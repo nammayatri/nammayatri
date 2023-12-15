@@ -31,6 +31,7 @@ import Kernel.Utils.Common (Money, logTagInfo, withFlowHandlerAPI)
 import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 type API =

@@ -417,6 +417,7 @@ library
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchRequestSpecialZone
       Storage.Beam.SearchTry
+      Storage.Beam.SystemConfigs
       Storage.Beam.Vehicle
       Storage.Beam.Volunteer
       Storage.CachedQueries.BapMetadata

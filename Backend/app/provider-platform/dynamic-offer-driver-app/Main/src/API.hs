@@ -34,6 +34,7 @@ import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp)
 import Servant.OpenApi
+import Storage.Beam.SystemConfigs ()
 
 type DriverOfferAPI =
   MainAPI

@@ -14,6 +14,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Servant
+import Storage.Beam.SystemConfigs ()
 
 type API =
   "beckn"

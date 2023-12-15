@@ -31,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 type API =

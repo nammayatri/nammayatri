@@ -285,6 +285,7 @@ library
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.Sos
       Storage.Beam.SpecialZoneQuote
+      Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
       Storage.Beam.Webengage
       Storage.CachedQueries.BlackListOrg

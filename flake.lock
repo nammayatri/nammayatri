@@ -100,15 +100,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1700470711,
-        "narHash": "sha256-d4oIDzr7E8trgeszZ7rhs695jxCqAMY24zp4FeEAd38=",
+        "lastModified": 1702559869,
+        "narHash": "sha256-HhRadY/oc0GQCWOQeO0Hni8DiHP7DKsFBokVM9VwbP8=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "53af8b5ec18b8ffbd1874a2396dc200a3d209e4c",
+        "rev": "dd315eababe5ee36a4727a53a43eca531aa46c90",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/shared-kernel-handlerAPi-change",
         "repo": "beckn-gateway",
         "type": "github"
       }
@@ -2982,6 +2983,7 @@
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "Backend/systemconfig-changes",
         "repo": "shared-kernel",
         "type": "github"
       }

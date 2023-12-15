@@ -22,7 +22,7 @@ import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps (LatLong)
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Common (withFlowHandlerAPI')
 import Servant hiding (throwError)
 
 dashboardHandler :: FlowServer API.SpecialZoneDashboardAPIs
@@ -39,16 +39,16 @@ handler :: FlowServer API.API
 handler = specialZoneHandler :<|> dashboardHandler
 
 lookupSpecialZone :: LatLong -> FlowHandler Domain.SpecialZone
-lookupSpecialZone latLng = withFlowHandlerAPI $ DSpecialZone.lookupSpecialZone latLng
+lookupSpecialZone latLng = withFlowHandlerAPI' $ DSpecialZone.lookupSpecialZone latLng
 
 lookupSpecialZonesByRegion :: LatLong -> LatLong -> FlowHandler [Domain.SpecialZone]
-lookupSpecialZonesByRegion minLatLng maxLatLng = withFlowHandlerAPI $ DSpecialZone.lookupSpecialZonesByRegion minLatLng maxLatLng
+lookupSpecialZonesByRegion minLatLng maxLatLng = withFlowHandlerAPI' $ DSpecialZone.lookupSpecialZonesByRegion minLatLng maxLatLng
 
 createSpecialZone :: Domain.SpecialZoneAPIEntity -> FlowHandler APISuccess
-createSpecialZone specialZone = withFlowHandlerAPI $ DSpecialZone.createSpecialZone specialZone
+createSpecialZone specialZone = withFlowHandlerAPI' $ DSpecialZone.createSpecialZone specialZone
 
 updateSpecialZone :: Domain.SpecialZone -> FlowHandler APISuccess
-updateSpecialZone specialZone = withFlowHandlerAPI $ DSpecialZone.updateSpecialZone specialZone
+updateSpecialZone specialZone = withFlowHandlerAPI' $ DSpecialZone.updateSpecialZone specialZone
 
 deleteSpecialZone :: Id Domain.SpecialZone -> FlowHandler APISuccess
-deleteSpecialZone specialZoneId = withFlowHandlerAPI $ DSpecialZone.deleteSpecialZone specialZoneId
+deleteSpecialZone specialZoneId = withFlowHandlerAPI' $ DSpecialZone.deleteSpecialZone specialZoneId

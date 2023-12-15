@@ -11,6 +11,7 @@ import EulerHS.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 
 type API =
   "auth"

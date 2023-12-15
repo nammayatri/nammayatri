@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Error.FlowHandling
 import Servant
 import SharedLogic.Merchant
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
 data MapEndPoint
