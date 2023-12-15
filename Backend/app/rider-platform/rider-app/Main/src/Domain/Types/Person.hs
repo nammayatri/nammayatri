@@ -102,7 +102,9 @@ data PersonE e = Person
     shareEmergencyContacts :: Bool,
     nightSafetyChecks :: Bool,
     triggerSupport :: Bool,
-    hasCompletedSafetySetup :: Bool
+    hasCompletedSafetySetup :: Bool,
+    registrationLat :: Maybe Double,
+    registrationLon :: Maybe Double
   }
   deriving (Generic)
 

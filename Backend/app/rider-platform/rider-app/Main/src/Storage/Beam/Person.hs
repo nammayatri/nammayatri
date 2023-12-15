@@ -69,7 +69,9 @@ data PersonT f = PersonT
     shareEmergencyContacts :: B.C f Bool,
     triggerSupport :: B.C f Bool,
     nightSafetyChecks :: B.C f Bool,
-    hasCompletedSafetySetup :: B.C f Bool
+    hasCompletedSafetySetup :: B.C f Bool,
+    registrationLat :: B.C f (Maybe Double),
+    registrationLon :: B.C f (Maybe Double)
   }
   deriving (Generic, B.Beamable)
 
