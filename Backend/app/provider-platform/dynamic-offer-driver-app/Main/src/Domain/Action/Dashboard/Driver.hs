@@ -578,15 +578,16 @@ driverInfo merchantShortId _ mbMobileNumber mbMobileCountryCode mbVehicleNumber 
   let driverId = driverWithRidesCount.person.id
   mbDriverLicense <- B.runInReplica $ QDriverLicense.findByDriverId driverId
   rcAssociationHistory <- B.runInReplica $ QRCAssociation.findAllByDriverId driverId
-  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory
+  buildDriverInfoRes driverWithRidesCount mbDriverLicense rcAssociationHistory merchant.city
 
 buildDriverInfoRes ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   QPerson.DriverWithRidesCount ->
   Maybe DriverLicense ->
   [(DriverRCAssociation, VehicleRegistrationCertificate)] ->
+  Context.City ->
   m Common.DriverInfoRes
-buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory = do
+buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociationHistory city = do
   mobileNumber <- traverse decrypt person.mobileNumber
   driverLicenseDetails <- traverse buildDriverLicenseAPIEntity mbDriverLicense
   vehicleRegistrationDetails <- traverse buildRCAssociationAPIEntity rcAssociationHistory
@@ -599,6 +600,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       availableMerchantsShortId <- CQM.findAllShortIdById availableMerchantsId
       pure $ map getShortId availableMerchantsShortId
     Nothing -> pure []
+  merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -625,6 +627,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         rating = person.rating,
         alternateNumber = person.unencryptedAlternateMobileNumber,
         availableMerchants = availableMerchants,
+        merchantOperatingCity = fromMaybe city (merchantOperatingCity <&> (.city)),
         blockStateModifier = info.blockStateModifier
       }
 

@@ -25,6 +25,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Centesimal, HighPrecMoney, MandatoryQueryParam, Money)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
@@ -474,6 +475,7 @@ data DriverInfoRes = DriverInfoRes
     alternateNumber :: Maybe Text,
     rating :: Maybe Centesimal,
     availableMerchants :: [Text],
+    merchantOperatingCity :: Context.City,
     blockStateModifier :: Maybe Text
   }
   deriving stock (Show, Generic)
