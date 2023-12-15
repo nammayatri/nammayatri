@@ -25,6 +25,7 @@ module API.UI.Search
 where
 
 -- import qualified Beckn.ACL.Metro.Search as MetroACL
+
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import Data.OpenApi hiding (Header)
@@ -56,6 +57,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 -- import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J

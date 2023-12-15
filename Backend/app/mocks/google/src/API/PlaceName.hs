@@ -34,7 +34,7 @@ handler ::
   Maybe Text ->
   Maybe Language ->
   FlowHandler GoogleMaps.GetPlaceNameResp
-handler _sessionToken key mbLatLng _placeId _language = withFlowHandlerAPI $ do
+handler _sessionToken key mbLatLng _placeId _language = withFlowHandlerAPI' $ do
   unless (key == Data.mockKey) $ throwError AccessDenied
   latLng <- mbLatLng & fromMaybeM (NotImplemented "getPlaceName is not implemented: latlng: Nothing")
   pure $ Data.mkMockPlaceNameResp latLng

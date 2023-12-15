@@ -26,5 +26,5 @@ handler :: FlowServer API
 handler = bookingList
 
 bookingList :: PersonId -> Maybe Integer -> Maybe Integer -> Maybe BookingStatus -> FlowHandler BookingListRes
-bookingList personId mbLimit mbOffset mbBookingStatus = withFlowHandlerAPI $ do
+bookingList personId mbLimit mbOffset mbBookingStatus = withFlowHandlerAPI' $ do
   BookingList.bookingListHandler personId mbLimit mbOffset mbBookingStatus

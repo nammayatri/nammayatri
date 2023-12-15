@@ -81,7 +81,7 @@ data HandlerEnv = HandlerEnv
     enablePrometheusMetricLogging :: Bool,
     ltsCfg :: LT.LocationTrackingeServiceConfig,
     schedulerSetName :: Text,
-    tables :: Tables,
+    kvConfigUpdateFrequency :: Int,
     schedulerType :: SchedulerType
   }
   deriving (Generic)

@@ -56,14 +56,14 @@ buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.MapAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing Nothing
 
 callAutoComplete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
-callAutoComplete merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+callAutoComplete merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BPP.AutoCompleteEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.maps.autoComplete) personId req
 
 callGetPlaceName :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
-callGetPlaceName merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+callGetPlaceName merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BPP.GetPlaceNameEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $

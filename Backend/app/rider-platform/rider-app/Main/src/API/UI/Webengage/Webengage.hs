@@ -24,6 +24,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 
 type API =
   "webengage"

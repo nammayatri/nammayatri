@@ -23,6 +23,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Storage.Beam.SystemConfigs ()
 
 type API = OnConfirm.OnConfirmAPI
 

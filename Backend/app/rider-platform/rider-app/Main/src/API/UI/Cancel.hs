@@ -33,6 +33,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =

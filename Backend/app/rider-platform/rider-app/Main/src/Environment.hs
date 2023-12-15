@@ -39,7 +39,7 @@ import Kernel.Storage.Hedis as Redis
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
 import Kernel.Types.Cache
-import Kernel.Types.Common (HighPrecMeters, Meters, Seconds, Tables)
+import Kernel.Types.Common (HighPrecMeters, Meters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow
@@ -114,7 +114,7 @@ data AppCfg = AppCfg
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    tables :: Tables,
+    kvConfigUpdateFrequency :: Int,
     dontEnableForDb :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int

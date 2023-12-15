@@ -24,7 +24,7 @@ import Kernel.Storage.Hedis (connectHedis, connectHedisCluster)
 import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Tools.Metrics.Init as Metrics
-import Kernel.Types.Common (Seconds (..), Tables)
+import Kernel.Types.Common (Seconds (..))
 import qualified Kernel.Types.MonadGuid as G
 import Kernel.Utils.App
 import Kernel.Utils.Common (threadDelaySec)
@@ -43,10 +43,10 @@ runSchedulerService ::
   (JobProcessor t, FromJSON t) =>
   SchedulerConfig ->
   JobInfoMap ->
-  Tables ->
+  Int ->
   SchedulerHandle t ->
   IO ()
-runSchedulerService s@SchedulerConfig {..} jobInfoMap tables handle_ = do
+runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency handle_ = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.CallBPP as CallBPP
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRideB
 
 type API = OnInit.OnInitAPI

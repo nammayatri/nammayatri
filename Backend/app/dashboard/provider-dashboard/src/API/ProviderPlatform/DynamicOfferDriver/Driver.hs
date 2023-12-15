@@ -33,7 +33,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, fromMaybeM, throwError, withFlowHandlerAPI')
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified ProviderPlatformClient.DynamicOfferDriver.Fleet as Client
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
@@ -384,65 +384,65 @@ buildManagementServerTransaction endpoint apiTokenInfo driverId =
   T.buildTransaction (DT.DriverAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing
 
 driverDocuments :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> FlowHandler Common.DriverDocumentsInfoRes
-driverDocuments merchantShortId opCity apiTokenInfo = withFlowHandlerAPI $ do
+driverDocuments merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.driverDocumentsInfo)
 
 driverAadhaarInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.DriverAadhaarInfoRes
-driverAadhaarInfo merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+driverAadhaarInfo merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.driverAadhaarInfo) driverId
 
 driverAadhaarInfoByPhone :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> FlowHandler Common.DriverAadhaarInfoByPhoneReq
-driverAadhaarInfoByPhone merchantShortId opCity apiTokenInfo phoneNo = withFlowHandlerAPI $ do
+driverAadhaarInfoByPhone merchantShortId opCity apiTokenInfo phoneNo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.driverAadhaarInfoByPhone) phoneNo
 
 listDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Text -> FlowHandler Common.DriverListRes
-listDriver merchantShortId opCity apiTokenInfo mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString = withFlowHandlerAPI $ do
+listDriver merchantShortId opCity apiTokenInfo mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.listDrivers) mbLimit mbOffset verified enabled blocked mbSubscribed phone mbVehicleNumberSearchString
 
 getDriverDue :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Text -> FlowHandler [Common.DriverOutstandingBalanceResp]
-getDriverDue merchantShortId opCity apiTokenInfo mbMobileCountryCode phone = withFlowHandlerAPI $ do
+getDriverDue merchantShortId opCity apiTokenInfo mbMobileCountryCode phone = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.getDriverDue) mbMobileCountryCode phone
 
 driverActivity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> FlowHandler Common.DriverActivityRes
-driverActivity merchantShortId opCity apiTokenInfo = withFlowHandlerAPI $ do
+driverActivity merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.driverActivity)
 
 collectCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-collectCash merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+collectCash merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.CollectCashEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.collectCash) driverId apiTokenInfo.personId.getId
 
 exemptCash :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-exemptCash merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+exemptCash merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.ExemptCashEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.exemptCash) driverId apiTokenInfo.personId.getId
 
 enableDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-enableDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+enableDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.EnableDriverEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.enableDriver) driverId
 
 disableDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-disableDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+disableDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.DisableDriverEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.disableDriver) driverId
 
 blockDriverWithReason :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.BlockDriverWithReasonReq -> FlowHandler APISuccess
-blockDriverWithReason merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI $ do
+blockDriverWithReason merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   person <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
   let dashboardUserName = person.firstName <> " " <> person.lastName
@@ -451,19 +451,19 @@ blockDriverWithReason merchantShortId opCity apiTokenInfo driverId req = withFlo
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.blockDriverWithReason) driverId dashboardUserName req
 
 blockDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-blockDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+blockDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.BlockDriverEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.blockDriver) driverId
 
 blockReasonList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> FlowHandler [Common.BlockReason]
-blockReasonList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI $ do
+blockReasonList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.blockReasonList)
 
 unblockDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-unblockDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+unblockDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   person <- QP.findById apiTokenInfo.personId >>= fromMaybeM (PersonNotFound apiTokenInfo.personId.getId)
   let dashboardUserName = person.firstName <> " " <> person.lastName
@@ -472,7 +472,7 @@ unblockDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI 
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.unblockDriver) driverId dashboardUserName
 
 driverLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Common.DriverIds -> FlowHandler Common.DriverLocationRes
-driverLocation merchantShortId opCity apiTokenInfo mbLimit mbOffset req = withFlowHandlerAPI $ do
+driverLocation merchantShortId opCity apiTokenInfo mbLimit mbOffset req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.driverLocation) mbLimit mbOffset req
 
@@ -486,7 +486,7 @@ driverInfo ::
   Maybe Text ->
   Maybe Text ->
   FlowHandler Common.DriverInfoRes
-driverInfo merchantShortId opCity apiTokenInfo mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber = withFlowHandlerAPI $ do
+driverInfo merchantShortId opCity apiTokenInfo mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (length (catMaybes [mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber]) == 1) $
     throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\" is required"
@@ -498,21 +498,21 @@ driverInfo merchantShortId opCity apiTokenInfo mbMobileNumber mbMobileCountryCod
   Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.driverInfo) mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber apiTokenInfo.personId.getId mbFleet
 
 deleteDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-deleteDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+deleteDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.DeleteDriverEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.deleteDriver) driverId
 
 unlinkVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-unlinkVehicle merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+unlinkVehicle merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.UnlinkVehicleEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.unlinkVehicle) driverId
 
 updatePhoneNumber :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdatePhoneNumberReq -> FlowHandler APISuccess
-updatePhoneNumber merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI $ do
+updatePhoneNumber merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateUpdatePhoneNumberReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.UpdatePhoneNumberEndpoint apiTokenInfo driverId $ Just req
@@ -520,12 +520,12 @@ updatePhoneNumber merchantShortId opCity apiTokenInfo driverId req = withFlowHan
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.updatePhoneNumber) driverId req
 
 updateByPhoneNumber :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.UpdateDriverDataReq -> FlowHandler APISuccess
-updateByPhoneNumber merchantShortId opCity apiTokenInfo phoneNo req = withFlowHandlerAPI $ do
+updateByPhoneNumber merchantShortId opCity apiTokenInfo phoneNo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.updateByPhoneNumber) phoneNo req
 
 addVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.AddVehicleReq -> FlowHandler APISuccess
-addVehicle merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI $ do
+addVehicle merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.AddVehicleEndpoint apiTokenInfo driverId $ Just req
@@ -533,53 +533,53 @@ addVehicle merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.addVehicle) driverId req
 
 addVehicleForFleet :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Text -> Common.AddVehicleReq -> FlowHandler APISuccess
-addVehicleForFleet merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode req = withFlowHandlerAPI $ do
+addVehicleForFleet merchantShortId opCity apiTokenInfo phoneNo mbMobileCountryCode req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.addVehicleForFleet) phoneNo mbMobileCountryCode apiTokenInfo.personId.getId req
 
 getAllVehicleForFleet :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.ListVehicleRes
-getAllVehicleForFleet merchantShortId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
+getAllVehicleForFleet merchantShortId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.getAllVehicleForFleet) apiTokenInfo.personId.getId mbLimit mbOffset
 
 getAllDriverForFleet :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.FleetListDriverRes
-getAllDriverForFleet merchantShortId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
+getAllDriverForFleet merchantShortId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.getAllDriverForFleet) apiTokenInfo.personId.getId mbLimit mbOffset
 
 fleetUnlinkVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Text -> FlowHandler APISuccess
-fleetUnlinkVehicle merchantShortId opCity apiTokenInfo driverId vehicleNo = withFlowHandlerAPI $ do
+fleetUnlinkVehicle merchantShortId opCity apiTokenInfo driverId vehicleNo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.fleetUnlinkVehicle) apiTokenInfo.personId.getId driverId vehicleNo
 
 fleetRemoveVehicle :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> FlowHandler APISuccess
-fleetRemoveVehicle merchantShortId opCity apiTokenInfo vehicleNo = withFlowHandlerAPI $ do
+fleetRemoveVehicle merchantShortId opCity apiTokenInfo vehicleNo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.fleetRemoveVehicle) apiTokenInfo.personId.getId vehicleNo
 
 fleetRemoveDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-fleetRemoveDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+fleetRemoveDriver merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.fleetRemoveDriver) apiTokenInfo.personId.getId driverId
 
 fleetTotalEarning :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> FlowHandler Common.FleetTotalEarningResponse
-fleetTotalEarning merchantShortId opCity apiTokenInfo = withFlowHandlerAPI $ do
+fleetTotalEarning merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.fleetTotalEarning) apiTokenInfo.personId.getId
 
 fleetVehicleEarning :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe (Id Common.Driver) -> FlowHandler Common.FleetEarningRes
-fleetVehicleEarning merchantShortId opCity apiTokenInfo vehicleNo mbDriverId = withFlowHandlerAPI $ do
+fleetVehicleEarning merchantShortId opCity apiTokenInfo vehicleNo mbDriverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.fleetVehicleEarning) apiTokenInfo.personId.getId vehicleNo mbDriverId
 
 fleetDriverEarning :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.FleetEarningRes
-fleetDriverEarning merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+fleetDriverEarning merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.fleetDriverEarning) apiTokenInfo.personId.getId driverId
 
 updateDriverName :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverNameReq -> FlowHandler APISuccess
-updateDriverName merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI $ do
+updateDriverName merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateUpdateDriverNameReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.UpdateDriverNameEndpoint apiTokenInfo driverId $ Just req
@@ -587,117 +587,117 @@ updateDriverName merchantShortId opCity apiTokenInfo driverId req = withFlowHand
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.updateDriverName) driverId req
 
 unlinkDL :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-unlinkDL merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+unlinkDL merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.UnlinkDLEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.unlinkDL) driverId
 
 unlinkAadhaar :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-unlinkAadhaar merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+unlinkAadhaar merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.UnlinkAadhaarEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.unlinkAadhaar) driverId
 
 endRCAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-endRCAssociation merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+endRCAssociation merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.EndRCAssociationEndpoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.endRCAssociation) driverId
 
 setRCStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RCStatusReq -> FlowHandler APISuccess
-setRCStatus merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI $ do
+setRCStatus merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.SetRCStatusEndpoint apiTokenInfo driverId $ Just req
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPP checkedMerchantId opCity (.drivers.setRCStatus) driverId req
 
 deleteRC :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.DeleteRCReq -> FlowHandler APISuccess
-deleteRC merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI $ do
+deleteRC merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.DeleteRCEndpoint apiTokenInfo driverId $ Just req
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.deleteRC) driverId req
 
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> FlowHandler Common.ClearOnRideStuckDriversRes
-clearOnRideStuckDrivers merchantShortId opCity apiTokenInfo dbSyncTime = withFlowHandlerAPI $ do
+clearOnRideStuckDrivers merchantShortId opCity apiTokenInfo dbSyncTime = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.clearOnRideStuckDrivers) dbSyncTime
 
 getDriverHomeLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.GetHomeLocationsRes
-getDriverHomeLocation merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+getDriverHomeLocation merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.goHome.getDriverHomeLocation) driverId
 
 updateDriverHomeLocation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateDriverHomeLocationReq -> FlowHandler APISuccess
-updateDriverHomeLocation merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI $ do
+updateDriverHomeLocation merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.UpdateDriverHomeLocationEndpoint apiTokenInfo driverId $ Just req
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.goHome.updateDriverHomeLocation) driverId req
 
 incrementDriverGoToCount :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-incrementDriverGoToCount merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+incrementDriverGoToCount merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.IncrementDriverGoToCountEndPoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.goHome.incrementDriverGoToCount) driverId
 
 getDriverGoHomeInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler Common.CachedGoHomeRequestInfoRes
-getDriverGoHomeInfo merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+getDriverGoHomeInfo merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.goHome.getDriverGoHomeInfo) driverId
 
 getPaymentHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler Driver.HistoryEntityV2
-getPaymentHistory merchantShortId opCity apiTokenInfo driverId paymentMode limit offset = withFlowHandlerAPI $ do
+getPaymentHistory merchantShortId opCity apiTokenInfo driverId paymentMode limit offset = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.getPaymentHistory) driverId paymentMode limit offset
 
 getPaymentHistoryEntityDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Id INV.Invoice -> FlowHandler Driver.HistoryEntryDetailsEntityV2
-getPaymentHistoryEntityDetails merchantShortId opCity apiTokenInfo driverId invoiceId = withFlowHandlerAPI $ do
+getPaymentHistoryEntityDetails merchantShortId opCity apiTokenInfo driverId invoiceId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.getPaymentHistoryEntityDetails) driverId invoiceId
 
 updateSubscriptionDriverFeeAndInvoice :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.SubscriptionDriverFeesAndInvoicesToUpdate -> FlowHandler Common.SubscriptionDriverFeesAndInvoicesToUpdate
-updateSubscriptionDriverFeeAndInvoice merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI $ do
+updateSubscriptionDriverFeeAndInvoice merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.UpdateSubscriptionDriverFeeAndInvoiceEndpoint apiTokenInfo driverId $ Just req
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.updateSubscriptionDriverFeeAndInvoice) driverId req
 
 getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetDriverVehicleAssociation merchantId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
+getFleetDriverVehicleAssociation merchantId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.getFleetDriverVehicleAssociation) apiTokenInfo.personId.getId mbLimit mbOffset
 
 getFleetDriverAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetDriverAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
+getFleetDriverAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merhcantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.getFleetDriverAssociation) apiTokenInfo.personId.getId mbLimit mbOffset
 
 getFleetVehicleAssociation :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI $ do
+getFleetVehicleAssociation merhcantId opCity apiTokenInfo mbLimit mbOffset = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merhcantId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.getFleetVehicleAssociation) apiTokenInfo.personId.getId mbLimit mbOffset
 
 setVehicleDriverRcStatusForFleet :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RCStatusReq -> FlowHandler APISuccess
-setVehicleDriverRcStatusForFleet merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI $ do
+setVehicleDriverRcStatusForFleet merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.SetVehicleDriverRcStatusForFleetEndpoint apiTokenInfo driverId $ Just req
   T.withTransactionStoring transaction $
     Client.callDynamicOfferDriverAppFleetApi checkedMerchantId opCity (.operations.setVehicleDriverRcStatusForFleet) driverId apiTokenInfo.personId.getId req
 
 sendMessageToDriverViaDashboard :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> DDriver.SendSmsReq -> FlowHandler APISuccess
-sendMessageToDriverViaDashboard merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI $ do
+sendMessageToDriverViaDashboard merchantShortId opCity apiTokenInfo driverId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.SendMessageToDriverViaDashboardEndPoint apiTokenInfo driverId (Just $ DDriver.VolunteerTransactionStorageReq apiTokenInfo.personId.getId driverId.getId (show req.messageKey) (show req.channel) (show $ fromMaybe "" req.overlayKey) (show $ fromMaybe "" req.messageId))
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.subscription.sendMessageToDriverViaDashboard) driverId apiTokenInfo.personId.getId req
 
 sendDummyNotificationToDriverViaDashboard :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> FlowHandler APISuccess
-sendDummyNotificationToDriverViaDashboard merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI $ do
+sendDummyNotificationToDriverViaDashboard merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildManagementServerTransaction Common.SendDummyNotificationToDriverViaDashboardEndPoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $

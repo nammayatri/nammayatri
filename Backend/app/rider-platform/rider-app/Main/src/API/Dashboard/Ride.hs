@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.SystemConfigs ()
 
 type API =
   "ride"

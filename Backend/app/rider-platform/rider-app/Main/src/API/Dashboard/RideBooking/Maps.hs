@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Error.FlowHandling
 import Servant
 import SharedLogic.Merchant
+import Storage.Beam.SystemConfigs ()
 
 data MapEndPoints
   = AutoCompleteEndPoint

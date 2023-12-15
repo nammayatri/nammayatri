@@ -18,6 +18,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import SharedLogic.Merchant
+import Storage.Beam.SystemConfigs ()
 
 data TicketBookingEndpoint
   = VerifyBookingDetails

@@ -54,7 +54,7 @@ data AppCfg = AppCfg
     maxShards :: Int,
     metricsPort :: Int,
     schedulerType :: SchedulerType,
-    tables :: Tables,
+    kvConfigUpdateFrequency :: Int,
     runReviver :: Bool,
     kafkaProducerCfg :: KafkaProducerCfg
   }

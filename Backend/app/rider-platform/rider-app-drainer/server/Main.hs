@@ -46,7 +46,7 @@ main = do
                     esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
                     hedisClusterCfg = appCfg.hedisClusterCfg
                   }
-                appCfg.tables
+                appCfg.kvConfigUpdateFrequency
             )
 
           dbSyncMetric <- Event.mkDBSyncMetric

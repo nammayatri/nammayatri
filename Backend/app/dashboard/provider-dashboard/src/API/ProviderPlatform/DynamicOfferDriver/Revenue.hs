@@ -52,11 +52,11 @@ handler merchantId city =
     :<|> getAllDriverFeeHistory merchantId city
 
 getCollectionHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CollectionList
-getCollectionHistory merchantShortId opCity apiTokenInfo volunteerId place mbFrom mbTo = withFlowHandlerAPI $ do
+getCollectionHistory merchantShortId opCity apiTokenInfo volunteerId place mbFrom mbTo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.revenue.getCollectionHistory) volunteerId place mbFrom mbTo
 
 getAllDriverFeeHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler [Common.AllFees]
-getAllDriverFeeHistory merchantShortId opCity apiTokenInfo mbFrom mbTo = withFlowHandlerAPI $ do
+getAllDriverFeeHistory merchantShortId opCity apiTokenInfo mbFrom mbTo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.revenue.getAllDriverFeeHistory) mbFrom mbTo
