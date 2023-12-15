@@ -912,6 +912,16 @@ public class MobilityCommonBridge extends HyperBridge {
         }
     }
 
+    @JavascriptInterface
+    public void setMapPadding(final int left, final int top, final int right, final int bottom) {
+        ExecutorManager.runOnMainThread(() -> {
+            if (googleMap != null) {
+                googleMap.setPadding(left, top, right, bottom);
+            }
+        });
+    }
+
+
     @SuppressLint({"MissingPermission", "PotentialBehaviorOverride"})
     private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom) {
         if (bridgeComponents.getActivity() != null) {
