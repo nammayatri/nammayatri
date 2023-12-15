@@ -38,8 +38,8 @@ addColumnSQL tableName hfieldDef =
     generateAlterColumnSQL :: String -> String -> BeamField -> String
     generateAlterColumnSQL fieldName_ sqlType_ beamField =
       "ALTER TABLE atlas_app." ++ tableName ++ " ADD COLUMN " ++ fieldName_ ++ " " ++ sqlType_ ++ " "
-        ++ intercalate " " (catMaybes $ map constraintToSQL (bConstraints beamField))
-        ++ maybe "" ((++) " default ") (bDefaultVal beamField)
+        ++ unwords (mapMaybe constraintToSQL (bConstraints beamField))
+        ++ maybe "" (" default " ++) (bDefaultVal beamField)
         ++ ";"
 
 addKeySQL :: TableDef -> String

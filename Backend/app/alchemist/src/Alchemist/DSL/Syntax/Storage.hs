@@ -34,12 +34,12 @@ data Operator = And | Or deriving (Show)
 data FieldDef = FieldDef
   { fieldName :: String,
     haskellType :: String,
-    beamType :: String,
+    --beamType :: String,
     beamFields :: [BeamField],
-    sqlType :: String,
-    constraints :: [FieldConstraint],
-    defaultVal :: Maybe String,
-    toTType :: Maybe String,
+    --sqlType :: String,
+    --constraints :: [FieldConstraint],
+    --defaultVal :: Maybe String,
+    --toTType :: Maybe String,
     fromTType :: Maybe String,
     isEncrypted :: Bool
   }
