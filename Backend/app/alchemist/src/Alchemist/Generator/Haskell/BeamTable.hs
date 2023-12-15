@@ -11,18 +11,23 @@ formatType t = if " " `isInfixOf` t then "(" ++ t ++ ")" else t
 
 -- Converts a FieldDef to a Beam field declaration
 fieldDefToBeam :: FieldDef -> String
-fieldDefToBeam field =
-  if isEncrypted field
-    then
-      fieldName field ++ "Encrypted :: B.C f " ++ (wrapMaybe "Text") ++ ",\n"
-        ++ "    "
-        ++ fieldName field
-        ++ "Hash :: B.C f "
-        ++ (wrapMaybe "DbHash")
-    else fieldName field ++ " :: B.C f " ++ formatType (beamType field)
+fieldDefToBeam hfield =
+  intercalate ",\n    " $
+    map
+      ( \field ->
+          if bIsEncrypted field
+            then
+              bFieldName field ++ "Encrypted :: B.C f " ++ (wrapMaybe "Text" field) ++ ",\n"
+                ++ "    "
+                ++ bFieldName field
+                ++ "Hash :: B.C f "
+                ++ (wrapMaybe "DbHash" field)
+            else bFieldName field ++ " :: B.C f " ++ formatType (bFieldType field)
+      )
+      (beamFields hfield)
   where
-    wrapMaybe :: String -> String
-    wrapMaybe beamType = if isMaybeType (haskellType field) then "(Maybe " ++ beamType ++ ")" else beamType
+    wrapMaybe :: String -> BeamField -> String
+    wrapMaybe beamType field = if isMaybeType (bFieldType field) then "(Maybe " ++ beamType ++ ")" else beamType
 
 -- Converts a list of fields to Beam field declarations
 fieldsToBeam :: [FieldDef] -> String

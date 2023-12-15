@@ -11,12 +11,14 @@ import Data.Aeson.Key (fromString, toString)
 import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Lens (_Array, _Object, _Value)
 import qualified Data.ByteString as BS
+import Data.Char (toUpper)
 import qualified Data.List as L
 import qualified Data.List.Extra as L
 import Data.List.Split (split, splitOn, splitWhen, whenElt)
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
+import Debug.Trace (traceShowId)
 import Kernel.Prelude hiding (fromString, toString, toText, traceShowId, try)
 import Text.Casing (quietSnake)
 import Text.Regex.TDFA ((=~))
@@ -37,7 +39,7 @@ parseTableDef dList importObj (parseDomainName, obj) =
       parsedTypes = view _1 <$> parsedTypesAndExcluded
       excludedList = view _2 <$> parsedTypesAndExcluded
       enumList = maybe [] (view _3) parsedTypesAndExcluded
-      parsedFields = parseFields (Just parseDomainName) excludedList dList enumList importObj obj
+      parsedFields = traceShowId $ parseFields (Just parseDomainName) excludedList dList enumList (fromMaybe [] parsedTypes) importObj obj
       containsEncryptedField = any isEncrypted parsedFields
       parsedImports = parseImports parsedFields (fromMaybe [] parsedTypes)
       parsedQueries = parseQueries (Just parseDomainName) excludedList dList parsedFields importObj obj
@@ -179,8 +181,8 @@ parseExtraTypes moduleName dList importObj obj = do
           )
         )
 
-parseFields :: Maybe String -> Maybe [String] -> [String] -> [String] -> Object -> Object -> [FieldDef]
-parseFields moduleName excludedList dataList enumList impObj obj =
+parseFields :: Maybe String -> Maybe [String] -> [String] -> [String] -> [TypeObject] -> Object -> Object -> [FieldDef]
+parseFields moduleName excludedList dataList enumList definedTypes impObj obj =
   let fields = (++) <$> preview (ix "fields" . _Value . to mkList . to filterOutAlreadyDefaultTypes) obj <*> pure defaultFields
       constraintsObj = obj ^? (ix "constraints" . _Object)
       sqlTypeObj = obj ^? (ix "sqlType" . _Object)
@@ -197,20 +199,68 @@ parseFields moduleName excludedList dataList enumList impObj obj =
             parseToTType = obj ^? (ix "toTType" . _Object) >>= preview (ix fieldKey . _String)
             parseFromTType = obj ^? (ix "fromTType" . _Object) >>= preview (ix fieldKey . _String)
             defaultImportModule = "Domain.Types."
+            getbeamFields = makeBeamFields (fromMaybe (error "Module name not found") moduleName) excludedList dataList enumList fieldName haskellType definedTypes impObj obj
          in FieldDef
               { fieldName = fieldName,
                 haskellType = makeTypeQualified moduleName excludedList (Just dataList) defaultImportModule impObj haskellType,
                 beamType = makeTypeQualified moduleName excludedList (Just dataList) defaultImportModule impObj beamType,
+                beamFields = getbeamFields,
                 sqlType = sqlType,
                 constraints = constraints,
                 defaultVal = defaultValue,
                 toTType = parseToTType,
-                fromTType = parseFromTType,
+                fromTType = maybe (if length getbeamFields > 1 then error ("Complex type (" <> T.pack fieldName <> ") should have fromTType function") else Nothing) pure parseFromTType,
                 isEncrypted = "EncryptedHashedField" `T.isInfixOf` (T.pack haskellType)
               }
    in case (map getFieldDef) <$> fields of
         Just f -> f
         Nothing -> error "Error Parsing Fields"
+
+beamFieldsWithExtractors :: String -> Maybe Object -> String -> String -> [TypeObject] -> [String] -> [(String, String, [String])]
+beamFieldsWithExtractors moduleName beamFieldObj fieldName haskellType definedTypes extractorFuncs =
+  case findIfComplexType haskellType of
+    Just (TypeObject (_nm, (arrOfFields, _))) ->
+      foldl (\acc (nm, tpp) -> acc ++ beamFieldsWithExtractors moduleName beamFieldObj (fieldName ++ capitalise nm) tpp definedTypes (qualified nm : extractorFuncs)) [] arrOfFields
+    Nothing ->
+      [(fromMaybe fieldName (beamFieldObj >>= preview (ix (fromString fieldName) . _String)), haskellType, extractorFuncs)]
+  where
+    qualified tp = "Domain.Types." ++ moduleName ++ "." ++ tp
+    capitalise :: String -> String
+    capitalise [] = []
+    capitalise (c : cs) = toUpper c : cs
+
+    findIfComplexType :: String -> Maybe TypeObject
+    findIfComplexType tpp = find (\(TypeObject (nm, (arrOfFields, _))) -> (nm == tpp || tpp == "Domain.Types." ++ moduleName ++ "." ++ nm) && all (\(k, _) -> k /= "enum") arrOfFields) definedTypes
+
+makeBeamFields :: String -> Maybe [String] -> [String] -> [String] -> String -> String -> [TypeObject] -> Object -> Object -> [BeamField]
+makeBeamFields moduleName excludedList dataList enumList fieldName haskellType definedTypes impObj obj =
+  let constraintsObj = obj ^? (ix "constraints" . _Object)
+      sqlTypeObj = obj ^? (ix "sqlType" . _Object)
+      beamTypeObj = obj ^? (ix "beamType" ._Object)
+      beamFieldObj = obj ^? (ix "beamFields" . _Object)
+      defaultsObj = obj ^? (ix "default" . _Object)
+      extractedBeamInfos = beamFieldsWithExtractors moduleName beamFieldObj fieldName haskellType definedTypes []
+      getBeamFieldDef (fName, tpp, extractorFuncs) =
+        let fieldKey = fromString fName
+            beamType = fromMaybe (findBeamType tpp) (beamTypeObj >>= preview (ix fieldKey . _String))
+            sqlType = fromMaybe (findMatchingSqlType enumList tpp) (sqlTypeObj >>= preview (ix fieldKey . _String))
+            defaultImportModule = "Domain.Types."
+            defaultValue = maybe (sqlDefaultsWrtName fName) pure (defaultsObj >>= preview (ix fieldKey . _String))
+            parseToTType = obj ^? (ix "toTType" . _Object) >>= preview (ix fieldKey . _String)
+            constraints = L.nub $ getDefaultFieldConstraints fName tpp ++ fromMaybe [] (constraintsObj >>= preview (ix fieldKey . _String . to (splitOn "|") . to (map getProperConstraint)))
+            isEncrypted = "EncryptedHashedField" `T.isInfixOf` (T.pack tpp)
+         in BeamField
+              { bFieldName = fName,
+                hFieldType = makeTypeQualified (Just moduleName) excludedList (Just dataList) defaultImportModule impObj tpp,
+                bFieldType = makeTypeQualified (Just moduleName) excludedList (Just dataList) defaultImportModule impObj beamType,
+                bConstraints = constraints,
+                bSqlType = sqlType,
+                bDefaultVal = defaultValue,
+                bToTType = parseToTType,
+                bfieldExtractor = extractorFuncs,
+                bIsEncrypted = isEncrypted
+              }
+   in map getBeamFieldDef extractedBeamInfos
 
 findBeamType :: String -> String
 findBeamType str = concatMap (typeMapper . L.trimStart) (split (whenElt (`elem` typeDelimiter)) str)
@@ -306,7 +356,10 @@ sqlTypeWrtType =
   ]
 
 extractKeys :: [FieldDef] -> ([String], [String])
-extractKeys fieldDefs =
-  let primaryKeyFields = [fieldName fd | fd <- fieldDefs, PrimaryKey `elem` constraints fd]
-      secondaryKeyFields = [fieldName fd | fd <- fieldDefs, SecondaryKey `elem` constraints fd]
-   in (primaryKeyFields, secondaryKeyFields)
+extractKeys fieldDefs = extractKeysFromBeamFields (concatMap beamFields fieldDefs)
+
+extractKeysFromBeamFields :: [BeamField] -> ([String], [String])
+extractKeysFromBeamFields fieldDefs = (primaryKeyFields, secondaryKeyFields)
+  where
+    primaryKeyFields = [bFieldName fd | fd <- fieldDefs, PrimaryKey `elem` bConstraints fd]
+    secondaryKeyFields = [bFieldName fd | fd <- fieldDefs, SecondaryKey `elem` bConstraints fd]

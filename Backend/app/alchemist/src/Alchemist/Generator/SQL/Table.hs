@@ -22,19 +22,24 @@ alterTableSQL tableDef =
 
 -- SQL for adding a single column with constraints
 addColumnSQL :: String -> FieldDef -> String
-addColumnSQL tableName fieldDef =
-  if isEncrypted fieldDef
-    then
-      generateAlterColumnSQL (quietSnake (fieldName fieldDef) ++ "_hash") "bytea"
-        ++ "\n"
-        ++ generateAlterColumnSQL (quietSnake (fieldName fieldDef) ++ "_encrypted") "character varying(255)"
-    else generateAlterColumnSQL (quietSnake (fieldName fieldDef)) (sqlType fieldDef)
+addColumnSQL tableName hfieldDef =
+  intercalate "\n" $
+    map
+      ( \fieldDef ->
+          if bIsEncrypted fieldDef
+            then
+              generateAlterColumnSQL (quietSnake (bFieldName fieldDef) ++ "_hash") "bytea" fieldDef
+                ++ "\n"
+                ++ generateAlterColumnSQL (quietSnake (bFieldName fieldDef) ++ "_encrypted") "character varying(255)" fieldDef
+            else generateAlterColumnSQL (quietSnake (bFieldName fieldDef)) (bSqlType fieldDef) fieldDef
+      )
+      (beamFields hfieldDef)
   where
-    generateAlterColumnSQL :: String -> String -> String
-    generateAlterColumnSQL fieldName_ sqlType_ =
+    generateAlterColumnSQL :: String -> String -> BeamField -> String
+    generateAlterColumnSQL fieldName_ sqlType_ beamField =
       "ALTER TABLE atlas_app." ++ tableName ++ " ADD COLUMN " ++ fieldName_ ++ " " ++ sqlType_ ++ " "
-        ++ intercalate " " (catMaybes $ map constraintToSQL (constraints fieldDef))
-        ++ maybe "" ((++) " default ") (defaultVal fieldDef)
+        ++ intercalate " " (catMaybes $ map constraintToSQL (bConstraints beamField))
+        ++ maybe "" ((++) " default ") (bDefaultVal beamField)
         ++ ";"
 
 addKeySQL :: TableDef -> String
