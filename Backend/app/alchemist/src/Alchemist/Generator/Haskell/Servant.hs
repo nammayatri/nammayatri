@@ -46,7 +46,7 @@ generateServantAPI input =
       _ -> True
 
     defaultImports :: [String]
-    defaultImports = ["EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common"]
+    defaultImports = ["EulerHS.Prelude", "Servant", "Tools.Auth", "Kernel.Utils.Common", "Storage.Beam.SystemConfigs ()"]
 
     defaultQualifiedImport :: [String]
     defaultQualifiedImport = ["Domain.Types.Person", "Kernel.Prelude", "Domain.Types.Merchant", "Environment", "Kernel.Types.Id"]

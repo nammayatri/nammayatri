@@ -705,7 +705,7 @@ sendDummyNotificationToDriverViaDashboard merchantShortId opCity apiTokenInfo dr
 
 changeOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ChangeOperatingCityReq -> FlowHandler APISuccess
 changeOperatingCity merchantShortId opCity apiTokenInfo driverId req =
-  withFlowHandlerAPI $ do
+  withFlowHandlerAPI' $ do
     checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
     transaction <- buildTransaction Common.ChangeOperatingCityEndpoint apiTokenInfo driverId (Just req)
     T.withTransactionStoring transaction $

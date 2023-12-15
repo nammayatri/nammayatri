@@ -156,12 +156,7 @@ let hccfg =
       , connectTimeout = None Integer
       }
 
-let tables =
-      { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
-      , kafkaNonKVTables = [] : List Text
-      }
+let kvConfigUpdateFrequency = +0
 
 let dontEnableForDb = [] : List Text
 
@@ -225,7 +220,7 @@ in  { esqDBCfg
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
-    , tables
+    , kvConfigUpdateFrequency
     , dontEnableForDb
     , maxMessages
     , incomingAPIResponseTimeout = +15
