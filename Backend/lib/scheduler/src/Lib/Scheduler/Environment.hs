@@ -100,7 +100,7 @@ data SchedulerEnv = SchedulerEnv
     enablePrometheusMetricLogging :: Bool,
     maxThreads :: Int,
     jobInfoMap :: JobInfoMap,
-    tables :: Tables
+    kvConfigUpdateFrequency :: Int
   }
   deriving (Generic)
 
@@ -132,7 +132,7 @@ runSchedulerM schedulerConfig env action = do
                 esqDBReplicaCfg = schedulerConfig.esqDBCfg,
                 hedisClusterCfg = schedulerConfig.hedisClusterCfg
               }
-            env.tables
+            env.kvConfigUpdateFrequency
         )
           >> L.setOption KafkaConn env.kafkaProducerTools
       )

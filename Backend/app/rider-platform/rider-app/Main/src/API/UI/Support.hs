@@ -29,6 +29,7 @@ import Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 -------- Support Flow----------

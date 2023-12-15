@@ -59,21 +59,21 @@ buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.MapsAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
 callAutoComplete :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
-callAutoComplete merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+callAutoComplete merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.AutoCompleteEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId opCity (.rideBooking.maps.autoComplete) personId req
 
 callGetPlaceDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
-callGetPlaceDetails merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+callGetPlaceDetails merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.GetPlaceDetailsEndPoints apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId opCity (.rideBooking.maps.getPlaceDetails) personId req
 
 callGetPlaceName :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
-callGetPlaceName merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI $ do
+callGetPlaceName merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.GetPlaceNameEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $

@@ -52,12 +52,12 @@ handler =
 
 createRole :: TokenInfo -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
 createRole tokenInfo =
-  withFlowHandlerAPI . DRoles.createRole tokenInfo
+  withFlowHandlerAPI' . DRoles.createRole tokenInfo
 
 assignAccessLevel :: TokenInfo -> Id DRole.Role -> DRoles.AssignAccessLevelReq -> FlowHandler APISuccess
 assignAccessLevel tokenInfo roleId =
-  withFlowHandlerAPI . DRoles.assignAccessLevel tokenInfo roleId
+  withFlowHandlerAPI' . DRoles.assignAccessLevel tokenInfo roleId
 
 listRoles :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
 listRoles mbsearchstr mblimit mboffset =
-  withFlowHandlerAPI . DRoles.listRoles mbsearchstr mblimit mboffset
+  withFlowHandlerAPI' . DRoles.listRoles mbsearchstr mblimit mboffset

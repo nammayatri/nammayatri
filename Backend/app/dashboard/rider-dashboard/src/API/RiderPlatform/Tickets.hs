@@ -68,7 +68,7 @@ verifyBookingDetails ::
   Id DTB.TicketService ->
   ShortId DTB.TicketBookingService ->
   FlowHandler DTB.TicketServiceVerificationResp
-verifyBookingDetails merchantShortId opCity apiTokenInfo personServiceId ticketBookingShortId = withFlowHandlerAPI $ do
+verifyBookingDetails merchantShortId opCity apiTokenInfo personServiceId ticketBookingShortId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction ADT.VerifyBookingDetails apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
@@ -81,7 +81,7 @@ getServices ::
   Id DTB.TicketPlace ->
   Maybe Day ->
   FlowHandler [DTB.TicketServiceResp]
-getServices merchantShortId opCity apiTokenInfo ticketPlaceId mbDate = withFlowHandlerAPI $ do
+getServices merchantShortId opCity apiTokenInfo ticketPlaceId mbDate = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.tickets.getServices) ticketPlaceId mbDate
 
@@ -91,6 +91,6 @@ updateSeatManagement ::
   ApiTokenInfo ->
   DTB.TicketBookingUpdateSeatsReq ->
   FlowHandler APISuccess
-updateSeatManagement merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+updateSeatManagement merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.tickets.updateSeatManagement) req

@@ -37,7 +37,7 @@ withFlowHandlerAPI ::
   ) =>
   FlowR r a ->
   FlowHandlerR r a
-withFlowHandlerAPI = withFlowHandler . apiHandler . handleIfUp
+withFlowHandlerAPI = withFlowHandler' . apiHandler . handleIfUp
 
 apiHandler ::
   ( MonadCatch m,

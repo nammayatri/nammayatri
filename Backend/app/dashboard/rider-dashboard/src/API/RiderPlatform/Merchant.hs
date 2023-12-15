@@ -27,7 +27,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, throwError, withFlowHandlerAPI')
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
@@ -95,7 +95,7 @@ merchantUpdate ::
   ApiTokenInfo ->
   Common.MerchantUpdateReq ->
   FlowHandler APISuccess
-merchantUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+merchantUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateMerchantUpdateReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.MerchantUpdateEndpoint apiTokenInfo (Just req)
@@ -107,7 +107,7 @@ serviceUsageConfig ::
   City.City ->
   ApiTokenInfo ->
   FlowHandler Common.ServiceUsageConfigRes
-serviceUsageConfig merchantShortId opCity apiTokenInfo = withFlowHandlerAPI $ do
+serviceUsageConfig merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.merchant.serviceUsageConfig)
 
@@ -117,7 +117,7 @@ mapsServiceConfigUpdate ::
   ApiTokenInfo ->
   Common.MapsServiceConfigUpdateReq ->
   FlowHandler APISuccess
-mapsServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+mapsServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.MapsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
@@ -129,7 +129,7 @@ mapsServiceUsageConfigUpdate ::
   ApiTokenInfo ->
   Common.MapsServiceUsageConfigUpdateReq ->
   FlowHandler APISuccess
-mapsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+mapsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateMapsServiceUsageConfigUpdateReq req
   whenJust req.getEstimatedPickupDistances $ \_ ->
     throwError (InvalidRequest "getEstimatedPickupDistances is not allowed for bap")
@@ -144,7 +144,7 @@ smsServiceConfigUpdate ::
   ApiTokenInfo ->
   Common.SmsServiceConfigUpdateReq ->
   FlowHandler APISuccess
-smsServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+smsServiceConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.SmsServiceConfigUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
@@ -156,7 +156,7 @@ smsServiceUsageConfigUpdate ::
   ApiTokenInfo ->
   Common.SmsServiceUsageConfigUpdateReq ->
   FlowHandler APISuccess
-smsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+smsServiceUsageConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateSmsServiceUsageConfigUpdateReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.SmsServiceConfigUsageUpdateEndpoint apiTokenInfo (Just req)

@@ -30,7 +30,7 @@ handler ::
   SignatureAuthResult ->
   BecknCallbackReq OnSearch.OnSearchCatalog ->
   FlowHandler AckResponse
-handler _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+handler _ _ req = withFlowHandlerBecknAPI' . withTransactionIdLogTag req $ do
   validateContext Context.ON_SEARCH $ req.context
   case req.contents of
     Right msg -> do

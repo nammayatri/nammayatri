@@ -34,7 +34,7 @@ handler ::
   Maybe [GoogleMaps.Place] ->
   Maybe Text ->
   FlowHandler GoogleMaps.DirectionsResp
-handler origin destination key _alternatives mode waypoints avoid = withFlowHandlerAPI $ do
+handler origin destination key _alternatives mode waypoints avoid = withFlowHandlerAPI' $ do
   unless (key == Data.mockKey) $ throwError AccessDenied
   unless (isNothing mode || mode == Just GoogleMaps.DRIVING) $
     throwError $ NotImplemented $ "directions API is not implemented: mode: " <> show mode

@@ -27,4 +27,4 @@ handler :: FlowServer API
 handler = status
 
 status :: PersonId -> Id DBooking.Booking -> FlowHandler DBooking.BookingAPIEntity
-status _ bookingId = withFlowHandlerAPI $ DStatus.status bookingId
+status _ bookingId = withFlowHandlerAPI' $ DStatus.status bookingId

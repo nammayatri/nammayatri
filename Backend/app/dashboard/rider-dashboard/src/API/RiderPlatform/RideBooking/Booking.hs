@@ -58,13 +58,13 @@ buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.RBooking endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
 callBookingStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id SRB.Booking -> Id DP.Person -> FlowHandler DB.BookingAPIEntity
-callBookingStatus merchantShortId opCity apiTokenInfo bookingId personId = withFlowHandlerAPI $ do
+callBookingStatus merchantShortId opCity apiTokenInfo bookingId personId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.RideStatusEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId opCity (.rideBooking.booking.bookingStatus) bookingId personId
 
 callBookingList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
-callBookingList merchantShortId opCity apiTokenInfo personId limit offset onlyActive status = withFlowHandlerAPI $ do
+callBookingList merchantShortId opCity apiTokenInfo personId limit offset onlyActive status = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderApp checkedMerchantId opCity (.rideBooking.booking.bookingList) personId limit offset onlyActive status

@@ -64,24 +64,24 @@ buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.SelectAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
 callSelect :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
-callSelect merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
+callSelect merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.EstimatesEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callRiderApp checkedMerchantId opCity (.rideBooking.select.rSelect) personId estimateId
 
 callSelectList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
-callSelectList merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
+callSelectList merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderApp checkedMerchantId opCity (.rideBooking.select.selectList) personId estimateId
 
 callSelectResult :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.QuotesResultResponse
-callSelectResult merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
+callSelectResult merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderApp checkedMerchantId opCity (.rideBooking.select.selectResult) personId estimateId
 
 callCancelSearch :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
-callCancelSearch merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI $ do
+callCancelSearch merchantShortId opCity apiTokenInfo personId estimateId = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.CancelSearchEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $

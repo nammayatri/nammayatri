@@ -24,11 +24,14 @@ import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import Kernel.Beam.Types (KafkaConn (..))
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
+import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.App
 import Kernel.Utils.Common
@@ -44,6 +47,7 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import System.Environment (lookupEnv)
 import "utils" Utils.Common.Events as UE
@@ -76,15 +80,20 @@ runRiderApp' appCfg = do
                   hedisClusterCfg = appCfg.hedisClusterCfg
                 }
             )
-            appCfg.tables
+            appCfg.kvConfigUpdateFrequency
         )
           >> L.setOption KafkaConn appEnv.kafkaProducerTools
+          >> L.setOption KBT.Tables (Tables [] [])
       )
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo "Setting up for signature auth..."
+        kvConfigs <-
+          findById "kv_configs" >>= pure . decodeFromText' @Tables
+            >>= fromMaybeM (InternalError "Couldn't find kv_configs table for rider app")
+        L.setOption KBT.Tables kvConfigs
         allBaps <-
           try QMerchant.loadAllBaps
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "

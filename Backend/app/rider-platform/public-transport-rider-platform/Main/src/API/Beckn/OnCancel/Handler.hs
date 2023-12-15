@@ -38,7 +38,7 @@ onCancel ::
   SignatureAuthResult ->
   BecknCallbackReq OnCancel.OnCancelMessage ->
   FlowHandler AckResponse
-onCancel _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onCancel _ req = withFlowHandlerBecknAPI' . withTransactionIdLogTag req $ do
   validateContext Context.ON_CANCEL $ req.context
   case req.contents of
     Right msg -> do

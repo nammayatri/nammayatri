@@ -32,7 +32,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error (PersonError (..))
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI')
 import Kernel.Utils.Error (fromMaybeM)
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
@@ -101,17 +101,17 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo = T.buildTransaction (DT.IssueAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 issueCategoryList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> FlowHandler Common.IssueCategoryListRes
-issueCategoryList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI $ do
+issueCategoryList merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueCategoryList)
 
 issueList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe DIssue.IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> FlowHandler Common.IssueReportListResponse
-issueList merchantShortId opCity apiTokenInfo mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withFlowHandlerAPI $ do
+issueList merchantShortId opCity apiTokenInfo mbLimit mbOffset mbStatus mbCategoryId mbAssignee = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueList) mbLimit mbOffset mbStatus mbCategoryId mbAssignee
 
 issueInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueReport -> FlowHandler Common.IssueInfoRes
-issueInfo merchantShortId opCity apiTokenInfo issueReportId_ = withFlowHandlerAPI $ do
+issueInfo merchantShortId opCity apiTokenInfo issueReportId_ = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   addAuthorDetails =<< Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueInfo) issueReportId_
   where
@@ -139,7 +139,7 @@ issueInfo merchantShortId opCity apiTokenInfo issueReportId_ = withFlowHandlerAP
           }
 
 issueUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueReport -> Common.IssueUpdateReq -> FlowHandler APISuccess
-issueUpdate merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI $ do
+issueUpdate merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.IssueUpdateEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
@@ -152,7 +152,7 @@ issueUpdate merchantShortId opCity apiTokenInfo issueReportId req = withFlowHand
         }
 
 issueAddComment :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueReport -> Common.IssueAddCommentReq -> FlowHandler APISuccess
-issueAddComment merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI $ do
+issueAddComment merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.IssueAddCommentEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
@@ -165,12 +165,12 @@ issueAddComment merchantShortId opCity apiTokenInfo issueReportId req = withFlow
         }
 
 issueFetchMedia :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> FlowHandler Text
-issueFetchMedia merchantShortId opCity apiTokenInfo filePath = withFlowHandlerAPI $ do
+issueFetchMedia merchantShortId opCity apiTokenInfo filePath = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueFetchMedia) filePath
 
 ticketStatusCallBack :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
-ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.ticketStatusCallBack_) req

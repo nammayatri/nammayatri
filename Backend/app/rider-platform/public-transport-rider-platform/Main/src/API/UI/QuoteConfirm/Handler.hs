@@ -29,7 +29,7 @@ import Kernel.Utils.Common
 import Tools.Auth (PersonId)
 
 handler :: PersonId -> Id D.Quote -> QConfirmReq -> FlowHandler QConfirmRes
-handler personId quoteId confirmReq = withFlowHandlerAPI $ do
+handler personId quoteId confirmReq = withFlowHandlerAPI' $ do
   (res, becknReq) <- quoteConfirm personId quoteId confirmReq
   callConfirm becknReq
   pure res

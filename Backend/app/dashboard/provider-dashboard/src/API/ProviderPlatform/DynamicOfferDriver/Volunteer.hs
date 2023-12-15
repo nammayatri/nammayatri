@@ -26,7 +26,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI')
 import qualified ProviderPlatformClient.DynamicOfferDriver.RideBooking as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
@@ -64,12 +64,12 @@ buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.VolunteerAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing Nothing
 
 bookingInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> FlowHandler Common.BookingInfoResponse
-bookingInfo merchantShortId opCity apiTokenInfo otpCode = withFlowHandlerAPI $ do
+bookingInfo merchantShortId opCity apiTokenInfo otpCode = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPP checkedMerchantId opCity (.volunteer.bookingInfo) otpCode
 
 assignCreateAndStartOtpRide :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AssignCreateAndStartOtpRideAPIReq -> FlowHandler APISuccess
-assignCreateAndStartOtpRide merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+assignCreateAndStartOtpRide merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.AssignCreateAndStartOtpRideEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
