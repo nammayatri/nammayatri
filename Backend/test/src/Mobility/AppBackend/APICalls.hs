@@ -112,7 +112,9 @@ mkAuthReq =
       email = Nothing,
       language = Nothing,
       gender = Nothing,
-      otpChannel = Nothing
+      otpChannel = Nothing,
+      registrationLat = Nothing,
+      registrationLon = Nothing
     }
 
 mkAuthVerifyReq :: Reg.AuthVerifyReq

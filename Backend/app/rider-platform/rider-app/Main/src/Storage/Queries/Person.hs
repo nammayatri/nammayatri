@@ -391,7 +391,9 @@ instance ToTType' BeamP.Person Person where
         BeamP.shareEmergencyContacts = shareEmergencyContacts,
         BeamP.nightSafetyChecks = nightSafetyChecks,
         BeamP.triggerSupport = triggerSupport,
-        BeamP.hasCompletedSafetySetup = hasCompletedSafetySetup
+        BeamP.hasCompletedSafetySetup = hasCompletedSafetySetup,
+        BeamP.registrationLat = registrationLat,
+        BeamP.registrationLon = registrationLon
       }
 
 updateEmergencyInfo ::

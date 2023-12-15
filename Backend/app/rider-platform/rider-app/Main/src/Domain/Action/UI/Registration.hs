@@ -96,7 +96,9 @@ data AuthReq = AuthReq
     email :: Maybe Text,
     language :: Maybe Maps.Language,
     gender :: Maybe SP.Gender,
-    otpChannel :: Maybe OTPChannel
+    otpChannel :: Maybe OTPChannel,
+    registrationLat :: Maybe Double,
+    registrationLon :: Maybe Double
   }
   deriving (Generic, ToJSON, Show, ToSchema)
 
@@ -116,6 +118,8 @@ instance A.FromJSON AuthReq where
         <*> obj .:? "language"
         <*> obj .:? "gender"
         <*> obj .:? "otpChannel"
+        <*> obj .:? "registrationLat"
+        <*> obj .:? "registrationLon"
     A.String s ->
       case A.eitherDecodeStrict (TE.encodeUtf8 s) of
         Left err -> fail err
@@ -338,7 +342,9 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         shareEmergencyContacts = False,
         triggerSupport = True,
         nightSafetyChecks = True,
-        hasCompletedSafetySetup = False
+        hasCompletedSafetySetup = False,
+        registrationLat = req.registrationLat,
+        registrationLon = req.registrationLon
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
