@@ -154,7 +154,6 @@ window.getMerchantConfig = function () {
       , "packageName" : "com.google.android.apps.maps"
     }
     , "subscriptionConfig" : {
-      "enableBlocking" : true,
       "completePaymentPopup" : false,
       "supportNumber" : "08069724949",
       "enableSubscriptionPopups" : true,
