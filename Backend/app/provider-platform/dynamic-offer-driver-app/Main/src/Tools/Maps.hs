@@ -140,10 +140,10 @@ snapToRoadWithFallback ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   SnapToRoadReq ->
-  m (Maps.MapsService, SnapToRoadResp)
+  m ([Maps.MapsService], Either String SnapToRoadResp)
 snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback handler
   where
-    handler = Maps.SnapToRaodHandler {..}
+    handler = Maps.SnapToRoadHandler {..}
 
     getConfidenceThreshold = do
       transporterConfig <- TConfig.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantNotFound merchantOperatingCityId.getId)
