@@ -140,7 +140,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   where
     snapToRoadWithService req = do
       resp <- TMaps.snapToRoad merchantId merchantOpCityId req
-      return (Google, resp)
+      return ([Google], Right resp)
 
     checkTimeConstraint config now = do
       let midnightTime = UTCTime (utctDay now) 0
