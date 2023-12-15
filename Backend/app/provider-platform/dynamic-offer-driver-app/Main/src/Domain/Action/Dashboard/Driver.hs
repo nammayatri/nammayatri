@@ -599,6 +599,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       availableMerchantsShortId <- CQM.findAllShortIdById availableMerchantsId
       pure $ map getShortId availableMerchantsShortId
     Nothing -> pure []
+  merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId
   pure
     Common.DriverInfoRes
       { driverId = cast @DP.Person @Common.Driver person.id,
@@ -625,6 +626,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         rating = person.rating,
         alternateNumber = person.unencryptedAlternateMobileNumber,
         availableMerchants = availableMerchants,
+        merchantOperatingCity = merchantOperatingCity <&> (.city),
         blockStateModifier = info.blockStateModifier
       }
 
