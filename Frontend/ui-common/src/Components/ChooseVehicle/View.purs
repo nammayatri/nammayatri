@@ -140,7 +140,7 @@ priceDetailsView push config = do
         , height $ V 14
         , margin $ Margin 4 6 0 0
         , visibility if config.showInfo then VISIBLE else GONE
-        , onClick push $ const $ ShowRateCard config.vehicleVariant
+        , onClick push $ const $ ShowRateCard config
         , visibility if config.isBookingOption then GONE else VISIBLE
         ]
     ]
