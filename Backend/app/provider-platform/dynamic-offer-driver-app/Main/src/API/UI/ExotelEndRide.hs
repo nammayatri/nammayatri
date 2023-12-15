@@ -26,6 +26,7 @@ import Kernel.External.Encryption (getDbHash)
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Tools.Error
 

@@ -29,6 +29,7 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Servant (JSON, Post, ReqBody, type (:>))
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =

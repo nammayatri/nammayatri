@@ -34,6 +34,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Servant
 import qualified SharedLogic.CallBAP as BP
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as QPerson
 
 type API =

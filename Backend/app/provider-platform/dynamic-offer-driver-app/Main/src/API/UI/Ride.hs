@@ -45,6 +45,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Servant hiding (throwError)
 import SharedLogic.Person (findPerson)
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI

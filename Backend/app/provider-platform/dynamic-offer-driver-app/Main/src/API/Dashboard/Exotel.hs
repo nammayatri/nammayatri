@@ -21,6 +21,7 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
