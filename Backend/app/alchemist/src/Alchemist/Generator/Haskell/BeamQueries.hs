@@ -26,7 +26,7 @@ generateImports tableDef =
 
 toTTypeConversionFunction :: Maybe String -> String -> String -> String
 toTTypeConversionFunction transformer haskellType fieldName
-  | (isJust transformer) = fromJust transformer ++ " ( " ++ fieldName ++ " )"
+  | isJust transformer = fromJust transformer ++ " ( " ++ fieldName ++ " )"
   | "Kernel.Types.Id.Id " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.getId " ++ fieldName
   | "Kernel.Types.Id.Id " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.getId <$> " ++ fieldName
   | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.getShortId " ++ fieldName
@@ -35,7 +35,7 @@ toTTypeConversionFunction transformer haskellType fieldName
 
 fromTTypeConversionFunction :: Maybe String -> String -> String -> String
 fromTTypeConversionFunction fromTTypeFunc haskellType fieldName
-  | (isJust fromTTypeFunc) = fromJust fromTTypeFunc ++ " " ++ fieldName
+  | isJust fromTTypeFunc = fromJust fromTTypeFunc ++ " " ++ fieldName
   | "Kernel.Types.Id.Id " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.Id " ++ fieldName
   | "Kernel.Types.Id.Id " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.Id <$> " ++ fieldName
   | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.ShortId " ++ fieldName
@@ -62,7 +62,7 @@ fromTTypeInstance tableDef =
     ++ "\n          }\n\n"
   where
     getFromTTypeParams :: FieldDef -> String
-    getFromTTypeParams hfield = intercalate " " $ map bFieldName (beamFields hfield)
+    getFromTTypeParams hfield = unwords $ map bFieldName (beamFields hfield)
 
     fromField field =
       if isEncrypted field
@@ -104,7 +104,7 @@ toTTypeInstance tableDef =
 
 toTTypeExtractor :: Maybe String -> String -> String
 toTTypeExtractor extractor field
-  | (isJust extractor) = fromJust extractor ++ " (" ++ field ++ " )"
+  | isJust extractor = fromJust extractor ++ " (" ++ field ++ " )"
   | otherwise = field
 
 generateDefaultCreateQuery :: String -> String
@@ -197,7 +197,6 @@ generateQueryParams allFields params = "    [ " ++ intercalate ",\n      " (map 
 generateQueryParam :: [FieldDef] -> ((String, String), Bool) -> String
 generateQueryParam allFields ((field, tp), encrypted) =
   let bFields = maybe (error "Param not found in data type") beamFields $ find (\f -> fieldName f == field) allFields
-      isComplex = length bFields > 1
    in intercalate ",\n      " $
         map
           ( \bField ->
@@ -207,25 +206,24 @@ generateQueryParam allFields ((field, tp), encrypted) =
                   let encryptedField = "Se.Set Beam." ++ field ++ "Encrypted $ " ++ field ++ mapOperator ++ "unEncrypted . (.encrypted)"
                   let hashField = "Se.Set Beam." ++ field ++ "Hash $ " ++ field ++ mapOperator ++ "(.hash)"
                   encryptedField ++ ",\n      " ++ hashField
-                else "Se.Set Beam." ++ bFieldName bField ++ " $ " ++ correctSetField field tp bField isComplex
+                else "Se.Set Beam." ++ bFieldName bField ++ " $ " ++ correctSetField field tp bField
           )
           bFields
 
-correctSetField :: String -> String -> BeamField -> Bool -> String
-correctSetField field tp beamField isComplex
-  | isComplex = (maybe "" (++ " $ ") (bToTType beamField)) ++ toTTypeExtractor (makeExtractorFunction $ bfieldExtractor beamField) field
+correctSetField :: String -> String -> BeamField -> String
+correctSetField field tp beamField
   | "Kernel.Types.Id.Id " `isInfixOf` tp && not ("Kernel.Types.Id.Id " `isPrefixOf` tp) = "(Kernel.Types.Id.getId <$> " ++ field ++ ")"
   | "Kernel.Types.Id.ShortId " `isInfixOf` tp && not ("Kernel.Types.Id.ShortId " `isPrefixOf` tp) = "(Kernel.Types.Id.getShortId <$> " ++ field ++ ")"
   | "Kernel.Types.Id.Id " `isPrefixOf` tp = "(Kernel.Types.Id.getId " ++ field ++ ")"
   | "Kernel.Types.Id.ShortId " `isPrefixOf` tp = "(Kernel.Types.Id.getShortId " ++ field ++ ")"
   | field == "updatedAt" = "now"
-  | otherwise = field
+  | otherwise = maybe "" (++ " $ ") (bToTType beamField) ++ toTTypeExtractor (makeExtractorFunction $ bfieldExtractor beamField) field
 
-correctEqField :: String -> String -> String
-correctEqField field tp
+correctEqField :: String -> String -> BeamField -> String
+correctEqField field tp beamField
   | "Kernel.Types.Id.Id " `isInfixOf` tp && not ("Kernel.Types.Id.Id " `isPrefixOf` tp) = "(Kernel.Types.Id.getId <$> " ++ field ++ ")"
   | "Kernel.Types.Id.ShortId " `isInfixOf` tp && not ("Kernel.Types.Id.ShortId " `isPrefixOf` tp) = "(Kernel.Types.Id.getShortId <$> " ++ field ++ ")"
-  | otherwise = field
+  | otherwise = maybe "" (++ " $ ") (bToTType beamField) ++ toTTypeExtractor (makeExtractorFunction $ bfieldExtractor beamField) field
 
 mapWithIndex :: (Int -> a -> b) -> [a] -> [b]
 mapWithIndex f xs = zipWith f [0 ..] xs
@@ -235,8 +233,7 @@ generateClause :: [FieldDef] -> Bool -> Int -> Int -> WhereClause -> String
 generateClause _ _ _ _ EmptyWhere = ""
 generateClause allFields isFullObjInp n i (Leaf (field, tp)) =
   let bFields = maybe (error "Param not found in data type") beamFields $ find (\f -> fieldName f == field) allFields
-      isComplex = length bFields > 1
-   in intercalate "\n," $ map (\bfield -> (if i == 0 then " " else spaces n) ++ "Se.Is Beam." ++ field ++ " $ Se.Eq " ++ (if isFullObjInp then correctSetField field tp bfield isComplex else correctEqField field tp)) bFields
+   in intercalate " , " $ map (\bfield -> (if i == 0 then " " else spaces n) ++ "Se.Is Beam." ++ bFieldName bfield ++ " $ Se.Eq $ " ++ (if isFullObjInp then correctSetField field tp bfield else correctEqField field tp bfield)) bFields
 generateClause allFields isFullObjInp n i (Query (op, clauses)) =
   (if i == 0 then " " else spaces n) ++ operator op
     ++ "\n"
@@ -270,7 +267,7 @@ generateFromTypeFuncs fields = intercalate "\n" $ filter (not . null) $ map gene
       let (params, types) = first (map ("_" ++)) $ unzip $ map (\bfield -> (bFieldName bfield, bFieldType bfield)) (beamFields field)
           funcType = " :: " ++ intercalate " -> " types ++ " -> " ++ haskellType field
        in case fromTType field of
-            Just func -> func ++ funcType ++ "\n" ++ func ++ " " ++ intercalate " " params ++ " = error \"TODO\""
+            Just func -> func ++ funcType ++ "\n" ++ func ++ " " ++ unwords params ++ " = error \"TODO\""
             Nothing -> ""
 
 -- Helper to determine the operator
@@ -297,17 +294,17 @@ generateBeamQueries tableDef =
 defaultQueryDefs :: TableDef -> [QueryDef]
 defaultQueryDefs tableDef =
   [ QueryDef "findByPrimaryKey" "findOneWithKV" [] findByPrimayKeyWhereClause False,
-    QueryDef "updateByPrimaryKey" "updateWithKV" (getAllFieldNamesWithTypesExcludingPks (fields tableDef)) findByPrimayKeyWhereClause True
+    QueryDef "updateByPrimaryKey" "updateWithKV" (getAllFieldNamesWithTypesExcludingPks (primaryKey tableDef) (fields tableDef)) findByPrimayKeyWhereClause True
   ]
   where
-    getAllFieldNamesWithTypesExcludingPks :: [FieldDef] -> [((String, String), Bool)]
-    getAllFieldNamesWithTypesExcludingPks fieldDefs = map (\fieldDef -> ((fieldName fieldDef, haskellType fieldDef), isEncrypted fieldDef)) $ filter (\fieldDef -> PrimaryKey `notElem` constraints fieldDef) fieldDefs
+    getAllFieldNamesWithTypesExcludingPks :: [String] -> [FieldDef] -> [((String, String), Bool)]
+    getAllFieldNamesWithTypesExcludingPks pks fieldDefs = map (\fieldDef -> ((fieldName fieldDef, haskellType fieldDef), isEncrypted fieldDef)) $ filter (\fieldDef -> fieldName fieldDef `notElem` pks) fieldDefs
 
-    getAllPrimaryKeyWithTypes :: [FieldDef] -> [(String, String)]
-    getAllPrimaryKeyWithTypes fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef)) $ filter (\fieldDef -> PrimaryKey `elem` constraints fieldDef) fieldDefs
+    getAllPrimaryKeyWithTypes :: [String] -> [FieldDef] -> [(String, String)]
+    getAllPrimaryKeyWithTypes pks fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef)) $ filter (\fieldDef -> fieldName fieldDef `elem` pks) fieldDefs
 
     primaryKeysAndTypes :: [(String, String)]
-    primaryKeysAndTypes = getAllPrimaryKeyWithTypes (fields tableDef)
+    primaryKeysAndTypes = getAllPrimaryKeyWithTypes (primaryKey tableDef) (fields tableDef)
 
     findByPrimayKeyWhereClause :: WhereClause
     findByPrimayKeyWhereClause = Query (And, Leaf <$> primaryKeysAndTypes)

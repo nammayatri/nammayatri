@@ -17,11 +17,11 @@ fieldDefToBeam hfield =
       ( \field ->
           if bIsEncrypted field
             then
-              bFieldName field ++ "Encrypted :: B.C f " ++ (wrapMaybe "Text" field) ++ ",\n"
+              bFieldName field ++ "Encrypted :: B.C f " ++ wrapMaybe "Text" field ++ ",\n"
                 ++ "    "
                 ++ bFieldName field
                 ++ "Hash :: B.C f "
-                ++ (wrapMaybe "DbHash" field)
+                ++ wrapMaybe "DbHash" field
             else bFieldName field ++ " :: B.C f " ++ formatType (bFieldType field)
       )
       (beamFields hfield)

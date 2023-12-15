@@ -43,7 +43,7 @@ derivingInstances :: Bool -> [String]
 derivingInstances containsEncryptedField =
   if containsEncryptedField
     then ["Generic"]
-    else ["Generic", "ToJSON", "FromJSON", "ToSchema"]
+    else ["Generic", "Show", "ToJSON", "FromJSON", "ToSchema"]
 
 generateEncryptionInstance :: TableDef -> String
 generateEncryptionInstance tableDef =
@@ -146,7 +146,7 @@ generateHaskellTypes typeObj = (both concat . unzip . map (both L.unlines . proc
     generateDataStructure typeName fields =
       ( ["data " <> typeName <> " = " <> typeName]
           ++ ["  { " <> L.intercalate ",\n    " (map formatField fields) <> "\n  }"]
-          ++ ["  deriving (Generic, ToJSON, FromJSON, ToSchema)\n"],
+          ++ ["  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)\n"],
         []
       )
 
