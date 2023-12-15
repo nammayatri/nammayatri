@@ -28,7 +28,7 @@ import Data.Int (toNumber, round)
 import Data.Lens ((^.))
 import Data.Ord
 import Data.Eq
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim)
 import Data.Function.Uncurried (runFn1)
 import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage)
@@ -39,7 +39,7 @@ import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -325,6 +325,7 @@ getSpecialZoneQuote quote index =
       , capacity = getVehicleCapacity quoteEntity.vehicleVariant
       , showInfo = (getMerchant FunctionCall) == YATRI
       , searchResultType = ChooseVehicle.QUOTES
+      , pickUpCharges = 0
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
@@ -400,6 +401,8 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
 getEstimates :: EstimateAPIEntity -> Int -> Boolean -> ChooseVehicle.Config
 getEstimates (EstimateAPIEntity estimate) index isFareRange =
   let currency = getCurrency appConfig
+      estimateFareBreakup = fromMaybe [] estimate.estimateFareBreakup
+      pickUpCharges = fetchPickupCharges estimateFareBreakup
   in ChooseVehicle.config {
         vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
@@ -414,6 +417,7 @@ getEstimates (EstimateAPIEntity estimate) index isFareRange =
       , showInfo = (getMerchant FunctionCall) == YATRI
       , basePrice = estimate.estimatedTotalFare
       , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
+      , pickUpCharges = pickUpCharges
       }
 
 dummyFareRange :: FareRange
@@ -499,9 +503,7 @@ getEstimatesInfo estimates vehicleVariant state =
           Nothing -> []
         else
           []
-      pickUpCharges = case (DA.head (filter (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup)) of
-        Just deadKmFare -> deadKmFare ^. _price
-        Nothing -> 0
+      pickUpCharges = fetchPickupCharges estimateFareBreakup 
       additionalFare =
         if isJust (estimatedVarient DA.!! 0) then case (fromMaybe dummyEstimateEntity (estimatedVarient DA.!! 0)) ^. _totalFareRange of
           Just fareRange -> (fareRange ^. _maxFare - fareRange ^. _minFare)
@@ -597,3 +599,10 @@ getTripFromRideHistory state = {
   , recencyDate : Nothing
   , locationScore : Nothing
   }
+
+fetchPickupCharges :: Array EstimateFares -> Int 
+fetchPickupCharges estimateFareBreakup = 
+  let 
+    deadKmFare = DA.head (filter (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup)
+  in 
+    maybe 0 (\fare -> fare ^. _price) deadKmFare
