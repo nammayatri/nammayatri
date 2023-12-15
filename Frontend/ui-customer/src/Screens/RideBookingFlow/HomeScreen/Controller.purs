@@ -1997,11 +1997,12 @@ eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehi
               continue newState{data{specialZoneSelectedQuote = Just config.id ,specialZoneSelectedVariant = Just config.vehicleVariant }}
               else continue newState{props{estimateId = config.id }, data {selectedEstimatesObject = config}}
 
-eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard vehicleVariant))) state =
+eval (ChooseYourRideAction (ChooseYourRideController.ChooseVehicleAC (ChooseVehicleController.ShowRateCard config))) state =
   continue state{ props { showRateCard = true }
                 , data {  rateCard {  onFirstPage = false
-                                    , vehicleVariant = vehicleVariant
+                                    , vehicleVariant = config.vehicleVariant
                                     , currentRateCardType = DefaultRateCard
+                                    , pickUpCharges = config.pickUpCharges
                                     }}}
 
 eval (ChooseYourRideAction (ChooseYourRideController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do

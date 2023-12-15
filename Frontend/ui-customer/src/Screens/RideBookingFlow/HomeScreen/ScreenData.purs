@@ -111,6 +111,7 @@ initData = {
       , showInfo : true
       , searchResultType : CV.ESTIMATES
       , isBookingOption : false
+      , pickUpCharges : 0
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
