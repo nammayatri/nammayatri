@@ -323,6 +323,7 @@ config =
             }
         }
       ]
+  , bannerCarousel : defaultBannerCarousel
 }
 
 defaultCityConfig :: CityConfig

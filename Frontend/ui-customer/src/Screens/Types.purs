@@ -42,6 +42,7 @@ import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEnt
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
+import PrestoDOM.List
 
 type Contacts = {
   name :: String,
@@ -761,6 +762,7 @@ type HomeScreenStateData =
   , peekHeight :: Int
   , rideHistoryTrip :: Maybe Trip
   , rentalsInfo :: Maybe RentalsInfo
+  , bannerData :: BannerCarousalData
   }
 
 type RentalsInfo = 
@@ -792,6 +794,12 @@ type LocationDetails = {
     placeId :: Maybe String
   }
 
+type BannerCarousalData = {
+  bannerItem :: Maybe ListItem,
+  currentBanner :: Int,
+  bannerScrollState :: String,
+  currentPage :: Int
+}
 
 type DisabilityT = 
   {

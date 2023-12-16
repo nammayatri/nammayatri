@@ -945,6 +945,7 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
           BannerCarousel.Remote link -> do
             void $ openUrlInApp link
             pure NoAction
+          _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
 

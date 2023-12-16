@@ -56,7 +56,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, index)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
@@ -68,7 +68,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, getExpiryTime, convertUTCtoISC, getCurrentUTC, isPreviousVersion, safeMarginBottom, getDeviceHeight, screenHeight)
+import Engineering.Helpers.Commons
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign (unsafeToForeign)
@@ -91,6 +91,7 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
+import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..))
@@ -111,12 +112,15 @@ import Data.Function (const)
 import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
-import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
+import Data.Function.Uncurried
 import Timers (clearTimerWithId)
 import Mobility.Prelude (boolToInt, toBool)
 import SuggestionUtils
 import Data.Tuple (Tuple(..))
 import PrestoDOM.Core (getPushFn)
+import Components.BannerCarousel as BannerCarousel
+import PrestoDOM.List
+import PrestoDOM.Core
 
 instance showAction :: Show Action where
   show _ = ""
@@ -900,6 +904,11 @@ data Action = NoAction
             | LocationTagBarAC LocationTagBarV2Controller.Action
             | RentalBannerAction Banner.Action
             | BottomNavBarAction BottomNavBarIcon
+            | BannerCarousal BannerCarousel.Action
+            | SetBannerItem ListItem
+            | UpdateBanner
+            | BannerChanged String
+            | BannerStateChanged String
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -949,6 +958,44 @@ eval ReAllocate state =
     void $ pure $ setValueToLocalStore LOCAL_STAGE ( show FindingQuotes)
     updateAndExit updatedState $ ReAllocateRide updatedState
   else continue state
+  
+eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
+
+eval UpdateBanner state = do
+  if state.data.bannerData.bannerScrollState == "1" then continue state
+  else do
+    let nextBanner = state.data.bannerData.currentBanner + 1
+        updatedIdx = if nextBanner >= (length $ getBannerConfigs state) then 0 else nextBanner
+        newState = state{data {bannerData{currentBanner = updatedIdx, currentPage = updatedIdx}}}
+    continue newState
+
+eval (BannerChanged item) state = do
+  let currentBanner = fromString item
+  case currentBanner of
+    Just idx -> do 
+        let newState = state{data {bannerData{currentBanner = idx}}}
+        if state.data.bannerData.currentPage /= idx then void $ pure $ unsafePerformEffect $ processEvent "RestartAutoScroll" unit -- To stop and stop the new autosroll
+          else pure unit
+        continue newState
+    Nothing  -> continue state
+
+eval (BannerStateChanged item) state = do
+  let newState = state{data {bannerData{bannerScrollState = item}}}
+  continue newState
+
+eval (BannerCarousal (BannerCarousel.OnClick idx)) state = 
+  continueWithCmd state [do
+    let banners = getBannerConfigs state
+    case index banners idx of
+      Just config -> do
+        let _ = runFn2 updatePushInIdMap "bannerCarousel" false
+        case config.type of
+          BannerCarousel.Gender -> pure $ GenderBannerModal $ Banner.OnClick
+          BannerCarousel.Disability -> pure $ DisabilityBannerAC $ Banner.OnClick
+          BannerCarousel.ZooTicket -> pure $ TicketBookingFlowBannerAC $ Banner.OnClick
+          _ -> pure NoAction
+      Nothing -> pure NoAction
+  ] 
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -2271,6 +2318,7 @@ eval (TicketBookingFlowBannerAC Banner.OnClick) state = exit $ GoToTicketBooking
 
 eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = do 
   _ <- pure $ pauseYoutubeVideo unit
+  let _ = runFn2 updatePushInIdMap "bannerCarousel" true
   continue state{props{showEducationalCarousel = false}}
 
 eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do 
@@ -2904,3 +2952,11 @@ getPeekHeight state =
 logChatSuggestion :: HomeScreenState -> String -> Unit
 logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
 
+          
+getBannerConfigs :: HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+getBannerConfigs state = 
+  (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
+    then [disabilityBannerConfig state BannerCarousal] 
+    else [])
+  <> (if (state.data.config.feature.enableZooTicketBookingFlow)
+    then [ticketBannerConfig state BannerCarousal] else [])
