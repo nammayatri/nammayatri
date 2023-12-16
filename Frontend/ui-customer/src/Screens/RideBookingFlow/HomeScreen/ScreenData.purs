@@ -135,6 +135,12 @@ initData = {
     , searchLocationModelData : dummySearchLocationModelData
     , peekHeight : 0
     , rideHistoryTrip : Nothing
+    , bannerData : {
+        bannerItem : Nothing
+      , currentBanner : 0
+      , bannerScrollState: "0"
+      , currentPage : 0
+    } 
     },
     props: {
       rideRequestFlow : false

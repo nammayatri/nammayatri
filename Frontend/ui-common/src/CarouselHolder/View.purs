@@ -43,31 +43,35 @@ carouselView push config =
   let itemsLen = length config.items
   in
   frameLayout
-  [ height WRAP_CONTENT
+  [ height $ V 100
   , width MATCH_PARENT
+  , gravity BOTTOM
   , visibility if itemsLen  <= 0 then GONE else VISIBLE
-  ][ animationSet
-  [ scaleYAnimWithDelay 50
-  ]$ viewPager2
-      $ [ listItem  $ config.view
-      , listDataV2 $ config.items
-      , height WRAP_CONTENT
-      , width MATCH_PARENT
-      , currentItem config.currentPage
-      , afterRender (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
-      , registerEvent "RestartAutoScroll" (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
-      ] <> maybe [] (\action -> if (itemsLen > 1) then [onPageSelected push action] else []) config.onPageSelected
-        <> maybe [] (\action -> if (itemsLen > 1) then [onPageScrollStateChanged push action] else []) config.onPageScrollStateChanged
-        <> maybe [] (\action -> if (itemsLen > 1) then [onPageScrolled push action] else []) config.onPageScrolled
-    , linearLayout
-      [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , padding $ PaddingBottom 8
-      ][ linearLayout [weight 1.0, orientation VERTICAL] []
-      , scrollIndicator itemsLen config
-      ]
-    ]
+  ]$
+    if itemsLen  <= 0 
+      then [] 
+      else 
+        [ viewPager2
+          $ [ listItem  $ config.view
+          , listDataV2 $ config.items
+          , height $ V 100
+          , width MATCH_PARENT
+          , currentItem config.currentPage
+          , scrollDirection config.orientation
+          , afterRender (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
+          , registerEvent "RestartAutoScroll" (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
+          ] <> maybe [] (\action -> if (itemsLen > 1) then [onPageSelected push action] else []) config.onPageSelected
+            <> maybe [] (\action -> if (itemsLen > 1) then [onPageScrollStateChanged push action] else []) config.onPageScrollStateChanged
+            <> maybe [] (\action -> if (itemsLen > 1) then [onPageScrolled push action] else []) config.onPageScrolled
+        , linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , padding $ PaddingBottom 8
+          ][ linearLayout [weight 1.0, orientation VERTICAL] []
+          , scrollIndicator itemsLen config
+          ]
+        ]
 
 
 scrollIndicator :: forall w a action. Homogeneous a PropValue => Int -> CarouselHolderConfig a action -> Layout w
@@ -83,16 +87,16 @@ scrollIndicator itemsLen config =
   ][  linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , padding $ Padding 4 3 4 3
+      , padding $ Padding 5 4 5 4
       , gravity CENTER
       , background Color.black900
-      , cornerRadius 10.0
+      , cornerRadius 8.0
       , alpha 0.2
       ] $ mapWithIndex (\idx _ -> indicatorDot (getDotSize config.currentIndex idx) INVISIBLE (if idx == (itemsLen - 1) then MarginLeft 0 else MarginRight 2)) $ zeroArray
     , linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , padding $ Padding 4 3 4 3
+      , padding $ Padding 5 4 5 4
       , gravity CENTER
       ] $ mapWithIndex (\idx _ -> indicatorDot (getDotSize config.currentIndex idx) VISIBLE (if idx == (itemsLen - 1) then MarginLeft 0 else MarginRight 2)) $ zeroArray
   ]

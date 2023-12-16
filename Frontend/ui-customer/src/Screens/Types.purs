@@ -40,6 +40,7 @@ import Data.Argonaut.Encode (class EncodeJson)
 import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
 import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..))
+import PrestoDOM.List
 
 type Contacts = {
   name :: String,
@@ -615,6 +616,7 @@ type HomeScreenStateData =
   , suggestionsData :: SuggestionsData
   , peekHeight :: Int
   , rideHistoryTrip :: Maybe Trip
+  , bannerData :: BannerCarousalData
   }
 
 type LocationDetails = {
@@ -625,6 +627,12 @@ type LocationDetails = {
     placeId :: Maybe String
   }
 
+type BannerCarousalData = {
+  bannerItem :: Maybe ListItem,
+  currentBanner :: Int,
+  bannerScrollState :: String,
+  currentPage :: Int
+}
 
 type DisabilityT = 
   {

@@ -51,7 +51,7 @@ import Data.Either (Either(..))
 import Data.Int (ceil, floor, fromNumber, fromString, toNumber)
 import Data.Function.Uncurried (runFn1)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
 import Data.Number as NUM
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
@@ -80,7 +80,7 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getCurrentCustomerLocation, getPeekHeight)
+import Screens.HomeScreen.Controller
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
@@ -106,6 +106,9 @@ import SuggestionUtils
 import MerchantConfig.Types (MarginConfig, ShadowConfig)
 import ConfigProvider
 import Mobility.Prelude
+import CarouselHolder as CarouselHolder
+import PrestoDOM.List
+import Components.BannerCarousel as BannerCarousel
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -133,6 +136,7 @@ screen initialState =
               pure unit
             else do
               pure unit
+            when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $ computeListItem push
             case initialState.props.currentStage of
               SearchLocationModel -> case initialState.props.isSearchLocation of
                 LocateOnMap -> do
@@ -433,8 +437,23 @@ view push state =
                       ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
                     else [])
         ]
-    ] 
-    
+    ]
+
+getCarouselConfig ∷ forall a. ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
+getCarouselConfig view state = {
+    view
+  , items : BannerCarousel.bannerTransformer $ getBannerConfigs state
+  , orientation : HORIZONTAL
+  , currentPage : state.data.bannerData.currentPage
+  , autoScroll : true
+  , autoScrollDelay : 3000.0
+  , id : "bannerCarousel"
+  , autoScrollAction : Just UpdateBanner
+  , onPageSelected : Just BannerChanged
+  , onPageScrollStateChanged : Just BannerStateChanged
+  , onPageScrolled : Nothing
+  , currentIndex : state.data.bannerData.currentBanner
+}
 
 rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideCompletedCardView push state = 
@@ -849,39 +868,17 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding $ Padding 16 0 16 (16+safeMarginBottom)
   , cornerRadii $ Corners (4.0) true true false false
-  ]([ if (not hideSavedLocsView) then savedLocationsView state push else linearLayout[visibility GONE][]
-    , if (suggestionViewVisibility state)
-        then  suggestionsView push state
-        else emptySuggestionsBanner state push
-    -- , if (not hideRecentSearches) then recentSearchesView state push else linearLayout[visibility GONE][]
-    , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
-        then updateDisabilityBanner state push
-        else 
-          if (state.data.config.feature.enableZooTicketBookingFlow) 
-            then zooTicketBookingBanner state push 
-            else linearLayout[visibility GONE][]])
+  ](maybe ([]) (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem)
 
-updateDisabilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-updateDisabilityBanner state push = 
+bannersCarousal :: forall w. ListItem -> HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bannersCarousal view state push =
   linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    -- , margin $ Margin 16 10 16 10
-    , margin $ MarginVertical 10 10
-    ][  Banner.view (push <<< DisabilityBannerAC) (disabilityBannerConfig state)]
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ MarginTop 12
+  ][CarouselHolder.carouselView push $ getCarouselConfig view state]
 
-zooTicketBookingBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-zooTicketBookingBanner state push = 
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ MarginVertical 10 10
-    ][  Banner.view (push <<< TicketBookingFlowBannerAC) (ticketBannerConfig state)]
-    
 emptySuggestionsBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptySuggestionsBanner state push = 
   linearLayout
@@ -935,27 +932,13 @@ emptySuggestionsBanner state push =
             ]
           ]
      ]
-    
-    
-
-genderBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-genderBannerView state push =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ MarginVertical 10 10
-    , visibility if state.data.config.showGenderBanner then VISIBLE else GONE
-    ][
-        genderBanner push state
-    ]
-
 
 savedLocationsView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 savedLocationsView state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
+    , padding $ Padding 16 0 16 0
     ]
     [ linearLayout
         [ width MATCH_PARENT
@@ -972,6 +955,7 @@ recentSearchesView state push =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ MarginTop 16
+    , padding $ Padding 16 0 16 0
     , visibility if null state.data.destinationSuggestions then GONE else VISIBLE
     ]
     [ linearLayout
@@ -2490,10 +2474,6 @@ confirmingLottieView push state =
           ]
     ]
 
-genderBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-genderBanner push state =
-  Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
-
 isAnyOverlayEnabled :: HomeScreenState -> Boolean
 isAnyOverlayEnabled state = state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && state.data.config.feature.enableShareApp)
 
@@ -3227,3 +3207,8 @@ suggestionViewVisibility state =  ((length state.data.tripSuggestions  > 0 || le
 
 isBannerVisible :: HomeScreenState -> Boolean
 isBannerVisible state = getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner && isHomeScreenView state
+
+computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
+computeListItem push = do
+  bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousal)
+  void $ liftFlow $ push (SetBannerItem bannerItem)

@@ -24,6 +24,7 @@ import Animation.Config as AnimConfig
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Components.Banner as Banner
+import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
 import Components.ChatView as ChatView
 import Components.ChooseYourRide as ChooseYourRide
@@ -350,10 +351,10 @@ cancelRidePopUpConfig state =
         , config = state.data.config
         }
 
-genderBannerConfig :: ST.HomeScreenState -> Banner.Config
-genderBannerConfig state =
+genderBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
+genderBannerConfig state action =
   let
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config
       {
         backgroundColor = Color.lightMintGreen
@@ -361,15 +362,15 @@ genderBannerConfig state =
       , titleColor = Color.elfGreen
       , actionText = (getString UPDATE_NOW)
       , actionTextColor = Color.elfGreen
-      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_banner_gender_feat"
-      , isBanner = state.props.isBanner
+      , imageUrl = "ny_ic_banner_gender_feat"
+      , type = BannerCarousel.Gender
       }
   in config'
 
-disabilityBannerConfig :: ST.HomeScreenState -> Banner.Config
-disabilityBannerConfig state =
+disabilityBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
+disabilityBannerConfig state action =
   let
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config
       {
         backgroundColor = Color.paleLavender
@@ -377,15 +378,15 @@ disabilityBannerConfig state =
       , titleColor = Color.purple
       , actionText = (getString UPDATE_PROFILE)
       , actionTextColor = Color.purple
-      , imageUrl = fetchImage FF_ASSET "ny_ic_accessibility_banner_img"
-      , stroke = "1,"<> Color.fadedPurple
+      , imageUrl = "ny_ic_accessibility_banner_img"
+      , type = BannerCarousel.Disability
       }
   in config'
 
-ticketBannerConfig :: ST.HomeScreenState -> Banner.Config
-ticketBannerConfig state =
+ticketBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
+ticketBannerConfig state action =
   let
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config
       {
         backgroundColor = "#FFF6DE"
@@ -394,7 +395,7 @@ ticketBannerConfig state =
       , actionText = "Book Now"
       , actionTextColor = Color.black900
       , imageUrl = fetchImage FF_ASSET "ny_ic_zoo_banner"
-      , stroke = "1,"<> "#FFDE88"
+      , type = BannerCarousel.ZooTicket
       }
   in config'
 

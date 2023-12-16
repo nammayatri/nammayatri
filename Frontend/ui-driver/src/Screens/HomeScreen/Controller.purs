@@ -920,6 +920,7 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
           BannerCarousel.Gender -> pure (GenderBannerModal (Banner.OnClick))
           BannerCarousel.Disability -> pure (AccessibilityBannerAction (Banner.OnClick))
           BannerCarousel.AutoPay -> pure (AutoPayBanner (Banner.OnClick))
+          _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
 

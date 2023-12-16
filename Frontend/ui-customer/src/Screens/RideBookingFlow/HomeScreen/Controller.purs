@@ -54,7 +54,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, index)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
@@ -88,7 +88,7 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
+import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (HomeScreenState, Location, SearchResultType(..), LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CardType(..), RatingCard, CurrentLocationDetailsWithDistance(..), CurrentLocationDetails, LocationItemType(..), CallType(..), ZoneType(..), SpecialTags, TipViewStage(..), Trip)
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
@@ -110,6 +110,9 @@ import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
+import Components.BannerCarousel as BannerCarousel
+import PrestoDOM.List
+import PrestoDOM.Core
 
 instance showAction :: Show Action where
   show _ = ""
@@ -642,7 +645,12 @@ data Action = NoAction
             | RepeatRideCountDown Int String String String
             | StopRepeatRideTimer 
             | OpenLiveDashboard
-            | UpdatePeekHeight 
+            | UpdatePeekHeight
+            | BannerCarousal BannerCarousel.Action
+            | SetBannerItem ListItem
+            | UpdateBanner
+            | BannerChanged String
+            | BannerStateChanged String
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -655,6 +663,43 @@ eval (Scroll item) state = do
                    else item > state.props.currSlideIndex
       updatedState = state { props { isHomescreenExpanded = sheetState, currSlideIndex = item } }
   continue updatedState
+
+eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
+
+eval UpdateBanner state = do
+  if state.data.bannerData.bannerScrollState == "1" then continue state
+  else do
+    let nextBanner = state.data.bannerData.currentBanner + 1
+        updatedIdx = if nextBanner >= (length $ getBannerConfigs state) then 0 else nextBanner
+        newState = state{data {bannerData{currentBanner = updatedIdx, currentPage = updatedIdx}}}
+    continue newState
+
+eval (BannerChanged item) state = do
+  let currentBanner = fromString item
+  case currentBanner of
+    Just idx -> do 
+        let newState = state{data {bannerData{currentBanner = idx}}}
+        if state.data.bannerData.currentPage /= idx then void $ pure $ unsafePerformEffect $ processEvent "RestartAutoScroll" unit -- To stop and stop the new autosroll
+          else pure unit
+        continue newState
+    Nothing  -> continue state
+
+eval (BannerStateChanged item) state = do
+  let newState = state{data {bannerData{bannerScrollState = item}}}
+  continue newState
+
+eval (BannerCarousal (BannerCarousel.OnClick idx)) state = 
+  continueWithCmd state [do
+    let banners = getBannerConfigs state
+    case index banners idx of
+      Just config -> 
+        case config.type of
+          BannerCarousel.Gender -> pure (GenderBannerModal (Banner.OnClick))
+          BannerCarousel.Disability -> pure (DisabilityBannerAC (Banner.OnClick))
+          BannerCarousel.ZooTicket -> pure (TicketBookingFlowBannerAC (Banner.OnClick))
+          _ -> pure NoAction
+      Nothing -> pure NoAction
+  ] 
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -2514,3 +2559,10 @@ getPeekHeight state =
           let androidPixels = runFn1 getPixels ""
               androidDensity = (runFn1 getDeviceDefaultDensity "")/  defaultDensity
           in (screenHeight unit) - ( ceil(((toNumber homescreenHeader)/androidPixels) *androidDensity))
+          
+getBannerConfigs :: HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+getBannerConfigs state = 
+  (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
+    then [disabilityBannerConfig state BannerCarousal] 
+    else [])
+  <> (if (state.data.config.feature.enableZooTicketBookingFlow) then [ticketBannerConfig state BannerCarousal] else [])
