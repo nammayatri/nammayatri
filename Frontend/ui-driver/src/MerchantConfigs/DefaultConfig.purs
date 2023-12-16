@@ -348,6 +348,7 @@ config =
   , chooseCity : {
       straightLineDistLogic : false
   }
+  , bannerCarousel : defaultBannerCarousel
 }
 
 registrationConfig :: CTC.RegistrationConfig

@@ -26,13 +26,14 @@ import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDO
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Styles.Colors as Color
+import Engineering.Helpers.Commons
 
 
 view :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> PrestoDOM (Effect Unit) w
 view push config =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
+    , width $ V $ screenWidth unit
     , padding $ PaddingHorizontal 16 16
     , root true
     ][ bannerView push config]
@@ -43,7 +44,7 @@ bannerView :: forall w a. (a -> Effect Unit) -> (Config (Action -> a)) -> Presto
 bannerView push config = 
   linearLayout
     ([ height WRAP_CONTENT
-    , width MATCH_PARENT
+    , width $ V $ (screenWidth unit) - 32
     , cornerRadiusHolder "cornerRadiusMain"
     , backgroundHolder "backgroundColor"
     , visibilityHolder "visibility"
@@ -115,7 +116,7 @@ bannerView push config =
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , gravity LEFT
-                  , textFromHtml "&rarr;"
+                  , text "→"
                   , colorHolder "actionTextColor"
                   , padding $ PaddingBottom 3
                   , margin $ MarginLeft 5

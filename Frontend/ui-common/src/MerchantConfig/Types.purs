@@ -31,6 +31,7 @@ type CommonAppConfig = (
   , privacyLink :: String
   , dashboard :: DashboardConfig
   , logFunctionCalls :: Boolean
+  , bannerCarousel :: BannerCarousalConfig 
   , defaultLanguage :: String)
   
 type Colors = {
@@ -108,4 +109,9 @@ type RegistrationConfig = {
   supportWAN :: String,
   callSupport :: Boolean,
   whatsappSupport :: Boolean
+}
+
+type BannerCarousalConfig = {
+  autoScrollDelay :: Number
+, enableAutoScroll :: Boolean
 }

@@ -19,7 +19,7 @@ import Data.Array
 import Data.Maybe
 import Data.String
 import Prelude
-
+import Engineering.Helpers.Commons
 import Font.Style (Style(..))
 import Halogen.VDom.DOM.Prop (PropValue)
 import PrestoDOM (Length(..), Margin(..), Padding(..), Prop, toPropValue)
@@ -35,6 +35,7 @@ data BannerType = AutoPay
   | Disability
   | Gender
   | Remote String --TODO:: Temp added for just youtube links
+  | ZooTicket
 
 type CarouselConfig a = {
     item :: ListItem
@@ -145,7 +146,7 @@ bannerTransformer = map (
   actionText : toPropValue item.actionText,
   actionTextColor : toPropValue item.actionTextColor,
   bannerImageUrl : toPropValue $ (fromMaybe "" ((split (Pattern ",") item.imageUrl) !! 0)),
-  cornerRadiusMain : toPropValue $ "32.0",
+  cornerRadiusMain : toPropValue $ if os == "IOS" then "20.0" else "32.0",
   actionIconUrl : toPropValue item.actionIconUrl,
   actionTextBackgroundColour : toPropValue item.actionTextBackgroundColour,
   actionTextCornerRadius : toPropValue item.actionTextCornerRadius,

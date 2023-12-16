@@ -142,6 +142,12 @@ initData = {
     , peekHeight : 0
     , rideHistoryTrip : Nothing
     , rentalsInfo : Just {rentalsScheduledAt : "12 : 45 PM"}
+    , bannerData : {
+        bannerItem : Nothing
+      , currentBanner : 0
+      , bannerScrollState: "0"
+      , currentPage : 0
+    } 
     },
     props: {
       rideRequestFlow : false

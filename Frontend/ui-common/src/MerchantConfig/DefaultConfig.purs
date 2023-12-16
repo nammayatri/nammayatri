@@ -53,3 +53,9 @@ defaultNavigationAppConfig = {
       , packageName : ""
       }
     }
+
+defaultBannerCarousel :: BannerCarousalConfig
+defaultBannerCarousel = {
+  autoScrollDelay : 5000.0,
+  enableAutoScroll : true
+}
