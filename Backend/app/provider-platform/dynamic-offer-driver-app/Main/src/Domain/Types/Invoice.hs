@@ -28,7 +28,7 @@ data Invoice = Invoice
   }
   deriving (Show, Eq, Generic, FromJSON, ToJSON, ToSchema)
 
-data InvoiceStatus = ACTIVE_INVOICE | INACTIVE | SUCCESS | FAILED | EXPIRED deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, Ord)
+data InvoiceStatus = ACTIVE_INVOICE | INACTIVE | SUCCESS | FAILED | EXPIRED | CLEARED_BY_YATRI_COINS deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, Ord)
 
 data InvoicePaymentMode = MANUAL_INVOICE | AUTOPAY_INVOICE | MANDATE_SETUP_INVOICE deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
