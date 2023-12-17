@@ -1812,12 +1812,15 @@ getHistoryEntryDetailsEntityV2 (_, _, merchantOpCityId) invoiceShortId = do
   allEntiresByInvoiceId <- QINV.findAllByInvoiceShortId invoiceShortId
   allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntiresByInvoiceId <&> (.driverFeeId))
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  now <- getCurrentTime
   let amount = sum $ mapToAmount allDriverFeeForInvoice
       invoiceType = listToMaybe allEntiresByInvoiceId <&> (.paymentMode)
       createdAt = if invoiceType `elem` [Just INV.MANUAL_INVOICE, Just INV.MANDATE_SETUP_INVOICE, Nothing] then listToMaybe allEntiresByInvoiceId <&> (.createdAt) else Nothing
+      mbAutoPayStage = listToMaybe allDriverFeeForInvoice >>= (.autopayPaymentStage)
+      mbStageUpdatedAt = listToMaybe allDriverFeeForInvoice >>= (.stageUpdatedAt)
       executionAt =
         if invoiceType == Just INV.AUTOPAY_INVOICE
-          then calcExecutionTime transporterConfig (listToMaybe allDriverFeeForInvoice >>= (.autopayPaymentStage)) <$> (listToMaybe allDriverFeeForInvoice >>= (.stageUpdatedAt))
+          then Just $ maybe now (calcExecutionTime transporterConfig mbAutoPayStage) mbStageUpdatedAt
           else Nothing
       feeType
         | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
