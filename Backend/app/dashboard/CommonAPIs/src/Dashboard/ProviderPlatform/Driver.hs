@@ -25,6 +25,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Centesimal, HighPrecMoney, MandatoryQueryParam, Money)
 import Kernel.Types.Id
@@ -61,6 +62,7 @@ data DriverEndpoint
   | FleetUnlinkVehicleEndpoint
   | SendMessageToDriverViaDashboardEndPoint
   | SendDummyNotificationToDriverViaDashboardEndPoint
+  | ChangeOperatingCityEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -1011,3 +1013,20 @@ type SendDummyNotificationToDriverAPI =
   Capture "driverId" (Id Driver)
     :> "sendDummyNotification"
     :> Post '[JSON] APISuccess
+
+-- change operating city Api ------------------------
+-------------------------------------------
+
+type ChangeOperatingCityAPI =
+  Capture "driverId" (Id Driver)
+    :> "changeOperatingCity"
+    :> ReqBody '[JSON] ChangeOperatingCityReq
+    :> Post '[JSON] APISuccess
+
+newtype ChangeOperatingCityReq = ChangeOperatingCityReq
+  { operatingCity :: City.City
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets ChangeOperatingCityReq where
+  hideSecrets = identity

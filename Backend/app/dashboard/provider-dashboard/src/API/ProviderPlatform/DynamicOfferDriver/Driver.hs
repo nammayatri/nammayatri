@@ -98,6 +98,7 @@ type API =
            :<|> SetVehicleDriverRcStatusForFleetAPI
            :<|> SendMessageToDriverViaDashboardAPI
            :<|> SendDummyNotificationToDriverViaDashboardAPI
+           :<|> ChangeOperatingCityAPI
        )
 
 type DriverDocumentsInfoAPI =
@@ -300,6 +301,10 @@ type SendDummyNotificationToDriverViaDashboardAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'SEND_DUMMY_NOTIFICATION
     :> Common.SendDummyNotificationToDriverAPI
 
+type ChangeOperatingCityAPI =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'CHANGE_OPERATING_CITY
+    :> Common.ChangeOperatingCityAPI
+
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   driverDocuments merchantId city
@@ -352,6 +357,7 @@ handler merchantId city =
     :<|> setVehicleDriverRcStatusForFleet merchantId city
     :<|> sendMessageToDriverViaDashboard merchantId city
     :<|> sendDummyNotificationToDriverViaDashboard merchantId city
+    :<|> changeOperatingCity merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -696,3 +702,11 @@ sendDummyNotificationToDriverViaDashboard merchantShortId opCity apiTokenInfo dr
   transaction <- buildManagementServerTransaction Common.SendDummyNotificationToDriverViaDashboardEndPoint apiTokenInfo driverId T.emptyRequest
   T.withTransactionStoring transaction $
     Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.sendDummyNotificationToDriverViaDashboard) driverId
+
+changeOperatingCity :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ChangeOperatingCityReq -> FlowHandler APISuccess
+changeOperatingCity merchantShortId opCity apiTokenInfo driverId req =
+  withFlowHandlerAPI $ do
+    checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+    transaction <- buildTransaction Common.ChangeOperatingCityEndpoint apiTokenInfo driverId (Just req)
+    T.withTransactionStoring transaction $
+      Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverCommon.changeOperatingCity) driverId req

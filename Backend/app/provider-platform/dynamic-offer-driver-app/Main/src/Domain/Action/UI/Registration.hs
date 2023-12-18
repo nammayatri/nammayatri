@@ -22,6 +22,7 @@ module Domain.Action.UI.Registration
     verify,
     resend,
     logout,
+    cleanCachedTokens,
   )
 where
 

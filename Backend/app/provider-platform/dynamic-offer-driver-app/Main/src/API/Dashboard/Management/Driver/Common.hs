@@ -48,6 +48,7 @@ type API =
            :<|> Common.DeleteRCAPI
            :<|> Common.ClearOnRideStuckDriversAPI
            :<|> Common.SendDummyNotificationToDriverAPI
+           :<|> Common.ChangeOperatingCityAPI
        )
 
 type BlockDriverWithReasonAPI =
@@ -85,6 +86,7 @@ handler merchantId city =
     :<|> deleteRC merchantId city
     :<|> clearOnRideStuckDrivers merchantId city
     :<|> sendDummyNotificationToDriver merchantId city
+    :<|> changeOperatingCity merchantId city
 
 driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo merchantShortId = withFlowHandlerAPI . DDriver.driverDocumentsInfo merchantShortId
@@ -146,3 +148,6 @@ clearOnRideStuckDrivers merchantShortId opCity = withFlowHandlerAPI . DDriver.cl
 
 sendDummyNotificationToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
 sendDummyNotificationToDriver merchantShortId opCity = withFlowHandlerAPI . DDN.sendDummyNotificationToDriver merchantShortId opCity
+
+changeOperatingCity :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.ChangeOperatingCityReq -> FlowHandler APISuccess
+changeOperatingCity merchantShortId opCity driverId_ = withFlowHandlerAPI . DDriver.changeOperatingCity merchantShortId opCity driverId_

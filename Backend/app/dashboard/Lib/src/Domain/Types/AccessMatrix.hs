@@ -195,6 +195,7 @@ data UserActionType
   | GET_TICKET_SERVICES
   | UPDATE_SEAT_MANAGEMENT
   | SEND_DUMMY_NOTIFICATION
+  | CHANGE_OPERATING_CITY
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

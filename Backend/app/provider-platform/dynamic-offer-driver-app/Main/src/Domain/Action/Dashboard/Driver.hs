@@ -65,6 +65,7 @@ module Domain.Action.Dashboard.Driver
     SendSmsReq (..),
     MediaChannel (..),
     VolunteerTransactionStorageReq (..),
+    changeOperatingCity,
   )
 where
 
@@ -82,6 +83,7 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import Domain.Action.UI.DriverOnboarding.Status (ResponseStatus (..))
 import qualified Domain.Action.UI.DriverOnboarding.Status as St
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.UI.Registration as DReg
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (CachedGoHomeRequest (..))
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
 import qualified Domain.Types.DriverBlockReason as DBR
@@ -149,6 +151,7 @@ import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageTranslation as MTQuery
 import qualified Storage.Queries.Person as QPerson
+import Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.RegistrationToken as QR
 import Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Ride as QRD
@@ -1586,6 +1589,20 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
           else sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) pendingDriverFees
 
     templateText txt = "{#" <> txt <> "#}"
+
+changeOperatingCity :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.ChangeOperatingCityReq -> Flow APISuccess
+changeOperatingCity merchantShortId opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  -- merchant access checking
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  merchantOpCityId' <- CQMOC.getMerchantOpCityId Nothing merchant (Just $ req.operatingCity)
+  QPerson.updateMerchantOperatingCityId personId merchantOpCityId'
+  QReg.updateMerchantOperatingCityId personId.getId merchantOpCityId'.getId merchant.id.getId
+  DReg.cleanCachedTokens personId
+  pure Success
 
 windowLimit :: SWC.SlidingWindowOptions
 windowLimit = SWC.SlidingWindowOptions 24 SWC.Hours
