@@ -117,7 +117,8 @@ data AppCfg = AppCfg
     tables :: Tables,
     dontEnableForDb :: [Text],
     maxMessages :: Text,
-    incomingAPIResponseTimeout :: Int
+    incomingAPIResponseTimeout :: Int,
+    dontEnableForKafka :: [Text]
   }
   deriving (Generic, FromDhall)
 
@@ -181,7 +182,8 @@ data AppEnv = AppEnv
     eventRequestCounter :: EventCounterMetric,
     dontEnableForDb :: [Text],
     maxMessages :: Text,
-    incomingAPIResponseTimeout :: Int
+    incomingAPIResponseTimeout :: Int,
+    dontEnableForKafka :: [Text]
   }
   deriving (Generic)
 

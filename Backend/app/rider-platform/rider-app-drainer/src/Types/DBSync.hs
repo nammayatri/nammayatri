@@ -17,7 +17,11 @@ module Types.DBSync
   )
 where
 
+import Data.Aeson (Object)
+import qualified Data.Aeson as A
+import Database.Beam.Postgres (Connection)
 import EulerHS.KVConnector.DBSync
+import EulerHS.KVConnector.Types
 import EulerHS.Language as EL
 import EulerHS.Prelude
 import Kafka.Producer as Producer
@@ -37,7 +41,9 @@ data Env = Env
   { _streamRedisInfo :: Text,
     _counterHandles :: Event.DBSyncCounterHandler,
     _kafkaConnection :: Producer.KafkaProducer,
-    _dontEnableDbTables :: [Text]
+    _pgConnection :: Connection,
+    _dontEnableDbTables :: [Text],
+    _dontEnableForKafka :: [Text]
   }
 
 type Flow = EL.ReaderFlow Env
@@ -50,16 +56,41 @@ data StateRef = StateRef
   }
 
 data DBCommand
-  = Create DBCommandVersion Tag Double DBName DBCreateObject
-  | Update DBCommandVersion Tag Double DBName DBUpdateObject
-  | Delete DBCommandVersion Tag Double DBName DBDeleteObject
-  deriving (Generic, ToJSON, FromJSON)
+  = Create DBCommandObject
+  | Update DBCommandObject
+  | Delete DBCommandObject
+  deriving (Generic)
 
-data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBCreateObject
+instance FromJSON DBCommand where
+  parseJSON = genericParseJSON dbCommandOptions
 
-data UpdateDBCommand = UpdateDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBUpdateObject
+dbCommandOptions :: A.Options
+dbCommandOptions =
+  A.defaultOptions
+    { A.sumEncoding = dbCommandTaggedObject
+    }
 
-data DeleteDBCommand = DeleteDBCommand EL.KVDBStreamEntryID DBCommandVersion Tag Double DBName DBDeleteObject
+dbCommandTaggedObject :: A.SumEncoding
+dbCommandTaggedObject =
+  A.TaggedObject
+    { tagFieldName = "tag",
+      contentsFieldName = "contents_v2"
+    }
+
+data DBCommandObject = DBCommandObject
+  { cmdVersion :: DBCommandVersion',
+    tag :: Tag,
+    timestamp :: Double,
+    dbName :: DBName,
+    command :: Object
+  }
+  deriving (Generic, FromJSON)
+
+data CreateDBCommand = CreateDBCommand EL.KVDBStreamEntryID DBCommandVersion' Tag Double DBName Object
+
+data UpdateDBCommand = UpdateDBCommand EL.KVDBStreamEntryID DBCommandVersion' Tag Double DBName Object
+
+data DeleteDBCommand = DeleteDBCommand EL.KVDBStreamEntryID DBCommandVersion' Tag Double DBName Object
 
 deriving stock instance Show EL.KVDBStreamEntryID
 

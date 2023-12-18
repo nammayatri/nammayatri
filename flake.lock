@@ -585,12 +585,16 @@
         ],
         "haskell-flake": [
           "shared-kernel",
+          "euler-hs",
+          "common",
           "haskell-flake"
         ],
         "hedis": "hedis",
         "juspay-extra": "juspay-extra",
         "nixpkgs": [
           "shared-kernel",
+          "euler-hs",
+          "common",
           "nixpkgs"
         ],
         "sequelize": "sequelize",
@@ -598,16 +602,16 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1702549068,
-        "narHash": "sha256-th4rnWCZYXlHPbUrcwd9F977xrqmocn9YfrA+JYvr6s=",
-        "owner": "enigma-commits",
+        "lastModified": 1702901266,
+        "narHash": "sha256-UxxR+mJlrEIPKRG6u6bfj0d5ISTZKYuSBU0zMw6Reh8=",
+        "owner": "roman-bodavskiy",
         "repo": "euler-hs",
-        "rev": "2d9664bc472bacccd8a005da802ab82530e1e86d",
+        "rev": "4643ff58ab04648e41b20cb8d96a7ed6f34a3f5c",
         "type": "github"
       },
       "original": {
-        "owner": "enigma-commits",
-        "ref": "Backend/feat/redis-cluster-pipelining",
+        "owner": "roman-bodavskiy",
+        "ref": "backend/db-object-contents-v2",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -2910,11 +2914,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1696055637,
-        "narHash": "sha256-RVlpKevWjt9pB9Ia61+ILFcbjB8omiRA6zehmPb6FHg=",
-        "owner": "juspay",
+        "lastModified": 1702897959,
+        "narHash": "sha256-uhv/uKOwu1IfFnYyFFB4k5dMrYcorjs1DCd6ehm9ReA=",
+        "owner": "roman-bodavskiy",
         "repo": "haskell-sequelize",
-        "rev": "991064c0b9b5f5cf691b19d53ac6b0c9109a2dff",
+        "rev": "b109d29f46b611cd5ff7e0d09aead48076871210",
         "type": "github"
       },
       "original": {
@@ -2973,11 +2977,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1702887261,
-        "narHash": "sha256-jBiFE/LceNJy2tlgexHXXSC0rW9okCKRcHPWiwzOjn8=",
+        "lastModified": 1702916783,
+        "narHash": "sha256-MrtQILw0AWIlTGqtutVHqksmkJPWQ+UllFcieNHUNAM=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "cf042c6f724cb1c2e649c93942e2b2274e628628",
+        "rev": "c01e77c3828a0a96aeb484c5e754af9edcf8ea27",
         "type": "github"
       },
       "original": {
