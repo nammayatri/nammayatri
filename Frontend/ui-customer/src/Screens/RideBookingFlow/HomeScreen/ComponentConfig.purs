@@ -396,12 +396,16 @@ ticketBannerConfig state =
     config' = config
       {
         backgroundColor = "#FFF6DE"
-      , title = "Now buy tickets to zoo with Yatri Sathi"
+      , title = "Book Millennium Jetty, Heritage cruise and Alipore  zoo tickets "
       , titleColor = Color.black800
       , actionText = "Book Now"
       , actionTextColor = Color.black900
       , imageUrl = fetchImage FF_ASSET "ny_ic_zoo_banner"
       , stroke = "1,"<> "#FFDE88"
+      , margin = MarginTop 0
+      , imageHeight = V 75
+      , imageWidth = V 60
+      , padding = Padding 0 5 5 5
       }
   in config'
 

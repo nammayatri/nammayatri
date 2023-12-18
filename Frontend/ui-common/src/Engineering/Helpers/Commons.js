@@ -361,6 +361,10 @@ function formatDates(date, format, language) {
       const year = date.getFullYear();
       return `${year}`;
     },
+    "YY": () => {
+      const year = ("" + date.getFullYear()).slice(-2);
+      return `${year}`;
+    },
     "D": () => {
       const day = date.getDate();
       return `${day}`;
@@ -389,6 +393,11 @@ function formatDates(date, format, language) {
     },
     "ddd": () => {
       const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const weekday = weekdays[date.getDay()];
+      return `${weekday}`;
+    },
+    "dddFull": () => {
+      const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
       const weekday = weekdays[date.getDay()];
       return `${weekday}`;
     },
@@ -441,6 +450,12 @@ export const convertUTCtoISC = function (str) {
     localTime = formatDates(localTime, format, getFormattedLanguage(language));
     return localTime;
   };
+};
+
+export const convertUTCTimeToISTTimeinHHMMSS = function (utcTime) {
+
+  const utcDate = new Date(`1970-01-01T${utcTime}Z`);
+  return (String(utcDate.getHours()).padStart(2, "0") + ":" + String(utcDate.getMinutes()).padStart(2, "0") + ":" + String(utcDate.getSeconds()).padStart(2, "0"));
 };
 
 export const getFormattedDate = function (str) {

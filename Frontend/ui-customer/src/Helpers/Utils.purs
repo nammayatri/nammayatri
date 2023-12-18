@@ -95,6 +95,7 @@ foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -
 foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 
 foreign import getCurrentDate :: String -> String
+foreign import getCurrentDatev2 :: String -> String
 foreign import getNextDate :: String -> String
 foreign import getNextDateV2 :: String -> String
 foreign import compareDate :: EffectFn2 String String Boolean
@@ -169,8 +170,11 @@ foreign import getDefaultPixels :: Fn1 String Number
 foreign import getDeviceDefaultDensity ::Fn1 String Number
 
 foreign import getMobileNumber :: EffectFn2 String String String
+foreign import getDateAfterNDaysv2 :: Int -> String
 
 foreign import extractKeyByRegex :: Fn2 String String String
+
+foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
 
 data TimeUnit
   = HOUR
@@ -203,6 +207,24 @@ convertUTCToISTAnd12HourFormat inputTime = do
   
       pure adjustedTime
     _ -> Nothing
+
+getMinutesBetweenTwoUTChhmmss :: String -> String -> Maybe Int
+getMinutesBetweenTwoUTChhmmss time1 time2 = do
+  if DS.null time1 || DS.null time2 then Nothing
+  else
+    case split (Pattern ":") time1 of
+      [h1, m1, _] -> do
+        hours1 <- fromString h1
+        minutes1 <- fromString m1
+        case split (Pattern ":") time2 of
+          [h2, m2, _] -> do
+            hours2 <- fromString h2
+            minutes2 <- fromString m2
+            let cal1 = hours1 * 60 + minutes1
+                cal2 = if (hours2 < hours1) then (hours2 + 24) * 60 + minutes2 else hours2 * 60 + minutes2
+            Just $ if cal1 > cal2 then cal1 - cal2 else cal2 - cal1
+          _ -> Nothing
+      _ -> Nothing
   
 otpRule :: Reader.OtpRule
 otpRule =
