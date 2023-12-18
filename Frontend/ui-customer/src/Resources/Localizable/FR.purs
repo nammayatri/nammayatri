@@ -489,7 +489,7 @@ getFR stringKey =
         YOU_SEEM_TO_BE_FAR_FROM_PICK_UP -> "Vous semblez être loin du lieu de prise en charge !"
         ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING -> "Êtes-vous sûr de vouloir procéder à la réservation ?"
         SOMETHING_WENT_WRONG_TRY_AGAIN_LATER -> "Quelque chose c'est mal passé. Merci d'essayer plus tard"
-        MY_TICKETS -> ""
+        MY_TICKETS -> "Mes billets"
         YOU_CAN_BOOK_TICKETS_TO_THE_ZOO_BY_CLICKING_THE_BUTTON -> ""
         DRIVER_ADDITION_LIMITS_ARE_IN_INCREMENTS -> ""
         CGST -> ""

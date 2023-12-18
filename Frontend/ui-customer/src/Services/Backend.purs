@@ -21,12 +21,12 @@ import Accessor (_deviceToken)
 import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
-import Data.Array ((!!), catMaybes, concat, take, any, singleton)
+import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe)
 import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..), FeedbackAnswer)
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), maybe, fromMaybe, isJust)
-import Engineering.Helpers.Commons (liftFlow, os)
+import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion, isInvalidUrl)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
@@ -41,7 +41,7 @@ import ModifyScreenState (modifyScreenState)
 import Prelude (Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
-import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, TicketServicePriceData)
+import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, PeopleCategoriesRespData)
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker (trackApiCallFlow, trackExceptionFlow)
@@ -52,6 +52,7 @@ import Types.EndPoint as EP
 import Foreign.Object (empty)
 import Data.String as DS
 import ConfigProvider as CP
+import Debug(spy)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -951,24 +952,41 @@ bookTicketsBT payload placeId = do
 mkBookingTicketReq :: TicketBookingScreenData -> TicketBookingReq -- TODO:: Refactor and make it generic without having state for serviceType
 mkBookingTicketReq ticketBookingScreenData = 
   TicketBookingReq 
-    { services : concat $ map createTicketServiceRequest ticketBookingScreenData.servicesInfo,
-      visitDate : ticketBookingScreenData.dateOfVisit
+    { services : createTicketServiceRequest ticketBookingScreenData.servicesInfo,
+      visitDate : convertUTCtoISC ticketBookingScreenData.dateOfVisit "YYYY-MM-DD"
     }
   where
-    createTicketServiceRequest :: TicketServiceData -> Array TicketService
-    createTicketServiceRequest service =
-      catMaybes $ map createTicketServicePriceRequest service.prices
-      where
-        createTicketServicePriceRequest :: TicketServicePriceData -> Maybe TicketService
-        createTicketServicePriceRequest price =
-          if price.currentValue > 0 then
-            Just $
-              TicketService {
+    createTicketServiceRequest :: Array TicketServiceData -> Array TicketService
+    createTicketServiceRequest services = mapMaybe createPeopleCategoriesRespRequest services
+
+    createPeopleCategoriesRespRequest :: TicketServiceData -> Maybe TicketService
+    createPeopleCategoriesRespRequest service = 
+        let maybeBusinessHour = maybe Nothing (findSelectedBusinessHour service) service.selectedBHid
+        in maybe Nothing (getTicketServiceReqElement service) maybeBusinessHour
+
+    findSelectedBusinessHour service bhId = find (\businessHour -> businessHour.bhourId == bhId) service.businessHours
+    
+    getValidCategories category = do
+        let filteredPC = filter (\pc -> pc.currentValue > 0) category.peopleCategories
+        if null filteredPC then Nothing
+        else Just $ TicketBookingCategory {
+        categoryId : category.categoryId,
+        peopleCategories : map mkPeopleCatReq filteredPC
+        }
+
+    mkPeopleCatReq peopleCat = TicketBookingPeopleCategory {peopleCategoryId : peopleCat.peopleCategoryId, numberOfUnits : peopleCat.currentValue}
+
+    getTicketServiceReqElement service businessHour = do
+        let categories = filter (\cat -> cat.isSelected) businessHour.categories
+            filteredValidCategories = mapMaybe getValidCategories categories
+        if (null categories) || (null filteredValidCategories) then Nothing
+        else Just $ 
+                TicketService {
                 serviceId : service.id,
-                attendeeType : price.attendeeType,
-                numberOfUnits : price.currentValue
-              }
-          else Nothing
+                businessHourId : businessHour.bhourId,
+                categories : filteredValidCategories
+            }
+
 
 ------------------------------------------------------------------------ ZoneTicketBookingFlow --------------------------------------------------------------------------------
 getAllBookingsBT :: BookingStatus ->  FlowBT String GetAllBookingsRes
@@ -980,7 +998,7 @@ getAllBookingsBT status = do
             BackT $ pure GoBack
 
 
-getTicketBookingDetailsBT :: String -> FlowBT String GetBookingInfoRes 
+getTicketBookingDetailsBT :: String -> FlowBT String TicketBookingDetails
 getTicketBookingDetailsBT shortId = do
     headers <- getHeaders' "" false 
     withAPIResultBT (EP.ticketBookingDetails shortId) (\x -> x) errorHandler (lift $ lift $ callAPI headers (GetBookingInfoReq shortId))

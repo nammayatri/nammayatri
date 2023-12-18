@@ -57,13 +57,22 @@ export const getCurrentDate = function (string) {
   const dd = String(today.getDate()).padStart(2, "0");
   const mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
   const yyyy = today.getFullYear();
-
   today = dd + "/" + mm + "/" + yyyy;
+  return today;
+}
+
+export const getCurrentDatev2 = function (string) {
+  let today = new Date();
+  const dd = String(today.getDate()).padStart(2, "0");
+  const mm = String(today.getMonth() + 1).padStart(2, "0"); //January is 0!
+  const yyyy = today.getFullYear();
+  today = yyyy + "-" + mm + "-" + dd;
   return today;
 }
 
 
 export const compareDate = function (date1, date2) {
+  console.log("comparing : ", date1, date2);
   return date1 >= date2;
 }
 
@@ -471,3 +480,25 @@ export const getPixels = function (){
   }
 }
 
+export const getDateAfterNDaysv2 = function (n) {
+  const today = new Date();
+  const dateAfterNDays = new Date(today);
+  dateAfterNDays.setDate(today.getDate() + n);
+  const year = dateAfterNDays.getFullYear();
+  const month = String(dateAfterNDays.getMonth() + 1).padStart(2, "0");
+  const day = String(dateAfterNDays.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export const incrOrDecrTimeFrom = function (inputTime, minutesToAddOrSubtract, isIncrement) {
+  const [hours, minutes, seconds] = inputTime.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours);
+  date.setMinutes(minutes);
+  date.setSeconds(seconds);
+    
+  if (isIncrement) date.setMinutes(date.getMinutes() + minutesToAddOrSubtract);
+  else date.setMinutes(date.getMinutes() - minutesToAddOrSubtract);
+  const newTime = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+  return newTime;
+}

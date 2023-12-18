@@ -1,7 +1,7 @@
 module Screens.TicketInfoScreen.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, discard, pure, unit, bind, ($), not, (+), (-), (==), (*), (<>), show, (+), (==), (-), show)
+import Prelude (void, class Show, discard, pure, unit, bind, ($), not, (+), (-), (==), (*), (<>), show, (+), (==), (-), show)
 import PrestoDOM (Eval, continue, exit, updateAndExit, continueWithCmd, continueWithCmd)
 import Screens (ScreenName(..), getScreen)
 import PrestoDOM.Types.Core (class Loggable)
@@ -15,11 +15,14 @@ import Effect.Uncurried(runEffectFn4)
 import Debug (spy)
 import Helpers.Utils (generateQR)
 import Data.Array (length, (!!))
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), maybe)
 import Engineering.Helpers.Commons(getNewIDWithTag)
 import Components.GenericHeader as GenericHeader
-import JBridge (shareImageMessage)
+import JBridge (shareImageMessage, copyToClipboard, toast)
 import Common.Types.App as Common
+import Services.API (TicketPlaceResp(..))
+import Language.Strings (getString)
+import Language.Types (STR(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -37,6 +40,7 @@ data Action = AfterRender
             | GenericHeaderAC GenericHeader.Action 
             | GoHome
             | ShareTicketQR String
+            | Copy String
 
 
 data ScreenOutput = GoToHomeScreen | GoBack
@@ -71,10 +75,17 @@ eval (TicketQRRendered id text) state  =
   ]
 
 eval (ShareTicketQR serviceName) state = do
-  _ <- pure $ shareImageMessage "Embark on a wild adventure at Alipore Zoo! 🐅🌿 Your tickets are ready to unlock a day of fun and discovery. See you soon! 🎟️👀 #AliporeZooAdventures" (shareImageMessageConfig serviceName)
+  let textMessage = getTextMessage state.data.selectedBookingInfo.ticketPlaceName
+  void $ pure $ shareImageMessage textMessage (shareImageMessageConfig serviceName)
   continue state
 
 eval GoHome state = exit GoToHomeScreen
+
+eval (Copy text) state = continueWithCmd state [ do 
+    void $ pure $ copyToClipboard text
+    void $ pure $ toast (getString COPIED)
+    pure NoAction
+  ]
 
 eval _ state = continue state
 
@@ -85,3 +96,9 @@ shareImageMessageConfig serviceName = {
   logoId : getNewIDWithTag "ticketQRView",
   isReferral : false
   }
+
+getTextMessage :: String -> String
+getTextMessage placeName = case placeName of
+  "Alipore Zoo" -> "Embark on a wild adventure at Alipore Zoo! 🐅🌿 Your tickets are ready to unlock a day of fun and discovery. See you soon! 🎟️👀 #AliporeZooAdventures"
+  "Kolkata Heritage River Cruise" -> "Hey! Get ready to immerse yourself in the rich heritage and beauty of Kolkata with these tickets to the Millennium Heritage Cruise!"
+  _ -> ""

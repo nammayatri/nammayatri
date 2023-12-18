@@ -85,6 +85,7 @@ foreign import clearTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int
 foreign import getCurrentUTC :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
+foreign import convertUTCTimeToISTTimeinHHMMSS :: String -> String
 foreign import getCurrentTimeStamp :: Unit -> Number
 foreign import getDateFromObj :: Fn1 DateObj String
 foreign import getFormattedDate :: Fn1 String String

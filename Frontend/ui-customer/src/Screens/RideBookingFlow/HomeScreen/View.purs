@@ -955,9 +955,12 @@ buttonLayout state push =
             , background if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == []) || state.props.isSearchLocation == LocateOnMap) then Color.transparent else Color.white900
             , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
             , orientation VERTICAL
-            , padding (PaddingTop 16)
+            , padding $ if state.data.config.feature.enableZooTicketBookingFlow then PaddingTop 0 else PaddingTop 16
             ]
-            [ PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
+            [ if state.data.config.feature.enableZooTicketBookingFlow
+                then zooTicketBookingBanner state push 
+                else linearLayout[visibility GONE][]
+            , PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
             , if state.props.isSearchLocation == LocateOnMap
                 then emptyLayout state 
                 else recentSearchesAndFavourites state push (null state.data.savedLocations) (null state.data.recentSearchs.predictionArray)
@@ -979,10 +982,7 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
     -- , if (not hideRecentSearches) then recentSearchesView state push else linearLayout[visibility GONE][]
     , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
         then updateDisabilityBanner state push
-        else 
-          if (state.data.config.feature.enableZooTicketBookingFlow) 
-            then zooTicketBookingBanner state push 
-            else linearLayout[visibility GONE][]])
+        else linearLayout[visibility GONE][]])
 
 updateDisabilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 updateDisabilityBanner state push = 
@@ -997,10 +997,10 @@ updateDisabilityBanner state push =
 zooTicketBookingBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 zooTicketBookingBanner state push = 
   linearLayout
-    [ height MATCH_PARENT
+    [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin $ MarginVertical 10 10
+    , margin $ Margin 16 0 16 16
     ][  Banner.view (push <<< TicketBookingFlowBannerAC) (ticketBannerConfig state)]
     
 emptySuggestionsBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

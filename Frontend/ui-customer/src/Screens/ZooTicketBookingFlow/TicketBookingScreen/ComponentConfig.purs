@@ -5,10 +5,12 @@ import Prelude
 import Common.Styles.Colors as Color
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Font.Style (Style(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), visibility)
+import Accessor (_name)
+import Data.Lens ((^.))
 import Screens.Types as ST
 import Data.Array as DA
 import JBridge as JB
@@ -29,7 +31,9 @@ genericHeaderConfig state = let
     , padding = PaddingVertical 5 5
     , textConfig {
         text = case state.props.currentStage of
-                  ST.DescriptionStage -> "Zoological Garden, Alipore"
+                  ST.DescriptionStage -> case state.data.placeInfo of
+                                            Just placeInfo -> placeInfo ^._name
+                                            Nothing -> "Book Tickets"
                   ST.ChooseTicketStage -> "Choose Tickets"
                   ST.ViewTicketStage -> if DA.null state.props.ticketBookingList.booked && DA.null state.props.ticketBookingList.pendingBooking then "My Tickets" else "Choose Tickets"
                   ST.TicketInfoStage -> state.props.selectedBookingInfo.ticketPlaceName

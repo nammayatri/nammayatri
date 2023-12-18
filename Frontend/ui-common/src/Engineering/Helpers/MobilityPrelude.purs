@@ -18,7 +18,8 @@ import Data.String (null,Pattern(..), contains, joinWith, toLower, take, toUpper
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import PrestoDOM as PD
 import Prelude
-import Data.Array (elem)
+import Data.Array (elem, cons)
+import Data.Array as DA
 import Data.Foldable (foldl)
 
 has :: String -> String -> Boolean
@@ -63,3 +64,7 @@ boolToInt bool = if bool then 1 else 0
 caseInsensitiveCompare :: String -> String -> Boolean
 caseInsensitiveCompare str1 str2 = 
   toLower(str1) == toLower(str2)
+
+groupAdjacent :: forall a. Array a -> Array (Array a)
+groupAdjacent [] = []
+groupAdjacent x = cons (DA.take 2 x) (groupAdjacent (DA.drop 2 x))

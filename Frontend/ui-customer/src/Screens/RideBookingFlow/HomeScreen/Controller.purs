@@ -726,6 +726,7 @@ data ScreenOutput = LogoutUser
                   | GoToTicketBookingFlow HomeScreenState
                   | GoToMyTickets HomeScreenState
                   | RepeatTrip HomeScreenState Trip
+                  | ExitToTicketing HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -861,7 +862,7 @@ data Action = NoAction
             | RepeatRideCountDown Int String String String
             | StopRepeatRideTimer 
             | OpenLiveDashboard
-            | UpdatePeekHeight 
+            | UpdatePeekHeight
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 

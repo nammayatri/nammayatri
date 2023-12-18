@@ -213,8 +213,8 @@ type CustomerTip = {
 type Features = {
   enableAutoReadOtp :: Boolean ,
   enableZooTicketBookingFlow :: Boolean,
-  enableLiveDashboard :: Boolean,
   enableSuggestions :: Boolean,
+  enableLiveDashboard :: Boolean,
   enableShareRide :: Boolean,
   enableChat :: Boolean,
   enableEmergencyContacts :: Boolean,
