@@ -19,10 +19,13 @@ ticketBookingScreen = do
   case action of
     GoToHomeScreen updatedState -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> TicketBookingScreenData.initData)
-      App.BackT $ App.NoBack <$> (pure GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING updatedState)
     GoToTicketPayment state -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
       App.BackT $ App.NoBack <$> (pure (GO_TO_TICKET_PAYMENT state))
+    GoToOpenGoogleMaps state lat2 long2 -> do
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
+      App.BackT $ App.BackPoint <$> (pure (GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW lat2 long2))
     GoToGetBookingInfo updatedState bookingStatus -> do
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GET_BOOKING_INFO_SCREEN updatedState bookingStatus)
@@ -32,3 +35,6 @@ ticketBookingScreen = do
     RefreshPaymentStatus updatedState -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ REFRESH_PAYMENT_STATUS updatedState)
+    BookTickets updatedState -> do
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> updatedState{props{navigateToHome = false}})
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING updatedState{props{navigateToHome = false}})

@@ -96,6 +96,7 @@ import Data.Function.Uncurried (runFn1, runFn2)
 import Components.CommonComponentConfig as CommonComponentConfig
 import Constants.Configs 
 import Common.Resources.Constants (zoomLevel)
+import Components.NavBar as NavBar
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -360,6 +361,7 @@ view push state =
             , rideTrackingView push state
             , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
             , if ((state.props.currentStage /= RideRating) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
+            -- , navigationView push state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain ]) then (quoteListModelView push state) else emptyTextView state
@@ -2355,3 +2357,14 @@ carouselView state push =
         ]
     , PrimaryButton.view (push <<< UpdateProfileButtonAC) (updateProfileConfig state)
     , PrimaryButton.view (push <<< SkipAccessibilityUpdateAC) (maybeLaterButtonConfig state)]
+
+navigationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+navigationView push state = 
+  relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , alignParentBottom "true,-1"
+      ][NavBar.view (push <<< NavBarAC) 0]]

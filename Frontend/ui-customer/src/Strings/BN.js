@@ -626,6 +626,7 @@ const bengaliStrings = {
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "আপনি পিকআপ অবস্থান থেকে অনেক দূরে বলে মনে হচ্ছে!",
   "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "আপনি কি নিশ্চিত যে আপনি বুকিং নিয়ে এগিয়ে যেতে চান?",
   "SOMETHING_WENT_WRONG_TRY_AGAIN_LATER" : "কিছু প্রযুক্তিগত সমস্যা হয়েছে, অনুগ্রহ করে পরে আবার চেষ্টা করুন",
+  "MY_TICKETS" : "আমার টিকেট"
 }
 
 export function getStringValue(key) {

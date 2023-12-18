@@ -629,6 +629,7 @@ const hindiStrings = {
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "आप पिकअप स्थान से बहुत दूर हैं!",
   "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "क्या आप वाकई बुकिंग जारी रखना चाहते हैं?",
   "SOMETHING_WENT_WRONG_TRY_AGAIN_LATER": "कुछ तकनीकी समस्या हुई है, कृपया बाद में दोबारा प्रयास करें",
+  "MY_TICKETS": "मेरे टिकट"
 }
 
 export function getStringValue(key) {

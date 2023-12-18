@@ -42,7 +42,8 @@ import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState)
+import Screens.TicketingScreen.ScreenData as TicketingScreenData
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, TicketingScreenState ) 
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
@@ -51,7 +52,8 @@ import Foreign (Foreign)
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
 newtype GlobalState = GlobalState {
-    splashScreen :: SplashScreenState
+    splashScreen :: SplashScreenState ,
+    ticketingScreen :: TicketingScreenState 
   , enterMobileNumberScreen :: EnterMobileNumberScreenState
   , chooseLanguageScreen :: ChooseLanguageScreenState
   , accountSetUpScreen :: AccountSetUpScreenState
@@ -78,7 +80,8 @@ newtype GlobalState = GlobalState {
 
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState {
-    splashScreen : {data : {message : "pass"}}
+  ticketingScreen : TicketingScreenData.initData , 
+    splashScreen : {data : {message : "pass"}} 
   , enterMobileNumberScreen : EnterMobileNumberScreenData.initData
   , chooseLanguageScreen : ChooseLanguageScreenData.initData
   , accountSetUpScreen : AccountSetUpScreenData.initData
@@ -171,6 +174,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | REPORT_ISSUE HomeScreenState
                         | RIDE_DETAILS_SCREEN HomeScreenState
                         | GO_TO_TICKET_BOOKING_FLOW HomeScreenState
+                        | EXIT_TO_TICKETING HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -194,10 +198,15 @@ data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 data APP_UPDATE_POPUP = Later | UpdateNow
 
 data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreenState BookingStatus
-                                    | GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING 
+                                    | GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING TicketBookingScreenState
                                     | GO_TO_TICKET_PAYMENT TicketBookingScreenState
                                     | RESET_SCREEN_STATE
+                                    | GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW Number Number
                                     | REFRESH_PAYMENT_STATUS TicketBookingScreenState
+
+data TICKETING_SCREEN_SCREEN_OUTPUT = EXIT_TO_HOME TicketingScreenState
+                                    | EXIT_TO_MY_TICKETS TicketingScreenState
+                                    | BOOK_TICKETS TicketingScreenState
 
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
@@ -220,3 +229,4 @@ data ScreenType =
   | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
   | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)
+  | TicketingScreenStateType (TicketingScreenState -> TicketingScreenState)

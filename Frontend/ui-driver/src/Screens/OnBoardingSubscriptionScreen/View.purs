@@ -39,7 +39,7 @@ import Screens.SubscriptionScreen.Controller (getAllFareFromArray, getPlanPrice)
 import Components.PrimaryButton as PrimaryButton
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import JBridge as JB
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getDateAfterNDays)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
 import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Properties (cornerRadii)

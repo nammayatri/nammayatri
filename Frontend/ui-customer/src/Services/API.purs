@@ -38,8 +38,7 @@ import Data.Eq.Generic (genericEq)
 import Debug (spy)
 import Data.Maybe
 import PaymentPage (PaymentPagePayload(..))
-
-
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 
 newtype ErrorPayloadWrapper = ErrorPayload ErrorPayload
 
@@ -2094,18 +2093,26 @@ instance decodeTicketBookingAPIEntity :: Decode TicketBookingAPIEntity where dec
 instance encodeTicketBookingAPIEntity :: Encode TicketBookingAPIEntity where encode = defaultEncode
 
 newtype TicketBookingServiceDetails = TicketBookingServiceDetails
-  { ticketServiceShortId :: String,
-    amount :: Number,
+  { amount :: Number,
     status :: String,
     verificationCount :: Int,
     expiryDate :: Maybe String,
     ticketServiceName :: String,
-    prices :: (Array TicketBookingServicePriceBreakup)
+    categories :: Array TicketBookingCategoryDetails,
+    ticketServiceShortId :: String,
+    slot :: Maybe String
   }
 
-newtype TicketBookingServicePriceBreakup = TicketBookingServicePriceBreakup
-  { attendeeType :: String,
-    numberOfUnits :: Int,
+newtype TicketBookingCategoryDetails = TicketBookingCategoryDetails
+  { amount :: Number,
+    bookedSeats :: Int,
+    name :: String,
+    peopleCategories :: Array TicketBookingPeopleCategoryDetails
+  }
+
+newtype TicketBookingPeopleCategoryDetails = TicketBookingPeopleCategoryDetails
+  { name :: String,
+    numberOfUnits ::Int,
     pricePerUnit :: Number
   }
 
@@ -2116,16 +2123,22 @@ instance decodeTicketBookingServiceDetails :: Decode TicketBookingServiceDetails
 instance encodeTicketBookingServiceDetails :: Encode TicketBookingServiceDetails where encode = defaultEncode
 instance showTicketBookingServiceDetails :: Show TicketBookingServiceDetails where show = genericShow
 
-derive instance genericTicketBookingServicePriceBreakup :: Generic TicketBookingServicePriceBreakup _
-derive instance newtypeTicketBookingServicePriceBreakup :: Newtype TicketBookingServicePriceBreakup _
-instance standardEncodeTicketBookingServicePriceBreakup :: StandardEncode TicketBookingServicePriceBreakup where standardEncode _ = standardEncode {}
-instance decodeTicketBookingServicePriceBreakup :: Decode TicketBookingServicePriceBreakup where decode = defaultDecode
-instance encodeTicketBookingServicePriceBreakup :: Encode TicketBookingServicePriceBreakup where encode = defaultEncode
-instance showTicketBookingServicePriceBreakup :: Show TicketBookingServicePriceBreakup where show = genericShow
+derive instance genericTicketBookingCategoryDetails :: Generic TicketBookingCategoryDetails _
+derive instance newtypeTicketBookingCategoryDetails  :: Newtype TicketBookingCategoryDetails  _
+instance standardEncodeTicketBookingCategoryDetails :: StandardEncode TicketBookingCategoryDetails where standardEncode _ = standardEncode {}
+instance decodeTicketBookingCategoryDetails :: Decode TicketBookingCategoryDetails where decode = defaultDecode
+instance encodeTicketBookingCategoryDetails :: Encode TicketBookingCategoryDetails where encode = defaultEncode
+instance showTicketBookingCategoryDetails :: Show TicketBookingCategoryDetails where show = genericShow
 
+derive instance genericTicketBookingPeopleCategoryDetails :: Generic TicketBookingPeopleCategoryDetails _
+derive instance newtypeTicketBookingPeopleCategoryDetails  :: Newtype TicketBookingPeopleCategoryDetails  _
+instance standardEncodeTicketBookingPeopleCategoryDetails :: StandardEncode TicketBookingPeopleCategoryDetails where standardEncode _ = standardEncode {}
+instance decodeTicketBookingPeopleCategoryDetails :: Decode TicketBookingPeopleCategoryDetails where decode = defaultDecode
+instance encodeTicketBookingPeopleCategoryDetails :: Encode TicketBookingPeopleCategoryDetails where encode = defaultEncode
+instance showTicketBookingPeopleCategoryDetails :: Show TicketBookingPeopleCategoryDetails where show = genericShow
 data GetBookingInfoReq = GetBookingInfoReq String 
 
-newtype GetBookingInfoRes = GetBookingInfoRes
+newtype TicketBookingDetails = TicketBookingDetails
   { ticketShortId :: String,
     ticketPlaceId :: String,
     ticketPlaceName :: String,
@@ -2136,7 +2149,7 @@ newtype GetBookingInfoRes = GetBookingInfoRes
     services :: Array TicketBookingServiceDetails
   }
 
-instance getBookingInfoReq :: RestEndpoint GetBookingInfoReq GetBookingInfoRes where
+instance getBookingInfoReq :: RestEndpoint GetBookingInfoReq TicketBookingDetails where
  makeRequest reqBody@(GetBookingInfoReq shortId) headers = defaultMakeRequest GET (EP.ticketBookingDetails shortId) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
@@ -2148,12 +2161,12 @@ instance encodeGetBookingInfoReq :: Encode GetBookingInfoReq where encode = defa
 instance showGetBookingInfoReq:: Show GetBookingInfoReq where show = genericShow
 
 
-derive instance genericGetBookingInfoRes:: Generic GetBookingInfoRes _
-derive instance newtypeGetBookingInfoRes :: Newtype GetBookingInfoRes _
-instance standardEncodeGetBookingInfoRes :: StandardEncode GetBookingInfoRes where standardEncode _ = standardEncode {}
-instance showGetBookingInfoRes:: Show GetBookingInfoRes where show = genericShow
-instance decodeGetBookingInfoRes :: Decode GetBookingInfoRes where decode = defaultDecode
-instance encodeGetBookingInfoRes :: Encode GetBookingInfoRes where encode = defaultEncode
+derive instance genericTicketBookingDetails :: Generic TicketBookingDetails _
+derive instance newtypeTicketBookingDetails :: Newtype TicketBookingDetails _
+instance standardEncodeTicketBookingDetails :: StandardEncode TicketBookingDetails where standardEncode _ = standardEncode {}
+instance showTicketBookingDetails:: Show TicketBookingDetails where show = genericShow
+instance decodeTicketBookingDetails :: Decode TicketBookingDetails where decode = defaultDecode
+instance encodeTicketBookingDetails :: Encode TicketBookingDetails where encode = defaultEncode
 
 
 data TicketServiceReq = TicketServiceReq String
@@ -2164,17 +2177,29 @@ newtype TicketPlaceResponse = TicketPlaceResponse (Array TicketPlaceResp)
 
 newtype TicketServicesResponse = TicketServicesResponse (Array TicketServiceResp)
 
-newtype TicketService = TicketService
-  { serviceId :: String,
-    attendeeType :: String,
-    numberOfUnits :: Int
-  }
+
 
 data TicketBookingRequest = TicketBookingRequest String TicketBookingReq
 
 newtype TicketBookingReq = TicketBookingReq
   { visitDate :: String,
     services :: Array TicketService
+  }
+
+newtype TicketService = TicketService
+  { serviceId :: String,
+    businessHourId :: String,
+    categories :: Array TicketBookingCategory
+  }
+
+newtype TicketBookingCategory = TicketBookingCategory
+  { categoryId :: String,
+    peopleCategories :: Array TicketBookingPeopleCategory
+  }
+
+newtype TicketBookingPeopleCategory = TicketBookingPeopleCategory
+  { peopleCategoryId :: String,
+    numberOfUnits :: Int
   }
 
 newtype CreateOrderRes = CreateOrderRes --TODO:: Move to common
@@ -2192,15 +2217,66 @@ newtype PaymentLinks = PaymentLinks
     mobile :: Maybe String
   }
 
+data PlaceType = Museum | ThemePark | AmusementPark | WaterPark | WildLifeSanctuary | ArtGallery | HeritageSite | ReligiousSite | Other
+
+data ServiceExpiry = VisitDate String | InstantExpiry Int
+derive instance genericServiceExpiry :: Generic ServiceExpiry _
+instance showServiceExpiry :: Show ServiceExpiry where show = genericShow
+instance decodeServiceExpiry :: Decode ServiceExpiry where decode = defaultDecode
+instance encodeServiceExpiry :: Encode ServiceExpiry where encode = defaultEncode
+instance standardEncodeServiceExpiry :: StandardEncode ServiceExpiry
+  where
+    standardEncode (VisitDate param) = standardEncode param
+    standardEncode (InstantExpiry body) = standardEncode body
+
 newtype TicketServiceResp = TicketServiceResp
   { id :: String,
     placesId :: String,
-    service :: String,
+    name :: String,
     maxVerification :: Int,
-    openTimings :: Maybe String,
-    closeTimings :: Maybe String,
-    prices :: Array TicketServicePrice
+    allowFutureBooking :: Boolean,
+    shortDesc :: Maybe String,
+    expiry :: ServiceExpiry,
+    businessHours :: Array BusinessHoursResp
   }
+
+data SpecialDayType = Open | Closed
+
+derive instance genericSpecialDayType :: Generic SpecialDayType _
+instance showSpecialDayType :: Show SpecialDayType where show = genericShow
+instance decodeSpecialDayType :: Decode SpecialDayType where decode = defaultEnumDecode
+instance encodeSpecialDayType :: Encode SpecialDayType where encode = defaultEnumEncode
+instance eqSpecialDayType :: Eq SpecialDayType where eq = genericEq
+instance standardEncodeSpecialDayType :: StandardEncode SpecialDayType
+  where
+    standardEncode _ = standardEncode {}
+
+newtype BusinessHoursResp = BusinessHoursResp {
+  id :: String,
+  slot :: Maybe String, -- array of slots
+  startTime :: Maybe String,
+  endTime :: Maybe String,
+  specialDayDescription :: Maybe String,
+  specialDayType :: Maybe String,
+  operationalDays :: Array String,
+  categories :: Array TicketCategoriesResp
+}
+
+newtype TicketCategoriesResp = TicketCategoriesResp {
+  name :: String,
+  id :: String,
+  availableSeats :: Maybe Int,
+  allowedSeats :: Maybe Int,
+  bookedSeats :: Int,
+  peopleCategories :: Array PeopleCategoriesResp
+}
+
+newtype PeopleCategoriesResp = PeopleCategoriesResp {
+  name :: String,
+  id :: String,
+  pricePerUnit :: Number,
+  description :: Maybe String
+}
 
 newtype TicketPlaceResp = TicketPlaceResp
   { id :: String,
@@ -2211,13 +2287,12 @@ newtype TicketPlaceResp = TicketPlaceResp
     lon :: Maybe Number,
     gallery :: Array String,
     openTimings :: Maybe String,
-    closeTimings :: Maybe String
-  }
-
-newtype TicketServicePrice = TicketServicePrice
-  { ticketServiceId :: String,
-    attendeeType :: String,
-    pricePerUnit :: Number
+    closeTimings :: Maybe String,
+    iconUrl :: Maybe String,
+    shortDesc :: Maybe String,
+    mapImageUrl :: Maybe String,
+    termsAndConditions :: Array String,
+    placeType :: String
   }
 
 data GetTicketStatusReq = GetTicketStatusReq String
@@ -2263,6 +2338,20 @@ instance showTicketService:: Show TicketService where show = genericShow
 instance decodeTicketService :: Decode TicketService where decode = defaultDecode
 instance encodeSTicketService :: Encode TicketService where encode = defaultEncode
 
+derive instance genericTicketBookingCategory:: Generic TicketBookingCategory _
+derive instance newtypeTicketBookingCategory :: Newtype TicketBookingCategory _
+instance standardEncodeTicketBookingCategory :: StandardEncode TicketBookingCategory where standardEncode (TicketBookingCategory req) = standardEncode req
+instance showTicketBookingCategory:: Show TicketBookingCategory where show = genericShow
+instance decodeTicketBookingCategory:: Decode TicketBookingCategory where decode = defaultDecode
+instance encodeSTicketBookingCategory :: Encode TicketBookingCategory where encode = defaultEncode
+
+derive instance genericTicketBookingPeopleCategory:: Generic TicketBookingPeopleCategory _
+derive instance newtypeTicketBookingPeopleCategory :: Newtype TicketBookingPeopleCategory _
+instance standardEncodeTicketBookingPeopleCategory :: StandardEncode TicketBookingPeopleCategory where standardEncode (TicketBookingPeopleCategory req) = standardEncode req
+instance showTicketBookingPeopleCategory :: Show TicketBookingPeopleCategory where show = genericShow
+instance decodeTicketBookingPeopleCategory :: Decode TicketBookingPeopleCategory where decode = defaultDecode
+instance encodeSTicketBookingPeopleCategory :: Encode TicketBookingPeopleCategory where encode = defaultEncode
+
 derive instance genericTicketBookingReq:: Generic TicketBookingReq _
 derive instance newtypeTicketBookingReq :: Newtype TicketBookingReq _
 instance standardEncodeTicketBookingReq :: StandardEncode TicketBookingReq where standardEncode (TicketBookingReq req) = standardEncode req
@@ -2298,12 +2387,12 @@ instance showTicketServicesResponse :: Show TicketServicesResponse where show = 
 instance decodeTicketServicesResponse :: Decode TicketServicesResponse where decode = defaultDecode
 instance encodeTicketServicesResponse :: Encode TicketServicesResponse where encode = defaultEncode
 
-derive instance genericTicketServicePrice :: Generic TicketServicePrice _
-derive instance newtypeTicketServicePrice :: Newtype TicketServicePrice _
-instance standardEncodeTicketServicePrice :: StandardEncode TicketServicePrice where standardEncode (TicketServicePrice body) = standardEncode body
-instance showTicketServicePrice :: Show TicketServicePrice where show = genericShow
-instance decodeTicketServicePrice :: Decode TicketServicePrice where decode = defaultDecode
-instance encodeTicketServicePrice :: Encode TicketServicePrice where encode = defaultEncode
+derive instance genericPeopleCategoriesResp :: Generic PeopleCategoriesResp _
+derive instance newtypePeopleCategoriesResp :: Newtype PeopleCategoriesResp _
+instance standardEncodePeopleCategoriesResp :: StandardEncode PeopleCategoriesResp where standardEncode (PeopleCategoriesResp body) = standardEncode body
+instance showPeopleCategoriesResp :: Show PeopleCategoriesResp where show = genericShow
+instance decodePeopleCategoriesResp :: Decode PeopleCategoriesResp where decode = defaultDecode
+instance encodePeopleCategoriesResp :: Encode PeopleCategoriesResp where encode = defaultEncode
 
 derive instance genericTicketPlaceResp :: Generic TicketPlaceResp _
 derive instance newtypeTicketPlaceResp :: Newtype TicketPlaceResp _
@@ -2336,3 +2425,24 @@ instance standardEncodeTicketPlaceResponse :: StandardEncode TicketPlaceResponse
 instance showTicketPlaceResponse :: Show TicketPlaceResponse where show = genericShow
 instance decodeTicketPlaceResponse :: Decode TicketPlaceResponse where decode = defaultDecode
 instance encodeTicketPlaceResponse  :: Encode TicketPlaceResponse where encode = defaultEncode
+
+derive instance genericPlaceType :: Generic PlaceType _
+instance standardEncodePlaceType :: StandardEncode PlaceType where standardEncode _ = standardEncode {}
+instance showPlaceType :: Show PlaceType where show = genericShow
+instance decodePlaceType :: Decode PlaceType where decode = defaultDecode
+instance encodePlaceType  :: Encode PlaceType where encode = defaultEncode
+instance eqPlaceType :: Eq PlaceType where eq = genericEq
+
+derive instance genericTicketCategoriesResp :: Generic TicketCategoriesResp _
+derive instance newtypeTicketCategoriesResp :: Newtype TicketCategoriesResp _
+instance standardEncodeTicketCategoriesResp :: StandardEncode TicketCategoriesResp where standardEncode (TicketCategoriesResp id) = standardEncode id
+instance showTicketCategoriesResp :: Show TicketCategoriesResp where show = genericShow
+instance decodeTicketCategoriesResp :: Decode TicketCategoriesResp where decode = defaultDecode
+instance encodeTicketCategoriesResp :: Encode TicketCategoriesResp where encode = defaultEncode
+
+derive instance genericBusinessHoursResp :: Generic BusinessHoursResp _
+derive instance newtypeBusinessHoursResp :: Newtype BusinessHoursResp _
+instance standardEncodeBusinessHoursResp :: StandardEncode BusinessHoursResp where standardEncode (BusinessHoursResp id) = standardEncode id
+instance showBusinessHoursResp :: Show BusinessHoursResp where show = genericShow
+instance decodeBusinessHoursResp :: Decode BusinessHoursResp where decode = defaultDecode
+instance encodeBusinessHoursResp :: Encode BusinessHoursResp where encode = defaultEncode

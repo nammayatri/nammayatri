@@ -75,7 +75,7 @@ homeScreen = do
           App.BackT $ App.NoBack <$> (pure $ GET_QUOTES updatedState)
     GoToTicketBookingFlow updatedState -> do 
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-          App.BackT $ App.BackPoint <$> (pure $ GO_TO_TICKET_BOOKING_FLOW updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_TICKETING updatedState)
     LogoutUser -> App.BackT $ App.NoBack <$> (pure $ LOGOUT)
     SelectEstimate updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
@@ -167,3 +167,6 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       modifyScreenState $ TripDetailsScreenStateType (\_ -> getTripDetailsState updatedState.data.ratingViewState.rideBookingRes state.tripDetailsScreen)
       App.BackT $ App.BackPoint <$> (pure $ RIDE_DETAILS_SCREEN updatedState)
+    ExitToTicketing updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ EXIT_TO_TICKETING updatedState)

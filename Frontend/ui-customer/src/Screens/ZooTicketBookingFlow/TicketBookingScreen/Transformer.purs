@@ -24,7 +24,7 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Services.API as API
 import Data.Lens((^.))
 
-import Screens.Types(TicketBookingItem(..),IndividualBookingItem(..), TicketBookingServicePriceBreakup(..), TicketBookingServiceDetails(..))
+import Screens.Types(TicketBookingItem(..),IndividualBookingItem(..), TicketBookingCategoryDetails(..), TicketBookingServiceDetails(..), TicketBookingPeopleCategoryDetails(..))
 
 buildBookingDetails :: (Array API.TicketBookingAPIEntity) -> Array TicketBookingItem
 buildBookingDetails res =
@@ -40,7 +40,7 @@ buildBookingDetails res =
       }
   ) (res)
 
-ticketDetailsTransformer :: API.GetBookingInfoRes -> IndividualBookingItem
+ticketDetailsTransformer :: API.TicketBookingDetails-> IndividualBookingItem
 ticketDetailsTransformer resp = 
   { 
     shortId : (resp ^. _ticketShortId),
@@ -51,7 +51,6 @@ ticketDetailsTransformer resp =
     visitDate : (resp ^. _visitDate),
     status : (getBookingStatus (resp ^. _status)),
     services : (ticketServicesTransformer (resp ^. _services) )
-
   }
 
 ticketServicesTransformer :: (Array API.TicketBookingServiceDetails) -> (Array TicketBookingServiceDetails)
@@ -64,19 +63,31 @@ ticketServicesTransformer services =
         status : item.status,
         verificationCount : item.verificationCount,
         expiryDate : item.expiryDate,
-        prices : (ticketServicePricesTransformer item.prices)
+        categories : ticketBookingCategoriesTransformer item.categories,
+        slot : item.slot
       }
   ) (services)
 
-ticketServicePricesTransformer :: (Array API.TicketBookingServicePriceBreakup) -> (Array TicketBookingServicePriceBreakup)
-ticketServicePricesTransformer prices = 
-  map (\(API.TicketBookingServicePriceBreakup item) -> do
+ticketBookingCategoriesTransformer :: (Array API.TicketBookingCategoryDetails) -> (Array TicketBookingCategoryDetails)
+ticketBookingCategoriesTransformer categories =
+  map (\(API.TicketBookingCategoryDetails item) -> do
       {
-        pricePerUnit : item.pricePerUnit,
-        numberOfUnits : item.numberOfUnits,
-        attendeeType : item.attendeeType
+        amount : item.amount,
+        bookedSeats : item.bookedSeats,
+        name : item.name,
+        peopleCategories : ticketBookingPCTransformer item.peopleCategories
       }
-  ) (prices)
+  ) (categories)
+
+ticketBookingPCTransformer :: (Array API.TicketBookingPeopleCategoryDetails) -> (Array TicketBookingPeopleCategoryDetails)
+ticketBookingPCTransformer pcs = 
+  map (\(API.TicketBookingPeopleCategoryDetails item) -> do
+      {
+        name : item.name,
+        numberOfUnits : item.numberOfUnits,
+        pricePerUnit : item.pricePerUnit
+      }
+  ) (pcs)
 
 dummyTicketBookingApiEntity :: API.TicketBookingAPIEntity
 dummyTicketBookingApiEntity = API.TicketBookingAPIEntity {

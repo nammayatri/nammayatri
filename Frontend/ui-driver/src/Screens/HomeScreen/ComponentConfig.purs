@@ -548,6 +548,7 @@ chatViewConfig state = let
     , black700 = Color.black700
     , canSendSuggestion = state.props.canSendSuggestion
     , enableCall = (not (state.data.activeRide.disabilityTag == Just ST.HEAR_IMPAIRMENT))
+    , enableSuggestions = state.data.config.features.enableSuggestions
   }
   in chatViewConfig'
 

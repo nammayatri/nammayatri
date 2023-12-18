@@ -625,7 +625,7 @@ const kannadaStrings = {
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "ನೀವು ಪಿಕಪ್ ಸ್ಥಳದಿಂದ ದೂರದಲ್ಲಿರುವಂತೆ ತೋರುತ್ತಿದೆ!",
   "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "ನೀವು ಬುಕಿಂಗ್‌ನೊಂದಿಗೆ ಮುಂದುವರಿಯಲು ಖಚಿತವಾಗಿ ಬಯಸುವಿರಾ?",
   "SOMETHING_WENT_WRONG_TRY_AGAIN_LATER" : "ಕೆಲವು ತಾಂತ್ರಿಕ ಸಮಸ್ಯೆ ಸಂಭವಿಸಿದೆ, ದಯವಿಟ್ಟು ನಂತರ ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ",
-
+  "MY_TICKETS" : "ನನ್ನ ಟಿಕೆಟ್‌ಗಳು"
 }
 
 export function getStringValue(key) {

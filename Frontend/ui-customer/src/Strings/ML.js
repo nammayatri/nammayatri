@@ -626,6 +626,7 @@ const malayalamStrings = {
   "YOU_SEEM_TO_BE_FAR_FROM_PICK_UP" : "നിങ്ങൾ പിക്കപ്പ് ലൊക്കേഷനിൽ നിന്ന് വളരെ അകലെയാണെന്ന് തോന്നുന്നു!",
   "ARE_YOU_SURE_YOU_WANT_TO_PROCEED_WITH_THE_BOOKING" : "ബുക്കിംഗുമായി മുന്നോട്ട് പോകണമെന്ന് തീർച്ചയാണോ?",
   "SOMETHING_WENT_WRONG_TRY_AGAIN_LATER" : "ചില സാങ്കേതിക പ്രശ്നം സംഭവിച്ചു, ദയവായി പിന്നീട് വീണ്ടും ശ്രമിക്കുക",
+  "MY_TICKETS" : "എന്റെ ടിക്കറ്റുകൾ"
 }
 
 export function getStringValue(key) {
