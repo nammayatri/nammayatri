@@ -91,7 +91,8 @@ data CancelSearch = CancelSearch
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { cancellationDues :: HighPrecMoney,
-    disputeChancesUsed :: Int
+    disputeChancesUsed :: Int,
+    canBlockCustomer :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -247,5 +248,5 @@ getCancellationDuesDetails (personId, merchantId) = do
   case (person.mobileNumber, person.mobileCountryCode) of
     (Just mobileNumber, Just countryCode) -> do
       res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
-      return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDues, disputeChancesUsed = res.disputeChancesUsed}
+      return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDues, disputeChancesUsed = res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
     _ -> throwError (PersonMobileNumberIsNULL person.id.getId)

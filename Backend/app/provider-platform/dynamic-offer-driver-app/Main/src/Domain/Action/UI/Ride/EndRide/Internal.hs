@@ -154,7 +154,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
             then do
               logWarning "Unable to calculate dispute chances used"
               return 0
-            else return $ round $ newFareParams.customerCancellationDues / thresholdConfig.cancellationFee
+            else do
+              return $ round $ newFareParams.customerCancellationDues / thresholdConfig.cancellationFee
         QRD.updateDisputeChancesUsedAndCancellationDues riderDetails.id (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
 

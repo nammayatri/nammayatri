@@ -108,7 +108,8 @@ disputeCancellationDues apiKey internalUrl merchantId phoneNumber countryCode me
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { customerCancellationDues :: HighPrecMoney,
-    disputeChancesUsed :: Int
+    disputeChancesUsed :: Int,
+    canBlockCustomer :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
