@@ -39,9 +39,6 @@ TicketPlace:
     PlaceType:
       enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Other"
 
-  constraints:
-    id: PrimaryKey
-
   default:
     termsAndConditions: "'{}'"
     placeType: "'Other'"
@@ -71,9 +68,6 @@ TicketService:
     ExpiryType:
       enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay"
 
-  constraints :
-    id : PrimaryKey
-
   default:
     operationalDays: "'{Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}'"
     allowFutureBooking: "true"
@@ -100,9 +94,6 @@ SpecialOccasion:
     specialDayType : SpecialDayType
     description : Maybe Text
     businessHours : "[Id BusinessHour]"
-
-  constraints :
-    id : PrimaryKey
 
   types:
     SpecialDayType:
@@ -133,9 +124,6 @@ BusinessHour:
     BusinessHourType:
       enum: "Slot Kernel.Prelude.TimeOfDay,Duration Kernel.Prelude.TimeOfDay Kernel.Prelude.TimeOfDay"
 
-  constraints :
-    id : PrimaryKey
-
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -152,9 +140,6 @@ ServiceCategory:
     allowedSeats: Maybe Int
     peopleCategory: "[Id ServicePeopleCategory]"
 
-  constraints :
-    id : PrimaryKey
-
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -168,9 +153,6 @@ ServicePeopleCategory:
     name: Text
     description: Text
     pricePerUnit: HighPrecMoney
-
-  constraints :
-    id : PrimaryKey
 
   queries:
     findById:
@@ -186,9 +168,6 @@ SeatManagement:
     ticketServiceCategoryId: Id ServiceCategory
     booked: Int
     blocked: Int
-
-  constraints :
-    id : PrimaryKey
 
   default:
     booked: "0"
@@ -274,9 +253,6 @@ TicketBookingService:
     ServiceStatus:
       enum: "Pending,Failed,Confirmed,Verified"
 
-  constraints:
-    id: PrimaryKey
-
   default:
     btype: "'Duration 03:30:00 12:00:00'"
 
@@ -310,9 +286,6 @@ TicketBookingServiceCategory:
     amount: HighPrecMoney
     serviceCategoryId: Maybe Text
 
-  constraints:
-    id: PrimaryKey
-
   queries:
     findAllByTicketBookingServiceId:
       kvFunction: findAllWithKV
@@ -327,8 +300,6 @@ TicketBookingPeopleCategory:
     name: Text
     pricePerUnit: HighPrecMoney
     numberOfUnits: Int
-  constraints:
-    id: PrimaryKey
 
   queries:
     findById:
