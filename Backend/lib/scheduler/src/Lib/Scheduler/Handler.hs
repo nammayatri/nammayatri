@@ -179,7 +179,7 @@ registerExecutionResult SchedulerHandle {..} j@(AnyJob job@Job {..}) result = do
     Complete -> do
       logInfo $ "job successfully completed on try " <> show (currErrors + 1)
       markAsComplete jobType' job.id
-      fork "" $ incrementStreamCounter "Executor"
+      fork "" $ incrementStreamCounter ("Executor_" <> show jobType')
     Terminate description -> do
       logInfo $ "job terminated on try " <> show (currErrors + 1) <> "; reason: " <> description
       markAsFailed jobType' job.id

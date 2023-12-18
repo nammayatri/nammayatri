@@ -141,7 +141,7 @@ markAsFailed :: (JobExecutor r m) => Id AnyJob -> m ()
 markAsFailed _ = pure ()
 
 updateErrorCountAndFail :: (JobExecutor r m, Forkable m, CoreMetrics m) => Id AnyJob -> Int -> m ()
-updateErrorCountAndFail _ _ = fork "" $ incrementSchedulerFailureCounter "RedisBased_Scheduler"
+updateErrorCountAndFail _ _ = pure ()
 
 updateKey :: AesonKey.Key -> Text -> Value -> Value
 updateKey key newString (A.Object obj) =
