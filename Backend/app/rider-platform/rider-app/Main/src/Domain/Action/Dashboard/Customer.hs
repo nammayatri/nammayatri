@@ -186,5 +186,6 @@ getCancellationDuesDetails merchantShortId personId = do
   return $
     Common.CancellationDuesDetailsRes
       { cancellationDues = res.cancellationDues,
-        disputeChancesUsed = res.disputeChancesUsed
+        disputeChancesUsed = res.disputeChancesUsed,
+        canBlockCustomer = res.canBlockCustomer
       }

@@ -42,7 +42,8 @@ data CancellationDuesReq = CancellationDuesReq
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { customerCancellationDues :: HighPrecMoney,
-    disputeChancesUsed :: Int
+    disputeChancesUsed :: Int,
+    canBlockCustomer :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -112,7 +113,11 @@ getCancellationDuesDetails merchantId merchantCity apiKey CancellationDuesReq {.
     throwError $ CityRestrictionOnCustomerCancellationDuesAddition (show merchantCity)
   numberHash <- getDbHash customerMobileNumber
   riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" customerMobileNumber)
-  return $ CancellationDuesDetailsRes {customerCancellationDues = riderDetails.cancellationDues, disputeChancesUsed = riderDetails.disputeChancesUsed}
+  let numOfChargableCancellations =
+        if transporterConfig.cancellationFee == 0
+          then 0
+          else round $ riderDetails.cancellationDues / transporterConfig.cancellationFee
+  return $ CancellationDuesDetailsRes {customerCancellationDues = riderDetails.cancellationDues, disputeChancesUsed = riderDetails.disputeChancesUsed, canBlockCustomer = Just (numOfChargableCancellations == transporterConfig.numOfCancellationsAllowed)}
 
 customerCancellationDuesSync ::
   ( MonadFlow m,

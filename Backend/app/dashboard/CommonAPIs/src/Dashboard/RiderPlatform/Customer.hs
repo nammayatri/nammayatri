@@ -140,6 +140,7 @@ type GetCancellationDuesDetailsAPI =
 
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { cancellationDues :: HighPrecMoney,
-    disputeChancesUsed :: Int
+    disputeChancesUsed :: Int,
+    canBlockCustomer :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
