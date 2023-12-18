@@ -24,6 +24,57 @@ import EulerHS.Prelude hiding (State, id, state)
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+data OrderV2 = OrderV2
+  { items :: [OrderItemV2],
+    fulfillments :: [FulfillmentInfoV2],
+    billing :: Billing,
+    payments :: [PaymentV2],
+    quote :: Quote,
+    provider :: Maybe Provider
+  }
+  deriving (Generic, Show)
+
+instance ToSchema OrderV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON OrderV2 where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON OrderV2 where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+data OrderItemV2 = OrderItemV2
+  { id :: Text,
+    fulfillment_ids :: Maybe [Text]
+  }
+  deriving (Generic, Show)
+
+instance ToSchema OrderItemV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON OrderItemV2 where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON OrderItemV2 where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+data Billing = Billing
+  { name :: Maybe Text,
+    phone :: Maybe Text
+  }
+  deriving (Generic, Show)
+
+instance ToSchema Billing where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON Billing where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON Billing where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data Order = Order
   { items :: [OrderItem],
     fulfillment :: FulfillmentInfo,
@@ -56,19 +107,4 @@ instance FromJSON OrderItem where
   parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 instance ToJSON OrderItem where
-  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
-
-data Billing = Billing
-  { name :: Maybe Text,
-    phone :: Maybe Text
-  }
-  deriving (Generic, Show)
-
-instance ToSchema Billing where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-instance FromJSON Billing where
-  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
-
-instance ToJSON Billing where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}

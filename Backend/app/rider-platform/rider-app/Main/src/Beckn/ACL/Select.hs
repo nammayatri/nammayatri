@@ -13,7 +13,7 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Select (buildSelectReq) where
+module Beckn.ACL.Select (buildSelectReq, buildSelectReqV2) where
 
 import Beckn.ACL.Common (castVariant, mkLocation)
 import qualified Beckn.Types.Core.Taxi.Select as Select
@@ -40,6 +40,19 @@ buildSelectReq dSelectRes = do
   context <- buildTaxiContext Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.merchant.defaultCity dSelectRes.merchant.country dSelectRes.autoAssignEnabled
   order <- buildOrder dSelectRes
   pure $ BecknReq context $ Select.SelectMessage order
+
+buildSelectReqV2 ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DSelect.DSelectRes ->
+  m (BecknReq Select.SelectMessageV2)
+buildSelectReqV2 dSelectRes = do
+  let messageId = dSelectRes.estimate.bppEstimateId.getId
+  let transactionId = dSelectRes.searchRequest.id.getId
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.merchant.defaultCity dSelectRes.merchant.country dSelectRes.autoAssignEnabled
+  order <- buildOrderV2 dSelectRes
+  pure $ BecknReq context $ Select.SelectMessageV2 order
 
 buildOrder :: (Monad m, Log m, MonadThrow m) => DSelect.DSelectRes -> m Select.Order
 buildOrder res = do
@@ -86,6 +99,72 @@ buildOrder res = do
                 { display = (\_ -> Just False) =<< res.customerExtraFee,
                   code = (\_ -> Just "customer_tip") =<< res.customerExtraFee,
                   name = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
+                  value = (\charges -> Just $ show charges.getMoney) =<< res.customerExtraFee
+                }
+            ]
+        }
+
+buildOrderV2 :: (Monad m, Log m, MonadThrow m) => DSelect.DSelectRes -> m Select.OrderV2
+buildOrderV2 res = do
+  let start = mkLocation $ DSearchCommon.makeSearchReqLoc' res.searchRequest.fromLocation
+  toLocation <- res.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
+  let end = mkLocation $ DSearchCommon.makeSearchReqLoc' toLocation
+  let variant = castVariant res.variant
+  let item =
+        Select.OrderItemV2
+          { id = res.estimate.itemId,
+            price =
+              Select.Price
+                { currency = "INR",
+                  value = show res.estimate.estimatedFare.getMoney
+                },
+            tags = if isJust res.customerExtraFee then Just [mkCustomerTipTags] else Nothing
+          }
+  return
+    Select.OrderV2
+      { items = [item],
+        fulfillments =
+          [ Select.FulfillmentInfoV2
+              { stops =
+                  [ Select.Stop
+                      { location = start,
+                        stopType = Select.START
+                      },
+                    Select.Stop
+                      { location = end,
+                        stopType = Select.END
+                      }
+                  ],
+                id = res.estimate.bppEstimateId.getId,
+                vehicle =
+                  Select.Vehicle
+                    { category = variant
+                    },
+                _type = Select.RIDE
+                -- tags = Nothing
+              }
+          ]
+      }
+  where
+    mkCustomerTipTags =
+      Select.TagGroupV2
+        { display = False,
+          descriptor =
+            Select.DescriptorV2
+              { code = Just "customer_tip_info",
+                name = Just "Customer Tip Info",
+                short_desc = Nothing
+              },
+          list =
+            [ Select.TagV2
+                { display = (\_ -> Just False) =<< res.customerExtraFee,
+                  descriptor =
+                    Just
+                      Select.DescriptorV2
+                        { code = (\_ -> Just "customer_tip") =<< res.customerExtraFee,
+                          name = (\_ -> Just "Customer Tip") =<< res.customerExtraFee,
+                          short_desc = Nothing
+                        },
                   value = (\charges -> Just $ show charges.getMoney) =<< res.customerExtraFee
                 }
             ]

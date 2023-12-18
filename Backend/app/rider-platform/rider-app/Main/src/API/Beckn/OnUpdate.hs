@@ -16,12 +16,17 @@ module API.Beckn.OnUpdate (API, handler) where
 
 import qualified Beckn.ACL.OnUpdate as ACL
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as OnUpdate
+import Data.Aeson as A
+import Data.Text as T
+import Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Tools.Error (GenericError (InvalidRequest))
 import Storage.Beam.SystemConfigs ()
 
 type API = OnUpdate.OnUpdateAPI
@@ -31,15 +36,22 @@ handler = onUpdate
 
 onUpdate ::
   SignatureAuthResult ->
-  OnUpdate.OnUpdateReq ->
+  -- OnUpdate.OnUpdateReqV2 ->
+  ByteString ->
   FlowHandler AckResponse
-onUpdate _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnUpdateReq <- ACL.buildOnUpdateReq req
+onUpdate _ reqBS = withFlowHandlerBecknAPI do
+  req <- decodeReq reqBS
+  mbDOnUpdateReq <- case req of
+    Right reqV2 -> withTransactionIdLogTag reqV2 $ ACL.buildOnUpdateReqV2 reqV2
+    Left reqV1 -> withTransactionIdLogTag reqV1 $ ACL.buildOnUpdateReq reqV1
+  messageId <- case req of
+    Right reqV2 -> pure $ reqV2.context.message_id
+    Left reqV1 -> pure $ reqV1.context.message_id
   whenJust mbDOnUpdateReq $ \onUpdateReq ->
-    Redis.whenWithLockRedis (onUpdateLockKey req.context.message_id) 60 $ do
+    Redis.whenWithLockRedis (onUpdateLockKey messageId) 60 $ do
       validatedOnUpdateReq <- DOnUpdate.validateRequest onUpdateReq
       fork "on update processing" $ do
-        Redis.whenWithLockRedis (onUpdateProcessngLockKey req.context.message_id) 60 $
+        Redis.whenWithLockRedis (onUpdateProcessngLockKey messageId) 60 $
           DOnUpdate.onUpdate validatedOnUpdateReq
   pure Ack
 
@@ -48,3 +60,12 @@ onUpdateLockKey id = "Customer:OnUpdate:MessageId-" <> id
 
 onUpdateProcessngLockKey :: Text -> Text
 onUpdateProcessngLockKey id = "Customer:OnUpdate:Processing:MessageId-" <> id
+
+decodeReq :: MonadFlow m => ByteString -> m (Either OnUpdate.OnUpdateReq OnUpdate.OnUpdateReqV2)
+decodeReq reqBS =
+  case A.eitherDecodeStrict reqBS of
+    Right reqV2 -> pure $ Right reqV2
+    Left _ ->
+      case A.eitherDecodeStrict reqBS of
+        Right reqV1 -> pure $ Left reqV1
+        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS

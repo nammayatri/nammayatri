@@ -14,7 +14,7 @@
 
 module Beckn.ACL.Search where
 
-import Beckn.ACL.Common (getTag)
+import Beckn.ACL.Common (getTag, getTagV2)
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import Data.Aeson
@@ -36,18 +36,18 @@ import Storage.Queries.Geometry
 import Tools.Error
 import qualified Tools.Maps as Maps
 
-buildSearchReq ::
+buildSearchReqV1 ::
   (HasFlowEnv m r '["coreVersion" ::: Text], CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant.Merchant ->
   Subscriber.Subscriber ->
   Search.SearchReq ->
   m DSearch.DSearchReq
-buildSearchReq merchantId subscriber req = do
+buildSearchReqV1 merchantId subscriber req = do
   now <- getCurrentTime
   let context = req.context
   validateContext Context.SEARCH context
   let intent = req.message.intent
-  let pickup = intent.fulfillment.start
+      pickup = intent.fulfillment.start
       dropOff = intent.fulfillment.end
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let geoRestriction = merchant.geofencingConfig.origin
@@ -97,6 +97,68 @@ buildSearchReq merchantId subscriber req = do
         ..
       }
 
+buildSearchReqV2 ::
+  (HasFlowEnv m r '["coreVersion" ::: Text], CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant.Merchant ->
+  Subscriber.Subscriber ->
+  Search.SearchReqV2 ->
+  m DSearch.DSearchReq
+buildSearchReqV2 merchantId subscriber req = do
+  now <- getCurrentTime
+  let context = req.context
+  validateContext Context.SEARCH context
+  let intent = req.message.intent
+  let stops = intent.fulfillment.stops
+  pickup <- firstStop stops & fromMaybeM (InvalidRequest "Missing start location in stops")
+  dropOff <- lastStop stops & fromMaybeM (InvalidRequest "Missing end location in stops")
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  let geoRestriction = merchant.geofencingConfig.origin
+  city <-
+    case geoRestriction of
+      Unrestricted -> pure merchant.city
+      Regions regions -> do
+        geometry <-
+          runInReplica $
+            findGeometriesContaining LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon} regions >>= \case
+              [] -> do
+                logError $ "No geometry found for pickup: " <> show pickup <> " for regions: " <> show regions
+                pure Nothing
+              (g : _) -> pure $ Just g
+        pure $ fromMaybe merchant.city ((.city) <$> geometry)
+  let distance = getDistanceV2 =<< intent.fulfillment.tags
+  let duration = getDurationV2 =<< intent.fulfillment.tags
+  let customerLanguage = buildCustomerLanguageV2 =<< intent.fulfillment.customer
+  let isReallocationEnabled = getIsReallocationEnabledV2 =<< intent.fulfillment.tags
+  unless (subscriber.subscriber_id == context.bap_id) $
+    throwError (InvalidRequest "Invalid bap_id")
+  unless (subscriber.subscriber_url == context.bap_uri) $
+    throwError (InvalidRequest "Invalid bap_uri")
+  let disabilityTag = buildDisabilityTagV2 =<< intent.fulfillment.customer
+  let messageId = context.message_id
+  transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing transaction_id")
+  pure
+    DSearch.DSearchReq
+      { messageId = messageId,
+        transactionId = transactionId,
+        bapId = subscriber.subscriber_id,
+        bapUri = subscriber.subscriber_url,
+        bapCity = city,
+        bapCountry = context.country,
+        pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
+        pickupTime = now,
+        dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},
+        pickupAddress = pickup.location.address,
+        dropAddrress = dropOff.location.address,
+        routeDistance = distance,
+        routeDuration = duration,
+        device = Nothing,
+        routePoints = buildRoutePointsV2 =<< intent.fulfillment.tags, --------TODO------Take proper input---------
+        customerLanguage = customerLanguage,
+        disabilityTag = disabilityTag,
+        customerPhoneNum = buildCustomerPhoneNumberV2 =<< intent.fulfillment.customer,
+        ..
+      }
+
 getDistance :: Search.TagGroups -> Maybe Meters
 getDistance tagGroups = do
   tagValue <- getTag "route_info" "distance_info_in_m" tagGroups
@@ -109,9 +171,26 @@ getDuration tagGroups = do
   durationValue <- readMaybe $ T.unpack tagValue
   Just $ Seconds durationValue
 
+getDistanceV2 :: [Search.TagGroupV2] -> Maybe Meters
+getDistanceV2 tagGroups = do
+  tagValue <- getTagV2 "route_info" "distance_info_in_m" tagGroups
+  distanceValue <- readMaybe $ T.unpack tagValue
+  Just $ Meters distanceValue
+
+getDurationV2 :: [Search.TagGroupV2] -> Maybe Seconds
+getDurationV2 tagGroups = do
+  tagValue <- getTagV2 "route_info" "duration_info_in_s" tagGroups
+  durationValue <- readMaybe $ T.unpack tagValue
+  Just $ Seconds durationValue
+
 getIsReallocationEnabled :: Search.TagGroups -> Maybe Bool
 getIsReallocationEnabled tagGroups = do
   tagValue <- getTag "reallocation_info" "is_reallocation_enabled" tagGroups
+  readMaybe $ T.unpack tagValue
+
+getIsReallocationEnabledV2 :: [Search.TagGroupV2] -> Maybe Bool
+getIsReallocationEnabledV2 tagGroups = do
+  tagValue <- getTagV2 "reallocation_info" "is_reallocation_enabled" tagGroups
   readMaybe $ T.unpack tagValue
 
 buildCustomerLanguage :: Search.Customer -> Maybe Language
@@ -119,9 +198,19 @@ buildCustomerLanguage Search.Customer {..} = do
   tagValue <- getTag "customer_info" "customer_language" person.tags
   readMaybe $ T.unpack tagValue
 
+buildCustomerLanguageV2 :: Search.CustomerV2 -> Maybe Language
+buildCustomerLanguageV2 Search.CustomerV2 {..} = do
+  tagValue <- getTagV2 "customer_info" "customer_language" person.tags
+  readMaybe $ T.unpack tagValue
+
 buildDisabilityTag :: Search.Customer -> Maybe Text
 buildDisabilityTag Search.Customer {..} = do
   tagValue <- getTag "customer_info" "customer_disability" person.tags
+  readMaybe $ T.unpack tagValue
+
+buildDisabilityTagV2 :: Search.CustomerV2 -> Maybe Text
+buildDisabilityTagV2 Search.CustomerV2 {..} = do
+  tagValue <- getTagV2 "customer_info" "customer_disability" person.tags
   readMaybe $ T.unpack tagValue
 
 buildRoutePoints :: Search.TagGroups -> Maybe [Maps.LatLong]
@@ -129,7 +218,23 @@ buildRoutePoints tagGroups = do
   tagValue <- getTag "route_info" "route_points" tagGroups
   decode $ encodeUtf8 tagValue
 
+buildRoutePointsV2 :: [Search.TagGroupV2] -> Maybe [Maps.LatLong]
+buildRoutePointsV2 tagGroups = do
+  tagValue <- getTagV2 "route_info" "route_points" tagGroups
+  decode $ encodeUtf8 tagValue
+
+firstStop :: [Search.Stop] -> Maybe Search.Stop
+firstStop = find (\stop -> Search.stopType stop == Search.START)
+
+lastStop :: [Search.Stop] -> Maybe Search.Stop
+lastStop stops = find (\stop -> Search.stopType stop == Search.END) (reverse stops)
+
 buildCustomerPhoneNumber :: Search.Customer -> Maybe Text
 buildCustomerPhoneNumber Search.Customer {..} = do
   tagValue <- getTag "customer_info" "customer_phone_number" person.tags
+  readMaybe $ T.unpack tagValue
+
+buildCustomerPhoneNumberV2 :: Search.CustomerV2 -> Maybe Text
+buildCustomerPhoneNumberV2 Search.CustomerV2 {..} = do
+  tagValue <- getTagV2 "customer_info" "customer_phone_number" person.tags
   readMaybe $ T.unpack tagValue

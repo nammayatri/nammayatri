@@ -30,11 +30,11 @@ import Kernel.Types.Field
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 
-buildConfirmReq ::
+buildConfirmReqV1 ::
   (HasFlowEnv m r '["coreVersion" ::: Text]) =>
   Confirm.ConfirmReq ->
   m DConfirm.DConfirmReq
-buildConfirmReq req = do
+buildConfirmReqV1 req = do
   validateContext Context.CONFIRM req.context
   let bookingId = Id req.message.order.id
       fulfillment = req.message.order.fulfillment
@@ -45,8 +45,45 @@ buildConfirmReq req = do
       mbRiderName = fulfillment.customer.person <&> (.name)
       vehicleVariant = castVehicleVariant fulfillment.vehicle.category
       driverId = req.message.order.provider <&> (.id)
-      nightSafetyCheck = buildNightSafetyCheckTag $ (.tags) =<< fulfillment.customer.person
+      nightSafetyCheck = buildNightSafetyCheckTag $ (.tags) =<< fulfillment.customer.person -- TODO : make OrderPerson compatible with both v1 and v2
   toAddress <- (castAddress . (.location.address) <$> fulfillment.end) & fromMaybeM (InvalidRequest "end location missing")
+
+  return $
+    DConfirm.DConfirmReq
+      { ..
+      }
+  where
+    castAddress Confirm.Address {..} = DL.LocationAddress {areaCode = area_code, area = locality, fullAddress = Nothing, ..}
+    castVehicleVariant = \case
+      Confirm.SEDAN -> VehVar.SEDAN
+      Confirm.SUV -> VehVar.SUV
+      Confirm.HATCHBACK -> VehVar.HATCHBACK
+      Confirm.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
+      Confirm.TAXI -> VehVar.TAXI
+      Confirm.TAXI_PLUS -> VehVar.TAXI_PLUS
+
+buildConfirmReqV2 ::
+  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
+  Confirm.ConfirmReqV2 ->
+  m DConfirm.DConfirmReq
+buildConfirmReqV2 req = do
+  validateContext Context.CONFIRM req.context
+  let bookingId = Id req.message.order.id
+  fulfillment <-
+    case req.message.order.fulfillments of
+      [fulfillment] -> pure fulfillment
+      _ -> throwError . InvalidRequest $ "Exactly one fulfillment is expected in confirm request " <> show req.message.order.fulfillments
+  start <- find (\stop -> stop.stopType == Confirm.START) fulfillment.stops & fromMaybeM (InvalidRequest $ "start stop missing " <> show fulfillment.stops)
+  let end = find (\stop -> stop.stopType == Confirm.END) fulfillment.stops
+  let phone = fulfillment.customer.contact.phone
+      customerMobileCountryCode = phone.phoneCountryCode
+      customerPhoneNumber = phone.phoneNumber
+      fromAddress = castAddress start.location.address
+      mbRiderName = fulfillment.customer.person <&> (.name)
+      vehicleVariant = castVehicleVariant fulfillment.vehicle.category
+      driverId = req.message.order.provider <&> (.id)
+      nightSafetyCheck = buildNightSafetyCheckTagV2 $ (.tags) =<< fulfillment.customer.person
+  toAddress <- (castAddress . (.location.address) <$> end) & fromMaybeM (InvalidRequest "end location missing")
 
   return $
     DConfirm.DConfirmReq
@@ -76,5 +113,14 @@ buildNightSafetyCheckTag tagGroups' = do
   where
     getTagValue tagGroups = do
       let tagValue = getTag "customer_info" "night_safety_check" tagGroups
+          res = maybe (Just True) ((\val -> readMaybe val :: Maybe Bool) . T.unpack) tagValue
+      fromMaybe True res
+
+buildNightSafetyCheckTagV2 :: Maybe [Confirm.TagGroupV2] -> Bool
+buildNightSafetyCheckTagV2 tagGroups' = do
+  maybe True getTagValue tagGroups'
+  where
+    getTagValue tagGroups = do
+      let tagValue = getTagV2 "customer_info" "night_safety_check" tagGroups
           res = maybe (Just True) ((\val -> readMaybe val :: Maybe Bool) . T.unpack) tagValue
       fromMaybe True res

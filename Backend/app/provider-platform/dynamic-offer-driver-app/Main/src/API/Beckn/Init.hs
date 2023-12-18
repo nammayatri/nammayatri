@@ -19,9 +19,13 @@ import qualified Beckn.ACL.OnInit as ACL
 import qualified Beckn.Core as CallBAP
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import Beckn.Types.Core.Taxi.API.OnInit as OnInit
+import qualified Data.Aeson as A
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant as DM
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude hiding (init)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
@@ -45,24 +49,41 @@ handler = init
 init ::
   Id DM.Merchant ->
   SignatureAuthResult ->
-  Init.InitReq ->
+  -- Init.InitReq ->
+  ByteString ->
   FlowHandler AckResponse
-init transporterId (SignatureAuthResult _ subscriber) req =
-  withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Init API Flow" "Reached"
-    dInitReq <- ACL.buildInitReq subscriber req
-    Redis.whenWithLockRedis (initLockKey dInitReq.estimateId) 60 $ do
-      let context = req.context
-      validatedRes <- DInit.validateRequest transporterId dInitReq
-      fork "init request processing" $ do
-        Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
-          dInitRes <- DInit.handler transporterId dInitReq validatedRes
+init transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBecknAPI $ do
+  req <- decodeReq reqBS
+  dInitReq <- case req of
+    Right reqV2 ->
+      withTransactionIdLogTag reqV2 $ do
+        logTagInfo "Init API Flow" "Reached"
+        ACL.buildInitReqV2 subscriber reqV2
+    Left reqV1 ->
+      withTransactionIdLogTag reqV1 $ do
+        logTagInfo "Init API Flow" "Reached"
+        ACL.buildInitReqV1 subscriber reqV1
+
+  Redis.whenWithLockRedis (initLockKey dInitReq.estimateId) 60 $ do
+    validatedRes <- DInit.validateRequest transporterId dInitReq
+    fork "init request processing" $ do
+      Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
+        dInitRes <- DInit.handler transporterId dInitReq validatedRes
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
-          void . handle (errHandler dInitRes.booking) $
-            CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri internalEndPointHashMap $
-              pure $ ACL.mkOnInitMessage dInitRes
-      return ()
-    pure Ack
+        context <- case req of
+          Left reqV1 -> pure $ reqV1.context
+          Right reqV2 -> pure $ reqV2.context
+        isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+        if isBecknSpecVersion2
+          then
+            void . handle (errHandler dInitRes.booking) $
+              CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPIV2 context context.bap_uri internalEndPointHashMap $
+                pure $ ACL.mkOnInitMessageV2 dInitRes
+          else
+            void . handle (errHandler dInitRes.booking) $
+              CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPIV1 context context.bap_uri internalEndPointHashMap $
+                pure $ ACL.mkOnInitMessage dInitRes
+  pure Ack
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DInit.cancelBooking booking transporterId
@@ -74,3 +95,12 @@ initLockKey id = "Driver:Init:DriverQuoteId-" <> id
 
 initProcessingLockKey :: Text -> Text
 initProcessingLockKey id = "Driver:Init:Processing:DriverQuoteId-" <> id
+
+decodeReq :: MonadFlow m => ByteString -> m (Either Init.InitReq Init.InitReqV2)
+decodeReq reqBS =
+  case A.eitherDecodeStrict reqBS of
+    Right reqV2 -> pure $ Right reqV2
+    Left _ ->
+      case A.eitherDecodeStrict reqBS of
+        Right reqV1 -> pure $ Left reqV1
+        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS

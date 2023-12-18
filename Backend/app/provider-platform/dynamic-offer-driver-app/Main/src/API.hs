@@ -38,14 +38,14 @@ import Storage.Beam.SystemConfigs ()
 
 type DriverOfferAPI =
   MainAPI
-    :<|> Beckn.API -- TODO :: Temporary
+    :<|> Beckn.API -- TODO : Revert after 2.x release
     :<|> SwaggerAPI
     :<|> OpenAPI
     :<|> Raw
 
 type MainAPI =
   UI.API
-    -- :<|> Beckn.API -- TODO :: Temporary commented
+    -- :<|> Beckn.API -- TODO : Revert after 2.x release
     :<|> Idfy.IdfyWebhookAPI
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Idfy.IdfyWebhookAPI
@@ -67,7 +67,7 @@ driverOfferAPI = Proxy
 mainServer :: FlowServer MainAPI
 mainServer =
   UI.handler
-    -- :<|> Beckn.handler -- TODO :: Temporary commented
+    -- :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> oldIdfyWebhookHandler
     :<|> idfyWebhookHandler
     :<|> idfyWebhookV2Handler
@@ -79,7 +79,7 @@ mainServer =
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =
   mainServer
-    :<|> Beckn.handler -- TODO :: Temporary
+    :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow
     :<|> serveDirectoryWebApp "swagger"

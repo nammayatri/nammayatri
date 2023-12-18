@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnInit (buildOnInitReq) where
+module Beckn.ACL.OnInit (buildOnInitReq, buildOnInitReqV2) where
 
 import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
@@ -23,6 +23,7 @@ import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Tools.Error
 
 buildOnInitReq ::
   ( HasFlowEnv m r '["coreVersion" ::: Text]
@@ -48,12 +49,52 @@ buildOnInitReq req = do
           ..
         }
 
+buildOnInitReqV2 ::
+  ( HasFlowEnv m r '["coreVersion" ::: Text]
+  ) =>
+  OnInit.OnInitReqV2 ->
+  m (Maybe DOnInit.OnInitReq)
+buildOnInitReqV2 req = do
+  validateContext Context.ON_INIT $ req.context
+  handleErrorV2 req.contents $ \message -> do
+    let bookingId = Id req.context.message_id
+        bppBookingId = Id message.order.id
+        estimatedFare = message.order.quote.price.value
+        estimatedTotalFare = message.order.quote.price.offered_value
+    validatePrices estimatedFare estimatedTotalFare
+    -- if we get here, the discount >= 0
+    let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
+    payment <- case message.order.payments of
+      [payment] -> pure payment
+      _ -> throwError . InvalidRequest $ "There must be exactly one payment in on_init request " <> show message.order.payments
+    return $
+      DOnInit.OnInitReq
+        { estimatedFare = roundToIntegral estimatedFare,
+          estimatedTotalFare = roundToIntegral estimatedTotalFare,
+          discount = roundToIntegral <$> discount,
+          paymentUrl = payment.uri,
+          ..
+        }
+
 handleError ::
   (MonadFlow m) =>
   Either Error OnInit.OnInitMessage ->
   (OnInit.OnInitMessage -> m DOnInit.OnInitReq) ->
   m (Maybe DOnInit.OnInitReq)
 handleError etr action =
+  case etr of
+    Right msg -> do
+      Just <$> action msg
+    Left err -> do
+      logTagError "on_init req" $ "on_init error: " <> show err
+      pure Nothing
+
+handleErrorV2 ::
+  (MonadFlow m) =>
+  Either Error OnInit.OnInitMessageV2 ->
+  (OnInit.OnInitMessageV2 -> m DOnInit.OnInitReq) ->
+  m (Maybe DOnInit.OnInitReq)
+handleErrorV2 etr action =
   case etr of
     Right msg -> do
       Just <$> action msg

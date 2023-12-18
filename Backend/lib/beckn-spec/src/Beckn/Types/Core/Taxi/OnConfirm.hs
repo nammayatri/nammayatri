@@ -30,6 +30,7 @@ import Beckn.Types.Core.Taxi.Common.Price as Reexport
 import Beckn.Types.Core.Taxi.Common.Provider as Reexport
 import Beckn.Types.Core.Taxi.Common.Quote as Reexport
 import Beckn.Types.Core.Taxi.Common.StartInfo as Reexport
+import Beckn.Types.Core.Taxi.Common.Stop as Reexport
 import Beckn.Types.Core.Taxi.Common.StopInfo as Reexport
 import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
@@ -40,5 +41,10 @@ import EulerHS.Prelude
 
 newtype OnConfirmMessage = OnConfirmMessage
   { order :: Order
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype OnConfirmMessageV2 = OnConfirmMessageV2
+  { order :: OrderV2
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

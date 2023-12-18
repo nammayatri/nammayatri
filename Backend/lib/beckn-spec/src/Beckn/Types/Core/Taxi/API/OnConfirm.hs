@@ -14,20 +14,39 @@
 
 module Beckn.Types.Core.Taxi.API.OnConfirm where
 
-import Beckn.Types.Core.Taxi.OnConfirm (OnConfirmMessage)
+import Beckn.Types.Core.Taxi.OnConfirm (OnConfirmMessage, OnConfirmMessageV2)
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnConfirmReq = BecknCallbackReq OnConfirmMessage
+
+type OnConfirmReqV2 = BecknCallbackReq OnConfirmMessageV2
 
 type OnConfirmRes = AckResponse
 
 type OnConfirmAPI =
   "on_confirm"
-    :> ReqBody '[JSON] OnConfirmReq
+    :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] OnConfirmRes
 
 onConfirmAPI :: Proxy OnConfirmAPI
 onConfirmAPI = Proxy
+
+type OnConfirmAPIV1 =
+  "on_confirm"
+    :> ReqBody '[JSON] OnConfirmReq
+    :> Post '[JSON] OnConfirmRes
+
+onConfirmAPIV1 :: Proxy OnConfirmAPIV1
+onConfirmAPIV1 = Proxy
+
+type OnConfirmAPIV2 =
+  "on_confirm"
+    :> ReqBody '[JSON] OnConfirmReqV2
+    :> Post '[JSON] OnConfirmRes
+
+onConfirmAPIV2 :: Proxy OnConfirmAPIV2
+onConfirmAPIV2 = Proxy

@@ -18,12 +18,13 @@ module Beckn.Types.Core.Taxi.OnSearch
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Descriptor as Reexport hiding (Descriptor (..))
 import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Addon as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Catalog as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Category as Reexport
-import Beckn.Types.Core.Taxi.OnSearch.Descriptor as Reexport
+import Beckn.Types.Core.Taxi.OnSearch.Descriptor as Reexport -- why onsearch has a seperate descriptor?
 import Beckn.Types.Core.Taxi.OnSearch.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Item as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Location as Reexport
@@ -31,11 +32,16 @@ import Beckn.Types.Core.Taxi.OnSearch.Offer as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Price as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Provider as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.ProviderLocation as Reexport
--- import Beckn.Types.Core.Taxi.OnSearch.StartInfo as Reexport
--- import Beckn.Types.Core.Taxi.OnSearch.StopInfo as Reexport
+-- import Beckn.Types.Core.Taxi.OnSearch.StartInfo as Reexport -- to be removed
+-- import Beckn.Types.Core.Taxi.OnSearch.StopInfo as Reexport -- to be removed
 import Kernel.Prelude
 
 newtype OnSearchMessage = OnSearchMessage
   { catalog :: Catalog
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype OnSearchMessageV2 = OnSearchMessageV2
+  { catalog :: CatalogV2
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

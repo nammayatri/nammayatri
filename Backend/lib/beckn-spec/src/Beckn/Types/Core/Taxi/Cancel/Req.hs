@@ -23,8 +23,8 @@ import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 data CancelMessage = CancelMessage
-  { order_id :: Text,
-    item_id :: Text,
+  { order_id :: Text, -- bppBookingId
+    item_id :: Text, -- bppTransactionId
     cancellation_reason_id :: CancellationSource
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

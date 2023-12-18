@@ -24,6 +24,22 @@ import EulerHS.Prelude
 import qualified Kernel.Utils.JSON as J
 import qualified Kernel.Utils.Schema as S
 
+data UpdateEventV2
+  = PaymentCompletedV2 PaymentCompletedEventV2
+    | EditLocationV2 EditLocationEventV2
+  deriving (Generic, Show)
+
+instance ToJSON UpdateEventV2 where
+  toJSON = genericToJSON J.untaggedValue
+
+instance FromJSON UpdateEventV2 where
+  parseJSON = genericParseJSON J.untaggedValue
+
+instance ToSchema UpdateEventV2 where
+  declareNamedSchema = genericDeclareNamedSchema S.untaggedValue
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data UpdateEvent
   = PaymentCompleted PaymentCompletedEvent
   | EditLocation EditLocationEvent

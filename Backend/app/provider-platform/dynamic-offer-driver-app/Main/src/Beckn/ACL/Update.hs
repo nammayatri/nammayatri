@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.Update (buildUpdateReq) where
+module Beckn.ACL.Update (buildUpdateReqV1, buildUpdateReqV2) where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.Update as Update
@@ -28,19 +28,33 @@ import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Tools.Error (GenericError (InvalidRequest))
 
-buildUpdateReq ::
+buildUpdateReqV1 ::
   ( HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
   Subscriber.Subscriber ->
   Update.UpdateReq ->
   m DUpdate.DUpdateReq
-buildUpdateReq subscriber req = do
+buildUpdateReqV1 subscriber req = do
   validateContext Context.UPDATE $ req.context
   unless (subscriber.subscriber_id == req.context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == req.context.bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri")
   pure $ parseEvent req.message.order
+
+buildUpdateReqV2 ::
+  ( HasFlowEnv m r '["coreVersion" ::: Text]
+  ) =>
+  Subscriber.Subscriber ->
+  Update.UpdateReqV2 ->
+  m DUpdate.DUpdateReq
+buildUpdateReqV2 subscriber req = do
+  validateContext Context.UPDATE $ req.context
+  unless (subscriber.subscriber_id == req.context.bap_id) $
+    throwError (InvalidRequest "Invalid bap_id")
+  unless (subscriber.subscriber_url == req.context.bap_uri) $
+    throwError (InvalidRequest "Invalid bap_uri")
+  pure $ parseEventV2 req.message.order
 
 parseEvent :: Update.UpdateEvent -> DUpdate.DUpdateReq
 parseEvent (Update.PaymentCompleted pcEvent) = do
@@ -58,12 +72,33 @@ parseEvent (Update.EditLocation elEvent) = do
       destination = elEvent.fulfillment.destination.location
     }
 
+parseEventV2 :: Update.UpdateEventV2 -> DUpdate.DUpdateReq
+parseEventV2 (Update.PaymentCompletedV2 pcEvent) =
+  let maybePayment = safeHead $ pcEvent.payments
+      maybeFulfillment = safeHead $ pcEvent.fulfillments
+      payment = fromMaybe (error "Missing payments") maybePayment
+      fulfillment = fromMaybe (error "Missing fulfillments") maybeFulfillment
+   in DUpdate.PaymentCompletedReq
+        { bookingId = Id pcEvent.id,
+          rideId = Id fulfillment.id,
+          paymentStatus = castPaymentStatus payment.status,
+          paymentMethodInfo = mkPaymentMethodInfoV2 payment
+        }
+
 mkPaymentMethodInfo :: Update.Payment -> DMPM.PaymentMethodInfo
 mkPaymentMethodInfo Update.Payment {..} =
   DMPM.PaymentMethodInfo
     { collectedBy = Common.castPaymentCollector collected_by,
       paymentType = Common.castPaymentType _type,
       paymentInstrument = Common.castPaymentInstrument instrument
+    }
+
+mkPaymentMethodInfoV2 :: Update.PaymentV2 -> DMPM.PaymentMethodInfo
+mkPaymentMethodInfoV2 Update.PaymentV2 {..} =
+  DMPM.PaymentMethodInfo
+    { collectedBy = Common.castPaymentCollector collected_by,
+      paymentType = Common.castPaymentType _type,
+      paymentInstrument = Common.castPaymentInstrument params.instrument
     }
 
 castPaymentStatus :: Update.PaymentStatus -> DUpdate.PaymentStatus

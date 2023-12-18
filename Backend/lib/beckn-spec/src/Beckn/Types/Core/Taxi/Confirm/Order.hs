@@ -28,6 +28,42 @@ import EulerHS.Prelude hiding (State, id, state)
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+data OrderV2 = OrderV2
+  { id :: Text,
+    items :: [OrderItem],
+    fulfillments :: [FulfillmentInfoV2],
+    quote :: Quote,
+    payments :: [PaymentV2],
+    provider :: Maybe Provider
+  }
+  deriving (Generic, Show)
+
+instance ToSchema OrderV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON OrderV2 where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON OrderV2 where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+data OrderItem = OrderItem
+  { id :: Text,
+    price :: Maybe Price
+  }
+  deriving (Generic, Show)
+
+instance ToSchema OrderItem where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON OrderItem where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON OrderItem where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data Order = Order
   { id :: Text,
     items :: [OrderItem],
@@ -45,19 +81,4 @@ instance FromJSON Order where
   parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 instance ToJSON Order where
-  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
-
-data OrderItem = OrderItem
-  { id :: Text,
-    price :: Maybe Price
-  }
-  deriving (Generic, Show)
-
-instance ToSchema OrderItem where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-instance FromJSON OrderItem where
-  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
-
-instance ToJSON OrderItem where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}

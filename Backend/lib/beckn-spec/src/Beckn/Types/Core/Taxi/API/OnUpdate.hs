@@ -14,20 +14,39 @@
 
 module Beckn.Types.Core.Taxi.API.OnUpdate where
 
-import Beckn.Types.Core.Taxi.OnUpdate (OnUpdateMessage)
+import Beckn.Types.Core.Taxi.OnUpdate (OnUpdateMessage, OnUpdateMessageV2)
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnUpdateReq = BecknCallbackReq OnUpdateMessage
+
+type OnUpdateReqV2 = BecknCallbackReq OnUpdateMessageV2
 
 type OnUpdateRes = AckResponse
 
 type OnUpdateAPI =
   "on_update"
-    :> ReqBody '[JSON] OnUpdateReq
+    :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] OnUpdateRes
 
 onUpdateAPI :: Proxy OnUpdateAPI
 onUpdateAPI = Proxy
+
+type OnUpdateAPIV1 =
+  "on_update"
+    :> ReqBody '[JSON] OnUpdateReq
+    :> Post '[JSON] OnUpdateRes
+
+onUpdateAPIV1 :: Proxy OnUpdateAPIV1
+onUpdateAPIV1 = Proxy
+
+type OnUpdateAPIV2 =
+  "on_update"
+    :> ReqBody '[JSON] OnUpdateReqV2
+    :> Post '[JSON] OnUpdateRes
+
+onUpdateAPIV2 :: Proxy OnUpdateAPIV2
+onUpdateAPIV2 = Proxy

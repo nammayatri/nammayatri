@@ -23,6 +23,7 @@ import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Data.Time.LocalTime (CalendarDiffTime, ctTime)
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Domain.Types.VehicleVariant
+import EulerHS.Prelude (safeHead)
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
@@ -60,12 +61,54 @@ buildOnSelectReq req = do
           ..
         }
 
+buildOnSelectReqV2 ::
+  HasFlowEnv m r '["coreVersion" ::: Text] =>
+  OnSelect.OnSelectReqV2 ->
+  m (Maybe DOnSelect.DOnSelectReq)
+buildOnSelectReqV2 req = do
+  logDebug $ "on_select request: " <> show req
+  let context = req.context
+  let timestamp = context.timestamp
+  validateContext Context.ON_SELECT context
+  handleErrorV2 req.contents $ \message -> do
+    providerId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
+    providerUrl <- context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_uri")
+    let items = message.order.items
+    fulfillment <- message.order.fulfillments & safeHead & fromMaybeM (InvalidRequest $ "Missing fulfillment in order " <> show message.order)
+    quotesInfo <- traverse (buildQuoteInfoV2 message.order.provider.id fulfillment message.order.quote timestamp) items
+    let providerInfo =
+          DOnSelect.ProviderInfo
+            { providerId = providerId,
+              name = "",
+              url = providerUrl,
+              mobileNumber = "", ------------TODO remove it or make it as maybe type
+              ridesCompleted = 0 -------------TODO remove it or make it as maybe type
+            }
+    pure
+      DOnSelect.DOnSelectReq
+        { bppEstimateId = Id context.message_id,
+          ..
+        }
+
 handleError ::
   (MonadFlow m) =>
   Either Error OnSelect.OnSelectMessage ->
   (OnSelect.OnSelectMessage -> m DOnSelect.DOnSelectReq) ->
   m (Maybe DOnSelect.DOnSelectReq)
 handleError etr action =
+  case etr of
+    Right msg -> do
+      Just <$> action msg
+    Left err -> do
+      logTagError "on_select req" $ "on_select error: " <> show err
+      pure Nothing
+
+handleErrorV2 ::
+  (MonadFlow m) =>
+  Either Error OnSelect.OnSelectMessageV2 ->
+  (OnSelect.OnSelectMessageV2 -> m DOnSelect.DOnSelectReq) ->
+  m (Maybe DOnSelect.DOnSelectReq)
+handleErrorV2 etr action =
   case etr of
     Right msg -> do
       Just <$> action msg
@@ -107,6 +150,40 @@ buildQuoteInfo driverId fulfillment quote contextTime item = do
       OnSelect.TAXI -> TAXI
       OnSelect.TAXI_PLUS -> TAXI_PLUS
 
+buildQuoteInfoV2 ::
+  (MonadThrow m, Log m, MonadTime m) =>
+  Text ->
+  OnSelect.FulfillmentInfoV2 ->
+  OnSelect.Quote ->
+  UTCTimeRFC3339 ->
+  OnSelect.ItemV2 ->
+  m DOnSelect.QuoteInfo
+buildQuoteInfoV2 driverId fulfillment quote contextTime item = do
+  quoteDetails <- case fulfillment._type of
+    OnSelect.RIDE -> buildDriverOfferQuoteDetailsV2 item fulfillment quote contextTime driverId
+    OnSelect.RIDE_OTP -> throwError $ InvalidRequest "select not supported for ride otp trip"
+  let vehicleVariant = fulfillment.vehicle.category
+      estimatedFare = roundToIntegral item.price.value
+      estimatedTotalFare = roundToIntegral item.price.value
+      descriptions = []
+      specialLocationTag = getTagV2 "general_info" "special_location_tag" =<< item.tags
+  validatePrices estimatedFare estimatedTotalFare
+  -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
+  let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
+  pure
+    DOnSelect.QuoteInfo
+      { vehicleVariant = castVehicleVariant vehicleVariant,
+        ..
+      }
+  where
+    castVehicleVariant = \case
+      OnSelect.SEDAN -> SEDAN
+      OnSelect.SUV -> SUV
+      OnSelect.HATCHBACK -> HATCHBACK
+      OnSelect.AUTO_RICKSHAW -> AUTO_RICKSHAW
+      OnSelect.TAXI -> TAXI
+      OnSelect.TAXI_PLUS -> TAXI_PLUS
+
 buildDriverOfferQuoteDetails ::
   (MonadThrow m, Log m, MonadTime m) =>
   OnSelect.Item ->
@@ -130,9 +207,41 @@ buildDriverOfferQuoteDetails item fulfillment quote timestamp driverId = do
         ..
       }
 
+buildDriverOfferQuoteDetailsV2 ::
+  (MonadThrow m, Log m, MonadTime m) =>
+  OnSelect.ItemV2 ->
+  OnSelect.FulfillmentInfoV2 ->
+  OnSelect.Quote ->
+  UTCTimeRFC3339 ->
+  Text ->
+  m DOnSelect.DriverOfferQuoteDetails
+buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp driverId = do
+  agentPerson <- fulfillment.agent.person & fromMaybeM (InvalidRequest $ "Missing person in agent of fulfillment " <> show fulfillment)
+  let agentPersonTags = agentPerson.tags & fromMaybe []
+  let driverName = agentPerson.name
+  durationToPickup <- getDurationToPickupV2 agentPersonTags & fromMaybeM (InvalidRequest "Missing duration_to_pickup in driver offer select item")
+  distanceToPickup' <- (getDistanceToNearestDriverV2 =<< item.tags) & fromMaybeM (InvalidRequest "Trip type is DRIVER_OFFER, but distance_to_nearest_driver is Nothing")
+  validTill <- (getQuoteValidTillV2 (convertRFC3339ToUTC timestamp) =<< quote.ttl) & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
+  logDebug $ "on_select ttl request rider: " <> show validTill
+  let rating = getDriverRatingV2 agentPersonTags
+
+  bppQuoteId <- (getTagV2 "general_info" "bpp_quote_id" =<< item.tags) & fromMaybeM (InvalidRequest "Missing bpp quoteId select item")
+  pure $
+    DOnSelect.DriverOfferQuoteDetails
+      { distanceToPickup = realToFrac distanceToPickup',
+        bppDriverQuoteId = bppQuoteId,
+        ..
+      }
+
 getDriverRating :: OnSelect.TagGroups -> Maybe Centesimal
 getDriverRating tagGroups = do
   tagValue <- getTag "agent_info" "rating" tagGroups
+  driverRating <- readMaybe $ T.unpack tagValue
+  Just $ Centesimal driverRating
+
+getDriverRatingV2 :: [OnSelect.TagGroupV2] -> Maybe Centesimal
+getDriverRatingV2 tagGroups = do
+  tagValue <- getTagV2 "agent_info" "rating" tagGroups
   driverRating <- readMaybe $ T.unpack tagValue
   Just $ Centesimal driverRating
 
@@ -141,14 +250,30 @@ getQuoteValidTill contextTime time = do
   valid <- parseISO8601Duration time
   Just $ addDurationToUTCTime contextTime valid
 
+getQuoteValidTillV2 :: UTCTime -> Text -> Maybe UTCTime
+getQuoteValidTillV2 contextTime time = do
+  valid <- parseISO8601Duration time
+  Just $ addDurationToUTCTime contextTime valid
+
 getDurationToPickup :: OnSelect.TagGroups -> Maybe Int
 getDurationToPickup tagGroups = do
   tagValue <- getTag "agent_info" "duration_to_pickup_in_s" tagGroups
   readMaybe $ T.unpack tagValue
 
+getDurationToPickupV2 :: [OnSelect.TagGroupV2] -> Maybe Int
+getDurationToPickupV2 tagGroups = do
+  tagValue <- getTagV2 "agent_info" "duration_to_pickup_in_s" tagGroups
+  readMaybe $ T.unpack tagValue
+
 getDistanceToNearestDriver :: OnSelect.TagGroups -> Maybe Meters
 getDistanceToNearestDriver tagGroups = do
   tagValue <- getTag "general_info" "distance_to_nearest_driver_in_m" tagGroups
+  distanceToPickup <- readMaybe $ T.unpack tagValue
+  Just $ Meters distanceToPickup
+
+getDistanceToNearestDriverV2 :: [OnSelect.TagGroupV2] -> Maybe Meters
+getDistanceToNearestDriverV2 tagGroups = do
+  tagValue <- getTagV2 "general_info" "distance_to_nearest_driver_in_m" tagGroups
   distanceToPickup <- readMaybe $ T.unpack tagValue
   Just $ Meters distanceToPickup
 

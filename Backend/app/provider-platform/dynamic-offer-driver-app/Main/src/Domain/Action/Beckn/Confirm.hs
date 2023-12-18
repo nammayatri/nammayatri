@@ -314,6 +314,7 @@ cancelBooking ::
     Esq.EsqDBReplicaFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,
@@ -324,7 +325,6 @@ cancelBooking ::
   DM.Merchant ->
   m ()
 cancelBooking booking mbDriver transporter = do
-  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   let transporterId' = Just booking.providerId
   unless (transporterId' == Just transporter.id) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId booking.id
@@ -374,6 +374,7 @@ validateRequest ::
     EncFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool,
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]

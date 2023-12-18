@@ -14,14 +14,32 @@
 
 module Beckn.Types.Core.Taxi.OnSearch.Offer where
 
-import Beckn.Types.Core.Taxi.OnSearch.Descriptor
+import Beckn.Types.Core.Taxi.Common.Descriptor
+import Beckn.Types.Core.Taxi.Common.Tags
+import qualified Beckn.Types.Core.Taxi.OnSearch.Descriptor as OSD
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+data OfferV2 = OfferV2
+  { id :: Text,
+    descriptor :: Descriptor,
+    -- locationIds :: Maybe Text,
+    -- categoryIds :: Maybe Text,
+    -- itemIds :: Maybe Text,
+    -- time :: Maybe Time,
+    tags :: [TagGroupV2]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema OfferV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data Offer = Offer
   { id :: Text,
-    descriptor :: Descriptor
+    descriptor :: OSD.Descriptor
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

@@ -18,10 +18,14 @@ import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnInit as TaxiACL
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
+import Data.Aeson as A
+import Data.Text as T
+import Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
 import Domain.Types.CancellationReason
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -39,17 +43,24 @@ handler = onInit
 
 onInit ::
   SignatureAuthResult ->
-  OnInit.OnInitReq ->
+  -- OnInit.OnInitReqV2 ->
+  ByteString ->
   FlowHandler AckResponse
-onInit _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnInitReq <- TaxiACL.buildOnInitReq req
+onInit _ reqBS = withFlowHandlerBecknAPI do
+  req <- decodeReq reqBS
+  mbDOnInitReq <- case req of
+    Right reqV2 -> withTransactionIdLogTag reqV2 $ TaxiACL.buildOnInitReqV2 reqV2
+    Left reqV1 -> withTransactionIdLogTag reqV1 $ TaxiACL.buildOnInitReq reqV1
   whenJust mbDOnInitReq $ \onInitReq ->
     Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
       fork "oninit request processing" $ do
         onInitRes <- DOnInit.onInit onInitReq
         booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
+        isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
         handle (errHandler booking) $
-          void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
+          if isBecknSpecVersion2
+            then void $ withShortRetry $ CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
+            else void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
   pure Ack
   where
     errHandler booking exc
@@ -70,3 +81,12 @@ onInit _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
 
 onInitLockKey :: Text -> Text
 onInitLockKey id = "Customer:OnInit:BppBookingId-" <> id
+
+decodeReq :: MonadFlow m => ByteString -> m (Either OnInit.OnInitReq OnInit.OnInitReqV2)
+decodeReq reqBS =
+  case A.eitherDecodeStrict reqBS of
+    Right reqV2 -> pure $ Right reqV2
+    Left _ ->
+      case A.eitherDecodeStrict reqBS of
+        Right reqV1 -> pure $ Left reqV1
+        Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS

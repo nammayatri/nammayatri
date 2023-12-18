@@ -25,6 +25,83 @@ import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name)
 import GHC.Exts (fromList)
 import Kernel.Prelude
+import Kernel.Utils.JSON
+import Kernel.Utils.Schema
+
+data BookingCancelledEventV2 = BookingCancelledEventV2
+  { id :: Text,
+    status :: Text,
+    cancellation :: Cancellation
+  }
+  deriving (Generic, Show)
+
+instance ToJSON BookingCancelledEventV2 where
+  toJSON = genericToJSON removeNullFields
+
+-- toJSON BookingCancelledEventV2 {..} =
+--   A.Object $
+--     "id" .= id
+--       <> "status" .= status
+--       <> "cancellation" .= cancellation
+--       <> "fulfillments" .= (("status" .= ("descriptor" .= (("code" .= RIDE_BOOKING_CANCELLED <> "name" .= A.String "Ride Cancelled") :: A.Object) :: A.Object)) :: A.Object)
+
+instance FromJSON BookingCancelledEventV2 where
+  parseJSON = genericParseJSON removeNullFields
+
+-- parseJSON = withObject "BookingCancelledEventV2" $ \obj -> do
+--   update_type <- (obj .: "fulfillments") >>= (.: "status") >>= (.: "descriptor") >>= (.: "code")
+--   unless (update_type == RIDE_BOOKING_CANCELLED) $ fail "Wrong update_type."
+--   BookingCancelledEventV2
+--     <$> obj .: "id"
+--     <*> obj .: "status"
+--     <*> obj .: "cancellation"
+
+instance ToSchema BookingCancelledEventV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+-- declareNamedSchema _ = do
+--   txt <- declareSchemaRef (Proxy :: Proxy Text)
+--   cancellation <- declareSchemaRef (Proxy :: Proxy Cancellation)
+--   update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
+--   let st =
+--         mempty
+--           & type_ L.?~ OpenApiObject
+--           & properties
+--             L..~ fromList
+--               [("code", update_type), ("name", txt)]
+--           & required L..~ ["code", "name"]
+--       descriptor =
+--         mempty
+--           & type_ L.?~ OpenApiObject
+--           & properties
+--             L..~ fromList
+--               [("descriptor", Inline st)]
+--           & required L..~ ["descriptor"]
+--       fulfillments =
+--         mempty
+--           & type_ L.?~ OpenApiObject
+--           & properties
+--             L.<>~ fromList [("status", Inline descriptor)]
+--           & required L.<>~ ["status"]
+--   return $
+--     NamedSchema (Just "BookingCancelledEventV2") $
+--       mempty
+--         & type_ L.?~ OpenApiObject
+--         & properties
+--           L..~ fromList
+--             [ ("id", txt),
+--               ("status", txt),
+--               ("cancellation", cancellation),
+--               ("fulfillments", Inline fulfillments)
+--             ]
+--         & required
+--           L..~ [ "id",
+--                  "status",
+--                  "cancellation",
+--                  "fulfillments"
+--                ]
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data BookingCancelledEvent = BookingCancelledEvent
   { id :: Text,

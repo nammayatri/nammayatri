@@ -137,6 +137,7 @@ oneWaySearch ::
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool,
     HasBAPMetrics m r,
     MonadProducer PublicTransportSearch m,
     EventStreamFlow m r
@@ -150,8 +151,14 @@ oneWaySearch ::
 oneWaySearch personId bundleVersion clientVersion device req = do
   dSearchRes <- DOneWaySearch.oneWaySearch personId req bundleVersion clientVersion device
   fork "search cabs" . withShortRetry $ do
-    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
-    void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+    if isBecknSpecVersion2
+      then do
+        becknTaxiReq <- TaxiACL.buildOneWaySearchReqV2 dSearchRes
+        void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReq
+      else do
+        becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
+        void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
   -- fork "search metro" . withShortRetry $ do
   --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes
   --   CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
@@ -167,6 +174,7 @@ rentalSearch ::
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool,
     HasBAPMetrics m r
   ) =>
   Id Person.Person ->
@@ -179,8 +187,15 @@ rentalSearch personId bundleVersion clientVersion device req = do
   dSearchRes <- DRentalSearch.rentalSearch personId bundleVersion clientVersion device req
   fork "search rental" . withShortRetry $ do
     -- do we need fork here?
-    becknReq <- TaxiACL.buildRentalSearchReq dSearchRes
-    void $ CallBPP.search dSearchRes.gatewayUrl becknReq
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+    if isBecknSpecVersion2
+      then do
+        becknReq <- TaxiACL.buildRentalSearchReqV2 dSearchRes
+        void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknReq
+      else do
+        becknReq <- TaxiACL.buildRentalSearchReq dSearchRes
+        void $ CallBPP.search dSearchRes.gatewayUrl becknReq
+
   pure (dSearchRes.searchId, dSearchRes.searchRequestExpiry, Nothing)
 
 checkSearchRateLimit ::

@@ -23,10 +23,55 @@ import Beckn.Types.Core.Taxi.Common.PaymentCollector as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentInstrument as Reexport
 import Beckn.Types.Core.Taxi.Common.PaymentType as Reexport
 import Beckn.Types.Core.Taxi.Common.TimeDuration as Reexport
-import Data.OpenApi (ToSchema (..), fromAesonOptions)
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import Kernel.Prelude
 import Kernel.Utils.JSON as JSON
 import Kernel.Utils.Schema
+
+data PaymentV2 = PaymentV2
+  { collected_by :: PaymentCollector,
+    _type :: PaymentType,
+    status :: PaymentStatus,
+    params :: PaymentParamsV2
+  }
+  deriving (Generic, Show)
+
+instance FromJSON PaymentV2 where
+  parseJSON = genericParseJSON JSON.stripPrefixUnderscoreIfAny
+
+instance ToJSON PaymentV2 where
+  toJSON = genericToJSON JSON.stripPrefixUnderscoreIfAny
+
+instance ToSchema PaymentV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions JSON.stripPrefixUnderscoreIfAny
+
+newtype PaymentParamsV2 = PaymentParamsV2
+  { instrument :: PaymentInstrument
+  }
+  deriving (Generic, Show)
+
+instance ToSchema PaymentParamsV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON PaymentParamsV2 where
+  parseJSON = genericParseJSON JSON.stripPrefixUnderscoreIfAny
+
+instance ToJSON PaymentParamsV2 where
+  toJSON = genericToJSON JSON.stripPrefixUnderscoreIfAny
+
+data PaymentStatus = PAID | NOT_PAID
+  deriving (Generic, Show)
+
+instance FromJSON PaymentStatus where
+  parseJSON = genericParseJSON constructorsWithHyphens
+
+instance ToJSON PaymentStatus where
+  toJSON = genericToJSON constructorsWithHyphens
+
+instance ToSchema PaymentStatus where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions constructorsWithHyphens
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data Payment = Payment
   { collected_by :: PaymentCollector,
@@ -44,15 +89,3 @@ instance ToJSON Payment where
 
 instance ToSchema Payment where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions JSON.stripPrefixUnderscoreIfAny
-
-data PaymentStatus = PAID | NOT_PAID
-  deriving (Generic, Show)
-
-instance FromJSON PaymentStatus where
-  parseJSON = genericParseJSON constructorsWithHyphens
-
-instance ToJSON PaymentStatus where
-  toJSON = genericToJSON constructorsWithHyphens
-
-instance ToSchema PaymentStatus where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions constructorsWithHyphens

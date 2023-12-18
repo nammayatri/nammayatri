@@ -14,6 +14,7 @@
 
 module Beckn.Types.Core.Taxi.Common.Customer where
 
+import Beckn.Types.Core.Taxi.Common.Image
 import Beckn.Types.Core.Taxi.Common.Tags
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
@@ -23,19 +24,19 @@ import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 import qualified Text.Show
 
-data Customer = Customer
+data CustomerV2 = CustomerV2
   { contact :: Contact,
-    person :: Maybe OrderPerson
+    person :: Maybe OrderPersonV2
   }
   deriving (Generic, Show)
 
-instance ToSchema Customer where
+instance ToSchema CustomerV2 where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-instance FromJSON Customer where
+instance FromJSON CustomerV2 where
   parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
-instance ToJSON Customer where
+instance ToJSON CustomerV2 where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
 
 newtype Contact = Contact
@@ -70,6 +71,40 @@ instance FromJSON Phone where
 instance ToSchema Phone where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
+data OrderPersonV2 = OrderPersonV2
+  { id :: Maybe Text, -- TODO : Remove Maybe
+    name :: Text,
+    -- url :: Maybe Text,
+    image :: Maybe Image,
+    -- age :: Maybe Text,
+    -- dob :: Maybe Text,
+    -- gender :: Maybe Text,
+    -- creds :: Maybe [Credential],
+    -- language :: Maybe [Language],
+    tags :: Maybe [TagGroupV2]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema OrderPersonV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
+data Customer = Customer
+  { contact :: Contact,
+    person :: Maybe OrderPerson
+  }
+  deriving (Generic, Show)
+
+instance ToSchema Customer where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON Customer where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON Customer where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
 data OrderPerson = OrderPerson
   { name :: Text,
     tags :: Maybe TagGroups
@@ -78,3 +113,22 @@ data OrderPerson = OrderPerson
 
 instance ToSchema OrderPerson where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+-- data Credential = Credential
+--   { id :: Maybe Text,
+--     _type :: Maybe Text,
+--     url :: Maybe Text
+--   }
+--   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- data Language = Language
+--   { code :: Maybe Text,
+--     name :: Maybe Text
+--   }
+--   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+-- data Skills = Skills
+--   { code :: Maybe Text,
+--     name :: Maybe Text
+--   }
+--   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

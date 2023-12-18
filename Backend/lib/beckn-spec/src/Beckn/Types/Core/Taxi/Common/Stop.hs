@@ -12,34 +12,28 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Search.Intent
-  ( module Beckn.Types.Core.Taxi.Search.Intent,
+module Beckn.Types.Core.Taxi.Common.Stop
+  ( module Beckn.Types.Core.Taxi.Common.Stop,
     module Reexport,
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
-import Beckn.Types.Core.Taxi.Search.Fulfillment
-import Beckn.Types.Core.Taxi.Search.Payment
+import Beckn.Types.Core.Taxi.Common.Authorization
+import Beckn.Types.Core.Taxi.Common.Location as Reexport (Location)
+import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Reexport
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data IntentV2 = IntentV2
-  { fulfillment :: FulfillmentInfoV2,
-    payment :: Payment
+data StopType = START | END | INTERMEDIATE
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
+
+data Stop = Stop
+  { location :: Location,
+    stopType :: StopType,
+    authorization :: Maybe Authorization
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show, ToJSON, FromJSON)
 
-instance ToSchema IntentV2 where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
----------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
-
-newtype Intent = Intent
-  { fulfillment :: FulfillmentInfo
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Intent where
+instance ToSchema Stop where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

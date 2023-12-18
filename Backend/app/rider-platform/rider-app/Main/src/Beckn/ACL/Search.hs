@@ -13,7 +13,7 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
+module Beckn.ACL.Search (buildRentalSearchReq, buildRentalSearchReqV2, buildOneWaySearchReq, buildOneWaySearchReqV2) where
 
 import Beckn.ACL.Common (mkLocation)
 import qualified Beckn.Types.Core.Taxi.Search as Search
@@ -57,12 +57,54 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
+buildOneWaySearchReqV2 ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DOneWaySearch.OneWaySearchRes ->
+  m (BecknReq Search.SearchMessageV2)
+buildOneWaySearchReqV2 DOneWaySearch.OneWaySearchRes {..} =
+  buildSearchReqV2
+    origin
+    destination
+    searchId
+    device
+    (shortestRouteInfo >>= (.distance))
+    (shortestRouteInfo >>= (.duration))
+    customerLanguage
+    disabilityTag
+    merchant
+    city
+    (getPoints shortestRouteInfo)
+    phoneNumber
+    isReallocationEnabled
+  where
+    getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
+
 buildRentalSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
   m (BecknReq Search.SearchMessage)
 buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
   buildSearchReq
+    origin
+    origin
+    searchId
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+    Nothing
+    merchant
+    city
+    Nothing
+    phoneNumber
+    Nothing
+
+buildRentalSearchReqV2 ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DRentalSearch.RentalSearchRes ->
+  m (BecknReq Search.SearchMessageV2)
+buildRentalSearchReqV2 DRentalSearch.RentalSearchRes {..} =
+  buildSearchReqV2
     origin
     origin
     searchId
@@ -101,6 +143,33 @@ buildSearchReq origin destination searchId _ distance duration customerLanguage 
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
   let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled
   let searchMessage = Search.SearchMessage intent
+
+  pure $ BecknReq context searchMessage
+
+buildSearchReqV2 ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DSearchCommon.SearchReqLocation ->
+  DSearchCommon.SearchReqLocation ->
+  Id DSearchReq.SearchRequest ->
+  Maybe Text ->
+  Maybe Meters ->
+  Maybe Seconds ->
+  Maybe Maps.Language ->
+  Maybe Text ->
+  DM.Merchant ->
+  Context.City ->
+  Maybe [Maps.LatLong] ->
+  Maybe Text ->
+  Maybe Bool ->
+  m (BecknReq Search.SearchMessageV2)
+buildSearchReqV2 origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber mbIsReallocationEnabled = do
+  let transactionId = getId searchId
+      messageId = transactionId
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
+  let intent = mkIntentV2 origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled
+  let searchMessage = Search.SearchMessageV2 intent
 
   pure $ BecknReq context searchMessage
 
@@ -198,12 +267,6 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
                   code = (\_ -> Just "customer_disability") =<< disabilityTag,
                   name = (\_ -> Just "Customer Disability") =<< disabilityTag,
                   value = (Just . show) =<< disabilityTag
-                },
-              Search.Tag
-                { display = (\_ -> Just False) =<< mbPhoneNumber,
-                  code = (\_ -> Just "customer_phone_number") =<< mbPhoneNumber,
-                  name = (\_ -> Just "Customer Phone Number") =<< mbPhoneNumber,
-                  value = (Just . show) =<< mbPhoneNumber
                 }
             ]
         }
@@ -218,6 +281,174 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
                 { display = (\_ -> Just False) =<< mbIsReallocationEnabled,
                   code = (\_ -> Just "is_reallocation_enabled") =<< mbIsReallocationEnabled,
                   name = (\_ -> Just "Is Reallocation Enabled") =<< mbIsReallocationEnabled,
+                  value = (Just . show) =<< mbIsReallocationEnabled
+                }
+            ]
+        }
+
+mkIntentV2 ::
+  DSearchCommon.SearchReqLocation ->
+  DSearchCommon.SearchReqLocation ->
+  Maybe Maps.Language ->
+  Maybe Text ->
+  Maybe Meters ->
+  Maybe Seconds ->
+  Maybe [Maps.LatLong] ->
+  Maybe Text ->
+  Maybe Bool ->
+  Search.IntentV2
+mkIntentV2 origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled = do
+  let startLocation =
+        Search.Stop
+          { location = mkLocation origin,
+            stopType = Search.START
+          }
+      endLocation =
+        Search.Stop
+          { location = mkLocation destination,
+            stopType = Search.END
+          }
+
+      fulfillment =
+        Search.FulfillmentInfoV2
+          { stops = [startLocation, endLocation],
+            tags =
+              if isJust distance || isJust duration
+                then Just [mkRouteInfoTags, mkReallocationInfoTags]
+                else Nothing,
+            customer =
+              if isJust customerLanguage || isJust disabilityTag || isJust mbPhoneNumber
+                then
+                  Just $
+                    Search.CustomerV2
+                      { person =
+                          Search.PersonV2
+                            { tags = [mkCustomerInfoTags]
+                            }
+                      }
+                else Nothing
+          }
+
+      payment =
+        Search.Payment
+          { tags = Nothing
+          }
+
+  Search.IntentV2
+    { ..
+    }
+  where
+    mkRouteInfoTags =
+      Search.TagGroupV2
+        { display = False,
+          descriptor =
+            Search.DescriptorV2
+              { code = Just "route_info",
+                name = Just "Route Information",
+                short_desc = Nothing
+              },
+          list =
+            [ Search.TagV2
+                { display = (\_ -> Just False) =<< distance,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = (\_ -> Just "distance_info_in_m") =<< distance,
+                          name = (\_ -> Just "Distance Information In Meters") =<< distance,
+                          short_desc = Nothing
+                        },
+                  value = (\distanceInM -> Just $ show distanceInM.getMeters) =<< distance
+                },
+              Search.TagV2
+                { display = (\_ -> Just False) =<< duration,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = (\_ -> Just "duration_info_in_s") =<< duration,
+                          name = (\_ -> Just "Duration Information In Seconds") =<< duration,
+                          short_desc = Nothing
+                        },
+                  value = (\durationInS -> Just $ show durationInS.getSeconds) =<< duration
+                },
+              Search.TagV2
+                { display = (\_ -> Just False) =<< mbPoints,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = (\_ -> Just "route_points") =<< mbPoints,
+                          name = (\_ -> Just "Route Points") =<< mbPoints,
+                          short_desc = Nothing
+                        },
+                  value = LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints
+                }
+            ]
+        }
+
+    mkCustomerInfoTags =
+      Search.TagGroupV2
+        { display = False,
+          descriptor =
+            Search.DescriptorV2
+              { code = Just "customer_info",
+                name = Just "Customer Information",
+                short_desc = Nothing
+              },
+          list =
+            [ Search.TagV2
+                { display = (\_ -> Just False) =<< customerLanguage,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = (\_ -> Just "customer_language") =<< customerLanguage,
+                          name = (\_ -> Just "Customer Language") =<< customerLanguage,
+                          short_desc = Nothing
+                        },
+                  value = (Just . show) =<< customerLanguage
+                },
+              Search.TagV2
+                { display = (\_ -> Just False) =<< disabilityTag,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = (\_ -> Just "customer_disability") =<< disabilityTag,
+                          name = (\_ -> Just "Customer Disability") =<< disabilityTag,
+                          short_desc = Nothing
+                        },
+                  value = (Just . show) =<< disabilityTag
+                },
+              Search.TagV2
+                { display = (\_ -> Just False) =<< mbPhoneNumber,
+                  descriptor =
+                    Just
+                      Search.DescriptorV2
+                        { code = (\_ -> Just "customer_phone_number") =<< mbPhoneNumber,
+                          name = (\_ -> Just "Customer Phone Number") =<< mbPhoneNumber,
+                          short_desc = Nothing
+                        },
+                  value = (Just . show) =<< mbPhoneNumber
+                }
+            ]
+        }
+
+    mkReallocationInfoTags =
+      Search.TagGroupV2
+        { display = False,
+          descriptor =
+            Search.DescriptorV2
+              { code = Just "reallocation_info",
+                name = Just "Reallocation Information",
+                short_desc = Nothing
+              },
+          list =
+            [ Search.TagV2
+                { display = (\_ -> Just False) =<< mbIsReallocationEnabled,
+                  descriptor =
+                    Just $
+                      Search.DescriptorV2
+                        { code = (\_ -> Just "is_reallocation_enabled") =<< mbIsReallocationEnabled,
+                          name = (\_ -> Just "Is Reallocation Enabled") =<< mbIsReallocationEnabled,
+                          short_desc = Nothing
+                        },
                   value = (Just . show) =<< mbIsReallocationEnabled
                 }
             ]

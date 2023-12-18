@@ -90,8 +90,10 @@ library
       Beckn.Types.Core.Taxi.Common.FulfillmentInfo
       Beckn.Types.Core.Taxi.Common.FulfillmentType
       Beckn.Types.Core.Taxi.Common.Gps
+      Beckn.Types.Core.Taxi.Common.Image
       Beckn.Types.Core.Taxi.Common.ItemCode
       Beckn.Types.Core.Taxi.Common.Location
+      Beckn.Types.Core.Taxi.Common.MediaFile
       Beckn.Types.Core.Taxi.Common.Payment
       Beckn.Types.Core.Taxi.Common.PaymentCollector
       Beckn.Types.Core.Taxi.Common.PaymentInstrument
@@ -100,8 +102,11 @@ library
       Beckn.Types.Core.Taxi.Common.Provider
       Beckn.Types.Core.Taxi.Common.Quote
       Beckn.Types.Core.Taxi.Common.StartInfo
+      Beckn.Types.Core.Taxi.Common.State
+      Beckn.Types.Core.Taxi.Common.Stop
       Beckn.Types.Core.Taxi.Common.StopInfo
       Beckn.Types.Core.Taxi.Common.Tags
+      Beckn.Types.Core.Taxi.Common.Time
       Beckn.Types.Core.Taxi.Common.TimeDuration
       Beckn.Types.Core.Taxi.Common.TimeTimestamp
       Beckn.Types.Core.Taxi.Common.Vehicle
@@ -131,6 +136,7 @@ library
       Beckn.Types.Core.Taxi.OnSearch.Provider
       Beckn.Types.Core.Taxi.OnSearch.ProviderLocation
       Beckn.Types.Core.Taxi.OnSearch.StartInfo
+      Beckn.Types.Core.Taxi.OnSearch.Stop
       Beckn.Types.Core.Taxi.OnSearch.StopInfo
       Beckn.Types.Core.Taxi.OnSelect
       Beckn.Types.Core.Taxi.OnSelect.Addon
@@ -171,7 +177,9 @@ library
       Beckn.Types.Core.Taxi.Search.Fulfillment
       Beckn.Types.Core.Taxi.Search.Intent
       Beckn.Types.Core.Taxi.Search.Location
+      Beckn.Types.Core.Taxi.Search.Payment
       Beckn.Types.Core.Taxi.Search.StartInfo
+      Beckn.Types.Core.Taxi.Search.Stop
       Beckn.Types.Core.Taxi.Search.StopInfo
       Beckn.Types.Core.Taxi.Search.Time
       Beckn.Types.Core.Taxi.Select

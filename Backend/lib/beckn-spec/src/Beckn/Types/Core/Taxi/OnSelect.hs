@@ -31,11 +31,15 @@ import Beckn.Types.Core.Taxi.OnSelect.Provider as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.ProviderLocation as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Quote as Reexport
 import Beckn.Types.Core.Taxi.Search.Location as Reexport
-import Beckn.Types.Core.Taxi.Search.StartInfo as Reexport
-import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
+import Beckn.Types.Core.Taxi.Search.Stop as Reexport
 import Kernel.Prelude
 
 newtype OnSelectMessage = OnSelectMessage
   { order :: Order
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+newtype OnSelectMessageV2 = OnSelectMessageV2
+  { order :: OrderV2
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

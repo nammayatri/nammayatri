@@ -24,10 +24,87 @@ import Beckn.Types.Core.Taxi.Common.FulfillmentInfo
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (ESTIMATE_REPETITION))
 import qualified Control.Lens as L
 import Data.Aeson as A
-import Data.OpenApi hiding (Example, example, name)
+import Data.OpenApi hiding (Example, example, items, name)
 import GHC.Exts (fromList)
 import Kernel.Prelude
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema
+
+data EstimateRepetitionEventV2 = EstimateRepetitionEventV2
+  { id :: Text, -- bppBookingId
+  -- update_target :: Text,
+    fulfillments :: [FulfillmentInfoV2],
+    items :: [Item]
+  }
+  deriving (Generic, Show)
+
+instance ToJSON EstimateRepetitionEventV2 where
+  toJSON = genericToJSON removeNullFields
+
+-- toJSON EstimateRepetitionEventV2 {..} = do
+--   let (A.Object fulfJSON) = toJSON fulfillments
+--   let (A.Object itemJSON) = toJSON items
+--   A.Object $
+--     "id" .= id
+--       -- <> "update_target" .= update_target
+--       <> "fulfillments" .= (fulfJSON <> ("status" .= ("descriptor" .= (("code" .= ESTIMATE_REPETITION <> "name" .= A.String "Estimate Repetition") :: A.Object) :: A.Object)))
+--       <> "items" .= itemJSON
+
+instance FromJSON EstimateRepetitionEventV2 where
+  parseJSON = genericParseJSON removeNullFields
+
+-- parseJSON = withObject "EstimateRepetitionEventV2" $ \obj -> do
+--   update_type <- (obj .: "fulfillments") >>= (.: "status") >>= (.: "descriptor") >>= (.: "code")
+--   unless (update_type == ESTIMATE_REPETITION) $ fail "Wrong update_type."
+--   EstimateRepetitionEventV2
+--     <$> obj .: "id"
+--     -- <*> obj .: "update_target"
+--     <*> obj .: "fulfillments"
+--     <*> obj .: "items"
+
+instance ToSchema EstimateRepetitionEventV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+-- declareNamedSchema _ = do
+--   txt <- declareSchemaRef (Proxy :: Proxy Text)
+--   update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
+--   reallocationSource <- declareSchemaRef (Proxy :: Proxy CancellationSource)
+--   item <- declareSchemaRef (Proxy :: Proxy Item)
+--   let st =
+--         mempty
+--           & type_ L.?~ OpenApiObject
+--           & properties
+--             L..~ fromList
+--               [("code", update_type)]
+--           & required L..~ ["code"]
+--       fulfillments =
+--         toInlinedSchema (Proxy :: Proxy FulfillmentInfo)
+--           & properties
+--             L.<>~ fromList [("status", Inline st)]
+--           & required L.<>~ ["status"]
+--   return $
+--     NamedSchema (Just "EstimateRepetitionEventV2")
+--       $ mempty
+--         & type_ L.?~ OpenApiObject
+--         & properties
+--           L..~ fromList
+--             [ ("id", txt),
+--               -- ("update_target", txt),
+--               ("cancellation", reallocationSource),
+--               ("fulfillments", Inline fulfillments),
+--               ("item", item)
+--             ]
+--         & required L..~ ["id", "cancellation", "fulfillments", "item"]
+
+newtype Item = Item
+  { id :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema Item where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data EstimateRepetitionEvent = EstimateRepetitionEvent
   { id :: Text, -- bppBookingId
@@ -87,11 +164,3 @@ instance ToSchema EstimateRepetitionEvent where
                 ("item", item)
               ]
           & required L..~ ["id", "cancellation_reason", "fulfillment", "item"]
-
-newtype Item = Item
-  { id :: Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema Item where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

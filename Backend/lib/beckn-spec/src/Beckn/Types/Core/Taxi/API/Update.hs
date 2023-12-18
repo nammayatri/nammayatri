@@ -18,16 +18,36 @@ import Beckn.Types.Core.Taxi.Update
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type UpdateReq = BecknReq UpdateMessage
+
+type UpdateReqV2 = BecknReq UpdateMessageV2
 
 type UpdateRes = AckResponse
 
 type UpdateAPI =
   "update"
+    -- :> ReqBody '[JSON] UpdateReq
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] UpdateRes
+
+type UpdateAPIV1 =
+  "update"
     :> ReqBody '[JSON] UpdateReq
+    :> Post '[JSON] UpdateRes
+
+type UpdateAPIV2 =
+  "update"
+    :> ReqBody '[JSON] UpdateReqV2
     :> Post '[JSON] UpdateRes
 
 updateAPI :: Proxy UpdateAPI
 updateAPI = Proxy
+
+updateAPIV1 :: Proxy UpdateAPIV1
+updateAPIV1 = Proxy
+
+updateAPIV2 :: Proxy UpdateAPIV2
+updateAPIV2 = Proxy

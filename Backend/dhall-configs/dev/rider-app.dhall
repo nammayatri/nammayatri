@@ -225,4 +225,5 @@ in  { esqDBCfg
     , maxMessages
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap
+    , isBecknSpecVersion2 = False
     }

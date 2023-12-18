@@ -83,8 +83,14 @@ select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate ->
 select2 (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req
-    becknReq <- ACL.buildSelectReq dSelectReq
-    void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+    if isBecknSpecVersion2
+      then do
+        becknReq <- ACL.buildSelectReqV2 dSelectReq
+        void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq
+      else do
+        becknReq <- ACL.buildSelectReq dSelectReq
+        void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
 selectList :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes

@@ -124,7 +124,8 @@ data AppCfg = AppCfg
     modelNamesMap :: M.Map Text Text,
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -201,7 +202,8 @@ data AppEnv = AppEnv
     maxMessages :: Text,
     modelNamesHashMap :: HM.Map Text Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool
   }
   deriving (Generic)
 

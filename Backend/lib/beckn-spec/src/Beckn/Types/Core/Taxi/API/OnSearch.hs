@@ -18,16 +18,35 @@ import Beckn.Types.Core.Taxi.OnSearch
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnSearchReq = BecknCallbackReq OnSearchMessage
+
+type OnSearchReqV2 = BecknCallbackReq OnSearchMessageV2
 
 type OnSearchRes = AckResponse
 
 type OnSearchAPI =
   "on_search"
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] OnSearchRes
+
+type OnSearchAPIV1 =
+  "on_search"
     :> ReqBody '[JSON] OnSearchReq
+    :> Post '[JSON] OnSearchRes
+
+type OnSearchAPIV2 =
+  "on_search"
+    :> ReqBody '[JSON] OnSearchReqV2
     :> Post '[JSON] OnSearchRes
 
 onSearchAPI :: Proxy OnSearchAPI
 onSearchAPI = Proxy
+
+onSearchAPIV1 :: Proxy OnSearchAPIV1
+onSearchAPIV1 = Proxy
+
+onSearchAPIV2 :: Proxy OnSearchAPIV2
+onSearchAPIV2 = Proxy
