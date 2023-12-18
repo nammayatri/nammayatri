@@ -115,6 +115,7 @@ data KeyStore = USER_NAME
                 | SHOW_SUBSCRIPTIONS
                 | TOTAL_WAITED
                 | REFERRAL_CODE_ADDED
+                | SAVED_GOTO_COUNT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

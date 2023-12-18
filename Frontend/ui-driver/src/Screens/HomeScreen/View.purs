@@ -1389,7 +1389,7 @@ offlineNavigationLinks push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , scrollBarX false
-  , margin $ MarginLeft 16
+  , margin $ MarginHorizontal 16 16
   , visibility if state.props.driverStatusSet == ST.Offline then VISIBLE else GONE
   ][ linearLayout
       [ width MATCH_PARENT
@@ -1426,7 +1426,7 @@ offlineNavigationLinks push state =
           ) navLinksArray)
     ]
     where
-      navLinksArray = [ {title : getString ADD_GOTO, icon : "ny_ic_loc_goto", action : AddGotoAC},
+      navLinksArray = [ {title : getString if showAddGoto then ADD_GOTO else GOTO_LOCS , icon : "ny_ic_loc_goto", action : AddGotoAC},
                         {title : getString ADD_ALTERNATE_NUMBER, icon : "ic_call_plus", action : ClickAddAlternateButton},
                         {title : getString REPORT_ISSUE, icon : "ny_ic_vector_black", action : HelpAndSupportScreen},
                         {title : getString ENTER_AADHAAR_DETAILS, icon : "ny_ic_aadhaar_logo", action : LinkAadhaarAC}
@@ -1436,6 +1436,7 @@ offlineNavigationLinks push state =
                         LinkAadhaarAC -> if state.props.showlinkAadhaarPopup then VISIBLE else GONE
                         AddGotoAC -> if state.data.driverGotoState.gotoEnabledForMerchant && state.data.config.gotoConfig.enableGoto then VISIBLE else GONE
                         _ -> VISIBLE
+      showAddGoto = state.data.driverGotoState.savedLocationCount < state.data.config.gotoConfig.maxGotoLocations
 
 locationLastUpdatedTextAndTimeView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 locationLastUpdatedTextAndTimeView push state =

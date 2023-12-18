@@ -22,20 +22,23 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Number as Number
 import Engineering.Helpers.BackTrack (getState)
 import Helpers.Utils (getCurrentLocation, LatLon(..))
-import Prelude (bind, ($), pure, (<$>), discard)
+import Prelude (bind, ($), pure, (<$>), discard, show)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverSavedLocationScreen.Controller (ScreenOutput(..))
 import Screens.DriverSavedLocationScreen.View as DriverSavedLocationScreen
 import Storage (KeyStore(..), getValueToLocalNativeStore)
 import Types.App (DRIVE_SAVED_LOCATION_OUTPUT(..), ScreenType(..), FlowBT, GlobalState(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Data.Array as DA
 
 driverSavedLocationScreen :: FlowBT String DRIVE_SAVED_LOCATION_OUTPUT
 driverSavedLocationScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ DriverSavedLocationScreen.screen state.driverSavedLocationScreen
   case action of
-    GoBack -> App.BackT $ pure App.GoBack
+    GoBack updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{ data { driverGotoState { savedLocationCount = DA.length updatedState.data.savedLocationsArray}}})
+      App.BackT $ pure App.GoBack
     UpdateConfirmLocation updatedScreen -> do
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedScreen)
       App.BackT $ App.NoBack <$> pure (GET_LOCATION_NAME updatedScreen)

@@ -140,7 +140,8 @@ initData = {
           gotoLocInRange : false,
           goToPopUpType : NO_POPUP_VIEW,
           gotoEnabledForMerchant : false,
-          confirmGotoCancel : false
+          confirmGotoCancel : false,
+          savedLocationCount : 0
         }
     },
     props: {
