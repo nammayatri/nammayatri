@@ -915,7 +915,7 @@ homeScreenFlow = do
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
           sourceLong = if sourceServiceabilityResp.serviceable then long else updatedState.props.sourceLong
       _ <- pure $ firebaseLogEvent $ "ny_loc_unserviceable_" <> show (not sourceServiceabilityResp.serviceable)
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{data{ polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson } ,props{locateOnMapLocation{sourceLat = sourceLat, sourceLng = sourceLong, source= (getString CURRENT_LOCATION)}, sourceLat = sourceLat, sourceLong = sourceLong, isSrcServiceable =sourceServiceabilityResp.serviceable , showlocUnserviceablePopUp = (not sourceServiceabilityResp.serviceable)}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> updatedState{data{ polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson } ,props{locateOnMapLocation{sourceLat = sourceLat, sourceLng = sourceLong, source= (getString CURRENT_LOCATION)}, sourceLat = sourceLat, sourceLong = sourceLong, isSrcServiceable =sourceServiceabilityResp.serviceable }})--, showlocUnserviceablePopUp = (not sourceServiceabilityResp.serviceable)}})
       homeScreenFlow
     HOME_SCREEN -> do
         (GlobalState state) <- getState
@@ -1265,10 +1265,10 @@ nammaSafetyFlow :: FlowBT String Unit
 nammaSafetyFlow = do
   (GlobalState currentState) <- getState
   config <- getAppConfigFlowBT appConfig
-  modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{safetyConfig = config.safetyConfig}})
+  modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{safetyConfig = config.safetyConfig}, props{showShimmer = true}})
   flow <- UI.nammaSafetyScreen
   case flow of 
-    NS_GO_BACK -> homeScreenFlow 
+    GO_BACK_FROM_SAFETY_SCREEN _ -> homeScreenFlow 
     UPDATE_CONTACTS state -> do
       _ <- Remote.emergencyContactsBT (Remote.postContactsReq state.data.contactsList)
       if state.props.showInfoPopUp then pure $ toast $ getString CONTACT_REMOVED_SUCCESSFULLY
@@ -1319,10 +1319,20 @@ nammaSafetyFlow = do
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> state{data {sosId = ""}})
       setValueToLocalStore IS_SOS_ACTIVE "false"
       homeScreenFlow
+    GO_TO_VIDEO_FLOW -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{props {timerValue = 15, shareTimerValue = 5, timerId = "", shareTimerId = ""}})
+      videoFlow
     GO_TO_EMERGENCY_CONTACT_SCREEN state -> emergencyScreenFlow
   pure unit
   
-
+videoFlow :: FlowBT String Unit
+videoFlow = do
+  flow <- UI.videoScreen
+  case flow of 
+    GO_BACK_FROM_SAFETY_SCREEN state -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\state -> state{props{currentStage = ST.TriggeredNammaSafety, recordingState = ST.NOT_RECORDING}})
+      nammaSafetyFlow 
+    _ -> videoFlow
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
 getDistanceDiff state lat lon = do

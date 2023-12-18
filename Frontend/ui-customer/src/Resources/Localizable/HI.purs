@@ -789,3 +789,4 @@ getHI stringKey =
         EDIT_ACTIONS_PLUS -> "सुरक्षा+ संपादित करें"
         CALL_POLICE_HELPLINE -> "पुलिस हेल्पलाइन को कॉल करें(112)"
         PLEASE_REMAIN_CALM_CALL_POLICE -> "कृपया शांत रहें, आप आवश्यक होने पर पुलिस हेल्पलाइन को कॉल कर सकते हैं। अतिरिक्त सुरक्षा के लिए आप ऊपर दाएं कोने में सेफ्टी मोड का उपयोग भी कर सकते हैं।"
+        PLEASE_ALLOW_CAMERA_AND_MICROPHONE_PERMISSIONS -> "कृपया कैमरा और माइक्रोफोन अनुमतियों को अनुमति दें"

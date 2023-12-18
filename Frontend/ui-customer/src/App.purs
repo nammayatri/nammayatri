@@ -130,12 +130,13 @@ data EMERGECY_CONTACTS_SCREEN_OUTPUT = GO_TO_HOME_FROM_EMERGENCY_CONTACTS Emerge
                                       | GET_CONTACTS EmergencyContactsScreenState
                                       | REFRESH_EMERGECY_CONTACTS_SCREEN EmergencyContactsScreenState
                                       
-data NAMMA_SAFETY_SCREEN_OUTPUT = NS_GO_BACK
+data NAMMA_SAFETY_SCREEN_OUTPUT = GO_BACK_FROM_SAFETY_SCREEN NammaSafetyScreenState
                                   | UPDATE_CONTACTS NammaSafetyScreenState
                                   | POST_EMERGENCY_SETTINGS NammaSafetyScreenState Boolean
                                   | CREATE_SOS NammaSafetyScreenState
                                   | UPDATE_ACTION NammaSafetyScreenState
                                   | UPDATE_AS_SAFE NammaSafetyScreenState
+                                  | GO_TO_VIDEO_FLOW
                                   | NS_REFRESH NammaSafetyScreenState
                                   | GO_TO_EMERGENCY_CONTACT_SCREEN NammaSafetyScreenState
 

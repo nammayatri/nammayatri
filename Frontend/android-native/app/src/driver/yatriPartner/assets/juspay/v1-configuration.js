@@ -99,6 +99,11 @@ window.getMerchantConfig = function () {
     , "vehicle" : {
       "validationPrefix" :  "KL"
     }
+    , "flowConfig" : {
+      "chooseCity" : {
+        "runFlow" : false
+      }
+    }
     , "banners" :{
       "autoPay" : false
     }

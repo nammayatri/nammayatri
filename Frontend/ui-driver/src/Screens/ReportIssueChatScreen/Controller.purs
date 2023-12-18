@@ -39,6 +39,7 @@ import Data.String.Pattern (Pattern(Pattern))
 import Data.TraversableWithIndex (forWithIndex)
 import Effect.Aff (makeAff, nonCanceler)
 import Effect.Class (liftEffect)
+import Effect.Uncurried (runEffectFn5)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Engineering.Helpers.Utils (uploadMultiPartData)
 import Helpers.Utils (clearFocus, clearTimer, convertUTCtoISC, getCurrentUTC, removeMediaPlayer, renderBase64ImageFile, saveAudioFile, startAudioRecording, startTimer, stopAudioRecording)
@@ -287,7 +288,7 @@ eval (ImageUploadCallback image imageName imagePath) state = do
                 else
                   snoc state.data.addImagesState.images { image, imageName }
   continueWithCmd state { data { addImagesState { isLoading = true } } } [do
-    res <- uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image" "file" "fileId"
+    res <- runEffectFn5 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image" "file" "fileId"
     let uploadedImagesIds' = if length state.data.addImagesState.imageMediaIds == 3
                              then do
                                state.data.addImagesState.imageMediaIds
@@ -336,7 +337,7 @@ eval (RecordAudioModelAction RecordAudioModel.OnClickDone) state =
     case state.data.recordAudioState.recordedFile of
       Just url -> do
                   res <- saveAudioFile url
-                  audioId <- uploadMultiPartData res (EndPoint.uploadFile "") "Audio" "file" "fileId"
+                  audioId <- runEffectFn5 uploadMultiPartData res (EndPoint.uploadFile "") "Audio" "file" "fileId"
                   _ <- removeMediaPlayer ""
                   pure $ UpdateState state { data  { recordedAudioUrl = Just res, uploadedAudioId = Just audioId }
                                            , props { isPopupModelOpen = false, showRecordModel = false } }

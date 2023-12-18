@@ -2622,7 +2622,7 @@ public class MobilityCommonBridge extends HyperBridge {
             }
             Map<String, String> formData = new HashMap<>();
             formData.put("fileType", fileType);
-            MobilityAPIResponse apiResponse = mobilityApiHandler.callMultipartAPI(uploadUrl, baseHeaders, formData, buffer, fileName, fileField,"POST");
+            MobilityAPIResponse apiResponse = mobilityApiHandler.callMultipartAPI(bridgeComponents.getContext(), filePath, fileField, uploadUrl, fileType, formData,"POST");
             System.out.println("Response Multipart" + apiResponse);
             if (apiResponse.getStatusCode() == 200) {
                 JSONObject jsonObject = new JSONObject(apiResponse.getResponseBody());
@@ -2631,6 +2631,7 @@ public class MobilityCommonBridge extends HyperBridge {
             else {
                 Toast.makeText(bridgeComponents.getContext(), "Unable to upload " + fileType.toLowerCase(), Toast.LENGTH_SHORT).show();
             }
+
         } catch (Exception error) {
             Log.d(LOG_TAG, "Catch in uploadMultiPartData : " + error);
         }

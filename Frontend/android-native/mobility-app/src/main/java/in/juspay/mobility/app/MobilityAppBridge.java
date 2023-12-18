@@ -989,13 +989,34 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void askRequestedPermissions(String[] requests) {
-        PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests);
+        PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, null);
     }
 
     @JavascriptInterface
-    public void setupCamera(String previewViewId) {
+    public void askRequestedPermissionsWithCallback(String[] requests, final String callback) {
+        PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, new PermissionUtils.PermissionCallback() {
+            @Override
+            public void onPermissionsGranted() {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", callback, true);
+                if (callback != null) {
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            }
+
+            @Override
+            public void onPermissionsDenied() {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", callback, false);
+                if (callback != null) {
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void setupCamera(String previewViewId, boolean isBackCamera) {
         cameraUtils = new CameraUtils();
-        cameraUtils.setupCamera(bridgeComponents.getActivity(), bridgeComponents.getContext(), previewViewId);
+        cameraUtils.setupCamera(bridgeComponents.getActivity(), bridgeComponents.getContext(), previewViewId, isBackCamera);
     }
 
     @JavascriptInterface

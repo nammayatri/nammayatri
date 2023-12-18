@@ -2281,12 +2281,26 @@ export const askRequestedPermissions = function(permissions){
     return window.JBridge.askRequestedPermissions(permissions);
 }
 
-export const setupCamera = function(id){
-  if (window.__OS == "IOS" && window.JBridge.renderCameraView) {
-    return window.JBridge.renderCameraView(id);
+export const askRequestedPermissionsWithCallback = function(permissions){
+  return function(cb) {
+    return function(action) {
+      const callback = callbackMapper.map(function (isPermissionGranted) {
+        cb(action(isPermissionGranted))();
+      });
+      if(window.JBridge.askRequestedPermissionsWithCallback)
+        return window.JBridge.askRequestedPermissionsWithCallback(permissions, callback);
+    }
   }
-  else if(window.JBridge.setupCamera){
-    return window.JBridge.setupCamera(id);
+}
+
+export const setupCamera = function(id){
+  return function(isBackCamera){
+    if (window.__OS == "IOS" && window.JBridge.renderCameraView) {
+      return window.JBridge.renderCameraView(id);
+    }
+    else if(window.JBridge.setupCamera){
+      return window.JBridge.setupCamera(id, isBackCamera);
+    }
   }
 }
 

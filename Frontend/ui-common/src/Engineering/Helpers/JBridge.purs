@@ -256,7 +256,8 @@ foreign import getLocationNameV2 :: Fn2 Number Number String
 foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitude :: Number }
 foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
 foreign import askRequestedPermissions :: Array String -> Unit
-foreign import setupCamera :: String -> Unit
+foreign import askRequestedPermissionsWithCallback :: forall action. Array String -> (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+foreign import setupCamera :: String -> Boolean -> Unit
 foreign import startRecord :: forall action. (action -> Effect Unit)  -> (String -> String -> action) -> Effect Unit
 foreign import stopRecord :: Unit -> Effect Unit
 

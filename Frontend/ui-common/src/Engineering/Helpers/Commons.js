@@ -182,8 +182,8 @@ export const setText = function (id) {
 
 function instantGetTimer (fn , delay) {
   fn();
-  window.timerId = setInterval( fn, delay );
-  return window.timerId;
+  const timerId = setInterval( fn, delay );
+  return timerId;
 }
 
 export const countDown = function (countDownTime) {
@@ -191,27 +191,44 @@ export const countDown = function (countDownTime) {
     return function (cb) {
       return function (action) {
         return function () {
+          console.log("countDown", countDownTime, id, action);
           if (countDownTimers[id] != undefined) {
             clearInterval(parseInt(countDownTimers[id]));
           }
-          const callback = PrestoCallbackMapper.map(function () {
+          const timer = function () {
             let countDownCounter = countDownTime;
             countDownTimers[id] = instantGetTimer(function () {
               const timerIID = countDownTimers[id];
+              console.log("countDown", countDownCounter, id, action, timerIID);
               if (timerIID != undefined) {
                 countDownCounter -= 1;
                 if (countDownCounter <= 0) {
                   delete countDownTimers[id];
                   cb(action(0)(id)("EXPIRED")(timerIID))();
+                  clearInterval(parseInt(countDownTimers[id]));
                 } else {
                   cb(action(countDownCounter)(id)("INPROGRESS")(timerIID))();
                 }
               }
             }, 1000);
-          });
-          window.callUICallback(callback);
+          }
+          timer();
         }
       }
+    }
+  }
+}
+
+export const clearCountDownTimer = function (id) {
+  return function (timerId) {
+    if (window.__OS == "IOS") {
+      if (window.JBridge.clearCountDownTimer) {
+        window.JBridge.clearCountDownTimer();
+      }
+    }
+    else {
+      delete countDownTimers[timerId];
+      clearInterval(parseInt(id));
     }
   }
 }

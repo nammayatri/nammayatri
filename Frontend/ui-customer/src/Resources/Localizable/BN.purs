@@ -788,3 +788,4 @@ getBN stringKey =
         EDIT_ACTIONS_PLUS -> "সেফটি+ মোড সম্পাদনা করুন"
         CALL_POLICE_HELPLINE -> "পুলিশ হেল্পলাইনে কল করুন (112)"
         PLEASE_REMAIN_CALM_CALL_POLICE -> "অনুগ্রহ করে শান্ত থাকুন, প্রয়োজনে আপনি পুলিশ হেল্পলাইনে কল করতে পারেন (112)"
+        PLEASE_ALLOW_CAMERA_AND_MICROPHONE_PERMISSIONS -> "অনুগ্রহ করে ক্যামেরা এবং মাইক্রোফোনের অনুমতি দিন"

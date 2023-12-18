@@ -50,11 +50,9 @@ public class CameraUtils {
     }
 
     @SuppressLint("RestrictedApi")
-    private void startCameraX(Activity activity, ProcessCameraProvider cameraProvider) {
+    private void startCameraX(Activity activity, ProcessCameraProvider cameraProvider, CameraSelector cameraSelector) {
         cameraProvider.unbindAll();
         if (activity == null) return;
-
-        CameraSelector cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA;
 
         Preview preview = new Preview.Builder().build();
 
@@ -72,11 +70,11 @@ public class CameraUtils {
 
     }
 
-    public void setupCamera(Activity activity, Context context, String previewViewId) {
+    public void setupCamera(Activity activity, Context context, String previewViewId, boolean isBackCamera) {
         ExecutorManager.runOnMainThread(new Runnable() {
             @Override
             public void run() {
-                PermissionUtils.askRequestedPermissions(activity, context, new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO});
+                PermissionUtils.askRequestedPermissions(activity, context, new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, null);
 
                 if(activity != null) {
                     int viewId = Integer.parseInt(previewViewId);
@@ -99,7 +97,8 @@ public class CameraUtils {
                     cameraProviderFuture.addListener(() -> {
                         try {
                             ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
-                            startCameraX(activity, cameraProvider);
+                            CameraSelector cameraSelector = isBackCamera ? CameraSelector.DEFAULT_BACK_CAMERA : CameraSelector.DEFAULT_FRONT_CAMERA;
+                            startCameraX(activity, cameraProvider, cameraSelector);
                         } catch (ExecutionException | InterruptedException e) {
                             e.printStackTrace();
                             return;
@@ -119,7 +118,7 @@ public class CameraUtils {
             contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, timeStamp);
             contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4");
 
-            PermissionUtils.askRequestedPermissions(activity, context, new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO});
+            PermissionUtils.askRequestedPermissions(activity, context, new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, null);
 
             try {
                 videoCapture.startRecording(

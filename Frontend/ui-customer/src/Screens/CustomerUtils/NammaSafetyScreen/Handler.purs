@@ -29,25 +29,29 @@ nammaSafetyScreen = do
   (GlobalState state') <- getState
   act <- lift $ lift $ runScreen $ NammaSafetyScreen.screen state'.nammaSafetyScreen
   case act of
-    GoBack -> do
-      App.BackT $ App.NoBack <$> (pure $ NS_GO_BACK)
+    GoBack updatedState -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_BACK_FROM_SAFETY_SCREEN updatedState)
     PostContacts updatedState -> do
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> updatedState)
+      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ UPDATE_CONTACTS updatedState)
     PostEmergencySettings updatedState isEmergencyContacts -> do
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> updatedState)
+      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ POST_EMERGENCY_SETTINGS updatedState isEmergencyContacts)
     CreateSOS updatedState -> do
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> updatedState)
+      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CREATE_SOS updatedState)
     UpdateAction updatedState -> do
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> updatedState)
+      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ UPDATE_ACTION updatedState)
     UpdateSafe updatedState -> do
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> updatedState)
+      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ UPDATE_AS_SAFE updatedState)
     Refresh updatedState -> do
       App.BackT $ App.NoBack <$> (pure $ NS_REFRESH updatedState)
     GoToEmergencyContactScreen updatedState -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_EMERGENCY_CONTACT_SCREEN updatedState)
+    GoToEmergencyVideo updatedState -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_VIDEO_FLOW)

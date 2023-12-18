@@ -789,3 +789,4 @@ getFR stringKey =
         EDIT_ACTIONS_PLUS -> "Modifier les actions"
         CALL_POLICE_HELPLINE -> "Appeler la ligne d'assistance de la police"
         PLEASE_REMAIN_CALM_CALL_POLICE -> "Veuillez rester calme, vous pouvez appeler la police si nécessaire.\n\nVous pouvez également utiliser les fonctionnalités SOS d'urgence en haut à droite pour plus de sécurité."
+        PLEASE_ALLOW_CAMERA_AND_MICROPHONE_PERMISSIONS -> "Veuillez autoriser les autorisations de caméra et de microphone pour enregistrer une vidéo"

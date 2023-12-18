@@ -36,7 +36,7 @@ import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import Engineering.Helpers.Utils as EHU
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage, requestCameraAndMicrophonePermissions)
 import JBridge as JB
@@ -49,7 +49,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.EmergencyContactsScreen.Controller (contactColorsList)
 import Screens.EmergencyContactsScreen.View (getFirstChar, getLastChar)
-import Screens.NammaSafetyScreen.Controller (Action(..), ScreenOutput, eval, checkForContactsAndSupportDisabled)
+import Screens.NammaSafetyScreen.Controller (Action(..), ScreenOutput, eval, checkForContactsAndSupportDisabled, getRecordViewWidth)
 import Screens.Types (NammaSafetyScreenState, NammaSafetyStage(..), NewContacts, RecordingState(..), StepsHeaderModelState)
 import Screens.Types as ST
 import Services.API (GetSosDetailsRes(..))
@@ -83,6 +83,7 @@ screen initialState =
                   else
                     pure unit
                   lift $ lift $ doAff do liftEffect $ push $ DisableShimmer
+                  lift $ lift $ EHU.toggleLoader false
                   pure unit
             pure $ pure unit
         )
@@ -120,13 +121,6 @@ view push state =
         , educationView state (state.props.currentStage == EduNammaSafetyMeasures || state.props.currentStage == EduNammaSafetyGuidelines || state.props.currentStage == EduNammaSafetyAboutSOS)
         , activateNammaSafetyView state push (state.props.currentStage == ActivateNammaSafety)
         , sosActiveView state push (state.props.currentStage == TriggeredNammaSafety)
-        , if state.props.currentStage == NammaSafetyVideoRecord then do
-            if state.props.recordingState == SHARED then
-              videoSharedView push state
-            else
-              videoRecordSOSView state push
-          else
-            emptyTextView
         , if state.props.showInfoPopUp then removeContactPopUpView push state else emptyTextView
         , if state.props.confirmPopup then PopUpModal.view (push <<< ConfirmSOSActivate) (confirmPopUpModelConfig state) else emptyTextView
         ]
@@ -215,7 +209,7 @@ headerView state push =
   visibility' =
     boolToVisibility $ not
       $ any (_ == state.props.currentStage)
-          [ SetTriggerCustomerSupport, SetNightTimeSafetyAlert, SetDefaultEmergencyContacts, SetPersonalSafetySettings ]
+          [ SetTriggerCustomerSupport, SetNightTimeSafetyAlert, SetDefaultEmergencyContacts, SetPersonalSafetySettings, NammaSafetyVideoRecord ]
       || state.props.recordingState == SHARED
 
   showLearnMore = boolToVisibility (state.props.currentStage == NammaSafetyDashboard && state.data.hasCompletedSafetySetup || state.props.currentStage == ActivateNammaSafety)
@@ -629,9 +623,7 @@ contactCircleView contact index =
     ]
   where
   backgroundColor = fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0)
-
   textColor = fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1)
-
   text' = (DS.toUpper ((<>) (getFirstChar contact.name) (getLastChar contact.name)))
 
 -- ---------------------------------- settingUpView -----------------------------------
@@ -1207,10 +1199,10 @@ sosActiveView state push visibility' =
                             if EHC.os == "IOS" then do
                               void $ pure $ requestCameraAndMicrophonePermissions unit
                             else
-                              void $ pure $ JB.askRequestedPermissions [ "android.permission.CAMERA", "android.permission.RECORD_AUDIO" ]
+                              void $ pure $ JB.askRequestedPermissionsWithCallback [ "android.permission.CAMERA", "android.permission.RECORD_AUDIO" ] push PermissionsCallback
                             void $ push action
                         )
-                        (const $ SwitchToStage NammaSafetyVideoRecord)
+                        (const NoAction)
                     ]
                     [ imageView
                         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_video"
@@ -1230,213 +1222,6 @@ sosActiveView state push visibility' =
                 ]
             , PrimaryButton.view (push <<< MarkRideAsSafe) (cancelSOSBtnConfig state)
             ]
-        ]
-    ]
-
-videoRecordSOSView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-videoRecordSOSView state push =
-  let
-    value = 15 - state.props.timerValue
-    timerval = if (value < 10) then "0" <> show value else show value
-  in
-    PrestoAnim.animationSet [ fadeIn $ true ]
-      $ relativeLayout
-          [ height MATCH_PARENT
-          , width MATCH_PARENT
-          , background Color.black900
-          , color $ Color.white900
-          , orientation VERTICAL
-          , padding $ getSafePadding
-          , onAnimationEnd
-              ( \_ -> do
-                  void $ pure $ runFn2 JB.storeOnResumeCallback push OnResumeCallback
-                  pure unit
-              )
-              (const NoAction)
-          ]
-          [ linearLayout
-              [ height WRAP_CONTENT
-              , width MATCH_PARENT
-              , orientation VERTICAL
-              ]
-              [ linearLayout
-                  [ height MATCH_PARENT
-                  , width MATCH_PARENT
-                  , orientation VERTICAL
-                  ]
-                  [ frameLayout
-                      [ height MATCH_PARENT
-                      , width MATCH_PARENT
-                      ]
-                      [ linearLayout
-                          [ height MATCH_PARENT
-                          , width MATCH_PARENT
-                          , padding $ Padding 16 20 16 5
-                          ]
-                          [ linearLayout
-                              [ id $ EHC.getNewIDWithTag "VideoCamView"
-                              , afterRender
-                                  ( \_ -> do
-                                      if EHC.os == "IOS" && state.props.currentStage == NammaSafetyVideoRecord then do
-                                        void $ pure $ requestCameraAndMicrophonePermissions unit
-                                      else
-                                        pure unit
-                                      pure $ JB.setupCamera (EHC.getNewIDWithTag "VideoCamView")
-                                  )
-                                  (const NoAction)
-                              , height if EHC.os == "IOS" then V 400 else MATCH_PARENT
-                              , width MATCH_PARENT
-                              , orientation VERTICAL
-                              ]
-                              []
-                          ]
-                      , if state.props.recordingState == SHARING && not state.props.enableLocalPoliceSupport then shareTimerView state push else emptyTextView
-                      ]
-                  ]
-              , linearLayout
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , orientation VERTICAL
-                  , visibility $ boolToVisibility $ state.props.recordingState /= UPLOADING
-                  ]
-                  [ linearLayout
-                      [ height WRAP_CONTENT
-                      , width MATCH_PARENT
-                      , background Color.white900
-                      , margin $ MarginHorizontal 16 16
-                      , id $ EHC.getNewIDWithTag "recordProgress"
-                      , visibility $ boolToVisibility $ state.props.recordingState /= SHARING
-                      , gravity LEFT
-                      ]
-                      [ linearLayout
-                          [ height $ V 4
-                          , width $ V ((((JB.getLayoutBounds $ EHC.getNewIDWithTag "recordProgress").width) / 15) * (15 - state.props.timerValue))
-                          , background Color.blue800
-                          ]
-                          []
-                      ]
-                  , linearLayout
-                      [ height WRAP_CONTENT
-                      , width MATCH_PARENT
-                      , padding $ PaddingHorizontal 16 16
-                      , visibility $ boolToVisibility $ state.props.recordingState /= SHARING
-                      ]
-                      [ textView
-                          [ text $ "0:" <> timerval
-                          , weight 1.0
-                          , color Color.white900
-                          ]
-                      , textView
-                          [ text "0:15"
-                          , color Color.white900
-                          ]
-                      ]
-                  , textView
-                      $ [ text $ getString if state.props.enableLocalPoliceSupport then VIDEO_SHARE_INFO_TO_POLICE else THE_VIDEO_WILL_BE_RECORDED
-                        , color "#B9BABE"
-                        , padding $ PaddingHorizontal 16 16
-                        , margin $ MarginTop 12
-                        ]
-                      <> FontStyle.body3 TypoGraphy
-                  ]
-              ]
-          , linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              , orientation VERTICAL
-              , gravity CENTER
-              , alignParentBottom "true,-1"
-              , margin $ MarginBottom 16
-              , onClick
-                  ( \action -> do
-                      void $ push action
-                      if state.props.recordingState == RECORDING then
-                        pure unit
-                      else do
-                        void $ JB.startRecord push VideoStatusCallBack
-                        if (EHC.os == "IOS") then
-                          liftEffect $ JB.startTimerWithTime (show state.props.timerValue) state.props.timerId "1" push CountDown
-                        else
-                          liftEffect $ EHC.countDown state.props.timerValue state.props.timerId push CountDown
-                      pure unit
-                  )
-                  (const ToggleRecord)
-              ]
-              [ imageView
-                  [ imageWithFallback
-                      $ fetchImage FF_ASSET case state.props.recordingState, state.props.enableLocalPoliceSupport of
-                          RECORDING, _ -> "ny_ic_stop_record"
-                          SHARING, false -> "ny_ic_cancel_share"
-                          _, _ -> "ny_ic_start_record"
-                  , height $ V 45
-                  , width $ V 45
-                  , visibility $ boolToVisibility $ state.props.recordingState /= UPLOADING
-                  ]
-              , textView
-                  $ [ text
-                        $ getString case state.props.recordingState, state.props.enableLocalPoliceSupport of
-                            RECORDING, _ -> STOP_AND_SHARE_RECORDING
-                            SHARING, false -> CANCEL_SHARING
-                            _, _ -> START_RECORDING
-                    , color Color.white900
-                    , visibility $ boolToVisibility $ state.props.recordingState /= UPLOADING
-                    ]
-                  <> FontStyle.tags TypoGraphy
-              ]
-          ]
-
-shareTimerView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-shareTimerView state push =
-  PrestoAnim.animationSet [ fadeIn $ true ]
-    $ linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , gravity CENTER_VERTICAL
-        , orientation VERTICAL
-        , padding $ Padding 16 20 16 5
-        , visibility $ boolToVisibility $ state.props.recordingState == SHARING
-        , background Color.blackLessTrans
-        , onAnimationEnd
-            ( \_ -> do
-                if (EHC.os == "IOS") then
-                  JB.startTimerWithTime (show state.props.shareTimerValue) state.props.shareTimerId "1" push CountDownShare
-                else
-                  EHC.countDown state.props.shareTimerValue state.props.shareTimerId push CountDownShare
-                pure unit
-            )
-            (const NoAction)
-        ]
-        [ textView
-            $ [ text $ getString SHARING_THE_VIDEO_IN
-              , height WRAP_CONTENT
-              , width MATCH_PARENT
-              , gravity CENTER
-              , color Color.white900
-              ]
-            <> FontStyle.paragraphText TypoGraphy
-        , textView
-            $ [ text $ show state.props.shareTimerValue
-              , height WRAP_CONTENT
-              , width MATCH_PARENT
-              , color Color.white900
-              , gravity CENTER
-              ]
-            <> FontStyle.priceFont TypoGraphy
-        ]
-
-toggleSwitchView :: Boolean -> NammaSafetyStage -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-toggleSwitchView isActive stage push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity CENTER_VERTICAL
-    , onClick push $ const $ ToggleSwitch stage
-    , visibility $ boolToVisibility $ stage /= SetPersonalSafetySettings
-    ]
-    [ imageView
-        [ imageUrl if isActive then "ny_ic_switch_active" else "ny_ic_switch_inactive"
-        , width $ V 40
-        , height $ V 24
         ]
     ]
 
@@ -1490,49 +1275,6 @@ removeContactPopUpView push state =
     ]
     [ PopUpModal.view (push <<< PopUpModalAction) (removeContactPopUpModelConfig state) ]
 
-videoSharedView :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
-videoSharedView push state =
-  linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    ]
-    [ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        , gravity CENTER
-        , padding $ PaddingTop 100
-        ]
-        [ imageView
-            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_video_shared"
-            , height $ V 300
-            , padding $ PaddingHorizontal 16 16
-            ]
-        , textView
-            $ [ text $ getString EMERGENCY_INFO_SHARED
-              , gravity CENTER
-              , color Color.white900
-              ]
-            <> FontStyle.h1 TypoGraphy
-        , textView
-            $ [ text $ getString if state.props.enableLocalPoliceSupport then EMERGENCY_INFO_SHARED_ACTION_POLICE else EMERGENCY_INFO_SHARED_ACTION
-              , padding $ PaddingHorizontal 20 20
-              , gravity CENTER
-              , color Color.white900
-              , margin $ MarginTop 8
-              ]
-            <> FontStyle.body1 TypoGraphy
-        ]
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation HORIZONTAL
-        , alignParentBottom "true,-1"
-        , margin $ MarginTop 50
-        ]
-        [ PrimaryButton.view (push <<< VideoShared) (goBackBtnConfig state) ]
-    ]
 
 emptyTextView :: forall w. PrestoDOM (Effect Unit) w
 emptyTextView = textView [ visibility GONE ]
@@ -1585,3 +1327,19 @@ sfl height' marginTop numberOfBoxes visibility' =
             ) (1 .. numberOfBoxes)
           )
   ]
+
+toggleSwitchView :: Boolean -> NammaSafetyStage -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+toggleSwitchView isActive stage push =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , gravity CENTER_VERTICAL
+    , onClick push $ const $ ToggleSwitch stage
+    , visibility $ boolToVisibility $ stage /= SetPersonalSafetySettings
+    ]
+    [ imageView
+        [ imageUrl if isActive then "ny_ic_switch_active" else "ny_ic_switch_inactive"
+        , width $ V 40
+        , height $ V 24
+        ]
+    ]
