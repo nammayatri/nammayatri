@@ -1,0 +1,24 @@
+module: AadhaarVerification
+imports:
+  AadhaarOtpReq: Tools.AadhaarVerification
+  AadhaarVerificationResp: Tools.AadhaarVerification
+  AadhaarOtpVerifyRes: Tools.AadhaarVerification
+
+types:
+  VerifyAadhaarOtpReq:
+    otp: Int
+    shareCode: Text
+
+apis:
+  - POST:
+      endpoint: verifyAadhaar/generateOtp
+      request:
+        type: AadhaarOtpReq
+      response:
+        type: AadhaarVerificationResp
+  - POST:
+      endpoint: verifyAadhaar/verifyOtp
+      request:
+        type: VerifyAadhaarOtpReq
+      response:
+        type: AadhaarOtpVerifyRes

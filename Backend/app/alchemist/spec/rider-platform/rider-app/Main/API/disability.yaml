@@ -1,0 +1,10 @@
+module: Disability
+
+imports:
+  DisabilityItem: Domain.Types.Person.PersonDisability
+
+apis:
+  - GET:
+    endpoint: disability/list
+    response:
+      type: [DisabilityItem]

@@ -1,0 +1,40 @@
+module: Cancel
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  CancellationReasonCode: Domain.Types.CancellationReason
+  CancellationStage: Domain.Types.CancellationStage
+  Booking: Domain.Types.Booking
+  CancellationReasonAPIEntity: Domain.Types.CancellationReason
+
+types:
+  CancelReq:
+    reasonCode: CancellationReasonCode
+    reasonStage: CancellationStage
+    additionalInfo: Text
+  CancellationDuesDetailsRes:
+    cancellationDues: HighPrecMoney
+    disputeChancesUsed: Int
+
+apis:
+  - POST:
+      endpoint: rideBooking/{rideBookingId}/cancel
+      params:
+        rideBookingId: Id Booking
+      request:
+        type: CancelReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: dispute/cancellationDues
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: getCancellationDuesDetails
+      response:
+        type: CancellationDuesDetailsRes
+  - GET:
+      endpoint: cancellationReason/list
+      mandatoryQuery:
+        cancellationStage: CancellationStage
+      response:
+        type: [CancellationReasonAPIEntity]

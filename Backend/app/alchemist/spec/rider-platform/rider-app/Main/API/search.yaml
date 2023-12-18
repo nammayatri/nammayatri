@@ -1,0 +1,53 @@
+module: Search
+imports:
+  Version: Kernel.Types.Version
+  RouteInfo: Tools.Maps
+  LocationAddress: Domain.Types.LocationAddress
+  SearchRequest: Domain.Types.SearchRequest
+  LocationAPIEntity: Domain.Types.Location
+  EstimateAPIEntity: Domain.Types.Estimate
+  PaymentMethodAPIEntity: Domain.Types.Merchant.MerchantPaymentMethod
+  OfferRes: Domain.Types.Other
+
+types:
+  SearchReq:
+    enum: OneWaySearch OneWaySearchReq,RentalSearch RentalSearchReq
+  OneWaySearchReq:
+    origin: SearchReqLocation
+    destination: SearchReqLocation
+    isSourceManuallyMoved: Maybe Bool
+    isSpecialLocation: Maybe Bool
+  RentalSearchReq:
+    origin: SearchReqLocation
+    startTime: UTCTime
+  SearchReqLocation:
+    gps: LatLong
+    address: LocationAddress
+  SearchRes:
+    searchId: Id SearchRequest
+    searchExpiry: UTCTime
+    routeInfo: Maybe RouteInfo
+  GetQuotesRes:
+    fromLocation: LocationAPIEntity
+    toLocation: Maybe LocationAPIEntity
+    quotes: [OfferRes]
+    estimates: [EstimateAPIEntity]
+    paymentMethods: [PaymentMethodAPIEntity]
+
+apis:
+  - POST:
+    endpoint: rideSearch
+    headers:
+      x-bundle-version: Version
+      x-client-version: Version
+      x-device: Text
+    request:
+      type: SearchReq
+    response:
+      type: SearchRes
+  - GET:
+    endpoint: rideSearch/{searchId}/results
+    params:
+      searchId: Id SearchRequest
+    response:
+      type: GetQuotesRes

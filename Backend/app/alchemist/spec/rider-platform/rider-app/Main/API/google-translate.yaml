@@ -1,0 +1,14 @@
+module: GoogleTranslate
+imports:
+  Language: Tools.Maps
+  GoogleTranslate: SharedLogic.GoogleTranslate
+
+apis:
+  - GET:
+      endpoint: language/translate
+      mandatoryQuery:
+        source: Language
+        target: Language
+        q: Text
+      response:
+        type: TranslateResp

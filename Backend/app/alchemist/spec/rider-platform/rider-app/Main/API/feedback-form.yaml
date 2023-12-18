@@ -1,0 +1,53 @@
+module: FeedbackForm
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  Ride: Domain.Types.Ride
+
+types:
+  FeedbackFormList:
+    _data: [FeedbackFormAPIEntity]
+  FeedbackFormAPIEntity:
+    categoryName: Category
+    feedbackForm: [FeedbackFormItem]
+  Category:
+    enum: RIDE,DRIVER,VEHICLE
+  FeedbackFormItem:
+    id: Id FeedbackFormItem
+    rating: Maybe Int
+    question: Text
+    answer: [Text]
+    answerType: AnswerType
+  AnswerType:
+    enum: Text,Checkbox,Radio
+  FeedbackFormReq:
+    rideId: Id Ride
+    feedback: [FeedbackAnswer]
+  FeedbackAnswer:
+    questionId: Text
+    answer: [Text]
+  FeedbackReq:
+    rideId: Id Ride
+    rating: Int
+    feedbackDetails: Maybe Text
+    nightSafety: Maybe Bool
+    wasOfferedAssistance: Maybe Bool
+
+apis:
+  - GET:
+      endpoint: feedback/form
+      query:
+        rating: Int
+      response:
+        type: FeedbackFormList
+  - POST:
+      endpoint: feedback/submit
+      request:
+        type: FeedbackFormReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: feedback/rateRide
+      request:
+        type: FeedbackReq
+      response:
+        type: APISuccess

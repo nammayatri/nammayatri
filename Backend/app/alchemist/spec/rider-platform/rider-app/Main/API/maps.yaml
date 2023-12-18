@@ -1,0 +1,59 @@
+module: Maps
+imports:
+  GetRoutesReq: Kernel.External.Maps
+  GetRoutesResp: Kernel.External.Maps
+  GetPlaceNameReq: Tools.Maps
+  GetPlaceNameResp: Tools.Maps
+  GetPlaceDetailsReq: Tools.Maps
+  GetPlaceDetailsResp: Tools.Maps
+  AutoCompleteResp: Tools.Maps
+  LatLong: Tools.Maps
+  Language: Tools.Maps
+
+types:
+  AutoCompleteReq:
+    input: Text
+    sessionToken: Text
+    location: Text
+    radius: Integer
+    language: Language
+    strictbounds: Maybe Bool
+    origin: Maybe LatLong
+
+apis:
+  - POST:
+      endpoint: route
+      request:
+        type: GetRoutesReq
+      response:
+        type: GetRoutesResp
+  - POST:
+      endpoint: pickup/route
+      request:
+        type: GetRoutesReq
+      response:
+        type: GetRoutesResp
+  - POST:
+      endpoint: trip/route
+      request:
+        type: GetRoutesReq
+      response:
+        type: GetRoutesResp
+  - POST:
+      endpoint: maps/autoComplete
+      request:
+        type: AutoCompleteReq
+      response:
+        type: AutoCompleteResp
+  - POST:
+      endpoint: maps/getPlaceDetails
+      request:
+        type: GetPlaceDetailsReq
+      response:
+        type: GetPlaceDetailsResp
+  - POST:
+      endpoint: maps/getPlaceName
+      request:
+        type: GetPlaceNameReq
+      response:
+        type: GetPlaceNameResp

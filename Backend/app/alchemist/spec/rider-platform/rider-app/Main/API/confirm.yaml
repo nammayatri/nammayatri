@@ -1,0 +1,19 @@
+module: Confirm
+imports:
+  MerchantPaymentMethod: Domain.Types.Merchant.MerchantPaymentMethod
+  Quote: Domain.Types.Quote
+  Booking: Domain.Types.Booking
+
+types:
+  ConfirmRes:
+    bookingId: Id Booking
+
+apis:
+  - POST:
+      endpoint: rideSearch/quotes/{quoteId}/confirm
+      query:
+        paymentMethodId: Id MerchantPaymentMethod
+      params:
+        quoteId: Id Quote
+      response:
+        type: ConfirmRes

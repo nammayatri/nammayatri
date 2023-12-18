@@ -69,7 +69,6 @@ library
       API.UI.Cancel
       API.UI.CancellationReason
       API.UI.Confirm
-      API.UI.CustomerSupport
       API.UI.Disability
       API.UI.FeedbackForm
       API.UI.Frontend
@@ -139,7 +138,6 @@ library
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
-      Domain.Action.UI.CustomerSupport
       Domain.Action.UI.Disability
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm

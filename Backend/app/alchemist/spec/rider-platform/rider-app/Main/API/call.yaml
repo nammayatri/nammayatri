@@ -1,0 +1,74 @@
+module: Call
+imports:
+  Ride: Domain.Types.Ride
+  CallStatus: Domain.Types.CallStatus
+  CallType: Kernel.External.Call.Interface.Types
+  AckResponse: Kernel.Types.Beckn.Ack
+  ExotelCallStatus: Kernel.External.Call.Exotel.Types
+  APISuccess: Kernel.Types.APISuccess
+
+types:
+  CallRes:
+    callId: Id CallStatus
+  CallStatusAPIEntity:
+    callStatusId: Id CallStatus
+    rideId: Maybe (Id Ride)
+    status: CallType.CallStatus
+  CallCallbackReq:
+    enum: ExotelCallCallbackReq CallAttachments
+  CallAttachments:
+    callStatusId: Id CallStatus
+    rideId: Maybe (Id Ride)
+  CallEventReq:
+    rideId: Id Ride
+    callType: Text
+    exophoneNumber: Text
+
+apis:
+  - POST:
+      endpoint: ride/{rideId}/call/driver
+      params:
+        rideId: Id Ride
+      response:
+        type: CallRes
+  - GET:
+      endpoint: ride/{rideId}/call/{callId}/status
+      params:
+        callId: Id CallStatus
+      response:
+        type: CallStatusAPIEntity
+  - POST:
+      endpoint: ride//call/statusCallback
+      request:
+        type: CallCallbackReq
+      response:
+        type: AckResponse
+  - GET:
+      endpoint: exotel/call/driver/number
+      mandatoryQuery:
+        CallSid: Text
+        CallFrom: Text
+        CallTo: Text
+        CallStatus: ExotelCallStatus
+        To: Text
+      query:
+        digits: Text
+      response:
+        type: Text
+  - GET:
+      endpoint: exotel/call/statusCallback
+      mandatoryQuery:
+        CallSid: Text
+        DialCallStatus: ExotelCallStatus
+      query:
+        RecordingUrl: Text
+        Legs[0][OnCallDuration]: Int
+        CallDuration: Int
+      response:
+        type: AckResponse
+  - POST:
+      endpoint: callEvent
+      request:
+        type: CallEventReq
+      response:
+        type: APISuccess

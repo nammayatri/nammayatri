@@ -1,0 +1,52 @@
+module: Ride
+imports:
+  LocationAPIEntity: Domain.Types.Location
+  RideAPIEntity: Domain.Types.Ride
+  PersonAPIEntity: Domain.Types.Person
+  LatLong: Tools.Maps
+  Booking: Domain.Types.Booking
+  BookingStatus: Domain.Types.Booking
+  BookingAPIEntity: Domain.Types.Booking
+
+types:
+  GetDriverLocResp:
+    lat: Double
+    lon: Double
+    lastUpdate: UTCTime
+  GetRideStatusResp:
+    fromLocation: LocationAPIEntity
+    toLocation: Maybe LocationAPIEntity
+    ride: RideAPIEntity
+    customer: PersonAPIEntity
+    driverPosition: Maybe LatLong
+  BookingListRes:
+    list: [BookingAPIEntity]
+
+apis:
+  - POST:
+      endpoint: ride/{rideId}/driver/location
+      params:
+        rideId: Id Ride
+      response:
+        type: GetDriverLocResp
+  - GET:
+      endpoint: ride/{rideId}/status
+      params:
+        rideId: Id Ride
+      response:
+        type: GetRideStatusResp
+  - POST:
+      endpoint: rideBooking/{rideBookingId}
+      params:
+        rideBookingId: Id Booking
+      response:
+        type: BookingAPIEntity
+  - GET:
+      endpoint: rideBooking/list
+      query:
+        limit: Integer
+        offset: Integer
+        onlyActive: Bool
+        status: BookingStatus
+      response:
+        type: BookingListRes

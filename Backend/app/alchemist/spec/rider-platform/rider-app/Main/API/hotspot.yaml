@@ -1,0 +1,19 @@
+module: HotSpot
+imports:
+  LatLong: Tools.Maps
+
+types:
+  HotSpotInfo:
+    _geoHash: Text
+    _centroidLatLong: LatLong
+  HotSpotResponse:
+    hotSpotInfo: [HotSpotInfo]
+    blockRadius: Maybe Int
+
+apis:
+  - GET:
+      endpoint: getHotSpot
+      request:
+        type: LatLong
+      response:
+        type: HotSpotResponse

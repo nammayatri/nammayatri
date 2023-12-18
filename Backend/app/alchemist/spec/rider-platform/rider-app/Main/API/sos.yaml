@@ -1,0 +1,61 @@
+module: Sos
+imports:
+  SosType: Domain.Types.Sos
+  Ride: Domain.Types.Ride
+  SosStatus: Domain.Types.Sos
+  FileType: Dashboard.ProviderPlatform.Message
+
+types:
+  SosReq:
+    flow: SosType
+    rideId: Id Ride
+  SosRes:
+    sosId: Id Sos
+  SosDetailsRes:
+    sosId: Maybe (Id Sos)
+  SosUpdateReq:
+    status: SosStatus
+    comment: Text
+  SOSVideoUploadReq:
+    video: FilePath
+    fileType: FileType
+    reqContentType: Text
+  AddSosVideoRes:
+    fileUrl: Text
+
+apis:
+  - POST:
+      endpoint: sos/create
+      request:
+        type: SosReq
+      response:
+        type: SosRes
+  - GET:
+      endpoint: sos/getDetails/{rideId}
+      params:
+        rideId: Id Ride
+      response:
+        type: SosDetailsRes
+  - POST:
+      endpoint: sos/{sosId}/status
+      params:
+        sosId: Id Sos
+      request:
+        type: SosUpdateReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: sos/{sosId}/addVideo
+      params:
+        sosId: Id Sos
+      request:
+        type: SOSVideoUploadReq
+        format: MultipartForm
+      response:
+        type: AddSosVideoRes
+  - POST:
+      endpoint: sos/{sosId}/markRideAsSafe
+      params:
+        sosId: Id Sos
+      response:
+        type: APISuccess

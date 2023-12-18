@@ -1,0 +1,55 @@
+module: SavedReqLocation
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+types:
+  CreateSavedReqLocationReq:
+    lat: Double
+    lon: Double
+    street: Maybe Text
+    door: Maybe Text
+    city: Maybe Text
+    state: Maybe Text
+    country: Maybe Text
+    building: Maybe Text
+    areaCode: Maybe Text
+    area: Maybe Text
+    tag: Text
+    placeId: Maybe Text
+    ward: Maybe Text
+    isMoved: Maybe Bool
+  SavedReqLocationAPIEntity:
+    lat: Double
+    lon: Double
+    street: Maybe Text
+    door: Maybe Text
+    city: Maybe Text
+    state: Maybe Text
+    country: Maybe Text
+    building: Maybe Text
+    areaCode: Maybe Text
+    area: Maybe Text
+    tag: Text
+    placeId: Maybe Text
+    ward: Maybe Text
+
+  SavedReqLocationsListRes:
+    list: [SavedReqLocationAPIEntity]
+
+apis:
+  - POST:
+    endpoint: savedLocation
+    request:
+      type: CreateSavedReqLocationReq
+    response:
+      type: APISuccess
+  - GET:
+    endpoint: savedLocation/list
+    response:
+      type: SavedReqLocationsListRes
+  - DELETE:
+    endpoint: savedLocation/{tag}
+    params:
+      tag: Text
+    response:
+      type: APISuccess

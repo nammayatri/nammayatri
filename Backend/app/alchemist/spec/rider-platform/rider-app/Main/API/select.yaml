@@ -1,0 +1,48 @@
+module: Select
+imports:
+  Estimate: Domain.Types.Estimate
+  MerchantPaymentMethod: Domain.Types.Merchant.MerchantPaymentMethod
+  APISuccess: Kernel.Types.APISuccess
+  QuoteAPIEntity: Domain.Types.Quote
+  Booking: Domain.Types.Booking.Type
+  CancelAPIResponse: Domain.API.UI.Types
+
+types:
+  DSelectReq:
+    customerExtraFee: Maybe Money
+    autoAssignEnabled: Bool
+    autoAssignEnabledV2: Maybe Bool
+    paymentMethodId: Maybe (Id MerchantPaymentMethod)
+  SelectListRes:
+    selectedQuotes: [QuoteAPIEntity]
+  QuotesResultResponse:
+    selectedQuotes: Maybe SelectListRes
+    bookingId: Maybe (Id Booking)
+
+apis:
+  - POST:
+      endpoint: estimate/{estimateId}/select2
+      params:
+        estimateId: Id Estimate
+      request:
+        type: DSelectReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: estimate/{estimateId}/quotes
+      params:
+        estimateId: Id Estimate
+      response:
+        type: SelectListRes
+  - GET:
+      endpoint: estimate/{estimateId}/results
+      params:
+        estimateId: Id Estimate
+      response:
+        type: QuotesResultResponse
+  - POST:
+      endpoint: estimate/{estimateId}/cancel
+      params:
+        estimateId: Id Estimate
+      response:
+        type: CancelAPIResponse

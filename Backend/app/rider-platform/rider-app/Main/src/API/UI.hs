@@ -27,7 +27,6 @@ import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
-import qualified API.UI.CustomerSupport as CustomerSupport
 import qualified API.UI.Disability as Disability
 import qualified API.UI.FeedbackForm as FeedbackForm
 import qualified API.UI.Frontend as Frontend
@@ -75,7 +74,6 @@ type API =
            :<|> Serviceability.API
            :<|> Rating.API
            :<|> FeedbackForm.API
-           :<|> CustomerSupport.API
            :<|> MapsProxy.API
            :<|> GoogleTranslateProxy.API
            :<|> CancellationReason.API
@@ -114,7 +112,6 @@ handler =
     :<|> Serviceability.handler
     :<|> Rating.handler
     :<|> FeedbackForm.handler
-    :<|> CustomerSupport.handler
     :<|> MapsProxy.handler
     :<|> GoogleTranslateProxy.handler
     :<|> CancellationReason.handler

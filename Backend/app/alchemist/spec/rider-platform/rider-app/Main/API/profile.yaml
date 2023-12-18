@@ -1,0 +1,114 @@
+module: Profile
+imports:
+  Language: Kernel.External.Maps
+  Gender: Domain.Types.Person
+  PersonAPIEntity: Domain.Types.Person
+  Version: Kernel.Types.Version
+  PersonDefaultEmergencyNumberAPIEntity: Domain.Types.Person.PersonDefaultEmergencyNumber
+  Person: Domain.Types.Person
+
+types:
+  GetProfileDefaultEmergencyNumbersResp:
+    defaultEmergencyNumbers: [PersonDefaultEmergencyNumberAPIEntity]
+  UpdateProfileDefaultEmergencyNumbersReq:
+    defaultEmergencyNumbers: [PersonDefaultEmergencyNumber]
+  PersonDefaultEmergencyNumber:
+    name: Text
+    mobileCountryCode: Text
+    mobileNumber: Text
+  EmergencySettingsRes:
+    shareEmergencyContacts: Bool
+    triggerSupport: Bool
+    nightSafetyChecks: Bool
+    hasCompletedSafetySetup: Bool
+    defaultEmergencyNumbers: [PersonDefaultEmergencyNumberAPIEntity]
+    enablePoliceSupport: Bool
+    localPoliceNumber: Maybe Text
+  UpdateEmergencySettingsReq:
+    shareEmergencyContacts: Maybe Bool
+    triggerSupport: Maybe Bool
+    nightSafetyChecks: Maybe Bool
+    hasCompletedSafetySetup: Maybe Bool
+  UpdateProfileReq:
+    firstName: Maybe Text
+    middleName: Maybe Text
+    lastName: Maybe Text
+    email: Maybe Text
+    deviceToken: Maybe Text
+    notificationToken: Maybe Text
+    referralCode: Maybe Text
+    language: Language
+    gender: Gender
+    bundleVersion: Maybe Version
+    clientVersion: Maybe Version
+    disability: Maybe Disability
+    hasDisability: Maybe Bool
+  disability:
+    id: Id Disability
+    description: Maybe Text
+  PersonStatsRes:
+    riderId: Id Person
+    signupDate: UTCTime
+    email: Maybe Text
+    isWhatsAppOptInStatus: Bool
+    lifetimeRides: Int
+    lastRideTaken: Maybe UTCTime
+    userCancellationRate: Float
+    frequencyCategory: FrequencyCategory
+    isChurnedUser: Bool
+    userCategory: UserCategory
+    isBlocked: Bool
+    latestSearch: Maybe UTCTime
+    latestSearchFrom: Maybe LatLong
+    emergencyContactsNum: Int
+    overalCancellationRate: Float
+    favoriteLocationsNum: Int
+    weekdayMorningPeakRidesRate: Float
+    weekdayEveningPeakRidesRate: Float
+    offPeakRidesRate: Float
+    weekendRidesRate: Float
+    weekdayRidesRate: Float
+    weekendPeakRideRate: Float
+    commonAppUseCase: AppUseCase
+  FrequencyCategory:
+    enum: HIGH,MID,LOW,ZERO
+  UserCategory:
+    enum: POWER,REGULAR,IRREGULAR,RARE
+  AppUseCase:
+    enum: WEEKDAY,WEEKEND,OCCASIONAL,MISCELLANEOUS
+
+apis:
+  - GET:
+      endpoint: profile
+      response:
+        type: PersonAPIEntity
+  - POST:
+      endpoint: profile
+      request:
+        type: UpdateProfileReq
+      response:
+        type: APISuccess
+  - PUT:
+      endpoint: profile/updateEmergencySettings
+      request:
+        type: UpdateEmergencySettingsReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: profile/getEmergencySettings
+      response:
+        type: EmergencySettingsRes
+  - POST:
+      endpoint: profile/defaultEmergencyNumbers
+      request:
+        type: UpdateProfileDefaultEmergencyNumbersReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: profile/defaultEmergencyNumbers
+      response:
+        type: GetProfileDefaultEmergencyNumbersResp
+  - GET:
+      endpoint: personStats
+      response:
+        type: PersonStatsRes
