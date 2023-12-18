@@ -16,7 +16,7 @@ data TableDef = TableDef
   }
   deriving (Show)
 
-data TypeObject = TypeObject (String, ([(String, String)], Maybe String))
+newtype TypeObject = TypeObject (String, ([(String, String)], Maybe String))
   deriving (Show)
 
 data QueryDef = QueryDef
@@ -28,9 +28,12 @@ data QueryDef = QueryDef
   }
   deriving (Show)
 
-data WhereClause = EmptyWhere | Leaf (String, String) | Query (Operator, [WhereClause]) deriving (Show)
+data WhereClause = EmptyWhere | Leaf (String, String, Maybe Operator) | Query (Operator, [WhereClause]) deriving (Show)
 
-data Operator = And | Or deriving (Show)
+data Operator = And | Or | In | Eq | GreaterThan | LessThan | GreaterThanOrEq | LessThanOrEq deriving (Show, Eq)
+
+comparisonOperator :: [Operator]
+comparisonOperator = [In, Eq, GreaterThan, LessThan, GreaterThanOrEq, LessThanOrEq]
 
 data FieldDef = FieldDef
   { fieldName :: String,

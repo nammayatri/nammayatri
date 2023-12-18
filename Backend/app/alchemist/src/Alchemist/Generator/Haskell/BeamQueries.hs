@@ -217,12 +217,12 @@ generateQueryReturnType kvFunction tableNameHaskell = do
     then "Maybe (Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ ")"
     else
       if kvFunction `elem` ["findAllWithKV", "findAllWithKVScheduler", "findAllWithOptionsKV", "findAllWithOptionsKV'", "findAllWithOptionsKVScheduler", "findAllWithDb", "findAllWithOptionsDb", "findAllWithKVAndConditionalDB"]
-        then ("[" ++ "Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ "]")
+        then "[" ++ "Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell ++ "]"
         else ""
 
 getWhereClauseFieldNamesAndTypes :: WhereClause -> [(String, String)]
 getWhereClauseFieldNamesAndTypes EmptyWhere = []
-getWhereClauseFieldNamesAndTypes (Leaf (field, _type)) = [(field, _type)]
+getWhereClauseFieldNamesAndTypes (Leaf (field, _type, op)) = if op == Just In then [(field, "[" <> _type <> "]")] else [(field, _type)]
 getWhereClauseFieldNamesAndTypes (Query (_, clauses)) = concatMap getWhereClauseFieldNamesAndTypes clauses
 
 generateBeamFunctionCall :: String -> String
@@ -265,23 +265,31 @@ correctEqField field tp beamField
   | otherwise = maybe "" (++ " $ ") (bToTType beamField) ++ toTTypeExtractor (makeExtractorFunction $ bfieldExtractor beamField) field
 
 mapWithIndex :: (Int -> a -> b) -> [a] -> [b]
-mapWithIndex f xs = zipWith f [0 ..] xs
+mapWithIndex f = zipWith f [0 ..]
 
 -- Function to process each clause
 generateClause :: [FieldDef] -> Bool -> Int -> Int -> WhereClause -> String
 generateClause _ _ _ _ EmptyWhere = ""
-generateClause allFields isFullObjInp n i (Leaf (field, tp)) =
+generateClause allFields isFullObjInp n i (Leaf (field, tp, op)) =
   let bFields = maybe (error "Param not found in data type") beamFields $ find (\f -> fieldName f == field) allFields
-   in intercalate " , " $ map (\bfield -> (if i == 0 then " " else spaces n) ++ "Se.Is Beam." ++ bFieldName bfield ++ " $ Se.Eq $ " ++ (if isFullObjInp then correctSetField field tp bfield else correctEqField field tp bfield)) bFields
+   in intercalate " , " $ map (\bfield -> (if i == 0 then " " else spaces n) ++ "Se.Is Beam." ++ bFieldName bfield ++ " $ " ++ operator (fromMaybe Eq op) ++ " " ++ (if isFullObjInp then correctSetField field tp bfield else correctEqField field tp bfield)) bFields
 generateClause allFields isFullObjInp n i (Query (op, clauses)) =
-  (if i == 0 then " " else spaces n) ++ operator op
-    ++ "\n"
-    ++ spaces (n + 2)
-    ++ "["
+  (if i == 0 then " " else spaces n)
+    ++ ( if op `elem` comparisonOperator
+           then ""
+           else
+             operator op
+               ++ "\n"
+               ++ spaces (n + 2)
+               ++ "["
+       )
     ++ intercalate ",\n" (mapWithIndex (generateClause allFields isFullObjInp (n + 4)) clauses)
-    ++ "\n"
-    ++ spaces (n + 2)
-    ++ "]"
+    ++ if op `elem` comparisonOperator
+      then ""
+      else
+        "\n"
+          ++ spaces (n + 2)
+          ++ "]"
 
 generateToTTypeFuncs :: StorageM ()
 generateToTTypeFuncs = do
@@ -317,6 +325,12 @@ generateFromTypeFuncs = do
 operator :: Operator -> String
 operator And = "Se.And"
 operator Or = "Se.Or"
+operator In = "Se.In"
+operator Eq = "Se.Eq"
+operator LessThan = "Se.LessThan"
+operator LessThanOrEq = "Se.LessThanOrEq"
+operator GreaterThan = "Se.GreaterThan"
+operator GreaterThanOrEq = "Se.GreaterThanOrEq"
 
 spaces :: Int -> String
 spaces n = replicate n ' '
@@ -330,10 +344,10 @@ defaultQueryDefs tableDef =
     getAllFieldNamesWithTypesExcludingPks :: [String] -> [FieldDef] -> [((String, String), Bool)]
     getAllFieldNamesWithTypesExcludingPks pks fieldDefs = map (\fieldDef -> ((fieldName fieldDef, haskellType fieldDef), isEncrypted fieldDef)) $ filter (\fieldDef -> fieldName fieldDef `notElem` pks) fieldDefs
 
-    getAllPrimaryKeyWithTypes :: [String] -> [FieldDef] -> [(String, String)]
-    getAllPrimaryKeyWithTypes pks fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef)) $ filter (\fieldDef -> fieldName fieldDef `elem` pks) fieldDefs
+    getAllPrimaryKeyWithTypes :: [String] -> [FieldDef] -> [(String, String, Maybe Operator)]
+    getAllPrimaryKeyWithTypes pks fieldDefs = map (\fieldDef -> (fieldName fieldDef, haskellType fieldDef, Nothing)) $ filter (\fieldDef -> fieldName fieldDef `elem` pks) fieldDefs
 
-    primaryKeysAndTypes :: [(String, String)]
+    primaryKeysAndTypes :: [(String, String, Maybe Operator)]
     primaryKeysAndTypes = getAllPrimaryKeyWithTypes (primaryKey tableDef) (fields tableDef)
 
     findByPrimayKeyWhereClause :: WhereClause
