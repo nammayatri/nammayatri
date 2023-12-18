@@ -1764,17 +1764,21 @@ mkAutoPayPaymentEntity mapDriverFeeByDriverFeeId' transporterConfig autoInvoice 
   now <- getCurrentTime
   case mapDriverFeeByDriverFeeId' M.!? (autoInvoice.driverFeeId) of
     Just dfee ->
-      return $
-        Just
-          AutoPayInvoiceHistory
-            { invoiceId = autoInvoice.invoiceShortId,
-              amount = sum $ mapToAmount [dfee],
-              executionAt = maybe now (calcExecutionTime transporterConfig dfee.autopayPaymentStage) dfee.stageUpdatedAt,
-              autoPayStage = dfee.autopayPaymentStage,
-              rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dfee.createdAt,
-              isCoinCleared = dfee.status == DDF.CLEARED_BY_YATRI_COINS,
-              coinDiscountAmount = dfee.amountPaidByCoin
-            }
+      let executionTime =
+            if dfee.status == DDF.CLEARED_BY_YATRI_COINS
+              then autoInvoice.createdAt
+              else maybe now (calcExecutionTime transporterConfig dfee.autopayPaymentStage) dfee.stageUpdatedAt
+       in return $
+            Just
+              AutoPayInvoiceHistory
+                { invoiceId = autoInvoice.invoiceShortId,
+                  amount = sum $ mapToAmount [dfee],
+                  executionAt = executionTime,
+                  autoPayStage = dfee.autopayPaymentStage,
+                  rideTakenOn = addUTCTime (-1 * secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dfee.createdAt,
+                  isCoinCleared = dfee.status == DDF.CLEARED_BY_YATRI_COINS,
+                  coinDiscountAmount = dfee.amountPaidByCoin
+                }
     Nothing -> return Nothing
   where
     mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
