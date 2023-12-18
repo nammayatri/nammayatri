@@ -454,7 +454,7 @@ type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
 dueDetailsListState :: ST.SubscriptionScreenState -> DueDetailsListState
 dueDetailsListState state = let 
     calculateCharges count charges = 
-      if count == 0 && charges == 0.0 then Nothing 
+      if count == 0 || charges == 0.0 then Nothing 
       else Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> HU.getFixedTwoDecimals (charges / DI.toNumber count) <> " " <> getString GST_INCLUDE
   in
   {

@@ -77,7 +77,7 @@ data Action
   | OnAnimationEnd
 
 data ScreenOutput
-  = GoBack
+  = GoBack DriverSavedLocationScreenState
   | CallAutoComplete String DriverSavedLocationScreenState
   | UpdateConfirmLocation DriverSavedLocationScreenState
   | SaveLocation DriverSavedLocationScreenState
@@ -91,14 +91,14 @@ eval BackPressed state =
   if state.props.confirmDelete then
     continue state { props { confirmDelete = false } }
   else if state.props.viewType == SearchLocation then do
-    if state.props.gotBackToHomeScreen then exit GoBack else continue state { props { viewType = GoToList } }
+    if state.props.gotBackToHomeScreen then exit $ GoBack state else continue state { props { viewType = GoToList } }
   else if state.props.viewType == LOCATE_ON_MAP then
     continue state { props { viewType = SearchLocation } }
   else if state.props.viewType == ConfirmLocation then
     continue state { props { viewType = if state.props.fromEditButton == (Just FromEdit) then GoToList else LOCATE_ON_MAP } }
   else do
     _ <- pure $ exitLocateOnMap ""
-    exit GoBack
+    exit $ GoBack state
 
 eval OnAnimationEnd state = do
   void case state.props.viewType of

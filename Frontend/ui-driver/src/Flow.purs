@@ -2964,6 +2964,9 @@ updateBannerAndPopupFlags = do
                   { totalPendingManualDues = pendingTotalManualDues
                   , autoPayStatus = autoPayStatus
                   , showShimmer = false
+                  },
+                  driverGotoState 
+                  { savedLocationCount = fromMaybe 0 $ fromString $ getValueToLocalStore SAVED_GOTO_COUNT
                   }
                 , config = appConfig
                 }

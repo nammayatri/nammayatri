@@ -880,7 +880,8 @@ type DriverGoToState = {
   gotoLocInRange :: Boolean,
   goToPopUpType :: GoToPopUpType,
   gotoEnabledForMerchant :: Boolean,
-  confirmGotoCancel :: Boolean
+  confirmGotoCancel :: Boolean,
+  savedLocationCount :: Int
 }
 
 
