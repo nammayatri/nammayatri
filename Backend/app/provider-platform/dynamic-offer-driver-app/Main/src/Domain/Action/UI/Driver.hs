@@ -1820,7 +1820,10 @@ getHistoryEntryDetailsEntityV2 (_, _, merchantOpCityId) invoiceShortId = do
       mbStageUpdatedAt = listToMaybe allDriverFeeForInvoice >>= (.stageUpdatedAt)
       executionAt =
         if invoiceType == Just INV.AUTOPAY_INVOICE
-          then Just $ maybe now (calcExecutionTime transporterConfig mbAutoPayStage) mbStageUpdatedAt
+          then
+            if ((.invoiceStatus) <$> listToMaybe allEntiresByInvoiceId) == Just INV.CLEARED_BY_YATRI_COINS
+              then (.createdAt) <$> listToMaybe allEntiresByInvoiceId
+              else Just $ maybe now (calcExecutionTime transporterConfig mbAutoPayStage) mbStageUpdatedAt
           else Nothing
       feeType
         | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
