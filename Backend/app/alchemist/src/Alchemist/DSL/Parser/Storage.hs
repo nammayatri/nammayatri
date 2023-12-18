@@ -81,8 +81,8 @@ parseQueries moduleName excludedList dList fields impObj obj = do
         let queryName = fst query
             queryDataObj = snd query
             params = addDefaultUpdatedAtToQueryParams queryName $ map (first (second makeTypeQualified')) $ fromMaybe [] (queryDataObj ^? ix "params" . _Array . to V.toList . to (map (searchForKey fields . valueToString)))
-            kvFunction = fromMaybe (error $ "kvFunction is neccessary") (queryDataObj ^? ix "kvFunction" . _String)
-            whereClause = fromMaybe EmptyWhere (queryDataObj ^? ix "where" . to (parseWhereClause makeTypeQualified' fields))
+            kvFunction = fromMaybe (error "kvFunction is neccessary") (queryDataObj ^? ix "kvFunction" . _String)
+            whereClause = fromMaybe EmptyWhere (queryDataObj ^? ix "where" . to (parseWhereClause makeTypeQualified' "eq" fields))
          in QueryDef queryName kvFunction params whereClause False
 
   case mbQueries of
@@ -99,26 +99,33 @@ parseQueries moduleName excludedList dList fields impObj obj = do
     valueToString (String s) = T.unpack s
     valueToString _ = error "Param not a string"
 
-parseWhereClause :: (String -> String) -> [FieldDef] -> Value -> WhereClause
-parseWhereClause mkQTypeFunc fields (String st) = do
+parseWhereClause :: (String -> String) -> String -> [FieldDef] -> Value -> WhereClause
+parseWhereClause mkQTypeFunc operatorStr fields (String st) = do
   let ((key_, value), _) = searchForKey fields (T.unpack st)
-  Leaf (key_, mkQTypeFunc value)
-parseWhereClause mkQTypeFunc fields (Object clauseObj) = do
+  Leaf (key_, mkQTypeFunc value, Just $ parseOperator (T.unpack (T.toLower (T.pack operatorStr))))
+parseWhereClause mkQTypeFunc _ fields (Object clauseObj) = do
   let clauseObj' = KM.toList clauseObj
   case clauseObj' of
     [(operatorStr, value)] -> do
       case value of
         Array arr_ -> do
-          let clauses = map (parseWhereClause mkQTypeFunc fields) (V.toList arr_)
+          let op_ = if parseOperator (T.unpack (T.toLower (T.pack (toString operatorStr)))) `elem` comparisonOperator then toString operatorStr else "Eq"
+          let clauses = map (parseWhereClause mkQTypeFunc op_ fields) (V.toList arr_)
           Query (parseOperator (toString operatorStr), clauses)
         _ -> error "Invalid where clause, operator must be followed by an array of clauses"
     _ -> error "Invalid where clause, element of where clause array must be an single key object"
-  where
-    parseOperator :: String -> Operator
-    parseOperator "and" = And
-    parseOperator "or" = Or
-    parseOperator _ = error "Invalid operator"
-parseWhereClause _ _ val = error $ T.pack $ "Invalid where clause, must be a string or an object: " <> show val
+parseWhereClause _ _ _ val = error $ T.pack $ "Invalid where clause, must be a string or an object: " <> show val
+
+parseOperator :: String -> Operator
+parseOperator "and" = And
+parseOperator "or" = Or
+parseOperator "in" = In
+parseOperator "eq" = Eq
+parseOperator "gt" = GreaterThan
+parseOperator "lt" = LessThan
+parseOperator "gte" = GreaterThanOrEq
+parseOperator "lte" = LessThanOrEq
+parseOperator val = error $ "Invalid operator " <> show val
 
 parseTypes :: Object -> Maybe [TypeObject]
 parseTypes obj = case preview (ix "types" ._Object) obj of
@@ -127,7 +134,7 @@ parseTypes obj = case preview (ix "types" ._Object) obj of
 
 parseTypeObjects :: Object -> [TypeObject]
 parseTypeObjects obj =
-  map (processType1) $ KM.toList obj
+  map processType1 $ KM.toList obj
   where
     extractFields :: KM.KeyMap Value -> [(String, String)]
     extractFields = map (first toString) . KM.toList . fmap extractString
@@ -215,7 +222,7 @@ parseFields moduleName excludedList dataList enumList definedTypes impObj obj =
                 fromTType = maybe (if length getbeamFields > 1 then error ("Complex type (" <> T.pack fieldName <> ") should have fromTType function") else Nothing) pure parseFromTType,
                 isEncrypted = "EncryptedHashedField" `T.isInfixOf` (T.pack haskellType)
               }
-   in case (map getFieldDef) <$> fields of
+   in case map getFieldDef <$> fields of
         Just f -> f
         Nothing -> error "Error Parsing Fields"
 
