@@ -23,10 +23,17 @@ import qualified Kafka.Producer as KafkaProd
 import qualified Kafka.Producer as Producer
 import System.Posix.Signals (raiseSignal, sigKILL)
 import System.Random.PCG
-import Text.Casing (camel)
 import Types.DBSync
 import Types.Event
 import qualified Utils.Redis as RQ
+
+-- uncomment for debug purposes
+-- import qualified Data.ByteString as BS
+-- import qualified Data.Time.Clock.POSIX as Time
+-- import qualified EulerHS.Language as EL
+-- import Kernel.Prelude (UTCTime)
+-- import qualified System.Directory as Dir
+-- import System.FilePath.Posix as Path
 
 (!?) :: [a] -> Int -> Maybe a
 xs !? n
@@ -159,7 +166,7 @@ shutDownHandler = do
 
 createInKafka :: Producer.KafkaProducer -> A.Value -> Text -> DBModel -> IO (Either Text ())
 createInKafka producer dbObject dbStreamKey model = do
-  let topicName = "adob-sessionizer-" <> T.toLower (T.pack (camel (T.unpack model.getDBModel)))
+  let topicName = "adob-sessionizer-" <> T.toLower model.getDBModel
   result' <- KafkaProd.produceMessage producer (message topicName dbObject)
   case result' of
     Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
@@ -178,3 +185,21 @@ shouldPushToKafkaOnly model _dontEnableDbTables = textToSnakeCaseText model.getD
 
 shouldPushToDbOnly :: DBModel -> [Text] -> Bool
 shouldPushToDbOnly model _dontEnableDbTables = textToSnakeCaseText model.getDBModel `elem` _dontEnableDbTables || model.getDBModel `elem` _dontEnableDbTables
+
+-- FIXME KVDBStreamEntryID can be the same for different entries
+-- uncomment for debug purposes
+-- writeDebugFile ::
+--   String ->
+--   DBModel ->
+--   EL.KVDBStreamEntryID ->
+--   String ->
+--   BS.ByteString ->
+--   ReaderT Env EL.Flow ()
+-- writeDebugFile action dbModel entryId fileName entity = EL.runIO $ do
+--   let fullPath'Name = "/tmp/drainer/driver/" <> action <> "/" <> T.unpack dbModel.getDBModel <> "/" <> show (mkTimeStamp entryId) <> "/" <> fileName
+--   let fullPath = Path.takeDirectory fullPath'Name
+--   Dir.createDirectoryIfMissing True fullPath
+--   BS.writeFile fullPath'Name entity
+
+-- mkTimeStamp :: EL.KVDBStreamEntryID -> UTCTime
+-- mkTimeStamp (EL.KVDBStreamEntryID posixTime _) = Time.posixSecondsToUTCTime $ fromInteger (posixTime `div` 1000)

@@ -6,7 +6,7 @@ import DBQuery.Functions
 import DBQuery.Types
 import Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
-import Data.Text as T hiding (map)
+import Data.Text as T hiding (elem, map)
 import qualified Data.Text.Encoding as TE
 import Database.PostgreSQL.Simple.Types
 import qualified EulerHS.Language as EL
@@ -28,6 +28,9 @@ runUpdate updateDataEntries streamName = do
     Right updateDBModel -> do
       EL.logDebug ("DB OBJECT" :: Text) (show updateDBModel)
       let tableName = updateDBModel.dbModel
+      -- uncomment for debug purposes
+      -- writeDebugFile "update" tableName entryId "streamData.json" streamData
+      -- writeDebugFile "update" tableName entryId "dbObject.txt" $ show updateDBModel
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
         then runUpdateQuery updateDataEntries updateDBModel
         else do
@@ -60,9 +63,13 @@ runUpdateQuery updateDataEntries dbUpdateObject = do
           case result of
             Left (QueryError errorMsg) -> do
               EL.logError ("QUERY UPDATE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+              -- uncomment for debug purposes
+              -- writeDebugFile "update" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("QUERY UPDATE SUCCESSFUL" :: Text) (" Update successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+              -- uncomment for debug purposes
+              -- writeDebugFile "update" dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
               return $ Right entryId
         Nothing -> do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)

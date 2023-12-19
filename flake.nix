@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/backend/adding-instances-for-column-mapping";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
