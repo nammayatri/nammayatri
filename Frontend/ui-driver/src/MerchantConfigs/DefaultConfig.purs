@@ -143,7 +143,7 @@ config =
               cityLat : 12.295810,
               cityLong : 76.639381,
               supportNumber : "",
-              languageKey : "TA_IN",
+              languageKey : "KN_IN",
               showDriverReferral : true,
               uploadRCandDL : true
             },

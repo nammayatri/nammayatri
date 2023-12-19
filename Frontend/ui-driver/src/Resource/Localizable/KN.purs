@@ -1092,7 +1092,7 @@ getKN stringKey =
         PLEASE_ADD_RC -> "ರೈಡ್‌ಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಲು ದಯವಿಟ್ಟು RC ಸೇರಿಸಿ"
         LOCATION_CANNOT_BE_ADDED_WHILE_GOTO_ACTIVE -> "ಗೋ-ಟು ಅನ್ನು ಸಕ್ರಿಯಗೊಳಿಸದಿದ್ದಾಗ ಮಾತ್ರ ಆಯ್ಕೆಯು ಲಭ್ಯವಿರುತ್ತದೆ"
         LOCATION_CANNOT_BE_ADDED_WHILE_ON_RIDE -> "ರೈಡ್ ಪ್ರಗತಿಯಲ್ಲಿರುವಾಗ ಆಯ್ಕೆಯು ಲಭ್ಯವಿರುವುದಿಲ್ಲ"
-        ADD_GOTO -> "ಹೋಗಿ-ಗೆ ಸೇರಿಸಿ"
+        ADD_GOTO -> "ಗೋ-ಟು ಸೇರಿಸಿ"
         NO_OPEN_MARKET_RIDES _ -> "ಸವಾರಿ ಇಲ್ಲ"
         ACCOUNT_BLOCKED -> "ಖಾತೆಯನ್ನು ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ!"
         YOU_HAVE_BEEN_BLOCKED_FROM_TAKING_RIDES -> "ನಿಮ್ಮನ್ನು ಸವಾರಿ ಮಾಡದಂತೆ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ.\nದಯವಿಟ್ಟು ಸಹಾಯಕ್ಕಾಗಿ ಬೆಂಬಲವನ್ನು ಸಂಪರ್ಕಿಸಿ."

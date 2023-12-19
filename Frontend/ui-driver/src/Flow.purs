@@ -1023,8 +1023,9 @@ driverProfileFlow = do
       _ <- Remote.callDriverToDriverBT  state.data.rcNumber
       pure $ toast $ (getString CALL_REQUEST_HAS_BEEN_PLACED)
       driverProfileFlow
-    TA.GO_HOME -> homeScreenFlow
-
+    TA.GO_HOME state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data {gender = fromMaybe "UNKNOWN" state.data.driverGender}})
+      homeScreenFlow
 
     DRIVER_ALTERNATE_CALL_API1 updatedState -> do
       let number =  updatedState.data.driverEditAlternateMobile
