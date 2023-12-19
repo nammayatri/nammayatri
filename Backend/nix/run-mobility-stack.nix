@@ -50,31 +50,31 @@ _:
 
       mobilityStackProcesses = m: addModule m {
         # The keys of this attrset correspond to the cabal executable names
-        driver-offer-allocator-exe = { };
-        driver-tracking-healthcheck-exe = { };
+        # driver-offer-allocator-exe = { };
+        # driver-tracking-healthcheck-exe = { };
         dynamic-offer-driver-app-exe = { };
         dynamic-offer-driver-drainer-exe = { };
         rider-app-drainer-exe = { };
-        image-api-helper-exe = { };
-        kafka-consumers-exe = {
-          environment = {
-            CONSUMER_TYPE = "AVAILABILITY_TIME";
-          };
-        };
+        # image-api-helper-exe = { };
+        # kafka-consumers-exe = {
+        #   environment = {
+        #     CONSUMER_TYPE = "AVAILABILITY_TIME";
+        #   };
+        # };
         mock-fcm-exe = { };
         mock-google-exe = { };
         mock-idfy-exe = { };
         mock-sms-exe = { };
-        provider-dashboard-exe = { };
+        # provider-dashboard-exe = { };
         producer-exe = { };
-        public-transport-rider-platform-exe = { };
-        public-transport-search-consumer-exe = { };
+        # public-transport-rider-platform-exe = { };
+        # public-transport-search-consumer-exe = { };
         rider-app-exe = { };
-        rider-dashboard-exe = { };
-        scheduler-example-app-exe = { };
+        # rider-dashboard-exe = { };
+        # scheduler-example-app-exe = { };
         # scheduler-example-scheduler-exe = { };
-        search-result-aggregator-exe = { };
-        special-zone-exe = { };
+        # search-result-aggregator-exe = { };
+        # special-zone-exe = { };
       };
 
     in
