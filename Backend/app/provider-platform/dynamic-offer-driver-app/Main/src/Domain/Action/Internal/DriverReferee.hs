@@ -27,6 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Text as TU
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.Queries.DriverInformation as DI
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.RiderDetails as QRD
 
@@ -55,6 +56,9 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
     throwError $ InvalidRequest "Referral Code must have 6 digits"
   numberHash <- getDbHash customerMobileNumber
   driverReferralLinkage <- QDR.findByRefferalCode referralCode >>= fromMaybeM (InvalidRequest "Invalid referral code.")
+  driverInfo <- DI.findById driverReferralLinkage.driverId >>= fromMaybeM (PersonNotFound driverReferralLinkage.driverId.getId)
+  unless (driverInfo.enabled) $
+    throwError $ InvalidRequest "Driver is not enabled"
   mbRiderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id
   _ <- case mbRiderDetails of
     Just _ -> QRD.updateReferralInfo numberHash merchant.id referralCode driverReferralLinkage.driverId
