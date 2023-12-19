@@ -37,16 +37,26 @@ primaryKeyToBeam tableDef =
     ++ tableNameHaskell tableDef
     ++ "T f = "
     ++ tableNameHaskell tableDef
-    ++ "Id (B.C f "
-    ++ formatType (beamType fetchPrimaryKey)
-    ++ ")\n    deriving (Generic, B.Beamable)\n"
+    ++ fetchPrimaryKey
+    ++ "\n    deriving (Generic, B.Beamable)\n"
     ++ "  primaryKey = "
     ++ tableNameHaskell tableDef
-    ++ "Id . "
-    ++ fromMaybe (error $ T.pack ("Primary Key not found for " ++ tableNameHaskell tableDef)) (headMay (primaryKey tableDef))
+    ++ "Id "
+    ++ fromMaybe (error $ T.pack ("Primary Key not found for " ++ tableNameHaskell tableDef)) (getPrimaryKeys (primaryKey tableDef))
     ++ "\n"
   where
-    fetchPrimaryKey = fromMaybe (error $ T.pack ("Primary Key not found for " ++ tableNameHaskell tableDef)) (headMay $ filter (\f -> fieldName f `elem` primaryKey tableDef) $ fields tableDef)
+    fetchPrimaryKey = fromMaybe (error $ T.pack ("Primary Key not found for " ++ tableNameHaskell tableDef)) (generateKeyTypes (filter (\f -> fieldName f `elem` primaryKey tableDef) $ fields tableDef))
+
+    getPrimaryKeys [] = Nothing
+    getPrimaryKeys [xs] = Just $ ". " <> xs
+    getPrimaryKeys xs = Just $ foldl' handleAccPrimary "<$> " xs
+    handleAccPrimary acc x = if acc == "<$> " then (acc ++ x) else acc ++ " <*> " ++ x
+
+    generateKeyTypes :: [FieldDef] -> Maybe String
+    generateKeyTypes [] = Nothing
+    generateKeyTypes xs = Just $ foldl' handleAcc "Id" xs
+      where
+        handleAcc acc x = acc ++ " (B.C f " ++ formatType (beamType x) ++ ")"
 
 -- Generates Haskell code for the table instances
 tableInstancesToBeam :: TableDef -> String
