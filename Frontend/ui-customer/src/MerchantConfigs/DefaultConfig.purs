@@ -78,8 +78,8 @@ config =
     , otpStroke: "0,#717171"
     , showNumberPlatePrefix : true
     , showNumberPlateSuffix : false
-    , callHeight: 24
-    , callWidth: 24
+    , callHeight: 32
+    , callWidth: 32
     , numberPlateBackground : "#E9BE4D"
     , showCancelPrevention : true
     , showTrackingButton : true

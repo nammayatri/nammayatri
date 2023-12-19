@@ -31,7 +31,7 @@ type Config =
   , messagesSize :: String
   , sendMessageActive :: Boolean
   , vehicleNo :: String
-  , suggestionsList :: Array String
+  , chatSuggestionsList :: Array String
   , suggestionDelay :: Int
   , spanParent :: Boolean
   , showTextEdit :: Boolean
@@ -87,7 +87,7 @@ config =
     , messagesSize : ""
     , sendMessageActive : false
     , vehicleNo : ""
-    , suggestionsList : []
+    , chatSuggestionsList : []
     , hint : ""
     , suggestionHeader : ""
     , suggestionDelay : 0

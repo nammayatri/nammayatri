@@ -16,12 +16,12 @@
 module Screens.HomeScreen.View where
 
 import Accessor (_lat, _lon, _selectedQuotes, _fareProductType)
-import Animation (fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha , translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, screenAnimation)
-import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig)
+import Animation (fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYAnimFromTopWithAlpha , translateInXAnim, translateOutXAnim, translateInXForwardAnim, translateOutXBackwardAnimY, translateInXSidebarAnim, screenAnimation, fadeInWithDuration, fadeOutWithDuration, scaleYAnimWithDelay, shimmerAnimation)
+import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, messageInAnimConfig, messageOutAnimConfig)
 import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
 import Components.Banner.Controller as BannerConfig
 import Components.Banner.View as Banner
-import Components.ChatView as ChatView
+import Components.MessagingView as MessagingView
 import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
@@ -60,13 +60,14 @@ import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Engineering.Helpers.Commons (countDown, flowRunner, getNewIDWithTag, liftFlow, os, safeMarginBottom, safeMarginTop, screenHeight, isPreviousVersion, screenWidth, camelCaseToSentenceCase, truncate,getExpiryTime, getDeviceHeight, getScreenPpi)
+import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer)
-import JBridge (addMarker, animateCamera, drawRoute, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, isCoordOnPath, isInternetAvailable, removeAllPolylines, removeMarker, requestKeyboardShow, showMap, startLottieProcess, toast, updateRoute, getExtendedPath, generateSessionId, initialWebViewSetUp, stopChatListenerService, startChatListenerService, startTimerWithTime, storeCallBackMessageUpdated, isMockLocation, storeCallBackOpenChatScreen, scrollOnResume, waitingCountdownTimer, lottieAnimationConfig, storeKeyBoardCallback, getLayoutBounds, clearChatMessages, startTimerWithTime, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage)
+import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, startTimerWithTime, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, waitingCountdownTimer, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
@@ -74,7 +75,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..),layoutGravity, adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, scrollBarY,cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onSlide,onStateChanged, shadow, clipChildren, topShift, bottomShift, onAnimationEnd, enableShift)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
@@ -84,7 +85,7 @@ import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLoca
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
-import Screens.Types (HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), Stage(..), CallType(..), ZoneType(..), SearchResultType(..), Trip(..), SuggestionsMap(..), Suggestions(..))
+import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
@@ -203,6 +204,7 @@ screen initialState =
                   pure unit
                 else
                   pure unit
+                void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               RideStarted -> do
                 _ <- pure $ enableMyLocation false
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
@@ -214,6 +216,7 @@ screen initialState =
                   pure unit
                 _ <- push RemoveChat
                 pure unit
+                void $ push $ DriverInfoCardActionController DriverInfoCard.NoAction
               ChatWithDriver -> if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then waitingCountdownTimer initialState.data.driverInfoCardState.driverArrivalTime push WaitingTimeAction else pure unit
               ConfirmingLocation -> do
                 _ <- pure $ enableMyLocation true
@@ -317,7 +320,7 @@ view push state =
                 , clickable true
                 ]
                 [ linearLayout
-                  [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then (V (((screenHeight unit)/ 15)*10)) else MATCH_PARENT
+                  [ height MATCH_PARENT
                   , width MATCH_PARENT
                   , background Color.transparent
                   , accessibility if any (_ == state.props.currentStage) [RideAccepted, RideStarted, HomeScreen] && not isAnyOverlayEnabled state then ENABLE else DISABLE
@@ -383,14 +386,16 @@ view push state =
             , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
-            , relativeLayout 
+            , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then rideInfoView push state else emptyTextView state
+            , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then
+                relativeLayout 
                 [ width MATCH_PARENT
                 , height MATCH_PARENT
-                , visibility if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then VISIBLE else GONE
                 ][ rideTrackingView push state 
-                , DriverInfoCard.brandingBannerView state.data.config.driverInfoConfig VISIBLE
+                , DriverInfoCard.brandingBannerView state.data.config.driverInfoConfig VISIBLE (Just "BrandingBanner")
                 ]
-            , if state.props.currentStage == ChatWithDriver then (chatView push state) else emptyTextView state
+              else emptyTextView state
+            , if state.props.currentStage == ChatWithDriver then messagingView push state else emptyTextView state
             , if ((state.props.currentStage /= RideRating) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
@@ -415,6 +420,7 @@ view push state =
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
+            , if state.data.waitTimeInfo then waitTimeInfoPopUp push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -433,8 +439,7 @@ view push state =
                       ][ PrestoAnim.animationSet [ fadeIn state.props.showEducationalCarousel] $ carouselView state push ]] 
                     else [])
         ]
-    ] 
-    
+  ]
 
 rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideCompletedCardView push state = 
@@ -463,14 +468,79 @@ cancelSearchPopUp push state =
   , accessibility DISABLE
   ][PopUpModal.view (push <<< CancelSearchAction) (cancelAppConfig state)]
 
-chatView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-chatView push state =
-  PrestoAnim.animationSet [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 300 ] $
+rideInfoView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rideInfoView push state = 
+  let isClickable = os == "IOS"
+  in 
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  , accessibility if state.props.showCallPopUp then DISABLE_DESCENDANT else DISABLE
-  ][ ChatView.view (push <<< ChatViewActionController) (chatViewConfig state) ]
+  , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.props.bottomSheetState == STATE_EXPANDED || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
+  , clickable (os == "IOS" || state.props.bottomSheetState == STATE_EXPANDED)
+  , background if state.props.bottomSheetState == STATE_EXPANDED then Color.black400 else Color.transparent
+  , orientation VERTICAL
+  ][ (if disableSuggestions state then 
+        PrestoAnim.animationSet[] 
+      else (if state.props.showChatNotification then 
+        PrestoAnim.animationSet [translateYAnimFromTop $ messageInAnimConfig true] 
+      else if state.props.isNotificationExpanded then 
+        PrestoAnim.animationSet [translateYAnimFromTop $ messageOutAnimConfig true] 
+      else PrestoAnim.animationSet[scaleYAnimWithDelay 5000])) $ 
+     linearLayout
+     [ height $ MATCH_PARENT
+     , width MATCH_PARENT
+     , padding $ PaddingHorizontal 8 8
+     , alignParentBottom "true,-1"
+     , gravity BOTTOM
+     , accessibility DISABLE
+     , onAnimationEnd push $ const $ NotificationAnimationEnd
+     , orientation VERTICAL
+     , clickable isClickable
+     ][ linearLayout
+       [ height $ MATCH_PARENT
+       , width $ MATCH_PARENT
+       , clickable isClickable
+       , clipChildren false
+       , accessibility DISABLE
+       , margin $ MarginBottom 8
+       , gravity BOTTOM
+       ][ linearLayout
+          [ height $ MATCH_PARENT
+          , accessibility DISABLE
+          , gravity BOTTOM
+          , clickable isClickable
+          , clipChildren false
+          ][ otpAndWaitView push state
+           , trackRideView push state
+          ]
+        , linearLayout[weight 1.0][]
+        , linearLayout
+          [ height $ MATCH_PARENT
+          , clipChildren false
+          , gravity BOTTOM
+          , clickable isClickable
+          , accessibility DISABLE
+          ][ rideInfoActionView push state 
+           ]
+         ]
+       , messageNotificationView push state
+       , linearLayout
+        [ height $ V $ ((getInfoCardPeekHeight state) - if ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions) || (state.props.currentStage == RideStarted && os == "IOS") then 140 else 0)
+        , width $ MATCH_PARENT
+        , accessibility DISABLE
+        ][]
+     ]
+  ]
+  where disableSuggestions :: HomeScreenState -> Boolean
+        disableSuggestions state = state.data.currentSearchResultType == QUOTES || not state.data.config.feature.enableChat || not state.data.config.feature.enableSuggestions
+
+messagingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+messagingView push state = 
+  relativeLayout
+  [ height $ MATCH_PARENT
+  , width $ MATCH_PARENT
+  , accessibility $ DISABLE
+  ][ MessagingView.view (push <<< MessagingViewActionController) $ messagingViewConfig state ]
 
 showLiveStatsDashboard :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 showLiveStatsDashboard push state =
@@ -717,10 +787,12 @@ recenterButtonView push state =
 
 referralView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 referralView push state =
+  let removeRefferal = (not state.data.config.feature.enableReferral) || (((any (_ == state.props.currentStage)) [RideAccepted, RideStarted, ChatWithDriver]) || state.props.hasTakenRide || state.props.sheetState == EXPANDED)
+  in
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , visibility if (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.sheetState == EXPANDED) then GONE else VISIBLE
+    , visibility $ boolToVisibility $ not removeRefferal
     , stroke $ "1," <> if not state.props.isReferred then Color.blue900 else Color.black700
     , margin (MarginHorizontal 16 13)
     , cornerRadius 20.0
@@ -746,12 +818,61 @@ referralView push state =
       ] <> FontStyle.tags TypoGraphy
     ]
 
+nammaSafetyView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+nammaSafetyView push state =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , visibility $ boolToVisibility $ (any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver]
+  , stroke $ "1," <> Color.grey900
+  , margin $ MarginHorizontal 16 16
+  , cornerRadius 20.0
+  , background Color.white900
+  , accessibility ENABLE
+  , accessibilityHint $ "Safety + : Button : Select to view S O S Options"
+  , gravity CENTER_VERTICAL
+  , clickable true
+  , padding (Padding 12 8 12 8)
+  ][ imageView 
+    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_namma_safety"
+    , width $ V 24
+    , height $ V 24
+    , margin $ MarginRight 4
+    ]
+  , textView $ 
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , color Color.blue900
+    , accessibility DISABLE
+    , text $ getString NAMMA_SAFETY
+    ] <> FontStyle.body1 TypoGraphy
+  ]
+
+sosView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+sosView push state =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , visibility $ boolToVisibility $ (any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
+  , margin (MarginHorizontal 16 16)
+  , cornerRadius if os == "IOS" then 20.0 else 32.0
+  , clickable true
+  , onClick push $ const OpenEmergencyHelp
+  ][ imageView 
+    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
+    , width $ V 50
+    , height $ V 50
+    , accessibilityHint $ "S O S : Button : Select to view S O S options"
+    , accessibility ENABLE
+    ]
+  ]
+
 liveStatsDashboardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 liveStatsDashboardView push state =
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
-    , visibility if state.data.config.dashboard.enable && (state.props.isReferred || state.props.hasTakenRide) && state.props.currentStage == RideStarted then VISIBLE else GONE
+    , visibility GONE
     , stroke $ "1," <> Color.blue900
     , margin (MarginHorizontal 16 13)
     , accessibility DISABLE_DESCENDANT
@@ -1219,7 +1340,7 @@ topLeftIconView state push =
       , orientation HORIZONTAL
       , visibility if state.data.config.showHamMenu then VISIBLE else GONE
       , margin (Margin 16 48 0 0)
-      , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard then DISABLE_DESCENDANT else DISABLE
+      , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
       ][
         linearLayout
           [ height $ V 48
@@ -1248,6 +1369,7 @@ topLeftIconView state push =
           , weight 1.0
           ][]
         , referralView push state
+        , sosView push state
         , if (not state.data.config.dashboard.enable) || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyTextView state else liveStatsDashboardView push state
       ]
 
@@ -1945,7 +2067,7 @@ rideTrackingView push state =
     , orientation VERTICAL
     , padding (Padding 0 0 0 0)
     , background Color.transparent
-    , accessibility if (state.data.settingSideBar.opened /= SettingSideBar.CLOSED) || state.props.currentStage == ChatWithDriver || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.isCancelRide || state.props.emergencyHelpModal || state.props.isLocationTracking || state.props.callSupportPopUp || (state.props.showShareAppPopUp && state.data.config.feature.enableShareApp) then DISABLE_DESCENDANT else DISABLE
+    , accessibility if (state.data.settingSideBar.opened /= SettingSideBar.CLOSED) || state.props.currentStage == ChatWithDriver || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.isCancelRide || state.props.emergencyHelpModal || state.props.isLocationTracking || state.props.callSupportPopUp || (state.props.showShareAppPopUp && state.data.config.feature.enableShareApp) || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
     , alignParentBottom "true,-1" -- Check it in Android.
     , onBackPressed push (const $ BackPressed)
     ]
@@ -1975,8 +2097,10 @@ rideTrackingView push state =
                         , background Color.transparent
                         , sheetState state.props.sheetState 
                         , accessibility DISABLE
-                        , peakHeight $ getPeakHeight state.data.config.feature.enableShareRide state.props.currentStage
-                        , halfExpandedRatio 0.75
+                        , enableShift false
+                        , onStateChanged push $ ScrollStateChanged
+                        , peakHeight $ getInfoCardPeekHeight state
+                        , halfExpandedRatio $ halfExpanded
                         , orientation VERTICAL
                         ]
                         [ linearLayout
@@ -1989,19 +2113,532 @@ rideTrackingView push state =
                                 emptyTextView state
                             ]
                         ]
-                ]
+              ]
         ]
     ]
+  where halfExpanded = (toNumber (getInfoCardPeekHeight state)) / (toNumber if (runFn1 getLayoutBounds $ getNewIDWithTag "BottomSheetLayout").height == 0 then 536 else (runFn1 getLayoutBounds $ getNewIDWithTag "BottomSheetLayout").height)
 
-getPeakHeight :: Boolean -> Stage -> Int
-getPeakHeight enableShareRide stage = case enableShareRide , stage of
-                      true , RideAccepted -> getHeightFromPercent 65
-                      true , ChatWithDriver -> getHeightFromPercent 65
-                      false , RideAccepted -> getHeightFromPercent 60
-                      false , ChatWithDriver -> getHeightFromPercent 60
-                      true , _ ->  getHeightFromPercent 52
-                      false , _ ->  getHeightFromPercent 47
-                      _ , _ -> getHeightFromPercent 47
+messageNotificationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+messageNotificationView push state =
+  (if state.props.showChatNotification then 
+    if os == "IOS" then PrestoAnim.animationSet[] else PrestoAnim.animationSet [fadeInWithDuration 1000 true]
+  else if state.props.isNotificationExpanded then 
+    if os == "IOS" then PrestoAnim.animationSet[] else PrestoAnim.animationSet [fadeOutWithDuration 1000 true]
+  else  PrestoAnim.animationSet []) $ 
+  linearLayout
+  [ height $ V $ 130
+  , width $ MATCH_PARENT
+  , margin $ MarginBottom 8
+  , padding $ Padding 12 12 12 12
+  , background Color.black900
+  , orientation VERTICAL
+  , clickable true
+  , accessibility $ if state.props.isNotificationExpanded && os /= "IOS" then ENABLE else if not state.props.isNotificationExpanded then DISABLE_DESCENDANT else DISABLE
+  , accessibilityHint $ "Quick Chat : Widget"
+  , onAnimationEnd push $ const $ MessageViewAnimationEnd
+  , visibility $ if (((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions 
+                  then VISIBLE 
+                  else if state.props.currentStage == RideStarted && os == "IOS" 
+                    then INVISIBLE 
+                    else GONE
+  , cornerRadius 20.0
+  ][linearLayout 
+    [ height $ WRAP_CONTENT
+    , width $ MATCH_PARENT
+    , clickable true
+    , accessibility DISABLE
+    ][ messagePromtView push state
+     , chatNotificationMessageView push state
+     , linearLayout
+       [ height $ WRAP_CONTENT
+       , width $ MATCH_PARENT
+       , gravity RIGHT
+       , clickable true
+       , accessibility DISABLE
+       ][ linearLayout
+         [ height $ WRAP_CONTENT
+         , width $ WRAP_CONTENT
+         , cornerRadius 20.0
+         , clickable true
+         , id $ getNewIDWithTag "CrossView"
+         , accessibility ENABLE
+         , accessibilityHint $ "Close : Button : Select to close chat widget"
+         , background Color.manatee200
+         , padding $ Padding 10 10 10 10
+         , onClick push $ const $ RemoveNotification
+         ][imageView
+           [ height $ V 16
+           , width $ V 16
+           , accessibility DISABLE
+           , imageWithFallback $ fetchImage FF_ASSET "ny_ic_cross_white"
+           ]
+         ]
+       ]  
+    ]
+    , separatorView push state
+    , if (state.data.lastMessage.sentBy == "Driver" || not (didDriverMessage FunctionCall)) then quickRepliesView push state else dummyView state
+    , if ((not $ DS.null state.data.lastSentMessage.sentBy) && (not $ DS.null state.data.lastReceivedMessage.sentBy)) then messageView push state.data.lastSentMessage else dummyView state
+  ]
+
+chatNotificationMessageView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+chatNotificationMessageView push state = if ((not $ didDriverMessage FunctionCall) && (not $ DS.null state.data.lastSentMessage.sentBy)) then messageView push state.data.lastSentMessage 
+                                            else if (not $ DS.null state.data.lastReceivedMessage.sentBy) then messageView push state.data.lastReceivedMessage 
+                                            else dummyView state
+
+separatorView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+separatorView push state = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width  MATCH_PARENT
+  , margin $ MarginVertical 8 8 
+  ](map (\_ -> linearLayout
+  [ height $ V 1
+  , width $ V 8
+  , margin $ MarginRight 4
+  , background Color.manatee200
+  ][]) (getArray 100))
+
+dummyView :: forall w. HomeScreenState -> PrestoDOM ( Effect Unit) w
+dummyView state = 
+  linearLayout
+  [height $ V 0
+  , width $ V 0
+  ][]
+
+messageView :: forall w. (Action -> Effect Unit) -> MessagingView.ChatComponent -> PrestoDOM ( Effect Unit) w
+messageView push message =
+  let value = getMessageFromKey message.message $ getValueToLocalStore LANGUAGE_KEY
+  in
+  linearLayout
+  [ width $ V (screenWidth unit - 140)
+  , height $ WRAP_CONTENT
+  , clickable true
+  , onClick push $ const $ MessageDriver
+  , accessibility ENABLE
+  , accessibilityHint $ (if message.sentBy == "Customer" then "You Sent : " else "Message From Driver : ") <> getMessageFromKey message.message "EN_US"
+  ][ imageView
+     [ height $ V 32
+     , width $ V 32
+     , imageWithFallback $ if message.sentBy == "Driver" then fetchImage FF_ASSET "ny_ic_driver_message" else fetchImage FF_ASSET "ny_ic_customer_message"
+     , margin $ Margin 0 8 8 0
+     , accessibility DISABLE
+     ]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation VERTICAL
+      , accessibility DISABLE_DESCENDANT
+      , gravity LEFT
+      ][ textView $ 
+        [ width $ WRAP_CONTENT
+        , height $ WRAP_CONTENT
+        , text $ (if message.sentBy == "Driver" then getString MESSAGE_FROM_DRIVER else getString YOU_SENT) <> ":"
+        , color Color.black700
+        , maxLines 1
+        , ellipsize true
+        , margin $ if os == "IOS" then MarginBottom 2 else MarginBottom 0
+        ] <> FontStyle.captions TypoGraphy
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , cornerRadii $ Corners 12.0 true true true false
+        , background if message.sentBy == "Driver" then Color.manatee200 else Color.blue200
+        , margin $ MarginTop 4
+        , padding $ Padding 8 4 8 4
+        , visibility $ boolToVisibility $ not $ DS.null value
+        , gravity CENTER
+        ][ textView $ 
+          [ height WRAP_CONTENT
+          , text $ value
+          , color Color.white900
+          , maxLines 1
+          , ellipsize true
+          ] <> FontStyle.body9 TypoGraphy
+        ]
+      ]
+    ]
+
+quickRepliesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+quickRepliesView push state = 
+  linearLayout
+  [ height $ WRAP_CONTENT
+  , width $ MATCH_PARENT
+  , orientation VERTICAL
+  , clickable true
+  , accessibility DISABLE
+  ][ textView $
+     [ width WRAP_CONTENT
+     , height WRAP_CONTENT
+     , text $ getString QUICK <> " " <> getString CHATS
+     , color Color.black700
+     , accessibility ENABLE
+     , accessibilityHint $ "Quick Chats"
+     , margin $ MarginBottom 4
+     ] <> FontStyle.captions TypoGraphy
+   , linearLayout
+     [ height $ WRAP_CONTENT
+     , width $ MATCH_PARENT
+     , clickable true
+     , accessibility DISABLE
+     ][ horizontalScrollView
+        [ height $ WRAP_CONTENT
+        , width $ MATCH_PARENT
+        , scrollBarX false
+        , accessibility DISABLE
+        , clickable true
+        ][ linearLayout
+            [ height $ WRAP_CONTENT
+            , width $ MATCH_PARENT
+            , clickable true
+            , accessibility DISABLE
+            ][linearLayout
+              [ height $ WRAP_CONTENT
+              , width $ WRAP_CONTENT
+              , cornerRadius 13.0
+              , background Color.white900
+              , padding $ Padding 16 6 16 6
+              , margin $ MarginRight 12
+              , clickable true
+              , accessibility ENABLE
+              , accessibilityHint $ "Custom Message : Button : Select to input custom message"
+              , onClick push $ const $ MessageDriver
+              ][ imageView
+                [ height $ V 16
+                , width $ V 16
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_message_black"
+                ]
+              ]
+              , linearLayout
+                [ height $ WRAP_CONTENT
+                , width $ MATCH_PARENT
+                , clickable true
+                , accessibility DISABLE
+                ](mapWithIndex (\index item -> 
+                  quickReplyItem push state item index
+                 ) (getChatSuggestions state))
+            ]
+          ]            
+      ]
+    ]
+
+quickReplyItem :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Int -> PrestoDOM ( Effect Unit) w
+quickReplyItem push state item idx = 
+  let message = getMessageFromKey item $ getValueToLocalStore LANGUAGE_KEY
+  in
+  linearLayout
+  [ height $ WRAP_CONTENT
+  , width $ WRAP_CONTENT
+  , cornerRadius 13.0
+  , clickable true
+  , rippleColor Color.rippleShade
+  , accessibility ENABLE
+  , visibility $ boolToVisibility $ not $ DS.null message
+  , accessibilityHint $ (getMessageFromKey item $ "EN_US") <> ": Button : Select to send message to driver"
+  , onClick (\action -> do
+                when (not $ DS.null state.data.lastReceivedMessage.sentBy) $ do void $ countDown 5 ("ChatNotificationRemoval" <> (show $ state.data.triggerPatchCounter)) push MessageExpiryTimer
+                push action)
+            (const $ SendQuickMessage item)
+  , background Color.white900
+  , padding $ Padding 16 6 16 6
+  , margin $ MarginLeft if idx == 0 then 0 else 12
+  ][ textView $
+      [ text $ message
+      , color Color.black900
+      ] <> FontStyle.tags TypoGraphy
+  ]
+
+messagePromtView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+messagePromtView push state = 
+  linearLayout
+  [ height $ WRAP_CONTENT
+  , width $ V (screenWidth unit - 100)
+  , orientation VERTICAL
+  , clickable true
+  , accessibility ENABLE
+  , accessibilityHint $ "Want to message your driver?"
+  , onClick push $ const $ MessageDriver
+  , visibility $ boolToVisibility $ null state.data.messages 
+  ][ textView $ 
+      [ text $ getString MESSAGE_YOUR_DRIVER
+      , accessibility ENABLE
+      , color Color.white900
+      , accessibility DISABLE
+      , ellipsize true
+      , singleLine true
+      ] <> FontStyle.body6 TypoGraphy
+   , textView $ 
+      [ text $ getString CHECK_IN_WITH_YOUR_DRIVER 
+      , color Color.white900
+      , accessibility DISABLE
+      , ellipsize true
+      , singleLine true
+      ] <> FontStyle.captions TypoGraphy
+  ]
+
+trackRideView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+trackRideView push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , clipChildren false
+  , clickable true
+  ][ linearLayout
+    [ height $ V 40
+    , width $ WRAP_CONTENT
+    , background Color.white900
+    , cornerRadius if os == "IOS" then 20.0 else 32.0
+    , padding $ PaddingHorizontal 12 12
+    , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+    , visibility $ boolToVisibility $ state.props.currentStage == RideStarted
+    , clickable true
+    , onClick push $ const $ StartLocationTracking "GOOGLE_MAP"
+    , gravity CENTER
+    , accessibility ENABLE
+    , accessibilityHint $ "Track on Google Maps : Button"
+    , accessibility DISABLE_DESCENDANT
+    ][ linearLayout
+      [ height $ WRAP_CONTENT
+      , width $ WRAP_CONTENT
+      ][ imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_nav_grey"
+          , height $ V 16
+          , width $ V 16
+          , accessibilityHint "Track on Gooole Maps : Button"
+          , accessibility ENABLE
+          , margin $ MarginRight 4
+          ]
+        , textView $ 
+          [ text $ getString TRACK_ON_GOOGLE_MAPS
+          , color Color.black800
+          ] <> FontStyle.body9 TypoGraphy
+      ]
+    ]
+  ]
+
+otpAndWaitView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+otpAndWaitView push state =
+  linearLayout
+  [ height $ V 40
+  , orientation HORIZONTAL
+  , visibility $ boolToVisibility $ any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver]
+  , clipChildren false
+  , clickable true
+  , gravity BOTTOM
+  , accessibility DISABLE
+  ]([linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , cornerRadius if os == "IOS" then 18.0 else 32.0
+    , background Color.white900
+    , gravity CENTER
+    , clickable true
+    , accessibility DISABLE
+    , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+    ][ textView $
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , accessibilityHint $ "O T P : " <> (DS.replaceAll (DS.Pattern "") (DS.Replacement " ")  state.data.driverInfoCardState.otp)
+      , accessibility ENABLE
+      , text $ getString OTP
+      , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
+      , color Color.black700
+      ] <> FontStyle.body2 TypoGraphy
+    , otpView push state
+    ]
+  ] <> if (state.data.currentSearchResultType == QUOTES || state.data.driverInfoCardState.driverArrived) then 
+        [(PrestoAnim.animationSet [ fadeIn true ] $ 
+        let isQuotes = state.data.currentSearchResultType == QUOTES
+        in
+        linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , cornerRadius if os == "IOS" then 18.0 else 32.0
+        , background Color.white900
+        , clickable true
+        , onClick push $ const WaitingInfo
+        , gravity CENTER
+        , accessibility DISABLE
+        , margin $ MarginLeft 12
+        , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+        ][ textView $ 
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , accessibility ENABLE
+          , accessibilityHint $ (if isQuotes then "O T P Expiry Info" else "Wait time info : ") <> "Button : Select to learn more about " <> if isQuotes then "O T P Expiry Time" else "wait time"   
+          , text $ if isQuotes then getString EXPIRES_IN else getString WAIT_TIME
+          , color Color.black700
+          , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
+          ] <> FontStyle.body2 TypoGraphy
+        , imageView
+            [ height $ V 12
+            , width  $ V 12
+            , gravity CENTER_VERTICAL
+            , accessibility DISABLE
+            , margin $ MarginRight 4
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
+            ]
+        , waitTimeView push state
+        ])]
+      else [])
+
+shineAnimation :: forall w . Int -> Int -> PrestoDOM (Effect Unit) w
+shineAnimation height' width' =
+  linearLayout
+  [ height $ MATCH_PARENT
+  , width $ WRAP_CONTENT
+  , gravity CENTER_VERTICAL
+  , cornerRadius 16.0
+  , clipChildren true
+  , clipToPadding true
+  ][ PrestoAnim.animationSet
+    [ shimmerAnimation (-100) width' 1500
+    ] $ linearLayout
+        [ width $ V $ width'
+        , height $ MATCH_PARENT
+        , gravity CENTER_VERTICAL
+        ][ linearLayout
+          [ width $ V 10
+          , height $ V $ height'
+          , background Color.white200
+          , rotation 20.0
+          , cornerRadius 2.0
+          , margin $ MarginHorizontal 10 8
+          ][]
+         , linearLayout
+           [ width $ V 5
+           , height $ V $ height'
+           , background Color.white200
+           , rotation 20.0
+           , cornerRadius 2.0
+           , margin $ MarginRight 20
+           ][]
+        ]
+  ]
+
+waitTimeView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+waitTimeView push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , cornerRadius if os == "IOS" then 12.0 else 16.0
+  , margin $ Margin 0 4 4 4
+  , background $ colorForWaitTime state
+  , gravity CENTER_VERTICAL
+  , accessibility DISABLE
+  ][ textView $ 
+     [ height $ WRAP_CONTENT 
+     , width $ V $ 60
+     , padding $ Padding 0 4 0 6
+     , accessibilityHint $ waitTimeHint state
+     , accessibility ENABLE 
+     , text $ state.data.driverInfoCardState.waitingTime
+     , color Color.black900
+     , gravity CENTER
+     , singleLine true
+     ] <> FontStyle.body4 TypoGraphy
+  ]
+
+waitTimeHint :: HomeScreenState -> String
+waitTimeHint state = (if state.data.currentSearchResultType == QUOTES then "O T P Expires in : " else "Wait Time : ") <> case DS.split (DS.Pattern ":") state.data.driverInfoCardState.waitingTime of
+                        [minutes, seconds] -> do 
+                          let min = DS.trim $ minutes
+                          let sec = DS.trim $ seconds
+                          if min /= "00" then min <> " Minutes and " <> sec <> " Seconds" else sec <> " Seconds" 
+                        _ -> ""
+
+colorForWaitTime:: HomeScreenState -> String
+colorForWaitTime state =
+  let waitTime = DS.split (DS.Pattern ":") state.data.driverInfoCardState.waitingTime
+  in
+  case waitTime of
+    [minutes, _] -> 
+      let mins = fromMaybe 0 (fromString (DS.trim minutes))
+          threshold = if state.data.currentSearchResultType == QUOTES then mins < 5 else mins > 2
+      in
+      if threshold then Color.carnation100 else Color.grey700 
+    _ -> Color.grey700
+
+
+otpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+otpView push state =
+  let otpDimensions = runFn1 getLayoutBounds $ getNewIDWithTag "OTPView"
+      shimmerHeight = (otpDimensions.height) + 3
+      shimmerWidth = (otpDimensions.width) - (if os == "IOS" then 3 else 10)
+  in
+  relativeLayout
+  [ height $ WRAP_CONTENT
+  , width $ WRAP_CONTENT
+  , cornerRadius 16.0
+  , accessibility DISABLE_DESCENDANT
+  ][linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , cornerRadius if os == "IOS" then 12.0 else 16.0
+      , id $ getNewIDWithTag "OTPView"
+      , margin $ Margin 0 4 4 4
+      , background Color.grey700
+      ][ textView $ 
+        [ text $ state.data.driverInfoCardState.otp
+        , color Color.black900
+        , padding $ Padding 8 4 8 6
+        ] <> FontStyle.body4 TypoGraphy
+      ]
+  , if state.data.currentSearchResultType == QUOTES then shineAnimation shimmerHeight shimmerWidth else emptyTextView state
+  ]
+
+rideInfoActionView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
+rideInfoActionView push state =
+  linearLayout
+  [ height $ WRAP_CONTENT
+  , width $ WRAP_CONTENT
+  , orientation VERTICAL
+  , clickable true
+  , accessibility DISABLE
+  , clipChildren false
+  ][linearLayout
+    [ width $ V 40
+    , height $ V 40
+    , gravity CENTER
+    , clickable true
+    , visibility $ boolToVisibility $ any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ] && state.data.config.feature.enableSupport
+    , background Color.white900
+    , stroke $ "1,"<> Color.grey900
+    , cornerRadius if os == "IOS" then 20.0 else 32.0
+    , onClick push $ const RideSupport
+    , accessibilityHint "Contact Support : Button"
+    , accessibility ENABLE
+    , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+    ][ imageView
+      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_contact_support"
+      , height $ V 16
+      , width $ V 16
+      , accessibility DISABLE
+      , clickable true
+      ]
+    ] 
+    , linearLayout
+      [ width $ V 40
+      , height $ V 40
+      , gravity CENTER
+      , visibility $ boolToVisibility $ any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ] && state.data.config.feature.enableChat
+      , background Color.white900
+      , stroke $ "1,"<> Color.grey900
+      , cornerRadius if os == "IOS" then 20.0 else 32.0
+      , margin $ MarginTop 8
+      , clickable true
+      , accessibilityHint "Share Ride : Button : Select to share ride details"
+      , accessibility ENABLE
+      , onClick push $ const ShareRide
+      , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+      ][ imageView
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_icon"
+        , height $ V 16
+        , width $ V 16
+        , clickable true
+        , accessibility DISABLE
+        ]
+      ]
+  ]
 
 distanceOutsideLimitsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 distanceOutsideLimitsView push state =
@@ -2070,6 +2707,15 @@ separator lineHeight lineColor currentStage =
     , visibility if currentStage == FindingQuotes then GONE else VISIBLE
     ]
     []
+
+waitTimeInfoPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+waitTimeInfoPopUp push state =
+  PrestoAnim.animationSet [ fadeIn true ]
+  $ linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , accessibility DISABLE
+  ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig state) ]
 
 lottieLoaderView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 lottieLoaderView state push =
@@ -2495,7 +3141,7 @@ genderBanner push state =
   Banner.view (push <<< GenderBannerModal) (genderBannerConfig state)
 
 isAnyOverlayEnabled :: HomeScreenState -> Boolean
-isAnyOverlayEnabled state = state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && state.data.config.feature.enableShareApp)
+isAnyOverlayEnabled state = state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.emergencyHelpModal || state.props.cancelSearchCallDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.showCallPopUp || state.props.showRateCard || (state.props.showShareAppPopUp && state.data.config.feature.enableShareApp || state.data.waitTimeInfo)
 
 carouselView:: HomeScreenState -> (Action -> Effect Unit)  -> forall w . PrestoDOM (Effect Unit) w
 carouselView state push = 
@@ -2540,6 +3186,9 @@ carouselView state push =
         ]
     , PrimaryButton.view (push <<< UpdateProfileButtonAC) (updateProfileConfig state)
     , PrimaryButton.view (push <<< SkipAccessibilityUpdateAC) (maybeLaterButtonConfig state)]
+
+getInfoCardPeekHeight :: HomeScreenState -> Int
+getInfoCardPeekHeight state = if state.data.infoCardPeekHeight == 0 then (getDefaultPeekHeight state) else state.data.infoCardPeekHeight
 
 
 homeScreenView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -2995,8 +3644,8 @@ mapView push state =
     ]
 getMapDimensions :: HomeScreenState -> {height :: Length, width :: Length}
 getMapDimensions state = 
-  let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS" && not state.props.locateOnMap) then 
-                    V (((screenHeight unit)/ 15)*10)
+  let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then 
+                    V (getMapHeight state)
                   else if ( (suggestionViewVisibility state) && (isBannerVisible state)|| suggestionViewVisibility state) then 
                     V (getHeightFromPercent 27)
                   else if (isHomeScreenView state) then
@@ -3005,6 +3654,8 @@ getMapDimensions state =
                     MATCH_PARENT
       mapWidth =  if state.props.currentStage /= HomeScreen then MATCH_PARENT else V ((screenWidth unit)-32)
   in {height : mapHeight, width : mapWidth}
+  where getMapHeight :: HomeScreenState -> Int
+        getMapHeight state = if state.data.currentSearchResultType == QUOTES then (((screenHeight unit)/ 4)*3) else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then (((screenHeight unit)/ 10)*6) else (((screenHeight unit)/ 15)*10)
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestionsView push state = 

@@ -56,14 +56,17 @@ checkRideStatus rideAssigned = do
             (RideBookingRes resp) = (fromMaybe dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
             rideStatus = if status == "NEW" then RideAccepted else RideStarted
+            fareProductType = ((resp.bookingDetails) ^. _fareProductType)
+            otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
+            isQuotes = (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing)
             newState = 
               state
                 { data
-                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) (null resp.rideList)
+                    { driverInfoCardState = getDriverInfo state.data.specialZoneSelectedVariant (RideBookingRes resp) isQuotes
                     , finalAmount = fromMaybe 0 $ (fromMaybe dummyRideAPIEntity (head resp.rideList) )^. _computedPrice
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
-                    , currentSearchResultType = if null resp.rideList then QUOTES else ESTIMATES},
+                    , currentSearchResultType = if isQuotes then QUOTES else ESTIMATES},
                   props
                     { currentStage = rideStatus
                     , rideRequestFlow = true

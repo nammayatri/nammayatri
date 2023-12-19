@@ -150,6 +150,9 @@ black900 =   let config = getAppConfig appConfig
 black6000 :: Color
 black6000 = "#565961"
 
+black400 :: Color
+black400 = "#40000000"
+
 red :: Color
 red = let config = getAppConfig appConfig
   in config.colors.red
@@ -211,5 +214,20 @@ blue100 = "#1A2194FF"
 green600 :: Color
 green600 = "#269574"
 
+ghostWhite :: Color
+ghostWhite = "#F3F4F8"
+
+manatee200 :: Color
+manatee200 = "#206D7280"
+
+blue200 :: Color
+blue200 = "#202194FF"
+
+carnation100 :: Color
+carnation100 = "#10E55454"
+
 squidInkBlue :: Color
 squidInkBlue = "#303440"
+
+rippleShade :: Color
+rippleShade = "#D5D5D8"

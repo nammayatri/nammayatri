@@ -24,8 +24,7 @@ import Animation.Config as AnimConfig
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Components.Banner as Banner
-import Components.ChatView as ChatView
-import Components.ChatView as ChatView
+import Components.MessagingView as MessagingView
 import Components.ChooseYourRide as ChooseYourRide
 import Components.DriverInfoCard (DriverInfoCardData)
 import Components.DriverInfoCard as DriverInfoCard
@@ -79,6 +78,7 @@ import Font.Style (Style(..))
 import Services.API as API
 import Data.Lens ((^.))
 import Accessor (_fareBreakup, _description)
+import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
 
@@ -675,6 +675,48 @@ sourceUnserviceableConfig state =
   in
     errorModalConfig'
 
+waitTimeInfoCardConfig :: ST.HomeScreenState -> RequestInfoCard.Config
+waitTimeInfoCardConfig state = let
+  waitTimeConfig = textConfig $ state.data.currentSearchResultType == ST.QUOTES
+  config = RequestInfoCard.config
+  requestInfoCardConfig' = config{
+    title {
+      text = getString waitTimeConfig.title,
+      accessibilityHint = getEN waitTimeConfig.title
+    }
+  , primaryText {
+      text = getString waitTimeConfig.primaryText,
+      padding = Padding 16 16 0 0,
+      textStyle = FontStyle.ParagraphText,
+      color = Color.black700,
+      accessibilityHint = getEN waitTimeConfig.primaryText
+    }
+  , secondaryText {
+      text = getString waitTimeConfig.secondaryText,
+      visibility = VISIBLE,
+      padding = PaddingLeft 16,
+      color = Color.black700,
+      textStyle = FontStyle.ParagraphText,
+      width = (V $ JB.getWidthFromPercent 75),
+      accessibilityHint = getEN waitTimeConfig.secondaryText
+    }
+  , imageConfig {
+      imageUrl = fetchImage FF_ASSET "ny_ic_wait_timer",
+      height = V 130,
+      width = V 130,
+      padding = Padding 0 2 2 0
+    }
+  , buttonConfig {
+      text = getString GOT_IT,
+      padding = PaddingVertical 16 20,
+      accessibilityHint = (getEN GOT_IT) <> " : Button"
+    }
+  }
+  in requestInfoCardConfig'
+  where textConfig :: Boolean -> {title :: STR, primaryText :: STR, secondaryText :: STR}
+        textConfig isQuotes = if isQuotes then {title : OTP_EXPIRE_TIMER, primaryText : SHOWS_FOR_HOW_LONG_YOUR_OTP_, secondaryText : IF_YOUR_OTP_EXPIRES_}
+                              else {title : WAIT_TIMER, primaryText : HOW_LONG_DRIVER_WAITED_FOR_PICKUP, secondaryText : YOU_WILL_PAY_FOR_EVERY_MINUTE}
+
 rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
   let
@@ -804,59 +846,53 @@ driverInfoCardViewState state = { props:
                                   { currentStage: state.props.currentStage
                                   , trackingEnabled: state.props.isInApp
                                   , unReadMessages : state.props.unReadMessages
-                                  , showChatNotification : state.props.showChatNotification && state.data.lastMessage.sentBy /= ""
                                   , showCallPopUp: state.props.showCallPopUp
                                   , isSpecialZone: state.props.isSpecialZone
                                   , estimatedTime : state.data.rideDuration
                                   , zoneType : state.props.zoneType.priorityTag
                                   , currentSearchResultType : state.data.currentSearchResultType
-                                  , isChatOpened : state.props.isChatOpened
-                                  , chatcallbackInitiated : state.props.chatcallbackInitiated
                                   , merchantCity : state.props.city
                                   }
                               , data: driverInfoTransformer state
                             }
 
-chatViewConfig :: ST.HomeScreenState -> ChatView.Config
-chatViewConfig state = let
-  config = ChatView.config
-  chatViewConfig' = config {
+messagingViewConfig :: ST.HomeScreenState -> MessagingView.Config
+messagingViewConfig state = let
+  config = MessagingView.config
+  messagingViewConfig' = config {
     userConfig
-        {
-          userName = state.data.driverInfoCardState.driverName
-        , appType = "Customer"
-        }
-      , messages = state.data.messages
-      , messagesSize = state.data.messagesSize
-      , sendMessageActive = state.props.sendMessageActive
-      , vehicleNo = HU.makeNumber $ state.data.driverInfoCardState.registrationNumber     
-      , suggestionsList = if showSuggestions state then if (metersToKm state.data.driverInfoCardState.distance state) == getString AT_PICKUP then getSuggestionsfromKey "customerInitialAP" else getSuggestionsfromKey "customerInitialBP" else state.data.suggestionsList
-      , hint = (getString MESSAGE)
-      , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
-      , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
-      , languageKey = (getValueToLocalStore LANGUAGE_KEY)
-      , mapsText = "Maps"
-      , grey700 = Color.grey700
-      , blue600 = Color.blue600
-      , blue900 = Color.blue900
-      , transparentGrey = Color.transparentGrey
-      , green200 = Color.green200
-      , grey900 = Color.grey900
-      , grey800 = Color.grey800
-      , blue800 = Color.blue800
-      , white900 = Color.white900
-      , black800 = Color.black800
-      , black700 = Color.black700
-      , canSendSuggestion = state.props.canSendSuggestion
-      , showAutoGeneratedText = (getValueToLocalStore NOTIFIED_CUSTOMER == "true") && (HU.secondsToHms state.data.driverInfoCardState.eta) /= ""
-      , rideConfirmedAt = state.data.driverInfoCardState.startedAt
-      , autoGeneratedText = state.data.config.notifyRideConfirmationConfig.autoGeneratedText <> (HU.secondsToHms state.data.driverInfoCardState.eta)
-      , enableSuggestions = state.data.config.feature.enableSuggestions
+    { userName = state.data.driverInfoCardState.driverName
+    , appType = "Customer"
+    }
+  , feature 
+    { sendMessageActive = state.props.sendMessageActive
+    , canSendSuggestion = state.props.canSendSuggestion
+    , showAutoGeneratedText = (getValueToLocalStore NOTIFIED_CUSTOMER == "true") && isJust state.data.driverInfoCardState.eta && (HU.secondsToHms $ fromMaybe 0 state.data.driverInfoCardState.eta) /= "--"
+    , enableSuggestions = state.data.config.feature.enableSuggestions
+    }
+  , messages = state.data.messages
+  , messagesSize = state.data.messagesSize
+  , vehicleNo = HU.makeNumber $ state.data.driverInfoCardState.registrationNumber     
+  , chatSuggestionsList = getChatSuggestions state
+  , hint = (getString MESSAGE)
+  , languageKey = (getValueToLocalStore LANGUAGE_KEY)
+  , rideConfirmedAt = state.data.driverInfoCardState.startedAt
+  , autoGeneratedText = state.data.config.notifyRideConfirmationConfig.autoGeneratedText <> (HU.secondsToHms $ fromMaybe 0 state.data.driverInfoCardState.eta)
+  , driverRating = show $ state.data.driverInfoCardState.rating
+  , fareAmount = show $ state.data.driverInfoCardState.price
+  , config = state.data.config
+  , peekHeight = if state.data.infoCardPeekHeight == 0 then getDefaultPeekHeight state else state.data.infoCardPeekHeight
+  , otp = state.data.driverInfoCardState.otp
   }
-  in chatViewConfig'
+  in messagingViewConfig'
 
-showSuggestions :: ST.HomeScreenState -> Boolean
-showSuggestions state = (not $ state.data.lastMessage.sentBy == "Customer") && DA.null state.data.suggestionsList && ((show $ DA.length $ JB.getChatMessages "") == state.data.messagesSize || state.data.messagesSize == "-1")
+getDefaultPeekHeight :: ST.HomeScreenState -> Int
+getDefaultPeekHeight state = do
+  let isQuotes = state.data.currentSearchResultType == ST.QUOTES
+      height = case state.props.currentStage == ST.RideAccepted of 
+                  true -> if isQuotes then 234 else 337
+                  false -> if isQuotes then 334 else 316
+  height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
 
 metersToKm :: Int -> ST.HomeScreenState -> String
 metersToKm distance state =
@@ -899,9 +935,10 @@ driverInfoTransformer state =
     , bppRideId : ""
     , driverNumber : cardState.driverNumber
     , merchantExoPhone : cardState.merchantExoPhone
-    , lastMessage : state.data.lastMessage
     , config : state.data.config
     , vehicleVariant : cardState.vehicleVariant
+    , defaultPeekHeight : getDefaultPeekHeight state
+    , bottomSheetState : state.props.bottomSheetState
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1467,3 +1504,22 @@ getSelectedEstimatesObject dummy =
   case runExcept (decodeJSON (getValueToLocalStore ESTIMATE_DATA) :: _ ChooseVehicle.Config) of
     Right res -> Just res
     Left err -> Nothing
+
+getChatSuggestions :: ST.HomeScreenState -> Array String
+getChatSuggestions state = do 
+  let didDriverMessage = HU.didDriverMessage FunctionCall
+      lastMessage = DA.last state.data.messages
+      canShowSuggestions = case lastMessage of 
+                            Just value -> (value.sentBy /= "Customer") || not didDriverMessage
+                            Nothing -> true
+      isAtPickup = (metersToKm state.data.driverInfoCardState.distance state) == getString AT_PICKUP
+  if (DA.null state.data.chatSuggestionsList) && canShowSuggestions && state.props.canSendSuggestion then
+    if didDriverMessage && (not $ DA.null state.data.messages) then
+      if isAtPickup then getSuggestionsfromKey "customerDefaultAP" else getSuggestionsfromKey "customerDefaultBP"
+    else 
+    if isAtPickup then getSuggestionsfromKey "customerInitialAP" else do
+        let hideInitial = not (DA.null state.data.messages) && not didDriverMessage
+        if (DA.null state.data.messages) && (EHC.getExpiryTime state.data.driverInfoCardState.createdAt true) > 30 then getSuggestionsfromKey "customerInitialBP3"
+        else if hideInitial then getSuggestionsfromKey "customerInitialBP2"
+        else getSuggestionsfromKey "customerInitialBP1"
+  else state.data.chatSuggestionsList
