@@ -529,8 +529,9 @@ data GetCityReq = GetCityReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-newtype GetCityResp = GetCityResp
-  { city :: Maybe Text
+data GetCityResp = GetCityResp
+  { city :: Maybe Text,
+    status :: APISuccess
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1885,7 +1886,7 @@ getCity req = do
           pure Nothing
         (g : _) -> pure $ Just g
   let city = (.city) <$> geometry
-  pure $ GetCityResp {city = show <$> city}
+  pure $ GetCityResp {city = show <$> city, status = APISuccess.Success}
 
 planMaxRides :: Plan -> Maybe Int
 planMaxRides plan = do
