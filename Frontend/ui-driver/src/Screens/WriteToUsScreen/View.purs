@@ -16,7 +16,7 @@
 module Screens.WriteToUsScreen.View where
 
 import Prelude (Unit, const, map, not, ($), (<<<), (==), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, onBackPressed, visibility, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), ScopedScreen, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, onBackPressed, visibility, afterRender, imageWithFallback)
 import Effect (Effect)
 import Screens.WriteToUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.WriteToUsScreen.ScreenData (viewsItemList)
@@ -38,13 +38,14 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
 
-screen :: ST.WriteToUsScreenState -> Screen Action ST.WriteToUsScreenState ScreenOutput
+screen :: ST.WriteToUsScreenState -> ScopedScreen Action ST.WriteToUsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "WriteToUsScreen"
   , globalEvents : []
   , eval
+  , parent: Nothing
   }
 
 view

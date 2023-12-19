@@ -36,14 +36,14 @@ import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, discard, not, pure, unit, ($), (<<<), (<>), (==), (&&), (/=))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textFromHtml, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, ScopedScreen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textFromHtml, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.AadhaarVerificationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (AadhaarStage(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 
-screen :: ST.AadhaarVerificationScreenState -> Screen Action ST.AadhaarVerificationScreenState ScreenOutput
+screen :: ST.AadhaarVerificationScreenState -> ScopedScreen Action ST.AadhaarVerificationScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -60,6 +60,7 @@ screen initialState =
       let _ = spy "AadhaarVerificationScreenState action" action
       let _ = spy "AadhaarVerificationScreenState state" state
       eval action state)
+  , parent: Nothing
   }
 
 view

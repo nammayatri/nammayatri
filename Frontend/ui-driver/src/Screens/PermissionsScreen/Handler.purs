@@ -20,17 +20,17 @@ import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.PermissionsScreen.Controller (ScreenOutput(..))
 import Screens.PermissionsScreen.View as PermissionsScreen
 import Types.App (FlowBT, GlobalState(..), PERMISSIONS_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 permissions :: FlowBT String PERMISSIONS_SCREEN_OUTPUT
 permissions = do
     (GlobalState state) <- getState
     logField_ <- lift $ lift $ getLogFields 
-    action <- lift $ lift $ runScreen $ PermissionsScreen.screen state.permissionsScreen{data{logField = logField_}}
+    action <- lift $ lift $ navigateToScreen $ PermissionsScreen.screen state.permissionsScreen{data{logField = logField_}}
     case action of 
         GoBack -> App.BackT $ pure App.GoBack
         GoToHome -> App.BackT $ App.BackPoint <$> pure DRIVER_HOME_SCREEN

@@ -17,7 +17,7 @@ module Screens.EnterMobileNumberScreen.View where
 
 import Data.Maybe (Maybe(..))
 import Prelude (Unit, const, ($), (<<<), (<>), bind, pure , unit, (==))
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), ScopedScreen, alpha, background, clickable, color, cornerRadius, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textView, visibility, weight, width, afterRender, imageWithFallback)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Components.MobileNumberEditor as MobileNumberEditor
@@ -42,7 +42,7 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Debug(spy)
 
-screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
+screen :: ST.EnterMobileNumberScreenState -> ScopedScreen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -52,6 +52,7 @@ screen initialState =
       let _ = spy "EnterMobileNUmber state -----" state
       let _ = spy "EnterMobileNUmber--------action" action
       eval action state)
+  , parent: Nothing
   }
 
 view :: forall w . (Action -> Effect Unit) -> ST.EnterMobileNumberScreenState -> PrestoDOM (Effect Unit) w

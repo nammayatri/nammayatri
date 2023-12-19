@@ -50,7 +50,7 @@ import Log (printLog)
 import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), discard, void, not, (||))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), ScopedScreen, afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
@@ -62,7 +62,7 @@ import Types.App (defaultGlobalState)
 import Screens.RegistrationScreen.ComponentConfig (logoutPopUp) as LP
 import Data.String.Common as DSC
 
-screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
+screen :: ST.UploadDrivingLicenseState -> ScopedScreen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -81,6 +81,7 @@ screen initialState =
       let _ = printLog  "UploadDrivingLicenseScreen state -----" state
           _ = spy "UploadDrivingLicenseScreen action -----" action
       eval action state
+  , parent: Nothing
   }
 
 view

@@ -23,17 +23,17 @@ import Data.Number as Number
 import Engineering.Helpers.BackTrack (getState)
 import Helpers.Utils (getCurrentLocation, LatLon(..))
 import Prelude (bind, ($), pure, (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverSavedLocationScreen.Controller (ScreenOutput(..))
 import Screens.DriverSavedLocationScreen.View as DriverSavedLocationScreen
 import Storage (KeyStore(..), getValueToLocalNativeStore)
 import Types.App (DRIVE_SAVED_LOCATION_OUTPUT(..), ScreenType(..), FlowBT, GlobalState(..))
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 driverSavedLocationScreen :: FlowBT String DRIVE_SAVED_LOCATION_OUTPUT
 driverSavedLocationScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ DriverSavedLocationScreen.screen state.driverSavedLocationScreen
+  action <- lift $ lift $ navigateToScreen $ DriverSavedLocationScreen.screen state.driverSavedLocationScreen
   case action of
     GoBack -> App.BackT $ pure App.GoBack
     UpdateConfirmLocation updatedScreen -> do

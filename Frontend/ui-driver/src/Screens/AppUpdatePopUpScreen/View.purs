@@ -50,7 +50,7 @@ screen :: ST.AppUpdatePopUpScreenState -> ScopedScreen Action ST.AppUpdatePopUpS
 screen initialState =
   { initialState
   , view
-  , parent : Just "AppUpdatePopUpScreen"
+  , parent : Nothing -- Just "AppUpdatePopUpScreen"
   , name : "AppUpdatePopUpScreen"
   , eval : (\state  action -> do
       let _ = spy "AppUpdatePopUpScreen state -----" state

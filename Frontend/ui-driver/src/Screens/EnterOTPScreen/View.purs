@@ -16,7 +16,7 @@
 module Screens.EnterOTPScreen.View where
 import Data.Maybe (Maybe(..))
 import Prelude (Unit, const, bind, pure, unit, ($), (<<<), (<>), (==), (>), discard)
-import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), LetterSpacing(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), ScopedScreen, alpha, background, clickable, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, text, textSize, textView, weight, width, afterRender, visibility, imageWithFallback)
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Effect (Effect)
@@ -39,7 +39,7 @@ import Screens.EnterOTPScreen.ComponentConfig
 import Data.Ring ((-))
 import Storage (getValueToLocalStore, KeyStore(..))
 
-screen :: ST.EnterOTPScreenState -> Screen Action ST.EnterOTPScreenState ScreenOutput
+screen :: ST.EnterOTPScreenState -> ScopedScreen Action ST.EnterOTPScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -49,6 +49,7 @@ screen initialState =
                       _ <- HU.startTimer 10 true push TIMERACTION
                       pure (pure unit)) ] <> if (DS.length initialState.data.otp) > 0 then [] else [ HU.startOtpReciever AutoFill ]
   , eval
+  , parent : Nothing
   }
 
 view

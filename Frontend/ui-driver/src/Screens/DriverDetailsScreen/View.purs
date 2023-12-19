@@ -16,7 +16,7 @@
 module Screens.DriverDetailsScreen.View where
 
 import Prelude
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, afterRender, id, visibility, imageWithFallback, clickable, relativeLayout)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), ScopedScreen, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, afterRender, id, visibility, imageWithFallback, clickable, relativeLayout)
 import Effect (Effect)
 import Screens.DriverDetailsScreen.Controller (Action(..), ScreenOutput, eval, getTitle, getValue)
 import Screens.DriverDetailsScreen.ComponentConfig (ListOptions(..),optionList)
@@ -45,7 +45,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
-screen :: ST.DriverDetailsScreenState -> Screen Action ST.DriverDetailsScreenState ScreenOutput
+screen :: ST.DriverDetailsScreenState -> ScopedScreen Action ST.DriverDetailsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -57,6 +57,7 @@ screen initialState =
       let _ = spy "DriverDetailsScreen state -----" state
       let _ = spy "DriverDetailsScreen --------action" action
       eval state action)
+  , parent: Nothing
   }
 
 view

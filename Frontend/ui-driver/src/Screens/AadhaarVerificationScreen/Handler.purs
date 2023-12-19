@@ -25,12 +25,13 @@ import Screens.AadhaarVerificationScreen.View as AadhaarVerificationScreen
 import Storage (KeyStore(..), setValueToLocalStore)
 import Types.App (AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 import Debug
 
 aadhaarVerificationScreen :: FlowBT String AADHAAR_VERIFICATION_SCREEN_OUTPUT
 aadhaarVerificationScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ AadhaarVerificationScreen.screen state.aadhaarVerificationScreen
+  act <- lift $ lift $ navigateToScreen $ AadhaarVerificationScreen.screen state.aadhaarVerificationScreen
   case act of
     GoToOtpStage updatedState-> do
       modifyScreenState $ AadhaarVerificationScreenType (\_ -> updatedState)

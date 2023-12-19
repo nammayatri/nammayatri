@@ -20,17 +20,17 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, ($), pure, (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.ChooseCityScreen.Controller (ScreenOutput(..))
 import Screens.ChooseCityScreen.View as ChooseCityScreen
 import Types.App (CHOOSE_CITY_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 
 chooseCityScreen :: FlowBT String CHOOSE_CITY_SCREEN_OUTPUT
 chooseCityScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ ChooseCityScreen.screen state.chooseCityScreen
+  act <- lift $ lift $ navigateToScreen $ ChooseCityScreen.screen state.chooseCityScreen
   case act of
     SelectLanguageScreen -> App.BackT $ pure App.GoBack 
     WelcomeScreen -> App.BackT $ App.NoBack <$> (pure GoToWelcomeScreen)

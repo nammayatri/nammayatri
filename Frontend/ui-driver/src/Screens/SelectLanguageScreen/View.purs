@@ -27,7 +27,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, ($), (<<<), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, ScopedScreen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -37,8 +37,9 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import PrestoDOM.Animation as PrestoAnim
 import Debug
+import Data.Maybe (Maybe(..))
 
-screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
+screen :: ST.SelectLanguageScreenState -> ScopedScreen Action ST.SelectLanguageScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -49,6 +50,7 @@ screen initialState =
         let _ = spy "SelectLanguageScreen action " action
         let _ = spy "SelectLanguageScreen state " state
         eval action state
+  , parent: Nothing
   }
 
 view

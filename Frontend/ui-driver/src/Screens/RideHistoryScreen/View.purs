@@ -50,12 +50,12 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, ($), (<$>), const, (==), (<<<), bind, pure, unit, discard, show, not, map, (&&), ($), (<$>), (<>), (<<<), (==), (/), (>), (-))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), ScopedScreen, afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.List as PrestoList
-import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Properties (cornerRadii, disableClickFeedback, rippleColor)
 import PrestoDOM.Types.Core (Corners(..), toPropValue)
 import Resource.Constants (tripDatesCount)
 import Screens as ScreenNames
@@ -66,9 +66,12 @@ import Services.Backend as Remote
 import Storage (getValueToLocalStore)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Data.Maybe (Maybe(..))
+import Halogen.VDom.Types (VDom(..))
+import ReactComponents.ZooBookingModel.View as ZooBookingModel
+import ReactComponents.IncrementDecrement.View as IncrementDecrement
 
-
-screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> Screen Action ST.RideHistoryScreenState ScreenOutput
+screen :: ST.RideHistoryScreenState -> PrestoList.ListItem -> ScopedScreen Action ST.RideHistoryScreenState ScreenOutput
 screen initialState rideListItem =
   {
     initialState : initialState {
@@ -94,6 +97,7 @@ screen initialState rideListItem =
     let _ = spy "RideHistoryScreenState action" action
     let _ = spy "RideHistoryScreenState state" state 
     eval action state)
+  , parent: Nothing
   }
 
 view :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
@@ -109,8 +113,37 @@ view rideListItem push state =
         $ relativeLayout
             [ height MATCH_PARENT
             , width WRAP_CONTENT
-            ]$[rideListView rideListItem push state] <> if state.props.showPaymentHistory then [paymentHistoryModel push state] else []
+            ]$[
+                -- ReactElem $ ZooBookingModel.app {push: push, state: state}]
+                -- ReactElem $ IncrementDecrement.test Dummy push {count: 1}]
+              -- checkingView Dummy push state ]
+                ReactElem $ ZooBookingModel.app CounterChange push {push: push, state: state}]
+              -- ReactElem $ IncrementDecrement.app CounterChange push (incrementDecrementConfig push state)]
+              -- rideListView rideListItem push state] <> if state.props.showPaymentHistory then [paymentHistoryModel push state] else []
     ]
+
+checkingView :: forall w. forall action. action -> (action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
+checkingView action push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , orientation VERTICAL
+  , height MATCH_PARENT
+  , background Color.white900
+  , clickable true
+  , visibility $ if state.props.showPaymentHistory then VISIBLE else GONE
+  , onClick push $ const action 
+  ]$[ textView $
+      [ height WRAP_CONTENT
+      , weight 1.0
+      , text "Hello"
+      , textSize 42
+      , cornerRadius 24.0
+      , padding $ PaddingVertical 6 6
+      , gravity CENTER
+      , color Color.black900
+      ] <> FontStyle.tags LanguageStyle
+    ]
+
 
 rideListView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
 rideListView rideListItem push state = 
@@ -254,6 +287,7 @@ calendarView push state =
           , orientation HORIZONTAL
           , gravity CENTER_VERTICAL
           , onClick push (const ShowDatePicker)
+          , rippleColor Color.black800
           ][ textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
@@ -269,6 +303,7 @@ calendarView push state =
             , background Color.grey700
             , cornerRadius 17.0
             , gravity CENTER
+            -- , rippleColor Color.black800
             ]
             [ imageView
                 [ height $ V 24
@@ -282,6 +317,28 @@ calendarView push state =
             , weight 1.0
             ]
             []
+        , linearLayout 
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , orientation HORIZONTAL
+          , gravity CENTER
+          , padding $ Padding 5 5 5 5
+          , onClick push $ const OpenPaymentHistory
+          , visibility $ if getMerchant FunctionCall == YATRISATHI then VISIBLE else GONE
+          ][  textView
+              $ [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text $ getString VIEW_PAYMENT_HISTORY
+                , color Color.blue900
+                , margin $ MarginRight 5
+                ]
+              <> FontStyle.tags LanguageStyle
+            , imageView
+              [ height $ V 8
+              , width $ V 10
+              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_right_arrow_blue"
+              ]
+          ]
         ]
     ]
 

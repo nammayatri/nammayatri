@@ -20,18 +20,18 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.SubscriptionScreen.Controller (ScreenOutput(..))
 import Screens.SubscriptionScreen.View as SubscriptionScreen
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
 import Types.App (FlowBT, GlobalState(..), SUBSCRIPTION_SCREEN_OUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Debug
+import React.Navigation.Navigate (navigateToScreen)
 
 subscriptionScreen :: FlowBT String SUBSCRIPTION_SCREEN_OUTPUT
 subscriptionScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ SubscriptionScreen.screen state.subscriptionScreen (GlobalState state)
+  act <- lift $ lift $ navigateToScreen $ SubscriptionScreen.screen state.subscriptionScreen (GlobalState state)
   case act of
     HomeScreen updatedState -> do 
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)

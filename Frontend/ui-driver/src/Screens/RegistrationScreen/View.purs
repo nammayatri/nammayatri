@@ -37,7 +37,7 @@ import JBridge (lottieAnimationConfig, startLottieProcess)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, layoutGravity)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), ScopedScreen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, layoutGravity)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RegistrationScreen.Controller (Action(..), eval, ScreenOutput)
 import Screens.Types (RegisterationStep(..), StageStatus(..), ValidationStatus(..))
@@ -46,7 +46,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Storage(getValueToLocalStore , KeyStore(..))
 
-screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
+screen :: ST.RegistrationScreenState -> ScopedScreen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -58,6 +58,7 @@ screen initialState =
           let _ = spy "RegistrationScreen --------action" action
           eval state action
       )
+  , parent: Nothing
   }
 
 view ::

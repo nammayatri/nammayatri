@@ -15,7 +15,7 @@
 
 module Screens.EditAadhaarDetailsScreen.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, visibility, onBackPressed, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), ScopedScreen, background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, frameLayout, layoutGravity, alpha, scrollView, visibility, onBackPressed, afterRender, imageWithFallback)
 import Screens.EditAadhaarDetailsScreen.Controller (Action(..), ScreenOutput, eval, getTitleFromList)
 import Screens.EditAadhaarDetailsScreen.ScreenData (viewsItemList, ListOptions(..))
 import Screens.Types as ST
@@ -31,14 +31,16 @@ import Common.Types.App
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Data.Maybe (Maybe(..))
 
-screen :: ST.EditAadhaarDetailsScreenState -> Screen Action ST.EditAadhaarDetailsScreenState ScreenOutput
+screen :: ST.EditAadhaarDetailsScreenState -> ScopedScreen Action ST.EditAadhaarDetailsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "EditAadhaarDetailsScreen"
   , globalEvents : []
   , eval
+  , parent: Nothing
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.EditAadhaarDetailsScreenState -> PrestoDOM (Effect Unit) w

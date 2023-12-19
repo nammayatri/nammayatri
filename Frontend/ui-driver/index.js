@@ -1,6 +1,15 @@
+if (window.parent !== window) {
+  try {
+    window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = window.parent.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+  }catch (e) {
+    console.error("error in attaching react devtools", e)
+  }
+}
+
 import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
+import "react";
 
 
 function guid() {
@@ -92,6 +101,7 @@ if (!window.__OS) {
 }
 
 const purescript = require("./output/Main");
+// const react = require("./output/React");
 
 
 function callInitiateResult () {

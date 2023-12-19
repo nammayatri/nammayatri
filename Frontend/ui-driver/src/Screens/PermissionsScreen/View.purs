@@ -33,7 +33,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>), (==), (>), not, void, discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), ScopedScreen, afterRender, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -43,8 +43,9 @@ import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Web.HTML.History (back)
+import Data.Maybe (Maybe(..))
 
-screen :: ST.PermissionsScreenState -> Screen Action ST.PermissionsScreenState ScreenOutput
+screen :: ST.PermissionsScreenState -> ScopedScreen Action ST.PermissionsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
@@ -60,7 +61,8 @@ screen initialState =
           let _ = spy "PermissionsScreen ----- state" state
           let _ = spy "PermissionsScreen --------action" action
           eval state action
-      ) 
+      )
+  , parent: Nothing
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.PermissionsScreenState -> PrestoDOM (Effect Unit) w
