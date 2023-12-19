@@ -25,14 +25,14 @@ createMany = traverse_ createWithKV
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> m (Maybe (Domain.Types.BusinessHour.BusinessHour))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
+    [ Se.Is Beam.id $ Se.Eq $ id
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> m (Maybe (Domain.Types.BusinessHour.BusinessHour))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq $ id
         ]
     ]
 
@@ -40,15 +40,15 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.BusinessHour.BusinessHour {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.btype btype,
-      Se.Set Beam.categoryId (Kernel.Types.Id.getId <$> categoryId),
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt now
+    [ Se.Set Beam.btype $ btype,
+      Se.Set Beam.categoryId $ (Kernel.Types.Id.getId <$> categoryId),
+      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt $ createdAt,
+      Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
         ]
     ]
 
