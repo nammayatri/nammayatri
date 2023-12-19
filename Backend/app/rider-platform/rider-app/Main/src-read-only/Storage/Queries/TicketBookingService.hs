@@ -28,47 +28,47 @@ createMany = traverse_ createWithKV
 findAllByBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ([Domain.Types.TicketBookingService.TicketBookingService])
 findAllByBookingId (Kernel.Types.Id.Id ticketBookingId) = do
   findAllWithKV
-    [ Se.Is Beam.ticketBookingId $ Se.Eq ticketBookingId
+    [ Se.Is Beam.ticketBookingId $ Se.Eq $ ticketBookingId
     ]
 
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m (Maybe (Domain.Types.TicketBookingService.TicketBookingService))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq id
+    [ Se.Is Beam.id $ Se.Eq $ id
     ]
 
 findByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> m (Maybe (Domain.Types.TicketBookingService.TicketBookingService))
 findByShortId (Kernel.Types.Id.ShortId shortId) = do
   findOneWithKV
-    [ Se.Is Beam.shortId $ Se.Eq shortId
+    [ Se.Is Beam.shortId $ Se.Eq $ shortId
     ]
 
 updateAllStatusByBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking -> m ()
 updateAllStatusByBookingId status (Kernel.Types.Id.Id ticketBookingId) = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.status status,
-      Se.Set Beam.updatedAt now
+    [ Se.Set Beam.status $ status,
+      Se.Set Beam.updatedAt $ now
     ]
-    [ Se.Is Beam.ticketBookingId $ Se.Eq ticketBookingId
+    [ Se.Is Beam.ticketBookingId $ Se.Eq $ ticketBookingId
     ]
 
 updateVerificationById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ()
 updateVerificationById status verificationCount (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.status status,
-      Se.Set Beam.verificationCount verificationCount,
-      Se.Set Beam.updatedAt now
+    [ Se.Set Beam.status $ status,
+      Se.Set Beam.verificationCount $ verificationCount,
+      Se.Set Beam.updatedAt $ now
     ]
-    [ Se.Is Beam.id $ Se.Eq id
+    [ Se.Is Beam.id $ Se.Eq $ id
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m (Maybe (Domain.Types.TicketBookingService.TicketBookingService))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq id
+        [ Se.Is Beam.id $ Se.Eq $ id
         ]
     ]
 
@@ -76,21 +76,21 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.TicketBookingService.TicketBookingService {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.amount amount,
-      Se.Set Beam.btype btype,
-      Se.Set Beam.expiryDate expiryDate,
-      Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
-      Se.Set Beam.status status,
-      Se.Set Beam.ticketBookingId (Kernel.Types.Id.getId ticketBookingId),
-      Se.Set Beam.ticketServiceId (Kernel.Types.Id.getId ticketServiceId),
-      Se.Set Beam.verificationCount verificationCount,
-      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt createdAt,
-      Se.Set Beam.updatedAt now
+    [ Se.Set Beam.amount $ amount,
+      Se.Set Beam.btype $ btype,
+      Se.Set Beam.expiryDate $ expiryDate,
+      Se.Set Beam.shortId $ (Kernel.Types.Id.getShortId shortId),
+      Se.Set Beam.status $ status,
+      Se.Set Beam.ticketBookingId $ (Kernel.Types.Id.getId ticketBookingId),
+      Se.Set Beam.ticketServiceId $ (Kernel.Types.Id.getId ticketServiceId),
+      Se.Set Beam.verificationCount $ verificationCount,
+      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt $ createdAt,
+      Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
         ]
     ]
 
