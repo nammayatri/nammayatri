@@ -598,11 +598,11 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1702549068,
-        "narHash": "sha256-th4rnWCZYXlHPbUrcwd9F977xrqmocn9YfrA+JYvr6s=",
+        "lastModified": 1702989746,
+        "narHash": "sha256-ZVy/rPeSHaoCP6UiqOfxWeuQllvDVVE5jtaSMaEvR44=",
         "owner": "enigma-commits",
         "repo": "euler-hs",
-        "rev": "2d9664bc472bacccd8a005da802ab82530e1e86d",
+        "rev": "78f63d5648fa463cc78af909d9a9509d34a0b59c",
         "type": "github"
       },
       "original": {
@@ -2973,11 +2973,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1702887261,
-        "narHash": "sha256-jBiFE/LceNJy2tlgexHXXSC0rW9okCKRcHPWiwzOjn8=",
+        "lastModified": 1702992436,
+        "narHash": "sha256-57RtTDTHPaGWhfng8wvVMdgouVpRjnqjEvAg/S4k2t0=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "cf042c6f724cb1c2e649c93942e2b2274e628628",
+        "rev": "cc38176cfdacfbd32fb0714fb36cb40e34e9047e",
         "type": "github"
       },
       "original": {
