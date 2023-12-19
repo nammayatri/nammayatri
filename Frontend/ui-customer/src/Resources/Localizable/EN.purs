@@ -664,3 +664,7 @@ getEN stringKey =
         FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "Your fare has been updated as your ride was {} km shorter and wait time charges incurred"
         FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "Your fare has been updated as your ride was {} km longer and wait time charges incurred"
         START_TYPING_TO_SEARCH_PLACES -> "Start typing to search for places"
+        DID_YOU_HAVE_A_SAFE_JOURNEY -> "Did you have a safe journey?"
+        TRIP_WAS_SAFE_AND_WORRY_FREE -> "We would like to ensure that your trip was safe and worry free."
+        DRIVER_BEHAVED_INAPPROPRIATELY -> "The driver behaved inappropriately"
+        I_DID_NOT_FEEL_SAFE -> "I did not feel safe"

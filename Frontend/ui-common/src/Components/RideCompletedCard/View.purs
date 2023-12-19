@@ -28,6 +28,7 @@ import JBridge as JB
 import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude
 import ConfigProvider
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -247,8 +248,12 @@ customerSideBottomCardsView config push =
 ---------------------------------------------------- customerIssueView ------------------------------------------------------------------------------------------------------------------------------------------
 customerIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerIssueView config push =
-  scrollView [
-    width MATCH_PARENT 
+  let
+  showOptions =  boolToVisibility $ (config.customerIssueCard.selectedYesNoButton == boolToInt config.customerIssueCard.isNightRide) && not config.customerIssueCard.wasOfferedAssistanceCardView
+  lineVisibility index = boolToVisibility $ index == 0 && config.customerIssueCard.showCallSupport
+  in
+  (if os == "IOS" then linearLayout else scrollView) 
+  [ width MATCH_PARENT 
   , height WRAP_CONTENT
   , visibility $ boolToVisibility (config.customerIssueCard.issueFaced || config.customerIssueCard.wasOfferedAssistanceCardView)
   ][
@@ -268,7 +273,7 @@ customerIssueView config push =
         , gravity CENTER
         , margin $ MarginTop 15
         , orientation VERTICAL
-        , visibility $ boolToVisibility (config.customerIssueCard.selectedYesNoButton == 0 && not config.customerIssueCard.wasOfferedAssistanceCardView)
+        , visibility showOptions
         ](mapWithIndex (\ index item ->
             linearLayout
             [ height WRAP_CONTENT
@@ -297,9 +302,9 @@ customerIssueView config push =
                 , height $ V 1
                 , background Color.grey900
                 , margin $ MarginBottom 15
-                , visibility if index == 0 then VISIBLE else GONE
+                , visibility $ lineVisibility index
                 ][]
-            ]) [config.customerIssueCard.option1Text, config.customerIssueCard.option2Text])
+            ]) ([config.customerIssueCard.option1Text] <> if config.customerIssueCard.showCallSupport then [config.customerIssueCard.option2Text] else []))
     ]
   ]
 
@@ -336,16 +341,19 @@ yesNoRadioButton config push =
 ------------------------------------------- customerRatingDriverView -------------------------------------------------------------------------------------------------------------------------------------------------------------
 customerRatingDriverView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerRatingDriverView config push =
+  let 
+  ratingVisibility = boolToVisibility $ config.customerBottomCard.visible && not config.customerIssueCard.wasOfferedAssistanceCardView
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
+  , visibility ratingVisibility
   , cornerRadius 8.0
   , stroke $ "1,"<>Color.grey800
   , padding $ Padding 10 10 10 10
   , margin $ MarginBottom 24
   , gravity CENTER
-  , visibility $ boolToVisibility (not config.customerIssueCard.wasOfferedAssistanceCardView)
   ][ imageView [
       imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_driver_avatar"
       , height $ V 56

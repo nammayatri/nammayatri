@@ -195,8 +195,9 @@ config =
           background : "#00FFFFFF"
         , textColor : "#A7A7A7"
         }                     
+      }
+     , showCallSupport : false
     }
-  }
   , mapConfig : 
       { locateOnMapConfig : 
           { dottedLineConfig : 

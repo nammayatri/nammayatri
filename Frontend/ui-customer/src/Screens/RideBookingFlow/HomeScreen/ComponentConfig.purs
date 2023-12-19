@@ -182,7 +182,6 @@ getDistanceString currDistance initDistance zoneType
 skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
-    issueFaced =  state.data.ratingViewState.issueFacedView
     config = PrimaryButton.config
     primaryButtonConfig' =
       config
@@ -195,12 +194,18 @@ skipButtonConfig state =
         , margin = MarginTop 22
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
-        , visibility = boolToVisibility (state.data.ratingViewState.doneButtonVisibility || not state.props.showOfferedAssistancePopUp)
+        , visibility = boolToVisibility $ doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
         , isClickable = issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
         , alpha = if issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
         }
   in
     primaryButtonConfig'
+  where 
+      issueFaced =  state.data.ratingViewState.issueFacedView
+      showOfferedAssistancePopUp = state.props.showOfferedAssistancePopUp
+      doneButtonVisibility = case issueFaced, showOfferedAssistancePopUp of 
+                                  false, false -> true
+                                  _, _ -> false
 
 getSelectedYesNoButton :: ST.HomeScreenState -> Int
 getSelectedYesNoButton state = state.data.ratingViewState.selectedYesNoButton
@@ -406,7 +411,7 @@ reportIssuePopUpConfig state =
     reportIssueConfig = CancelRidePopUpConfig.config
     reportIssueConfig' =
       reportIssueConfig
-        { selectionOptions = reportIssueOptions state
+        { selectionOptions = options
         , primaryButtonTextConfig
           { firstText = getString GO_BACK_
           , secondText = getString SUBMIT
@@ -433,6 +438,7 @@ reportIssuePopUpConfig state =
         }
   in
     reportIssueConfig'
+  where options = if state.props.nightSafetyFlow then safetyIssueOptions FunctionCall else reportIssueOptions state
 
 logOutPopUpModelConfig :: ST.HomeScreenState -> PopUpModal.Config
 logOutPopUpModelConfig state =
@@ -1287,6 +1293,7 @@ rideCompletedCardConfig state =
   let topCardConfig = state.data.config.rideCompletedCardConfig.topCard
       topCardGradient = if topCardConfig.enableGradient then [state.data.config.primaryBackground, state.data.config.primaryBackground, topCardConfig.gradient, state.data.config.primaryBackground] else [topCardConfig.background,topCardConfig.background]
       waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
+      headerConfig = mkHeaderConfig state.props.nightSafetyFlow state.props.showOfferedAssistancePopUp
   in RideCompletedCard.config {
         isDriver = false,
         customerIssueCard{
@@ -1294,13 +1301,15 @@ rideCompletedCardConfig state =
           issueFaced = state.data.ratingViewState.issueFacedView,
           selectedYesNoButton = state.data.ratingViewState.selectedYesNoButton,
           reportIssuePopUpConfig = reportIssuePopUpConfig state,
-          title = if state.props.showOfferedAssistancePopUp then (getString DID_THE_DRIVER_OFFER_ASSISTANCE) else (getString DID_YOU_FACE_ANY_ISSUE),
-          subTitle = if state.props.showOfferedAssistancePopUp then (getString WAS_THE_DRIVER_UNDERSTANDING_OF_YOUR_NEEDS) else (getString WE_NOTICED_YOUR_RIDE_ENDED_AWAY),
+          title = headerConfig.title,
+          subTitle = headerConfig.subTitle,
           option1Text = getString REPORT_ISSUE_,
           option2Text = getString GET_CALLBACK_FROM_US,
           yesText = getString YES,
           noText = getString NO,
-          wasOfferedAssistanceCardView = state.props.showOfferedAssistancePopUp
+          wasOfferedAssistanceCardView = state.props.showOfferedAssistancePopUp && not state.props.nightSafetyFlow,
+          isNightRide = state.props.nightSafetyFlow,
+          showCallSupport = state.data.config.rideCompletedCardConfig.showCallSupport
         },
         topCard {
           title =  getString RIDE_COMPLETED,
@@ -1323,11 +1332,17 @@ rideCompletedCardConfig state =
           title = getRateYourRideString (getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName,
           subTitle = (getString $ YOUR_FEEDBACK_HELPS_US "YOUR_FEEDBACK_HELPS_US"),
           selectedRating = state.data.ratingViewState.selectedRating,
-          visible = true
+          visible = not state.data.ratingViewState.issueFacedView
         },
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.feature.enableSupport
       }
+  where 
+    mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}
+    mkHeaderConfig isNightSafety offeredAssistance = case isNightSafety, offeredAssistance of
+                                                      true,_ -> {title : getString DID_YOU_HAVE_A_SAFE_JOURNEY, subTitle : getString TRIP_WAS_SAFE_AND_WORRY_FREE}
+                                                      _,true -> {title : getString DID_THE_DRIVER_OFFER_ASSISTANCE, subTitle : getString WAS_THE_DRIVER_UNDERSTANDING_OF_YOUR_NEEDS}
+                                                      _,_ -> {title : getString DID_YOU_FACE_ANY_ISSUE, subTitle : getString WE_NOTICED_YOUR_RIDE_ENDED_AWAY} 
 
 getFareUpdatedStr :: Int -> Boolean -> String
 getFareUpdatedStr diffInDist waitingChargeApplied = do
@@ -1424,6 +1439,25 @@ getCarouselData state =
         {image : "ny_ic_locomotor_arrival" , videoLink : "" , videoHeight :  0, imageHeight :  160, imageBgColor :  Color.blue600, title :   (getString EDUCATIONAL_POP_UP_SLIDE_4_TITLE) , description :  (getString EDUCATIONAL_POP_UP_SLIDE_4_SUBTITLE) , descTextSize : 12, carouselBgColor :  Color.grey700, gravity : 0},
         {image : "ny_ic_disability_illustration" , videoLink : "" , videoHeight :  0, imageHeight :  160, imageBgColor :  Color.white900, title :   (getString EDUCATIONAL_POP_UP_SLIDE_5_TITLE) , description :  (getString EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE) , descTextSize : 12 ,carouselBgColor :  Color.grey700, gravity : 0}
       ]
+
+safetyIssueOptions :: LazyCheck -> Array OptionButtonList 
+safetyIssueOptions dummy =
+  [ { reasonCode: "DRIVER_BEHAVED_INAPPROPRIATELY"
+    , description: getString DRIVER_BEHAVED_INAPPROPRIATELY
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  , { reasonCode: "I_DID_NOT_FEEL_SAFE"
+    , description: getString I_DID_NOT_FEEL_SAFE
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  , { reasonCode: "OTHER"
+    , description: getString OTHER
+    , textBoxRequired : false
+    , subtext : Nothing
+    }
+  ]
 
 setSelectedEstimatesObject :: Encode ChooseVehicle.Config => ChooseVehicle.Config -> Effect Unit
 setSelectedEstimatesObject object = void $ pure $ setValueToLocalStore ESTIMATE_DATA (encodeJSON object)

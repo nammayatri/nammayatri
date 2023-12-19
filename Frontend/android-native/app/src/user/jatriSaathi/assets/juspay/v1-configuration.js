@@ -86,6 +86,9 @@ window.getMerchantConfig = function () {
     "primaryButtonCornerRadius" : 8.0,
     "cancelSearchTextColor": "#E55454",
     "dashboardUrl" : "https://yatrisathi.in/open/?source=in-app",
+    "rideCompletedCardConfig" : {
+      "showCallSupport" : true
+    },
     "quoteListItemConfig": {
       "primaryButtonCorner": 8.0,
       "expiresColor" : "#E55454",

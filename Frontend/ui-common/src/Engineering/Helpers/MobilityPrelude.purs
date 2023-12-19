@@ -56,6 +56,9 @@ spaceSeparatedPascalCase inputStr =
   where 
     capitalize' :: String -> String
     capitalize' str = capitalize $ toLower str <> " "
+
+boolToInt :: Boolean -> Int
+boolToInt bool = if bool then 1 else 0
   
 caseInsensitiveCompare :: String -> String -> Boolean
 caseInsensitiveCompare str1 str2 = 

@@ -225,6 +225,7 @@ type Features = {
 
 type RideCompletedCardConfig = {
   topCard :: TopCardConfig
+, showCallSupport :: Boolean
 }
 
 type TopCardConfig = {

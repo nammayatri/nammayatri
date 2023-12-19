@@ -28,7 +28,7 @@ import Types.App (GlobalState(..))
 import Data.Either (Either(..))
 import Services.API
 import Data.Array (null, head, length, (!!))
-import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe')
+import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe', maybe)
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Data.Lens ((^.))
@@ -117,10 +117,14 @@ checkRideStatus rideAssigned = do
               else pure unit
             when (isNothing currRideListItem.rideRating) $ do
               when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
+                let nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
                           , estimatedDistance = contents.estimatedDistance
-                          , zoneType = getSpecialTag resp.specialLocationTag}
+                          , zoneType = getSpecialTag resp.specialLocationTag
+                          , nightSafetyFlow = nightSafetyFlow
+                          , showOfferedAssistancePopUp = resp.hasDisability == Just true
+                          }
                   , data { rideRatingState
                           { driverName = currRideListItem.driverName
                           , rideId = currRideListItem.id
@@ -153,7 +157,7 @@ checkRideStatus rideAssigned = do
                             price = resp.estimatedTotalFare,
                             rideId = currRideListItem.id
                           }
-                          , ratingViewState { rideBookingRes = (RideBookingRes resp)}
+                          , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}
                           }
                 })
                 updateLocalStage RideCompleted
@@ -178,3 +182,9 @@ getFlowStatusData dummy =
   case runExcept (decodeJSON (getValueToLocalStore FLOW_STATUS_DATA) :: _ FlowStatusData) of
     Right res -> Just res
     Left err -> Nothing
+
+showNightSafetyFlow :: Maybe Boolean -> Maybe String -> Maybe String -> Boolean
+showNightSafetyFlow hasNightIssue rideStartTime rideEndTime = not (fromMaybe true hasNightIssue) && (isNightRide rideStartTime || isNightRide rideEndTime)
+
+isNightRide :: Maybe String -> Boolean
+isNightRide = maybe false (\time -> withinTimeRange "21:00:00" "06:00:00" $ convertUTCtoISC time "HH:mm:ss")

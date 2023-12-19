@@ -664,3 +664,7 @@ getHI stringKey =
         FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "आपका किराया अपडेट कर दिया गया है क्योंकि आपकी सवारी {} किमी छोटी थी और प्रतीक्षा समय का शुल्क लगा था"
         FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "आपका किराया अपडेट कर दिया गया है क्योंकि आपकी सवारी {} किमी लंबी थी और प्रतीक्षा समय का शुल्क लगा था"
         START_TYPING_TO_SEARCH_PLACES -> "स्थान खोजने के लिए टाइप करना प्रारंभ करें"
+        DID_YOU_HAVE_A_SAFE_JOURNEY -> "क्या आपकी यात्रा सुरक्षित रही?"
+        TRIP_WAS_SAFE_AND_WORRY_FREE -> "हम यह सुनिश्चित करना चाहेंगे कि आपकी यात्रा सुरक्षित और चिंता मुक्त हो।"
+        DRIVER_BEHAVED_INAPPROPRIATELY -> "ड्राइवर ने अनुचित व्यवहार किया"
+        I_DID_NOT_FEEL_SAFE -> "मैं सुरक्षित महसूस नहीं कर रहा था"
