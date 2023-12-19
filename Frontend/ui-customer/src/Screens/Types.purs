@@ -738,6 +738,7 @@ type HomeScreenStateProps =
   , repeatRideTimer :: String
   , repeatRideTimerId :: String
   , showShimmer :: Boolean
+  , nightSafetyFlow :: Boolean 
   }
 
 type SearchLocationModelProps = {

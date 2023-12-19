@@ -766,14 +766,15 @@ normalRoute _ = {
 }
 
 
-makeSendIssueReq :: Maybe String ->  Maybe String -> String -> String -> SendIssueReq
-makeSendIssueReq email bookingId reason description= SendIssueReq {
+makeSendIssueReq :: Maybe String ->  Maybe String -> String -> String -> Maybe Boolean -> SendIssueReq
+makeSendIssueReq email bookingId reason description nightSafety = SendIssueReq {
     "contactEmail" : email ,
     "rideBookingId" : bookingId ,
     "issue" : Issue {
             "reason" : reason,
             "description" : description
-        }
+        },
+    "nightSafety" : nightSafety
 }
 
 originServiceabilityBT :: ServiceabilityReq -> FlowBT String ServiceabilityRes

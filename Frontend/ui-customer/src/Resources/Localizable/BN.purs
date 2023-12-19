@@ -664,3 +664,7 @@ getBN stringKey =
         FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "আপনার ভাড়া আপডেট করা হয়েছে কারণ আপনার রাইড {} কিমি কম ছিল এবং অপেক্ষার সময় চার্জ নেওয়া হয়েছে"
         FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "আপনার ভাড়া আপডেট করা হয়েছে কারণ আপনার যাত্রা {} কিমি দীর্ঘ ছিল এবং অপেক্ষার সময় চার্জ নেওয়া হয়েছে"
         START_TYPING_TO_SEARCH_PLACES -> "স্থানগুলি অনুসন্ধান করতে টাইপ করা শুরু করুন৷"
+        DID_YOU_HAVE_A_SAFE_JOURNEY -> "আপনি একটি নিরাপদ যাত্রা আছে?"
+        TRIP_WAS_SAFE_AND_WORRY_FREE -> "আমরা নিশ্চিত করতে চাই যে আপনার ভ্রমণ নিরাপদ এবং দুশ্চিন্তামুক্ত।"
+        DRIVER_BEHAVED_INAPPROPRIATELY -> "চালক অশালীন আচরণ করেন"
+        I_DID_NOT_FEEL_SAFE -> "আমি নিরাপদ বোধ করিনি"

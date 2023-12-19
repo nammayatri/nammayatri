@@ -664,3 +664,7 @@ getFR stringKey =
         FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "Votre tarif a été mis à jour car votre trajet était plus court de {} km et des frais de temps d'attente ont été engagés"
         FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "Votre tarif a été mis à jour car votre trajet était plus long de {} km et des frais de temps d'attente ont été engagés"
         START_TYPING_TO_SEARCH_PLACES -> "Commencez à taper pour rechercher des lieux"
+        DID_YOU_HAVE_A_SAFE_JOURNEY -> "Avez-vous fait un bon voyage ?"
+        TRIP_WAS_SAFE_AND_WORRY_FREE -> "Nous aimerions nous assurer que votre voyage se déroule en toute sécurité et sans souci."
+        DRIVER_BEHAVED_INAPPROPRIATELY -> "Le conducteur s'est comporté de manière inappropriée"
+        I_DID_NOT_FEEL_SAFE -> "je ne me sentais pas en sécurité"

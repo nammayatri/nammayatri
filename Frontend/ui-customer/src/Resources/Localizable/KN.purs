@@ -665,3 +665,7 @@ getKN stringKey =
         FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "ನಿಮ್ಮ ಪ್ರಯಾಣವು {} ಕಿಮೀ ಕಡಿಮೆಯಾದ್ದರಿಂದ ನಿಮ್ಮ ದರವನ್ನು ಅಪ್‌ಡೇಟ್ ಮಾಡಲಾಗಿದೆ ಮತ್ತು ಕಾಯುವ ಸಮಯದ ಶುಲ್ಕಗಳು"
         FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "ನಿಮ್ಮ ಪ್ರಯಾಣವು {} ಕಿಮೀ ಉದ್ದವಿರುವುದರಿಂದ ನಿಮ್ಮ ದರವನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ ಮತ್ತು ಕಾಯುವ ಸಮಯದ ಶುಲ್ಕಗಳು"
         START_TYPING_TO_SEARCH_PLACES -> "ಸ್ಥಳಗಳನ್ನು ಹುಡುಕಲು ಟೈಪ್ ಮಾಡಲು ಪ್ರಾರಂಭಿಸಿ"
+        DID_YOU_HAVE_A_SAFE_JOURNEY -> "ನೀವು ಸುರಕ್ಷಿತ ಪ್ರಯಾಣವನ್ನು ಹೊಂದಿದ್ದೀರಾ?"
+        TRIP_WAS_SAFE_AND_WORRY_FREE -> "ನಿಮ್ಮ ಪ್ರವಾಸವು ಸುರಕ್ಷಿತವಾಗಿದೆ ಮತ್ತು ಚಿಂತೆಯಿಲ್ಲ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಲು ನಾವು ಬಯಸುತ್ತೇವೆ."
+        DRIVER_BEHAVED_INAPPROPRIATELY -> "ಚಾಲಕ ಅನುಚಿತವಾಗಿ ವರ್ತಿಸಿದ್ದಾನೆ"
+        I_DID_NOT_FEEL_SAFE -> "ನನಗೆ ಸುರಕ್ಷಿತ ಅನಿಸಲಿಲ್ಲ"

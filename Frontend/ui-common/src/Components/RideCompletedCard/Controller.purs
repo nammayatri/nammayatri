@@ -104,6 +104,8 @@ config = {
     option2Text : "",
     yesText : "",
     noText : "",
+    isNightRide : false,
+    showCallSupport : false,
     wasOfferedAssistanceCardView : false
   },
   customerBottomCard : {
@@ -162,6 +164,8 @@ type CustomerIssueCard = {
   option2Text :: String,
   yesText :: String,
   noText :: String,
+  showCallSupport :: Boolean,
+  isNightRide :: Boolean,
   wasOfferedAssistanceCardView :: Boolean
 }
 

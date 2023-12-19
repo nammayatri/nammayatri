@@ -100,7 +100,7 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm)
+import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm, safetyIssueOptions)
 import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..))
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
@@ -110,6 +110,7 @@ import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
+import Mobility.Prelude (boolToInt)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -745,13 +746,13 @@ eval OnResumeCallback state =
 
 eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = savedLoc}}
 
-eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = do 
-  if state.props.showOfferedAssistancePopUp 
-  then continue state {data { ratingViewState{selectedYesNoButton = index, doneButtonVisibility = true, wasOfferedAssistance = Just (index==0)}}} 
-  else continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == 1 }}}
+eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = 
+  case state.data.ratingViewState.issueFacedView of
+    true -> continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == (boolToInt $ not state.props.nightSafetyFlow)}}}
+    false -> continue state {data { ratingViewState{selectedYesNoButton = index, doneButtonVisibility = true, wasOfferedAssistance = Just (index==0)}}} 
 
 eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
-  _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
+  void $ pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
   continue
     state
       { props { currentStage = RideRating }
@@ -1170,25 +1171,28 @@ eval WhereToClick state = do
   exit $ UpdateSavedLocation updateState 
 
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = 
-  if state.props.showOfferedAssistancePopUp then do
-    void $ pure $ toggleBtnLoader "SkipButton" false
-    continue state {data {ratingViewState {selectedYesNoButton = -1}} , props{showOfferedAssistancePopUp = false}} 
-  else 
-    case state.data.ratingViewState.issueFacedView of
-      true -> do
-              _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-              continue
-                state
-                  { props { currentStage = RideRating }
-                  , data
-                    { rideRatingState =
-                      dummyRideRatingState
-                        { driverName = state.data.driverInfoCardState.driverName
-                        , rideId = state.data.driverInfoCardState.rideId
-                        }
-                    }
+  case state.data.ratingViewState.issueFacedView of
+    true -> do
+            void $ pure $ toggleBtnLoader "SkipButton" false
+            _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
+            continue
+              state
+                { props { nightSafetyFlow = false }
+                , data
+                  { rideRatingState =
+                    dummyRideRatingState
+                      { driverName = state.data.driverInfoCardState.driverName
+                      , rideId = state.data.driverInfoCardState.rideId
+                      },
+                    ratingViewState {issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1, doneButtonVisibility = false}
                   }
-      _ ->  if state.data.ratingViewState.selectedRating > 0 then updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
+                }
+    false ->  
+      if state.props.showOfferedAssistancePopUp then do
+        void $ pure $ toggleBtnLoader "SkipButton" false
+        continue state {data {ratingViewState {selectedYesNoButton = -1, doneButtonVisibility = false}} , props{showOfferedAssistancePopUp = false}} 
+      else 
+        if state.data.ratingViewState.selectedRating > 0 then updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
             else do
               _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
               _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
@@ -1391,10 +1395,10 @@ eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.On
 eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index))) state = continue state { data { ratingViewState { issueReportActiveIndex = Just index} } }
 
 eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick))) state = do
-  let issue = (reportIssueOptions state)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
-  let reason = (fromMaybe dummyCancelReason issue).description
+  let issue = (if state.props.nightSafetyFlow then safetyIssueOptions FunctionCall else reportIssueOptions state)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
+      reason = (fromMaybe dummyCancelReason issue)
   exit $ ReportIssue state { data {
-    ratingViewState { issueReason = Just reason, issueDescription = reason},
+    ratingViewState { issueReason = Just reason.reasonCode, issueDescription = reason.description},
     rideRatingState {rideId = state.data.driverInfoCardState.rideId, feedback = ""}
     }}
 
