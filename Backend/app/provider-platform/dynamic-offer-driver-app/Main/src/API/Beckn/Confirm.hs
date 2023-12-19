@@ -83,34 +83,38 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandler
             let booking = dConfirmRes.booking
             fork "on_confirm/on_update" $ do
               handle (errHandler dConfirmRes transporter (Just driver)) $ do
-                context <- case req of
-                  Left reqV1 -> pure $ reqV1.context
-                  Right reqV2 -> pure $ reqV2.context
+                (bapUri, bapId, msgId, city, country, txnId) <- case req of
+                  Left reqV1 ->
+                    pure (reqV1.context.bap_uri, reqV1.context.bap_id, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id)
+                  Right reqV2 ->
+                    pure (reqV2.context.bap_uri, reqV2.context.bap_id, reqV2.context.message_id, reqV2.context.location.city.code, reqV2.context.location.country.code, reqV2.context.transaction_id)
                 isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
                 if isBecknSpecVersion2
                   then do
                     onConfirmMessage <- ACL.buildOnConfirmMessageV2 dConfirmRes
-                    void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage
+                    void $ BP.callOnConfirmV2 dConfirmRes.transporter bapUri bapId msgId city country txnId onConfirmMessage
                     void $ BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
                   else do
                     onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
-                    void $ BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+                    void $ BP.callOnConfirm dConfirmRes.transporter bapUri bapId msgId city country txnId onConfirmMessage
                     void $ BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
             DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
           DBooking.SpecialZoneBooking -> do
             fork "on_confirm/on_update" $ do
               handle (errHandler' dConfirmRes transporter) $ do
-                context <- case req of
-                  Left reqV1 -> pure $ reqV1.context
-                  Right reqV2 -> pure $ reqV2.context
+                (bapUri, bapId, msgId, city, country, txnId) <- case req of
+                  Left reqV1 ->
+                    pure (reqV1.context.bap_uri, reqV1.context.bap_id, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id)
+                  Right reqV2 ->
+                    pure (reqV2.context.bap_uri, reqV2.context.bap_id, reqV2.context.message_id, reqV2.context.location.city.code, reqV2.context.location.country.code, reqV2.context.transaction_id)
                 isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
                 if isBecknSpecVersion2
                   then do
                     onConfirmMessage <- ACL.buildOnConfirmMessageV2 dConfirmRes
-                    void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage
+                    void $ BP.callOnConfirmV2 dConfirmRes.transporter bapUri bapId msgId city country txnId onConfirmMessage
                   else do
                     onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
-                    void $ BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+                    void $ BP.callOnConfirm dConfirmRes.transporter bapUri bapId msgId city country txnId onConfirmMessage
   pure Ack
   where
     errHandler dConfirmRes transporter driver exc

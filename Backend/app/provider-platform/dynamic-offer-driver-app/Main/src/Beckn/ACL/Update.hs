@@ -17,11 +17,12 @@ module Beckn.ACL.Update (buildUpdateReqV1, buildUpdateReqV2) where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.Update as Update
 import qualified Beckn.Types.Core.Taxi.Update as Update
+import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent as Update
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent as Update
 import qualified Domain.Action.Beckn.Update as DUpdate
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import EulerHS.Prelude hiding (state)
-import Kernel.Product.Validation.Context (validateContext)
+import Kernel.Product.Validation.Context (validateContext, validateContextV2)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
@@ -43,13 +44,13 @@ buildUpdateReqV1 subscriber req = do
   pure $ parseEvent req.message.order
 
 buildUpdateReqV2 ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text]
+  ( HasFlowEnv m r '["_version" ::: Text]
   ) =>
   Subscriber.Subscriber ->
   Update.UpdateReqV2 ->
   m DUpdate.DUpdateReq
 buildUpdateReqV2 subscriber req = do
-  validateContext Context.UPDATE $ req.context
+  validateContextV2 Context.UPDATE $ req.context
   unless (subscriber.subscriber_id == req.context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == req.context.bap_uri) $
@@ -83,6 +84,17 @@ parseEventV2 (Update.PaymentCompletedV2 pcEvent) =
           rideId = Id fulfillment.id,
           paymentStatus = castPaymentStatus payment.status,
           paymentMethodInfo = mkPaymentMethodInfoV2 payment
+        }
+parseEventV2 (Update.EditLocationV2 elEvent) =
+  let maybeFulfillment = safeHead $ elEvent.fulfillments
+      fulfillment = fromMaybe (error "Missing fulfillments") maybeFulfillment
+      mbStart = find (\stop -> stop.stopType == Update.START) fulfillment.stops
+      mbEnd = find (\stop -> stop.stopType == Update.END) fulfillment.stops
+   in DUpdate.EditLocationReq
+        { bookingId = Id elEvent.id,
+          rideId = Id fulfillment.id,
+          origin = fmap (.location) mbStart,
+          destination = fmap (.location) mbEnd
         }
 
 mkPaymentMethodInfo :: Update.Payment -> DMPM.PaymentMethodInfo

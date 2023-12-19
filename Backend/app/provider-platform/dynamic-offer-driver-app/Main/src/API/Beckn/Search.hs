@@ -33,8 +33,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
-import Tools.Error (GenericError (InvalidRequest))
 import Storage.Beam.SystemConfigs ()
+import Tools.Error (GenericError (InvalidRequest))
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -71,18 +71,22 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
       Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
         dSearchRes <- DSearch.handler merchant dSearchReq
         let callbackUrl = gateway.subscriber_url
-          internalEndPointHashMap <- asks (.internalEndPointHashMap)
-        context <- case req of
-          Left reqV1 -> pure $ reqV1.context
-          Right reqV2 -> pure $ reqV2.context
+        (bapUri, bapId, msgId, city, country, txnId, bppId, bppUri) <- case req of
+          Left reqV1 -> do
+            pure (reqV1.context.bap_uri, reqV1.context.bap_id, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id, reqV1.context.bpp_id, reqV1.context.bpp_uri)
+          Right reqV2 ->
+            pure (reqV2.context.bap_uri, reqV2.context.bap_id, reqV2.context.message_id, reqV2.context.location.city.code, reqV2.context.location.country.code, reqV2.context.transaction_id, reqV2.context.bpp_id, reqV2.context.bpp_uri)
+        internalEndPointHashMap <- asks (.internalEndPointHashMap)
         isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
         if isBecknSpecVersion2
           then do
+            context <- buildTaxiContextV2 Context.ON_SELECT msgId txnId bapId bapUri bppId bppUri city country
             logTagInfo "SearchV2 API Flow" "Sending OnSearch"
             void $
-              CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPIV2 context callbackUrl $ do
+              CallBAP.withCallbackV2 dSearchRes.provider Context.SEARCH OnSearch.onSearchAPIV2 context callbackUrl internalEndPointHashMap $ do
                 pure $ ACL.mkOnSearchMessageV2 dSearchRes
           else do
+            context <- buildTaxiContext Context.ON_SELECT msgId txnId bapId bapUri bppId bppUri city country False
             logTagInfo "Search API Flow" "Sending OnSearch"
             void $
               CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPIV1 context callbackUrl internalEndPointHashMap $ do

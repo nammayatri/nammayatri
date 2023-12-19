@@ -105,6 +105,7 @@ callOnSelect transporter searchRequest searchTry content = do
 
 callOnSelectV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c
@@ -120,10 +121,11 @@ callOnSelectV2 transporter searchRequest searchTry content = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
   let msgId = searchTry.estimateId.getId
-  context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False
+  context <- buildTaxiContextV2 Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry)
   logDebug $ "on_selectV2 request bpp: " <> show content
-  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (BecknCallbackReq context $ Right content)
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (BecknCallbackReqV2 context $ Right content)
 
 callOnUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -151,6 +153,7 @@ callOnUpdate transporter bapId bapUri bapCity bapCountry transactionId content r
 
 callOnUpdateV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     CoreMetrics m,
     HasHttpClientOptions r c
   ) =>
@@ -168,8 +171,9 @@ callOnUpdateV2 transporter bapId bapUri bapCity bapCountry transactionId content
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   msgId <- generateGUID
-  context <- buildTaxiContext Context.ON_UPDATE msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city bapCity) (fromMaybe Context.India bapCountry) False
-  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap (BecknCallbackReq context $ Right content)
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  context <- buildTaxiContextV2 Context.ON_UPDATE msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city bapCity) (fromMaybe Context.India bapCountry)
+  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPIV2 bapUri internalEndPointHashMap (BecknCallbackReqV2 context $ Right content)
 
 callOnConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -179,43 +183,45 @@ callOnConfirm ::
     CoreMetrics m
   ) =>
   DM.Merchant ->
-  Context.Context ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Context.City ->
+  Context.Country ->
+  Maybe Text ->
   OnConfirm.OnConfirmMessage ->
   m ()
-callOnConfirm transporter contextFromConfirm content = do
-  let bapUri = contextFromConfirm.bap_uri
-      bapId = contextFromConfirm.bap_id
-      msgId = contextFromConfirm.message_id
-      city = contextFromConfirm.city
-      country = contextFromConfirm.country
-      bppSubscriberId = getShortId $ transporter.subscriberId
+callOnConfirm transporter bapUri bapId msgId city country txnId content = do
+  let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
+  context_ <- buildTaxiContext Context.ON_CONFIRM msgId txnId bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV1 bapUri internalEndPointHashMap (BecknCallbackReq context_ $ Right content)
 
 callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m
   ) =>
   DM.Merchant ->
-  Context.Context ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Context.City ->
+  Context.Country ->
+  Maybe Text ->
   OnConfirm.OnConfirmMessageV2 ->
   m ()
-callOnConfirmV2 transporter contextFromConfirm content = do
-  let bapUri = contextFromConfirm.bap_uri
-      bapId = contextFromConfirm.bap_id
-      msgId = contextFromConfirm.message_id
-      city = contextFromConfirm.city
-      country = contextFromConfirm.country
-      bppSubscriberId = getShortId $ transporter.subscriberId
+callOnConfirmV2 transporter bapUri bapId msgId city country txnId content = do
+  let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
-  context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
-  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (BecknCallbackReq context_ $ Right content)
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  context_ <- buildTaxiContextV2 Context.ON_CONFIRM msgId txnId bapId bapUri (Just bppSubscriberId) (Just bppUri) city country
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (BecknCallbackReqV2 context_ $ Right content)
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -226,7 +232,7 @@ buildBppUrl (Id transporterId) =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
-sendRideAssignedUpdateToBAP :: -- TODO : should handle both V1 and V2
+sendRideAssignedUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
@@ -302,7 +308,7 @@ sendRideAssignedUpdateToBAP booking ride = do
           Redis.setExp refillKey True 86400
           pure newVehicle
 
-sendRideStartedUpdateToBAP :: -- TODO : should handle both V1 and V2
+sendRideStartedUpdateToBAP ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -331,7 +337,7 @@ sendRideStartedUpdateToBAP booking ride = do
     then void $ callOnUpdateV2 transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideStartedMsgV2 retryConfig
     else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideStartedMsg retryConfig
 
-sendRideCompletedUpdateToBAP :: -- TODO : should handle both V1 and V2
+sendRideCompletedUpdateToBAP ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -362,7 +368,7 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
     then void $ callOnUpdateV2 transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideCompletedMsgV2 retryConfig
     else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideCompletedMsg retryConfig
 
-sendBookingCancelledUpdateToBAP :: -- TODO : should handle both V1 and V2
+sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -434,7 +440,7 @@ sendDriverOffer transporter searchReq searchTry driverQuote = do
             searchRequest
           }
 
-sendDriverArrivalUpdateToBAP :: -- TODO : should handle both V1 and V2
+sendDriverArrivalUpdateToBAP ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -464,7 +470,7 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
     then void $ callOnUpdateV2 transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId driverArrivedMsgV2 retryConfig
     else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId driverArrivedMsg retryConfig
 
-sendNewMessageToBAP :: -- TODO : should handle both V1 and V2
+sendNewMessageToBAP ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -494,7 +500,7 @@ sendNewMessageToBAP booking ride message = do
     then void $ callOnUpdateV2 transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId newMessageMsgV2 retryConfig
     else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId newMessageMsg retryConfig
 
-sendAlertToBAP :: -- TODO : should handle both V1 and V2
+sendAlertToBAP ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
@@ -522,7 +528,7 @@ sendAlertToBAP booking ride reason = do
     then void $ callOnUpdateV2 transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId safetyAlertMsgV2 retryConfig
     else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId safetyAlertMsg retryConfig
 
-sendEstimateRepetitionUpdateToBAP :: -- TODO : should handle both V1 and V2
+sendEstimateRepetitionUpdateToBAP ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,

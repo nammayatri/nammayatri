@@ -64,7 +64,7 @@ buildSelectReqV1 subscriber req = do
       }
 
 buildSelectReqV2 ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text],
+  ( HasFlowEnv m r '["_version" ::: Text],
     CoreMetrics m
   ) =>
   Subscriber.Subscriber ->
@@ -72,7 +72,7 @@ buildSelectReqV2 ::
   m DSelect.DSelectReq
 buildSelectReqV2 subscriber req = do
   let context = req.context
-  validateContext Context.SELECT context
+  validateContextV2 Context.SELECT context
   now <- getCurrentTime
   let order = req.message.order
   unless (subscriber.subscriber_id == context.bap_id) $
@@ -95,7 +95,7 @@ buildSelectReqV2 subscriber req = do
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         pickupTime = now,
-        autoAssignEnabled = isJust context.max_callbacks && (fromMaybe 0 context.max_callbacks == 1),
+        autoAssignEnabled = False, -- shrey00 TODO: need to handle this conditon
         customerExtraFee = customerExtraFee,
         estimateId = Id fulfillment.id
       }

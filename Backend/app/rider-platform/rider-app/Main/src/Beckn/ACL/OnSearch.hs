@@ -28,7 +28,7 @@ import EulerHS.Prelude hiding (find, id, map, readMaybe, state, unpack)
 import GHC.Float (int2Double)
 -- import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
-import Kernel.Product.Validation.Context (validateContext)
+import Kernel.Product.Validation.Context (validateContext, validateContextV2)
 -- import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
@@ -57,13 +57,13 @@ buildOnSearchReq req = do
       pure Nothing
 
 buildOnSearchReqV2 ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text],
+  ( HasFlowEnv m r '["_version" ::: Text],
     EsqDBFlow m r
   ) =>
-  BecknCallbackReq OnSearch.OnSearchMessageV2 ->
+  BecknCallbackReqV2 OnSearch.OnSearchMessageV2 ->
   m (Maybe DOnSearch.DOnSearchReq)
 buildOnSearchReqV2 req = do
-  validateContext Context.ON_SEARCH $ req.context
+  validateContextV2 Context.ON_SEARCH req.context
   logOnSearchEventV2 req
   case req.contents of
     Right msg -> do
@@ -96,7 +96,7 @@ searchCbService context catalog = do
         ..
       }
 
-searchCbServiceV2 :: MonadFlow m => Context.Context -> OnSearch.CatalogV2 -> m DOnSearch.DOnSearchReq
+searchCbServiceV2 :: MonadFlow m => Context.ContextV2 -> OnSearch.CatalogV2 -> m DOnSearch.DOnSearchReq
 searchCbServiceV2 context catalog = do
   providerId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
   providerUrl <- context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_uri")
@@ -135,7 +135,7 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
       OnSearchEvent {..}
 
 logOnSearchEventV2 :: EsqDBFlow m r => OnSearch.OnSearchReqV2 -> m ()
-logOnSearchEventV2 (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
+logOnSearchEventV2 (BecknCallbackReqV2 context (leftToMaybe -> mbErr)) = do
   createdAt <- getCurrentTime
   id <- generateGUID
   bppId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing context.bpp_id")

@@ -48,14 +48,14 @@ buildInitReq res = do
 buildInitReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   SConfirm.DConfirmRes ->
-  m (BecknReq Init.InitMessageV2)
+  m (BecknReqV2 Init.InitMessageV2)
 buildInitReqV2 res = do
   let transactionId = res.searchRequestId.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.INIT res.booking.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.defaultCity res.merchant.country False
+  context <- buildTaxiContextV2 Context.INIT res.booking.id.getId (Just transactionId) res.merchant.bapId bapUrl (Just res.providerId) (Just res.providerUrl) res.merchant.defaultCity res.merchant.country
   initMessage <- buildInitMessageV2 res
-  pure $ BecknReq context initMessage
+  pure $ BecknReqV2 context initMessage
 
 buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessage
 buildInitMessage res = do

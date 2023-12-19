@@ -26,7 +26,7 @@ import qualified Kernel.Utils.Schema as S
 
 data UpdateEventV2
   = PaymentCompletedV2 PaymentCompletedEventV2
-    | EditLocationV2 EditLocationEventV2
+  | EditLocationV2 EditLocationEventV2
   deriving (Generic, Show)
 
 instance ToJSON UpdateEventV2 where

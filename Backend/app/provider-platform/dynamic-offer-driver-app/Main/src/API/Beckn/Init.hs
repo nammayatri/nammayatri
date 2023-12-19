@@ -69,17 +69,21 @@ init transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBec
     fork "init request processing" $ do
       Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
         dInitRes <- DInit.handler transporterId dInitReq validatedRes
-          internalEndPointHashMap <- asks (.internalEndPointHashMap)
-        context <- case req of
-          Left reqV1 -> pure $ reqV1.context
-          Right reqV2 -> pure $ reqV2.context
+        (bapUri, bapId, msgId, city, country, txnId, bppId, bppUri) <- case req of
+          Left reqV1 -> do
+            pure (reqV1.context.bap_uri, reqV1.context.bap_id, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id, reqV1.context.bpp_id, reqV1.context.bpp_uri)
+          Right reqV2 ->
+            pure (reqV2.context.bap_uri, reqV2.context.bap_id, reqV2.context.message_id, reqV2.context.location.city.code, reqV2.context.location.country.code, reqV2.context.transaction_id, reqV2.context.bpp_id, reqV2.context.bpp_uri)
+        internalEndPointHashMap <- asks (.internalEndPointHashMap)
         isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
         if isBecknSpecVersion2
-          then
+          then do
+            context <- buildTaxiContextV2 Context.ON_SELECT msgId txnId bapId bapUri bppId bppUri city country
             void . handle (errHandler dInitRes.booking) $
-              CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPIV2 context context.bap_uri internalEndPointHashMap $
+              CallBAP.withCallbackV2 dInitRes.transporter Context.INIT OnInit.onInitAPIV2 context context.bap_uri internalEndPointHashMap $
                 pure $ ACL.mkOnInitMessageV2 dInitRes
-          else
+          else do
+            context <- buildTaxiContext Context.ON_SELECT msgId txnId bapId bapUri bppId bppUri city country False
             void . handle (errHandler dInitRes.booking) $
               CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPIV1 context context.bap_uri internalEndPointHashMap $
                 pure $ ACL.mkOnInitMessage dInitRes

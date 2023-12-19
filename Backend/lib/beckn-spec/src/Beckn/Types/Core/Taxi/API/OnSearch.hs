@@ -17,13 +17,13 @@ module Beckn.Types.Core.Taxi.API.OnSearch where
 import Beckn.Types.Core.Taxi.OnSearch
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
-import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq, BecknCallbackReqV2)
 import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnSearchReq = BecknCallbackReq OnSearchMessage
 
-type OnSearchReqV2 = BecknCallbackReq OnSearchMessageV2
+type OnSearchReqV2 = BecknCallbackReqV2 OnSearchMessageV2
 
 type OnSearchRes = AckResponse
 

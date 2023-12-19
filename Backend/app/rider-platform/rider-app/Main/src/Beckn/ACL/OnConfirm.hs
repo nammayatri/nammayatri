@@ -42,12 +42,12 @@ buildOnConfirmReq req = do
         }
 
 buildOnConfirmReqV2 ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text]
+  ( HasFlowEnv m r '["_version" ::: Text]
   ) =>
   OnConfirm.OnConfirmReqV2 ->
   m (Maybe DOnConfirm.OnConfirmReq)
 buildOnConfirmReqV2 req = do
-  validateContext Context.ON_CONFIRM req.context
+  validateContextV2 Context.ON_CONFIRM req.context
   handleErrorV2 req.contents $ \message -> do
     fulfillment <- case message.order.fulfillments of
       [fulfillment] -> pure fulfillment

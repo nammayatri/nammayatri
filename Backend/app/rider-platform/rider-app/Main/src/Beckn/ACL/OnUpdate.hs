@@ -23,9 +23,9 @@ import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
 import Kernel.Prelude (roundToIntegral)
-import Kernel.Product.Validation.Context (validateContext)
+import Kernel.Product.Validation.Context (validateContext, validateContextV2)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq, BecknCallbackReqV2)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Tools.Error (GenericError (InvalidRequest))
@@ -43,13 +43,13 @@ buildOnUpdateReq req = do
     parseEvent transactionId message.order
 
 buildOnUpdateReqV2 ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text],
+  ( HasFlowEnv m r '["_version" ::: Text],
     EsqDBFlow m r
   ) =>
-  BecknCallbackReq OnUpdate.OnUpdateMessageV2 ->
+  BecknCallbackReqV2 OnUpdate.OnUpdateMessageV2 ->
   m (Maybe DOnUpdate.OnUpdateReq)
 buildOnUpdateReqV2 req = do
-  validateContext Context.ON_UPDATE $ req.context
+  validateContextV2 Context.ON_UPDATE $ req.context
   transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "transaction_id is not present.")
   handleErrorV2 req.contents $ \message -> do
     parseEventV2 transactionId message.order

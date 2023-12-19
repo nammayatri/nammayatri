@@ -17,13 +17,13 @@ module Beckn.Types.Core.Taxi.API.Search where
 import Beckn.Types.Core.Taxi.Search (SearchMessage, SearchMessageV2)
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
-import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Types.Beckn.ReqTypes (BecknReq, BecknReqV2)
 import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchReq = BecknReq SearchMessage
 
-type SearchReqV2 = BecknReq SearchMessageV2
+type SearchReqV2 = BecknReqV2 SearchMessageV2
 
 type SearchRes = AckResponse
 

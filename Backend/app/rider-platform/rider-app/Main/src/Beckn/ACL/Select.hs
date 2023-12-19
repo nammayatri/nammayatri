@@ -25,7 +25,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (mkLocation)
 import Tools.Error
 
 buildSelectReq ::
@@ -44,15 +44,15 @@ buildSelectReq dSelectRes = do
 buildSelectReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSelect.DSelectRes ->
-  m (BecknReq Select.SelectMessageV2)
+  m (BecknReqV2 Select.SelectMessageV2)
 buildSelectReqV2 dSelectRes = do
   let messageId = dSelectRes.estimate.bppEstimateId.getId
   let transactionId = dSelectRes.searchRequest.id.getId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack dSelectRes.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.merchant.defaultCity dSelectRes.merchant.country dSelectRes.autoAssignEnabled
+  context <- buildTaxiContextV2 Context.SELECT messageId (Just transactionId) dSelectRes.merchant.bapId bapUrl (Just dSelectRes.providerId) (Just dSelectRes.providerUrl) dSelectRes.merchant.defaultCity dSelectRes.merchant.country
   order <- buildOrderV2 dSelectRes
-  pure $ BecknReq context $ Select.SelectMessageV2 order
+  pure $ BecknReqV2 context $ Select.SelectMessageV2 order
 
 buildOrder :: (Monad m, Log m, MonadThrow m) => DSelect.DSelectRes -> m Select.Order
 buildOrder res = do

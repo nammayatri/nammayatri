@@ -98,7 +98,7 @@ buildSearchReqV1 merchantId subscriber req = do
       }
 
 buildSearchReqV2 ::
-  (HasFlowEnv m r '["coreVersion" ::: Text], CacheFlow m r, EsqDBFlow m r) =>
+  (HasFlowEnv m r '["_version" ::: Text], CacheFlow m r, EsqDBFlow m r) =>
   Id Merchant.Merchant ->
   Subscriber.Subscriber ->
   Search.SearchReqV2 ->
@@ -106,7 +106,7 @@ buildSearchReqV2 ::
 buildSearchReqV2 merchantId subscriber req = do
   now <- getCurrentTime
   let context = req.context
-  validateContext Context.SEARCH context
+  validateContextV2 Context.SEARCH context
   let intent = req.message.intent
   let stops = intent.fulfillment.stops
   pickup <- firstStop stops & fromMaybeM (InvalidRequest "Missing start location in stops")
@@ -143,7 +143,7 @@ buildSearchReqV2 merchantId subscriber req = do
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         bapCity = city,
-        bapCountry = context.country,
+        bapCountry = context.location.country.code,
         pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
         pickupTime = now,
         dropLocation = LatLong {lat = dropOff.location.gps.lat, lon = dropOff.location.gps.lon},

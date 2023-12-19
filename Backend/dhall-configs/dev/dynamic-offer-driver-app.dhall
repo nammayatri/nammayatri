@@ -300,5 +300,6 @@ in  { esqDBCfg
     , modelNamesMap
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap
-    , isBecknSpecVersion2 = False
+    , isBecknSpecVersion2 = True
+    , _version = "2.0.0"
     }

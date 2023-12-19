@@ -32,7 +32,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (mkLocation)
 import qualified Tools.Maps as Maps
 
 buildOneWaySearchReq ::
@@ -60,7 +60,7 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
 buildOneWaySearchReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOneWaySearch.OneWaySearchRes ->
-  m (BecknReq Search.SearchMessageV2)
+  m (BecknReqV2 Search.SearchMessageV2)
 buildOneWaySearchReqV2 DOneWaySearch.OneWaySearchRes {..} =
   buildSearchReqV2
     origin
@@ -102,7 +102,7 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
 buildRentalSearchReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DRentalSearch.RentalSearchRes ->
-  m (BecknReq Search.SearchMessageV2)
+  m (BecknReqV2 Search.SearchMessageV2)
 buildRentalSearchReqV2 DRentalSearch.RentalSearchRes {..} =
   buildSearchReqV2
     origin
@@ -161,17 +161,17 @@ buildSearchReqV2 ::
   Maybe [Maps.LatLong] ->
   Maybe Text ->
   Maybe Bool ->
-  m (BecknReq Search.SearchMessageV2)
+  m (BecknReqV2 Search.SearchMessageV2)
 buildSearchReqV2 origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber mbIsReallocationEnabled = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
+  context <- buildTaxiContextV2 Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country
   let intent = mkIntentV2 origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled
   let searchMessage = Search.SearchMessageV2 intent
 
-  pure $ BecknReq context searchMessage
+  pure $ BecknReqV2 context searchMessage
 
 mkIntent ::
   DSearchCommon.SearchReqLocation ->

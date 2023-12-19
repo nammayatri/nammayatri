@@ -18,13 +18,13 @@ import Beckn.Types.Core.Taxi.OnSelect (OnSelectMessage, OnSelectMessageV2)
 import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
-import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq, BecknCallbackReqV2)
 import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnSelectReq = BecknCallbackReq OnSelectMessage
 
-type OnSelectReqV2 = BecknCallbackReq OnSelectMessageV2
+type OnSelectReqV2 = BecknCallbackReqV2 OnSelectMessageV2
 
 type OnSelectRes = AckResponse
 

@@ -79,14 +79,14 @@ buildInitReqV1 subscriber req = do
 
 buildInitReqV2 ::
   ( MonadThrow m,
-    HasFlowEnv m r '["coreVersion" ::: Text]
+    HasFlowEnv m r '["_version" ::: Text]
   ) =>
   Subscriber.Subscriber ->
   Init.InitReqV2 ->
   m DInit.InitReq
 buildInitReqV2 subscriber req = do
   let context = req.context
-  Context.validateContext Context.INIT context
+  Context.validateContextV2 Context.INIT context
   let order = req.message.order
   _ <- case order.items of
     [it] -> pure it
@@ -109,8 +109,8 @@ buildInitReqV2 subscriber req = do
       { estimateId = fulfillmentId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
-        bapCity = context.city,
-        bapCountry = context.country,
+        bapCity = context.location.city.code,
+        bapCountry = context.location.country.code,
         vehicleVariant = castVehicleVariant fulfillment.vehicle.category,
         driverId = order.provider <&> (.id),
         paymentMethodInfo = mkPaymentMethodInfoV2 payment,

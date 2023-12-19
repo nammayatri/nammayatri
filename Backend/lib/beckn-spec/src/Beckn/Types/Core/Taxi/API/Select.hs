@@ -17,13 +17,13 @@ module Beckn.Types.Core.Taxi.API.Select where
 import Beckn.Types.Core.Taxi.Select (SelectMessage, SelectMessageV2)
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
-import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Types.Beckn.ReqTypes (BecknReq, BecknReqV2)
 import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SelectReq = BecknReq SelectMessage
 
-type SelectReqV2 = BecknReq SelectMessageV2
+type SelectReqV2 = BecknReqV2 SelectMessageV2
 
 type SelectRes = AckResponse
 

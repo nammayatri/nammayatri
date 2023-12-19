@@ -63,11 +63,11 @@ buildConfirmReqV1 req = do
       Confirm.TAXI_PLUS -> VehVar.TAXI_PLUS
 
 buildConfirmReqV2 ::
-  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
+  (HasFlowEnv m r '["_version" ::: Text]) =>
   Confirm.ConfirmReqV2 ->
   m DConfirm.DConfirmReq
 buildConfirmReqV2 req = do
-  validateContext Context.CONFIRM req.context
+  validateContextV2 Context.CONFIRM req.context
   let bookingId = Id req.message.order.id
   fulfillment <-
     case req.message.order.fulfillments of

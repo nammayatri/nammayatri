@@ -62,14 +62,14 @@ buildOnSelectReq req = do
         }
 
 buildOnSelectReqV2 ::
-  HasFlowEnv m r '["coreVersion" ::: Text] =>
+  HasFlowEnv m r '["_version" ::: Text] =>
   OnSelect.OnSelectReqV2 ->
   m (Maybe DOnSelect.DOnSelectReq)
 buildOnSelectReqV2 req = do
   logDebug $ "on_select request: " <> show req
   let context = req.context
   let timestamp = context.timestamp
-  validateContext Context.ON_SELECT context
+  validateContextV2 Context.ON_SELECT context
   handleErrorV2 req.contents $ \message -> do
     providerId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
     providerUrl <- context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_uri")

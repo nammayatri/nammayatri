@@ -17,13 +17,13 @@ module Beckn.Types.Core.Taxi.API.Init where
 import Beckn.Types.Core.Taxi.Init
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
-import Kernel.Types.Beckn.ReqTypes (BecknReq)
+import Kernel.Types.Beckn.ReqTypes (BecknReq, BecknReqV2)
 import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type InitReq = BecknReq InitMessage
 
-type InitReqV2 = BecknReq InitMessageV2
+type InitReqV2 = BecknReqV2 InitMessageV2
 
 type InitRes = AckResponse
 

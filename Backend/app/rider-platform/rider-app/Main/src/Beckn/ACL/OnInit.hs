@@ -50,12 +50,12 @@ buildOnInitReq req = do
         }
 
 buildOnInitReqV2 ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text]
+  ( HasFlowEnv m r '["_version" ::: Text]
   ) =>
   OnInit.OnInitReqV2 ->
   m (Maybe DOnInit.OnInitReq)
 buildOnInitReqV2 req = do
-  validateContext Context.ON_INIT $ req.context
+  validateContextV2 Context.ON_INIT $ req.context
   handleErrorV2 req.contents $ \message -> do
     let bookingId = Id req.context.message_id
         bppBookingId = Id message.order.id

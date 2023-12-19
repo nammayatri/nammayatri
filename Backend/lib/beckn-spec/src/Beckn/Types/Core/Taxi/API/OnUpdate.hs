@@ -17,13 +17,13 @@ module Beckn.Types.Core.Taxi.API.OnUpdate where
 import Beckn.Types.Core.Taxi.OnUpdate (OnUpdateMessage, OnUpdateMessageV2)
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
-import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq, BecknCallbackReqV2)
 import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnUpdateReq = BecknCallbackReq OnUpdateMessage
 
-type OnUpdateReqV2 = BecknCallbackReq OnUpdateMessageV2
+type OnUpdateReqV2 = BecknCallbackReqV2 OnUpdateMessageV2
 
 type OnUpdateRes = AckResponse
 

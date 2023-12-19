@@ -58,12 +58,14 @@ search gatewayUrl req = do
 
 searchV2 ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   API.SearchReqV2 ->
   m API.SearchRes
 searchV2 gatewayUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
   callBecknAPIWithSignature req.context.bap_id "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
 
 searchMetro ::
@@ -92,7 +94,8 @@ select providerUrl req = do
 
 selectV2 ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   SelectReqV2 ->
@@ -115,7 +118,8 @@ init providerUrl req = do
 
 initV2 ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   API.InitReqV2 ->
@@ -138,7 +142,8 @@ confirm providerUrl req = do
 
 confirmV2 ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   ConfirmReqV2 ->
@@ -173,12 +178,13 @@ update providerUrl req = do
 
 updateV2 ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   UpdateReqV2 ->
   m UpdateRes
-updateV2 providerUrl req =  do
+updateV2 providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   callBecknAPIWithSignature req.context.bap_id "update" API.updateAPIV2 providerUrl internalEndPointHashMap req
 
