@@ -179,7 +179,7 @@ shouldPushToKafkaOnly :: DBModel -> [Text] -> Bool
 shouldPushToKafkaOnly model _dontEnableDbTables = textToSnakeCaseText model.getDBModel `elem` _dontEnableDbTables || model.getDBModel `elem` _dontEnableDbTables
 
 shouldPushToDbOnly :: DBModel -> [Text] -> Bool
-shouldPushToDbOnly model _dontEnableDbTables = textToSnakeCaseText model.getDBModel `elem` _dontEnableDbTables || model.getDBModel `elem` _dontEnableDbTables
+shouldPushToDbOnly model _dontEnableForKafka = textToSnakeCaseText model.getDBModel `elem` _dontEnableForKafka || model.getDBModel `elem` _dontEnableForKafka
 
 -- FIXME KVDBStreamEntryID can be the same for different entries
 -- uncomment for debug purposes
