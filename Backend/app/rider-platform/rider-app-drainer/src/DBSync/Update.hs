@@ -6,17 +6,18 @@ import DBQuery.Functions
 import DBQuery.Types
 import Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
 import Data.Text as T hiding (map)
 import qualified Data.Text.Encoding as TE
 import Database.PostgreSQL.Simple.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id, try)
+import Kernel.Beam.Lib.Utils as KBLU
 import Text.Casing (pascal)
 import "rider-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
 import Utils.Utils
-
--- FIXME -- we are not pushing delete events to kafka | Todo : To be removed in new drainer PR
 
 -- | This function is used to run the update operation for a single entry in the stream
 runUpdate :: (EL.KVDBStreamEntryID, ByteString) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
@@ -35,7 +36,7 @@ runUpdate updateDataEntries streamName = do
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
         then runUpdateQuery updateDataEntries updateDBModel
         else do
-          let updateObject = getDbUpdateDataJson tableName updateDBModel.updatedModel
+          let updateObject = KBLU.replaceMappings (maybe (A.object []) A.Object (updateDBModel.updatedModel)) (HM.fromList . M.toList $ updateDBModel.mappings.getMapping)
           res <- EL.runIO $ createInKafka _kafkaConnection updateObject streamName tableName
           case res of
             Left err -> do
