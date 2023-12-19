@@ -216,7 +216,7 @@ constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity it
     tripDate: item.rideTakenOn,
     amount: item.driverFeeAmount,
     earnings: item.totalEarnings,
-    noOfRides: item.totalRides,
+    noOfRides: item.totalRides + fromMaybe 0 item.specialZoneRideCount,
     scheduledAt: convertUTCtoISC (fromMaybe "" item.executionAt) "Do MMM YYYY, h:mm A",
     paymentStatus: "",
     feeBreakup: if showFeeBreakup then getFeeBreakup item.maxRidesEligibleForCharge (item.planAmount - (fromMaybe 0.0 item.totalSpecialZoneCharges)) item.totalRides else "",
