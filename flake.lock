@@ -722,12 +722,16 @@
         ],
         "haskell-flake": [
           "shared-kernel",
+          "euler-hs",
+          "common",
           "haskell-flake"
         ],
         "hedis": "hedis",
         "juspay-extra": "juspay-extra",
         "nixpkgs": [
           "shared-kernel",
+          "euler-hs",
+          "common",
           "nixpkgs"
         ],
         "sequelize": "sequelize",
@@ -3805,6 +3809,7 @@
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/adding-instances-for-column-mapping",
         "repo": "shared-kernel",
         "type": "github"
       }
