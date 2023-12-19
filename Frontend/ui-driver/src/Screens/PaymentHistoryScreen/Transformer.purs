@@ -62,7 +62,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                   {
                     key : "NUMBER_OF_RIDES",
                     title : getString NUMBER_OF_RIDES,
-                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else rideNumberPrefix <> show driverFee'.totalRides 
+                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else rideNumberPrefix <> show (driverFee'.totalRides + fromMaybe 0 driverFee'.specialZoneRideCount)
                   },
                   {
                     key : "YOUR_EARNINGS",
@@ -123,7 +123,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                                 date : convertUTCtoISC driverFee.rideTakenOn "Do MMM YYYY",
                                 planType : planOfferData.plan,
                                 offerApplied : (getPromoConfig [OfferEntity{title : Just planOfferData.offer, description : Nothing, tnc : Nothing, offerId : "", gradient : Nothing}] gradientConfig) !! 0,
-                                noOfRides : driverFee.totalRides,
+                                noOfRides : driverFee.totalRides + fromMaybe 0 driverFee.specialZoneRideCount,
                                 totalEarningsOfDay : driverFee.totalEarnings,
                                 dueAmount : driverFee.driverFeeAmount,
                                 fareBreakup : fareBreakup driverFee,
