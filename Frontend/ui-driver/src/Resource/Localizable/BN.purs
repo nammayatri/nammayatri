@@ -1109,3 +1109,4 @@ getBN stringKey =
         COMPLETE_STEPS_TO_APPLY_REFERRAL -> "রেফারেল কোড প্রয়োগ করতে উপরের ধাপগুলি সম্পূর্ণ করুন"
         DOWNLOAD_NAMMA_YATRI -> "নম্মা যাত্রী ডাউনলোড করুন"
         ENTER_CODE -> "কোড লিখুন"
+        COMPLETE_REGISTRATION -> "সম্পূর্ণ নিবন্ধন"

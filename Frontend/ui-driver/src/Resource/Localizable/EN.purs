@@ -490,7 +490,7 @@ getEN stringKey =
         OTP_RESENT_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER -> "OTP resend limit exhausted, please try again later"
         OTP_PAGE_HAS_BEEN_EXPIRED_PLEASE_REQUEST_OTP_AGAIN -> "OTP page has been expired, please request OTP again"
         SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN -> "Something went wrong, please try again"
-        INVALID_REFERRAL_CODE -> "Invalid referal code"
+        INVALID_REFERRAL_CODE -> "Invalid referral code"
         ISSUE_REMOVED_SUCCESSFULLY -> "Issue removed successfully"
         OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_AGAIN_LATER -> "OTP entering limit exhausted, please try again later"
         TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER -> "Too many invalid attempts, please try again later"
@@ -1109,3 +1109,4 @@ getEN stringKey =
         COMPLETE_STEPS_TO_APPLY_REFERRAL -> "Complete above steps to apply referral code"
         DOWNLOAD_NAMMA_YATRI -> "Download Namma Yatri"
         ENTER_CODE -> "Enter Code"
+        COMPLETE_REGISTRATION -> "Complete Registration"

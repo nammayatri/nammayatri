@@ -1109,3 +1109,4 @@ getHI stringKey =
         COMPLETE_STEPS_TO_APPLY_REFERRAL -> "रेफरल कोड लागू करने के लिए उपरोक्त चरणों को पूरा करें"
         DOWNLOAD_NAMMA_YATRI -> "नम्मा यात्री डाउनलोड करें"
         ENTER_CODE -> "कोड दर्ज करें"
+        COMPLETE_REGISTRATION -> "पूरा पंजीकरण"

@@ -40,12 +40,22 @@ import Styles.Colors as Color
 import Helpers.Utils as HU
 import Storage ( getValueToLocalStore , KeyStore(..))
 import ConfigProvider
+import Mobility.Prelude
 
 ------------------------------ primaryButtonConfig --------------------------------
 primaryButtonConfig :: ST.UploadDrivingLicenseState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
+    dobNotEmpty = not $ DS.null state.data.dob
+    driverLicenseLengthValid = DS.length state.data.driver_license_number >= 9
+    driverLicensesMatch = caseInsensitiveCompare state.data.driver_license_number state.data.reEnterDriverLicenseNumber
+    uploadRCandDLNotRequired = not state.data.cityConfig.uploadRCandDL
+    dateOfIssueNotEmpty = state.data.dateOfIssue /= Just ""
+    isDriverInfoValid = dobNotEmpty 
+                        && driverLicenseLengthValid 
+                        && (driverLicensesMatch || uploadRCandDLNotRequired) 
+                        && dateOfIssueNotEmpty
     primaryButtonConfig' = config 
       { textConfig{ text = if isJust state.data.dateOfIssue then getString CONFIRM 
                            else if state.props.openHowToUploadManual then getString UPLOAD_PHOTO
@@ -56,8 +66,8 @@ primaryButtonConfig state = let
       , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
       , cornerRadius = 6.0
       , height = V 50
-      , isClickable =  state.data.dob /= "" && DS.length state.data.driver_license_number >= 9 && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && state.data.dateOfIssue /= Just ""
-      , alpha = if (state.data.dob /= "" && DS.length state.data.driver_license_number >= 9) && (DS.toLower(state.data.driver_license_number) == DS.toLower(state.data.reEnterDriverLicenseNumber)) && state.data.dateOfIssue /= Just "" then 1.0 else 0.8
+      , isClickable = isDriverInfoValid
+      , alpha = if isDriverInfoValid then 1.0 else 0.8
       }
   in primaryButtonConfig'
 

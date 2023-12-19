@@ -60,6 +60,7 @@ import Types.App (GlobalState(..), defaultGlobalState)
 import Data.String.Common as DSC
 import Effect.Uncurried (runEffectFn1)
 import ConfigProvider
+import Mobility.Prelude
 
 screen :: AddVehicleDetailsScreenState -> Screen Action AddVehicleDetailsScreenState ScreenOutput
 screen initialState =
@@ -339,6 +340,7 @@ vehicleRegistrationNumber state push =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation VERTICAL
+          , visibility $ boolToVisibility state.data.cityConfig.uploadRCandDL
           ] [
               linearLayout
               [ width MATCH_PARENT

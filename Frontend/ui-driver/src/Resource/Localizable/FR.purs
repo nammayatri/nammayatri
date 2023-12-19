@@ -821,4 +821,5 @@ getFR stringKey =
         COMPLETE_STEPS_TO_APPLY_REFERRAL -> "Suivez les étapes ci-dessus pour appliquer le code de parrainage"
         DOWNLOAD_NAMMA_YATRI -> "Télécharger Namma Yatri"
         ENTER_CODE -> "Entrez le code"
+        COMPLETE_REGISTRATION -> "Enregistrement complet"
         _ -> ""
