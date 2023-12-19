@@ -24,7 +24,7 @@ import AssetsProvider (fetchAssets)
 import Flow as Flow
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import PrestoDOM.Core (processEvent) as PrestoDom
+import React.Events (processEvent)
 import Log
 import Presto.Core.Types.Language.Flow (throwErr)
 import Foreign (MultipleErrors, unsafeToForeign)
@@ -88,7 +88,7 @@ onEvent event = do
   _ <- pure $ JBridge.toggleBtnLoader "" false
   case event of 
     "onBackPressed" -> do
-      PrestoDom.processEvent "onBackPressedEvent" unit
+      processEvent "onBackPressedEvent" unit
     _ -> pure unit
 
 onConnectivityEvent :: String -> Effect Unit

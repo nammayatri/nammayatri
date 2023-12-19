@@ -25,12 +25,16 @@ import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getPastDays)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((<>), (/=), ($))
+import Prelude -- ((<>), (/=), ($))
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Resource.Constants (tripDatesCount)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Storage (getValueToLocalStore, KeyStore(..))
+import ReactComponents.IncrementDecrement.Controller as IncrementDecrementController
+import Screens.RideHistoryScreen.Controller (Action(..))
+import Effect (Effect)
+import Data.Maybe(Maybe(..))
 
 errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config 
 errorModalConfig state = let 
@@ -71,3 +75,12 @@ datePickerConfig state = let
     , id = "DatePickerScrollView"
     }
   in datePickerConfig'
+
+incrementDecrementConfig :: (Action -> Effect Unit) -> ST.RideHistoryScreenState -> IncrementDecrementController.Config 
+incrementDecrementConfig push _ = let
+  config = IncrementDecrementController.config
+  incrementDecrementConfig' = config
+    { onChange = Just (\count -> do
+                  when(count < 10) do push $ CounterChange count
+                  pure unit)}
+  in incrementDecrementConfig'

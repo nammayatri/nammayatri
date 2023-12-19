@@ -86,6 +86,7 @@ instance loggableAction :: Loggable Action where
           trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
     PaymentHistoryModelAC act -> pure unit
     OpenPaymentHistory -> pure unit
+    CounterChange count -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "CounterChange" 
 
 data ScreenOutput = GoBack
                     | HomeScreen
@@ -119,6 +120,7 @@ data Action = Dummy
             | GenericHeaderAC GenericHeader.Action
             | PaymentHistoryModelAC PaymentHistoryModel.Action
             | OpenPaymentHistory
+            | CounterChange Int
 
 eval :: Action -> RideHistoryScreenState -> Eval Action ScreenOutput RideHistoryScreenState
 eval AfterRender state = continue state

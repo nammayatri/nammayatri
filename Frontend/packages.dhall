@@ -281,5 +281,58 @@ in  upstream
     , repo = "https://github.com/belevy/purescript-otp-reader.git"
     , version = "3a5c85bf41b5abb2c774ab98180c5608adb83551"
     }
+  with purs-react =
+    { dependencies =
+          [ "aff"
+          , "avar"
+          , "console"
+          , "debug"
+          , "effect"
+          , "either"
+          , "exceptions"
+          , "foreign"
+          , "foreign-object"
+          , "maybe"
+          , "prelude"
+          , "record"
+          , "tuples"
+          , "unsafe-coerce"
+          , "react-basic-hooks"
+          ]
+        , repo = "ssh://git@ssh.bitbucket.juspay.net/picaf/purs-react.git"
+        , version = "8f7c9b6cfd62cb028b98b3d20afd91cbd5b8a336"
+      }
+  with react-basic-hooks =
+    { dependencies =
+          [ "aff"
+          , "aff-promise"
+          , "bifunctors"
+          , "console"
+          , "control"
+          , "datetime"
+          , "effect"
+          , "either"
+          , "exceptions"
+          , "foldable-traversable"
+          , "functions"
+          , "indexed-monad"
+          , "integers"
+          , "maybe"
+          , "newtype"
+          , "now"
+          , "nullable"
+          , "ordered-collections"
+          , "prelude"
+          , "react-basic"
+          , "refs"
+          , "tuples"
+          , "type-equality"
+          , "unsafe-coerce"
+          , "unsafe-reference"
+          , "web-html"
+          ]
+        , repo = "ssh://git@ssh.bitbucket.juspay.net/~sridatta.yalla_juspay.in/purescript-react-basic-hooks.git"
+        , version = "b9dff0ab3711caf67bcae94fe008f3ac993e5abd"
+      }
   with beckn-common = ./ui-common/spago.dhall as Location
   

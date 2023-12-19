@@ -19,17 +19,17 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, ($), (<$>), discard)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.AddVehicleDetailsScreen.Controller (ScreenOutput(..))
 import Screens.AddVehicleDetailsScreen.Views as AddVehicleDetailsScreen
 import Types.App (FlowBT, GlobalState(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 
 addVehicleDetails :: FlowBT String ADD_VEHICLE_DETAILS_SCREENOUTPUT
 addVehicleDetails = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ AddVehicleDetailsScreen.screen state.addVehicleDetailsScreen
+  action <- lift $ lift $ navigateToScreen $ AddVehicleDetailsScreen.screen state.addVehicleDetailsScreen
   case action of
     GoBack updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> updatedState

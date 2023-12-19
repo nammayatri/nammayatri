@@ -26,7 +26,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, ScopedScreen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width)
 import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -34,13 +34,14 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import ConfigProvider
 
-screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
+screen :: ST.AboutUsScreenState -> ScopedScreen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name: "AboutUsScreen"
   , globalEvents: []
   , eval
+  , parent: Nothing
   }
 
 view ::

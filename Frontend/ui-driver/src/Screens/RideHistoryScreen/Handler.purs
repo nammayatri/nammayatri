@@ -23,7 +23,6 @@ import Engineering.Helpers.BackTrack (getState)
 import Engineering.Helpers.Commons (liftFlow)
 import Prelude (bind, map, pure, ($), (<$>), discard)
 import PrestoDOM.Core (getPushFn)
-import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import PrestoDOM.List as PrestoList
 import Screens.RideHistoryScreen.Controller (ScreenOutput(..))
 import Screens.RideHistoryScreen.ScreenData (initData) as RideHistoryScreenData
@@ -32,6 +31,7 @@ import Screens.Types (IndividualRideCardState, AnimationState(..))
 import Services.API (RidesInfo(..), Status(..))
 import Types.App (FlowBT, GlobalState(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import React.Navigation.Navigate (navigateToScreen)
 
 
 rideHistory :: FlowBT String MY_RIDES_SCREEN_OUTPUT
@@ -39,7 +39,7 @@ rideHistory = do
   (GlobalState state) <- getState
   push <- lift $ lift $ liftFlow $ getPushFn Nothing "RideHistoryScreen"
   rideListItem <- lift $ lift $ PrestoList.preComputeListItem $ IndividualRideCard.view push
-  act <- lift $ lift $ runScreen $ RideHistoryScreen.screen state.rideHistoryScreen{shimmerLoader = AnimatedIn} rideListItem
+  act <- lift $ lift $ navigateToScreen $ RideHistoryScreen.screen state.rideHistoryScreen{shimmerLoader = AnimatedIn} rideListItem
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     HomeScreen -> do

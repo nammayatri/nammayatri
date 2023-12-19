@@ -49,7 +49,9 @@
     "ramda": "^0.26.1",
     "purty": "^7.0.0",
     "regenerator-runtime": "^0.13.5",
-    "spago": "^0.21.0"
+    "spago": "^0.21.0",
+    "presto-react": "git+ssh://git@ssh.bitbucket.juspay.net/proj/presto-react.git#e9a96bb773983eb8e415be28cd9e9069940f9b3f",
+    "react": "^18.2.0"
   },
   "config": {
     "commitizen": {

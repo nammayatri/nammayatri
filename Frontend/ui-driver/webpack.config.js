@@ -23,7 +23,7 @@ module.exports = function(env, argv){
     rules: [
       {
         test: /\.m?js$/,
-        exclude: /(node_modules|bower_components)/,
+        exclude: /(node_modules|bower_components)\/?!(presto-react)/, 
         use: {
         loader: 'babel-loader',
         options: {

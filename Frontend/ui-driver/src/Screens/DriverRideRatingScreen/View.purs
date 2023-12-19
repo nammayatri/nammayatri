@@ -15,7 +15,7 @@
 
 module Screens.DriverRideRatingScreen.View where
 
-import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, pattern, scrollView, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), InputType(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, ScopedScreen, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, imageUrl, imageView, inputType, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, relativeLayout, singleLine, stroke, text, textSize, textView, weight, width, pattern, scrollView, afterRender, imageWithFallback)
 import Screens.DriverRideRatingScreen.Controller (Action(..), ScreenOutput, eval, getFeedBackString)
 import Prelude (Unit, const, unit, ($), (-), (<<<), (<=), (<>), (==), bind, pure)
 import Screens.Types as ST
@@ -37,13 +37,14 @@ import Screens.DriverRideRatingScreen.ComponentConfig
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
-screen :: ST.DriverRideRatingScreenState -> Screen Action ST.DriverRideRatingScreenState ScreenOutput
+screen :: ST.DriverRideRatingScreenState -> ScopedScreen Action ST.DriverRideRatingScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "DriverRideRatingScreen"
   , globalEvents : []
   , eval
+  , parent: Nothing
   }
 
 view :: forall w . (Action -> Effect Unit) -> ST.DriverRideRatingScreenState -> PrestoDOM (Effect Unit) w

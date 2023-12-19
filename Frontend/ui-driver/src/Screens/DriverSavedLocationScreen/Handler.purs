@@ -30,11 +30,12 @@ import Storage (KeyStore(..), getValueToLocalNativeStore)
 import Types.App (DRIVE_SAVED_LOCATION_OUTPUT(..), ScreenType(..), FlowBT, GlobalState(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Data.Array as DA
+import React.Navigation.Navigate (navigateToScreen)
 
 driverSavedLocationScreen :: FlowBT String DRIVE_SAVED_LOCATION_OUTPUT
 driverSavedLocationScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ DriverSavedLocationScreen.screen state.driverSavedLocationScreen
+  action <- lift $ lift $ navigateToScreen $ DriverSavedLocationScreen.screen state.driverSavedLocationScreen
   case action of
     GoBack updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> homeScreenState{ data { driverGotoState { savedLocationCount = DA.length updatedState.data.savedLocationsArray}}})

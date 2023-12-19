@@ -37,7 +37,7 @@ screen initialState =
     _ <- JB.setStoreCallBackPopUp push PopUpCallBack
     pure $ pure unit)]
   , eval
-  , parent : Just "PopUpScreen"
+  , parent : Nothing 
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.PopUpScreenState -> PrestoDOM (Effect Unit) w
