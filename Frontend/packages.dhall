@@ -189,7 +189,7 @@ in  upstream
       , "web-events"
       ]
     , repo = "https://github.com/juspay/purescript-halogen-vdom.git"
-    , version = "update/github-purescript-halogen-vdom-repo"
+    , version = "fork/update/github-purescript-halogen-vdom-repo"
     }
   with foreign-generic =
     { dependencies =
@@ -300,7 +300,7 @@ in  upstream
           , "react-basic-hooks"
           ]
         , repo = "ssh://git@ssh.bitbucket.juspay.net/picaf/purs-react.git"
-        , version = "8f7c9b6cfd62cb028b98b3d20afd91cbd5b8a336"
+        , version = "namma-react"
       }
   with react-basic-hooks =
     { dependencies =
