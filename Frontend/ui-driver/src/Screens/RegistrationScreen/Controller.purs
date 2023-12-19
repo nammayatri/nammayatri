@@ -139,7 +139,7 @@ eval SubmitReferralCode state = exit $ ReferralCode state
 eval (EnterReferralCode val ) state = if not val then do
                                         pure $ JB.toast $ getString COMPLETE_STEPS_TO_APPLY_REFERRAL
                                         continue state
-                                      else continue state {props {enterReferralCodeModal = true}}
+                                      else continue state {props {enterReferralCodeModal = true, isValidReferralCode = true}}
 
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state = do
   let

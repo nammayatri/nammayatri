@@ -40,7 +40,7 @@ primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
     config = PrimaryButton.config
     primaryButtonConfig' = config 
-      { textConfig{ text = (getString NEXT)}
+      { textConfig{ text = (getString COMPLETE_REGISTRATION)}
       , width = MATCH_PARENT
       , background = Color.black900
       , margin = (Margin 0 0 0 0)

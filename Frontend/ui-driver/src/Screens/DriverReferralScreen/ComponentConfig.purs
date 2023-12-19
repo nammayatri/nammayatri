@@ -52,7 +52,7 @@ genericHeaderConfig state = let
       }
     , padding = Padding 16 16 0 16
     , textConfig {
-        text = getString RANKINGS
+        text = getString CONTEST
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {

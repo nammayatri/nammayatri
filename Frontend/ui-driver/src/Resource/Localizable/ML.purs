@@ -1109,3 +1109,4 @@ getML stringKey =
         COMPLETE_STEPS_TO_APPLY_REFERRAL -> "റഫറൽ കോഡ് പ്രയോഗിക്കുന്നതിന് മുകളിലുള്ള ഘട്ടങ്ങൾ പൂർത്തിയാക്കുക"
         DOWNLOAD_NAMMA_YATRI -> "നമ്മ യാത്രി ഡൗൺലോഡ് ചെയ്യുക"
         ENTER_CODE -> "കോഡ് നൽകുക"
+        COMPLETE_REGISTRATION -> "പൂർണ്ണമായ രജിസ്ട്രേഷൻ"

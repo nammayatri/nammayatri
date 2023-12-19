@@ -1109,3 +1109,4 @@ getKN stringKey =
         COMPLETE_STEPS_TO_APPLY_REFERRAL -> "ರೆಫರಲ್ ಕೋಡ್ ಅನ್ನು ಅನ್ವಯಿಸಲು ಮೇಲಿನ ಹಂತಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ"
         DOWNLOAD_NAMMA_YATRI -> "ನಮ್ಮ ಯಾತ್ರಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ"
         ENTER_CODE -> "ಕೋಡ್ ನಮೂದಿಸಿ"
+        COMPLETE_REGISTRATION -> "ಸಂಪೂರ್ಣ ನೋಂದಣಿ"

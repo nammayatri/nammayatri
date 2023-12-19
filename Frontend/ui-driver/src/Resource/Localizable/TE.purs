@@ -1109,4 +1109,5 @@ getTE stringKey =
         COMPLETE_STEPS_TO_APPLY_REFERRAL -> "రెఫరల్ కోడ్‌ని వర్తింపజేయడానికి పై దశలను పూర్తి చేయండి"
         DOWNLOAD_NAMMA_YATRI -> "నమ్మ యాత్రి డౌన్లోడ్"
         ENTER_CODE -> "కోడ్ వ్రాయండి"
+        COMPLETE_REGISTRATION -> "నమోదును పూర్తి చెయ్యండి"
     

@@ -2,7 +2,7 @@ module Screens.DriverReferralScreen.View where
 
 import Animation as Anim
 import Effect (Effect)
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), show, (>))
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), show, (>), (/), (-))
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, accessibility, afterRender, background, gravity, height, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, orientation, padding, weight, width, cornerRadius, textView, text, color, fontStyle, onClick, visibility, relativeLayout, layoutGravity)
 import Screens.DriverReferralScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (DriverReferralScreenState)
@@ -144,7 +144,7 @@ driverReferralCode push state =
 buttonOptions :: forall w . String -> String -> Action -> (Action -> Effect Unit) -> DriverReferralScreenState -> PrestoDOM (Effect Unit) w
 buttonOptions _text image action push state =
   linearLayout
-  [ width WRAP_CONTENT
+  [ width $ V $ (screenWidth unit/2) - 40
   , height WRAP_CONTENT
   , background state.data.config.popupBackground
   , cornerRadius 20.0
@@ -235,10 +235,12 @@ rideLeaderBoard push state =
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_driver_leaderboard"
             ]
           , linearLayout
+            [weight 1.0][]
+          , linearLayout
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , orientation VERTICAL
-                , margin $ MarginLeft 80
+                , margin $ MarginRight 10
                 , gravity CENTER
                 ][ textView $
                     [ width WRAP_CONTENT
@@ -260,7 +262,7 @@ rideLeaderBoard push state =
                     , background state.data.config.popupBackground
                     , color state.data.config.primaryBackground
                     , cornerRadius 10.0
-                    , padding $ Padding 25 8 25 8
+                    , padding $ Padding 15 8 15 8
                     , onClick push $ const $ LearnMore
                     , margin $ MarginTop 5
                     ]
