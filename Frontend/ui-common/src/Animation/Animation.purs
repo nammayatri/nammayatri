@@ -159,6 +159,14 @@ rotateAnim config =
     , PrestoAnim.repeatCount PrestoAnim.Infinite
     ] config.ifAnim
 
+shimmerAnimation :: Int -> Int -> Int -> PrestoAnim.Animation
+shimmerAnimation from' to' duration' = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration'
+    , PrestoAnim.fromX $ from'
+    , PrestoAnim.toX $ to'
+    , PrestoAnim.repeatCount PrestoAnim.Infinite
+    ] true
 
 translateInXForwardAnim :: Boolean -> PrestoAnim.Animation
 translateInXForwardAnim =
@@ -240,6 +248,26 @@ fadeInWithDelay delay =
     , PrestoAnim.interpolator $ PrestoAnim.EaseIn
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     , PrestoAnim.delay delay
+    ]
+
+fadeInWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+fadeInWithDuration duration = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.toAlpha 1.0
+    , PrestoAnim.fromAlpha 0.0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ]
+
+fadeOutWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+fadeOutWithDuration duration = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.toAlpha 0.0
+    , PrestoAnim.fromAlpha 1.0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
 
 translateYAnimFromTopWithAlpha:: AnimConfig -> PrestoAnim.Animation

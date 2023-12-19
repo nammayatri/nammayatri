@@ -675,6 +675,7 @@ export const storeCallBackMessageUpdated = function (cb) {
               delay: 0
             }
             window.chatMessages = window.chatMessages || [];
+            if(sentBy == "Driver") window.didDriverMessage = true;
             window.chatMessages.push(messageObj);
             if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
               cb(action(message)(sentBy)(timeStamp)(messagesSize))();
@@ -703,6 +704,7 @@ export const getChatMessages = function (string) {
 
 export const clearChatMessages = function () {
   window.chatMessages = undefined;
+  window.didDriverMessage = undefined;
 }
 
 export const dateCallback = function (cb, action) {
@@ -760,6 +762,7 @@ export const startChatListenerService = function () {
 export const stopChatListenerService = function () {
   if (JBridge.stopChatListenerService) {
     window.chatMessages = undefined;
+    window.didDriverMessage = undefined;
     JBridge.stopChatListenerService();
   }
 }
@@ -787,16 +790,22 @@ export const scrollToEnd = function (id) {
 export const saveSuggestions = function (key) {
   return function (suggestions) {
     try {
-      const convertedJSON = {};
-      if (!Array.isArray(suggestions)) {
-        return;
-      } else {
-        suggestions.map(item => {
-          convertedJSON[item.key] = item.value
-        });
+      let configSuggestions = "";
+      if(JBridge.fetchRemoteConfigString) {
+        configSuggestions = JBridge.fetchRemoteConfigString("chat_suggestions");
       }
-      window.suggestions = convertedJSON;
-      JBridge.setKeysInSharedPrefs(key, JSON.stringify(convertedJSON));
+      if (configSuggestions == "") {
+        const convertedJSON = {};
+        if (!Array.isArray(suggestions)) {
+          return;
+        } else {
+          suggestions.forEach(item => {
+            convertedJSON[item.key] = item.value
+          });
+        }
+        configSuggestions = JSON.stringify(convertedJSON);
+      }
+      JBridge.setKeysInSharedPrefs(key, configSuggestions);
     } catch (error) {
       console.error("Error in saveSuggestions " + error);
     }
@@ -806,17 +815,22 @@ export const saveSuggestions = function (key) {
 export const saveSuggestionDefs = function (key) {
   return function (suggestionDefs) {
     try {
-      const convertedJSON = {};
-      if (!Array.isArray(suggestionDefs)) {
-        return;
-      } else {
-        suggestionDefs.map(item => {
-          convertedJSON[item.key] = item.value
-        });
+      let configSuggestionDefs = "";
+      if(JBridge.fetchRemoteConfigString) {
+        configSuggestionDefs = JBridge.fetchRemoteConfigString("chat_suggestions_defs");
       }
-
-      window.suggestionsDefs = convertedJSON;
-      JBridge.setKeysInSharedPrefs(key, JSON.stringify(convertedJSON));
+      if(configSuggestionDefs == "") {
+        const convertedJSON = {};
+        if (!Array.isArray(suggestionDefs)) {
+          return;
+        } else {
+          suggestionDefs.forEach(item => {
+            convertedJSON[item.key] = item.value
+          });
+        }
+        configSuggestionDefs = JSON.stringify(convertedJSON);
+      }
+      JBridge.setKeysInSharedPrefs(key, configSuggestionDefs);
     } catch (error) {
       console.error("Error in saveSuggestionDefs " + error);
     }
@@ -825,10 +839,7 @@ export const saveSuggestionDefs = function (key) {
 
 export const getSuggestionsfromLocal = function (key) {
   try {
-    if (!window.suggestions) {
-      window.suggestions = JSON.parse(getKeyInSharedPrefKeys("SUGGESTIONS"));
-    }
-    const suggestions = window.suggestions;
+    const suggestions = JSON.parse(JBridge.fetchRemoteConfigString("chat_suggestions"));
     const keys = suggestions[key];
     if (keys) {
       return keys;
@@ -843,11 +854,8 @@ export const getSuggestionsfromLocal = function (key) {
 export const getSuggestionfromKey = function (key) {
   return function (language) {
     try {
-      if (!window.suggestionsDefs) {
-        window.suggestionsDefs = JSON.parse(getKeyInSharedPrefKeys("SUGGESTIONS_DEFINITIONS"));
-      }
-      const suggestionsDefs = window.suggestionsDefs;
-      const val = suggestionsDefs[key];
+      const suggestionDefs = JSON.parse(JBridge.fetchRemoteConfigString("chat_suggestions_defs"));
+      const val = suggestionDefs[key];
       let suggestion = "";
       if (val) {
         switch (language) {
@@ -868,6 +876,9 @@ export const getSuggestionfromKey = function (key) {
             break;
           case "TA_IN":
             suggestion = val["ta_in"];
+            break;
+          case "TE_IN": 
+            suggestion = val["te_in"];
             break;
           default:
             suggestion = val["en_us"];

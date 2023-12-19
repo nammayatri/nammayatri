@@ -23,7 +23,7 @@ import Font.Size as FontSize
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
 import Data.Array (mapWithIndex , (!!), length, null)
-import Data.String (split, Pattern(..), length) as STR
+import Data.String (split, Pattern(..), length, null) as STR
 import Data.Maybe (fromMaybe, Maybe(..))
 import JBridge (renderBase64Image, scrollToEnd, addMediaFile, getSuggestionfromKey)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponent)
@@ -34,6 +34,7 @@ import PrestoDOM.Events (afterRender)
 import Engineering.Helpers.Commons (screenHeight, safeMarginTop)
 import Engineering.Helpers.Suggestions(getMessageFromKey)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -215,7 +216,7 @@ chatView config push =
             , orientation VERTICAL
             , padding (PaddingHorizontal 16 16)
             ](mapWithIndex (\index item -> chatComponent config push item (index == (length config.messages - 1)) (config.userConfig.appType)) (config.messages))
-          , if (length config.suggestionsList) > 0 && config.spanParent then suggestionsView config push else dummyTextView
+          , if (length config.chatSuggestionsList) > 0 && config.spanParent then suggestionsView config push else dummyTextView
         ]
       ]
     ] )
@@ -290,7 +291,7 @@ emptyChatView config push =
      , accessibility DISABLE
      , background config.white900
      ]([ textView $
-       [ text $ if config.userConfig.appType == "Customer" && null config.suggestionsList && null config.messages then config.emptyChatHeader else config.suggestionHeader
+       [ text $ if config.userConfig.appType == "Customer" && null config.chatSuggestionsList && null config.messages then config.emptyChatHeader else config.suggestionHeader
        , color config.black700
        , accessibility ENABLE
        , width MATCH_PARENT
@@ -300,7 +301,7 @@ emptyChatView config push =
        , gravity CENTER
        , fontStyle $ FontStyle.medium LanguageStyle
        ]
-     ] <> if (length config.suggestionsList) > 0 && config.spanParent then [suggestionsView config push] else [])
+     ] <> if (not $ null config.chatSuggestionsList) && config.spanParent then [suggestionsView config push] else [])
   ]
 
 suggestionsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -313,7 +314,7 @@ suggestionsView config push =
     , margin if config.spanParent then (Margin 0 0 16 20) else (Margin 0 (if os == "IOS" then 8 else 0) 16 0)
     , onAnimationEnd push (const EnableSuggestions)
     , alpha if config.spanParent then 0.0 else 1.0
-    , visibility if (length config.suggestionsList == 0 ) && not config.canSendSuggestion || (not config.spanParent && not config.enableSuggestions) then GONE else VISIBLE
+    , visibility $ boolToVisibility $ not ((null config.chatSuggestionsList) && not config.canSendSuggestion || (not config.spanParent && not config.enableSuggestions))
     ][ linearLayout
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
@@ -321,7 +322,7 @@ suggestionsView config push =
       , stroke ("1,"<> config.grey900)
       , cornerRadius 8.0
       , orientation VERTICAL
-      ] (mapWithIndex (\index item -> quickMessageView config item (if index == (length config.suggestionsList-1) then true else false) push) (config.suggestionsList))
+      ] (mapWithIndex (\index item -> quickMessageView config item (index == (length config.chatSuggestionsList)-1) push) (config.chatSuggestionsList))
     ]
 
 dummyTextView :: forall w . PrestoDOM (Effect Unit) w
@@ -333,14 +334,17 @@ dummyTextView =
 
 quickMessageView :: forall w. Config -> String -> Boolean -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 quickMessageView config message isLastItem push =
+  let value = getMessageFromKey message config.languageKey
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width (V (((screenWidth unit)/100)* 80))
   , gravity LEFT
+  , visibility $ boolToVisibility $ not $ STR.null message
   , orientation VERTICAL
   , onClick push (if config.enableSuggestionClick then const (SendSuggestion message) else (const NoAction))
   ][ textView $
-     [ text $ getMessageFromKey message config.languageKey
+     [ text $ value
      , color config.blue800
      , padding (Padding 12 16 12 16)
      ] <> FontStyle.body1 TypoGraphy
@@ -353,6 +357,8 @@ quickMessageView config message isLastItem push =
   ]
 chatComponent :: forall w. Config -> (Action -> Effect Unit) -> ChatComponent -> Boolean -> String -> PrestoDOM (Effect Unit) w
 chatComponent state push config isLastItem userType =
+  let value = getMessageFromKey config.message state.languageKey
+  in
   PrestoAnim.animationSet
     [ if state.userConfig.appType == config.sentBy then
         if (state.spanParent) then
@@ -372,6 +378,7 @@ chatComponent state push config isLastItem userType =
   , margin (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).margin
   , gravity (getChatConfig state config.sentBy isLastItem (STR.length config.timeStamp > 0)).gravity
   , orientation VERTICAL
+  , visibility $ boolToVisibility $ not $ (not state.spanParent && STR.null value)
   , onAnimationEnd (\action ->
       if isLastItem || state.spanParent then do
         _ <- scrollToEnd (getNewIDWithTag "ChatScrollView") true
@@ -437,7 +444,7 @@ chatComponent state push config isLastItem userType =
                     ]
                    ]
         _ -> textView
-          [ text if state.spanParent then config.message else getMessageFromKey config.message state.languageKey
+          [ text if state.spanParent then config.message else value
           , textSize FontSize.a_14
           , singleLine false
           , lineHeight "18"

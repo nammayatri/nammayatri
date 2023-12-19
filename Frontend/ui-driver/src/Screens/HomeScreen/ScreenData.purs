@@ -80,7 +80,7 @@ initData = {
         },
         messages : [],
         messagesSize : "-1",
-        suggestionsList : [],
+        chatSuggestionsList : [],
         messageToBeSent : "",
         logField : empty, 
         paymentState : {
@@ -176,7 +176,6 @@ initData = {
         notRemoveBanner : true,
         showBonusInfo : false,
         showlinkAadhaarPopup : false,
-        isChatOpened : false,
         showAadharPopUp : true,
         canSendSuggestion : true,
         showOffer : false,
