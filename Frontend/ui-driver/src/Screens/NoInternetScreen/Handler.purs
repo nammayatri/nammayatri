@@ -26,7 +26,7 @@ import Data.Maybe
 import Effect.Class (liftEffect)
 import Screens.NoInternetScreen.Controller (ScreenOutput(..))
 import Types.App (FlowBT, GlobalState(..), NO_INTERNET_SCREEN_OUTPUT(..))
-import React.Navigation.Navigate (terminateRenderer, navigateToScreen)
+import React.Navigation.Navigate (removeScaffold, navigateToScreen)
 import Debug (spy)
 
 noInternetScreen :: String -> FlowBT String NO_INTERNET_SCREEN_OUTPUT
@@ -35,7 +35,7 @@ noInternetScreen triggertype = do
   _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "NoInternetScreen" Nothing
   act <- lift $ lift $ navigateToScreen $ NoInternetScreen.screen state.noInternetScreen triggertype
   json <- lift $ lift getLogFields
-  _ <- lift $ lift $ doAff $ liftEffect $ terminateRenderer json $ Just "NoInternetScreen"
+  _ <- lift $ lift $ doAff $ liftEffect $ removeScaffold json $ Just "NoInternetScreen"
   case act of
     GoBack -> App.BackT $ pure App.GoBack
     Refresh -> App.BackT $ App.BackPoint <$> (pure REFRESH_INTERNET)

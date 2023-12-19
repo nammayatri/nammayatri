@@ -121,7 +121,7 @@ import Helpers.Firebase
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import MerchantConfig.Types (AppConfig(..))
 import ConfigProvider
-import React.Navigation.Navigate (initNamespace)
+import React.Navigation.Navigate (initScaffold)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -132,7 +132,7 @@ baseAppFlow baseFlow event = do
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
     void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
-    when baseFlow $ lift $ lift $ initNamespace Nothing Nothing
+    when baseFlow $ lift $ lift $ initScaffold Nothing Nothing
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     setValueToLocalStore CURRENCY (getCurrency Constants.appConfig)

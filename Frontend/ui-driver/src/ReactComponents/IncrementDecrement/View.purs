@@ -17,6 +17,7 @@ module ReactComponents.IncrementDecrement.View (app)  where
 
 import Prelude
 import React.Basic.Hooks (Component, component)
+import React.Basic.Roll (jempty, (+=))
 import Effect (Effect)
 import React.Render.CustomBase (linearLayout, textView)
 import Styles.Colors as Color
@@ -47,47 +48,48 @@ app action push = do
         , orientation: "vertical"
         , weight: "0.0"
         , margin: margin
-      } [ linearLayout {
-            height: "wrap_content"
-          , width: "match_parent"
-          , orientation: "horizontal"
-          , padding: "4, 4, 4, 4"
-          , cornerRadius: "8.0"
-          , background: backgroundColor
-          , stroke: stroke
-        } [ textView {
-              background: minus.backgroundColor
-            , text: "-"
-            , textSize: fontSize
-            , gravity: "center"
-            , cornerRadius: cornerRadius
-            , width: minus.width
-            , padding: padding
-            , onClick: onDecrement
-            , height: minus.height
-            , rippleColor: minus.rippleColor
-            }
-          , textView {
-              background: Color.white900
-            , text: (show count)
-            , textSize: fontSize
-            , height: "wrap_content"
-            , color: Color.black800
-            , padding: padding
-            , weight: "1.0"
-            , gravity: "center"
-            } 
-          , textView {
-              background: plus.backgroundColor
-            , width: plus.width
-            , height: plus.height
-            , text: "+"
-            , textSize: fontSize
-            , color: plus.textColor
-            , padding: padding
-            , cornerRadius: cornerRadius
-            , onClick: onIncrement
-            , rippleColor: plus.rippleColor
-            }
-          ]
-        ]
+      } (jempty += textView {text: "Hello World"})
+      -- linearLayout {
+      --       height: "wrap_content"
+      --     , width: "match_parent"
+      --     , orientation: "horizontal"
+      --     , padding: "4, 4, 4, 4"
+      --     , cornerRadius: "8.0"
+      --     , background: backgroundColor
+      --     , stroke: stroke
+      --   } [ textView {
+      --         background: minus.backgroundColor
+      --       , text: "-"
+      --       , textSize: fontSize
+      --       , gravity: "center"
+      --       , cornerRadius: cornerRadius
+      --       , width: minus.width
+      --       , padding: padding
+      --       , onClick: onDecrement
+      --       , height: minus.height
+      --       , rippleColor: minus.rippleColor
+      --       }
+      --     , textView {
+      --         background: Color.white900
+      --       , text: (show count)
+      --       , textSize: fontSize
+      --       , height: "wrap_content"
+      --       , color: Color.black800
+      --       , padding: padding
+      --       , weight: "1.0"
+      --       , gravity: "center"
+      --       } 
+      --     , textView {
+      --         background: plus.backgroundColor
+      --       , width: plus.width
+      --       , height: plus.height
+      --       , text: "+"
+      --       , textSize: fontSize
+      --       , color: plus.textColor
+      --       , padding: padding
+      --       , cornerRadius: cornerRadius
+      --       , onClick: onIncrement
+      --       , rippleColor: plus.rippleColor
+      --       }
+      --     ]
+      --   ]

@@ -22,12 +22,12 @@ import Screens.SplashScreen.View as SplashScreen
 import Types.App (FlowBT)
 import Engineering.Helpers.Commons (liftFlow)
 import JBridge (initiateLocationServiceClient)
-import React.Navigation.Navigate (initNamespace, navigateToScreen)
+import React.Navigation.Navigate (initScaffold, navigateToScreen)
 import Data.Maybe (Maybe(..))
 
 splashScreen :: SplashScreenState → FlowBT String Unit
 splashScreen screenState = do
     _ <- lift $ lift $ liftFlow $ initiateLocationServiceClient
     -- lift $ lift $ initUIWithScreen $ SplashScreen.screen screenState
-    _ <- lift $ lift $ initNamespace Nothing Nothing
+    _ <- lift $ lift $ initScaffold Nothing Nothing
     lift $ lift $ navigateToScreen $ SplashScreen.screen screenState

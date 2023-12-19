@@ -26,7 +26,7 @@ import Effect.Class (liftEffect)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..)) as App
 import Engineering.Helpers.BackTrack (getState)
 import Data.Maybe (Maybe(..))
-import React.Navigation.Navigate (terminateRenderer, navigateToOverlayScreen)
+import React.Navigation.Navigate (removeScaffold, navigateToOverlayScreen)
 
 handleAppUpdatePopUp :: FlowBT String APP_UPDATE_POPUP
 handleAppUpdatePopUp = do
@@ -34,7 +34,7 @@ handleAppUpdatePopUp = do
   _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing
   act <- lift $ lift $ navigateToOverlayScreen (AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen)
   json <- lift $ lift $ getLogFields
-  _ <- lift $ lift $ doAff $ liftEffect $ terminateRenderer json $ Just "AppUpdatePopUpScreen"
+  _ <- lift $ lift $ doAff $ liftEffect $ removeScaffold json $ Just "AppUpdatePopUpScreen"
   case act of
     CD.Accept -> App.BackT $ App.NoBack <$> pure UpdateNow
     CD.Decline -> App.BackT $ App.BackPoint <$> pure Later

@@ -30,7 +30,7 @@ import Types.ModifyScreenState (modifyScreenState)
 import Effect.Class (liftEffect)
 import JBridge (deletePopUpCallBack)
 import Engineering.Helpers.Commons (liftFlow)
-import React.Navigation.Navigate (navigateToScreen, terminateRenderer)
+import React.Navigation.Navigate (navigateToScreen, removeScaffold)
 
 popUpScreen :: FlowBT String POPUP_SCREEN_OUTPUT
 popUpScreen = do
@@ -38,7 +38,7 @@ popUpScreen = do
     _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "PopUpScreen" Nothing
     action <- lift $ lift $ navigateToScreen $ PopUpScreen.screen state.popUpScreen
     json <- lift $ lift $ getLogFields
-    _ <- lift $ lift $ doAff $ liftEffect $ terminateRenderer json $ Just "PopUpScreen"
+    _ <- lift $ lift $ doAff $ liftEffect $ removeScaffold json $ Just "PopUpScreen"
     case action of
         GoBack -> App.BackT $ pure App.GoBack
         RequestRide id extraFare -> App.BackT $ App.NoBack <$> ( pure (POPUP_REQUEST_RIDE id extraFare) )
