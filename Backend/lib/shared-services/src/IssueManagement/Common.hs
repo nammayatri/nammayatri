@@ -27,6 +27,7 @@ import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.External.Encryption
 import Kernel.External.Types
 import Kernel.Prelude
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id, ShortId)
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -41,7 +42,11 @@ data Ride = Ride
     createdAt :: UTCTime
   }
 
-data MerchantOperatingCity
+data MerchantOperatingCity = MerchantOperatingCity
+  { id :: Id MerchantOperatingCity,
+    merchantId :: Id Merchant,
+    city :: Context.City
+  }
 
 data PersonE e = Person
   { id :: Id Person,
@@ -49,7 +54,8 @@ data PersonE e = Person
     firstName :: Maybe Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
-    mobileNumber :: Maybe (EncryptedHashedField e Text)
+    mobileNumber :: Maybe (EncryptedHashedField e Text),
+    merchantOperatingCityId :: Id MerchantOperatingCity
   }
   deriving (Generic)
 
