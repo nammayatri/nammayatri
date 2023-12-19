@@ -47,8 +47,6 @@ runUpdate updateDataEntries streamName = do
       EL.logError ("UPDATE FAILED" :: Text) ("Invalid streamData or Extraction of data from redis stream failed :: " <> TE.decodeUtf8 streamData <> "; error :: " <> show err)
       return $ Left entryId
 
--- FIXME let topicName = "adob-sessionizer-" <> T.toLower model
-
 runUpdateQuery :: (EL.KVDBStreamEntryID, ByteString) -> DBUpdateObject -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
 runUpdateQuery updateDataEntries dbUpdateObject = do
   Env {..} <- ask

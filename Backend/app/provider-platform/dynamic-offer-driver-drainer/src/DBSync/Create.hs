@@ -90,5 +90,3 @@ getCreateObjectForKafka model content =
       "tag" A..= ((T.pack . pascal . T.unpack) model.getDBModel <> "Object"),
       "type" A..= ("INSERT" :: Text)
     ]
-
--- FIXME let topicName = "adob-sessionizer-" <> T.toLower model

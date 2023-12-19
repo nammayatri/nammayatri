@@ -20,7 +20,7 @@ import Data.Aeson (Object)
 import qualified Data.Aeson as A
 import Database.Beam.Postgres (Connection)
 import EulerHS.KVConnector.DBSync
-import EulerHS.KVConnector.Types
+import EulerHS.KVConnector.Types (DBCommandVersion')
 import EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types as ET hiding (Tag)

@@ -23,7 +23,6 @@ import qualified Kafka.Producer as KafkaProd
 import qualified Kafka.Producer as Producer
 import System.Posix.Signals (raiseSignal, sigKILL)
 import System.Random.PCG
-import Text.Casing (camel)
 import Types.DBSync
 import Types.Event
 import qualified Utils.Redis as RQ
@@ -162,7 +161,7 @@ shutDownHandler = do
 
 createInKafka :: Producer.KafkaProducer -> A.Value -> Text -> DBModel -> IO (Either Text ())
 createInKafka producer dbObject dbStreamKey model = do
-  let topicName = "adob-sessionizer-" <> T.toLower (T.pack (camel (T.unpack model.getDBModel)))
+  let topicName = "adob-sessionizer-" <> T.toLower model.getDBModel
   result' <- KafkaProd.produceMessage producer (message topicName dbObject)
   case result' of
     Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)

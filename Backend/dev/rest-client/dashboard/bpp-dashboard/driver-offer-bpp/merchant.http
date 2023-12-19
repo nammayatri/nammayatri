@@ -22,16 +22,20 @@ content-type: application/json
   "exoPhones" :
     [
       { "primaryPhone" : "+918035272984",
-        "backupPhone" :  "+804710859599"
+        "backupPhone" :  "+804710859599",
+        "callService" :  "Exotel"
       },
       { "primaryPhone" : "+918069457996",
-        "backupPhone" :  "+918069457986"
+        "backupPhone" :  "+918069457986",
+        "callService" :  "Exotel"
       },
       { "primaryPhone" : "+918069457991",
-        "backupPhone" :  "+918069457981"
+        "backupPhone" :  "+918069457981",
+        "callService" :  "Exotel"
       },
       { "primaryPhone" : "+918069457992",
-        "backupPhone" :  "+918069457982"
+        "backupPhone" :  "+918069457982",
+        "callService" :  "Exotel"
       }
     ],
   "fcmConfig" :
