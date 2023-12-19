@@ -168,7 +168,8 @@ repeatSearch ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasShortDurationRetryCfg r c,
     CacheFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   DMerc.Merchant ->
   DFP.FullFarePolicy ->
@@ -210,13 +211,16 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
   where
     buildSearchTry ::
       ( MonadTime m,
-        MonadGuid m
+        MonadGuid m,
+        MonadReader r m,
+        HasField "searchRequestExpirationSeconds" r NominalDiffTime
       ) =>
       DST.SearchTry ->
       m DST.SearchTry
     buildSearchTry DST.SearchTry {..} = do
       id_ <- Id <$> generateGUID
-      let validTill_ = 120 `addUTCTime` validTill
+      searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+      let validTill_ = searchRequestExpirationSeconds `addUTCTime` now
       pure
         DST.SearchTry
           { id = id_,
