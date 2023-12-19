@@ -16,6 +16,8 @@ import "rider-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
 import Utils.Utils
 
+-- FIXME -- we are not pushing delete events to kafka | Todo : To be removed in new drainer PR
+
 -- | This function is used to run the update operation for a single entry in the stream
 runUpdate :: (EL.KVDBStreamEntryID, ByteString) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
 runUpdate updateDataEntries streamName = do
@@ -27,6 +29,9 @@ runUpdate updateDataEntries streamName = do
     Right updateDBModel -> do
       EL.logDebug ("DB OBJECT" :: Text) (show updateDBModel)
       let tableName = updateDBModel.dbModel
+      -- uncomment for debug purposes
+      -- writeDebugFile "update" tableName entryId "streamData.json" streamData
+      -- writeDebugFile "update" tableName entryId "dbObject.txt" $ show updateDBModel
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
         then runUpdateQuery updateDataEntries updateDBModel
         else do
@@ -59,9 +64,13 @@ runUpdateQuery updateDataEntries dbUpdateObject = do
           case result of
             Left (QueryError errorMsg) -> do
               EL.logError ("QUERY UPDATE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+              -- uncomment for debug purposes
+              -- writeDebugFile "update" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("QUERY UPDATE SUCCESSFUL" :: Text) (" Update successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+              -- uncomment for debug purposes
+              -- writeDebugFile "update" dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
               return $ Right entryId
         Nothing -> do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)

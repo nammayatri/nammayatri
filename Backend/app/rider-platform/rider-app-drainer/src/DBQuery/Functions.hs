@@ -112,7 +112,7 @@ makeWhereCondition whereClause mappings = do
       let columnText = quote' $ replaceMappings column mappings
       case term of
         In values -> columnText <> " IN " <> valueToTextForInConditions values
-        Eq value -> columnText <> " != " <> valueToText value
+        Eq value -> columnText <> " = " <> valueToText value
         GreaterThan value -> columnText <> " > " <> valueToText value
         GreaterThanOrEq value -> columnText <> " >= " <> valueToText value
         LessThan value -> columnText <> " < " <> valueToText value
