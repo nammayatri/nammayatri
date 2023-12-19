@@ -5,12 +5,15 @@ import DBQuery.Functions
 import DBQuery.Types
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
 import Data.Maybe
 import Data.Text as T hiding (any, map, null)
 import qualified Data.Text.Encoding as TE
 import Database.PostgreSQL.Simple.Types
 import EulerHS.Language as EL
 import EulerHS.Prelude
+import Kernel.Beam.Lib.Utils as KBLU
 import Text.Casing (pascal)
 import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
@@ -41,7 +44,7 @@ runCreate createDataEntry streamName = do
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
         then runCreateQuery createDataEntry createDBModel
         else do
-          let createObject = getCreateObjectForKafka tableName createDBModel.contentsObj
+          let createObject = KBLU.replaceMappings (A.Object createDBModel.contentsObj) (HM.fromList . M.toList $ createDBModel.mappings.getMapping)
           res <- EL.runIO $ createInKafka _kafkaConnection createObject streamName tableName
           case res of
             Left err -> do
