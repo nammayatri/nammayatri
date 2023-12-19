@@ -72,12 +72,12 @@ runCreateQuery createDataEntry dbCreateObject = do
             Left (QueryError errorMsg) -> do
               EL.logError ("QUERY INSERT FAILED" :: Text) (errorMsg <> " for query :: " <> query)
               -- uncomment for debug purposes
-              -- writeDebugFile dbModel entryId "queryFailed.sql" $ encodeUtf8 query
+              -- writeDebugFile "create" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
               -- uncomment for debug purposes
-              -- writeDebugFile dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
+              -- writeDebugFile "create" dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
               return $ Right entryId
         Nothing -> do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)

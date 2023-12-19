@@ -31,14 +31,14 @@ parseStreamEntryId bs =
 
 parseUpdateValue :: A.Value -> Parser (Text, A.Value)
 parseUpdateValue = A.withObject "update key value pair" $ \o ->
-  (,) <$> (o .: "value0") <*> (o .: "value1")
+  (,) <$> (o .: "key") <*> (o .: "value")
 
 parseDeleteCommandValues ::
   A.Value -> Parser Where
 parseDeleteCommandValues = A.withObject "DBDeleteCommand: Where clause object" $ \o -> do
-  w <- o .: "value0"
+  w <- o .: "clauseTag"
   if w == ("where" :: Text)
-    then decodeWhere =<< o .: "value1"
+    then decodeWhere =<< o .: "clauseContents"
     else fail "Expected where clause"
 
 parseUpdateCommandValues :: A.Value -> Parser ([Set], Where)
@@ -52,9 +52,9 @@ parseUpdateCommandValues = A.withArray "DBUpdateCommand" $ \v -> do
 
 parseCreateCommandValues :: A.Value -> Parser [TermWrap]
 parseCreateCommandValues = A.withObject "DBCreateCommand" $ \o -> do
-  termWrapList <- forM (HM.toList o) $ \(k, v) -> do
+  termWrapList <- forM (AKM.toList o) $ \(k, v) -> do
     val <- parseJSON v
-    pure $ TermWrap (Column k) val
+    pure $ TermWrap (Column $ AesonKey.toText k) val
   case termWrapList of
     [] -> fail "Expected at least one term wrap for CreateCommand"
     _ -> pure termWrapList
@@ -69,9 +69,9 @@ parseWhereValuePairs = A.withArray "Where clause list" $ \v -> do
   case V.toList v of
     [whereObj] ->
       ( A.withObject "Where clause object" $ \o -> do
-          w <- o .: "value0"
+          w <- o .: "clauseTag"
           if w == ("where" :: Text)
-            then decodeWhere =<< o .: "value1"
+            then decodeWhere =<< o .: "clauseContents"
             else fail "Expected where clause"
       )
         whereObj
