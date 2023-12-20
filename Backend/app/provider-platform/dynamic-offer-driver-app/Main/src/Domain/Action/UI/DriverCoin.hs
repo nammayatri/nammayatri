@@ -89,7 +89,7 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
   transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
-  coinBalance_ <- Coins.getCoinsByDriverId driverId
+  coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   let dateInIst = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dateInUTC
   driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let coinUsed_ = driver.usedCoins
@@ -129,7 +129,7 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) = do
   transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
-  coinBalance_ <- Coins.getCoinsByDriverId driverId
+  coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   purchaseSummary <- PHistory.getPurchasedHistory driverId
   mbDriverPlan <- DPlan.findByDriverId driverId
   let coinUsageHistory = map toUsageHistoryItem purchaseSummary
@@ -183,7 +183,7 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   _ <- DPlan.findByDriverId driverId >>= fromMaybeM (InternalError $ "No plan against the driver id" <> driverId.getId <> "Please choose a plan")
   now <- getCurrentTime
   uuid <- generateGUIDText
-  coinBalance <- Coins.getCoinsByDriverId driverId
+  coinBalance <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   let stepFunctionToConvertCoins = transporterConfig.stepFunctionToConvertCoins
   when (coins < stepFunctionToConvertCoins) $
     throwError $ CoinConversionToCash driverId.getId coins
