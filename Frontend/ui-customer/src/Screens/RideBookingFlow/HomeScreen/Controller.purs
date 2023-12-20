@@ -637,6 +637,12 @@ data Action = NoAction
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
+eval ReAllocate state =
+  if isLocalStageOn ReAllocated then do
+    _ <- pure $ setValueToLocalStore LOCAL_STAGE ( show FindingQuotes)
+    exit $ Retry state{ props{ currentStage = FindingQuotes } }
+  else continue state
+
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
   updateAndExit state{props{isPopUp = NoPopUp}} $ LocationSelected (fromMaybe dummyListItem state.data.selectedLocationListItem) false state{props{currentStage = currentStage, sourceSelectedOnMap = true, isPopUp = NoPopUp}}
