@@ -72,6 +72,9 @@ instance FromField [EstimateBreakupD 'Unsafe] where
 instance FromField (EstimateBreakupD 'Unsafe) where
   fromField = fromFieldJSON
 
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be (EstimateBreakupD 'Unsafe) where
+  sqlValueSyntax = sqlValueSyntax . encodeToText
+
 instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [EstimateBreakupD 'Unsafe] where
   sqlValueSyntax unsafeEstimateBreakupList =
     let x = encodeToText <$> unsafeEstimateBreakupList
