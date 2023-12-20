@@ -18,6 +18,7 @@ import Text.Casing (pascal)
 import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
 import Types.DBSync.Update
+import Types.Event as Event
 import Utils.Utils
 
 -- | This function is used to run the update operation for a single entry in the stream
@@ -42,6 +43,7 @@ runUpdate updateDataEntries streamName = do
           case res of
             Left err -> do
               EL.logError ("KAFKA UPDATE FAILED" :: Text) (err <> " for Object :: " <> show updateDBModel.contents)
+              void $ publishDBSyncMetric Event.KafkaPushFailure
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("KAFKA UPDATE SUCCESSFUL" :: Text) (" Update successful for object :: " <> show updateDBModel.contents)
@@ -66,6 +68,7 @@ runUpdateQuery updateDataEntries dbUpdateObject = do
           case result of
             Left (QueryError errorMsg) -> do
               EL.logError ("QUERY UPDATE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+              void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Update" dbModel.getDBModel
               -- uncomment for debug purposes
               -- writeDebugFile "update" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
