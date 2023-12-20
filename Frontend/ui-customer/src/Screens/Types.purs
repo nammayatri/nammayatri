@@ -514,6 +514,7 @@ data Stage = HomeScreen
            | FindingEstimate
            | ConfirmingRide
            | RideAccepted
+           | ReAllocated
            | RideStarted
            | RideCompleted
            | PricingTutorial
@@ -710,6 +711,7 @@ type HomeScreenStateProps =
   , currentLocation :: Location
   , isShorterTrip :: Boolean
   , city :: Maybe String
+  , reAllocation :: ReAllocationProp
   }
 
 type SearchLocationModelProps = {
@@ -775,6 +777,7 @@ data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_
 
 derive instance genericTipViewStage :: Generic TipViewStage _
 instance showTipViewStage :: Show TipViewStage where show = genericShow
+instance eqTipViewStage :: Eq TipViewStage where eq = genericEq
 instance encodeTipViewStage :: Encode TipViewStage where encode = defaultEncode
 instance decodeTipViewStage :: Decode TipViewStage where decode = defaultDecode
 
@@ -1469,3 +1472,7 @@ data TicketBookingScreenStage = DescriptionStage
 derive instance genericTicketBookingScreenStage :: Generic TicketBookingScreenStage _
 instance showTicketBookingScreenStage :: Show TicketBookingScreenStage where show = genericShow
 instance eqTicketBookingScreenStage :: Eq TicketBookingScreenStage where eq = genericEq
+
+type ReAllocationProp =
+  { showPopUp :: Boolean
+  }

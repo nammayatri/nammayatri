@@ -85,6 +85,7 @@ data KeyStore
   | REFERRER_URL
   | PAYMENT_STATUS_POOLING
   | CONFIG_VERSION
+  | REALLOCATE_PRODUCT_ENABLED
 
 derive instance genericKeyStore :: Generic KeyStore _
 

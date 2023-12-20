@@ -64,6 +64,7 @@ type AppConfig =
   , enableGeocoder :: Boolean -- TODO:: Deprecated 21st Nov 2023
   , geoCoder :: GeoCoderConfig
   , appLink :: String
+  , enableReAllocation :: Boolean
   } 
 
 type GeoCoderConfig = {

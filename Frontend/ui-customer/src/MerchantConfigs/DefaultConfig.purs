@@ -177,4 +177,5 @@ config =
       hearingImpairmentVideo : ""
     }
   , appLink : ""
+  , enableReAllocation : true
   }

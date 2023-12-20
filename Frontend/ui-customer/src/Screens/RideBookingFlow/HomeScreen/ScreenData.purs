@@ -247,6 +247,9 @@ initData = {
         , destinationAddress : dummyAddress
       }
     , city : Nothing
+    , reAllocation : {
+        showPopUp : false
+      }
     }
 }
 

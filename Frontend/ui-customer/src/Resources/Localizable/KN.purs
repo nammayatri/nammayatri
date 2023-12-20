@@ -664,3 +664,5 @@ getKN stringKey =
         FARE_UPDATED_WITH_LONGER_DIST -> "ನಿಮ್ಮ ಸವಾರಿ {} ಕಿಮೀ ಉದ್ದವಿರುವುದರಿಂದ ನಿಮ್ಮ ದರವನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"
         FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "ನಿಮ್ಮ ಪ್ರಯಾಣವು {} ಕಿಮೀ ಕಡಿಮೆಯಾದ್ದರಿಂದ ನಿಮ್ಮ ದರವನ್ನು ಅಪ್‌ಡೇಟ್ ಮಾಡಲಾಗಿದೆ ಮತ್ತು ಕಾಯುವ ಸಮಯದ ಶುಲ್ಕಗಳು"
         FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "ನಿಮ್ಮ ಪ್ರಯಾಣವು {} ಕಿಮೀ ಉದ್ದವಿರುವುದರಿಂದ ನಿಮ್ಮ ದರವನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ ಮತ್ತು ಕಾಯುವ ಸಮಯದ ಶುಲ್ಕಗಳು"
+        LOOKING_FOR_ANOTHER_RIDE -> "ಇನ್ನೊಂದು ಸವಾರಿಗಾಗಿ ಹುಡುಕುತ್ತಿದ್ದೇವೆ..."
+        THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "ಸವಾರಿ ರದ್ದಾಗಿದೆ, ನಾವು ನಿಮಗೆ ಇನ್ನೊಂದನ್ನು ಹುಡುಕುತ್ತಿದ್ದೇವೆ"

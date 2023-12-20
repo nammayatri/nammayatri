@@ -31,12 +31,12 @@ import Data.Either (Either(..))
 import Services.API
 import Data.Array (null, head, length)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing, isJust, maybe')
-import Screens.HomeScreen.ScreenData (dummyRideBooking)
-import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
+import Screens.HomeScreen.ScreenData (dummyRideBooking, initData) as HSD
+import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getSpecialTag)
+import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Data.Lens ((^.))
 import Accessor
-import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..))
-import Screens.HomeScreen.Transformer (getDriverInfo, getSpecialTag)
+import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatusData(..), TipViewData(..))
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage
@@ -56,9 +56,9 @@ checkRideStatus rideAssigned = do
       if not (null listResp.list) then do
         (GlobalState state') <- getState
         let state = state'.homeScreen
-            (RideBookingRes resp) = (fromMaybe dummyRideBooking (head listResp.list))
+            (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
-            rideStatus = if status == "NEW" then RideAccepted else RideStarted
+            rideStatus = if status == "NEW" then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             newState = 
               state
                 { data
@@ -73,34 +73,37 @@ checkRideStatus rideAssigned = do
                     , zoneType = getSpecialTag resp.specialLocationTag
                   }
                 }
-        when (not rideAssigned) $ do
-          lift $ lift $ liftFlow $ logEvent logField_ "ny_active_ride_with_idle_state"
-          void $ pure $ logEventWithTwoParams logField_ "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
-        modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
-        updateLocalStage rideStatus
-        maybe' (\_ -> pure unit) updateCity (getFlowStatusData "LazyCheck")
-        let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-            (RideBookingDetails contents) = bookingDetails.contents
-            otpCode = contents.otpCode
-            rideListItem = head resp.rideList
-        case rideListItem of
-          Nothing -> do
-            case otpCode of
-              Just otp' -> do
+        if rideStatus == HomeScreen then
+          updateLocalStage HomeScreen
+        else do
+          when (not rideAssigned) $ do
+            lift $ lift $ liftFlow $ logEvent logField_ "ny_active_ride_with_idle_state"
+            void $ pure $ logEventWithTwoParams logField_ "ny_active_ride_with_idle_state" "status" status "bookingId" resp.id
+          modifyScreenState $ HomeScreenStateType (\homeScreen → newState)
+          updateLocalStage rideStatus
+          maybe' (\_ -> pure unit) updateCity (getFlowStatusData "LazyCheck")
+          let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+              (RideBookingDetails contents) = bookingDetails.contents
+              otpCode = contents.otpCode
+              rideListItem = head resp.rideList
+          case rideListItem of
+            Nothing -> do
+              case otpCode of
+                Just otp' -> do
+                  setValueToLocalStore TRACKING_ENABLED "True"
+                  modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true, isInApp = true}, data{driverInfoCardState{otp = otp'}}})
+                Nothing -> pure unit
+            Just (RideAPIEntity _) ->
+              if isJust otpCode then do
                 setValueToLocalStore TRACKING_ENABLED "True"
-                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true, isInApp = true}, data{driverInfoCardState{otp = otp'}}})
-              Nothing -> pure unit
-          Just (RideAPIEntity _) ->
-            if isJust otpCode then do
-              setValueToLocalStore TRACKING_ENABLED "True"
-              modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true }}) else
-              pure unit
+                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true,isInApp = true }}) else
+                pure unit
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
         rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
         case rideBookingListResponse of
           Right (RideBookingListRes listResp) -> do
-            let (RideBookingRes resp) = fromMaybe dummyRideBooking $ head listResp.list
+            let (RideBookingRes resp) = fromMaybe HSD.dummyRideBooking $ head listResp.list
                 (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
                 (RideBookingDetails contents) = bookingDetails.contents
                 (RideAPIEntity currRideListItem) = fromMaybe dummyRideAPIEntity $ head resp.rideList

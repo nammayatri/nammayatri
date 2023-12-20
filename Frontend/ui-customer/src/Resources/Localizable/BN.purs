@@ -662,3 +662,5 @@ getBN stringKey =
         FARE_UPDATED_WITH_LONGER_DIST -> "আপনার ভাড়া আপডেট করা হয়েছে কারণ আপনার যাত্রা {} কিলোমিটার দীর্ঘ ছিল"
         FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "আপনার ভাড়া আপডেট করা হয়েছে কারণ আপনার রাইড {} কিমি কম ছিল এবং অপেক্ষার সময় চার্জ নেওয়া হয়েছে"
         FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "আপনার ভাড়া আপডেট করা হয়েছে কারণ আপনার যাত্রা {} কিমি দীর্ঘ ছিল এবং অপেক্ষার সময় চার্জ নেওয়া হয়েছে"
+        LOOKING_FOR_ANOTHER_RIDE -> "আরেকটি চলার জন্য খোঁজ করছি..."
+        THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "চলন্ত ছিল, তা বাতিল করতে হয়েছে, আমরা তার জন্য আরও খোঁজছি"

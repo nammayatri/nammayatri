@@ -662,3 +662,5 @@ getHI stringKey =
         FARE_UPDATED_WITH_LONGER_DIST -> "आपका किराया अपडेट कर दिया गया है क्योंकि आपकी सवारी {} किमी लंबी थी"
         FARE_UPDATED_WITH_CHARGES_SHORTER_DIST -> "आपका किराया अपडेट कर दिया गया है क्योंकि आपकी सवारी {} किमी छोटी थी और प्रतीक्षा समय का शुल्क लगा था"
         FARE_UPDATED_WITH_CHARGES_LONGER_DIST -> "आपका किराया अपडेट कर दिया गया है क्योंकि आपकी सवारी {} किमी लंबी थी और प्रतीक्षा समय का शुल्क लगा था"
+        LOOKING_FOR_ANOTHER_RIDE -> "एक और सफर ढूंढ़ रहे हैं..."
+        THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "यात्रा को रद्द कर दिया गया था, हम आपके लिए एक और ढूंढ़ रहे हैं"
