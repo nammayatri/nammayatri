@@ -17,6 +17,7 @@ import Kernel.Beam.Lib.Utils as KBLU
 import Text.Casing (pascal)
 import "rider-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
+import Types.Event as Event
 import Utils.Utils
 
 -- | This function is used to run the create operation for a single entry in the stream
@@ -41,6 +42,7 @@ runCreate createDataEntry streamName = do
           case res of
             Left err -> do
               EL.logError ("KAFKA CREATE FAILED" :: Text) (err <> " for Object :: " <> show createDBModel.contents)
+              void $ publishDBSyncMetric Event.KafkaPushFailure
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("KAFKA CREATE SUCCESSFUL" :: Text) (" Create successful for object :: " <> show createDBModel.contents)
@@ -66,6 +68,7 @@ runCreateQuery createDataEntry dbCreateObject = do
           case result of
             Left (QueryError errorMsg) -> do
               EL.logError ("QUERY INSERT FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+              void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" dbModel.getDBModel
               -- uncomment for debug purposes
               -- writeDebugFile "create" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
