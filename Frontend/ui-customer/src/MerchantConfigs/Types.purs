@@ -167,8 +167,10 @@ type QuoteListConfig = {
 type SuggestedDestinationAndTripsConfig = {
   geohashLimitForMap :: Int,
   geohashPrecision :: Int,
-  locationsToBeShown :: Int,
-  tripsToBeShown :: Int,
+  maxLocationsToBeShown :: Int,
+  minLocationsToBeShown :: Int,
+  maxTripsToBeShown :: Int,
+  minTripsToBeShown :: Int,
   locationsToBeStored :: Int,
   tripsToBeStored :: Int,
   frequencyWeight :: Number,
