@@ -213,7 +213,7 @@ schedulerTrigger ::
   ApiTokenInfo ->
   Common.SchedulerTriggerReq ->
   FlowHandler APISuccess
-schedulerTrigger merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI $ do
+schedulerTrigger merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.schedulerTrigger) req
 
