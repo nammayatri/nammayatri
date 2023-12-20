@@ -39,6 +39,8 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl)
 import JBridge (lottieAnimationConfig, startLottieProcess)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 -- import React.Render.CustomBase (lottieAnimationView)
+import ReactComponents.Calendar.View as CalendarView
+import ReactComponents.Calendar.Controller as CalendarController
 
 -- view :: forall action. (action -> Effect Unit) -> ST.RideHistoryScreenState -> Effect Unit
 -- view push state = PrestoDOM.linearLayout[
@@ -46,16 +48,16 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 --     , width MATCH_PARENT
 --   ] [ ]
 
-app :: forall action. (Int -> action) -> (action -> Effect Unit) -> Component{push :: (Action -> Effect Unit), state :: ST.RideHistoryScreenState}
-app action halfPush = do
-  component "App" \{push, state} -> React.do    
+app :: (Action -> Effect Unit) -> Component{state :: ST.RideHistoryScreenState}
+app push = do
+  component "App" \{state} -> React.do    
     
-    useEffectAlways (\_ -> do
-      log "useEffectAlways"
-      _ <- pure $ startLottieProcess lottieAnimationConfig { rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/accepted_by_another_driver_lottie.json", lottieId = (getNewIDWithTag "splashLottieAnimation"), speed = 1.8 }
-      -- _ <- push action
-      pure $ pure unit
-    )
+    -- useEffectAlways (\_ -> do
+    --   log "useEffectAlways"
+    --   _ <- pure $ startLottieProcess lottieAnimationConfig { rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/accepted_by_another_driver_lottie.json", lottieId = (getNewIDWithTag "splashLottieAnimation"), speed = 1.8 }
+    --   -- _ <- push action
+    --   pure $ pure unit
+    -- )
 
     -- ref <- useRef ("safas")
     -- r <- readRef(ref)
@@ -89,8 +91,9 @@ app action halfPush = do
               , margin: "0, 0, 0, 0"
             }
           , linearLayout {weight: "1.0"} []
-          -- , IncrementDecrementView.app action halfPush (incrementDecrementConfig push state)
-          , PrimaryButtonView.primaryButton BackPressed push {text: "Pay Money"}
+          , IncrementDecrementView.app (push <<< CounterChange) (incrementDecrementConfig push state)
+          , CalendarView.app (push <<< CalendarAction) (CalendarController.config)
+          -- , PrimaryButtonView.primaryButton BackPressed push {text: "Pay Money"}
         --   , imageView {
         --       height: "24"
         --     , width: "24"

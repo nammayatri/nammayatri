@@ -50,6 +50,7 @@ import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
 import ReactComponents.IncrementDecrement.Controller as IDA
+import ReactComponents.Calendar.Controller as CA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -123,7 +124,8 @@ data Action = Dummy
             | PaymentHistoryModelAC PaymentHistoryModel.Action
             | OpenPaymentHistory
             | CounterChange IDA.ComponentOutput
-
+            | CalendarAction CA.ComponentOutput
+            
 eval :: Action -> RideHistoryScreenState -> Eval Action ScreenOutput RideHistoryScreenState
 eval AfterRender state = continue state
 eval BackPressed state = if state.props.showPaymentHistory then continue state{ props {showPaymentHistory = false }}
