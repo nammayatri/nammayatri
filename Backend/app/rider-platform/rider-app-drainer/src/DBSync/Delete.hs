@@ -2,14 +2,12 @@ module DBSync.Delete where
 
 import Config.Env
 import Data.Aeson
-import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
 import Data.Maybe (fromJust)
 import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
-import EulerHS.KVConnector.DBSync
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
@@ -17,8 +15,6 @@ import Kafka.Producer
 import qualified Kafka.Producer as KafkaProd
 import qualified Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
-import Sequelize
-import Text.Casing
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -136,14 +132,3 @@ streamRiderDrainerDeletes producer dbObject dbStreamKey = do
           prKey = Just $ TE.encodeUtf8 dbStreamKey,
           prValue = Just . LBS.toStrict $ encode event
         }
-
-getDbDeleteDataJson :: forall be table. (Model be table, MeshMeta be table) => Text -> Where be table -> A.Value
-getDbDeleteDataJson model whereClause =
-  A.object
-    [ "contents"
-        .= A.object
-          [ "where" .= modelEncodeWhere whereClause
-          ],
-      "tag" .= T.pack (pascal (T.unpack model)),
-      "type" .= ("DELETE" :: Text)
-    ]

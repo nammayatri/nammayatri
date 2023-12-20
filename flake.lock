@@ -598,16 +598,16 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1703253881,
-        "narHash": "sha256-QfpyJmvGaejRzMbWZOlOoWkU4CkdgNTwuuVRORvn/Wg=",
-        "owner": "juspay",
+        "lastModified": 1703765920,
+        "narHash": "sha256-1UT2s+1KBb2UtFGdYFZuv/zVQIuJWvnLtvr4iShtBQg=",
+        "owner": "nammayatri",
         "repo": "euler-hs",
-        "rev": "3108d72edb65897c89d7ded4da9fea93dc98d397",
+        "rev": "50a9fc56258ceed718a1e84951550821738d83a3",
         "type": "github"
       },
       "original": {
-        "owner": "enigma-commits",
-        "ref": "Backend/feat/redis-cluster-pipelining",
+        "owner": "nammayatri",
+        "ref": "backend/custom-mapping-and-sqlObject-for-decoupling-drainers",
         "repo": "euler-hs",
         "type": "github"
       }
@@ -2910,16 +2910,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1696055637,
-        "narHash": "sha256-RVlpKevWjt9pB9Ia61+ILFcbjB8omiRA6zehmPb6FHg=",
-        "owner": "juspay",
+        "lastModified": 1702897959,
+        "narHash": "sha256-uhv/uKOwu1IfFnYyFFB4k5dMrYcorjs1DCd6ehm9ReA=",
+        "owner": "vijaygupta18",
         "repo": "haskell-sequelize",
-        "rev": "991064c0b9b5f5cf691b19d53ac6b0c9109a2dff",
+        "rev": "b109d29f46b611cd5ff7e0d09aead48076871210",
         "type": "github"
       },
       "original": {
-        "owner": "juspay",
-        "ref": "beckn-compatible",
+        "owner": "vijaygupta18",
+        "ref": "decouple-drainer-from-app",
         "repo": "haskell-sequelize",
         "type": "github"
       }
@@ -2973,11 +2973,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1703314416,
-        "narHash": "sha256-Oo8Yv4hmfGgeXbeUGf/0Z/wjwXafbwldwAF7h0gnrJY=",
+        "lastModified": 1703776861,
+        "narHash": "sha256-UkVcpIdoTuChdFjIF2d7NWrDy6RHikZRh0Zt7UNqToY=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "4d814d09efecf6bce3dc0854164b171245cfcf48",
+        "rev": "c5429711caa8225c6c0ddb84f0f4b89cfdd60017",
         "type": "github"
       },
       "original": {

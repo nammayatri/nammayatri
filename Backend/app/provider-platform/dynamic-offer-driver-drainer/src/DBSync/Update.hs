@@ -197,7 +197,7 @@ runUpdateCommands (cmd, val) dbStreamKey = do
                 (\_ -> pure $ Right id)
                 res''
             Left _ -> do
-              let updatedJSON = getDbUpdateDataJson model $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
+              let updatedJSON = getDbUpdateDataJson model (A.String "No Data in Redis for updated condition")
               Env {..} <- ask
               res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
               either
