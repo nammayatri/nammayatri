@@ -89,7 +89,7 @@ app action halfPush = do
               , margin: "0, 0, 0, 0"
             }
           , linearLayout {weight: "1.0"} []
-          , IncrementDecrementView.app action halfPush (incrementDecrementConfig push state)
+          -- , IncrementDecrementView.app action halfPush (incrementDecrementConfig push state)
           , PrimaryButtonView.primaryButton BackPressed push {text: "Pay Money"}
         --   , imageView {
         --       height: "24"

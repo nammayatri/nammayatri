@@ -49,6 +49,7 @@ import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..),
 import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Styles.Colors as Color
+import ReactComponents.IncrementDecrement.Controller as IDA
 
 instance showAction :: Show Action where
   show _ = ""
@@ -86,7 +87,8 @@ instance loggableAction :: Loggable Action where
           trackAppEndScreen appId (getScreen TRIP_DETAILS_SCREEN)
     PaymentHistoryModelAC act -> pure unit
     OpenPaymentHistory -> pure unit
-    CounterChange count -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "CounterChange" 
+    _ -> pure unit
+    -- CounterChange count -> trackAppScreenEvent appId (getScreen RIDE_HISTORY_SCREEN) "in_screen" "CounterChange" 
 
 data ScreenOutput = GoBack
                     | HomeScreen
@@ -120,7 +122,7 @@ data Action = Dummy
             | GenericHeaderAC GenericHeader.Action
             | PaymentHistoryModelAC PaymentHistoryModel.Action
             | OpenPaymentHistory
-            | CounterChange Int
+            | CounterChange IDA.ComponentOutput
 
 eval :: Action -> RideHistoryScreenState -> Eval Action ScreenOutput RideHistoryScreenState
 eval AfterRender state = continue state

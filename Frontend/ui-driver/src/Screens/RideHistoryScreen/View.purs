@@ -117,8 +117,8 @@ view rideListItem push state =
                 -- ReactElem $ ZooBookingModel.app {push: push, state: state}]
                 -- ReactElem $ IncrementDecrement.test Dummy push {count: 1}]
               -- checkingView Dummy push state ]
-                ReactElem $ ZooBookingModel.app CounterChange push {push: push, state: state}]
-              -- ReactElem $ IncrementDecrement.app CounterChange push (incrementDecrementConfig push state)]
+                -- ReactElem $ ZooBookingModel.app (push <<< CounterChange) {push: push, state: state}]  
+              ReactElem $ IncrementDecrement.app (push <<< CounterChange) (incrementDecrementConfig push state)]
               -- rideListView rideListItem push state] <> if state.props.showPaymentHistory then [paymentHistoryModel push state] else []
     ]
 

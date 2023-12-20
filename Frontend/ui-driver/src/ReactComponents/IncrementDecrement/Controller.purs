@@ -20,6 +20,22 @@ import Common.Types.App
 import Effect (Effect)
 import Styles.Colors as Color
 import Data.Maybe (Maybe(..))
+import Debug 
+
+data ComponentOutput = Counter Int
+
+data ComponentAction = Increment | Decrement
+
+componentAction :: ComponentAction -> ((Config -> Config) -> Effect Unit) -> Effect Unit
+componentAction componentAction updatedState = updatedState (\state_ -> eval componentAction state_)
+
+eval :: ComponentAction -> Config -> Config
+eval Increment state = 
+  let _ = spy "debug action eval" Increment
+  in state { initialCount = state.initialCount + 1}
+eval Decrement state = 
+  let _ = spy "debug action eval" Decrement
+  in state { initialCount = state.initialCount - 1}
 
 type Config = {
     initialCount :: Int
@@ -31,7 +47,7 @@ type Config = {
   , cornerRadius :: String
   , padding :: String
   , margin :: String
-  , onChange :: Maybe (Int -> Effect Unit)
+  -- , onChange :: Maybe (Int -> Effect Unit)
 }
 
 type PlusMinusObj = {
@@ -71,5 +87,5 @@ config =
   , cornerRadius: "4.0"
   , padding: "28, 7, 28, 7"
   , margin: "0, 24, 0, 24"
-  , onChange: Nothing
+  -- , onChange: Nothing
   }

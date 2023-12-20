@@ -16,11 +16,11 @@
 module ReactComponents.IncrementDecrement.View (app)  where
 
 import Prelude
-import React.Basic.Hooks (Component, component)
+import React.Basic.Hooks (Component, component, JSX)
 import Effect (Effect)
 import React.Render.CustomBase (linearLayout, textView)
 import Styles.Colors as Color
-import ReactComponents.IncrementDecrement.Controller (Config)
+import ReactComponents.IncrementDecrement.Controller (Config, ComponentOutput(..), config, ComponentAction(..), componentAction)
 import React.Basic.Hooks as React
 import React.Basic.Hooks (Component, component, useEffect, useState)
 import Data.Tuple.Nested (type (/\), (/\))
@@ -30,67 +30,78 @@ import Data.Maybe (Maybe(..), maybe)
 -- import Helpers.Utils ((:<>))
 -- import Prim.Boolean (False)
 
-app :: forall action . (Int -> action) -> (action -> Effect Unit) -> Component Config
-app action push = do 
-  component "app" \{initialCount, plus, minus, stroke, backgroundColor, fontSize, cornerRadius, padding, margin, onChange} -> React.do
-    count /\ setCount <- useState initialCount
-    let onIncrement = setCount (\prevCount -> prevCount + 1)
-    let onDecrement = setCount (\prevCount -> if(prevCount > 1) then prevCount - 1 else prevCount)
-
-    useEffect count (\_ -> do
-                      log ("IncrementDecrementView count: " <> show count)
-                      maybe (push $ action count) (\f -> f count) onChange
-                      pure $ pure unit)
-
-    pure $
-      linearLayout {
-          height: "wrap_content"
-        , width: "match_parent"
-        , orientation: "vertical"
-        , weight: "0.0"
-        , margin: margin
-      } [ linearLayout {
-            height: "wrap_content"
-          , width: "match_parent"
-          , orientation: "horizontal"
-          , padding: "4, 4, 4, 4"
-          , cornerRadius: "8.0"
-          , background: backgroundColor
-          , stroke: stroke
-        } [ textView {
-              background: minus.backgroundColor
-            , text: "-"
-            , textSize: fontSize
-            , gravity: "center"
-            , cornerRadius: cornerRadius
-            , width: minus.width
-            , padding: padding
-            , onClick: onDecrement
-            , height: minus.height
-            -- , rippleColor: minus.rippleColor
-            }
-          , textView {
-              background: Color.white900
-            , text: (show count)
-            , textSize: fontSize
-            , height: "wrap_content"
-            , color: Color.black800
-            , padding: padding
-            , weight: "1.0"
-            , gravity: "center"
-            } 
-          , textView ({
-              background: plus.backgroundColor
-            , width: plus.width
-            , height: plus.height
-            , text: "+"
-            , textSize: fontSize
-            , color: plus.textColor
-            , padding: padding
-            , cornerRadius: cornerRadius
-            , onClick: onIncrement
-            -- , rippleColor: plus.rippleColor 
-            } )
-            -- :<> (if false then {background: plus.backgroundColor} else {background: ""}))
-          ]
-        ]
+app :: (ComponentOutput -> Effect Unit) -> Component Config
+app push = do 
+  component "app" \initialState -> React.do
+    -- count /\ setCount <- useState initialState.initialCount
+    -- let onIncrement = setCount (\prevCount -> prevCount + 1)
+    -- let onDecrement = setCount (\prevCount -> if(prevCount > 1) then prevCount - 1 else prevCount)
+    state /\ updatedState <- useState initialState
+    pure $ view push state updatedState
+  
+view :: (ComponentOutput -> Effect Unit) -> Config -> ((Config -> Config) -> Effect Unit) -> JSX
+view push config updateState =
+  linearLayout 
+  { height: "wrap_content"
+  , width: "match_parent"
+  , orientation: "vertical"
+  , weight: "0.0"
+  , margin: config.margin
+  } [ linearLayout 
+    { height: "wrap_content"
+    , width: "match_parent"
+    , orientation: "horizontal"
+    , padding: "4, 4, 4, 4"
+    , cornerRadius: "8.0"
+    , background: config.backgroundColor
+    , stroke: config.stroke
+    } [ textView 
+        { background: config.minus.backgroundColor
+        , text: "-"
+        , textSize: config.fontSize
+        , gravity: "center"
+        , cornerRadius: config.cornerRadius
+        , width: config.minus.width
+        , padding: config.padding
+        , onClick: componentAction Decrement updateState
+        , height: config.minus.height
+        , rippleColor: config.minus.rippleColor
+        }
+      , textView 
+        { background: Color.white900
+        , text: (show config.initialCount)
+        , textSize: config.fontSize
+        , height: "wrap_content"
+        , color: Color.black800
+        , padding: config.padding
+        , weight: "1.0"
+        , gravity: "center"
+        } 
+      , textView
+        { background: config.plus.backgroundColor
+        , width: config.plus.width
+        , height: config.plus.height
+        , text: "+"
+        , textSize: config.fontSize
+        , color: config.plus.textColor
+        , padding: config.padding
+        , cornerRadius: config.cornerRadius
+        , onClick: componentAction Increment updateState
+        , rippleColor: config.plus.rippleColor 
+        }
+      ]
+    , linearLayout
+      { width : "match_parent"
+      , height : "wrap_content"
+      , background : Color.black800
+      , cornerRadius : config.cornerRadius
+      , margin : config.margin
+      , onClick: push $ Counter config.initialCount
+      , gravity : "center"
+      }[  textView
+          { text : "Output"
+          , color : Color.white900
+          , padding : config.padding
+          }
+       ]
+    ]
