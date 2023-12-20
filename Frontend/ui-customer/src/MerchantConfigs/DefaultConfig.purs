@@ -135,8 +135,10 @@ config =
   , suggestedTripsAndLocationConfig : {
         geohashLimitForMap : 60,
         geohashPrecision : 7,
-        locationsToBeShown : 5,
-        tripsToBeShown : 5,
+        maxLocationsToBeShown : 5,
+        minLocationsToBeShown : 2,
+        maxTripsToBeShown : 5,
+        minTripsToBeShown : 2,
         locationsToBeStored : 30,
         tripsToBeStored : 30,
         frequencyWeight : 0.7,

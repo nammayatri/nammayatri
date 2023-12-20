@@ -162,7 +162,7 @@ window.getMerchantConfig = function () {
     , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "callOptions" : ["ANONYMOUS", "DIRECT"]
-    , "showDisabilityBanner" : true
+    , "showDisabilityBanner" : false
     , "enableContactSupport" : false
     , "enableGeocoder" : true
     , "estimateAndQuoteConfig" :

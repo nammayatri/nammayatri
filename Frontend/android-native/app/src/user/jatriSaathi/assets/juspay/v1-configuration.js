@@ -268,5 +268,9 @@ window.getMerchantConfig = function () {
       "enableZooTicketBookingFlow" : true,
       "enableShareRide" : false
     } 
+    , "suggestedTripsAndLocationConfig" : {
+      "minLocationsToBeShown" : 1,
+      "minTripsToBeShown" : 1,
+    }
   })
 }

@@ -3722,7 +3722,7 @@ movingRightArrowView viewId =
 
 suggestedLocationCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestedLocationCardView push state = 
-  let takeValue = if state.props.suggestionsListExpanded then state.data.config.suggestedTripsAndLocationConfig.locationsToBeShown else 2
+  let takeValue = if state.props.suggestionsListExpanded then state.data.config.suggestedTripsAndLocationConfig.maxLocationsToBeShown else state.data.config.suggestedTripsAndLocationConfig.minLocationsToBeShown
   in
   linearLayout
     [ height WRAP_CONTENT
@@ -3794,7 +3794,7 @@ suggestedDestinationCard push state index suggestion =
 
 repeatRideCardParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 repeatRideCardParentView push state = 
-  let takeValue = if state.props.suggestionsListExpanded then state.data.config.suggestedTripsAndLocationConfig.tripsToBeShown else 2
+  let takeValue = if state.props.suggestionsListExpanded then state.data.config.suggestedTripsAndLocationConfig.maxTripsToBeShown else state.data.config.suggestedTripsAndLocationConfig.minTripsToBeShown
   in
   linearLayout
     [ height WRAP_CONTENT
