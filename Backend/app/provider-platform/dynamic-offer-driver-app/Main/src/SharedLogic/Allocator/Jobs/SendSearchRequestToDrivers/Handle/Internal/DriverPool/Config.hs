@@ -79,3 +79,4 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be OnRideRadiusConfig 
   sqlValueSyntax = autoSqlValueSyntax
 
 $(mkBeamInstancesForEnum ''PoolSortingType)
+$(mkBeamInstancesForList ''BatchSplitByPickupDistance)

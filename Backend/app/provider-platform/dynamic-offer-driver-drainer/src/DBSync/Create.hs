@@ -18,6 +18,7 @@ import Text.Casing (pascal)
 import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
 import Types.DBSync.Create
+import Types.Event as Event
 import Utils.Utils
 
 -- import qualified Data.ByteString as BS
@@ -49,6 +50,7 @@ runCreate createDataEntry streamName = do
           case res of
             Left err -> do
               EL.logError ("KAFKA CREATE FAILED" :: Text) (err <> " for Object :: " <> show createDBModel.contents)
+              void $ publishDBSyncMetric Event.KafkaPushFailure
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("KAFKA CREATE SUCCESSFUL" :: Text) (" Create successful for object :: " <> show createDBModel.contents)
@@ -73,6 +75,7 @@ runCreateQuery createDataEntry dbCreateObject = do
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
           case result of
             Left (QueryError errorMsg) -> do
+              void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" dbModel.getDBModel
               EL.logError ("QUERY INSERT FAILED" :: Text) (errorMsg <> " for query :: " <> query)
               -- uncomment for debug purposes
               -- writeDebugFile "create" dbModel entryId "queryFailed.sql" $ encodeUtf8 query

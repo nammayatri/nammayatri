@@ -16,7 +16,6 @@
 module Domain.Types.Maps.PlaceNameCache where
 
 import Database.Beam.Backend
-import Database.Beam.Backend
 import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH (mkBeamInstancesForList)
