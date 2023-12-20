@@ -280,7 +280,7 @@ vehicleRegistrationNumber state push =
               , height WRAP_CONTENT
               , text (getString VEHICLE_REGISTRATION_NUMBER)
               , color Color.greyTextColor
-              , margin (MarginBottom 10)
+              , margin (MarginBottom 12)
               ] <> FontStyle.body3 TypoGraphy)
           ,   textView $ -- (Required Field Indication)
               [ width WRAP_CONTENT
@@ -747,7 +747,7 @@ rightWrongItemView isRight text' =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , margin $ MarginBottom 8
+  , margin $ MarginBottom 5
   , gravity CENTER_VERTICAL
   ][ imageView
     [ width $ V 16

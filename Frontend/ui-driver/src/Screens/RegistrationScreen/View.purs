@@ -382,7 +382,7 @@ enterReferralCode push state =
             , orientation HORIZONTAL
             , stroke $ "1," <> Color.grey900
             , cornerRadius 4.0
-            , padding $ Padding 10 10 10 10
+            , padding $ Padding 10 8 10 8
             ][  textView $
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
