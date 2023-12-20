@@ -251,7 +251,8 @@ type RegistrationScreenData = {
   cityConfig :: CityConfig,
   config :: AppConfig,
   referralCode :: String,
-  referral_code_input_data :: String
+  referral_code_input_data :: String,
+  logField :: Object Foreign
 }
 
 type StepProgress = {

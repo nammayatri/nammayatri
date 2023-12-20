@@ -23,6 +23,7 @@ import Common.Types.Config (CityConfig)
 import Prelude (class Eq)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
 import ConfigProvider
+import Foreign.Object (empty)
 
 initData :: RegistrationScreenState
 initData = {
@@ -55,7 +56,8 @@ initData = {
         cityConfig : dummyCityConfig,
         config : getAppConfig appConfig,
         referralCode : "",
-        referral_code_input_data : ""
+        referral_code_input_data : "",
+        logField : empty
       },
       props: {
         limitReachedFor : Nothing,

@@ -35,6 +35,8 @@ import Components.InAppKeyboardModal as InAppKeyboardModal
 import Data.String as DS
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.LogEvent (logEvent)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -124,7 +126,9 @@ eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit LogoutAcc
 
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutModalView= false}}
 
-eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = exit GoToHomeScreen
+eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_complete_registration"
+  exit GoToHomeScreen
 
 eval Refresh state = exit RefreshPage
 
