@@ -2844,6 +2844,7 @@ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)= do
       name = getDriverInfoResp.firstName <> middleName <> lastName
   setCleverTapUserData "Name" name
   setCleverTapUserData "Identity" $ getValueToLocalStore DRIVER_ID
+  void $ pure $ setCleverTapUserProp [{key : "Driver Location", value : unsafeToForeign (getValueToLocalStore DRIVER_LOCATION)}]
   case getDriverInfoResp.mobileNumber of
     Just value -> do 
       setCleverTapUserData "Phone" $ "+91" <> value
