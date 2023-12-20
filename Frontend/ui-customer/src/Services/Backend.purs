@@ -19,17 +19,22 @@ import Services.API
 
 import Accessor (_deviceToken)
 import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..))
+import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), FeedbackAnswer)
+import ConfigProvider as CP
+import Constants as CONST
+import Constants as Constants
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Data.Array ((!!), catMaybes, concat, take, any, singleton)
-import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..), FeedbackAnswer)
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), maybe, fromMaybe, isJust)
+import Data.String as DS
 import Engineering.Helpers.Commons (liftFlow, os)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion, isInvalidUrl)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
+import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
@@ -37,6 +42,7 @@ import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
+import MerchantConfig.Types (AppConfig)
 import ModifyScreenState (modifyScreenState)
 import Prelude (Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
@@ -49,9 +55,6 @@ import Tracker.Labels (Label(..))
 import Tracker.Types as Tracker
 import Types.App (GlobalState(..), FlowBT, ScreenType(..))
 import Types.EndPoint as EP
-import Constants as Constants
-import Foreign.Object (empty)
-import Data.String as DS
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -328,25 +331,26 @@ rideSearchBT payload = do
             BackT $ pure GoBack
 
 
-makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd=
-     SearchReq { "contents" : OneWaySearchReq{
-                                               "destination" : SearchReqLocation {
-                                                        "gps" : LatLong {
-                                                            "lat" : dlat ,
-                                                            "lon" : dlong
-                                                            },
-                                                        "address" : (LocationAddress desAdd)
-                                               },
-                                               "origin" : SearchReqLocation {
-                                                "gps" : LatLong {
-                                                            "lat" : slat ,
-                                                            "lon" : slong
-                                                },"address" : (LocationAddress srcAdd)
-                                               }
-                                              },
-                 "fareProductType" : "ONE_WAY"
-                }
+makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> Boolean -> SearchReq
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd isReallocationEnabled =
+    SearchReq { "contents" : OneWaySearchReq{
+                                                  "destination" : SearchReqLocation {
+                                                           "gps" : LatLong {
+                                                               "lat" : dlat ,
+                                                               "lon" : dlong
+                                                               },
+                                                           "address" : (LocationAddress desAdd)
+                                                  },
+                                                  "origin" : SearchReqLocation {
+                                                   "gps" : LatLong {
+                                                               "lat" : slat ,
+                                                               "lon" : slong
+                                                   },"address" : (LocationAddress srcAdd)
+                                                  },
+                                                  "isReallocationEnabled" : Just isReallocationEnabled
+                                                 },
+                    "fareProductType" : "ONE_WAY"
+                   }
 
 
 ------------------------------------------------------------------------ GetQuotes Function -------------------------------------------------------------------------------------------

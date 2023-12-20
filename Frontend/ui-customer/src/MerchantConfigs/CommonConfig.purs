@@ -124,4 +124,5 @@ commonConfig =
         , editTextDefaultColor : "#A7A7A7"
         }
         , appLink : ""
+        , enableReAllocation : true
         }
