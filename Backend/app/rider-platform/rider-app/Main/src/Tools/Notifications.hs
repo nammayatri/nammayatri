@@ -562,3 +562,30 @@ notifySafetyAlert booking reason = do
           [ reason
           ]
   notifyPerson person.merchantId person.merchantOperatingCityId notificationData
+
+notifyDriverBirthDay ::
+  ServiceFlow m r =>
+  Id Person ->
+  Text ->
+  m ()
+notifyDriverBirthDay personId driverName = do
+  person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.DRIVER_BIRTHDAY,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product personId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+          }
+      title = T.pack "Driver's Birthday!"
+      body =
+        unwords
+          [ "Today is your driver " <> driverName <> "'s birthday, your warm wishes will make their day even more special!"
+          ]
+  notifyPerson person.merchantId merchantOperatingCityId notificationData

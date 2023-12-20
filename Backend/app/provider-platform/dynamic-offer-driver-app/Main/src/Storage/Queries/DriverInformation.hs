@@ -400,3 +400,12 @@ updateCompAadhaarImagePath (Id driverId) compAadhaarImagePath =
     [ Se.Set BeamDI.compAadhaarImagePath (Just compAadhaarImagePath)
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+updateDriverDob :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe UTCTime -> m ()
+updateDriverDob (Id driverId) driverDob = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.driverDob driverDob,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]

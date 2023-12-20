@@ -67,6 +67,10 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
   let rating :: Maybe HighPrecMeters =
         readMaybe . T.unpack
           =<< getTag "driver_details" "rating" tagsGroup
+      mbIsDriverBirthDay = getTag "driver_details" "is_driver_birthday" tagsGroup
+      isDriverBirthDay = case T.toLower <$> mbIsDriverBirthDay of
+        Just "true" -> True
+        _ -> False
   authorization <- fromMaybeM (InvalidRequest "authorization is not present in RideAssigned Event.") $ taEvent.fulfillment.start.authorization
   return $
     DOnUpdate.RideAssignedReq
@@ -79,6 +83,7 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
         driverRating = realToFrac <$> rating,
         driverImage = agent.image,
         driverRegisteredAt = registeredAt,
+        isDriverBirthDay,
         vehicleNumber = vehicle.registration,
         vehicleColor = vehicle.color,
         vehicleModel = vehicle.model

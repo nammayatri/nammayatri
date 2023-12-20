@@ -54,7 +54,8 @@ data OnUpdateBuildReq
         vehicle :: SVeh.Vehicle,
         ride :: DRide.Ride,
         booking :: DRB.Booking,
-        image :: Maybe Text
+        image :: Maybe Text,
+        isDriverBirthDay :: Bool
       }
   | RideStartedBuildReq
       { driver :: SP.Person,
@@ -108,8 +109,9 @@ mkFullfillment ::
   Maybe SVeh.Vehicle ->
   Maybe Text ->
   Maybe Tags.TagGroups ->
+  Bool ->
   m RideFulfillment.FulfillmentInfo
-mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
+mkFullfillment mbDriver ride booking mbVehicle mbImage tags isDriverBirthDay = do
   agent <-
     forM mbDriver $ \driver -> do
       let agentTags =
@@ -119,7 +121,8 @@ mkFullfillment mbDriver ride booking mbVehicle mbImage tags = do
                   name = "Driver Details",
                   list =
                     [ Tags.Tag (Just False) (Just "registered_at") (Just "Registered At") (Just $ show driver.createdAt),
-                      Tags.Tag (Just False) (Just "rating") (Just "rating") (show <$> driver.rating)
+                      Tags.Tag (Just False) (Just "rating") (Just "rating") (show <$> driver.rating),
+                      Tags.Tag (Just False) (Just "is_driver_birthday") (Just "Is Driver BirthDay") (Just $ show isDriverBirthDay)
                     ]
                 }
             ]
@@ -178,7 +181,7 @@ buildOnUpdateMessage ::
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) image Nothing
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) image Nothing isDriverBirthDay
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -191,7 +194,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
         update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing Nothing
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing Nothing False
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -218,7 +221,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
                 ]
             }
         ]
-  fulfillment <- mkFullfillment (Just req.driver) req.ride req.booking (Just req.vehicle) Nothing (Just $ Tags.TG tagGroups)
+  fulfillment <- mkFullfillment (Just req.driver) req.ride req.booking (Just req.vehicle) Nothing (Just $ Tags.TG tagGroups) False
   fare <- realToFrac <$> req.ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
   let currency = "INR"
       price =
@@ -306,7 +309,7 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "arrival_time") (Just "Chargeable Distance") (show <$> arrivalTime) | isJust arrivalTime]
             }
         ]
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups)
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups) False
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -326,7 +329,7 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ castCancellationSource cancellationSource)]
             }
         ]
-  fulfillment <- mkFullfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups)
+  fulfillment <- mkFullfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups) False
   let item = EstimateRepetitionOU.Item {id = estimateId.getId}
   return $
     OnUpdate.OnUpdateMessage
@@ -348,7 +351,7 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "message") (Just "New Message") (Just message)]
             }
         ]
-  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups)
+  fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups) False
   return $
     OnUpdate.OnUpdateMessage
       { update_target = "order.fufillment.state.code, order.fulfillment.tags",

@@ -28,6 +28,7 @@ module Domain.Action.Beckn.OnUpdate
 where
 
 import qualified Data.HashMap as HM
+import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -77,6 +78,7 @@ data OnUpdateReq
         driverMobileCountryCode :: Maybe Text,
         driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
+        isDriverBirthDay :: Bool,
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
@@ -138,6 +140,7 @@ data ValidatedOnUpdateReq
         driverMobileCountryCode :: Maybe Text,
         driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
+        isDriverBirthDay :: Bool,
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
@@ -278,6 +281,8 @@ onUpdate ValidatedRideAssignedReq {..} = do
   _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideAssigned booking ride
+  when isDriverBirthDay $ do
+    Notify.notifyDriverBirthDay booking.riderId driverName
   withLongRetry $ CallBPP.callTrack booking ride
   where
     buildRide :: MonadFlow m => Maybe DMerchant.Merchant -> m SRide.Ride

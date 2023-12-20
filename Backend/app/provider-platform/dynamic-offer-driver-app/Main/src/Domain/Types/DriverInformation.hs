@@ -90,7 +90,8 @@ data DriverInformation = DriverInformation
     updatedAt :: UTCTime,
     compAadhaarImagePath :: Maybe Text,
     availableUpiApps :: Maybe Text,
-    blockStateModifier :: Maybe Text
+    blockStateModifier :: Maybe Text,
+    driverDob :: Maybe UTCTime
   }
   deriving (Generic)
 

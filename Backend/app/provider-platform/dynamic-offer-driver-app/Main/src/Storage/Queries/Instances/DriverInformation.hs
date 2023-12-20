@@ -66,5 +66,6 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.createdAt = createdAt,
         BeamDI.updatedAt = updatedAt,
         BeamDI.compAadhaarImagePath = compAadhaarImagePath,
-        BeamDI.availableUpiApps = availableUpiApps
+        BeamDI.availableUpiApps = availableUpiApps,
+        BeamDI.driverDob = driverDob
       }
