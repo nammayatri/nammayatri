@@ -202,9 +202,9 @@ updateEventAndGetCoinsvalue :: EventFlow m r => Id DP.Person -> Id DM.Merchant -
 updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins = do
   now <- getCurrentTime
   uuid <- generateGUIDText
-  -- Extract the integer value from maybeExpirationTime
-  let expiryTime = (\expirationTime -> addUTCTime (fromIntegral expirationTime) now) <$> mbexpirationTime
-  let status_ = if numCoins > 0 then Remaining else Used
+  -- Extract the integer value from maybeExpirationTime and then make it start of that day
+  let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
+      status_ = if numCoins > 0 then Remaining else Used
   let driverCoinEvent =
         DTCC.CoinHistory
           { id = Id uuid,
