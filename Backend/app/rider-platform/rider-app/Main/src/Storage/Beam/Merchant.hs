@@ -55,6 +55,7 @@ data MerchantT f = MerchantT
     driverOfferApiKey :: B.C f Text,
     driverOfferMerchantId :: B.C f Text,
     geoHashPrecisionValue :: B.C f Int,
+    fallbackShortId :: B.C f Text,
     signingPublicKey :: B.C f Base64,
     minimumDriverRatesCount :: B.C f Int,
     cipherText :: B.C f (Maybe Base64),

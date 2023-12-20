@@ -34,7 +34,7 @@ findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m (May
 findById (Id merchantId) = findOneWithKV [Se.Is BeamM.id $ Se.Eq merchantId]
 
 findByShortId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
-findByShortId shortId_ = findOneWithKV [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId_]
+findByShortId shortId_ = findOneWithKV [Se.And [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId_, Se.Is BeamM.fallbackShortId $ Se.Not $ Se.Eq $ getShortId shortId_]]
 
 findBySubscriberId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId = findOneWithKV [Se.Is BeamM.subscriberId $ Se.Eq $ getShortId subscriberId]
@@ -72,6 +72,7 @@ instance FromTType' BeamM.Merchant Merchant where
             name = name,
             defaultCity = city,
             country = country,
+            fallbackShortId = ShortId fallbackShortId,
             bapId = bapId,
             bapUniqueKeyId = bapUniqueKeyId,
             geofencingConfig = geofencingConfig,
@@ -107,6 +108,7 @@ instance ToTType' BeamM.Merchant Merchant where
       { BeamM.id = getId id,
         BeamM.subscriberId = getShortId subscriberId,
         BeamM.shortId = getShortId shortId,
+        BeamM.fallbackShortId = getShortId fallbackShortId,
         BeamM.name = name,
         BeamM.city = defaultCity,
         BeamM.country = country,
