@@ -187,6 +187,7 @@ in  upstream
       , "unsafe-coerce"
       , "web-dom"
       , "web-events"
+      , "react-basic"
       ]
     , repo = "https://github.com/juspay/purescript-halogen-vdom.git"
     , version = "fork/update/github-purescript-halogen-vdom-repo"

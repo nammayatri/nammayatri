@@ -80,7 +80,4 @@ incrementDecrementConfig :: (Action -> Effect Unit) -> ST.RideHistoryScreenState
 incrementDecrementConfig push _ = let
   config = IncrementDecrementController.config
   incrementDecrementConfig' = config
-    { onChange = Just (\count -> do
-                  when(count < 10) do push $ CounterChange count
-                  pure unit)}
   in incrementDecrementConfig'
