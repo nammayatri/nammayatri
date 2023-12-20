@@ -15,6 +15,8 @@ import Text.Casing (pascal)
 import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
 import Types.DBSync.Delete
+import Types.Event as Event
+import Utils.Utils
 
 -- import Utils.Utils
 
@@ -45,6 +47,7 @@ runDeleteQuery deleteEntries dbDeleteObject = do
       case result of
         Left (QueryError errorMsg) -> do
           EL.logError ("QUERY DELETE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
+          void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Delete" dbDeleteObject.dbModel.getDBModel
           -- uncomment for debug purposes
           -- writeDebugFile "delete" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
           return $ Left entryId
