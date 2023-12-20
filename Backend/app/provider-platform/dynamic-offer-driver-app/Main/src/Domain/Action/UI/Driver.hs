@@ -1310,7 +1310,7 @@ getStats (driverId, _, merchantOpCityId) date = do
   rides <- runInReplica $ QRide.getRidesForDate driverId date transporterConfig.timeDiffFromUtc
   let fareParamId = mapMaybe (.fareParametersId) rides
   fareParameters <- (runInReplica . QFP.findAllIn) fareParamId
-  coinBalance_ <- Coins.getCoinsByDriverId driverId
+  coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   return $
     DriverStatsRes
       { coinBalance = coinBalance_,
