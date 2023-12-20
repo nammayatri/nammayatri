@@ -199,9 +199,15 @@ auth req mbBundleVersion mbClientVersion = do
       mobileNumber = req.mobileNumber
       notificationToken = req.notificationToken
       otpChannel = fromMaybe defaultOTPChannel req.otpChannel
-  merchant <-
+  merchantTemp <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
+  merchant <-
+    if merchantTemp.shortId == merchantTemp.fallbackShortId
+      then return merchantTemp
+      else
+        QMerchant.findByShortId merchantTemp.fallbackShortId
+          >>= fromMaybeM (MerchantNotFound $ getShortId merchantTemp.fallbackShortId)
   mobileNumberHash <- getDbHash mobileNumber
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
