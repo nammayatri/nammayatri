@@ -50,6 +50,7 @@ data DriverInformationT f = DriverInformationT
     enabledAt :: B.C f (Maybe UTCTime),
     compAadhaarImagePath :: B.C f (Maybe Text),
     availableUpiApps :: B.C f (Maybe Text),
+    driverDob :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

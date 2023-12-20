@@ -184,6 +184,7 @@ import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDG
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDL
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -598,6 +599,7 @@ createDriverDetails ::
 createDriverDetails personId admin merchantId = do
   now <- getCurrentTime
   transporterConfig <- CQTC.findByMerchantOpCityId admin.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound admin.merchantOperatingCityId.getId)
+  mbDriverLicense <- runInReplica $ QDL.findByDriverId personId
   let driverInfo =
         DriverInfo.DriverInformation
           { driverId = personId,
@@ -628,6 +630,7 @@ createDriverDetails personId admin merchantId = do
             blockStateModifier = Nothing,
             lastEnabledOn = Just now,
             enabledAt = Just now,
+            driverDob = (.driverDob) =<< mbDriverLicense,
             createdAt = now,
             updatedAt = now
           }
