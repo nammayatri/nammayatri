@@ -24,6 +24,7 @@ import android.graphics.PixelFormat;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -47,6 +48,7 @@ import androidx.annotation.Nullable;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -63,9 +65,12 @@ import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -74,10 +79,13 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.hyper.bridge.HBridge;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 import in.juspay.mobility.app.TranslatorMLKit;
@@ -109,7 +117,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private ArrayList<TextView> tipsList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private String key = "";
-
+    private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+    private SheetModel modelForLogs;
+    private static Boolean enableCleverTapEvents;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -193,6 +203,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         @Override
         public void onViewHolderBind(SheetAdapter.SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> payloads) {
             SheetModel model = sheetArrayList.get(position);
+            modelForLogs = model;
             String x = payloads.size() > 0 ? (String) payloads.get(0) : "";
             switch (x) {
                 case "inc":
@@ -254,11 +265,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
+            CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(getApplicationContext());
+            String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
                 if (key != null && key.equals("nammayatriprovider"))
                     startApiLoader();
-                String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
                 if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
                     LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
                     lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
@@ -276,6 +288,18 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             }
                             String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
                             firebaseLogEvent(logEvent);
+                            if (enableCleverTapEvents) {
+                                HashMap<String, Object> cleverTapParams = new HashMap<>();
+                                try {
+                                    cleverTapParams.put("searchRequestId", model.getSearchRequestId());
+                                    cleverTapParams.put("rideRequestPopupDelayDuration", model.getRideRequestPopupDelayDuration());
+                                    cleverTapParams.put("vehicleVariant", vehicleVariant);
+                                    cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+                                    clevertapDefaultInstance.pushEvent(logEvent, cleverTapParams);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
                             isRideAcceptedOrRejected = true;
                             handler.post(() -> {
                                 startLoader(model.getSearchRequestId());
@@ -314,6 +338,19 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         handler.post(() -> {
                             String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
                             Utils.logEvent (logEvent, getApplicationContext());
+                            if (enableCleverTapEvents) {
+                                HashMap<String, Object> cleverTapParams = new HashMap<>();
+                                try {
+                                    cleverTapParams.put("searchRequestId", model.getSearchRequestId());
+                                    cleverTapParams.put("rideRequestPopupDelayDuration", model.getRideRequestPopupDelayDuration());
+                                    cleverTapParams.put("vehicleVariant", vehicleVariant);
+                                    cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+                                    String event = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_rejected" : "ride_rejected";
+                                    clevertapDefaultInstance.pushEvent(event, cleverTapParams);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
                             removeCard(position);
                             executor.shutdown();
                             Toast.makeText(getApplicationContext(), getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
@@ -419,6 +456,33 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void cleanUp() {
         if (!isRideAcceptedOrRejected) {
             firebaseLogEvent("ride_ignored");
+            try {
+                if (enableCleverTapEvents) {
+                    HashMap<String, Object> cleverTapParams = new HashMap<>();
+                    CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(getApplicationContext());
+
+                    if (modelForLogs != null) {
+                        cleverTapParams.put("searchRequestId", modelForLogs.getSearchRequestId());
+                        cleverTapParams.put("rideRequestPopupDelayDuration", modelForLogs.getRideRequestPopupDelayDuration());
+                    }
+
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                        String formattedDateTime = utcDateTime.format(formatter);
+                        long millisecondsSinceEpoch = Instant.now().toEpochMilli();
+                        cleverTapParams.put("timeStampString", formattedDateTime);
+                        cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
+                    }
+
+                    cleverTapParams.put("vehicleVariant", sharedPref.getString("VEHICLE_VARIANT", null));
+                    cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+
+                    clevertapDefaultInstance.pushEvent("ride_ignored", cleverTapParams);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         try {
             callBack.clear();
@@ -564,7 +628,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
                     if (floatyView == null) {
                         startTimer();
-                        showOverLayPopup();
+                        showOverLayPopup(rideRequestBundle);
                     }
                     sheetArrayList.add(sheetModel);
                     sheetAdapter.updateSheetList(sheetArrayList);
@@ -592,8 +656,37 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     @SuppressLint("InflateParams")
-    private void showOverLayPopup() {
+    private void showOverLayPopup(Bundle rideRequestBundle) {
         firebaseLogEvent("Overlay_is_popped_up");
+        String merchantId = getResources().getString(R.string.merchant_id);
+        try{
+            if (remoteConfigs.hasKey("enable_clevertap_events")){
+                JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_clevertap_events"));
+                if (clevertapConfig.has(merchantId)){
+                    enableCleverTapEvents = clevertapConfig.getBoolean(merchantId);
+                }
+            }
+            if (enableCleverTapEvents) {
+                CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(getApplicationContext());
+                HashMap<String, Object> cleverTapParams = new HashMap<>();
+                cleverTapParams.put("searchRequestId", rideRequestBundle.getString("searchRequestId"));
+                cleverTapParams.put("rideRequestPopupDelayDuration", rideRequestBundle.getInt("rideRequestPopupDelayDuration"));
+                cleverTapParams.put("keepHiddenForSeconds", rideRequestBundle.getInt("keepHiddenForSeconds", 0));
+                cleverTapParams.put("requestedVehicleVariant", rideRequestBundle.getString("requestedVehicleVariant"));
+                cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                    String formattedDateTime = utcDateTime.format(formatter);
+                    long millisecondsSinceEpoch = Instant.now().toEpochMilli();
+                    cleverTapParams.put("timeStampString", formattedDateTime);
+                    cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
+                }
+                clevertapDefaultInstance.pushEvent("overlay_is_popped_up", cleverTapParams);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         if (!Settings.canDrawOverlays(getApplicationContext())) return;
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         int layoutParamsType;
