@@ -17,6 +17,7 @@ module Beckn.Types.Core.Taxi.Common.Tags
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Descriptor -- 2.x
 import Data.Aeson
 import qualified Data.Aeson.Key as AesonKey
 import qualified Data.Aeson.KeyMap as AKM
@@ -27,11 +28,12 @@ import qualified Data.Text as T
 import EulerHS.Prelude hiding (State)
 import qualified Kernel.Prelude as P hiding (show)
 
-data TagGroup = TagGroup
+data TagGroupV2 = TagGroupV2
   { display :: Bool,
-    code :: Text,
-    name :: Text,
-    list :: [Tag]
+    descriptor :: DescriptorV2, -- 2.x
+    -- code :: Text, -- To be moved in descriptor in 2.x
+    -- name :: Text, -- To be moved in descriptor in 2.x
+    list :: [TagV2]
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
@@ -41,10 +43,11 @@ data TagGroup = TagGroup
 -- instance ToJSON TagGroup where
 --   toJSON = genericToJSON removeNullFields
 
-data Tag = Tag
+data TagV2 = TagV2
   { display :: Maybe Bool,
-    code :: Maybe Text,
-    name :: Maybe Text,
+    descriptor :: Maybe DescriptorV2, -- 2.x
+    -- code :: Maybe Text, -- To be moved in descriptor in 2.x
+    -- name :: Maybe Text, -- To be moved in descriptor in 2.x
     value :: Maybe Text
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
@@ -54,6 +57,24 @@ data Tag = Tag
 
 -- instance ToJSON Tag where
 --   toJSON = genericToJSON removeNullFields
+
+---------------------------------------- TagGroups not required in 2.x ---------------------------------
+
+data TagGroup = TagGroup
+  { display :: Bool,
+    code :: Text,
+    name :: Text,
+    list :: [Tag]
+  }
+  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
+
+data Tag = Tag
+  { display :: Maybe Bool,
+    code :: Maybe Text,
+    name :: Maybe Text,
+    value :: Maybe Text
+  }
+  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
 newtype TagGroups = TG [TagGroup] deriving (Show, Generic, ToSchema)
 

@@ -26,6 +26,39 @@ import EulerHS.Prelude hiding (State, id, state)
 import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+data OrderV2 = OrderV2
+  { id :: Text,
+    status :: Text,
+    items :: [OrderItemV2],
+    fulfillments :: [FulfillmentInfoV2],
+    quote :: Quote,
+    payments :: [PaymentV2],
+    provider :: Maybe Provider
+  }
+  deriving (Generic, Show)
+
+instance ToSchema OrderV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON OrderV2 where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON OrderV2 where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+data OrderItemV2 = OrderItemV2
+  { id :: Text,
+    fulfillment_ids :: [Text],
+    price :: Price,
+    descriptor :: DescriptorV2
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema OrderItemV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data Order = Order
   { id :: Text,
     state :: Text,

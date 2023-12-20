@@ -28,7 +28,35 @@ import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, title, value)
 import EulerHS.Prelude hiding (fromList, id)
 import GHC.Exts (fromList)
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema
+
+data PaymentCompletedEventV2 = PaymentCompletedEventV2
+  { id :: Text,
+    -- update_target :: Text, -- Moved to UpdateMessageV2
+    fulfillments :: [FulfillmentInfo], -- No need to change this because it only has id -> Just converted to list
+    payments :: [PaymentV2]
+  }
+  deriving (Generic, Show)
+
+instance ToJSON PaymentCompletedEventV2 where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON PaymentCompletedEventV2 where
+  parseJSON = genericParseJSON removeNullFields
+
+instance ToSchema PaymentCompletedEventV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype FulfillmentInfo = FulfillmentInfo
+  { id :: Text -- bppRideId
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema FulfillmentInfo where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data PaymentCompletedEvent = PaymentCompletedEvent
   { id :: Text,
@@ -91,11 +119,3 @@ instance ToSchema PaymentCompletedEvent where
                    "fulfillment",
                    "payment"
                  ]
-
-newtype FulfillmentInfo = FulfillmentInfo
-  { id :: Text -- bppRideId
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

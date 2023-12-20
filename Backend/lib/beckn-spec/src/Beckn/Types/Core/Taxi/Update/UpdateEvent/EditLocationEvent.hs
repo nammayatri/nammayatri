@@ -22,13 +22,55 @@ where
 
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.Common.Location
+import Beckn.Types.Core.Taxi.Common.Stop as Reexport
 import Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType (UpdateEventType (EDIT_LOCATION))
 import qualified Control.Lens as L
 import Data.Aeson as A
+import Data.Aeson.Types (Parser)
 import Data.OpenApi hiding (Example, example, title, value)
 import EulerHS.Prelude hiding (fromList, id)
 import GHC.Exts (fromList)
 import Kernel.Utils.Schema
+
+data EditLocationEventV2 = EditLocationEventV2
+  { id :: Text,
+    -- update_target :: Text, -- Moved to UpdateMessageV2
+    fulfillments :: [FulfillmentInfoV2]
+  }
+  deriving (Generic, Show)
+
+instance ToJSON EditLocationEventV2 where
+  toJSON EditLocationEventV2 {..} = do
+    let fulfJSONs = map toJSON fulfillments
+    A.Object $
+      "id" .= id
+        <> "fulfillments" .= map (\(A.Object obj) -> A.Object (obj <> stateObject)) fulfJSONs
+    where
+      stateObject = "status" .= (("code" .= EDIT_LOCATION) :: A.Object)
+
+instance FromJSON EditLocationEventV2 where
+  parseJSON = withObject "EditLocationEventV2" $ \obj -> do
+    fulfs <- obj .: "fulfillments" :: Parser [A.Object]
+    forM_ fulfs $ \fulf -> do
+      update_type <- fulf .: "status" >>= (.: "code")
+      unless (update_type == EDIT_LOCATION) $ fail "Wrong update_type."
+    EditLocationEventV2
+      <$> obj .: "id"
+      <*> obj .: "fulfillments"
+
+instance ToSchema EditLocationEventV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data FulfillmentInfoV2 = FulfillmentInfoV2
+  { id :: Text,
+    stops :: [Stop]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema FulfillmentInfoV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data EditLocationEvent = EditLocationEvent
   { id :: Text,

@@ -19,6 +19,7 @@ where
 
 import Beckn.Types.Core.Taxi.Common.FulfillmentType
 import Beckn.Types.Core.Taxi.Common.StartInfo
+import Beckn.Types.Core.Taxi.Common.Stop
 import Beckn.Types.Core.Taxi.Common.StopInfo
 import Beckn.Types.Core.Taxi.Common.Tags
 import Beckn.Types.Core.Taxi.Common.Vehicle
@@ -30,6 +31,27 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
 -- If end = Nothing, then bpp sends quotes only for RENTAL
 -- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
+
+data FulfillmentInfoV2 = FulfillmentInfoV2
+  { id :: Maybe Text,
+    _type :: FulfillmentType,
+    stops :: [Stop],
+    tags :: Maybe [TagGroupV2],
+    vehicle :: Vehicle
+  }
+  deriving (Generic, Show)
+
+instance ToSchema FulfillmentInfoV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance FromJSON FulfillmentInfoV2 where
+  parseJSON = genericParseJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+instance ToJSON FulfillmentInfoV2 where
+  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data FulfillmentInfo = FulfillmentInfo
   { id :: Maybe Text,
     _type :: FulfillmentType,

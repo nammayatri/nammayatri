@@ -27,3 +27,9 @@ data OnUpdateMessage = OnUpdateMessage
     order :: OnUpdateEvent
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data OnUpdateMessageV2 = OnUpdateMessageV2
+  { update_target :: Text,
+    order :: OnUpdateEventV2
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

@@ -25,11 +25,128 @@ import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
 import qualified Control.Lens as L
 import Data.Aeson as A
+import Data.Aeson.Types (Parser)
 import Data.OpenApi hiding (Example, example, tags, title, value)
 import EulerHS.Prelude hiding (fromList, id)
 import GHC.Exts (fromList)
 import Kernel.Utils.GenericPretty (PrettyShow)
 import Kernel.Utils.Schema
+
+data RideCompletedEventV2 = RideCompletedEventV2
+  { id :: Text,
+    -- update_target :: Text,
+    quote :: RideCompletedQuote,
+    fulfillments :: [FulfillmentInfoV2],
+    payment :: Maybe PaymentV2
+  }
+  deriving (Generic, Show)
+
+instance ToJSON RideCompletedEventV2 where
+  toJSON RideCompletedEventV2 {..} = do
+    let fulfJSONs = map toJSON fulfillments
+    A.Object $
+      "id" .= id
+        -- <> "update_target" .= update_target
+        <> "quote" .= quote
+        <> "payment" .= payment
+        <> "fulfillments" .= map (\(A.Object obj) -> A.Object (obj <> stateObject)) fulfJSONs
+    where
+      stateObject = "status" .= ("descriptor" .= (("code" .= RIDE_COMPLETED <> "name" .= A.String "Ride Completed") :: A.Object) :: A.Object)
+
+instance FromJSON RideCompletedEventV2 where
+  parseJSON = withObject "RideCompletedEventV2" $ \obj -> do
+    fulfs <- obj .: "fulfillments" :: Parser [A.Object]
+    forM_ fulfs $ \fulf -> do
+      update_type <- fulf .: "status" >>= (.: "descriptor") >>= (.: "code")
+      unless (update_type == RIDE_COMPLETED) $ fail "Wrong update_type."
+    RideCompletedEventV2
+      <$> obj .: "id"
+      -- <*> obj .: "update_target"
+      <*> obj .: "quote"
+      <*> obj .: "fulfillments"
+      <*> obj .: "payment"
+
+instance ToSchema RideCompletedEventV2 where
+  declareNamedSchema _ = do
+    txt <- declareSchemaRef (Proxy :: Proxy Text)
+    quote <- declareSchemaRef (Proxy :: Proxy RideCompletedQuote)
+    payment <- declareSchemaRef (Proxy :: Proxy PaymentV2)
+    update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
+    let stateSchema =
+          mempty
+            & type_ L.?~ OpenApiObject
+            & properties L..~ fromList [("code", update_type)]
+            & required L..~ ["code"]
+    let descriptorSchema =
+          mempty
+            & type_ L.?~ OpenApiObject
+            & properties L..~ fromList [("descriptor", Inline stateSchema)]
+            & required L..~ ["descriptor"]
+    let fulfillmentSchema =
+          toInlinedSchema (Proxy :: Proxy FulfillmentInfoV2)
+            & properties L.<>~ fromList [("state", Inline descriptorSchema)]
+            & required L.<>~ ["state"]
+    let fulfillmentsSchema =
+          mempty
+            & type_ L.?~ OpenApiArray
+            & items L.?~ OpenApiItemsObject (Inline fulfillmentSchema)
+    return $
+      NamedSchema (Just "RideCompletedEventV2") $
+        mempty
+          & type_ L.?~ OpenApiObject
+          & properties
+            L..~ fromList
+              [ ("id", txt),
+                -- ("update_target", txt),
+                ("quote", quote),
+                ("payment", payment),
+                ("fulfillments", Inline fulfillmentsSchema)
+              ]
+          & required L..~ ["id", "quote", "fulfillments", "payment"]
+
+data RideCompletedQuote = RideCompletedQuote
+  { price :: QuotePrice,
+    breakup :: [BreakupItem]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema RideCompletedQuote where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data QuotePrice = QuotePrice
+  { currency :: Text,
+    value :: DecimalValue,
+    computed_value :: DecimalValue
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema QuotePrice where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data BreakupItem = BreakupItem
+  { title :: Text,
+    price :: BreakupPrice
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
+
+instance ToSchema BreakupItem where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data BreakupPrice = BreakupPrice
+  { currency :: Text,
+    value :: DecimalValue
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
+
+instance ToSchema BreakupPrice where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data DistanceRelatedTags = DistanceRelatedTags
+  { chargeable_distance :: DecimalValue,
+    traveled_distance :: DecimalValue
+  }
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data RideCompletedEvent = RideCompletedEvent
   { id :: Text,
@@ -105,45 +222,3 @@ instance ToSchema RideCompletedEvent where
                    "fulfillment",
                    "payment"
                  ]
-
-data RideCompletedQuote = RideCompletedQuote
-  { price :: QuotePrice,
-    breakup :: [BreakupItem]
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema RideCompletedQuote where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data QuotePrice = QuotePrice
-  { currency :: Text,
-    value :: DecimalValue,
-    computed_value :: DecimalValue
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema QuotePrice where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data BreakupItem = BreakupItem
-  { title :: Text,
-    price :: BreakupPrice
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
-
-instance ToSchema BreakupItem where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data BreakupPrice = BreakupPrice
-  { currency :: Text,
-    value :: DecimalValue
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
-
-instance ToSchema BreakupPrice where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data DistanceRelatedTags = DistanceRelatedTags
-  { chargeable_distance :: DecimalValue,
-    traveled_distance :: DecimalValue
-  }

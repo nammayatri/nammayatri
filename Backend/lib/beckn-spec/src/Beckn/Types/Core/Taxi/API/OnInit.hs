@@ -17,17 +17,36 @@ module Beckn.Types.Core.Taxi.API.OnInit where
 import Beckn.Types.Core.Taxi.OnInit
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
-import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq, BecknCallbackReqV2)
+import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
 
 type OnInitReq = BecknCallbackReq OnInitMessage
+
+type OnInitReqV2 = BecknCallbackReqV2 OnInitMessageV2
 
 type OnInitRes = AckResponse
 
 type OnInitAPI =
   "on_init"
+    :> ReqBody '[JSONBS] ByteString
+    :> Post '[JSON] OnInitRes
+
+type OnInitAPIV1 =
+  "on_init"
     :> ReqBody '[JSON] OnInitReq
+    :> Post '[JSON] OnInitRes
+
+type OnInitAPIV2 =
+  "on_init"
+    :> ReqBody '[JSON] OnInitReqV2
     :> Post '[JSON] OnInitRes
 
 onInitAPI :: Proxy OnInitAPI
 onInitAPI = Proxy
+
+onInitAPIV1 :: Proxy OnInitAPIV1
+onInitAPIV1 = Proxy
+
+onInitAPIV2 :: Proxy OnInitAPIV2
+onInitAPIV2 = Proxy

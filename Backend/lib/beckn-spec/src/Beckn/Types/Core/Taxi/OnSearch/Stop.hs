@@ -12,23 +12,9 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Update
-  ( module Beckn.Types.Core.Taxi.Update,
-    module Reexport,
+module Beckn.Types.Core.Taxi.OnSearch.Stop
+  ( module Reexport,
   )
 where
 
-import Beckn.Types.Core.Taxi.Update.UpdateEvent as Reexport
-import Data.OpenApi (ToSchema)
-import EulerHS.Prelude
-
-newtype UpdateMessage = UpdateMessage
-  { order :: UpdateEvent
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-data UpdateMessageV2 = UpdateMessageV2
-  { order :: UpdateEventV2,
-    update_target :: Text
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+import Beckn.Types.Core.Taxi.Search.Stop as Reexport

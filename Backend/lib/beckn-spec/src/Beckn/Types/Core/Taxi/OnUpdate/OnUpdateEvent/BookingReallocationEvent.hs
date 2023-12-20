@@ -26,7 +26,81 @@ import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name)
 import GHC.Exts (fromList)
 import Kernel.Prelude
+import Kernel.Utils.JSON
 import Kernel.Utils.Schema
+
+data BookingReallocationEventV2 = BookingReallocationEventV2
+  { id :: Text,
+    update_target :: Text,
+    fulfillments :: [FulfillmentInfo],
+    cancellation :: Cancellation -- reallocation_reason
+  }
+  deriving (Generic, Show)
+
+instance ToJSON BookingReallocationEventV2 where
+  toJSON = genericToJSON removeNullFields
+
+-- toJSON BookingReallocationEventV2 {..} = do
+--   let (A.Object fulfJSON) = toJSON fulfillments
+--   A.Object $
+--     "id" .= id
+--       <> "./komn/update_target" .= update_target
+--       <> "./komn/reallocation_reason" .= cancellation
+--       <> "fulfillments" .= (fulfJSON <> ("status" .= (("code" .= RIDE_BOOKING_REALLOCATION) :: A.Object)))
+
+instance FromJSON BookingReallocationEventV2 where
+  parseJSON = genericParseJSON removeNullFields
+
+-- parseJSON = withObject "BookingReallocationEventV2" $ \obj -> do
+--   update_type <- (obj .: "fulfillments") >>= (.: "status") >>= (.: "code")
+--   unless (update_type == RIDE_BOOKING_REALLOCATION) $ fail "Wrong update_type."
+--   BookingReallocationEventV2
+--     <$> obj .: "id"
+--     <*> obj .: "./komn/update_target"
+--     <*> obj .: "fulfillments"
+--     <*> obj .: "./komn/reallocation_reason"
+
+instance ToSchema BookingReallocationEventV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+-- declareNamedSchema _ = do
+--   txt <- declareSchemaRef (Proxy :: Proxy Text)
+--   cancellation <- declareSchemaRef (Proxy :: Proxy Cancellation)
+--   update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
+--   let st =
+--         mempty
+--           & type_ L.?~ OpenApiObject
+--           & properties
+--             L..~ fromList
+--               [("code", update_type)]
+--           & required L..~ ["code"]
+--       fulfillments =
+--         toInlinedSchema (Proxy :: Proxy FulfillmentInfo)
+--           & properties
+--             L.<>~ fromList [("status", Inline st)]
+--           & required L.<>~ ["status"]
+--   return $
+--     NamedSchema (Just "BookingReallocationEventV2") $
+--       mempty
+--         & type_ L.?~ OpenApiObject
+--         & properties
+--           L..~ fromList
+--             [ ("id", txt),
+--               ("./komn/update_target", txt),
+--               ("./komn/reallocation_reason", cancellation),
+--               ("fulfillments", Inline fulfillments)
+--             ]
+--         & required L..~ ["id", "./komn/update_target", "./komn/reallocation_reason", "fulfillments"]
+
+newtype FulfillmentInfo = FulfillmentInfo
+  { id :: Text -- bppRideId
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema FulfillmentInfo where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data BookingReallocationEvent = BookingReallocationEvent
   { id :: Text,
@@ -84,11 +158,3 @@ instance ToSchema BookingReallocationEvent where
                 ("fulfillment", Inline fulfillment)
               ]
           & required L..~ ["id", "./komn/update_target", "./komn/reallocation_reason", "fulfillment"]
-
-newtype FulfillmentInfo = FulfillmentInfo
-  { id :: Text -- bppRideId
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-instance ToSchema FulfillmentInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

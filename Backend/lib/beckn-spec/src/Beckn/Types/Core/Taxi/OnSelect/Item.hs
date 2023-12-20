@@ -44,6 +44,39 @@ import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 -- tags	Tags{...}
 -- quantity
 
+data ItemV2 = ItemV2
+  { id :: Text,
+    -- category_id :: FareProductType,
+    fulfillment_ids :: [Text],
+    -- offer_id :: Maybe Text,
+    price :: Price,
+    -- descriptor :: ItemDescriptor,
+    -- quote_terms :: [Text],
+    -- Only when FareProductType.ONE_WAY_TRIP
+    tags :: Maybe [TagGroupV2]
+    -- Only when FareProductType.RENTAL_TRIP
+    -- base_distance :: Maybe Kilometers,
+    -- base_duration :: Maybe Hours,
+    -- Only when FareProductType.DRIVER_OFFER
+    -- driver_name :: Maybe Text,
+    -- duration_to_pickup :: Maybe Int, -- Seconds?
+    -- valid_till :: Maybe UTCTime
+    -- rating :: Maybe Centesimal
+    -- TODO consider to make proper Item type for different FareProductType without Maybes with custom To/FromJSON
+  }
+  deriving (Generic, Show)
+
+instance ToJSON ItemV2 where
+  toJSON = genericToJSON itemJSONOptions
+
+instance FromJSON ItemV2 where
+  parseJSON = genericParseJSON itemJSONOptions
+
+instance ToSchema ItemV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions itemJSONOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data Item = Item
   { id :: Text,
     -- category_id :: FareProductType,

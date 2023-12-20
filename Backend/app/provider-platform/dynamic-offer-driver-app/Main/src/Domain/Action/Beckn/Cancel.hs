@@ -83,7 +83,8 @@ cancel ::
     EventStreamFlow m r,
     LT.HasLocationService m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool
   ) =>
   CancelReq ->
   DM.Merchant ->

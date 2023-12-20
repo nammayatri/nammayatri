@@ -18,15 +18,34 @@ module Beckn.Types.Core.Taxi.OnSearch.Category
   )
 where
 
+import Beckn.Types.Core.Taxi.Common.Descriptor
 import Beckn.Types.Core.Taxi.Common.FareProductType as Reexport
-import Beckn.Types.Core.Taxi.OnSearch.Descriptor
+import Beckn.Types.Core.Taxi.Common.Tags
+import qualified Beckn.Types.Core.Taxi.OnSearch.Descriptor as OSD
+-- import Beckn.Types.Core.Taxi.Common.Time
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
+-- import Kernel.Types.Common (Seconds)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+
+data CategoryV2 = CategoryV2
+  { id :: FareProductType,
+    descriptor :: DescriptorV2,
+    -- parentCategoryId :: Maybe Text,
+    -- time :: Maybe Time,
+    -- ttl :: Maybe Seconds,
+    tags :: Maybe [TagGroupV2]
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema CategoryV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data Category = Category
   { id :: FareProductType,
-    descriptor :: Descriptor
+    descriptor :: OSD.Descriptor
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

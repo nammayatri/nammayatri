@@ -27,15 +27,6 @@ import Kernel.Prelude
 import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data StartInfo = StartInfo
-  { authorization :: Maybe Authorization,
-    location :: Location
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-instance ToSchema StartInfo where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
 data Authorization = Authorization
   { _type :: Text,
     token :: Text
@@ -57,6 +48,56 @@ data FulfillmentType
   deriving
     (Generic, ToSchema, Show, FromJSON, ToJSON, Read)
 
+data FulfillmentInfoV2 = FulfillmentInfoV2
+  { id :: Text, -- bppRideId
+    stops :: [Stop],
+    agent :: Maybe AgentV2,
+    _type :: FulfillmentType,
+    vehicle :: Maybe Vehicle,
+    tags :: Maybe [T.TagGroupV2]
+  }
+  deriving (Generic, Show)
+
+instance FromJSON FulfillmentInfoV2 where
+  parseJSON = genericParseJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToJSON FulfillmentInfoV2 where
+  toJSON = genericToJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToSchema FulfillmentInfoV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreAndRemoveNullFields
+
+data Vehicle = Vehicle
+  { model :: Text,
+    variant :: Text,
+    color :: Text,
+    registration :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Vehicle where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data StopType = START | END | INTERMEDIATE
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
+
+data Stop = Stop
+  { location :: Location,
+    stopType :: StopType,
+    authorization :: Maybe Authorization
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema Stop where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype Location = Location
+  { gps :: Gps
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
     start :: StartInfo,
@@ -77,6 +118,21 @@ instance ToJSON FulfillmentInfo where
 instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreAndRemoveNullFields
 
+stripPrefixUnderscoreAndRemoveNullFields :: Options
+stripPrefixUnderscoreAndRemoveNullFields =
+  stripPrefixUnderscoreIfAny
+    { omitNothingFields = True
+    }
+
+data StartInfo = StartInfo
+  { authorization :: Maybe Authorization,
+    location :: Location
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+instance ToSchema StartInfo where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
 newtype EndInfo = EndInfo
   { location :: Location
   }
@@ -84,25 +140,3 @@ newtype EndInfo = EndInfo
 
 instance ToSchema EndInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data Vehicle = Vehicle
-  { model :: Text,
-    variant :: Text,
-    color :: Text,
-    registration :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Vehicle where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-newtype Location = Location
-  { gps :: Gps
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-stripPrefixUnderscoreAndRemoveNullFields :: Options
-stripPrefixUnderscoreAndRemoveNullFields =
-  stripPrefixUnderscoreIfAny
-    { omitNothingFields = True
-    }

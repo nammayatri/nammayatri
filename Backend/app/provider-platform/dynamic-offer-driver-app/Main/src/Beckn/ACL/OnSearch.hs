@@ -15,7 +15,9 @@
 module Beckn.ACL.OnSearch where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.Types.Core.Taxi.Common.Descriptor as Descriptor
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
+import qualified Beckn.Types.Core.Taxi.OnSearch.Descriptor as OSD
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
@@ -30,7 +32,7 @@ autoOneWayCategory =
   OS.Category
     { id = OS.DRIVER_OFFER_ESTIMATE,
       descriptor =
-        OS.Descriptor
+        OSD.Descriptor
           { name = ""
           }
     }
@@ -40,9 +42,35 @@ oneWaySpecialZoneCategory =
   OS.Category
     { id = OS.ONE_WAY_SPECIAL_ZONE,
       descriptor =
-        OS.Descriptor
+        OSD.Descriptor
           { name = ""
           }
+    }
+
+autoOneWayCategoryV2 :: OS.CategoryV2
+autoOneWayCategoryV2 =
+  OS.CategoryV2
+    { id = OS.DRIVER_OFFER_ESTIMATE,
+      descriptor =
+        OS.DescriptorV2
+          { name = Just "",
+            code = Nothing,
+            short_desc = Nothing
+          },
+      tags = Nothing
+    }
+
+oneWaySpecialZoneCategoryV2 :: OS.CategoryV2
+oneWaySpecialZoneCategoryV2 =
+  OS.CategoryV2
+    { id = OS.ONE_WAY_SPECIAL_ZONE,
+      descriptor =
+        OS.DescriptorV2
+          { name = Just "",
+            code = Nothing,
+            short_desc = Nothing
+          },
+      tags = Nothing
     }
 
 mkOnSearchMessage ::
@@ -60,7 +88,7 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let providerSpec =
         OS.Provider
           { id = provider.subscriberId.getShortId,
-            descriptor = OS.Descriptor {name = provider.name},
+            descriptor = OSD.Descriptor {name = provider.name},
             locations = maybe [] mkProviderLocations estimateList,
             items,
             fulfillments
@@ -68,7 +96,51 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   OS.OnSearchMessage $
     OS.Catalog
       { bpp_providers = pure providerSpec,
-        bpp_descriptor = OS.Descriptor provider.name
+        bpp_descriptor = OSD.Descriptor provider.name
+      }
+  where
+    mkProviderLocations estimatesList =
+      foldl (<>) [] $ map mkProviderLocation estimatesList
+    mkProviderLocation DSearch.EstimateInfo {..} = toList driverLatLongs
+
+mkOnSearchMessageV2 ::
+  DSearch.DSearchRes ->
+  OS.OnSearchMessageV2
+mkOnSearchMessageV2 res@DSearch.DSearchRes {..} = do
+  let startInfo = mkStartInfoV2 res
+  let stopInfo = mkStopInfoV2 res
+  let (quoteEntitiesList :: [QuoteEntitiesV2]) = case (estimateList, specialQuoteList) of
+        (Just estimates, _) -> map (mkQuoteEntitiesV2 startInfo stopInfo provider) estimates
+        (Nothing, Just quotes) -> map (mkQuoteEntitiesSpecialZoneV2 startInfo stopInfo provider) quotes
+        (_, _) -> [] --this won't happen
+  let items = map (.item) quoteEntitiesList
+      fulfillments = map (.fulfillment) quoteEntitiesList
+  let providerSpec =
+        OS.ProviderV2
+          { id = provider.subscriberId.getShortId,
+            descriptor =
+              OS.DescriptorV2
+                { name = Just provider.name,
+                  code = Nothing,
+                  short_desc = Nothing
+                },
+            locations = maybe [] mkProviderLocations estimateList,
+            items,
+            fulfillments,
+            payments = Nothing
+            -- tags = Nothing
+          }
+  OS.OnSearchMessageV2 $
+    OS.CatalogV2
+      { providers = pure providerSpec,
+        descriptor =
+          Descriptor.DescriptorV2
+            { name = Just provider.name,
+              code = Nothing,
+              short_desc = Nothing
+            }
+            -- fulfillments,
+            -- payments = Nothing
       }
   where
     mkProviderLocations estimatesList =
@@ -95,9 +167,36 @@ mkStopInfo res =
           }
     }
 
+mkStartInfoV2 :: DSearch.DSearchRes -> OS.Stop
+mkStartInfoV2 dReq =
+  OS.Stop
+    { location =
+        OS.Location
+          { gps = OS.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
+            address = Nothing
+          },
+      stopType = OS.START
+    }
+
+mkStopInfoV2 :: DSearch.DSearchRes -> OS.Stop
+mkStopInfoV2 res =
+  OS.Stop
+    { location =
+        OS.Location
+          { gps = OS.Gps {lat = res.toLocation.lat, lon = res.toLocation.lon},
+            address = Nothing
+          },
+      stopType = OS.END
+    }
+
 data QuoteEntities = QuoteEntities
   { fulfillment :: OS.FulfillmentInfo,
     item :: OS.Item
+  }
+
+data QuoteEntitiesV2 = QuoteEntitiesV2
+  { fulfillment :: OS.FulfillmentInfoV2,
+    item :: OS.ItemV2
   }
 
 currency' :: Text
@@ -215,6 +314,167 @@ mkQuoteEntities start end provider estInfo = do
                 ]
             }
 
+mkQuoteEntitiesV2 :: OS.Stop -> OS.Stop -> DM.Merchant -> DSearch.EstimateInfo -> QuoteEntitiesV2
+mkQuoteEntitiesV2 start end provider estInfo = do
+  let estimate = estInfo.estimate
+      variant = Common.castVariant estimate.vehicleVariant
+      minPriceDecimalValue = OS.DecimalValue $ toRational estimate.minFare
+      maxPriceDecimalValue = OS.DecimalValue $ toRational estimate.maxFare
+      estimateBreakupList = buildEstimateBreakUpListTagsV2 <$> estimate.estimateBreakupList
+      fulfillment =
+        OS.FulfillmentInfoV2
+          { stops = [start, end],
+            id = estimate.id.getId,
+            _type = OS.RIDE,
+            vehicle =
+              OS.Vehicle
+                { category = variant
+                }
+                -- tags = Nothing
+          }
+      item =
+        OS.ItemV2
+          { id = Common.mkItemId provider.shortId.getShortId estimate.vehicleVariant,
+            fulfillment_id = fulfillment.id,
+            price =
+              OS.ItemPrice
+                { currency = currency',
+                  value = minPriceDecimalValue,
+                  offered_value = minPriceDecimalValue,
+                  minimum_value = minPriceDecimalValue,
+                  maximum_value = maxPriceDecimalValue
+                },
+            tags =
+              Just
+                [ mkGeneralInfoTag estimate,
+                  mkFarePolicyTagV2 estimateBreakupList,
+                  mkRateCardTag estimate
+                ]
+          }
+  QuoteEntitiesV2
+    { fulfillment,
+      item
+    }
+  where
+    mkGeneralInfoTag estimate =
+      let specialLocationTag = estimate.specialLocationTag
+       in OS.TagGroupV2
+            { display = False,
+              descriptor =
+                Descriptor.DescriptorV2
+                  { code = Just "general_info",
+                    name = Just "General Information",
+                    short_desc = Nothing
+                  },
+              list =
+                [ OS.TagV2
+                    { display = (\_ -> Just True) =<< specialLocationTag,
+                      descriptor =
+                        Just
+                          Descriptor.DescriptorV2
+                            { code = (\_ -> Just "special_location_tag") =<< specialLocationTag,
+                              name = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
+                              short_desc = Nothing
+                            },
+                      value = specialLocationTag
+                    },
+                  OS.TagV2
+                    { display = Just False,
+                      descriptor =
+                        Just
+                          Descriptor.DescriptorV2
+                            { code = Just "distance_to_nearest_driver",
+                              name = Just "Distance To Nearest Driver",
+                              short_desc = Nothing
+                            },
+                      value = Just $ show . double2Int . realToFrac $ estInfo.distanceToNearestDriver
+                    }
+                ]
+            }
+    mkFarePolicyTagV2 estimateBreakupList =
+      OS.TagGroupV2
+        { display = False,
+          descriptor =
+            Descriptor.DescriptorV2
+              { code = Just "fare_breakup",
+                name = Just "Fare Breakup",
+                short_desc = Nothing
+              },
+          list = estimateBreakupList
+        }
+    mkRateCardTag estimate =
+      let nightShiftCharges = (estimate.nightShiftInfo <&> (.nightShiftCharge))
+          oldNightShiftCharges = (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge)))
+          nightShiftStart = (estimate.nightShiftInfo <&> (.nightShiftStart))
+          waitingChargePerMin = (estimate.waitingCharges.waitingChargePerMin)
+          nightShiftEnd = (estimate.nightShiftInfo <&> (.nightShiftEnd))
+       in OS.TagGroupV2
+            { display = False,
+              descriptor =
+                Descriptor.DescriptorV2
+                  { code = Just "rate_card",
+                    name = Just "Rate Card",
+                    short_desc = Nothing
+                  },
+              list =
+                [ OS.TagV2
+                    { display = (\_ -> Just False) =<< nightShiftCharges,
+                      descriptor =
+                        Just
+                          Descriptor.DescriptorV2
+                            { code = (\_ -> Just "night_shift_charge") =<< nightShiftCharges,
+                              name = (\_ -> Just "Night Shift Charges") =<< nightShiftCharges,
+                              short_desc = Nothing
+                            },
+                      value = (\charges -> Just $ show charges.getMoney) =<< nightShiftCharges
+                    },
+                  OS.TagV2
+                    { display = (\_ -> Just False) =<< oldNightShiftCharges,
+                      descriptor =
+                        Just
+                          Descriptor.DescriptorV2
+                            { code = (\_ -> Just "old_night_shift_charge") =<< oldNightShiftCharges,
+                              name = (\_ -> Just "Old Night Shift Charges") =<< oldNightShiftCharges,
+                              short_desc = Nothing
+                            },
+                      value = (Just . DecimalValue.valueToString) =<< oldNightShiftCharges
+                    },
+                  OS.TagV2
+                    { display = (\_ -> Just False) =<< nightShiftStart,
+                      descriptor =
+                        Just
+                          Descriptor.DescriptorV2
+                            { code = (\_ -> Just "night_shift_start") =<< nightShiftStart,
+                              name = (\_ -> Just "Night Shift Start Timings") =<< nightShiftStart,
+                              short_desc = Nothing
+                            },
+                      value = (Just . show) =<< nightShiftStart
+                    },
+                  OS.TagV2
+                    { display = (\_ -> Just False) =<< waitingChargePerMin,
+                      descriptor =
+                        Just
+                          Descriptor.DescriptorV2
+                            { code = (\_ -> Just "waiting_charge_per_min") =<< waitingChargePerMin,
+                              name = (\_ -> Just "Waiting Charges Per Min") =<< waitingChargePerMin,
+                              short_desc = Nothing
+                            },
+                      value = (\charges -> Just $ show charges.getMoney) =<< waitingChargePerMin
+                    },
+                  OS.TagV2
+                    { display = (\_ -> Just False) =<< nightShiftEnd,
+                      descriptor =
+                        Just
+                          Descriptor.DescriptorV2
+                            { code = (\_ -> Just "night_shift_end") =<< nightShiftEnd,
+                              name = (\_ -> Just "Night Shift End Timings") =<< nightShiftEnd,
+                              short_desc = Nothing
+                            },
+                      value = (Just . show) =<< nightShiftEnd
+                    }
+                ]
+            }
+
 mkQuoteEntitiesSpecialZone :: OS.StartInfo -> OS.StopInfo -> DM.Merchant -> DSearch.SpecialZoneQuoteInfo -> QuoteEntities
 mkQuoteEntitiesSpecialZone start end provider it = do
   let variant = Common.castVariant it.vehicleVariant
@@ -264,6 +524,67 @@ mkQuoteEntitiesSpecialZone start end provider it = do
             ]
         }
 
+mkQuoteEntitiesSpecialZoneV2 :: OS.Stop -> OS.Stop -> DM.Merchant -> DSearch.SpecialZoneQuoteInfo -> QuoteEntitiesV2
+mkQuoteEntitiesSpecialZoneV2 start end provider it = do
+  let variant = Common.castVariant it.vehicleVariant
+      estimatedFare = OS.DecimalValue $ toRational it.estimatedFare
+      fulfillment =
+        OS.FulfillmentInfoV2
+          { stops = [start, end],
+            id = it.quoteId.getId,
+            _type = OS.RIDE_OTP,
+            vehicle =
+              OS.Vehicle
+                { category = variant
+                }
+                -- tags = Nothing
+          }
+      item =
+        OS.ItemV2
+          { id = Common.mkItemId provider.shortId.getShortId it.vehicleVariant,
+            fulfillment_id = fulfillment.id,
+            price =
+              OS.ItemPrice
+                { currency = currency',
+                  value = estimatedFare,
+                  offered_value = estimatedFare,
+                  minimum_value = estimatedFare,
+                  maximum_value = estimatedFare
+                },
+            tags =
+              if isJust it.specialLocationTag
+                then Just [mkSpecialLocationTag it.specialLocationTag]
+                else Nothing
+          }
+  QuoteEntitiesV2
+    { fulfillment,
+      item
+    }
+  where
+    mkSpecialLocationTag specialLocationTag =
+      OS.TagGroupV2
+        { display = False,
+          descriptor =
+            Descriptor.DescriptorV2
+              { code = Just "general_info",
+                name = Just "General Information",
+                short_desc = Nothing
+              },
+          list =
+            [ OS.TagV2
+                { display = (\_ -> Just True) =<< specialLocationTag,
+                  descriptor =
+                    Just
+                      Descriptor.DescriptorV2
+                        { code = (\_ -> Just "special_location_tag") =<< specialLocationTag,
+                          name = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
+                          short_desc = Nothing
+                        },
+                  value = specialLocationTag
+                }
+            ]
+        }
+
 buildEstimateBreakUpList ::
   DEst.EstimateBreakup ->
   BreakupItem
@@ -277,6 +598,22 @@ buildEstimateBreakUpList DEst.EstimateBreakup {..} = do
           }
     }
 
+buildEstimateBreakUpListTagsV2 ::
+  DEst.EstimateBreakup ->
+  OS.TagV2
+buildEstimateBreakUpListTagsV2 DEst.EstimateBreakup {..} = do
+  OS.TagV2
+    { display = Just False,
+      descriptor =
+        Just
+          Descriptor.DescriptorV2
+            { code = Just title,
+              name = Just title,
+              short_desc = Nothing
+            },
+      value = Just $ show price.value.getMoney
+    }
+
 buildEstimateBreakUpListTags ::
   DEst.EstimateBreakup ->
   OS.Tag
@@ -286,6 +623,24 @@ buildEstimateBreakUpListTags DEst.EstimateBreakup {..} = do
       code = Just title,
       name = Just title,
       value = Just $ show price.value.getMoney
+    }
+
+mkPaymentV2 :: DMPM.PaymentMethodInfo -> OS.PaymentV2
+mkPaymentV2 DMPM.PaymentMethodInfo {..} =
+  OS.PaymentV2
+    { params =
+        OS.PaymentParamsV2
+          { instrument = Just $ Common.castDPaymentInstrument paymentInstrument,
+            currency = currency',
+            amount = Nothing
+          },
+      collectedBy = Common.castDPaymentCollector collectedBy,
+      _type = Common.castDPaymentType paymentType,
+      uri = Nothing,
+      status = Nothing,
+      buyerAppFindeFeeType = Nothing,
+      buyerAppFinderFeeAmount = Nothing,
+      settlementDetails = Nothing
     }
 
 mkPayment :: DMPM.PaymentMethodInfo -> OS.Payment

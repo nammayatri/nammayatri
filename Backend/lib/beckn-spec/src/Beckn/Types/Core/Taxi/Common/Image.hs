@@ -12,34 +12,24 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.Search.Intent
-  ( module Beckn.Types.Core.Taxi.Search.Intent,
-    module Reexport,
-  )
-where
+module Beckn.Types.Core.Taxi.Common.Image where
 
-import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
-import Beckn.Types.Core.Taxi.Search.Fulfillment
-import Beckn.Types.Core.Taxi.Search.Payment
+import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (exp, id)
+-- import Kernel.Utils.JSON
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
-data IntentV2 = IntentV2
-  { fulfillment :: FulfillmentInfoV2,
-    payment :: Payment
+data SizeType = XS | SM | MD | LG | XL | CUSTOM
+  deriving (Generic, Show, Eq, Read, ToJSON, FromJSON, ToSchema, Enum, Bounded)
+
+data Image = Image
+  { url :: Maybe Text,
+    sizeType :: Maybe SizeType,
+    width :: Maybe Int,
+    height :: Maybe Int
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show, ToJSON, FromJSON)
 
-instance ToSchema IntentV2 where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
----------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
-
-newtype Intent = Intent
-  { fulfillment :: FulfillmentInfo
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Intent where
+instance ToSchema Image where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

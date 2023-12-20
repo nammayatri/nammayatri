@@ -27,6 +27,84 @@ import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name, tags)
 import GHC.Exts (fromList)
 import Kernel.Prelude
+import Kernel.Utils.JSON
+import Kernel.Utils.Schema
+
+data RideAssignedEventV2 = RideAssignedEventV2
+  { id :: Text,
+    status :: Text,
+    -- update_target :: Text,
+    fulfillments :: [FulfillmentInfoV2]
+  }
+  deriving (Generic, Show)
+
+instance ToJSON RideAssignedEventV2 where
+  toJSON = genericToJSON removeNullFields
+
+-- toJSON RideAssignedEventV2 {..} = do
+--   let (A.Object fulfJSON) = toJSON fulfillments
+--   A.Object $
+--     "id" .= id
+--       <> "status" .= status
+--       -- <> "update_target" .= update_target
+--       <> "fulfillments" .= (fulfJSON <> ("status" .= ("descriptor" .= (("code" .= RIDE_ASSIGNED <> "name" .= A.String "Ride Assigned") :: A.Object) :: A.Object)))
+
+instance FromJSON RideAssignedEventV2 where
+  parseJSON = genericParseJSON removeNullFields
+
+-- parseJSON = withObject "RideAssignedEventV2" $ \obj -> do
+--   update_type <- (obj .: "fulfillments") >>= (.: "status") >>= (.: "descriptor") >>= (.: "code")
+--   unless (update_type == RIDE_ASSIGNED) $ fail "Wrong update_type."
+--   RideAssignedEventV2
+--     <$> obj .: "id"
+--     <*> obj .: "status"
+--     -- <*> obj .: "update_target"
+--     <*> obj .: "fulfillments"
+
+instance ToSchema RideAssignedEventV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+-- declareNamedSchema _ = do
+--   txt <- declareSchemaRef (Proxy :: Proxy Text)
+--   update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
+--   let st =
+--         mempty
+--           & type_ L.?~ OpenApiObject
+--           & properties
+--             L..~ fromList
+--               [("code", update_type), ("name", txt)]
+--           & required L..~ ["code", "name"]
+--       descriptor =
+--         mempty
+--           & type_ L.?~ OpenApiObject
+--           & properties
+--             L..~ fromList
+--               [("descriptor", Inline st)]
+--           & required L..~ ["descriptor"]
+--       fulfillments =
+--         toInlinedSchema (Proxy :: Proxy FulfillmentInfoV2)
+--           & properties
+--             L.<>~ fromList [("status", Inline descriptor)]
+--           & required L.<>~ ["status"]
+--   return $
+--     NamedSchema (Just "RideAssignedEventV2") $
+--       mempty
+--         & type_ L.?~ OpenApiObject
+--         & properties
+--           L..~ fromList
+--             [ ("id", txt),
+--               ("status", txt),
+--               -- ("update_target", txt),
+--               ("fulfillments", Inline fulfillments)
+--             ]
+--         & required
+--           L..~ [ "id",
+--                  "status",
+--                  --  "update_target",
+--                  "fulfillments"
+--                ]
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data RideAssignedEvent = RideAssignedEvent
   { id :: Text,

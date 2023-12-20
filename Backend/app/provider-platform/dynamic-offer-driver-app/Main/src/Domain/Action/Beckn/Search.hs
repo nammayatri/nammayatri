@@ -53,7 +53,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (mkLocation)
 import SharedLogic.DriverPool
 import qualified SharedLogic.Estimate as SHEst
 import SharedLogic.FareCalculator

@@ -18,12 +18,24 @@ module Beckn.Types.Core.Taxi.OnSelect.Agent
   )
 where
 
+import qualified Beckn.Types.Core.Taxi.Common.Customer as Customer
 import Beckn.Types.Core.Taxi.Common.Gps as Reexport
 import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions, fromAesonOptions)
 import EulerHS.Prelude
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+
+newtype AgentV2 = AgentV2
+  { person :: Maybe Customer.OrderPersonV2
+  -- rateable :: Maybe Bool, -- removed in 2.x
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema AgentV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data Agent = Agent
   { name :: Maybe Text,

@@ -31,6 +31,35 @@ import Kernel.Prelude
 import Kernel.Utils.JSON (removeNullFields)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
 
+data ItemV2 = ItemV2
+  { id :: Text,
+    -- category_id :: FareProductType,
+    -- id :: Text,
+    fulfillment_id :: Text,
+    -- offer_id :: Maybe Text,
+    price :: ItemPrice,
+    -- descriptor :: ItemDescriptor,
+    -- quote_terms :: [Text],
+    -- Only when FareProductType.ONE_WAY_TRIP
+    tags :: Maybe [TagGroupV2]
+    -- Only when FareProductType.RENTAL_TRIP
+    -- base_distance :: Maybe Kilometers,
+    -- base_duration :: Maybe Hours
+    -- When we add some 3rd FareProductType, consider to make proper Item type without Maybes with custom To/FromJSON
+  }
+  deriving (Generic, Show)
+
+instance ToJSON ItemV2 where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON ItemV2 where
+  parseJSON = genericParseJSON removeNullFields
+
+instance ToSchema ItemV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions removeNullFields
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
+
 data Item = Item
   { id :: Text,
     -- category_id :: FareProductType,

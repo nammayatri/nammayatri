@@ -22,12 +22,31 @@ where
 import Beckn.Types.Core.Taxi.Common.FulfillmentInfo (FulfillmentType (..), stripPrefixUnderscoreAndRemoveNullFields)
 import Beckn.Types.Core.Taxi.Common.Vehicle as Reexport
 import Beckn.Types.Core.Taxi.OnSelect.Agent
-import Beckn.Types.Core.Taxi.Search.StartInfo
-import Beckn.Types.Core.Taxi.Search.StopInfo
+import Beckn.Types.Core.Taxi.Search.Stop
 import Data.OpenApi (ToSchema (..))
 import Data.OpenApi.Schema (fromAesonOptions)
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+
+data FulfillmentInfoV2 = FulfillmentInfoV2
+  { id :: Text,
+    stops :: [Stop],
+    vehicle :: Vehicle,
+    _type :: FulfillmentType,
+    agent :: AgentV2
+  }
+  deriving (Generic, Show)
+
+instance FromJSON FulfillmentInfoV2 where
+  parseJSON = genericParseJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToJSON FulfillmentInfoV2 where
+  toJSON = genericToJSON stripPrefixUnderscoreAndRemoveNullFields
+
+instance ToSchema FulfillmentInfoV2 where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreAndRemoveNullFields
+
+---------------- Code for backward compatibility : To be deprecated after v2.x release ----------------
 
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,

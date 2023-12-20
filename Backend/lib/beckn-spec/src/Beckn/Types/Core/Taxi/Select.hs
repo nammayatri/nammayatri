@@ -19,15 +19,20 @@ module Beckn.Types.Core.Taxi.Select
 where
 
 import Beckn.Types.Core.Taxi.Common.BreakupItem as Reexport
+import Beckn.Types.Core.Taxi.Common.Descriptor as Reexport
 import Beckn.Types.Core.Taxi.Common.Tags as Reexport
 import Beckn.Types.Core.Taxi.OnSearch.Fulfillment as Reexport
 import Beckn.Types.Core.Taxi.Select.Order as Reexport
 import Beckn.Types.Core.Taxi.Select.Quote as Reexport
--- import Beckn.Types.Core.Taxi.Select.StartInfo as Reexport
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 newtype SelectMessage = SelectMessage
   { order :: Order
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+newtype SelectMessageV2 = SelectMessageV2
+  { order :: OrderV2
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

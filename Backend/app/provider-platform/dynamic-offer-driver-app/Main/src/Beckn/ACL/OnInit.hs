@@ -15,6 +15,8 @@
 module Beckn.ACL.OnInit where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.Types.Core.Taxi.Common.Customer as Customer
+-- import qualified Beckn.Types.Core.Taxi.Common.Image as Image
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Booking as DRB
@@ -128,6 +130,164 @@ mkOnInitMessage res = do
                   _type = maybe OnInit.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) res.paymentMethodInfo,
                   uri = res.booking.paymentUrl
                 }
+          }
+    }
+  where
+    castAddress DL.LocationAddress {..} = OnInit.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
+    castVehicleVariant = \case
+      VehVar.SEDAN -> OnInit.SEDAN
+      VehVar.SUV -> OnInit.SUV
+      VehVar.HATCHBACK -> OnInit.HATCHBACK
+      VehVar.AUTO_RICKSHAW -> OnInit.AUTO_RICKSHAW
+      VehVar.TAXI -> OnInit.TAXI
+      VehVar.TAXI_PLUS -> OnInit.TAXI_PLUS
+    buildFulfillmentType = \case
+      DRB.NormalBooking -> OnInit.RIDE
+      DRB.SpecialZoneBooking -> OnInit.RIDE_OTP
+    filterRequiredBreakups fParamsType breakup = do
+      case fParamsType of
+        DFParams.Progressive ->
+          breakup.title == "BASE_FARE"
+            || breakup.title == "SERVICE_CHARGE"
+            || breakup.title == "DEAD_KILOMETER_FARE"
+            || breakup.title == "EXTRA_DISTANCE_FARE"
+            || breakup.title == "DRIVER_SELECTED_FARE"
+            || breakup.title == "CUSTOMER_SELECTED_FARE"
+            || breakup.title == "TOTAL_FARE"
+            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+            || breakup.title == "EXTRA_TIME_FARE"
+        DFParams.Slab ->
+          breakup.title == "BASE_FARE"
+            || breakup.title == "SERVICE_CHARGE"
+            || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+            || breakup.title == "PLATFORM_FEE"
+            || breakup.title == "SGST"
+            || breakup.title == "CGST"
+            || breakup.title == "FIXED_GOVERNMENT_RATE"
+            || breakup.title == "CUSTOMER_SELECTED_FARE"
+            || breakup.title == "TOTAL_FARE"
+            || breakup.title == "NIGHT_SHIFT_CHARGE"
+            || breakup.title == "EXTRA_TIME_FARE"
+
+mkOnInitMessageV2 :: DInit.InitRes -> OnInit.OnInitMessageV2
+mkOnInitMessageV2 res = do
+  let rb = res.booking
+      vehicleVariant = castVehicleVariant res.booking.vehicleVariant
+      itemId = Common.mkItemId res.transporter.shortId.getShortId res.booking.vehicleVariant
+      fareDecimalValue = fromIntegral rb.estimatedFare
+      currency = "INR"
+      breakup_ =
+        mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
+          & filter (filterRequiredBreakups $ DFParams.getFareParametersType rb.fareParams) -- TODO: Remove after roll out
+  OnInit.OnInitMessageV2
+    { order =
+        OnInit.OrderV2
+          { id = res.booking.id.getId,
+            items =
+              [ OnInit.OrderItemV2
+                  { id = itemId,
+                    fulfillment_ids = [res.booking.quoteId],
+                    price =
+                      OnInit.Price
+                        { currency,
+                          value = fareDecimalValue
+                        },
+                    descriptor =
+                      OnInit.DescriptorV2
+                        { short_desc = Just itemId,
+                          code = Nothing,
+                          name = Nothing
+                        }
+                  }
+              ],
+            fulfillments =
+              [ OnInit.FulfillmentInfoV2
+                  { id = res.booking.quoteId,
+                    _type = buildFulfillmentType res.booking.bookingType,
+                    stops =
+                      [ OnInit.Stop
+                          { location =
+                              OnInit.Location
+                                { gps =
+                                    OnInit.Gps
+                                      { lat = res.booking.fromLocation.lat,
+                                        lon = res.booking.fromLocation.lon
+                                      },
+                                  address = castAddress res.booking.fromLocation.address
+                                },
+                            stopType = OnInit.START,
+                            authorization = Nothing
+                          },
+                        OnInit.Stop
+                          { location =
+                              OnInit.Location
+                                { gps =
+                                    OnInit.Gps
+                                      { lat = res.booking.toLocation.lat,
+                                        lon = res.booking.toLocation.lon
+                                      },
+                                  address = castAddress res.booking.toLocation.address
+                                },
+                            stopType = OnInit.END,
+                            authorization = Nothing
+                          }
+                      ],
+                    vehicle =
+                      OnInit.Vehicle
+                        { category = vehicleVariant
+                        },
+                    agent =
+                      res.driverName >>= \driverName ->
+                        Just
+                          OnInit.AgentV2
+                            { person =
+                                Just $
+                                  Customer.OrderPersonV2
+                                    { name = driverName,
+                                      image = Nothing,
+                                      tags = Nothing,
+                                      id = res.driverId
+                                    },
+                              contact = Nothing,
+                              organization = Nothing,
+                              rating = Nothing
+                            }
+                  }
+              ],
+            status = OnInit.NEW,
+            quote =
+              OnInit.Quote
+                { price =
+                    OnInit.QuotePrice
+                      { currency,
+                        value = fareDecimalValue,
+                        offered_value = fareDecimalValue
+                      },
+                  breakup = Just breakup_
+                },
+            provider =
+              res.driverId >>= \dId ->
+                Just
+                  OnInit.Provider
+                    { id = dId
+                    },
+            payments =
+              [ OnInit.PaymentV2
+                  { params =
+                      OnInit.PaymentParamsV2
+                        { instrument = Common.castDPaymentInstrument . (.paymentInstrument) <$> res.paymentMethodInfo,
+                          currency = currency,
+                          amount = Just fareDecimalValue
+                        },
+                    collectedBy = OnInit.BPP, --maybe OnInit.BPP (Common.castDPaymentCollector . (.collectedBy)) res.paymentMethodInfo,
+                    _type = maybe OnInit.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType)) res.paymentMethodInfo,
+                    uri = res.booking.paymentUrl,
+                    status = Nothing,
+                    buyerAppFindeFeeType = Nothing,
+                    buyerAppFinderFeeAmount = Nothing,
+                    settlementDetails = Nothing
+                  }
+              ]
           }
     }
   where

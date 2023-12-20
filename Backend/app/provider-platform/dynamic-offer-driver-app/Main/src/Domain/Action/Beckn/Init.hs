@@ -84,6 +84,7 @@ cancelBooking ::
     CacheFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
@@ -92,7 +93,6 @@ cancelBooking ::
   Id DM.Merchant ->
   m AckResponse
 cancelBooking booking transporterId = do
-  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
   bookingCancellationReason <- buildBookingCancellationReason

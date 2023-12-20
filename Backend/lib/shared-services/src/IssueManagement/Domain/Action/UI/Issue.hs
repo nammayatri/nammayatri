@@ -40,7 +40,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Kernel.Utils.Common hiding (mkLocation)
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id Ride -> m (Maybe Ride),

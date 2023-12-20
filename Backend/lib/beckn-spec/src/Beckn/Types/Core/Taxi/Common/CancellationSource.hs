@@ -13,12 +13,28 @@
 -}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Beckn.Types.Core.Taxi.Common.CancellationSource where
+module Beckn.Types.Core.Taxi.Common.CancellationSource where -- rename file to Cancellation?
 
 import Data.Aeson
 import Data.OpenApi
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto
+import Kernel.Utils.JSON
+import Kernel.Utils.Schema
+
+newtype Cancellation = Cancellation
+  { reason :: CancellationSource
+  }
+  deriving (Show, Generic)
+
+instance ToJSON Cancellation where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON Cancellation where
+  parseJSON = genericParseJSON removeNullFields
+
+instance ToSchema Cancellation where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 data CancellationSource
   = ByUser
@@ -27,8 +43,6 @@ data CancellationSource
   | ByAllocator
   | ByApplication
   deriving (Show, Eq, Ord, Read, Generic)
-
-derivePersistField "CancellationSource"
 
 instance ToJSON CancellationSource where
   toJSON = genericToJSON cancellationSourceJSONOptions
@@ -50,3 +64,5 @@ cancellationSourceJSONOptions =
 
 instance ToSchema CancellationSource where
   declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions cancellationSourceJSONOptions
+
+derivePersistField "CancellationSource"
