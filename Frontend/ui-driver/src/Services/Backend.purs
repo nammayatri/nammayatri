@@ -180,9 +180,9 @@ triggerOTPBT payload = do
 
 
 makeTriggerOTPReq :: String → LatLon -> TriggerOTPReq
-makeTriggerOTPReq mobileNumber (LatLon lat lng) = TriggerOTPReq
+makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
     let operatingCity = getValueToLocalStore DRIVER_LOCATION
-        latitiude = mkLatLon lat
+        latitude = mkLatLon lat
         longitude = mkLatLon lng
     in
     {
@@ -190,7 +190,7 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng) = TriggerOTPReq
       "mobileCountryCode" : "+91",
       "merchantId" : if (SC.getMerchantId "") == "NA" then getValueToLocalNativeStore MERCHANT_ID else (SC.getMerchantId "" ),
       "merchantOperatingCity" : mkOperatingCity operatingCity,
-      "registrationLat" : latitiude,
+      "registrationLat" : latitude,
       "registrationLon" : longitude
     }
     where 
@@ -276,12 +276,13 @@ startRide productId payload = do
     where
         unwrapResponse (x) = x
 
-makeStartRideReq :: String -> Number -> Number -> StartRideReq
-makeStartRideReq otp lat lon = StartRideReq {
+makeStartRideReq :: String -> Number -> Number -> String -> StartRideReq
+makeStartRideReq otp lat lon ts = StartRideReq {
     "rideOtp": otp,
     "point": Point {
-        "lat" : lat,
-        "lon" : lon
+        lat,
+        lon,
+        ts
         }
 }
 --------------------------------- endRide ---------------------------------------------------------------------------------------------------------------------------------
@@ -295,12 +296,12 @@ endRide productId payload = do
             void $ lift $ lift $ toggleLoader false
             BackT $ pure GoBack
 
-makeEndRideReq :: Number -> Number -> Maybe Boolean -> Int -> Int -> EndRideReq
-makeEndRideReq lat lon numDeviation tripDistance tripDistanceWithAcc = EndRideReq {
-    "point" :  Point
-    {
-        "lat" : lat,
-        "lon" : lon
+makeEndRideReq :: Number -> Number -> Maybe Boolean -> Int -> Int -> String -> EndRideReq
+makeEndRideReq lat lon numDeviation tripDistance tripDistanceWithAcc ts = EndRideReq {
+    "point" :  Point {
+        lat,
+        lon,
+        ts
     },
     "numberOfDeviation" : numDeviation,
     "uiDistanceCalculationWithAccuracy" : tripDistanceWithAcc,
@@ -905,13 +906,14 @@ otpRide dummyRideOtp payload = do
     where
         unwrapResponse (x) = x
 
-makeOTPRideReq :: String -> Number -> Number -> OTPRideReq
-makeOTPRideReq otp lat lon = OTPRideReq {
+makeOTPRideReq :: String -> Number -> Number -> String -> OTPRideReq
+makeOTPRideReq otp lat lon ts = OTPRideReq {
     specialZoneOtpCode: otp,
-    point: LatLong {
-        lat : lat,
-        lon : lon
-        }
+    point: Point {
+        lat,
+        lon,
+        ts
+    }
 }
 
 ------------------------------------------------------------------------ OnCallBT Function ------------------------------------------------------------------------------------

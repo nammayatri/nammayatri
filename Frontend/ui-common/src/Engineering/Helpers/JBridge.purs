@@ -135,7 +135,7 @@ foreign import mapSnapShot :: forall action. String -> Locations -> String -> Bo
 foreign import getCurrentLatLong  :: Effect Paths
 foreign import isLocationEnabled :: Unit -> Effect Boolean
 foreign import getCurrentPosition  :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
-foreign import getCurrentPositionWithTimeout  :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Int -> Effect Unit
+foreign import getCurrentPositionWithTimeoutImpl  :: forall action. EffectFn4 (action -> Effect Unit) (String -> String -> String -> action) Int Boolean Unit
 
 foreign import translateStringWithTimeout :: forall action. (action -> Effect Unit) -> (String -> action) -> Int -> String -> Effect Unit
 
@@ -260,6 +260,9 @@ foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
+
+getCurrentPositionWithTimeout :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Int -> Boolean -> Effect Unit
+getCurrentPositionWithTimeout = runEffectFn4 getCurrentPositionWithTimeoutImpl
 
 type LottieAnimationConfig = {
     rawJson :: String

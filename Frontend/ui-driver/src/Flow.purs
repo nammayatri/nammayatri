@@ -294,7 +294,7 @@ loginFlow = do
   case mobileNo of
     GO_TO_ENTER_OTP updateState -> do
       liftFlowBT $ logEvent logField_ "ny_driver_otp_trigger"
-      latLong <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false
+      latLong <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
       TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq updateState.data.mobileNumber latLong)
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = triggerOtpResp.authId}})
       enterOTPFlow
@@ -1926,10 +1926,10 @@ homeScreenFlow = do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
     GO_TO_EDIT_GENDER_SCREEN -> driverProfileFlow
-    GO_TO_START_RIDE {id, otp , lat, lon} updatedState -> do
+    GO_TO_START_RIDE {id, otp , lat, lon, ts} updatedState -> do
       void $ lift $ lift $ loaderText (getString START_RIDE) ""
       void $ lift $ lift $ toggleLoader true
-      startRideResp <- lift $ lift $ Remote.startRide id (Remote.makeStartRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))) -- driver's lat long during starting ride
+      startRideResp <- lift $ lift $ Remote.startRide id (Remote.makeStartRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) ts) -- driver's lat long during starting ride
       case startRideResp of
         Right startRideResp -> do
           _ <- pure $ setValueToLocalNativeStore RIDE_ID id
@@ -1954,10 +1954,10 @@ homeScreenFlow = do
               void $ lift $ lift $ toggleLoader false
               else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           homeScreenFlow
-    GO_TO_START_ZONE_RIDE {otp, lat, lon} -> do
+    GO_TO_START_ZONE_RIDE {otp, lat, lon, ts} -> do
       void $ lift $ lift $ loaderText (getString PLEASE_WAIT) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
-      startZoneRideResp <- lift $ lift $ Remote.otpRide "" (Remote.makeOTPRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon))) -- driver's lat long during starting ride
+      startZoneRideResp <- lift $ lift $ Remote.otpRide "" (Remote.makeOTPRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) ts) -- driver's lat long during starting ride
       case startZoneRideResp of
         Right startZoneRideResp -> do
           liftFlowBT $ logEvent logField_ "ny_driver_special_zone_ride_start"
@@ -1979,13 +1979,13 @@ homeScreenFlow = do
               else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
           void $ lift $ lift $ toggleLoader false
           homeScreenFlow
-    GO_TO_END_RIDE {id, lat, lon} state -> do
+    GO_TO_END_RIDE {id, lat, lon, ts} state -> do
       void $ lift $ lift $ loaderText (getString END_RIDE) ""
       void $ lift $ lift $ toggleLoader true
       let numDeviation = Just $ (fromMaybe 0 (fromString (getValueToLocalNativeStore RIDE_WAYPOINT_DEVIATION_COUNT))) >=3
           tripDistanceWithAcc = fromMaybe 0 $ fromString $ getValueToLocalNativeStore TRIP_DISTANCE_ACC
           tripDistance = fromMaybe 0 $ fromString $ getValueToLocalNativeStore TRIP_DISTANCE
-      API.EndRideResponse endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation tripDistance tripDistanceWithAcc)-- driver's  lat long during ending ride
+      API.EndRideResponse endRideResp <- Remote.endRide id (Remote.makeEndRideReq (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) numDeviation tripDistance tripDistanceWithAcc ts)-- driver's  lat long during ending ride
       when state.data.driverGotoState.isGotoEnabled do
         getDriverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
         modifyScreenState $ GlobalPropsType (\globalProps -> globalProps 
@@ -2588,7 +2588,7 @@ subScriptionFlow = do
     GO_TO_FIND_HELP_CENTRE state -> do
       let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
       let currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
-      (LatLon lat lon) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 750 false
+      (LatLon lat lon _) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 750 false true
       modifyScreenState $ SubscriptionScreenStateType (\subScriptionScreenState -> subScriptionScreenState{props {subView = FindHelpCentre, showShimmer = false, currentLat = fromMaybe 0.0 $ Number.fromString lat, currentLon = fromMaybe 0.0 $ Number.fromString lon}})
       subScriptionFlow
     REFRESH_HELP_CENTRE state -> do

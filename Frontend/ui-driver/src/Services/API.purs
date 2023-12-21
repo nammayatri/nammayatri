@@ -247,6 +247,7 @@ newtype Point = Point
     {
         lat :: Number
     ,   lon :: Number
+    ,   ts :: String
     }
 
 derive instance genericPoint :: Generic Point _
@@ -1670,7 +1671,7 @@ instance encodeDeleteIssueResp :: Encode DeleteIssueResp where encode = defaultE
 newtype OTPRideReq = OTPRideReq
     {
       specialZoneOtpCode :: String,
-      point :: LatLong
+      point :: Point
     }
 
 data OTPRideRequest = OTPRideRequest OTPRideReq

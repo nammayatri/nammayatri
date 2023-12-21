@@ -44,7 +44,7 @@ data Action = BackPressed
             | UpdatePermission ChooseCityScreenState
             | UpdateLocationPermissionState
             | NoAction
-            | CurrentLocationCallBack String String
+            | CurrentLocationCallBack String String String
             | IsMockLocation String
             | ErrorModalActionController ErrorModalController.Action
             -- | MenuButtonAction2 MenuButtonController.Action
@@ -127,7 +127,7 @@ eval (UpdatePermission updatedState) state = do
   let newState = updatedState {props {currentStage = if updatedState.props.isLocationPermissionGiven then DETECT_LOCATION else updatedState.props.currentStage}}
   continue newState
 
-eval (CurrentLocationCallBack lat long) state = do
+eval (CurrentLocationCallBack lat long _) state = do
   let driverLat = fromMaybe 0.0 $ Number.fromString lat
       driverLon = fromMaybe 0.0 $ Number.fromString long
   if driverLat == 0.0 && driverLon == 0.0 then do

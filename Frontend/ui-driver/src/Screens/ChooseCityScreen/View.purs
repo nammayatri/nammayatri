@@ -64,7 +64,7 @@ screen initialState =
 
     isLocationPermissionEnabled <- JB.isLocationPermissionEnabled unit
     when isLocationPermissionEnabled $
-      JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 2000
+      JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 2000 true
 
     pure $ pure unit)]
   , eval:
