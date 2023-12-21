@@ -45,6 +45,7 @@ library
       Alchemist.Generator.Purs.Utils
       Alchemist.Generator.SQL
       Alchemist.Generator.SQL.Table
+      Alchemist.GeneratorCore
       Alchemist.Utils
   other-modules:
       Paths_alchemist
@@ -98,6 +99,7 @@ library
     , lens
     , lens-aeson
     , mobility-core
+    , mtl
     , parsec
     , persistent
     , persistent-postgresql
@@ -108,6 +110,7 @@ library
     , scientific
     , servant-server
     , split
+    , stringbuilder
     , template-haskell
     , text
     , time
@@ -175,6 +178,7 @@ executable alchemist-generator-exe
     , lens
     , lens-aeson
     , mobility-core
+    , mtl
     , parsec
     , persistent
     , persistent-postgresql
@@ -185,6 +189,7 @@ executable alchemist-generator-exe
     , scientific
     , servant-server
     , split
+    , stringbuilder
     , template-haskell
     , text
     , time
@@ -220,6 +225,7 @@ test-suite alchemist-tests
       Alchemist.Generator.Purs.Utils
       Alchemist.Generator.SQL
       Alchemist.Generator.SQL.Table
+      Alchemist.GeneratorCore
       Alchemist.Utils
       Paths_alchemist
   hs-source-dirs:
@@ -274,6 +280,7 @@ test-suite alchemist-tests
     , lens
     , lens-aeson
     , mobility-core
+    , mtl
     , parsec
     , persistent
     , persistent-postgresql
@@ -284,6 +291,7 @@ test-suite alchemist-tests
     , scientific
     , servant-server
     , split
+    , stringbuilder
     , template-haskell
     , text
     , time

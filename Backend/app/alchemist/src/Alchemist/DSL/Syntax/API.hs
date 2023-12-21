@@ -2,8 +2,8 @@
 
 module Alchemist.DSL.Syntax.API where
 
+import Alchemist.GeneratorCore
 import Control.Lens hiding (noneOf)
--- import Data.Aeson
 import Kernel.Prelude
 
 data UrlParts
@@ -55,3 +55,5 @@ data Apis = Apis
   deriving (Show)
 
 $(makeLenses ''Apis)
+
+type ApisM = BuilderM Apis
