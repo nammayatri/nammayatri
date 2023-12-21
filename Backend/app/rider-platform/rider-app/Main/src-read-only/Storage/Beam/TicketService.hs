@@ -18,6 +18,7 @@ import Tools.Beam.UtilsTH
 data TicketServiceT f = TicketServiceT
   { allowFutureBooking :: B.C f Kernel.Prelude.Bool,
     businessHours :: B.C f [Kernel.Prelude.Text],
+    enabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     expiry :: B.C f Domain.Types.TicketService.ExpiryType,
     id :: B.C f Kernel.Prelude.Text,
     maxVerification :: B.C f Kernel.Prelude.Int,

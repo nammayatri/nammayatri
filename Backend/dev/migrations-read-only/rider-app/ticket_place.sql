@@ -2,6 +2,7 @@ CREATE TABLE atlas_app.ticket_place ();
 
 ALTER TABLE atlas_app.ticket_place ADD COLUMN close_timings time without time zone ;
 ALTER TABLE atlas_app.ticket_place ADD COLUMN description text ;
+ALTER TABLE atlas_app.ticket_place ADD COLUMN enabled boolean ;
 ALTER TABLE atlas_app.ticket_place ADD COLUMN gallery text[] NOT NULL;
 ALTER TABLE atlas_app.ticket_place ADD COLUMN icon_url text ;
 ALTER TABLE atlas_app.ticket_place ADD COLUMN id character varying(36) NOT NULL;

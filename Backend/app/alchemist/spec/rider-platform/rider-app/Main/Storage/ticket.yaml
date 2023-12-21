@@ -31,6 +31,7 @@ TicketPlace:
     iconUrl : Maybe Text
     termsAndConditions : "[Text]"
     placeType : PlaceType #
+    enabled: Maybe Bool
     mapImageUrl : Maybe Text
     openTimings : Maybe TimeOfDay
     closeTimings : Maybe TimeOfDay
@@ -63,6 +64,7 @@ TicketService:
     maxVerification : Int
     allowFutureBooking : Bool
     expiry : ExpiryType
+    enabled: Maybe Bool
     businessHours : "[Id BusinessHour]"
   types:
     ExpiryType:
@@ -112,6 +114,9 @@ SpecialOccasion:
       kvFunction: findOneWithKV
       where:
         and: [entityId, dayOfWeek]
+    findAllSpecialOccasionByEntityIdAndDate:
+      kvFunction: findAllWithKV
+      where: entityId
 
 BusinessHour:
   tableName: business_hour
@@ -228,6 +233,10 @@ TicketBooking:
       kvFunction: findOneWithKV
       where: shortId
     getAllBookingsByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [personId, merchantOperatingCityId]
+    getAllBookingsByPersonIdAndStatus:
       kvFunction: findAllWithOptionsKV
       where:
         and: [personId, merchantOperatingCityId, status]

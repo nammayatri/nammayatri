@@ -47,6 +47,7 @@ updateByPrimaryKey Domain.Types.TicketPlace.TicketPlace {..} = do
   updateWithKV
     [ Se.Set Beam.closeTimings closeTimings,
       Se.Set Beam.description description,
+      Se.Set Beam.enabled enabled,
       Se.Set Beam.gallery gallery,
       Se.Set Beam.iconUrl iconUrl,
       Se.Set Beam.lat lat,
@@ -74,6 +75,7 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
         Domain.Types.TicketPlace.TicketPlace
           { closeTimings = closeTimings,
             description = description,
+            enabled = enabled,
             gallery = gallery,
             iconUrl = iconUrl,
             id = Kernel.Types.Id.Id id,
@@ -96,6 +98,7 @@ instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
     Beam.TicketPlaceT
       { Beam.closeTimings = closeTimings,
         Beam.description = description,
+        Beam.enabled = enabled,
         Beam.gallery = gallery,
         Beam.iconUrl = iconUrl,
         Beam.id = Kernel.Types.Id.getId id,

@@ -174,7 +174,6 @@ apis:
       query:
         limit: Int
         offset: Int
-      mandatoryQuery:
         status: BookingStatus
       response:
         type: "[API.Types.UI.TicketService.TicketBookingAPIEntity]"
