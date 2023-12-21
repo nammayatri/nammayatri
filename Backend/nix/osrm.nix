@@ -3,7 +3,7 @@
 let
   openStreetDataFile = inputs.osrm-pbf;
   # NOTE: This *should* match the flake input.
-  openStreetDataFileName = "southern-zone-230801";
+  openStreetDataFileName = "southern-zone-231220";
 in
 {
   perSystem = { pkgs, lib, ... }: {
