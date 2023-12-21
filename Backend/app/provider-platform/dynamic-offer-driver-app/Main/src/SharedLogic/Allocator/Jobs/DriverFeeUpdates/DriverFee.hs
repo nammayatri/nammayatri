@@ -281,7 +281,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
       return (0, 0, Nothing, Nothing)
     else do
-      offers <- SPayment.offerListCache merchantId driver.merchantOperatingCityId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal driverFee.numRides transporterConfig) -- handle UDFs
+      offers <- SPayment.offerListCache merchantId driver.merchantOperatingCityId (makeOfferReq feeWithoutDiscount driver plan dutyDate registrationDateLocal (calcNumRides driverFee transporterConfig) transporterConfig) -- handle UDFs
       (finalOrderAmount, offerId, offerTitle) <-
         if null offers.offerResp
           then pure (feeWithoutDiscount, Nothing, Nothing)
