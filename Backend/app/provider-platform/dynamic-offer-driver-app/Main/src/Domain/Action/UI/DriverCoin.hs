@@ -90,17 +90,18 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
-  let dateInIst = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) dateInUTC
+  let timeDiffFromUtc = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+  let dateInIst = addUTCTime timeDiffFromUtc dateInUTC
   driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let coinUsed_ = driver.usedCoins
       totalCoinsEarned_ = driver.totalEarnedCoins
       coinExpired_ = totalCoinsEarned_ - (coinBalance_ + coinUsed_)
-  coinSummary <- CHistory.getCoinEventSummary driverId dateInIst
+  coinSummary <- CHistory.getCoinEventSummary driverId dateInIst timeDiffFromUtc
   let todayCoinSummary_ = sum $ map (.coins) coinSummary
-  lastDayHistory <- CHistory.getCoinsEarnedLastDay driverId dateInIst
+  lastDayHistory <- CHistory.getCoinsEarnedLastDay driverId dateInIst timeDiffFromUtc
   let coinsEarnedPreviousDay_ = sum $ map (.coins) lastDayHistory
       coinTransactionHistory = map toTransactionHistoryItem coinSummary
-  coinsExpiring <- CHistory.getExpiringCoinsInXDay driverId transporterConfig.coinExpireTime
+  coinsExpiring <- CHistory.getExpiringCoinsInXDay driverId transporterConfig.coinExpireTime timeDiffFromUtc
   let totalExpiringCoins = sum $ map (\coinHistory -> coinHistory.coins - coinHistory.coinsUsed) coinsExpiring
       expiringDays_ = fromIntegral (nominalDiffTimeToSeconds transporterConfig.coinExpireTime) `div` 86400
   pure
@@ -185,11 +186,13 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
   uuid <- generateGUIDText
   coinBalance <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   let stepFunctionToConvertCoins = transporterConfig.stepFunctionToConvertCoins
+      timeDiffFromUtc = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
   when (coins < stepFunctionToConvertCoins) $
     throwError $ CoinConversionToCash driverId.getId coins
   when (coins `mod` stepFunctionToConvertCoins /= 0) $
     throwError $ CoinUsedForConverting driverId.getId coins
-  let currentDate = show $ utctDay now
+  let istTime = addUTCTime timeDiffFromUtc now
+      currentDate = show $ utctDay istTime
       calculatedAmount = fromIntegral coins * transporterConfig.coinConversionRate
   if coinBalance >= coins
     then do
@@ -209,8 +212,10 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
       void $ DPlan.updateCoinFieldsByDriverId driverId calculatedAmount
       driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       void $ Person.updateUsedCoins driverId (coins + driver.usedCoins)
-      histories <- CHistory.getDriverCoinInfo driverId
+      histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
+      logDebug $ "histories : " <> show histories
       let result = accumulateCoins coins histories
+      logDebug $ "result : " <> show result
       mapM_ (\(id, coinValue, status) -> CHistory.updateStatusOfCoins id coinValue status) result
       void $ Hedis.withCrossAppRedis $ Hedis.incrby (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins))
     else do
