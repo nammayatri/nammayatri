@@ -373,7 +373,7 @@ buildOnUpdateMessage SafetyAlertBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just code) (Just "Safety Alert Trigger") (Just reason)]
             }
         ]
-  fulfillment <- mkFullfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups)
+  fulfillment <- mkFullfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups) False
   return $
     OnUpdate.OnUpdateMessage
       { order =
