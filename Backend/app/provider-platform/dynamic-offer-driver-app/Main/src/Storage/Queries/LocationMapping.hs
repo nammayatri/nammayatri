@@ -59,7 +59,7 @@ getNewVersion oldVersion =
 updateVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Text -> m ()
 updateVersion entityId order version = do
   now <- getCurrentTime
-  updateOneWithKV
+  updateWithKV
     [ Se.Set BeamLM.version version,
       Se.Set BeamLM.updatedAt now
     ]
