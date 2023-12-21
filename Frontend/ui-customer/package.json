@@ -58,7 +58,9 @@
     "purty": "^7.0.0",
     "ramda": "^0.26.1",
     "regenerator-runtime": "^0.13.5",
-    "spago": "^0.21.0"
+    "spago": "^0.21.0",
+    "purescript": "0.15.10",
+    "purescript-psa": "^0.8.2"
   },
   "config": {
     "commitizen": {
