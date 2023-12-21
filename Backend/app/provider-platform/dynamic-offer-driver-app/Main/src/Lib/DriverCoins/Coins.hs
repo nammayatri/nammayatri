@@ -45,30 +45,33 @@ type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
 getCoinsByDriverId driverId timeDiffFromUtc = do
   now <- getCurrentTime
-  let currentDate = show $ utctDay now
+  let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+  let currentDate = show $ utctDay istTime
   expirationPeriod <- getExpirationSeconds timeDiffFromUtc
   coinKeyExists <- getCoinAccumulationByDriverIdKey driverId currentDate
   case coinKeyExists of
     Just coinBalance -> pure coinBalance
     Nothing -> do
-      totalCoins <- CHistory.getTotalCoins driverId
+      totalCoins <- CHistory.getTotalCoins driverId (secondsToNominalDiffTime timeDiffFromUtc)
       let coinBalance = sum $ map (\coinHistory -> coinHistory.coins - coinHistory.coinsUsed) totalCoins
       Hedis.whenWithLockRedis (mkCoinAccumulationByDriverIdKey driverId currentDate) 60 $ do
         setCoinAccumulationByDriverIdKey driverId currentDate coinBalance expirationPeriod
       pure coinBalance
 
-updateCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
-updateCoinsByDriverId driverId coinUpdateValue expirationPeriod = do
+updateCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Seconds -> m ()
+updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
   now <- getCurrentTime
-  let currentDate = show $ utctDay now
+  let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+  let currentDate = show $ utctDay istTime
+  expirationPeriod <- getExpirationSeconds timeDiffFromUtc
   void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral coinUpdateValue)
   Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
-updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> Int -> m ()
-updateDriverCoins driverId finalCoinsValue expirationPeriod = do
+updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> Seconds -> m ()
+updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
   driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   void $ Person.updateTotalEarnedCoins driverId (finalCoinsValue + driver.totalEarnedCoins)
-  updateCoinsByDriverId driverId finalCoinsValue expirationPeriod
+  updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
 
 driverCoinsEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> m ()
 driverCoinsEvent driverId merchantId merchantOpCityId eventType = do
@@ -76,8 +79,7 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType = do
   transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   coinConfiguration <- DCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId
   finalCoinsValue <- sum <$> forM coinConfiguration (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig)
-  expirationPeriod <- getExpirationSeconds transporterConfig.timeDiffFromUtc
-  updateDriverCoins driverId finalCoinsValue expirationPeriod
+  updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
 calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
 calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig = do
