@@ -1,28 +1,138 @@
-module Alchemist.Generator.Haskell.BeamQueries where
+module Alchemist.Generator.Haskell.BeamQueries (generateBeamQueries) where
 
 import Alchemist.DSL.Syntax.Storage
+import Alchemist.GeneratorCore
 import Alchemist.Utils
 import Data.List (intercalate, isInfixOf, isPrefixOf, nub)
 import qualified Data.Text as Text
 import Kernel.Prelude
 
-generateImports :: TableDef -> String
-generateImports tableDef =
-  "{-# OPTIONS_GHC -Wno-orphans #-}\n"
-    ++ "{-# OPTIONS_GHC -Wno-unused-imports #-}\n\n"
-    ++ "module Storage.Queries."
-    ++ (capitalize $ tableNameHaskell tableDef)
-    ++ " where\n\n"
-    ++ "import Kernel.Beam.Functions\n"
-    ++ "import Kernel.Prelude\n"
-    ++ "import Kernel.External.Encryption\n"
-    ++ "import Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime)\n"
-    ++ "import qualified Storage.Beam."
-    ++ (capitalize $ tableNameHaskell tableDef)
-    ++ " as Beam\n"
-    ++ "import qualified Sequelize as Se\n"
-    ++ intercalate "\n" (map ("import qualified " ++) $ imports tableDef)
-    ++ "\n\n"
+generateBeamQueries :: TableDef -> Code
+generateBeamQueries tableDef = do
+  generateCode generatorInput
+  where
+    generatorInput :: GeneratorInput
+    generatorInput =
+      GeneratorInput
+        { _ghcOptions = ["-Wno-orphans", "-Wno-unused-imports"],
+          _extensions = [],
+          _moduleNm = "Storage.Queries." ++ (capitalize $ tableNameHaskell tableDef),
+          _simpleImports = allSimpleImports,
+          _qualifiedImports = allQualifiedImports,
+          _codeBody = generateCodeBody mkCodeBody tableDef
+        }
+    allSimpleImports :: [String]
+    allSimpleImports =
+      [ "Kernel.Beam.Functions",
+        "Kernel.Prelude",
+        "Kernel.External.Encryption",
+        "Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime)"
+      ]
+    allQualifiedImports :: [String]
+    allQualifiedImports =
+      [ "Storage.Beam." ++ (capitalize $ tableNameHaskell tableDef) ++ " as Beam",
+        "Sequelize as Se"
+      ]
+        <> imports tableDef
+
+mkCodeBody :: StorageM ()
+mkCodeBody = do
+  generateDefaultCreateQuery
+  generateDefaultCreateManyQuery
+  beamQueries
+  fromTTypeInstance
+  toTTypeInstance
+  generateToTTypeFuncs
+  generateFromTypeFuncs
+
+generateDefaultCreateQuery :: StorageM ()
+generateDefaultCreateQuery = do
+  name <- tableNameHaskell <$> ask
+  let qname = "Domain.Types." ++ name ++ "." ++ name
+  onNewLine $
+    tellM $
+      "create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => " ++ qname ++ "-> m ()\n"
+        ++ "create = createWithKV\n\n"
+
+generateDefaultCreateManyQuery :: StorageM ()
+generateDefaultCreateManyQuery = do
+  name <- tableNameHaskell <$> ask
+  let qname = "Domain.Types." ++ name ++ "." ++ name
+  onNewLine $
+    tellM $
+      "createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => " ++ "[" ++ qname ++ "]" ++ "-> m ()\n"
+        ++ "createMany = traverse_ createWithKV\n\n"
+
+fromTTypeInstance :: StorageM ()
+fromTTypeInstance = do
+  tableDef <- ask
+  onNewLine $
+    tellM $
+      "instance FromTType' Beam." ++ tableNameHaskell tableDef ++ " Domain.Types." ++ tableNameHaskell tableDef ++ "." ++ tableNameHaskell tableDef ++ " where\n"
+        ++ "  fromTType' Beam."
+        ++ tableNameHaskell tableDef
+        ++ "T {..} = do\n"
+        ++ "    pure $\n"
+        ++ "      Just\n"
+        ++ "        "
+        ++ "Domain.Types."
+        ++ (tableNameHaskell tableDef)
+        ++ "."
+        ++ (tableNameHaskell tableDef)
+        ++ "\n"
+        ++ "          { "
+        ++ intercalate ",\n            " (map fromField (fields tableDef))
+        ++ "\n          }\n\n"
+  where
+    getFromTTypeParams :: FieldDef -> String
+    getFromTTypeParams hfield = unwords $ map bFieldName (beamFields hfield)
+
+    fromField field =
+      if isEncrypted field
+        then do
+          let mapOperator = if isMaybeType (haskellType field) then " <$> " else " "
+          let applicativeOperator = if isMaybeType (haskellType field) then " <*> " else " "
+          fieldName field ++ " = EncryptedHashed" ++ mapOperator ++ "(Encrypted" ++ mapOperator ++ fieldName field ++ "Encrypted)" ++ applicativeOperator ++ fieldName field ++ "Hash"
+        else fieldName field ++ " = " ++ fromTTypeConversionFunction (fromTType field) (haskellType field) (getFromTTypeParams field)
+
+toTTypeInstance :: StorageM ()
+toTTypeInstance = do
+  tableDef <- ask
+  onNewLine $
+    tellM $
+      "instance ToTType' Beam." ++ tableNameHaskell tableDef ++ " Domain.Types." ++ tableNameHaskell tableDef ++ "." ++ tableNameHaskell tableDef ++ " where\n"
+        ++ "  toTType' "
+        ++ "Domain.Types."
+        ++ (tableNameHaskell tableDef)
+        ++ "."
+        ++ (tableNameHaskell tableDef)
+        ++ " {..} = do\n"
+        ++ "    Beam."
+        ++ tableNameHaskell tableDef
+        ++ "T\n"
+        ++ "      { "
+        ++ intercalate ",\n        " (concatMap toField (fields tableDef))
+        ++ "\n      }\n\n"
+  where
+    toField hfield =
+      map
+        ( \field ->
+            if bIsEncrypted field
+              then do
+                let mapOperator = if isMaybeType (bFieldType field) then " <&> " else " & "
+                let encryptedField = "Beam." ++ bFieldName field ++ "Encrypted = " ++ bFieldName field ++ mapOperator ++ "unEncrypted . (.encrypted)"
+                let hashField = "Beam." ++ bFieldName field ++ "Hash = " ++ bFieldName field ++ mapOperator ++ "(.hash)"
+                encryptedField ++ ",\n        " ++ hashField
+              else "Beam." ++ bFieldName field ++ " = " ++ toTTypeConversionFunction (bToTType field) (haskellType hfield) (toTTypeExtractor (makeExtractorFunction $ bfieldExtractor field) (fieldName hfield))
+        )
+        (beamFields hfield)
+
+beamQueries :: StorageM ()
+beamQueries = do
+  tableDef <- ask
+  onNewLine $
+    intercalateA newLine $
+      map (generateBeamQuery tableDef.fields tableDef.tableNameHaskell) (queries tableDef ++ defaultQueryDefs tableDef)
 
 toTTypeConversionFunction :: Maybe String -> String -> String -> String
 toTTypeConversionFunction transformer haskellType fieldName
@@ -42,95 +152,24 @@ fromTTypeConversionFunction fromTTypeFunc haskellType fieldName
   | "Kernel.Types.Id.ShortId " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.ShortId <$> " ++ fieldName
   | otherwise = fieldName
 
--- Generates the FromTType' instance
-fromTTypeInstance :: TableDef -> String
-fromTTypeInstance tableDef =
-  "instance FromTType' Beam." ++ tableNameHaskell tableDef ++ " Domain.Types." ++ tableNameHaskell tableDef ++ "." ++ tableNameHaskell tableDef ++ " where\n"
-    ++ "  fromTType' Beam."
-    ++ tableNameHaskell tableDef
-    ++ "T {..} = do\n"
-    ++ "    pure $\n"
-    ++ "      Just\n"
-    ++ "        "
-    ++ "Domain.Types."
-    ++ (tableNameHaskell tableDef)
-    ++ "."
-    ++ (tableNameHaskell tableDef)
-    ++ "\n"
-    ++ "          { "
-    ++ intercalate ",\n            " (map fromField (fields tableDef))
-    ++ "\n          }\n\n"
-  where
-    getFromTTypeParams :: FieldDef -> String
-    getFromTTypeParams hfield = unwords $ map bFieldName (beamFields hfield)
-
-    fromField field =
-      if isEncrypted field
-        then do
-          let mapOperator = if isMaybeType (haskellType field) then " <$> " else " "
-          let applicativeOperator = if isMaybeType (haskellType field) then " <*> " else " "
-          fieldName field ++ " = EncryptedHashed" ++ mapOperator ++ "(Encrypted" ++ mapOperator ++ fieldName field ++ "Encrypted)" ++ applicativeOperator ++ fieldName field ++ "Hash"
-        else fieldName field ++ " = " ++ fromTTypeConversionFunction (fromTType field) (haskellType field) (getFromTTypeParams field)
-
--- Generates the ToTType' instance
-toTTypeInstance :: TableDef -> String
-toTTypeInstance tableDef =
-  "instance ToTType' Beam." ++ tableNameHaskell tableDef ++ " Domain.Types." ++ tableNameHaskell tableDef ++ "." ++ tableNameHaskell tableDef ++ " where\n"
-    ++ "  toTType' "
-    ++ "Domain.Types."
-    ++ (tableNameHaskell tableDef)
-    ++ "."
-    ++ (tableNameHaskell tableDef)
-    ++ " {..} = do\n"
-    ++ "    Beam."
-    ++ tableNameHaskell tableDef
-    ++ "T\n"
-    ++ "      { "
-    ++ intercalate ",\n        " (concatMap toField (fields tableDef))
-    ++ "\n      }\n\n"
-  where
-    toField hfield =
-      map
-        ( \field ->
-            if bIsEncrypted field
-              then do
-                let mapOperator = if isMaybeType (bFieldType field) then " <&> " else " & "
-                let encryptedField = "Beam." ++ bFieldName field ++ "Encrypted = " ++ bFieldName field ++ mapOperator ++ "unEncrypted . (.encrypted)"
-                let hashField = "Beam." ++ bFieldName field ++ "Hash = " ++ bFieldName field ++ mapOperator ++ "(.hash)"
-                encryptedField ++ ",\n        " ++ hashField
-              else "Beam." ++ bFieldName field ++ " = " ++ toTTypeConversionFunction (bToTType field) (haskellType hfield) (toTTypeExtractor (makeExtractorFunction $ bfieldExtractor field) (fieldName hfield))
-        )
-        (beamFields hfield)
-
 toTTypeExtractor :: Maybe String -> String -> String
 toTTypeExtractor extractor field
   | isJust extractor = fromJust extractor ++ " (" ++ field ++ " )"
   | otherwise = field
 
-generateDefaultCreateQuery :: String -> String
-generateDefaultCreateQuery tableNameHaskell =
-  let qname = "Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell
-   in "create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => " ++ qname ++ "-> m ()\n"
-        ++ "create = createWithKV\n\n"
-
-generateDefaultCreateManyQuery :: String -> String
-generateDefaultCreateManyQuery tableNameHaskell =
-  let qname = "Domain.Types." ++ tableNameHaskell ++ "." ++ tableNameHaskell
-   in "createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => " ++ "[" ++ qname ++ "]" ++ "-> m ()\n"
-        ++ "createMany = traverse_ createWithKV\n\n"
-
-generateBeamQuery :: [FieldDef] -> String -> QueryDef -> String
+generateBeamQuery :: [FieldDef] -> String -> QueryDef -> StorageM ()
 generateBeamQuery allHaskellFields tableNameHaskell query =
-  generateFunctionSignature
-    query
-    tableNameHaskell
-    ++ generateBeamFunctionCall query.kvFunction
-    ++ generateQueryParams allHaskellFields (query.params)
-    ++ "    ["
-    ++ genWhereClause
-    ++ (if genWhereClause == "" then "" else "\n    ")
-    ++ "]\n"
-    ++ orderAndLimit query
+  tellM $
+    generateFunctionSignature
+      query
+      tableNameHaskell
+      ++ generateBeamFunctionCall query.kvFunction
+      ++ generateQueryParams allHaskellFields (query.params)
+      ++ "    ["
+      ++ genWhereClause
+      ++ (if genWhereClause == "" then "" else "\n    ")
+      ++ "]\n"
+      ++ orderAndLimit query
   where
     genWhereClause = generateClause allHaskellFields query.takeFullObjectAsInput 6 0 query.whereClause
 
@@ -244,8 +283,10 @@ generateClause allFields isFullObjInp n i (Query (op, clauses)) =
     ++ spaces (n + 2)
     ++ "]"
 
-generateToTTypeFuncs :: [FieldDef] -> String
-generateToTTypeFuncs fields = intercalate "\n" $ map generateToTTypeFunc fields
+generateToTTypeFuncs :: StorageM ()
+generateToTTypeFuncs = do
+  def <- ask
+  onNewLine $ tellM $ intercalate "\n" $ map generateToTTypeFunc (fields def)
   where
     generateToTTypeFunc :: FieldDef -> String
     generateToTTypeFunc field =
@@ -259,8 +300,10 @@ generateToTTypeFuncs fields = intercalate "\n" $ map generateToTTypeFunc fields
             )
             (beamFields field)
 
-generateFromTypeFuncs :: [FieldDef] -> String
-generateFromTypeFuncs fields = intercalate "\n" $ filter (not . null) $ map generateFromTTypeFunc fields
+generateFromTypeFuncs :: StorageM ()
+generateFromTypeFuncs = do
+  def <- ask
+  onNewLine $ tellM $ intercalate "\n" $ filter (not . null) $ map generateFromTTypeFunc (fields def)
   where
     generateFromTTypeFunc :: FieldDef -> String
     generateFromTTypeFunc field =
@@ -277,19 +320,6 @@ operator Or = "Se.Or"
 
 spaces :: Int -> String
 spaces n = replicate n ' '
-
--- Generates both FromTType' and ToTType' instances
-generateBeamQueries :: TableDef -> String
-generateBeamQueries tableDef =
-  generateImports tableDef
-    ++ generateDefaultCreateQuery tableDef.tableNameHaskell
-    ++ generateDefaultCreateManyQuery tableDef.tableNameHaskell
-    ++ intercalate "\n" (map (generateBeamQuery tableDef.fields tableDef.tableNameHaskell) (queries tableDef ++ defaultQueryDefs tableDef))
-    ++ fromTTypeInstance tableDef
-    ++ toTTypeInstance tableDef
-    ++ generateToTTypeFuncs (fields tableDef)
-    ++ "\n"
-    ++ generateFromTypeFuncs (fields tableDef)
 
 defaultQueryDefs :: TableDef -> [QueryDef]
 defaultQueryDefs tableDef =

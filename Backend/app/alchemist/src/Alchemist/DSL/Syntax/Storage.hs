@@ -1,5 +1,6 @@
 module Alchemist.DSL.Syntax.Storage where
 
+import Alchemist.GeneratorCore
 import Kernel.Prelude
 
 data TableDef = TableDef
@@ -34,12 +35,7 @@ data Operator = And | Or deriving (Show)
 data FieldDef = FieldDef
   { fieldName :: String,
     haskellType :: String,
-    --beamType :: String,
     beamFields :: [BeamField],
-    --sqlType :: String,
-    --constraints :: [FieldConstraint],
-    --defaultVal :: Maybe String,
-    --toTType :: Maybe String,
     fromTType :: Maybe String,
     isEncrypted :: Bool
   }
@@ -59,3 +55,5 @@ data BeamField = BeamField
     bIsEncrypted :: Bool
   }
   deriving (Show)
+
+type StorageM = BuilderM TableDef
