@@ -29,8 +29,10 @@ library
       Alchemist.App
       Alchemist.DSL.Parser.API
       Alchemist.DSL.Parser.Storage
+      Alchemist.DSL.Parser.Transformer
       Alchemist.DSL.Syntax.API
       Alchemist.DSL.Syntax.Storage
+      Alchemist.DSL.Syntax.Transformer
       Alchemist.Generator.Haskell
       Alchemist.Generator.Haskell.ApiTypes
       Alchemist.Generator.Haskell.BeamQueries
@@ -38,6 +40,7 @@ library
       Alchemist.Generator.Haskell.DomainHandler
       Alchemist.Generator.Haskell.DomainType
       Alchemist.Generator.Haskell.Servant
+      Alchemist.Generator.Haskell.TransformerFunctions
       Alchemist.Generator.Purs
       Alchemist.Generator.Purs.API
       Alchemist.Generator.Purs.Backend
@@ -204,8 +207,10 @@ test-suite alchemist-tests
       Alchemist.App
       Alchemist.DSL.Parser.API
       Alchemist.DSL.Parser.Storage
+      Alchemist.DSL.Parser.Transformer
       Alchemist.DSL.Syntax.API
       Alchemist.DSL.Syntax.Storage
+      Alchemist.DSL.Syntax.Transformer
       Alchemist.Generator.Haskell
       Alchemist.Generator.Haskell.ApiTypes
       Alchemist.Generator.Haskell.BeamQueries
@@ -213,6 +218,7 @@ test-suite alchemist-tests
       Alchemist.Generator.Haskell.DomainHandler
       Alchemist.Generator.Haskell.DomainType
       Alchemist.Generator.Haskell.Servant
+      Alchemist.Generator.Haskell.TransformerFunctions
       Alchemist.Generator.Purs
       Alchemist.Generator.Purs.API
       Alchemist.Generator.Purs.Backend
