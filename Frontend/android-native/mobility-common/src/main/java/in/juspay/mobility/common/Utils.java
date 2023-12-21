@@ -7,8 +7,11 @@ import android.content.res.Configuration;
 import android.os.Handler;
 import android.util.Log;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.TimeZone;
 
 
 public class Utils {
@@ -48,5 +51,14 @@ public class Utils {
         configuration.setLocale(locale);
         context.getResources().updateConfiguration(configuration, context.getResources().getDisplayMetrics());
     }
+
+    public static String getUTCTimeStampFromMills(long time) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "US"));
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        Date locTime = new Date(time);
+        return sdf.format(locTime);
+    }
+
+
 
 }

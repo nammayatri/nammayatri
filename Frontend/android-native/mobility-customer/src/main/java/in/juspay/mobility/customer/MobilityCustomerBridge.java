@@ -789,8 +789,13 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void fetchAndUpdateCurrentLocation(String callback) {
+        fetchAndUpdateCurrentLocation(callback,true);
+    }
+
+    @JavascriptInterface
+    public void fetchAndUpdateCurrentLocation(String callback, boolean shouldFallback) {
         if (!isLocationPermissionEnabled()) return;
-        updateLastKnownLocation(callback, true, ZoomType.ZOOM);
+        updateLastKnownLocation(callback, true, ZoomType.ZOOM,shouldFallback);
     }
 
     //region Others

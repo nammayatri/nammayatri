@@ -55,6 +55,7 @@ import android.graphics.drawable.Drawable;
 import android.icu.util.Calendar;
 import android.location.Address;
 import android.location.Geocoder;
+import android.location.Location;
 import android.location.LocationManager;
 import android.media.AudioAttributes;
 import android.media.RingtoneManager;
@@ -98,6 +99,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.browser.customtabs.CustomTabsIntent;
 import androidx.core.app.ActivityCompat;
@@ -169,7 +171,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.TimeZone;
 
-
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.constants.LogCategory;
 import in.juspay.hyper.constants.LogSubCategory;
@@ -209,6 +210,7 @@ public class MobilityCommonBridge extends HyperBridge {
     //Location
     protected double lastLatitudeValue;
     protected double lastLongitudeValue;
+    protected Location lastKnownLocation;
     //LOG_TAGS
     protected String MAPS = "MAPS";
     protected String LOCATION = "LOCATION";
@@ -392,7 +394,7 @@ public class MobilityCommonBridge extends HyperBridge {
     private void showLocationOnMap(final String zoomType) {
         ExecutorManager.runOnMainThread(() -> {
             if (!isLocationPermissionEnabled()) return;
-            updateLastKnownLocation(null, true, zoomType);
+            updateLastKnownLocation(null, true, zoomType,true);
         });
     }
 
@@ -401,11 +403,12 @@ public class MobilityCommonBridge extends HyperBridge {
         JSONObject location = new JSONObject();
         location.put("lat", lastLatitudeValue);
         location.put("lng", lastLongitudeValue);
+        if (lastKnownLocation != null)  location.put("ts",Utils.getUTCTimeStampFromMills(lastKnownLocation.getTime()));
         return location.toString();
     }
 
     @SuppressLint("MissingPermission")
-    protected void updateLastKnownLocation(String callback, boolean animate, final String zoomType) {
+    protected void updateLastKnownLocation(String callback, boolean animate, final String zoomType, boolean shouldFallBack) {
         if (!isLocationPermissionEnabled()) return;
         if (bridgeComponents.getActivity() != null) {
             client.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
@@ -413,13 +416,16 @@ public class MobilityCommonBridge extends HyperBridge {
                         if (location != null) {
                             Double lat = location.getLatitude();
                             Double lng = location.getLongitude();
+                            String ts = Utils.getUTCTimeStampFromMills(location.getTime());
                             lastLatitudeValue = lat;
                             lastLongitudeValue = lng;
+                            lastKnownLocation = location;
                             setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                             setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                            setKeysInSharedPrefs("LAST_KNOWN_LOCATION_TS", ts);
                             if (callback != null) {
-                                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                                        callback, lat, lng);
+                                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
+                                        callback, lat, lng, ts);
                                 bridgeComponents.getJsCallback().addJsToWebView(javascript);
                             }
                             if (animate && googleMap != null) {
@@ -437,14 +443,29 @@ public class MobilityCommonBridge extends HyperBridge {
                                     e.printStackTrace();
                                 }
                             }
-                        } else getLastKnownLocationFromClientFallback(callback, animate);
+                        } else if (shouldFallBack) {
+                            getLastKnownLocationFromClientFallback(callback, animate);
+                        } else {
+                            sendDefaultLocationCallback(callback);
+                        }
                     })
                     .addOnFailureListener(bridgeComponents.getActivity(), e -> {
                         Log.e(LOCATION, "Current position not known");
-                        getLastKnownLocationFromClientFallback(callback, animate);
+                        if (shouldFallBack) {
+                            getLastKnownLocationFromClientFallback(callback, animate);
+                        } else {
+                            sendDefaultLocationCallback(callback);
+                        }
                     });
         }
+    }
 
+    private void sendDefaultLocationCallback(@Nullable String callback) {
+        if (callback != null) {
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
+                    callback, "0.0", "0.0", Utils.getUTCTimeStampFromMills(System.currentTimeMillis()));
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -457,13 +478,16 @@ public class MobilityCommonBridge extends HyperBridge {
                             if (location != null) {
                                 Double lat = location.getLatitude();
                                 Double lng = location.getLongitude();
+                                String ts = Utils.getUTCTimeStampFromMills(location.getTime());
                                 lastLatitudeValue = lat;
                                 lastLongitudeValue = lng;
+                                lastKnownLocation = location;
                                 setKeysInSharedPrefs("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                                 setKeysInSharedPrefs("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                                setKeysInSharedPrefs("LAST_KNOWN_LOCATION_TS", ts);
                                 if (callback != null) {
-                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
-                                            callback, lat, lng);
+                                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s','%s');",
+                                            callback, lat, lng,ts);
                                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                                 }
                                 if (animate && googleMap != null) {
@@ -664,8 +688,13 @@ public class MobilityCommonBridge extends HyperBridge {
 
     @JavascriptInterface
     public void getCurrentPosition(String callback) {
+        getCurrentPosition(callback,true);
+    }
+
+    @JavascriptInterface
+    public void getCurrentPosition(String callback, boolean shouldFallBack) {
         if (!isLocationPermissionEnabled()) return;
-        updateLastKnownLocation(callback, false, ZoomType.ZOOM);
+        updateLastKnownLocation(callback, false, ZoomType.ZOOM,shouldFallBack);
     }
 
     @SuppressLint("MissingPermission")
@@ -877,7 +906,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public void getLocationName(String latitude, String longitude, String defaultText, String callback) {
         if (!isLocationPermissionEnabled()) return;
 
-        updateLastKnownLocation(null, false, ZoomType.ZOOM);
+        updateLastKnownLocation(null, false, ZoomType.ZOOM,true);
 
         if (defaultText.equals(CURRENT_LOCATION_LATLON)) {
             latitude = String.valueOf(lastLatitudeValue);
@@ -1026,7 +1055,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     }
                 }
             } catch (Exception e) {
-                Log.e("FAILED WHILE REALLOCATING", e.toString());
+                Log.e("reallocateMapFragment", "FAILED WHILE REALLOCATING " + e);
             }
         });
     }
@@ -1270,7 +1299,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 specialTagImage.setImageDrawable(bitmapdraw);
             }
         } catch (Exception e) {
-            Log.e("Exception in rendering Image for special zone", e.toString());
+            Log.e("getMarkerBitmapFromView", "Exception in rendering Image for special zone" + e);
         }
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
         try {
@@ -1292,7 +1321,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 }
             }
         } catch (Exception e) {
-            Log.e("Exception in rendering Image", e.toString());
+            Log.e("getMarkerBitmapFromView", "Exception in rendering Image" + e);
         }
         customMarkerView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         customMarkerView.layout(0, 0, customMarkerView.getMeasuredWidth(), customMarkerView.getMeasuredHeight());

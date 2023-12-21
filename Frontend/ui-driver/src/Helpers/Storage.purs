@@ -55,6 +55,7 @@ data KeyStore = USER_NAME
                 | RIDE_REQUEST_TIME
                 | LAST_KNOWN_LAT
                 | LAST_KNOWN_LON
+                | LAST_KNOWN_LOCATION_TS
                 | GPS_METHOD
                 | MAKE_NULL_API_CALL
                 | ALERT_RECEIVED

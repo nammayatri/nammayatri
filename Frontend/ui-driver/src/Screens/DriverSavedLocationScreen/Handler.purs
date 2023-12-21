@@ -63,6 +63,6 @@ driverSavedLocationScreen = do
         _ , _ -> do
                   let currentDriverLat = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT
                       currentDriverLon = fromMaybe 0.0 $ Number.fromString $ getValueToLocalNativeStore LAST_KNOWN_LON
-                  (LatLon lat lon) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 500 false
+                  (LatLon lat lon _) <- getCurrentLocation currentDriverLat currentDriverLon currentDriverLat currentDriverLon 500 false true
                   modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState{ data { currentLat = Just lat, currentLon = Just lon}})
                   App.BackT $ App.NoBack <$> pure (AUTO_COMPLETE updatedState searchVal lat lon)

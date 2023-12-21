@@ -1054,21 +1054,19 @@ export const getCurrentPosition = function (cb) {
   };
 };
 
-export const getCurrentPositionWithTimeout = function (cb) {
-  return function (action) {
-    return function (delay) {
-      return function () {
-        const callbackFallback = function () {
-          cb(action("0.0")("0.0"))();
-        };
-        const currentLocationTimer = setTimeout(callbackFallback, delay);
-        const callback = callbackMapper.map(function (lat, lng) {
-          clearTimeout(currentLocationTimer);
-          cb(action(lat)(lng))();
-        });
-        window.JBridge.getCurrentPosition(callback);
-      }
-    }
+export const getCurrentPositionWithTimeoutImpl = function (cb, action, delay, shouldFallBack) {
+  const callbackFallback = function () {
+    cb(action("0.0")("0.0")(new Date().toISOString()))();
+  };
+  const currentLocationTimer = setTimeout(callbackFallback, delay);
+  const callback = callbackMapper.map(function (lat, lng, ts) {
+    clearTimeout(currentLocationTimer);
+    cb(action(lat)(lng)(ts))();
+  });
+  try {
+    window.JBridge.getCurrentPosition(callback, shouldFallBack);
+  } catch (err) {
+    window.JBridge.getCurrentPosition(callback);
   }
 }
 
