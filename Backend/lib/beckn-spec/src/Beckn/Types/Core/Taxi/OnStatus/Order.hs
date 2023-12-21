@@ -35,6 +35,7 @@ data BookingStatus
   | TRIP_ASSIGNED
   | BOOKING_COMPLETED
   | BOOKING_CANCELLED
+  | BOOKING_REALLOCATED
   deriving (Generic, Show)
 
 instance ToJSON BookingStatus where
@@ -64,4 +65,5 @@ modifier = \case
   "TRIP_ASSIGNED" -> "TRIP_ASSIGNED"
   "BOOKING_COMPLETED" -> "COMPLETED"
   "BOOKING_CANCELLED" -> "CANCELLED"
+  "BOOKING_REALLOCATED" -> "REALLOCATED"
   x -> x

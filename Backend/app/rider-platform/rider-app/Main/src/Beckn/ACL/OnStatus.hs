@@ -65,6 +65,7 @@ mapToDomainBookingStatus OnStatus.NEW_BOOKING = DBooking.NEW
 mapToDomainBookingStatus OnStatus.TRIP_ASSIGNED = DBooking.TRIP_ASSIGNED
 mapToDomainBookingStatus OnStatus.BOOKING_COMPLETED = DBooking.COMPLETED
 mapToDomainBookingStatus OnStatus.BOOKING_CANCELLED = DBooking.CANCELLED
+mapToDomainBookingStatus OnStatus.BOOKING_REALLOCATED = DBooking.REALLOCATED
 
 mapToDomainRideStatus :: OnStatus.RideStatus -> DRide.RideStatus
 mapToDomainRideStatus OnStatus.NEW = DRide.NEW
