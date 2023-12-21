@@ -29,6 +29,10 @@ repositories {
 }
 
 android {
+    Properties version = new Properties()
+    if (rootProject.file("version.properties").exists()) {
+        version.load(rootProject.file("version.properties").newDataInputStream())
+    }
     compileSdkVersion 33
     buildToolsVersion "30.0.3"
     namespace "in.juspay.mobility"
@@ -36,8 +40,8 @@ android {
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 33
-        versionCode 100
-        versionName "1.2.9"
+        versionCode Integer.parseInt(version.getProperty("versionCode",""))
+        versionName version.getProperty("versionName","")
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
