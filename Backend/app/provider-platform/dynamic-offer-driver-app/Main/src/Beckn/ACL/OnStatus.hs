@@ -43,6 +43,7 @@ mapToBecknBookingStatus DBooking.NEW = OnStatus.NEW_BOOKING
 mapToBecknBookingStatus DBooking.TRIP_ASSIGNED = OnStatus.TRIP_ASSIGNED
 mapToBecknBookingStatus DBooking.COMPLETED = OnStatus.BOOKING_COMPLETED
 mapToBecknBookingStatus DBooking.CANCELLED = OnStatus.BOOKING_CANCELLED
+mapToBecknBookingStatus DBooking.REALLOCATED = OnStatus.BOOKING_REALLOCATED
 
 mapToBecknRideStatus :: DRide.RideStatus -> OnStatus.RideStatus
 mapToBecknRideStatus DRide.NEW = OnStatus.NEW

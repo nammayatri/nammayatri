@@ -189,7 +189,8 @@ repeatSearch ::
   m ()
 repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSource now driverPoolConfig = do
   newSearchTry <- buildSearchTry searchTry
-  _ <- QST.create newSearchTry
+  void $ QST.create newSearchTry
+  void $ QRB.updateStatus booking.id SRB.REALLOCATED
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
   let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   (res, _) <-
