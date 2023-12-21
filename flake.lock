@@ -100,15 +100,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1700470711,
-        "narHash": "sha256-d4oIDzr7E8trgeszZ7rhs695jxCqAMY24zp4FeEAd38=",
+        "lastModified": 1703153717,
+        "narHash": "sha256-uaq0v2wiXzZs8lJ8GlT70f77sK7Hwm9PPfHCfRrJ4d0=",
         "owner": "nammayatri",
         "repo": "beckn-gateway",
-        "rev": "53af8b5ec18b8ffbd1874a2396dc200a3d209e4c",
+        "rev": "0a50a29c81761e56ca55ebd2734ad167d4666b09",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "backend/feat/frfs-bus-integration",
         "repo": "beckn-gateway",
         "type": "github"
       }
@@ -2492,13 +2493,13 @@
     "osrm-pbf": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-jaZn/oKdulySBnInQdizZBaA+ekdeNNmqgHBqwt8Daw=",
+        "narHash": "sha256-b9tmyzRuxTxPgvQlEclFR4MkWEBv5HONxjUbhc+O5Jg=",
         "type": "file",
-        "url": "http://download.geofabrik.de/asia/india/southern-zone-231115.osm.pbf"
+        "url": "https://download.geofabrik.de/asia/india/southern-zone-231220.osm.pbf"
       },
       "original": {
         "type": "file",
-        "url": "http://download.geofabrik.de/asia/india/southern-zone-231115.osm.pbf"
+        "url": "https://download.geofabrik.de/asia/india/southern-zone-231220.osm.pbf"
       }
     },
     "passetto-hs": {
