@@ -2,6 +2,11 @@ imports:
   Text: Data.Text
   UTCTime: Kernel.Prelude
   BaseUrl: Kernel.Prelude
+  MonadThrow: T1
+  MonadTime: T2
+  Log: T3
+  BecknSearchReq: T4
+  DomainSearchReq: T5
 
 module: BecknSearch
 types:
@@ -76,3 +81,29 @@ types:
 
   Seconds:
     getSeconds: Int
+
+transformer:
+  monads:
+    - MonadThrow m
+    - MonadTime m
+    - Log m
+  transformers:
+    transformBecknSearchReqToDomainSearchReq:
+      # extraMonads: should we allow this
+      fromType: BecknSearchReq
+      toType: DomainSearchReq
+      mapping:
+        key1: Id becknSearchReq.context.transactionId
+        key2: $$getId becknSearchReq.context.transactionId
+        key3: $getId becknSearchReq.context.transactionId
+    tfDomainSearchReq:
+      # extraMonads: should we allow this
+      fromType: BecknSearchReq
+      toType: DomainSearchReq
+      mapping:
+        key1: Id becknSearchReq.context.transactionId
+        key2: $$getId becknSearchReq.context.transactionId
+        key3: $getId becknSearchReq.context.transactionId
+
+  # $  -> pure    Haskell functions
+  # $$ -> impure  Haskell functions

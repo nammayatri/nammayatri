@@ -1,13 +1,16 @@
-{-# LANGUAGE QuasiQuotes #-}
+-- {-# LANGUAGE QuasiQuotes #-}
 
 module Alchemist.App where
 
 import Alchemist.DSL.Parser.API
 import Alchemist.DSL.Parser.Storage
+import Alchemist.DSL.Parser.Transformer
 import Alchemist.DSL.Syntax.API
 import Alchemist.DSL.Syntax.Storage
+import qualified Alchemist.DSL.Syntax.Transformer as ST
 import Alchemist.Generator.Haskell
 import Alchemist.Generator.Haskell.ApiTypes
+import Alchemist.Generator.Haskell.TransformerFunctions
 import Alchemist.Generator.Purs
 import Alchemist.Generator.SQL
 import Alchemist.Utils
@@ -62,3 +65,19 @@ mkFrontendAPIEndpoint :: FilePath -> FilePath -> IO ()
 mkFrontendAPIEndpoint filePath yaml = do
   apiDef <- apiParser yaml
   writeToFile filePath (T.unpack (_moduleName apiDef) ++ "2.purs") (generateAPIEndpoint apiDef)
+
+mkTransformerFunctions :: FilePath -> FilePath -> IO ()
+mkTransformerFunctions filePath yaml = do
+  functionDef <- transformerParser yaml
+  traverse_ (checkIfImpureMappingsExist (ST._monads functionDef)) (ST._functions functionDef)
+  -- let output = generateTransformerFunctions functionDef
+  -- putStrLn output
+  writeToFile filePath (T.unpack (ST._moduleName functionDef) ++ ".hs") (generateTransformerFunctions functionDef)
+  where
+    -- error "TODO: JAYPAL"
+
+    checkIfImpureMappingsExist :: [Text] -> ST.TransformerTT -> IO ()
+    checkIfImpureMappingsExist allMonads fn = do
+      let impureMappings = ST._impureMapping fn
+      when (not (null impureMappings) && null allMonads) $
+        error "Impure mappings exist but no monads are provided in the transformer definition"
