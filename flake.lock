@@ -598,11 +598,11 @@
         "tinylog": "tinylog"
       },
       "locked": {
-        "lastModified": 1702989746,
-        "narHash": "sha256-ZVy/rPeSHaoCP6UiqOfxWeuQllvDVVE5jtaSMaEvR44=",
-        "owner": "enigma-commits",
+        "lastModified": 1703253881,
+        "narHash": "sha256-QfpyJmvGaejRzMbWZOlOoWkU4CkdgNTwuuVRORvn/Wg=",
+        "owner": "juspay",
         "repo": "euler-hs",
-        "rev": "78f63d5648fa463cc78af909d9a9509d34a0b59c",
+        "rev": "3108d72edb65897c89d7ded4da9fea93dc98d397",
         "type": "github"
       },
       "original": {
@@ -2973,11 +2973,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1703249567,
-        "narHash": "sha256-vbPCh/Jpj9LGDjvmZyRBxu/whMPDPRo9gH93ZoXNGgQ=",
+        "lastModified": 1703268422,
+        "narHash": "sha256-aodtrIzvcQXIklMC3aPUPYRBfn3noXWwtrg0OvNxduw=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "c2c9c8d3bf6ecaab7c9df6ecb123ea7c553224c9",
+        "rev": "db998d6ca2efc548fdadca37b0fe4462ae9da564",
         "type": "github"
       },
       "original": {

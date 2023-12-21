@@ -30,15 +30,16 @@ create :: MonadFlow m => LocationMapping -> m ()
 create = createWithKV
 
 countOrders :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m Int
-countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] <&> length
+countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing <&> length
 
-findByEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [LocationMapping] --TODO : SORT BY ORDER
-findByEntityId entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId]
+findByEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [LocationMapping]
+findByEntityId entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] (Just (Se.Desc BeamLM.createdAt))
 
 findAllByEntityIdAndOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m [LocationMapping]
 findAllByEntityIdAndOrder entityId order =
   findAllWithKVAndConditionalDB
     [Se.And [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]]
+    Nothing
 
 updatePastMappingVersions :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m ()
 updatePastMappingVersions entityId order = do
