@@ -684,8 +684,10 @@ uploadDrivingLicenseFlow = do
           void $ lift $ lift $ toggleLoader false
           modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {dateOfIssue = Just ""}}
           if errorPayload.code == 400 || (errorPayload.code == 500 && (decodeErrorCode errorPayload.response.errorMessage) == "UNPROCESSABLE_ENTITY") then do
-            let correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
-            modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = true, validating = false, validateProfilePicturePopUp = false, openHowToUploadManual = false}, data {errorMessage = correspondingErrorMessage}}
+            let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+                hideError = not cityConfig.uploadRCandDL && ((decodeErrorCode errorPayload.response.errorMessage) == "IMAGE_NOT_FOUND")
+                correspondingErrorMessage =  Remote.getCorrespondingErrorMessage errorPayload
+            modifyScreenState $ UploadDrivingLicenseScreenStateType $ \uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { props {errorVisibility = not hideError, validating = false, validateProfilePicturePopUp = false, openHowToUploadManual = false}, data {errorMessage = if hideError then "" else correspondingErrorMessage }}
             uploadDrivingLicenseFlow
             else do
               _ <- pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
