@@ -478,7 +478,7 @@ type Suggestions = Array
 type SuggestionDefinitions = Array
   {
     key :: String,
-    value :: {en_us :: String, ta_in :: String, kn_in :: String, hi_in :: String, ml_in :: String, bn_in :: String}
+    value :: {en_us :: String, ta_in :: String, kn_in :: String, hi_in :: String, ml_in :: String, bn_in :: String, te_in :: String}
   }
 
 type UpdateRouteConfig = {
