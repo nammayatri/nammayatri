@@ -150,10 +150,12 @@ cancel req merchant booking = do
 
 customerCancellationChargesCalculation :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DTC.TransporterConfig -> SRB.Booking -> Maybe Meters -> m ()
 customerCancellationChargesCalculation transporterConfig booking disToPickup = do
+  logInfo $ "Entered CustomerCancellationDuesCalculation: " <> show disToPickup
   whenJust disToPickup $ \driverDistToPickup -> do
     now <- getCurrentTime
     let driverBookingDuration = roundToIntegral $ diffUTCTime now booking.createdAt
     let condition = (driverBookingDuration > transporterConfig.driverTimeSpentOnPickupThresholdOnCancel) && (driverDistToPickup < transporterConfig.driverDistanceToPickupThresholdOnCancel)
+    logInfo $ "Verifying condition1 for cancellation: " <> show condition <> " " <> show driverBookingDuration
     isChargable <-
       if not condition
         then do
