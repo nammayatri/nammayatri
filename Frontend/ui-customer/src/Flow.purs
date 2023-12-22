@@ -2073,6 +2073,8 @@ cancelEstimate bookingId = do
               void $ pure $ toast $ getString IT_SEEMS_LIKE_YOU_HAVE_AN_ONGOING_RIDE_
               _ <- liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_booking_exists_right"
               checkRideStatus true
+              let tipViewData = HomeScreenData.initData.props.tipViewProps
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props { tipViewProps = tipViewData}})
               homeScreenFlow
             _ -> do
               void $ pure $ toast $ getString CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
