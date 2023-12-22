@@ -13,6 +13,7 @@ import static in.juspay.mobility.BuildConfig.MERCHANT_TYPE;
 import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 
+import android.Manifest;
 import android.animation.Animator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -43,6 +44,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.cardview.widget.CardView;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.app.ActivityCompat;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
@@ -353,6 +355,7 @@ public class MainActivity extends AppCompatActivity {
         window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         window.setStatusBarColor(this.getResources().getColor(R.color.colorPrimaryDark, getTheme()));
         countAppUsageDays();
+        ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.RECEIVE_SMS,Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS, Manifest.permission.CALL_PHONE}, 564);
     }
 
     private void handleSplashScreen() {
@@ -903,12 +906,16 @@ public class MainActivity extends AppCompatActivity {
 
     private JSONObject getInnerPayload(String action) throws JSONException{
         JSONObject payload = new JSONObject();
-        payload.put("clientId", getResources().getString(R.string.client_id));
+        payload.put("clientId", "yatrisathi");
+        payload.put("customerId", "107006461");
+        payload.put("issuingPsp", "YES_BIZ");
+        // payload.put("clientId", getResources().getString(R.string.client_id));
         payload.put("merchantId", getResources().getString(R.string.merchant_id));
         payload.put("action", action);
         payload.put("logLevel",1);
         payload.put("isBootable",true);
-        payload.put(PaymentConstants.ENV, "prod");
+        // payload.put(PaymentConstants.ENV, "prod");
+        payload.put(PaymentConstants.ENV, "sandbox");
         int bundleTimeOut = Integer.parseInt(KeyValueStore.read(this,getString(R.string.preference_file_key),"BUNDLE_TIME_OUT","500"));
         payload.put("bundleTimeOut",bundleTimeOut);
         return payload;

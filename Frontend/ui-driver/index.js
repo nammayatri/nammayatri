@@ -301,6 +301,7 @@ window["onEvent'"] = function (_event, args) {
   console.log(_event, args);
   if (_event == "onBackPressed") {
     if (JBridge.onBackPressedPP && JBridge.onBackPressedPP()) {
+      if (window.manageUPICb) window.manageUPICb("Exit from managementFlow")();
       console.log("Backpress Consumed by PP")
     } else {
       purescript.onEvent(_event)();

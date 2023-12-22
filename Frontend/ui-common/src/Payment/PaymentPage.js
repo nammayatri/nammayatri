@@ -158,6 +158,37 @@ export const checkPPInitiateStatus = function (cb,services = microapps) {
   }
 }
 
+const pload = {
+  "service": "in.juspay.hyperpay",
+  "requestId": "743b1e7711cc4d1995633dbfcf4bb0e3",
+  "payload": {
+    "returnUrl": "google.com",
+    "orderId": "Test0100002",
+    "options_getUpiDeepLinks": null,
+    "options.createMandate": null,
+    "merchantId": "yatrisathi",
+    "mandate.startDate": null,
+    "mandate.maxAmount": null,
+    "mandate.endDate": null,
+    "lastName": null,
+    "language": "english",
+    "issuingPsp": "YES_BIZ",
+    "firstName": "Driverds",
+    "environment": "sandbox",
+    "description": "Complete your payment",
+    "customerPhone": null, // This should be same as sim operator or null
+    "customerId": "107006461",
+    "customer_id" : "107006461",
+    "customerEmail": "test@juspay.in",
+    "currency": "INR",
+    "clientId": "yatrisathi",
+    "clientAuthTokenExpiry": "2023-12-22T11:00:25Z",
+    "clientAuthToken": "tkn_a922265a98e04a7a9ce1964e19fa94ba",
+    "amount": "10.0",
+    "action": "paymentPage"
+  }
+}
+
 export const startPP = function (payload) {
   return function (sc) {
     return function () {
@@ -177,7 +208,9 @@ export const startPP = function (payload) {
       }
       if (JOS) {  
         try {
-          payload = JSON.parse(payload);                    
+          console.log("zxc payload " + payload);
+          payload = pload
+          // payload = JSON.parse(payload);                    
           console.log("%cHyperpay Request ", "background:darkblue;color:white;font-size:13px;padding:2px", payload);
           if (JBridge.processPP) {
             window.processCallBack = cb;
@@ -192,6 +225,53 @@ export const startPP = function (payload) {
           }
         } catch (err) {
           console.error("Hyperpay Request not sent : ", err);
+        }
+      }else{
+        sc("FAIL")();
+      }
+    }
+  }
+}
+
+const pl = {
+  "requestId": "6f38bccbafac49469aa86da79127fe44",
+  "service": "in.juspay.hyperapi",
+  "payload": {
+    "action": "management",
+    "merchantId": "yatrisathi",
+    "customerId": "107006461",
+    "clientAuthToken": "tkn_648575e3d1564b0dbff15eb021db5bfc",
+    "authExpiry" : "2023-12-22T09:34:42Z"
+  }
+}
+
+export const manageUPI = function (payload) {
+  console.log("zxc manageUPI ");
+  return function (sc) {
+    return function () {
+      const cb = function (resp) {
+        return function () { 
+          console.log(resp);                                                     
+          sc(resp)();
+          if ((window.__OS).toUpperCase() == "ANDROID") {
+            const ppServices = Object.keys(top.JOSHolder).filter((key) => { return key != JOS.self });
+            killPP(ppServices);
+          }
+          consumeBP();
+        }
+      }
+      if (JOS) {  
+        try {
+          console.log("zxc payload " + payload);
+          payload = pl
+          // payload = JSON.parse(payload);                    
+          console.log("%Hyperapi Request ", "background:darkblue;color:white;font-size:13px;padding:2px", payload);
+          if (JBridge.processPP) {
+            window.manageUPICb = cb;
+            JBridge.processPP(JSON.stringify(payload));
+          }
+        } catch (err) {
+          console.error("hyperapi Request not sent : ", err);
         }
       }else{
         sc("FAIL")();

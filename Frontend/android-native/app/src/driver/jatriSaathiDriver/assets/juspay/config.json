@@ -8,7 +8,9 @@
     "in.juspay.hyperos.placeholder",
     "in.juspay.hyperpay",
     "in.juspay.upiintent",
-    "in.yatri.provider"
+    "in.yatri.provider",
+    "in.juspay.inappupi",
+    "in.juspay.hyperupi"
   ],
   "dependencies": {
     "in.juspay.ec": {
@@ -17,7 +19,9 @@
         "required_apps": [
           "in.juspay.godel.placeholder",
           "in.juspay.hyperos.placeholder",
-          "in.juspay.upiintent"
+          "in.juspay.upiintent",
+          "in.juspay.inappupi",
+          "in.juspay.hyperupi"
         ],
         "root": "payments/in.juspay.ec/"
       }
@@ -37,9 +41,6 @@
     "in.juspay.hyperapi": {
       "default": {
         "entry": "base.html",
-        "required_apps": [
-          "in.juspay.ec"
-        ],
         "root": "payments/in.juspay.hyperapi/"
       }
     },
@@ -59,6 +60,7 @@
       "default": {
         "entry": "base.html",
         "required_apps": [
+          "in.juspay.hyperapi",
           "in.juspay.ec"
         ],
         "root": "payments/in.juspay.hyperpay/"
@@ -68,6 +70,18 @@
       "default": {
         "entry": "base.html",
         "root": "payments/in.juspay.upiintent/"
+      }
+    },
+    "in.juspay.inappupi": {
+      "default": {
+        "entry": "base.html",
+        "root": "payments/in.juspay.inappupi/"
+      }
+    },
+    "in.juspay.hyperupi": {
+      "default": {
+        "entry": "base.html",
+        "root": "payments/in.juspay.hyperupi/"
       }
     },
     "in.yatri.provider": {

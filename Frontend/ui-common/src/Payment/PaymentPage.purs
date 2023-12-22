@@ -42,6 +42,7 @@ foreign import startPP :: MicroAPPInvokeSignature
 foreign import initiatePP :: EffectFn1 Unit Unit
 foreign import getAvailableUpiApps :: EffectFn1 ((Array UpiApps) -> Effect Unit) Unit
 foreign import initiatePPSingleInstance :: EffectFn1 Unit Unit
+foreign import manageUPI :: MicroAPPInvokeSignature
 
 type UpiApps
   = { supportsPay :: Boolean
@@ -80,7 +81,8 @@ newtype PayPayload = PayPayload
     "mandate.maxAmount" :: Maybe String,
     "mandate.endDate" :: Maybe String,
     "mandate.startDate" :: Maybe String,
-    language :: Maybe String
+    language :: Maybe String,
+    issuingPsp :: Maybe String
   }
 
 derive instance genericPayPayload :: Generic PayPayload _
@@ -109,6 +111,9 @@ getPaymentPageLangKey key = case key of
 
 paymentPageUI :: forall st. PaymentPagePayload -> FlowBT String st String-- FlowBT String String
 paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
+
+manageInApUPI :: forall st. String -> FlowBT String st String
+manageInApUPI payload = lift $ lift $ doAff $ makeAff (\cb -> (manageUPI (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
 
 initiatePaymentPage :: Effect Unit
 initiatePaymentPage = do

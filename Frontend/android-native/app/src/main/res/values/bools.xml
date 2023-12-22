@@ -2,4 +2,5 @@
 <resources>
     <bool name="local_assets">true</bool>
     <bool name="use_local_assets">true</bool>
+    <bool name="godel_debuggable">true</bool>
 </resources><!-- These should be FALSE for release -->

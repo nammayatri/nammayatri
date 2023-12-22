@@ -209,10 +209,16 @@ ext {
     jpSDKversion = '2.1.20-nammayatri.11'
 }
 
+configurations.all {
+    exclude(group:'in.juspay',module:'secure-component-prod')
+}
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     implementation "in.juspay:hypersdk:$jpSDKversion"
     implementation "in.juspay:hyperqr:$jpSDKversion"
+    implementation "in.juspay:hyperupi:$jpSDKversion"
+    implementation'in.juspay:secure-component-uat:2.1.8'
     implementation project(path: ':mobility-app')
     compileOnly project(path: ':mobility-common')
     implementation platform('com.google.firebase:firebase-bom:31.1.1')
@@ -262,7 +268,7 @@ dependencies {
     implementation 'com.android.installreferrer:installreferrer:2.2'
     implementation 'com.google.mlkit:translate:17.0.1'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+//    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
 }
 
 def tmpSource = "/tmp/juspay"
