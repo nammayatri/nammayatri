@@ -1523,7 +1523,7 @@ getChatSuggestions state = do
     else 
     if isAtPickup then getSuggestionsfromKey "customerInitialAP" else do
         let hideInitial = not (DA.null state.data.messages) && not didDriverMessage
-        if (DA.null state.data.messages) && (EHC.getExpiryTime state.data.driverInfoCardState.createdAt true) > 30 then getSuggestionsfromKey "customerInitialBP3"
-        else if hideInitial then getSuggestionsfromKey "customerInitialBP2"
-        else getSuggestionsfromKey "customerInitialBP1"
+        if (DA.null state.data.messages) && (EHC.getExpiryTime state.data.driverInfoCardState.createdAt true) > 30 then getSuggestionsfromKey "customerInitialBP" --"customerInitialBP3" --TODO Revert during suggestions update
+        else if hideInitial then getSuggestionsfromKey "customerInitialBP" --"customerInitialBP2" --TODO Revert during suggestions update
+        else getSuggestionsfromKey "customerInitialBP" --"customerInitialBP1" --TODO Revert during suggestions update
   else state.data.chatSuggestionsList
