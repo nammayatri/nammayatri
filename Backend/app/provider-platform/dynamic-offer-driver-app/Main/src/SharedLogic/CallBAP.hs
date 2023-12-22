@@ -59,7 +59,6 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle as V
 import qualified EulerHS.Types as ET
-import Kernel.Beam.Functions (runInReplica)
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
@@ -74,7 +73,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDL
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
@@ -199,8 +197,7 @@ sendRideAssignedUpdateToBAP booking ride = do
       Nothing -> pure veh
   resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   let image = join (eitherToMaybe resp)
-  mbDriverDob <- backfillFromDriverLicense driverInfo.driverDob ride.driverId -- TO BE REMOVED AFTER BACKFILLING IS DONE
-  isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) mbDriverDob
+  isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
 
@@ -235,16 +232,6 @@ sendRideAssignedUpdateToBAP booking ride = do
                 else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate
           Redis.setExp refillKey True 86400
           pure newVehicle
-
-    backfillFromDriverLicense driverDob driverId = do
-      case driverDob of
-        Just _ -> pure driverDob
-        Nothing -> do
-          mbDriverLicense <- runInReplica $ QDL.findByDriverId driverId
-          let dob = (.driverDob) =<< mbDriverLicense
-          when (isJust dob) $ do
-            QDI.updateDriverDob driverId dob
-          pure dob
 
     checkIsDriverBirthDay mbTransporterConfig driverBirthDate = do
       case mbTransporterConfig of
