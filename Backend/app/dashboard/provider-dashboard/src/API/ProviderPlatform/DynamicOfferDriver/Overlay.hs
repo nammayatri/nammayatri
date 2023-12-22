@@ -102,10 +102,10 @@ listOverlay merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callDriverOfferBPPOperations checkedMerchantId opCity (.overlay.listOverlay)
 
-overlayInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> DTOverlay.OverlayInfoReq -> FlowHandler DTOverlay.OverlayInfoResp
-overlayInfo merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+overlayInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Maybe Text -> FlowHandler DTOverlay.OverlayInfoResp
+overlayInfo merchantShortId opCity apiTokenInfo overlayKey udf1 = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.overlay.overlayInfo) req
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.overlay.overlayInfo) overlayKey udf1
 
 scheduleOverlay :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> DTOverlay.ScheduleOverlay -> FlowHandler APISuccess
 scheduleOverlay merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do

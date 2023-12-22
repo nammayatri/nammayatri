@@ -23,7 +23,7 @@ import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Common (withFlowHandlerAPI)
+import Kernel.Utils.Common (MandatoryQueryParam, withFlowHandlerAPI)
 import Servant hiding (Unauthorized, throwError)
 import Storage.Beam.SystemConfigs ()
 
@@ -60,7 +60,8 @@ type ListOverlayAPI =
 
 type OverlayInfoAPI =
   "overlayInfo"
-    :> ReqBody '[JSON] DOverlay.OverlayInfoReq
+    :> MandatoryQueryParam "overlayKey" Text
+    :> QueryParam "udf1" Text
     :> Get '[JSON] DOverlay.OverlayInfoResp
 
 type ScheduleOverlayAPI =
@@ -85,8 +86,8 @@ deleteOverlay merchantShortId opCity req = withFlowHandlerAPI $ DOverlay.deleteO
 listOverlay :: ShortId DM.Merchant -> Context.City -> FlowHandler DOverlay.ListOverlayResp
 listOverlay merchantShortId = withFlowHandlerAPI . DOverlay.listOverlay merchantShortId
 
-overlayInfo :: ShortId DM.Merchant -> Context.City -> DOverlay.OverlayInfoReq -> FlowHandler DOverlay.OverlayInfoResp
-overlayInfo merchantShortId opCity = withFlowHandlerAPI . DOverlay.overlayInfo merchantShortId opCity
+overlayInfo :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> FlowHandler DOverlay.OverlayInfoResp
+overlayInfo merchantShortId opCity overlayKey = withFlowHandlerAPI . DOverlay.overlayInfo merchantShortId opCity overlayKey
 
 scheduleOverlay :: ShortId DM.Merchant -> Context.City -> DOverlay.ScheduleOverlay -> FlowHandler APISuccess
 scheduleOverlay merchantShortId opCity = withFlowHandlerAPI . DOverlay.scheduleOverlay merchantShortId opCity

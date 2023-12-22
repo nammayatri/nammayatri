@@ -172,7 +172,7 @@ data OverlayAPIs = OverlayAPIs
   { createOverlay :: Overlay.CreateOverlayReq -> Euler.EulerClient APISuccess,
     deleteOverlay :: Overlay.DeleteOverlayReq -> Euler.EulerClient APISuccess,
     listOverlay :: Euler.EulerClient Overlay.ListOverlayResp,
-    overlayInfo :: Overlay.OverlayInfoReq -> Euler.EulerClient Overlay.OverlayInfoResp,
+    overlayInfo :: Text -> Maybe Text -> Euler.EulerClient Overlay.OverlayInfoResp,
     scheduleOverlay :: Overlay.ScheduleOverlay -> Euler.EulerClient APISuccess
   }
 

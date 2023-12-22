@@ -165,26 +165,16 @@ listOverlay merchantShortId opCity = do
 
 type OverlayInfoResp = CreateOverlayReq
 
-data OverlayInfoReq = OverlayInfoReq
-  { overlayKey :: Text,
-    udf1 :: Maybe Text
-  }
-  deriving (Generic, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance HideSecrets OverlayInfoReq where
-  hideSecrets = identity
-
-overlayInfo :: ShortId DM.Merchant -> Context.City -> OverlayInfoReq -> Flow OverlayInfoResp
-overlayInfo merchantShortId opCity req = do
+overlayInfo :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Flow OverlayInfoResp
+overlayInfo merchantShortId opCity overlayReqKey udf1Req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  overlays <- SQMO.findAllByOverlayKeyUdf merchantOpCityId req.overlayKey req.udf1
+  overlays <- SQMO.findAllByOverlayKeyUdf merchantOpCityId overlayReqKey udf1Req
   buildOverlayInfoResp overlays
   where
     buildOverlayInfoResp overlays = do
       if null overlays
-        then do throwError $ OverlayKeyAndUdfNotFound ("overlayKey : " <> req.overlayKey <> " and " <> "udf : " <> show req.udf1)
+        then do throwError $ OverlayKeyAndUdfNotFound ("overlayKey : " <> overlayReqKey <> " and " <> "udf : " <> show udf1Req)
         else do
           let _res@DTMO.Overlay {..} = minimumBy (comparing (.language)) overlays
           groupedContents <- mapM buildGroupedContents overlays
