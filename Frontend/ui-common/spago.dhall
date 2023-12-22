@@ -40,6 +40,9 @@ to generate this file without the comments in this block.
   , "tracker"
   , "transformers"
   , "tuples"
+  , "argonaut-codecs"
+  , "argonaut-core"
+  , "argonaut-generic"
   ]
 , packages = ../packages.dhall
 , sources = [ "src/**/*.purs" ]
