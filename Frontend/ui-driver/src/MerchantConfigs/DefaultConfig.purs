@@ -258,4 +258,10 @@ config =
       url : ""
     }
   , logFunctionCalls : true
+  , rideRequest : {
+      negotiationUnit : {
+        cab : "20",
+        auto : "10"
+      }
+  }
 }

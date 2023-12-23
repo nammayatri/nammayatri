@@ -87,6 +87,7 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import Control.Transformers.Back.Trans (runBackT)
 import ConfigProvider
 import Screens.Types as ST
+import MerchantConfig.Types as MCT
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -426,10 +427,10 @@ instance decodeFetchImageFrom :: Decode FetchImageFrom where decode = defaultEnu
 
 foreign import isDateGreaterThan :: String -> Boolean
 
-getNegotiationUnit :: String -> String
-getNegotiationUnit varient = case varient of
-  "AUTO_RICKSHAW" -> "10"
-  _ -> "20"
+getNegotiationUnit :: String -> MCT.NegotiationUnit -> String
+getNegotiationUnit varient negotiationUnit = case varient of
+  "AUTO_RICKSHAW" -> negotiationUnit.auto
+  _ -> negotiationUnit.cab
   
 getValueBtwRange :: forall a. EuclideanRing a => a -> a -> a -> a -> a -> a
 getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min 
