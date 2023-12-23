@@ -33,7 +33,8 @@ type AppConfigDriver a =
     allowAllMobileNumber ::Boolean,
     engilshInNative :: String,
     banners :: BannerConfig,
-    referral :: ReferralConfig
+    referral :: ReferralConfig,
+    rideRequest :: RideRequestConfig
     | a
   } 
 
@@ -185,4 +186,13 @@ type BannerConfig = {
 type ReferralConfig = {
   type :: String
 , link :: String
+}
+
+type RideRequestConfig = {
+  negotiationUnit :: NegotiationUnit
+}
+
+type NegotiationUnit = {
+  auto :: String,
+  cab :: String
 }

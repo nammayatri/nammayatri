@@ -2770,6 +2770,7 @@ setDriverStatusInLocal status mode = do
 
 updateDriverDataToStates :: FlowBT String Unit
 updateDriverDataToStates = do
+  appConfig <- getAppConfigFlowBT Constants.appConfig
   (GlobalState globalstate) <- getState
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
   (DriverProfileStatsResp resp) <- getDriverStatesFromCache (GlobalState globalstate)
@@ -2804,7 +2805,7 @@ updateDriverDataToStates = do
 
   setValueToLocalStore DRIVER_SUBSCRIBED $ show $ isJust getDriverInfoResp.autoPayStatus
   setValueToLocalStore VEHICLE_VARIANT linkedVehicle.variant
-  setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant
+  setValueToLocalStore NEGOTIATION_UNIT $ getNegotiationUnit linkedVehicle.variant appConfig.rideRequest.negotiationUnit
   setValueToLocalStore USER_NAME getDriverInfoResp.firstName
   setValueToLocalStore REFERRAL_CODE (fromMaybe "" getDriverInfoResp.referralCode)
   setValueToLocalStore FREE_TRIAL_DAYS (show (fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft))
