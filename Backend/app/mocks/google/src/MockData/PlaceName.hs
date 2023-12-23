@@ -33,7 +33,8 @@ mkMockResultsResp latLng =
       plus_code =
         Just
           GoogleMaps.PlusCodeResp
-            { compound_code = "FW99+8R Davanagere, Karnataka, India"
+            { compound_code = Just "FW99+8R Davanagere, Karnataka, India",
+              global_code = Nothing
             },
       geometry =
         GoogleMaps.Geometry
