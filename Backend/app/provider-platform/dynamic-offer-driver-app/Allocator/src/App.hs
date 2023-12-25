@@ -21,9 +21,12 @@ import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration
+import Kernel.Storage.Queries.SystemConfigs as QSC
+import Kernel.Types.Error
 import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.App (getPodName, handleLeft)
 import Kernel.Utils.Common
@@ -41,6 +44,7 @@ import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (noti
 import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 
 allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
@@ -96,8 +100,16 @@ runDriverOfferAllocator configModifier = do
       withLogTag "Server startup" $ do
         migrateIfNeeded handlerCfg.appCfg.migrationPath handlerCfg.appCfg.autoMigrate handlerCfg.appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-
         logInfo "Setting up for signature auth..."
+        fork
+          "Fetching Kv configs"
+          ( forever $ do
+              kvConfigs <-
+                QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
+                  >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
+              L.setOption KBT.Tables kvConfigs
+              threadDelay (handlerCfg.appCfg.kvConfigUpdateFrequency * 1000000)
+          )
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
