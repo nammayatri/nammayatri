@@ -196,3 +196,13 @@ setCoinAdjustedInSubscriptionByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, Cache
 setCoinAdjustedInSubscriptionByDriverIdKey driverId count = do
   _ <- Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) count
   Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) 2592000 -- expire in 30 days
+
+notificationSchedulerKey :: UTCTime -> UTCTime -> Text
+notificationSchedulerKey startTime endTime = "NotificationScheduler:st:" <> show startTime <> ":et:" <> show endTime
+
+getNotificationSchedulerKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> m (Maybe Bool)
+getNotificationSchedulerKey startTime endTime = Hedis.withCrossAppRedis $ Hedis.get (notificationSchedulerKey startTime endTime)
+
+setNotificationSchedulerKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Bool -> m ()
+setNotificationSchedulerKey startTime endTime isNotificationSchedulerRunning = do
+  Hedis.withCrossAppRedis $ Hedis.setExp (notificationSchedulerKey startTime endTime) isNotificationSchedulerRunning (3600 * 24) -- one day expiry
