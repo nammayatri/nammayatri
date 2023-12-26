@@ -64,6 +64,13 @@
 
           services.redis."redis".enable = true;
 
+          services.redis-cluster."cluster1".enable = true;
+
+          services.zookeeper."zookeeper".enable = true;
+
+          services.apache-kafka."kafka".enable = true;
+
+          services.nginx."nginx".enable = true;
           services.passetto = {
             enable = true;
             initialDumps = [ ../dev/sql-seed/passetto-seed.sql ];
