@@ -325,7 +325,8 @@ onUpdate ValidatedRideAssignedReq {..} = do
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
-  frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) (Just booking.fromLocation.address) TripStart
+  fork "ride start geohash frequencyUpdater" $ do
+    frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) (Just booking.fromLocation.address) TripStart
   rideStartTime <- getCurrentTime
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
@@ -338,7 +339,8 @@ onUpdate ValidatedRideStartedReq {..} = do
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideStarted booking ride
 onUpdate ValidatedRideCompletedReq {..} = do
-  frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) (Just booking.fromLocation.address) TripEnd
+  fork "ride end geohash frequencyUpdater" $ do
+    frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) (Just booking.fromLocation.address) TripEnd
   SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
