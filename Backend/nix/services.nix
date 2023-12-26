@@ -45,8 +45,16 @@
           };
 
           services.postgres.location-db = {
-            enable = true;
+            initialDumps = [
+              ../dev/sql-seed/pre-init.sql
+              ../dev/sql-seed/driver-location-seed.sql
+              ../dev/local-testing-data/person-location.sql
+            ];
+            extensions = extensions: [
+              extensions.postgis
+            ];
             port = 5454;
+            enable = true;
           };
 
           services.postgres.location-db-replica = {
@@ -61,7 +69,7 @@
             package = lib.getBin inputs'.passetto.packages.passetto-service;
             pgweb.enable = true;
           };
-        };
+      };
     };
   };
 }
