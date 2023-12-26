@@ -211,15 +211,17 @@ getPlanCardConfig (PlanEntity planEntity) isLocalized isIntroductory gradientCon
 constructDues :: Array DriverDuesEntity -> Boolean -> Array DueItem
 constructDues duesArr showFeeBreakup = (mapWithIndex (\ ind (DriverDuesEntity item) ->  
   let offerAndPlanDetails = fromMaybe "" item.offerAndPlanDetails
+      feeBreakup = if showFeeBreakup then getFeeBreakup item.maxRidesEligibleForCharge (max 0.0 (item.planAmount - (fromMaybe 0.0 item.totalSpecialZoneCharges))) item.totalRides else ""
+      noOfRides = item.totalRides + fromMaybe 0 item.specialZoneRideCount
   in
   {    
     tripDate: item.rideTakenOn,
     amount: item.driverFeeAmount,
     earnings: item.totalEarnings,
-    noOfRides: item.totalRides + fromMaybe 0 item.specialZoneRideCount,
+    noOfRides: noOfRides,
     scheduledAt: convertUTCtoISC (fromMaybe "" item.executionAt) "Do MMM YYYY, h:mm A",
     paymentStatus: "",
-    feeBreakup: if showFeeBreakup then getFeeBreakup item.maxRidesEligibleForCharge (item.planAmount - (fromMaybe 0.0 item.totalSpecialZoneCharges)) item.totalRides else "",
+    feeBreakup: feeBreakup,
     plan: offerAndPlanDetails,
     mode: item.feeType,
     autoPayStage : item.autoPayStage,
