@@ -20,6 +20,7 @@ import qualified Data.Text as T
 import Domain.Action.Beckn.Search
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
@@ -31,7 +32,7 @@ import qualified Domain.Types.RideDetails as SRD
 import Domain.Types.RideRoute
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequestForDriver as SReqD
-import qualified Domain.Types.Vehicle.Variant as VehVar
+import qualified Domain.Types.Vehicle as DVeh
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -69,7 +70,7 @@ import qualified Tools.Notifications as Notify
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
-    vehicleVariant :: VehVar.Variant,
+    vehicleVariant :: DVeh.Variant,
     driverId :: Maybe Text,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
@@ -81,17 +82,22 @@ data DConfirmReq = DConfirmReq
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
-    ride :: Maybe DRide.Ride,
+    normalBookingInfo :: Maybe NormalBookingInfo,
     fromLocation :: DL.Location,
     toLocation :: DL.Location,
     riderDetails :: DRD.RiderDetails,
     riderMobileCountryCode :: Text,
     riderPhoneNumber :: Text,
     riderName :: Maybe Text,
-    vehicleVariant :: VehVar.Variant,
+    vehicleVariant :: DVeh.Variant,
     transporter :: DM.Merchant,
     driverId :: Maybe Text,
     driverName :: Maybe Text
+  }
+
+data NormalBookingInfo = NormalBookingInfo
+  { ride :: DRide.Ride,
+    vehicle :: DVeh.Vehicle
   }
 
 handler ::
@@ -133,7 +139,11 @@ handler transporter req quote = do
 
           ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
-          rideDetails <- buildRideDetails ride driver
+          vehicle <-
+            QVeh.findById ride.driverId
+              >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+          vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
+          let rideDetails = mkRideDetails ride driver vehicle vehicleRegCert
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
           routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
           case routeInfo of
@@ -174,7 +184,7 @@ handler transporter req quote = do
           pure
             DConfirmRes
               { booking = uBooking,
-                ride = Just ride,
+                normalBookingInfo = Just NormalBookingInfo {ride, vehicle},
                 riderDetails,
                 riderMobileCountryCode = req.customerMobileCountryCode,
                 riderPhoneNumber = req.customerPhoneNumber,
@@ -205,7 +215,7 @@ handler transporter req quote = do
           pure
             DConfirmRes
               { booking = uBooking,
-                ride = Nothing,
+                normalBookingInfo = Nothing,
                 riderDetails,
                 riderMobileCountryCode = req.customerMobileCountryCode,
                 riderPhoneNumber = req.customerPhoneNumber,
@@ -278,35 +288,25 @@ handler transporter req quote = do
             baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
 
-buildRideDetails ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    HasPrettyLogger m r,
-    EncFlow m r,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
-  ) =>
+mkRideDetails ::
   DRide.Ride ->
   DPerson.Person ->
-  m SRD.RideDetails
-buildRideDetails ride driver = do
-  vehicle <-
-    QVeh.findById ride.driverId
-      >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-  vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
-  return
-    SRD.RideDetails
-      { id = ride.id,
-        driverName = driver.firstName,
-        driverNumber = driver.mobileNumber,
-        driverCountryCode = driver.mobileCountryCode,
-        vehicleNumber = vehicle.registrationNo,
-        vehicleColor = Just vehicle.color,
-        vehicleVariant = Just vehicle.variant,
-        vehicleModel = Just vehicle.model,
-        vehicleClass = Nothing,
-        fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
-      }
+  DVeh.Vehicle ->
+  Maybe DVRC.VehicleRegistrationCertificate ->
+  SRD.RideDetails
+mkRideDetails ride driver vehicle vehicleRegCert = do
+  SRD.RideDetails
+    { id = ride.id,
+      driverName = driver.firstName,
+      driverNumber = driver.mobileNumber,
+      driverCountryCode = driver.mobileCountryCode,
+      vehicleNumber = vehicle.registrationNo,
+      vehicleColor = Just vehicle.color,
+      vehicleVariant = Just vehicle.variant,
+      vehicleModel = Just vehicle.model,
+      vehicleClass = Nothing,
+      fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
+    }
 
 cancelBooking ::
   ( EsqDBFlow m r,

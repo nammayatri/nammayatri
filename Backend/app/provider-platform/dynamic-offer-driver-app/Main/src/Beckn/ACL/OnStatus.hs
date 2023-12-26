@@ -12,41 +12,121 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnStatus (mkOnStatusMessage) where
+module Beckn.ACL.OnStatus
+  ( buildOnStatusMessage,
+  )
+where
 
+import qualified Beckn.ACL.Common as Common
+import qualified Beckn.ACL.Common.Order as Common
+import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
+import qualified Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder as BookingCancelledOS
+import qualified Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder as NewBookingOS
+import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as RideAssignedOS
+import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as RideCompletedOS
+import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
 import qualified Domain.Action.Beckn.Status as DStatus
-import qualified Domain.Types.Booking as DBooking
-import qualified Domain.Types.Ride as DRide
 import Kernel.Prelude
+import Kernel.Types.Common
+import qualified SharedLogic.SyncRide as SyncRide
 
-mkOnStatusMessage :: DStatus.DStatusRes -> OnStatus.OnStatusMessage
-mkOnStatusMessage res =
-  OnStatus.OnStatusMessage
-    { order =
-        OnStatus.Order
-          { id = res.bookingId.getId,
-            status = mapToBecknBookingStatus res.bookingStatus,
-            ..
-          }
-    }
-  where
-    fulfillment =
-      res.mbRide <&> \ride ->
-        OnStatus.FulfillmentInfo
-          { id = ride.id.getId,
-            status = mapToBecknRideStatus ride.status
-          }
-
-mapToBecknBookingStatus :: DBooking.BookingStatus -> OnStatus.BookingStatus
-mapToBecknBookingStatus DBooking.NEW = OnStatus.NEW_BOOKING
-mapToBecknBookingStatus DBooking.TRIP_ASSIGNED = OnStatus.TRIP_ASSIGNED
-mapToBecknBookingStatus DBooking.COMPLETED = OnStatus.BOOKING_COMPLETED
-mapToBecknBookingStatus DBooking.CANCELLED = OnStatus.BOOKING_CANCELLED
-mapToBecknBookingStatus DBooking.REALLOCATED = OnStatus.BOOKING_REALLOCATED
-
-mapToBecknRideStatus :: DRide.RideStatus -> OnStatus.RideStatus
-mapToBecknRideStatus DRide.NEW = OnStatus.NEW
-mapToBecknRideStatus DRide.INPROGRESS = OnStatus.INPROGRESS
-mapToBecknRideStatus DRide.COMPLETED = OnStatus.COMPLETED
-mapToBecknRideStatus DRide.CANCELLED = OnStatus.CANCELLED
+buildOnStatusMessage ::
+  (EsqDBFlow m r, EncFlow m r) =>
+  DStatus.OnStatusBuildReq ->
+  m OnStatus.OnStatusMessage
+buildOnStatusMessage (DStatus.NewBookingBuildReq {bookingId}) = do
+  return $
+    OnStatus.OnStatusMessage
+      { order =
+          OnStatus.NewBooking $
+            NewBookingOS.NewBookingOrder
+              { id = bookingId.getId,
+                state = NewBookingOS.orderState,
+                ..
+              }
+      }
+buildOnStatusMessage (DStatus.RideAssignedBuildReq {newRideInfo}) = do
+  let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
+  let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup)
+  return $
+    OnStatus.OnStatusMessage
+      { order =
+          OnStatus.RideAssigned $
+            RideAssignedOS.RideAssignedOrder
+              { id = booking.id.getId,
+                state = RideAssignedOS.orderState,
+                ..
+              }
+      }
+buildOnStatusMessage (DStatus.RideStartedBuildReq {newRideInfo}) = do
+  let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
+  let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup)
+  return $
+    OnStatus.OnStatusMessage
+      { order =
+          OnStatus.RideStarted $
+            RideStartedOS.RideStartedOrder
+              { id = booking.id.getId,
+                state = RideStartedOS.orderState,
+                ..
+              }
+      }
+buildOnStatusMessage (DStatus.RideCompletedBuildReq {newRideInfo, rideCompletedInfo}) = do
+  let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
+  let SyncRide.RideCompletedInfo {fareParams, paymentMethodInfo, paymentUrl} = rideCompletedInfo
+  let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+  distanceTagGroup <- Common.buildDistanceTagGroup ride
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup))
+  quote <- Common.buildRideCompletedQuote ride fareParams
+  return $
+    OnStatus.OnStatusMessage
+      { order =
+          OnStatus.RideCompleted
+            RideCompletedOS.RideCompletedOrder
+              { id = booking.id.getId,
+                state = RideCompletedOS.orderState,
+                quote,
+                payment = Just $ Common.mkRideCompletedPayment paymentMethodInfo paymentUrl,
+                fulfillment = fulfillment
+              }
+      }
+buildOnStatusMessage DStatus.BookingCancelledBuildReq {bookingCancelledInfo, mbNewRideInfo} = do
+  let SyncRide.BookingCancelledInfo {booking, cancellationSource} = bookingCancelledInfo
+  fulfillment <- forM mbNewRideInfo $ \newRideInfo -> do
+    let SyncRide.NewRideInfo {driver, image, vehicle, ride} = newRideInfo
+    let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+    Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup)
+  pure
+    OnStatus.OnStatusMessage
+      { order =
+          OnStatus.BookingCancelled $
+            BookingCancelledOS.BookingCancelledOrder
+              { id = booking.id.getId,
+                state = BookingCancelledOS.orderState,
+                cancellation_reason = Common.castCancellationSource cancellationSource,
+                fulfillment
+              }
+      }
+-- TODO
+-- buildOnStatusMessage (DStatus.BookingReallocatedBuildReq {newRideInfo, rideCompletedInfo}) = do
+--   let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
+--   let SyncRide.RideCompletedInfo {fareParams, paymentMethodInfo, paymentUrl} = rideCompletedInfo
+--   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+--   distanceTagGroup <- Common.buildDistanceTagGroup ride
+--   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup))
+--   quote <- Common.buildRideCompletedQuote ride fareParams
+--   return $
+--     OnStatus.OnStatusMessage
+--       { order =
+--           OnStatus.RideCompleted
+--             RideCompletedOS.RideCompletedOrder
+--               { id = booking.id.getId,
+--                 state = RideCompletedOS.orderState,
+--                 quote,
+--                 payment = Just $ Common.mkRideCompletedPayment paymentMethodInfo paymentUrl,
+--                 fulfillment = fulfillment
+--               }
+--       }

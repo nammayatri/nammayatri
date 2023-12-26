@@ -14,13 +14,15 @@
 
 module Beckn.ACL.Common where
 
+import qualified Beckn.Types.Core.Taxi.Common.BreakupItem as Common
+import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
--- import qualified Domain.Types.Merchant as DM
-
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import Data.Maybe
+import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Vehicle.Variant as Variant
@@ -95,3 +97,44 @@ getTag tagGroupCode tagCode (Tags.TG tagGroups) = do
   tagGroup <- find (\tagGroup -> tagGroup.code == tagGroupCode) tagGroups
   tag <- find (\tag -> tag.code == Just tagCode) tagGroup.list
   tag.value
+
+castCancellationSource :: DBCR.CancellationSource -> Common.CancellationSource
+castCancellationSource = \case
+  DBCR.ByUser -> Common.ByUser
+  DBCR.ByDriver -> Common.ByDriver
+  DBCR.ByMerchant -> Common.ByMerchant
+  DBCR.ByAllocator -> Common.ByAllocator
+  DBCR.ByApplication -> Common.ByApplication
+
+filterRequiredBreakups :: DFParams.FareParametersType -> Common.BreakupItem -> Bool
+filterRequiredBreakups fParamsType breakup = do
+  let title = breakup.title
+  case fParamsType of
+    DFParams.Progressive ->
+      title
+        `elem` [ "BASE_FARE",
+                 "SERVICE_CHARGE",
+                 "DEAD_KILOMETER_FARE",
+                 "EXTRA_DISTANCE_FARE",
+                 "DRIVER_SELECTED_FARE",
+                 "CUSTOMER_SELECTED_FARE",
+                 "TOTAL_FARE",
+                 "WAITING_OR_PICKUP_CHARGES",
+                 "EXTRA_TIME_FARE",
+                 "CUSTOMER_CANCELLATION_DUES"
+               ]
+    DFParams.Slab ->
+      title
+        `elem` [ "BASE_FARE",
+                 "SERVICE_CHARGE",
+                 "WAITING_OR_PICKUP_CHARGES",
+                 "PLATFORM_FEE",
+                 "SGST",
+                 "CGST",
+                 "FIXED_GOVERNMENT_RATE",
+                 "CUSTOMER_SELECTED_FARE",
+                 "TOTAL_FARE",
+                 "NIGHT_SHIFT_CHARGE",
+                 "EXTRA_TIME_FARE",
+                 "CUSTOMER_CANCELLATION_DUES"
+               ]

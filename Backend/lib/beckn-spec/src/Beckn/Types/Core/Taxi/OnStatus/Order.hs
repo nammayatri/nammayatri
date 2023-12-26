@@ -12,58 +12,34 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnStatus.Order (Order (..), BookingStatus (..)) where
+module Beckn.Types.Core.Taxi.OnStatus.Order (Order (..)) where
 
-import Beckn.Types.Core.Taxi.OnStatus.Fulfillment (FulfillmentInfo)
+import Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder
+import Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder
+import Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder
+import Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder
+import Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder
 import Data.Aeson
 import Data.OpenApi
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Utils.JSON as J
 import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+import qualified Kernel.Utils.Schema as S
 
-data Order = Order
-  { id :: Text, -- BPP booking id
-    status :: BookingStatus,
-    fulfillment :: Maybe FulfillmentInfo
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
-instance ToSchema Order where
-  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
-
-data BookingStatus
-  = NEW_BOOKING
-  | TRIP_ASSIGNED
-  | BOOKING_COMPLETED
-  | BOOKING_CANCELLED
-  | BOOKING_REALLOCATED
+data Order
+  = NewBooking NewBookingOrder
+  | RideAssigned RideAssignedOrder
+  | RideStarted RideStartedOrder
+  | RideCompleted RideCompletedOrder
+  | BookingCancelled BookingCancelledOrder
+  | BookingReallocated BookingReallocatedOrder
   deriving (Generic, Show)
 
-instance ToJSON BookingStatus where
-  toJSON = genericToJSON bookingStatusOptions
+instance ToJSON Order where
+  toJSON = genericToJSON J.untaggedValue
 
-instance FromJSON BookingStatus where
-  parseJSON = genericParseJSON bookingStatusOptions
+instance FromJSON Order where
+  parseJSON = genericParseJSON J.untaggedValue
 
-instance ToSchema BookingStatus where
-  declareNamedSchema = genericDeclareNamedSchema bookingStatusSchemaOptions
-
-bookingStatusOptions :: Options
-bookingStatusOptions =
-  defaultOptions
-    { constructorTagModifier = modifier
-    }
-
-bookingStatusSchemaOptions :: SchemaOptions
-bookingStatusSchemaOptions =
-  defaultSchemaOptions
-    { constructorTagModifier = modifier
-    }
-
-modifier :: String -> String
-modifier = \case
-  "NEW_BOOKING" -> "NEW"
-  "TRIP_ASSIGNED" -> "TRIP_ASSIGNED"
-  "BOOKING_COMPLETED" -> "COMPLETED"
-  "BOOKING_CANCELLED" -> "CANCELLED"
-  "BOOKING_REALLOCATED" -> "REALLOCATED"
-  x -> x
+instance ToSchema Order where
+  declareNamedSchema = genericDeclareUnNamedSchema S.untaggedValue

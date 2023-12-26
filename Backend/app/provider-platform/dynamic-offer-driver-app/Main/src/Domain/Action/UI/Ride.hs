@@ -260,7 +260,7 @@ otpRideCreate driver otpCode booking = do
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
 
-  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride
+  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
 
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
 
