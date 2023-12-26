@@ -30,6 +30,7 @@ library
       API.RiderPlatform
       API.RiderPlatform.Booking
       API.RiderPlatform.Customer
+      API.RiderPlatform.HotSpot
       API.RiderPlatform.Issue
       API.RiderPlatform.IssueList
       API.RiderPlatform.Merchant

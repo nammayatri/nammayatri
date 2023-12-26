@@ -25,7 +25,7 @@ import Control.Monad
 import Domain.Action.UI.HotSpot
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Action.UI.Serviceability as Serviceability
-import Domain.Types.HotSpot
+import Domain.Types.HotSpot hiding (updatedAt)
 import Domain.Types.HotSpotConfig
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
@@ -153,8 +153,9 @@ oneWaySearch personId req bundleVersion clientVersion device = do
   -- merchant operating city of search-request-origin-location
 
   when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
-    _ <- hotSpotUpdate person.merchantId mbFavourite req
-    updateForSpecialLocation person.merchantId req
+    fork "ride search geohash frequencyUpdater" $ do
+      _ <- hotSpotUpdate person.merchantId mbFavourite req
+      updateForSpecialLocation person.merchantId req
 
   merchantOperatingCity <-
     CQMOC.findByMerchantIdAndCity merchant.id originCity

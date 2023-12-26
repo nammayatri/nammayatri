@@ -22,6 +22,7 @@ data HotSpotConfig = HotSpotConfig
     precisionToSetGeohash :: Int,
     precisionToGetGeohash :: Int,
     precisionToFilterGeohash :: Int,
-    maxGeoHashToFilter :: Int
+    maxGeoHashToFilter :: Int,
+    hotSpotExpiry :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, Eq)

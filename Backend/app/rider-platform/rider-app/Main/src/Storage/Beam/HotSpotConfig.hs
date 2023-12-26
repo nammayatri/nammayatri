@@ -38,7 +38,8 @@ data HotSpotConfigT f = HotSpotConfigT
     precisionToSetGeohash :: B.C f Int,
     precisionToGetGeohash :: B.C f Int,
     precisionToFilterGeohash :: B.C f Int,
-    maxGeoHashToFilter :: B.C f Int
+    maxGeoHashToFilter :: B.C f Int,
+    hotSpotExpiry :: B.C f Int
   }
   deriving (Generic, B.Beamable)
 
@@ -70,7 +71,8 @@ defaultHotSpotConfig =
       precisionToSetGeohash = 0,
       precisionToGetGeohash = 0,
       precisionToFilterGeohash = 0,
-      maxGeoHashToFilter = 0
+      maxGeoHashToFilter = 0,
+      hotSpotExpiry = 0
     }
 
 $(enableKVPG ''HotSpotConfigT ['id] [])

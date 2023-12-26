@@ -40,7 +40,8 @@ data HotSpot = HotSpot
     _tripStart :: Int,
     _tripEnd :: Int,
     _specialLocation :: Int,
-    _address :: Maybe LA.LocationAddress
+    _address :: Maybe LA.LocationAddress,
+    _updatedAt :: Maybe UTCTime
   }
   deriving (Generic, ToSchema, Show, Eq)
 
@@ -66,7 +67,8 @@ instance Default HotSpot where
         _tripStart = 0,
         _tripEnd = 0,
         _specialLocation = 0,
-        _address = Nothing
+        _address = Nothing,
+        _updatedAt = Nothing
       }
 
 makeLenses ''HotSpot

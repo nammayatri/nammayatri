@@ -50,7 +50,8 @@ instance FromTType' BeamHSC.HotSpotConfig HotSpotConfig where
             precisionToSetGeohash = precisionToSetGeohash,
             precisionToGetGeohash = precisionToGetGeohash,
             precisionToFilterGeohash = precisionToFilterGeohash,
-            maxGeoHashToFilter = maxGeoHashToFilter
+            maxGeoHashToFilter = maxGeoHashToFilter,
+            hotSpotExpiry = hotSpotExpiry
           }
 
 instance ToTType' BeamHSC.HotSpotConfig HotSpotConfig where
@@ -73,5 +74,6 @@ instance ToTType' BeamHSC.HotSpotConfig HotSpotConfig where
         BeamHSC.precisionToSetGeohash = precisionToSetGeohash,
         BeamHSC.precisionToGetGeohash = precisionToGetGeohash,
         BeamHSC.precisionToFilterGeohash = precisionToFilterGeohash,
-        BeamHSC.maxGeoHashToFilter = maxGeoHashToFilter
+        BeamHSC.maxGeoHashToFilter = maxGeoHashToFilter,
+        BeamHSC.hotSpotExpiry = hotSpotExpiry
       }

@@ -21,6 +21,7 @@ where
 
 import qualified "rider-app" API.Dashboard as BAP
 import qualified "rider-app" API.Types.UI.TicketService as DTB
+import qualified Beckn.Types.Core.Taxi.Search ()
 import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.RiderPlatform.Customer as Customer
 import qualified Dashboard.RiderPlatform.Merchant as Merchant
@@ -56,7 +57,8 @@ data AppBackendAPIs = AppBackendAPIs
     rides :: RidesAPIs,
     issues :: ListIssueAPIs,
     issuesV2 :: IssueAPIs,
-    tickets :: TicketAPIs
+    tickets :: TicketAPIs,
+    hotSpot :: HotSpotAPIs
   }
 
 data CustomerAPIs = CustomerAPIs
@@ -114,6 +116,10 @@ data TicketAPIs = TicketAPIs
     updateSeatManagement :: DTB.TicketBookingUpdateSeatsReq -> Euler.EulerClient APISuccess
   }
 
+newtype HotSpotAPIs = HotSpotAPIs
+  { removeExpires :: Euler.EulerClient APISuccess
+  }
+
 mkAppBackendAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> AppBackendAPIs
 mkAppBackendAPIs merchantId city token = do
   let customers = CustomerAPIs {..}
@@ -123,6 +129,7 @@ mkAppBackendAPIs merchantId city token = do
   let issues = ListIssueAPIs {..}
   let issuesV2 = IssueAPIs {..}
   let tickets = TicketAPIs {..}
+  let hotSpot = HotSpotAPIs {..}
   AppBackendAPIs {..}
   where
     customersClient
@@ -131,7 +138,8 @@ mkAppBackendAPIs merchantId city token = do
       :<|> ridesClient
       :<|> issueClient
       :<|> issueV2Client
-      :<|> ticketsClient = clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
+      :<|> ticketsClient
+      :<|> hotSpotClient = clientWithMerchantAndCity (Proxy :: Proxy BAP.OperationsAPI) merchantId city token
 
     customerList
       :<|> customerDelete
@@ -173,6 +181,8 @@ mkAppBackendAPIs merchantId city token = do
     verifyBookingDetails
       :<|> getServices
       :<|> updateSeatManagement = ticketsClient
+
+    removeExpires = hotSpotClient
 
 callRiderAppOperations ::
   forall m r b c.

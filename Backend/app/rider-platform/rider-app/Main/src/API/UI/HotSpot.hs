@@ -26,6 +26,7 @@ import qualified Domain.Types.Person as Person
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.APISuccess ()
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -37,10 +38,14 @@ import Storage.CachedQueries.Maps.LocationMapCache
 import Tools.Auth
 import qualified Tools.Maps as Maps
 
-type API = "getHotSpot" :> TokenAuth :> ReqBody '[JSON] Maps.LatLong :> Get '[JSON] HotSpotResponse
+type API =
+  GetHotSpotAPI
+
+type GetHotSpotAPI = "getHotSpot" :> TokenAuth :> ReqBody '[JSON] Maps.LatLong :> Get '[JSON] HotSpotResponse
 
 handler :: FlowServer API
-handler = getHotSpot
+handler =
+  getHotSpot
 
 getHotSpot :: (Id Person.Person, Id Merchant.Merchant) -> Maps.LatLong -> FlowHandler HotSpotResponse
 getHotSpot (_, merchantId) latlong = withFlowHandlerAPI (getHotspot latlong merchantId)
@@ -93,10 +98,8 @@ getHotspot Maps.LatLong {..} merchantId = do
           case geoHashOfLatLong of
             Just currentGeoHash -> do
               let neighbourGeoHashes = neighboringGeohashes currentGeoHash hotSpotRadius (geoHashCellHeight precisionToGetGeohash)
-              let deviatedCharLen = precisionToSetGeohash - precisionToGetGeohash
-              let listOfGeoHashToCheck = allPreciseHotSpot hotSpotRadius deviatedCharLen (Maps.LatLong lat lon) neighbourGeoHashes
-              filteredAccordingToGeoHash :: [HotSpot] <- mapMaybeM (Hedis.hGet makeHotSpotKey . Dt.pack) listOfGeoHashToCheck
-              let finalHotSpot = filterAccordingMaxFrequency minFrequencyOfHotSpot filteredAccordingToGeoHash
+              filteredHotSpots :: [HotSpot] <- concat <$> mapMaybeM (Hedis.hGet makeHotSpotKey . Dt.pack) neighbourGeoHashes
+              let finalHotSpot = filterAccordingMaxFrequency minFrequencyOfHotSpot filteredHotSpots
               let sortedHotSpotWithFrequency = Dl.sortOn (Down . (\x -> do (x._manualMovedSaved * weightOfManualSaved) + (x._manualMovedPickup * weightOfManualPickup) + (x._nonManualMovedPickup * weightOfAutoPickup) + (x._nonManualMovedSaved * weightOfAutoSaved) + (x._tripStart * weightOfTripStart) + (x._tripEnd * weightOfTripEnd) + (x._specialLocation * weightOfSpecialLocation))) finalHotSpot
               let filteredHotSpotWithPrecisions = groupAndFilterHotSpotWithPrecision precisionToFilterGeohash maxGeoHashToFilter sortedHotSpotWithFrequency
               let hotSpots = take maxNumHotSpotsToShow filteredHotSpotWithPrecisions
