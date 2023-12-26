@@ -176,10 +176,3 @@ handlerSignature input =
     reqTypeToText :: Maybe ApiReq -> Text
     reqTypeToText Nothing = ""
     reqTypeToText (Just (ApiReq ty _)) = ty
-
-apiTypeToText :: ApiType -> Text
-apiTypeToText apitype = case apitype of
-  GET -> "Get"
-  POST -> "Post"
-  PUT -> "Put"
-  DELETE -> "Delete"

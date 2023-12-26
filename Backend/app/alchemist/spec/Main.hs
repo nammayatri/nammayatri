@@ -71,9 +71,7 @@ main = do
       let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
       let src = rootDir </> haskellOutputPathPrefix </> appPath </> "src"
 
+      -- Alchemist.mkFrontendAPIIntegration (readOnlySrc </> "Domain/Action") inputFile
       Alchemist.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
       Alchemist.mkApiTypes (readOnlySrc </> "API/Types/UI") inputFile
       Alchemist.mkDomainHandler (src </> "Domain/Action/UI") inputFile
-
--- Alchemist.mkFrontendAPIBackend (targetFolder </> "Domain/Action") inputFile
--- Alchemist.mkFrontendAPIEndpoint (targetFolder </> "Domain/Action") inputFile

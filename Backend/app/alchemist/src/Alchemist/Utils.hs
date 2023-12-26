@@ -1,5 +1,6 @@
 module Alchemist.Utils where
 
+import Alchemist.DSL.Syntax.API (ApiType (..))
 import Control.Lens.Combinators
 import Data.Aeson
 import Data.Aeson.Key (fromString)
@@ -12,6 +13,13 @@ import qualified Data.Text as T
 import Kernel.Prelude hiding (Show, fromString, hPutStr, toString, traceShowId, try)
 import System.Directory (createDirectoryIfMissing)
 import System.IO
+
+apiTypeToText :: ApiType -> Text
+apiTypeToText apitype = case apitype of
+  GET -> "Get"
+  POST -> "Post"
+  PUT -> "Put"
+  DELETE -> "Delete"
 
 startsWithLower :: String -> Bool
 startsWithLower (x : _) = isLower x

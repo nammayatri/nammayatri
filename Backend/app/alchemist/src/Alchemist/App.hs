@@ -53,12 +53,7 @@ mkDomainHandler filePath yaml = do
   fileExists <- doesFileExist (filePath </> fileName)
   unless fileExists $ writeToFile filePath fileName (show $ generateDomainHandler apiDef)
 
-mkFrontendAPIBackend :: FilePath -> FilePath -> IO ()
-mkFrontendAPIBackend filePath yaml = do
+mkFrontendAPIIntegration :: FilePath -> FilePath -> IO ()
+mkFrontendAPIIntegration filePath yaml = do
   apiDef <- apiParser yaml
-  writeToFile filePath (T.unpack (_moduleName apiDef) ++ "1.purs") (generateBackendCallAPI apiDef)
-
-mkFrontendAPIEndpoint :: FilePath -> FilePath -> IO ()
-mkFrontendAPIEndpoint filePath yaml = do
-  apiDef <- apiParser yaml
-  writeToFile filePath (T.unpack (_moduleName apiDef) ++ "2.purs") (generateAPIEndpoint apiDef)
+  writeToFile filePath (T.unpack (_moduleName apiDef) ++ ".purs") (generateAPIIntegrationCode apiDef)
