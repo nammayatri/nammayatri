@@ -66,8 +66,8 @@
 
           services.passetto = {
             enable = true;
+            initialDumps = [ ../dev/sql-seed/passetto-seed.sql ];
             package = lib.getBin inputs'.passetto.packages.passetto-service;
-            pgweb.enable = true;
           };
       };
     };
