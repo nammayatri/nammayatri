@@ -288,6 +288,7 @@
       "ny_ic_fill" : true,
       "ny_ic_front_car" : true,
       "ny_ic_general_profile" : true,
+      "ny_ic_generic_mascot" : true,
       "ny_ic_goto_arrived" : true,
       "ny_ic_goto_icon_map_pin_check" : true,
       "ny_ic_goto_special_pullout" : true,
