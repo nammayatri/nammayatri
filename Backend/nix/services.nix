@@ -3,6 +3,17 @@
   config = {
     perSystem = { inputs', self', pkgs, lib, ... }: {
       process-compose."services" = { config, ... }:
+        let
+          startScript = masterDb: replicaDb: port: pkgs.writeShellApplication {
+            name = "start-pgbasebackup";
+            runtimeInputs = with pkgs; [ config.services.postgres."${masterDb}".package coreutils ];
+            text = ''
+              masterDbPath=$(readlink -f data/${masterDb})
+              replicaDbPath=$(readlink -f data/${replicaDb})
+              pg_basebackup -h "$masterDbPath" -U repl_user --checkpoint=fast -D "$replicaDbPath"  -R --slot=some_name  -C --port=${port} 
+            '';
+          };
+        in
         {
           imports = [
             inputs.services-flake.processComposeModules.default
@@ -33,16 +44,27 @@
             ];
             port = 5432;
             enable = true;
+            listen_addresses = "*";
+            hbaConf = [
+              { type = "host"; database = "all"; user = "repl_user"; address = "127.0.0.1/32"; method = "trust"; }
+            ];
             initialScript.before = ''
               CREATE USER atlas WITH PASSWORD 'atlas';
+              
+              CREATE USER repl_user replication;
             '';
           };
+        
+          settings.processes.pgBaseBackupForPrimaryDb = {
+            command = "${startScript "db-primary" "db-replica" "5432"}/bin/start-pgbasebackup";
+            depends_on."db-primary".condition = "process_healthy";
+          };
 
-          # TODO: db-replica should depend on db-primary, maybe we can upstream this to provide a "dependsOn" option?
           services.postgres.db-replica = {
+            depends_on."pgBaseBackupForPrimaryDb".condition = "process_completed_successfully";
             enable = true;
             port = 5435;
-          };
+         };
 
           services.postgres.location-db = {
             initialDumps = [
@@ -55,9 +77,22 @@
             ];
             port = 5454;
             enable = true;
+            listen_addresses = "*";
+            hbaConf = [
+              { type = "host"; database = "all"; user = "repl_user"; address = "127.0.0.1/32"; method = "trust"; }
+            ];
+            initialScript.before = '' 
+              CREATE USER repl_user replication;
+            '';
+          };
+          
+          settings.processes.pgBaseBackupForLocationDb = {
+            command = "${startScript "location-db" "location-db-replica" "5454"}/bin/start-pgbasebackup";
+            depends_on."location-db".condition = "process_healthy";
           };
 
           services.postgres.location-db-replica = {
+            depends_on."pgBaseBackupForLocationDb".condition = "process_completed_successfully";
             enable = true;
             port = 5456;
           };
@@ -71,6 +106,7 @@
           services.apache-kafka."kafka".enable = true;
 
           services.nginx."nginx".enable = true;
+        
           services.passetto = {
             enable = true;
             initialDumps = [ ../dev/sql-seed/passetto-seed.sql ];
