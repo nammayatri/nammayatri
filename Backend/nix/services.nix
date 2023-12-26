@@ -54,7 +54,7 @@
               CREATE USER repl_user replication;
             '';
           };
-        
+
           settings.processes.pgBaseBackupForPrimaryDb = {
             command = "${startScript "db-primary" "db-replica" "5432"}/bin/start-pgbasebackup";
             depends_on."db-primary".condition = "process_healthy";
@@ -64,7 +64,7 @@
             depends_on."pgBaseBackupForPrimaryDb".condition = "process_completed_successfully";
             enable = true;
             port = 5435;
-         };
+          };
 
           services.postgres.location-db = {
             initialDumps = [
@@ -85,7 +85,7 @@
               CREATE USER repl_user replication;
             '';
           };
-          
+
           settings.processes.pgBaseBackupForLocationDb = {
             command = "${startScript "location-db" "location-db-replica" "5454"}/bin/start-pgbasebackup";
             depends_on."location-db".condition = "process_healthy";
@@ -106,13 +106,13 @@
           services.apache-kafka."kafka".enable = true;
 
           services.nginx."nginx".enable = true;
-        
+
           services.passetto = {
             enable = true;
             initialDumps = [ ../dev/sql-seed/passetto-seed.sql ];
             package = lib.getBin inputs'.passetto.packages.passetto-service;
           };
-      };
+        };
     };
   };
 }
