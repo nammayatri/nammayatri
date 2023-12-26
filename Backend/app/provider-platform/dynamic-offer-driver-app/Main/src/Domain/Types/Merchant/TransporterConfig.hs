@@ -154,7 +154,9 @@ data TransporterConfigD u = TransporterConfig
     updatedAt :: UTCTime,
     notificationRetryEligibleErrorCodes :: [Text],
     notificationRetryCountThreshold :: Int,
-    notificationRetryTimeGap :: NominalDiffTime
+    notificationRetryTimeGap :: NominalDiffTime,
+    driverAutoPayExecutionTimeFallBack :: NominalDiffTime,
+    orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime
   }
   deriving (Generic, Show)
 

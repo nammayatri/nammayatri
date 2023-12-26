@@ -348,6 +348,16 @@ updateAutopayPaymentStageByIds autopayPaymentStage driverFeeIds = do
     [Se.Set BeamDF.autopayPaymentStage autopayPaymentStage, Se.Set BeamDF.stageUpdatedAt (Just now)]
     [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
 
+updateAutopayPaymentStageAndRetryCountByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Domain.AutopayPaymentStage -> Int -> [Id DriverFee] -> m ()
+updateAutopayPaymentStageAndRetryCountByIds autopayPaymentStage retryCount driverFeeIds = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamDF.autopayPaymentStage autopayPaymentStage,
+      Se.Set BeamDF.stageUpdatedAt (Just now),
+      Se.Set BeamDF.notificationRetryCount retryCount
+    ]
+    [Se.Is BeamDF.id $ Se.In (getId <$> driverFeeIds)]
+
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
 updateStatusByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> [Id DriverFee] -> UTCTime -> m ()
 updateStatusByIds status driverFeeIds now = do

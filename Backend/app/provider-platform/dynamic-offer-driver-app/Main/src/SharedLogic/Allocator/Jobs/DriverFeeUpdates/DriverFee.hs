@@ -419,7 +419,7 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
   let timeDiffNormalFlow = addUTCTime dfNotificationTime endTime
-  let dfCalculationJobTs = if timeDiffNormalFlow > now then diffUTCTime timeDiffNormalFlow now else 0
+  let dfCalculationJobTs = if timeDiffNormalFlow > now then diffUTCTime timeDiffNormalFlow now else 5 * 60 --- 5 min
   createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $
     SendPDNNotificationToDriverJobData
       { merchantId = merchantId,
