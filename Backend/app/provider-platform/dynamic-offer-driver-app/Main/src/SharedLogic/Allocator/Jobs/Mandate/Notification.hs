@@ -75,7 +75,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
             scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards
             return Complete
           else do
-            let dfCalculationJobTs = 2 ^ (retryCount + 1) * transporterConfig.notificationRetryTimeGap
+            let dfCalculationJobTs = 2 ^ retryCount * transporterConfig.notificationRetryTimeGap
             createJobIn @_ @'SendPDNNotificationToDriver dfCalculationJobTs maxShards $
               SendPDNNotificationToDriverJobData
                 { merchantId = merchantId,
@@ -143,7 +143,7 @@ getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> 
 
 scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Id MerchantOperatingCity -> Int -> m ()
 scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards = do
-  now <- getCurrentTime
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfExecutionTime = transporterConfig.driverAutoPayExecutionTime
       dfStatusCheckTime = transporterConfig.orderAndNotificationStatusCheckTime
       dfNotificationTime = transporterConfig.driverAutoPayNotificationTime
