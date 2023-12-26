@@ -216,7 +216,7 @@ findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime e
           Se.Is BeamDF.feeType $ Se.Eq RECURRING_EXECUTION_INVOICE,
           Se.Is BeamDF.autopayPaymentStage $ Se.Eq (Just NOTIFICATION_SCHEDULED),
           Se.Is BeamDF.status $ Se.Eq status,
-          Se.Is BeamDF.notificationRetryCount $ Se.Eq retryCount,
+          Se.Is BeamDF.notificationRetryCount $ Se.LessThanOrEq retryCount,
           Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId
         ]
     ]
