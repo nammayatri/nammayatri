@@ -137,6 +137,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             badDebtRescheduleTime = secondsToNominalDiffTime badDebtRescheduleTime,
             badDebtSchedulerTime = secondsToNominalDiffTime badDebtSchedulerTime,
             badDebtTimeThreshold = badDebtTimeThreshold,
+            driverAutoPayExecutionTimeFallBack = secondsToNominalDiffTime driverAutoPayExecutionTimeFallBack,
+            orderAndNotificationStatusCheckFallBackTime = secondsToNominalDiffTime orderAndNotificationStatusCheckFallBackTime,
             ..
           }
     where
@@ -254,6 +256,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.notificationRetryEligibleErrorCodes = notificationRetryEligibleErrorCodes,
         BeamTC.notificationRetryCountThreshold = notificationRetryCountThreshold,
         BeamTC.notificationRetryTimeGap = nominalDiffTimeToSeconds notificationRetryTimeGap,
+        BeamTC.driverAutoPayExecutionTimeFallBack = nominalDiffTimeToSeconds driverAutoPayExecutionTimeFallBack,
+        BeamTC.orderAndNotificationStatusCheckFallBackTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckFallBackTime,
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt
       }

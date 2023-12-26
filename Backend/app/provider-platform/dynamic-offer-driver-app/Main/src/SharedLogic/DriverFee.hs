@@ -19,6 +19,7 @@ import Data.Maybe (listToMaybe)
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
+import qualified Domain.Types.Merchant as M
 import Domain.Types.Merchant.TransporterConfig as TC
 import Domain.Types.Person (Person)
 import Domain.Types.Plan (Plan)
@@ -197,12 +198,12 @@ setCoinAdjustedInSubscriptionByDriverIdKey driverId count = do
   _ <- Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) count
   Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) 2592000 -- expire in 30 days
 
-notificationSchedulerKey :: UTCTime -> UTCTime -> Text
-notificationSchedulerKey startTime endTime = "NotificationScheduler:st:" <> show startTime <> ":et:" <> show endTime
+notificationSchedulerKey :: UTCTime -> UTCTime -> Id M.Merchant -> Text
+notificationSchedulerKey startTime endTime merchantId = "NotificationScheduler:st:" <> show startTime <> ":et:" <> show endTime <> ":mid:" <> merchantId.getId
 
-getNotificationSchedulerKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> m (Maybe Bool)
-getNotificationSchedulerKey startTime endTime = Hedis.withCrossAppRedis $ Hedis.get (notificationSchedulerKey startTime endTime)
+isNotificationSchedulerRunningKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Id M.Merchant -> m (Maybe Bool)
+isNotificationSchedulerRunningKey startTime endTime merchantId = Hedis.withCrossAppRedis $ Hedis.get (notificationSchedulerKey startTime endTime merchantId)
 
-setNotificationSchedulerKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Bool -> m ()
-setNotificationSchedulerKey startTime endTime isNotificationSchedulerRunning = do
-  Hedis.withCrossAppRedis $ Hedis.setExp (notificationSchedulerKey startTime endTime) isNotificationSchedulerRunning (3600 * 24) -- one day expiry
+setIsNotificationSchedulerRunningKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Id M.Merchant -> Bool -> m ()
+setIsNotificationSchedulerRunningKey startTime endTime merchantId isNotificationSchedulerRunning = do
+  Hedis.withCrossAppRedis $ Hedis.setExp (notificationSchedulerKey startTime endTime merchantId) isNotificationSchedulerRunning (3600 * 24) -- one day expiry

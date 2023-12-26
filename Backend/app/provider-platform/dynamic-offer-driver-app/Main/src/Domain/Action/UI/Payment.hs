@@ -284,9 +284,10 @@ processNotification notificationId notificationStatus respCode respMessage fromW
     case notificationStatus of
       Juspay.NOTIFICATION_FAILURE -> do
         --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----
-        getNotificationScheduler <- SLDriverFee.getNotificationSchedulerKey driverFee.startTime driverFee.endTime
-        let areRetriesOccuring = fromMaybe False getNotificationScheduler
-        let isRetryEligibleError = maybe False (`elem` transporterConfig.notificationRetryEligibleErrorCodes) respCode && areRetriesOccuring
+        mbIsNotificationSchedulerRunning <- SLDriverFee.isNotificationSchedulerRunningKey driverFee.startTime driverFee.endTime driverFee.merchantId
+        let isRetryEligibleError = case (mbIsNotificationSchedulerRunning, respCode) of
+              (Just True, Just err) -> err `elem` transporterConfig.notificationRetryEligibleErrorCodes
+              (_, _) -> False
         unless (driverFee.status == CLEARED) $ do
           if driverFee.notificationRetryCount < transporterConfig.notificationRetryCountThreshold && fromWebhook && isRetryEligibleError
             then do
