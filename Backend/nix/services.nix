@@ -8,7 +8,35 @@
             inputs.services-flake.processComposeModules.default
             inputs.passetto.processComposeModules.default
           ];
-          services.postgres.db-primary.enable = true;
+
+          services.postgres.db-primary = {
+            extensions = extensions: [
+              extensions.postgis
+            ];
+            initialDumps = [
+              ../dev/sql-seed/pre-init.sql
+              ../dev/sql-seed/rider-app-seed.sql
+              ../dev/local-testing-data/rider-app.sql
+              ../dev/sql-seed/public-transport-rider-platform-seed.sql
+              ../dev/local-testing-data/public-transport-rider-platform.sql
+              ../dev/sql-seed/mock-registry-seed.sql
+              ../dev/local-testing-data/mock-registry.sql
+              ../dev/sql-seed/scheduler-example-seed.sql
+              ../dev/sql-seed/dynamic-offer-driver-app-seed.sql
+              ../dev/local-testing-data/dynamic-offer-driver-app.sql
+              ../dev/sql-seed/rider-dashboard-seed.sql
+              ../dev/local-testing-data/rider-dashboard.sql
+              ../dev/sql-seed/provider-dashboard-seed.sql
+              ../dev/local-testing-data/provider-dashboard.sql
+              ../dev/sql-seed/special-zone-seed.sql
+              ../dev/local-testing-data/special-zone.sql
+            ];
+            port = 5432;
+            enable = true;
+            initialScript.before = ''
+              CREATE USER atlas WITH PASSWORD 'atlas';
+            '';
+          };
 
           # TODO: db-replica should depend on db-primary, maybe we can upstream this to provide a "dependsOn" option?
           services.postgres.db-replica = {
