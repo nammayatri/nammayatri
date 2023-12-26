@@ -105,5 +105,19 @@ window.getMerchantConfig = function () {
     , "referral": {
       "link" : "https://yatricustomer.page.link/pcJb"
     }
+    , "flowConfig" : {
+      "chooseCity" : {
+        "runFlow" : false
+      }
+    }
+    , "permissions" : {
+      "locationPermission" : true,
+      "notification" : true
+    }
+    , "bottomNavConfig" : {
+      "subscription" :
+        { "isVisible" : false
+        }
+    }
   })
 }

@@ -223,7 +223,7 @@ cardItemView push state =
           , orientation HORIZONTAL
           , padding $ Padding 12 12 12 12
           , cornerRadius 8.0
-          , visibility if item.stage == ST.SUBSCRIPTION_PLAN && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS /= "true") then GONE else VISIBLE
+          , visibility $ boolToVisibility $ cardVisibility item
           , stroke $ "1,"<> case getStatus item.stage state of
                                     ST.COMPLETED -> Color.green900
                                     ST.IN_PROGRESS -> Color.yellow900
@@ -293,6 +293,10 @@ cardItemView push state =
           ]
       ) state.data.registerationSteps
   )
+  where cardVisibility item = 
+          case item.stage of
+            SUBSCRIPTION_PLAN -> (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true") && state.data.config.bottomNavConfig.subscription.isVisible
+            _ -> true
 
 getStatus :: ST.RegisterationStep -> ST.RegistrationScreenState -> ST.StageStatus
 getStatus step state = 

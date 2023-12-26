@@ -657,7 +657,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
     @SuppressLint("InflateParams")
     private void showOverLayPopup(Bundle rideRequestBundle) {
-        firebaseLogEvent("Overlay_is_popped_up");
         String merchantId = getResources().getString(R.string.merchant_id);
         try{
             if (remoteConfigs.hasKey("enable_clevertap_events")){
@@ -732,6 +731,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         viewPager.setAdapter(sheetAdapter);
         windowManager.addView(floatyView, params);
         setIndicatorClickListener();
+        firebaseLogEvent("Overlay_is_popped_up");
     }
 
     private void startTimer() {
