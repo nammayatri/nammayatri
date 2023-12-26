@@ -12,24 +12,34 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnStatus.Fulfillment where
+module Beckn.Types.Core.Taxi.Common.RideCompletedQuote
+  ( module Beckn.Types.Core.Taxi.Common.RideCompletedQuote,
+    module Reexport,
+  )
+where
 
-import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
+import Beckn.Types.Core.Taxi.Common.BreakupItem as Reexport
+import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
+import Data.Aeson as A
+import Data.OpenApi hiding (Example, example, title, value)
 import EulerHS.Prelude hiding (id)
-import Kernel.Utils.Schema (genericDeclareUnNamedSchema)
+import Kernel.Utils.Schema
 
-data FulfillmentInfo = FulfillmentInfo
-  { id :: Text, -- BPP ride id
-    status :: RideStatus
+data RideCompletedQuote = RideCompletedQuote
+  { price :: QuotePrice,
+    breakup :: [BreakupItem]
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-instance ToSchema FulfillmentInfo where
+instance ToSchema RideCompletedQuote where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-data RideStatus
-  = NEW
-  | INPROGRESS
-  | COMPLETED
-  | CANCELLED
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+data QuotePrice = QuotePrice
+  { currency :: Text,
+    value :: DecimalValue,
+    computed_value :: DecimalValue
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema QuotePrice where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

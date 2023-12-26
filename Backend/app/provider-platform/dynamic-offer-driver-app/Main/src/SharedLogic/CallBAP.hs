@@ -54,10 +54,11 @@ import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
-import qualified Domain.Types.Vehicle as V
+import qualified Domain.Types.Vehicle as DVeh
 import qualified EulerHS.Types as ET
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
@@ -174,13 +175,13 @@ sendRideAssignedUpdateToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
   m ()
-sendRideAssignedUpdateToBAP booking ride = do
+sendRideAssignedUpdateToBAP booking ride driver veh = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  veh <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
   mbTransporterConfig <- CQTC.findByMerchantOpCityId booking.merchantOperatingCityId -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
   vehicle <-
@@ -188,7 +189,7 @@ sendRideAssignedUpdateToBAP booking ride = do
       Just transporterConfig ->
         if transporterConfig.refillVehicleModel
           then do
-            reffiledVeh <- refillVehicleModel veh
+            reffiledVeh <- refillVehicleModel
             pure $
               case reffiledVeh of
                 Right reffiledVeh' -> reffiledVeh'
@@ -206,8 +207,8 @@ sendRideAssignedUpdateToBAP booking ride = do
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideAssignedMsg retryConfig
   where
     refillKey = "REFILLED_" <> ride.driverId.getId
-    updateVehicle V.Vehicle {..} newModel = V.Vehicle {model = newModel, ..}
-    refillVehicleModel veh = try @_ @SomeException do
+    updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
+    refillVehicleModel = try @_ @SomeException do
       -- TODO: remove later
       mbIsRefilledToday :: Maybe Bool <- Redis.get refillKey
       case mbIsRefilledToday of

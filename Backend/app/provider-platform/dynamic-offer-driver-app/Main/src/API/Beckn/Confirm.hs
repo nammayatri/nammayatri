@@ -63,7 +63,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
           dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
           case dConfirmRes.booking.bookingType of
             DBooking.NormalBooking -> do
-              ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
+              normalBookingInfo <- dConfirmRes.normalBookingInfo & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
               driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
               --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
               driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
@@ -75,7 +75,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
                   void $
                     BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
                   void $
-                    BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
+                    BP.sendRideAssignedUpdateToBAP dConfirmRes.booking normalBookingInfo.ride driver normalBookingInfo.vehicle
               DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
             DBooking.SpecialZoneBooking -> do
               fork "on_confirm/on_update" $ do

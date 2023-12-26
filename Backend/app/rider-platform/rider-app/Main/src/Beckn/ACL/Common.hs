@@ -14,11 +14,13 @@
 
 module Beckn.ACL.Common where
 
+import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Common
 import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as Variant
 import Kernel.Prelude
@@ -101,3 +103,11 @@ getTag tagGroupCode tagCode (Tags.TG tagGroups) = do
   tagGroup <- find (\tagGroup -> tagGroup.code == tagGroupCode) tagGroups
   tag <- find (\tag -> tag.code == Just tagCode) tagGroup.list
   tag.value
+
+castCancellationSource :: Common.CancellationSource -> SBCR.CancellationSource
+castCancellationSource = \case
+  Common.ByUser -> SBCR.ByUser
+  Common.ByDriver -> SBCR.ByDriver
+  Common.ByMerchant -> SBCR.ByMerchant
+  Common.ByAllocator -> SBCR.ByAllocator
+  Common.ByApplication -> SBCR.ByApplication

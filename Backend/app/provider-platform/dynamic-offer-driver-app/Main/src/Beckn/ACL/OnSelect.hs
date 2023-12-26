@@ -165,7 +165,7 @@ mkQuote driverQuote now = do
   let currency = "INR"
       breakup_ =
         mkBreakupList (OS.Price currency . fromIntegral) OS.PriceBreakup driverQuote.fareParams
-          & filter filterRequiredBreakups
+          & filter filterRequiredBreakups'
   let nominalDifferenceTime = diffUTCTime driverQuote.validTill now
   OS.Quote
     { price = mkPrice driverQuote,
@@ -173,7 +173,7 @@ mkQuote driverQuote now = do
       breakup = breakup_
     }
   where
-    filterRequiredBreakups breakup =
+    filterRequiredBreakups' breakup =
       breakup.title == "BASE_FARE"
         || breakup.title == "SERVICE_CHARGE"
         || breakup.title == "DEAD_KILOMETER_FARE"

@@ -99,6 +99,7 @@ library
       Beckn.Types.Core.Taxi.Common.Price
       Beckn.Types.Core.Taxi.Common.Provider
       Beckn.Types.Core.Taxi.Common.Quote
+      Beckn.Types.Core.Taxi.Common.RideCompletedQuote
       Beckn.Types.Core.Taxi.Common.StartInfo
       Beckn.Types.Core.Taxi.Common.StopInfo
       Beckn.Types.Core.Taxi.Common.Tags
@@ -149,8 +150,13 @@ library
       Beckn.Types.Core.Taxi.OnSelect.StartInfo
       Beckn.Types.Core.Taxi.OnSelect.StopInfo
       Beckn.Types.Core.Taxi.OnStatus
-      Beckn.Types.Core.Taxi.OnStatus.Fulfillment
       Beckn.Types.Core.Taxi.OnStatus.Order
+      Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.OrderState
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder
       Beckn.Types.Core.Taxi.OnTrack
       Beckn.Types.Core.Taxi.OnTrack.Tracking
       Beckn.Types.Core.Taxi.OnUpdate

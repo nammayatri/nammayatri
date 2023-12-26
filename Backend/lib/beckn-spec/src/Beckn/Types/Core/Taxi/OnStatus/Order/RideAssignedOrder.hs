@@ -12,16 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.Types.Core.Taxi.OnStatus
-  ( module Beckn.Types.Core.Taxi.OnStatus,
+module Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder
+  ( module Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder,
     module Reexport,
   )
 where
 
-import Beckn.Types.Core.Taxi.OnStatus.Order as Reexport
+import Beckn.Types.Core.Taxi.Common.Agent as Reexport
+import Beckn.Types.Core.Taxi.Common.FulfillmentInfo as Reexport
+import Beckn.Types.Core.Taxi.OnStatus.Order.OrderState (RideAssignedOrderCode (RIDE_ASSIGNED))
+import Data.Aeson as A
+import Data.OpenApi hiding (Example, example, name, tags)
 import Kernel.Prelude
 
-newtype OnStatusMessage = OnStatusMessage
-  { order :: Order
+data RideAssignedOrder = RideAssignedOrder
+  { id :: Text,
+    state :: RideAssignedOrderCode,
+    fulfillment :: FulfillmentInfo
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+orderState :: RideAssignedOrderCode
+orderState = RIDE_ASSIGNED
