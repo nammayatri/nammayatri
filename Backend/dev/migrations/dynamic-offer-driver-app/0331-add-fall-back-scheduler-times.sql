@@ -1,3 +1,3 @@
 
-alter atlas_driver_offer_bpp.transporter_config add column driver_auto_pay_execution_time_fall_back bigint not null default 93600;
-alter atlas_driver_offer_bpp.transporter_config add column order_and_notification_status_check_fall_back_time bigint not null default 43200;
+alter table atlas_driver_offer_bpp.transporter_config add column driver_auto_pay_execution_time_fall_back bigint not null default 93600;
+alter table atlas_driver_offer_bpp.transporter_config add column order_and_notification_status_check_fall_back_time bigint not null default 43200;
