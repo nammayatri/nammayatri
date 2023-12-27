@@ -56,6 +56,19 @@ findAllInvoicesByDriverIdWithLimitAndOffset driverId paymentModes limit offset =
     (Just limit)
     (Just offset)
 
+findLatestByDriverFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m (Maybe Domain.Invoice)
+findLatestByDriverFeeId (Id driverFeeId) =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamI.driverFeeId $ Se.Eq driverFeeId,
+          Se.Is BeamI.invoiceStatus $ Se.Not $ Se.In [Domain.INACTIVE, Domain.EXPIRED]
+        ]
+    ]
+    (Se.Desc BeamI.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
+
 findAllByInvoiceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Invoice -> m [Domain.Invoice]
 findAllByInvoiceId (Id invoiceId) = findAllWithKV [Se.Is BeamI.id $ Se.Eq invoiceId]
 

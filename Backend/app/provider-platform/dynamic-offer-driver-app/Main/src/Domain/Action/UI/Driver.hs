@@ -42,6 +42,7 @@ module Domain.Action.UI.Driver
     ClearDuesRes (..),
     GetCityReq (..),
     GetCityResp (..),
+    DriverFeeResp (..),
     getInformation,
     activateGoHomeFeature,
     deactivateGoHomeFeature,
@@ -76,6 +77,7 @@ module Domain.Action.UI.Driver
     getCity,
     getPlanDataFromDriverFee,
     planMaxRides,
+    getDownloadInvoiceData,
   )
 where
 
@@ -449,39 +451,6 @@ data DriverPaymentHistoryResp = DriverPaymentHistoryResp
     charges :: Money,
     chargesBreakup :: [DriverPaymentBreakup],
     txnInfo :: [DriverTxnInfo]
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-data DriverFeeInfo = DriverFeeInfo
-  { date :: Day, -- window start day
-    driverFeeId :: Id DDF.DriverFee,
-    autoPayStage :: DDF.AutopayPaymentStage,
-    id :: Maybe (Id INV.Invoice),
-    billNumber :: Maybe Integer,
-    status :: DDF.DriverFeeStatus,
-    paymentAmount :: HighPrecMoney,
-    planOfferDetails :: Text,
-    totalRides :: Int,
-    totalEarnings :: HighPrecMoney,
-    charges :: Money,
-    invoiceDetails :: Maybe InvoiceInfo
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
--- DriverFee   InvoiceId     DriverFeeId
---   1             1             1     !INACTIVE
---   2             1             2     !INACTIVE
---   3             2             3     !INACTIVE
---   4             3             4     !INACTIVE
---   5             4             5     INACTIVE
---                 5             5     !INACTIVE
-
-data InvoiceInfo = InvoiceInfo
-  { id :: Id INV.Invoice,
-    paymentMode :: INV.InvoiceStatus,
-    debitedOn :: UTCTime,
-    invoiceAmount :: HighPrecMoney,
-    numberOfDays :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -1906,3 +1875,60 @@ getPlanDataFromDriverFee driverFee = do
   case (mbPlanId, mbPaymentMode) of
     (Just planId, _) -> CQP.findByIdAndPaymentMode planId $ fromMaybe MANUAL mbPaymentMode
     _ -> return Nothing
+
+data DriverFeeResp = DriverFeeResp
+  { createdAt :: UTCTime, -- window start day
+    driverFeeId :: Id DDF.DriverFee,
+    chargesBreakup :: [DriverPaymentBreakup],
+    status :: DDF.DriverFeeStatus,
+    totalRides :: Int,
+    planOfferTitle :: Maybe Text,
+    billNumber :: Maybe Int,
+    debitedOn :: Maybe UTCTime,
+    amountPaidByCoin :: Maybe HighPrecMoney,
+    feeWithoutDiscount :: Maybe HighPrecMoney,
+    invoiceStatus :: Maybe INV.InvoiceStatus
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+getDownloadInvoiceData :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Day -> m [DriverFeeResp]
+getDownloadInvoiceData (personId, _merchantId, merchantOpCityId) from mbTo = do
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  let today = utctDay now
+      to = fromMaybe today mbTo
+  let windowStartTime = UTCTime from 0
+      windowEndTime = addUTCTime transporterConfig.driverPaymentCycleDuration (UTCTime to 0)
+  driverFees <- runInReplica $ QDF.findWindowsWithoutLimit personId windowStartTime windowEndTime
+  mapM buildDriverFeeRespEntity driverFees
+  where
+    buildDriverFeeRespEntity DDF.DriverFee {..} = do
+      mbInvoice <- QINV.findLatestByDriverFeeId id
+      return
+        DriverFeeResp
+          { chargesBreakup = mkChargesBreakup govtCharges platformFee.fee platformFee.cgst platformFee.sgst,
+            totalRides = numRides,
+            driverFeeId = id,
+            debitedOn = mbInvoice <&> (.updatedAt),
+            invoiceStatus = mbInvoice <&> (.invoiceStatus),
+            ..
+          }
+
+    mkChargesBreakup _ platformFee cgst sgst =
+      [ DriverPaymentBreakup
+          { component = "Final Platform Fee",
+            amount = platformFee + cgst + sgst
+          },
+        DriverPaymentBreakup
+          { component = "Platform Fee",
+            amount = platformFee
+          },
+        DriverPaymentBreakup
+          { component = "CGST",
+            amount = cgst
+          },
+        DriverPaymentBreakup
+          { component = "SGST",
+            amount = sgst
+          }
+      ]
