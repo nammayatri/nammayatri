@@ -41,8 +41,9 @@ import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
-import Timers (countDown, startTimerWithTimeV2)
+import Timers
 import Debug
+import Engineering.Helpers.Commons (liftFlow)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -58,10 +59,7 @@ view push state =
           , stroke if state.selectedQuote == Just state.id then ("1,"<>Color.blue700') else ("1," <> Color.grey)
           , afterRender (\action -> do
                           _ <- push action
-                          _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do
-                            if (os == "IOS") then
-                              liftEffect $ startTimerWithTimeV2 (show state.seconds) state.id "1" push CountDown
-                              else liftEffect $ countDown state.seconds state.id push CountDown
+                          _ <- launchAff $ flowRunner defaultGlobalState $ liftFlow $ startTimer state.seconds state.id "1" push CountDown
                           pure unit
                         ) (const NoAction)
           , onClick push (const $ Click state)

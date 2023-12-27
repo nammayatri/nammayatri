@@ -14,7 +14,7 @@
 -}
 module Components.PopUpModal.View where
 
-import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map)
+import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map, when)
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id)
 import Components.PopUpModal.Controller (Action(..), Config, CoverVideoConfig)
@@ -39,7 +39,7 @@ import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Data.Function.Uncurried (runFn3)
 import PrestoDOM.Animation as PrestoAnim
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Timers (clearTimerWithId, countDown, startTimerWithTimeV2)
+import Timers
 import Debug
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -53,16 +53,11 @@ view push state =
     , background state.backgroundColor
     , afterRender
         ( \action -> do
-            if (state.option2.enableTimer || state.option1.enableTimer) then do
-              let
-                timerValue' = if state.option2.enableTimer then state.option2.timerValue else state.option1.timerValue
-              if os == "IOS" then
-                liftEffect $ startTimerWithTimeV2 (show timerValue') state.timerId "1"  push CountDown
-              else
-                countDown timerValue' state.timerId push CountDown
-              pure unit
-            else
-              pure unit
+            when 
+              (state.option2.enableTimer || state.option1.enableTimer)
+                $ do
+                  let timerValue' = if state.option2.enableTimer then state.option2.timerValue else state.option1.timerValue
+                  startTimer timerValue' state.timerId "1" push CountDown
         )
         (const NoAction)
     , onClick

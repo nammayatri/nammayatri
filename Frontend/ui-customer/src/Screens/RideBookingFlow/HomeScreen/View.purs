@@ -106,8 +106,8 @@ import Data.Map as Map
 import SuggestionUtils
 import MerchantConfig.Types (MarginConfig, ShadowConfig)
 import ConfigProvider
-import Timers (countDown, waitingCountdownTimerV2, startTimerWithTimeV2)
 import Mobility.Prelude
+import Timers
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -153,13 +153,10 @@ screen initialState =
                 pure unit
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
-                  _ <- pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
-                  if os == "IOS" then do
-                        void $ startTimerWithTimeV2 (show initialState.props.searchExpire) "findingQuotes" "1" push SearchExpireCountDown 
-                        pure unit
-                       else countDown initialState.props.searchExpire "findingQuotes" push SearchExpireCountDown
-                  _ <- pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
-                  _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
+                  void $ pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
+                  void $ startTimer initialState.props.searchExpire "findingQuotes" "1" push SearchExpireCountDown 
+                  void $ pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
+                  void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
               ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
@@ -173,25 +170,23 @@ screen initialState =
                 fetchAndUpdateCurrentLocation push UpdateLocAndLatLong RecenterCurrentLocation
               SettingPrice -> do
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-                when (initialState.props.isRepeatRide && initialState.data.config.estimateAndQuoteConfig.enableOnlyAuto) $ do 
-                  if (os == "IOS") then startTimerWithTimeV2 (show 5) "repeatRide" "1" push RepeatRideCountDown
-                  else countDown 5 "repeatRide" push RepeatRideCountDown
-                pure unit
+                when 
+                  (initialState.props.isRepeatRide && initialState.data.config.estimateAndQuoteConfig.enableOnlyAuto) 
+                    $ startTimer 5 "repeatRide" "1" push RepeatRideCountDown
               PickUpFarFromCurrentLocation -> 
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
-                if ( initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"] ) then 
-                  if (os == "IOS") then startTimerWithTimeV2 (show 5) "notifyCustomer" "1" push NotifyDriverStatusCountDown
-                    else liftEffect $ countDown 5 "notifyCustomer" push NotifyDriverStatusCountDown
-                  else pure unit
+                when 
+                  (initialState.data.config.notifyRideConfirmationConfig.notify && any (_ == getValueToLocalStore NOTIFIED_CUSTOMER) ["false" , "__failed" , "(null)"])
+                    $ startTimer 5 "notifyCustomer" "1" push NotifyDriverStatusCountDown
                 _ <- pure $ enableMyLocation true
                 if ((getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_WAITING_ACTION") then do
                   void $ waitingCountdownTimerV2 initialState.data.driverInfoCardState.driverArrivalTime "1" "countUpTimerId" push WaitingTimeAction
-                else if initialState.data.currentSearchResultType == QUOTES then do
-                  let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
-                  if (os == "IOS") then void $ startTimerWithTimeV2 (show secondsLeft) "SpecialZoneOTPExpiry" "1" push SpecialZoneOTPExpiryAction
-                  else liftEffect $ countDown secondsLeft "SpecialZoneOTPExpiry" push SpecialZoneOTPExpiryAction
-                else pure unit
+                else 
+                  when 
+                    (initialState.data.currentSearchResultType == QUOTES) $ do
+                      let secondsLeft = initialState.data.config.driverInfoConfig.specialZoneQuoteExpirySeconds - (getExpiryTime initialState.data.driverInfoCardState.createdAt true)
+                      void $ startTimer secondsLeft "SpecialZoneOTPExpiry" "1" push SpecialZoneOTPExpiryAction
                 if ((getValueToLocalStore TRACKING_DRIVER) == "False") then do
                   _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                   _ <- pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)

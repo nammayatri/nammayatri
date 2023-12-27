@@ -18,6 +18,7 @@ module Timers where
 import Prelude
 import Effect (Effect)
 import Effect.Uncurried
+import Engineering.Helpers.Commons
 
 foreign import waitingCountdownTimerV2Impl :: forall action. EffectFn5 Int String String (action -> Effect Unit) (String -> String -> Int -> action) Unit
 foreign import countDownImpl :: forall action. EffectFn4 Int String (action -> Effect Unit) (Int -> String -> String-> action) Unit
@@ -34,3 +35,9 @@ startTimerWithTimeV2 = runEffectFn5 startTimerWithTimeV2Impl
 
 countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String-> action) -> Effect Unit
 countDown = runEffectFn4 countDownImpl
+
+startTimer :: forall action. Int -> String -> String -> (action -> Effect Unit) -> (Int -> String -> String-> action) -> Effect Unit
+startTimer seconds id interval push action = 
+  if os == "IOS" 
+    then startTimerWithTimeV2 (show seconds) id interval push action
+    else countDown seconds id push action
