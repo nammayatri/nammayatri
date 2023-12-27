@@ -15,6 +15,7 @@
 module Beckn.Types.Core.Taxi.OnStatus.Order (Order (..)) where
 
 import Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder
+import Beckn.Types.Core.Taxi.OnStatus.Order.BookingReallocationOrder
 import Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder
 import Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder
 import Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder
@@ -32,7 +33,7 @@ data Order
   | RideStarted RideStartedOrder
   | RideCompleted RideCompletedOrder
   | BookingCancelled BookingCancelledOrder
-  | BookingReallocated BookingReallocatedOrder
+  | BookingReallocation BookingReallocationOrder
   deriving (Generic, Show)
 
 instance ToJSON Order where

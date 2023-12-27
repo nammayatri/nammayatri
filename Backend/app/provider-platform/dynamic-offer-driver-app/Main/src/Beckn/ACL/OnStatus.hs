@@ -22,6 +22,7 @@ import qualified Beckn.ACL.Common.Order as Common
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder as BookingCancelledOS
+import qualified Beckn.Types.Core.Taxi.OnStatus.Order.BookingReallocationOrder as BookingReallocationOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder as NewBookingOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as RideAssignedOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as RideCompletedOS
@@ -49,7 +50,7 @@ buildOnStatusMessage (DStatus.NewBookingBuildReq {bookingId}) = do
 buildOnStatusMessage (DStatus.RideAssignedBuildReq {newRideInfo}) = do
   let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup)
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) False
   return $
     OnStatus.OnStatusMessage
       { order =
@@ -63,7 +64,7 @@ buildOnStatusMessage (DStatus.RideAssignedBuildReq {newRideInfo}) = do
 buildOnStatusMessage (DStatus.RideStartedBuildReq {newRideInfo}) = do
   let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup)
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) False
   return $
     OnStatus.OnStatusMessage
       { order =
@@ -79,7 +80,7 @@ buildOnStatusMessage (DStatus.RideCompletedBuildReq {newRideInfo, rideCompletedI
   let SyncRide.RideCompletedInfo {fareParams, paymentMethodInfo, paymentUrl} = rideCompletedInfo
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
   distanceTagGroup <- Common.buildDistanceTagGroup ride
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup))
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup)) False
   quote <- Common.buildRideCompletedQuote ride fareParams
   return $
     OnStatus.OnStatusMessage
@@ -98,7 +99,7 @@ buildOnStatusMessage DStatus.BookingCancelledBuildReq {bookingCancelledInfo, mbN
   fulfillment <- forM mbNewRideInfo $ \newRideInfo -> do
     let SyncRide.NewRideInfo {driver, image, vehicle, ride} = newRideInfo
     let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-    Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup)
+    Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) False
   pure
     OnStatus.OnStatusMessage
       { order =
@@ -110,23 +111,19 @@ buildOnStatusMessage DStatus.BookingCancelledBuildReq {bookingCancelledInfo, mbN
                 fulfillment
               }
       }
--- TODO
--- buildOnStatusMessage (DStatus.BookingReallocatedBuildReq {newRideInfo, rideCompletedInfo}) = do
---   let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
---   let SyncRide.RideCompletedInfo {fareParams, paymentMethodInfo, paymentUrl} = rideCompletedInfo
---   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
---   distanceTagGroup <- Common.buildDistanceTagGroup ride
---   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup))
---   quote <- Common.buildRideCompletedQuote ride fareParams
---   return $
---     OnStatus.OnStatusMessage
---       { order =
---           OnStatus.RideCompleted
---             RideCompletedOS.RideCompletedOrder
---               { id = booking.id.getId,
---                 state = RideCompletedOS.orderState,
---                 quote,
---                 payment = Just $ Common.mkRideCompletedPayment paymentMethodInfo paymentUrl,
---                 fulfillment = fulfillment
---               }
---       }
+buildOnStatusMessage DStatus.BookingReallocationBuildReq {bookingReallocationInfo, newRideInfo} = do
+  let SyncRide.BookingCancelledInfo {booking, cancellationSource} = bookingReallocationInfo
+  let SyncRide.NewRideInfo {driver, image, vehicle, ride} = newRideInfo
+  let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) False
+  pure
+    OnStatus.OnStatusMessage
+      { order =
+          OnStatus.BookingReallocation $
+            BookingReallocationOS.BookingReallocationOrder
+              { id = booking.id.getId,
+                state = BookingReallocationOS.orderState, -----
+                reallocation_reason = Common.castCancellationSource cancellationSource,
+                fulfillment
+              }
+      }

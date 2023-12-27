@@ -18,10 +18,7 @@ import Beckn.ACL.Common (getTag)
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
-import Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder as OnStatusBookingCancelled
 import Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as OnStatusRideAssigned
-import Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as OnStatusRideCompleted
-import Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as OnStatusRideStarted
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Kernel.Prelude
@@ -56,7 +53,7 @@ parseOrder (OnStatus.RideAssigned raOrder) = do
         rideDetails = DOnStatus.RideAssignedDetails {newRideInfo}
       }
 parseOrder (OnStatus.RideStarted rsOrder) = do
-  newRideInfo <- buildNewRideInfo . mkRideAssignedFulfillment $ rsOrder.fulfillment
+  newRideInfo <- buildNewRideInfo rsOrder.fulfillment
   rideStartTime <- fromMaybeM (InvalidRequest "fulfillment.start.time is not present in RideStarted Order.") (rsOrder.fulfillment.start.time <&> (.timestamp))
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in DriverArrived Event.") rsOrder.fulfillment.tags
   let driverArrivalTime =
@@ -72,8 +69,6 @@ parseOrder (OnStatus.RideStarted rsOrder) = do
       { bppBookingId = Id rsOrder.id,
         rideDetails = DOnStatus.RideStartedDetails {newRideInfo, rideStartedInfo}
       }
-  where
-    mkRideAssignedFulfillment OnStatusRideStarted.FulfillmentInfo {..} = OnStatusRideAssigned.FulfillmentInfo {..}
 parseOrder (OnStatus.RideCompleted rcOrder) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideCompleted Order.") rcOrder.fulfillment.tags
   chargeableDistance :: HighPrecMeters <-
@@ -87,7 +82,7 @@ parseOrder (OnStatus.RideCompleted rcOrder) = do
   let driverArrivalTime =
         readMaybe . T.unpack
           =<< getTag "driver_arrived_info" "arrival_time" tagsGroup
-  newRideInfo <- buildNewRideInfo . mkRideAssignedFulfillment $ rcOrder.fulfillment
+  newRideInfo <- buildNewRideInfo rcOrder.fulfillment
   rideStartTime <- fromMaybeM (InvalidRequest "fulfillment.start.time is not present in RideCompleted Order.") (rcOrder.fulfillment.start.time <&> (.timestamp))
   rideEndTime <- fromMaybeM (InvalidRequest "fulfillment.end.time is not present in RideCompleted Order.") (rcOrder.fulfillment.end.time <&> (.timestamp))
   let rideStartedInfo =
@@ -111,14 +106,13 @@ parseOrder (OnStatus.RideCompleted rcOrder) = do
         rideDetails = DOnStatus.RideCompletedDetails {newRideInfo, rideStartedInfo, rideCompletedInfo}
       }
   where
-    mkRideAssignedFulfillment OnStatusRideCompleted.FulfillmentInfo {..} = OnStatusRideAssigned.FulfillmentInfo {..}
     mkOnStatusFareBreakup breakup =
       DOnStatus.OnStatusFareBreakup
         { amount = realToFrac breakup.price.value,
           description = breakup.title
         }
 parseOrder (OnStatus.BookingCancelled bcOrder) = do
-  mbNewRideInfo <- forM bcOrder.fulfillment (buildNewRideInfo . mkRideAssignedFulfillment)
+  mbNewRideInfo <- forM bcOrder.fulfillment buildNewRideInfo
   pure
     DOnStatus.DOnStatusReq
       { bppBookingId = Id bcOrder.id,
@@ -128,8 +122,17 @@ parseOrder (OnStatus.BookingCancelled bcOrder) = do
               cancellationSource = Common.castCancellationSource bcOrder.cancellation_reason
             }
       }
-  where
-    mkRideAssignedFulfillment OnStatusBookingCancelled.FulfillmentInfo {..} = OnStatusRideAssigned.FulfillmentInfo {..}
+parseOrder (OnStatus.BookingReallocation brOrder) = do
+  newRideInfo <- buildNewRideInfo brOrder.fulfillment
+  pure
+    DOnStatus.DOnStatusReq
+      { bppBookingId = Id brOrder.id,
+        rideDetails =
+          DOnStatus.BookingReallocationDetails
+            { newRideInfo,
+              reallocationSource = Common.castCancellationSource brOrder.reallocation_reason
+            }
+      }
 
 buildNewRideInfo :: (MonadFlow m) => OnStatusRideAssigned.FulfillmentInfo -> m DOnStatus.NewRideInfo
 buildNewRideInfo fulfillment = do

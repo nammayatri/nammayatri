@@ -35,6 +35,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareBreakup as QFareBreakup
@@ -92,6 +93,10 @@ data RideDetails
       { mbNewRideInfo :: Maybe NewRideInfo,
         cancellationSource :: DBCR.CancellationSource
       }
+  | BookingReallocationDetails
+      { newRideInfo :: NewRideInfo,
+        reallocationSource :: DBCR.CancellationSource
+      }
 
 -- the same as OnUpdateFareBreakup
 data OnStatusFareBreakup = OnStatusFareBreakup
@@ -113,7 +118,8 @@ buildRideEntity booking updRide newRideInfo = do
   mbExistingRide <- B.runInReplica $ QRide.findByBPPRideId newRideInfo.bppRideId
   case mbExistingRide of
     Nothing -> do
-      newRide <- buildNewRide booking newRideInfo
+      mbMerchant <- CQM.findById booking.merchantId
+      newRide <- buildNewRide mbMerchant booking newRideInfo
       pure $ RenewedRide (updRide newRide)
     Just existingRide -> do
       unless (existingRide.bookingId == booking.id) $ throwError (InvalidRequest "Invalid rideId")
@@ -207,9 +213,22 @@ onStatus req = do
         bookingNewStatus = DB.CANCELLED
         rideNewStatus = DRide.CANCELLED
         updateRideCancelled newRide = newRide{status = rideNewStatus}
+    BookingReallocationDetails {newRideInfo, reallocationSource} -> do
+      rideEntity <- buildRideEntity booking updateReallocatedRide newRideInfo
+      let rideId = case rideEntity of
+            UpdatedRide {ride} -> ride.id
+            RenewedRide {ride} -> ride.id
+      let bookingCancellationReason = mkBookingCancellationReason booking.id (Just rideId) reallocationSource booking.merchantId
+      rideBookingTransaction bookingNewStatus rideNewStatus booking rideEntity
+      when (isStatusChanged booking.status bookingNewStatus rideEntity) $ do
+        QBCR.upsert bookingCancellationReason
+      where
+        bookingNewStatus = DB.AWAITING_REASSIGNMENT
+        rideNewStatus = DRide.CANCELLED
+        updateReallocatedRide newRide = newRide{status = rideNewStatus}
 
-buildNewRide :: MonadFlow m => DB.Booking -> NewRideInfo -> m DRide.Ride
-buildNewRide booking NewRideInfo {..} = do
+buildNewRide :: MonadFlow m => Maybe DM.Merchant -> DB.Booking -> NewRideInfo -> m DRide.Ride
+buildNewRide mbMerchant booking NewRideInfo {..} = do
   id <- generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
@@ -219,6 +238,7 @@ buildNewRide booking NewRideInfo {..} = do
         DB.RentalDetails _ -> Nothing
         DB.DriverOfferDetails details -> Just details.toLocation
         DB.OneWaySpecialZoneDetails details -> Just details.toLocation
+  let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   let createdAt = now
       updatedAt = now
       merchantId = Just booking.merchantId
@@ -235,6 +255,7 @@ buildNewRide booking NewRideInfo {..} = do
       rideStartTime = Nothing
       rideEndTime = Nothing
       rideRating = Nothing
+      safetyCheckStatus = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

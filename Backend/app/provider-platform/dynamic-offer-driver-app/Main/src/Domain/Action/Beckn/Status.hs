@@ -63,6 +63,10 @@ data OnStatusBuildReq
       { bookingCancelledInfo :: SyncRide.BookingCancelledInfo,
         mbNewRideInfo :: Maybe SyncRide.NewRideInfo
       }
+  | BookingReallocationBuildReq
+      { bookingReallocationInfo :: SyncRide.BookingReallocationInfo,
+        newRideInfo :: SyncRide.NewRideInfo
+      }
 
 handler ::
   Id DM.Merchant ->
@@ -90,9 +94,15 @@ handler transporterId req = do
           rideCompletedInfo <- SyncRide.fetchRideCompletedInfo ride booking
           pure $ RideCompletedBuildReq {newRideInfo, rideCompletedInfo}
         DRide.CANCELLED -> do
-          newRideInfo <- SyncRide.fetchNewRideInfo ride booking
-          bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo (Just ride) booking
-          pure $ BookingCancelledBuildReq {mbNewRideInfo = Just newRideInfo, bookingCancelledInfo}
+          case booking.status of
+            DBooking.REALLOCATED -> do
+              newRideInfo <- SyncRide.fetchNewRideInfo ride booking
+              bookingReallocationInfo <- SyncRide.fetchBookingReallocationInfo (Just ride) booking
+              pure $ BookingReallocationBuildReq {newRideInfo, bookingReallocationInfo}
+            _ -> do
+              newRideInfo <- SyncRide.fetchNewRideInfo ride booking
+              bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo (Just ride) booking
+              pure $ BookingCancelledBuildReq {mbNewRideInfo = Just newRideInfo, bookingCancelledInfo}
     Nothing -> do
       case booking.status of
         DBooking.NEW -> do
@@ -104,4 +114,6 @@ handler transporterId req = do
         DBooking.CANCELLED -> do
           bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo Nothing booking
           pure $ BookingCancelledBuildReq {mbNewRideInfo = Nothing, bookingCancelledInfo}
+        DBooking.REALLOCATED -> do
+          throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
   pure DStatusRes {transporter, info}

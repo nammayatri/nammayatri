@@ -152,6 +152,7 @@ library
       Beckn.Types.Core.Taxi.OnStatus
       Beckn.Types.Core.Taxi.OnStatus.Order
       Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.BookingReallocationOrder
       Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder
       Beckn.Types.Core.Taxi.OnStatus.Order.OrderState
       Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder

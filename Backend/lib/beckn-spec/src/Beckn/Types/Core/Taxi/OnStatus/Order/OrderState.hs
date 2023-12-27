@@ -37,6 +37,9 @@ data RideCompletedOrderCode = RIDE_COMPLETED
 data RideBookingCancelledOrderCode = RIDE_BOOKING_CANCELLED
   deriving (Show, Generic, ToSchema)
 
+data RideBookingReallocationOrderCode = RIDE_BOOKING_REALLOCATION
+  deriving (Show, Generic, ToSchema)
+
 -- Generic instances for type with single value will not work
 instance FromJSON NewBookingOrderCode where
   parseJSON (String "NEW_BOOKING") = pure NEW_BOOKING
@@ -76,4 +79,12 @@ instance FromJSON RideBookingCancelledOrderCode where
   parseJSON e = typeMismatch "String" e
 
 instance ToJSON RideBookingCancelledOrderCode where
+  toJSON = String . show
+
+instance FromJSON RideBookingReallocationOrderCode where
+  parseJSON (String "RIDE_BOOKING_REALLOCATION") = pure RIDE_BOOKING_REALLOCATION
+  parseJSON (String _) = parseFail "Expected \"RIDE_BOOKING_REALLOCATION\""
+  parseJSON e = typeMismatch "String" e
+
+instance ToJSON RideBookingReallocationOrderCode where
   toJSON = String . show

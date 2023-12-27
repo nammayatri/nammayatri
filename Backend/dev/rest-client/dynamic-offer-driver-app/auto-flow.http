@@ -8,7 +8,6 @@
 
 
 @app-host = http://localhost:8013/v2
-@app-token = 851a466b-33cd-461d-87ab-0c4e081efbb4
 
 # @name healthcheck
 GET {{driver-offer-bpp-host}}/ui
@@ -40,9 +39,6 @@ mId: {{merchantId}}
 vt: AUTO_RICKSHAW
 dm: ONLINE
 content-type: application/json
-dm: ONLINE
-mid: favorit0-0000-0000-0000-00000favorit
-vt: SUV
 
 [
     {
