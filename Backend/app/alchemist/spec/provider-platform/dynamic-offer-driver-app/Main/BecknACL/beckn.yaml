@@ -8,7 +8,7 @@ imports:
   BecknSearchReq: T4
   DomainSearchReq: T5
 
-module: BecknSearch
+module: Search
 types:
   SearchReq:
     context: Context
@@ -88,22 +88,18 @@ transformer:
     - MonadTime m
     - Log m
   transformers:
-    transformBecknSearchReqToDomainSearchReq:
+    buildBecknSearchReq:
       # extraMonads: should we allow this
-      fromType: BecknSearchReq
-      toType: DomainSearchReq
+      fromTypes:
+        - DomainSearchReq
+        - Context
+      paramNames:
+        - domainSearchReq
+        - context
+      toType: BecknSearchReq
       mapping:
-        key1: Id becknSearchReq.context.transactionId
-        key2: $$getId becknSearchReq.context.transactionId
-        key3: $getId becknSearchReq.context.transactionId
-    tfDomainSearchReq:
-      # extraMonads: should we allow this
-      fromType: BecknSearchReq
-      toType: DomainSearchReq
-      mapping:
-        key1: Id becknSearchReq.context.transactionId
-        key2: $$getId becknSearchReq.context.transactionId
-        key3: $getId becknSearchReq.context.transactionId
+        searchReqContext: context
+        searchReqMessage: ?
 
   # $  -> pure    Haskell functions
   # $$ -> impure  Haskell functions
