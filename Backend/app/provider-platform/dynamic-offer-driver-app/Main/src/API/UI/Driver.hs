@@ -196,6 +196,11 @@ type API =
                       :> ReqBody '[JSON] DDriver.GetCityReq
                       :> Post '[JSON] DDriver.GetCityResp
                   )
+             :<|> "invoice"
+               :> TokenAuth
+               :> MandatoryQueryParam "from" Day
+               :> QueryParam "to" Day
+               :> Get '[JSON] [DDriver.DriverFeeResp]
          )
 
 handler :: FlowServer API
@@ -233,6 +238,7 @@ handler =
              :<|> getDriverPaymentsHistoryV2
              :<|> getDriverPaymentsHistoryEntityDetailsV2
              :<|> getCity
+             :<|> getDownloadInvoiceData
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
@@ -329,3 +335,6 @@ getDriverPaymentsHistoryEntityDetailsV2 invoiceId (driverId, merchantId, merchan
 
 getCity :: DDriver.GetCityReq -> FlowHandler DDriver.GetCityResp
 getCity = withFlowHandlerAPI . DDriver.getCity
+
+getDownloadInvoiceData :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Day -> FlowHandler [DDriver.DriverFeeResp]
+getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate = withFlowHandlerAPI . DDriver.getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate
