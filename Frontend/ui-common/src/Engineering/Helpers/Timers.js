@@ -41,8 +41,13 @@ export const clearTimerWithId = function (id) {
     if (JBridge.clearTimerWithId) {
       JBridge.clearTimerWithId(id);
     }
-    else if (JBridge.clearCountDownTimer) {
-      JBridge.clearCountDownTimer();
+    else {
+      if (JBridge.clearCountDownTimer) {
+        JBridge.clearCountDownTimer();
+      }
+      if (JBridge.clearCountUpTimer && id == "countUpTimerId") {
+        window.JBridge.clearCountUpTimer();
+      }
     }
   }
   else {
@@ -106,7 +111,7 @@ export const startTimerWithTimeV2Impl = function (time, cdTimerId, interval, cb,
   }
   if (JBridge.startCountDownTimerWithTime) {
     const callback = callbackMapper.map(function (seconds, id, timerStatus, timerID) {
-      cb(action(seconds)(id)(timerStatus)(timerID))();
+      cb(action(seconds)(timerStatus)(timerID))();
     });
     return JBridge.startCountDownTimerWithTime(time, interval, cdTimerId, callback);
   } 
