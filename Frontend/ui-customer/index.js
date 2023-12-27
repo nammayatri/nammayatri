@@ -2,9 +2,20 @@ import "core-js";
 import "presto-ui";
 import "regenerator-runtime/runtime";
 
+if (!window.__OS) {
+  const getOS = function () { //taken from getOS() in presto-ui
+    const userAgent = navigator.userAgent;
+    if (!userAgent) return console.error(new Error("UserAgent is null"));
+    if (userAgent.indexOf("Android") != -1 && userAgent.indexOf("Version") != -1) return "ANDROID";
+    if (userAgent.indexOf("iPhone") != -1 && userAgent.indexOf("Version") == -1) return "IOS";
+    return "WEB";
+  }
+  window.__OS = getOS();
+}
+
 const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
 
-if (window.JBridge.firebaseLogEventWithParams){  
+if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
     return blackListFunctions.indexOf(fnName) == -1
   }).forEach(fnName => {
@@ -110,17 +121,6 @@ window.setManualEvents = setManualEvents;
 
 window.__FN_INDEX = 0;
 window.__PROXY_FN = top.__PROXY_FN || {};
-
-if (!window.__OS) {
-  const getOS = function () { //taken from getOS() in presto-ui
-    const userAgent = navigator.userAgent;
-    if (!userAgent) return console.error(new Error("UserAgent is null"));
-    if (userAgent.indexOf("Android") != -1 && userAgent.indexOf("Version") != -1) return "ANDROID";
-    if (userAgent.indexOf("iPhone") != -1 && userAgent.indexOf("Version") == -1) return "IOS";
-    return "WEB";
-  }
-  window.__OS = getOS();
-}
 
 const purescript = require("./output/Main");
 // if (window.__OS == "WEB") {

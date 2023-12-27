@@ -199,14 +199,14 @@ locationUnserviceableView state push =
 sourceDestinationImageView :: forall w. SearchLocationModelState -> PrestoDOM (Effect Unit) w
 sourceDestinationImageView state =
   linearLayout
-    [ height $ WRAP_CONTENT
-    , width $ WRAP_CONTENT
+    [ height WRAP_CONTENT
+    , width $ V 20
     , margin $ Margin 8 9 8 0
     , orientation VERTICAL
     , gravity CENTER
     ][ linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
+        [ height $ V 15
+        , width $  V 15
         , gravity CENTER
         , margin $ Margin 2 20 2 0
         ][  imageView
@@ -217,8 +217,8 @@ sourceDestinationImageView state =
           ]
     , SeparatorView.view separatorConfig
     , linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
+        [ height $ V 15
+        , width $  V 15
         , gravity CENTER
         ][  imageView
             [ height $ V 15
@@ -396,7 +396,7 @@ searchResultsView state push =
     , padding (PaddingBottom 60)
     , background Color.white900
     , scrollBarY false
-    , visibility if (length state.locationList == 0) then GONE else VISIBLE
+    , visibility if (length state.locationList == 0 || state.findPlaceIllustration) then GONE else VISIBLE
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
