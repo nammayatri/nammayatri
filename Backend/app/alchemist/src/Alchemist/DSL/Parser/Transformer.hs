@@ -43,23 +43,23 @@ parseTransformers obj =
       unParsedFunctions = preview (ix "transformers" . _Object) transformerObj & fromMaybe (error "Failed to parse transformers Key Object") & KM.toList
       functions = mapM parseSingleTransformer unParsedFunctions & fromMaybe (error "Failed to parse transformer functions")
    in ST.Transformers moduleName imports functions monads
-  where
-    convertToListOfText :: Maybe [Value] -> [Text]
-    convertToListOfText Nothing = []
-    convertToListOfText (Just val) = mapM (preview _String) val & fromMaybe (error "Failed to convert monads to Text")
+
+convertToListOfText :: Maybe [Value] -> [Text]
+convertToListOfText Nothing = []
+convertToListOfText (Just val) = mapM (preview _String) val & fromMaybe (error "Failed to convert monads to Text")
 
 parseSingleTransformer :: (Key, Value) -> Maybe ST.TransformerTT
 parseSingleTransformer (key, value) = do
   obj <- preview _Object value
   let name = toText key
-      fromType = preview (ix "fromType" . _String) obj & fromMaybe (error "Transformer fromType is required")
-      paramName = updateFirstChar toLower fromType
+      fromTypes = preview (ix "fromTypes" . _Array . to V.toList) obj & convertToListOfText
+      paramNames = preview (ix "paramNames" . _Array . to V.toList) obj & convertToListOfText
       toType = preview (ix "toType" . _String) obj & fromMaybe (error "Transformer toType is required")
       mapping = preview (ix "mapping" . _Object) obj & fromMaybe (error "Transformer mapping is required") & KM.toList & map toTextPair
       outputTypeBindings = map (setFieldBindings toType) mapping
       impureMapping = map (setImpureBindings toType) $ filter (\(_, val) -> "$$" `T.isPrefixOf` val) mapping
       pureMapping = map (setPureBindings toType) $ filter (\(_, val) -> not $ "$$" `T.isPrefixOf` val) mapping
-  pure $ ST.TransformerTT name fromType paramName toType outputTypeBindings pureMapping impureMapping
+  pure $ ST.TransformerTT name fromTypes paramNames toType outputTypeBindings pureMapping impureMapping
   where
     toTextPair :: (Key, Value) -> (Text, Text)
     toTextPair (k, v) =

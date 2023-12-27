@@ -23,6 +23,9 @@ dslInputPathPrefix = "Backend" </> "app" </> "alchemist" </> "spec"
 haskellOutputPathPrefix :: FilePath
 haskellOutputPathPrefix = "Backend" </> "app"
 
+becknSpecLibOutputPathPrefix :: FilePath
+becknSpecLibOutputPathPrefix = "Backend" </> "lib" </> "beckn-spec"
+
 sqlOutputPathPrefix :: FilePath
 sqlOutputPathPrefix = "Backend" </> "dev" </> "migrations-read-only"
 
@@ -57,7 +60,7 @@ main = do
     processApp rootDir appPath _appName = do
       -- applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "Storage") (processStorageDSL rootDir appPath appName)
       -- applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "API") (processAPIDSL rootDir appPath)
-      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "BecknACL") (processBecknACL rootDir appPath)
+      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "BecknACL") (processBecknACL rootDir becknSpecLibOutputPathPrefix)
 
     -- processStorageDSL rootDir appPath appName inputFile = do
     --   let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"

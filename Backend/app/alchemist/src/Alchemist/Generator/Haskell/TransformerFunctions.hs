@@ -13,12 +13,15 @@ import Kernel.Prelude
 defaultMonad :: Text
 defaultMonad = "Monad m"
 
+moduleNamePrefix :: String
+moduleNamePrefix = "module Beckn.OnDemand.Transfomer."
+
 generateTransformerFunctions :: ST.Transformers -> String
 generateTransformerFunctions input =
   "{-# OPTIONS_GHC -Wno-orphans #-}\n"
     <> "{-# OPTIONS_GHC -Wno-unused-imports #-}"
     <> "\n\n"
-    <> "module Beckn.ACL."
+    <> moduleNamePrefix
     <> T.unpack (input ^. ST.moduleName)
     <> " where \n\n"
     <> intercalate "\n" (map ("import " <>) defaultImports) -- JAYPAL
@@ -43,9 +46,9 @@ generateFunctions :: [Text] -> [ST.TransformerTT] -> HM.HashMap Text Text -> Tex
 generateFunctions globalMonads functionList importMap = T.unlines $ concatMap processFunction functionList
   where
     processFunction :: ST.TransformerTT -> [Text]
-    processFunction (ST.TransformerTT name fromType paramName toType outputTypeBindings pureMapping impureMapping) =
-      [ createFunctionDefinition name globalMonads fromType importMap toType,
-        name <> " " <> paramName <> " = do"
+    processFunction (ST.TransformerTT name fromTypes paramNames toType outputTypeBindings pureMapping impureMapping) =
+      [ createFunctionDefinition name globalMonads fromTypes importMap toType,
+        name <> " " <> T.intercalate " " paramNames <> " = do"
       ]
         <> map
           ("  " <>)
@@ -59,13 +62,13 @@ generateFunctions globalMonads functionList importMap = T.unlines $ concatMap pr
                 )
           )
 
-createFunctionDefinition :: Text -> [Text] -> Text -> HM.HashMap Text Text -> Text -> Text
-createFunctionDefinition name allMonads fromType importMap toType =
+createFunctionDefinition :: Text -> [Text] -> [Text] -> HM.HashMap Text Text -> Text -> Text
+createFunctionDefinition name allMonads fromTypes importMap toType =
   let qualifiedMonads = map (\monad -> getValue importMap monad <> "." <> monad) allMonads
-      qualifiedInputType = getValue importMap fromType <> "." <> fromType
+      qualifiedInputTypes = map (\type' -> getValue importMap type' <> "." <> type') fromTypes
       monadVar = getMonadVar
       qualifiedOutputType = getValue importMap toType <> "." <> toType
-   in name <> " :: (" <> defaultMonad <> ", " <> T.intercalate ", " qualifiedMonads <> ") => " <> qualifiedInputType <> " -> " <> monadVar <> qualifiedOutputType
+   in name <> " :: (" <> defaultMonad <> ", " <> T.intercalate ", " qualifiedMonads <> ") => " <> T.intercalate " -> " qualifiedInputTypes <> " -> " <> monadVar <> qualifiedOutputType
   where
     getMonadVar :: Text
     getMonadVar = case allMonads of
