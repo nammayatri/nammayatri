@@ -18,6 +18,8 @@ module SharedLogic.SyncRide
     fetchRideCompletedInfo,
     BookingCancelledInfo (..),
     fetchBookingCancelledInfo,
+    BookingReallocationInfo,
+    fetchBookingReallocationInfo,
     NewRideInfo (..),
     fetchNewRideInfo,
   )
@@ -134,6 +136,13 @@ findCancellationSource (Just ride) = do
               <> "; Using ByMerchant as cancellation source"
           pure DBCReason.ByMerchant
 findCancellationSource Nothing = pure DBCReason.ByMerchant
+
+-- REALLOCATION --
+
+type BookingReallocationInfo = BookingCancelledInfo
+
+fetchBookingReallocationInfo :: Maybe DRide.Ride -> DB.Booking -> Flow BookingCancelledInfo
+fetchBookingReallocationInfo = fetchBookingCancelledInfo
 
 -- COMPLETED --
 
