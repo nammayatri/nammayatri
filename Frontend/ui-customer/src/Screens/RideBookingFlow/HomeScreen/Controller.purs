@@ -1766,9 +1766,9 @@ eval (GetQuotesList (SelectListRes resp)) state = do
                 _ <- pure $ setValueToLocalStore AUTO_SELECTING id
                 continue nextState
               else do
-                let value = null newState.data.quoteListModelState
-                _ <- pure $ setValueToLocalStore AUTO_SELECTING (if value then "false" else getValueToLocalStore AUTO_SELECTING)
-                continue newState{props{selectedQuote = if value then Nothing else newState.props.selectedQuote}}
+                let quoteListEmpty = null newState.data.quoteListModelState
+                _ <- pure $ setValueToLocalStore AUTO_SELECTING (if quoteListEmpty then "false" else getValueToLocalStore AUTO_SELECTING)
+                continue newState{props{selectedQuote = if quoteListEmpty then Nothing else newState.props.selectedQuote}}
 
 eval (ContinueWithoutOffers (SelectListRes resp)) state = do
   case resp.bookingId of
