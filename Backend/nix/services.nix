@@ -118,7 +118,7 @@
           };
 
           settings.processes.osrm-server = {
-            command = "${lib.getExe self'.packages.osrm-server}";
+            command = self'.packages.osrm-server;
           };
         };
     };
