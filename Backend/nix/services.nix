@@ -10,9 +10,9 @@
             name = "start-pg-basebackup";
             runtimeInputs = with pkgs; [ config.services.postgres."${master-db-name}".package coreutils ];
             text = ''
-              MASTER_DB_PATH=$(readlink -f ${config.services.postgres."${master-db-name}".dataDir})
-              REPLICA_DB_PATH=$(readlink -f ${config.services.postgres."${replica-db-name}".dataDir})
-              pg_basebackup -h "$MASTER_DB_PATH" -U repl_user --checkpoint=fast -D "$REPLICA_DB_PATH"  -R --slot=some_name  -C --port=${builtins.toString port}
+              MASTER_DB_ABS_PATH=$(readlink -f ${config.services.postgres."${master-db-name}".dataDir})
+              REPLICA_DB_ABS_PATH=$(readlink -f ${config.services.postgres."${replica-db-name}".dataDir})
+              pg_basebackup -h "$MASTER_DB_ABS_PATH" -U repl_user --checkpoint=fast -D "$REPLICA_DB_ABS_PATH"  -R --slot=some_name  -C --port=${builtins.toString port}
             '';
           };
         in
