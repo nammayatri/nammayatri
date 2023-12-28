@@ -87,6 +87,7 @@ dependencies:
   - filepath
   - mtl
   - stringbuilder
+  - pretty-show
 
 ghc-options:
   - -Wall

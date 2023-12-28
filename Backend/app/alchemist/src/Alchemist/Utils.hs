@@ -5,7 +5,7 @@ import Control.Lens.Combinators
 import Data.Aeson
 import Data.Aeson.Key (fromString)
 import Data.Aeson.Lens (key, _Value)
-import Data.Char (isLower, toUpper)
+import Data.Char (isLower, toLower, toUpper)
 import Data.List (intercalate, nub)
 import qualified Data.List as L
 import Data.List.Split (split, splitOn, splitWhen, whenElt)
@@ -13,6 +13,7 @@ import qualified Data.Text as T
 import Kernel.Prelude hiding (Show, fromString, hPutStr, toString, traceShowId, try)
 import System.Directory (createDirectoryIfMissing)
 import System.IO
+import Text.Regex.TDFA ((=~))
 
 apiTypeToText :: ApiType -> Text
 apiTypeToText apitype = case apitype of
@@ -52,6 +53,24 @@ defaultTypeImports tp = case tp of
   "Kilometers" -> Just "Kernel.Types.Common"
   "HighPrecMoney" -> Just "Kernel.Types.Common"
   _ -> Nothing
+
+removeOccurrence :: String -> String -> String
+removeOccurrence remove str = T.unpack $ T.replace (T.pack remove) (T.pack "") (T.pack str)
+
+regexExec :: String -> String -> Maybe String
+regexExec str pattern' = do
+  let match = str =~ pattern' :: (String, String, String, [String])
+  listToMaybe $ filter (/= "") $ snd4 match
+  where
+    snd4 (_, _, _, x) = x
+
+extractIdType :: String -> Maybe String
+extractIdType str = do
+  let pattern' :: String = ".*Domain\\.Types\\.(.*)\\."
+      match = str =~ pattern' :: (String, String, String, [String])
+  listToMaybe $ snd4 match
+  where
+    snd4 (_, _, _, x) = x
 
 -- makeTypeQualified (Maybe Module name)
 makeTypeQualified :: Maybe String -> Maybe [String] -> Maybe [String] -> String -> Object -> String -> String
@@ -93,5 +112,13 @@ capitalize :: String -> String
 capitalize "" = ""
 capitalize (x : xs) = toUpper x : xs
 
+-- Helper function to lowercase the first letter of a string
+lowercaseFirstLetter :: String -> String
+lowercaseFirstLetter "" = ""
+lowercaseFirstLetter (x : xs) = toLower x : xs
+
 _String :: Prism' Value String
 _String = _Value . prism (String . T.pack) (\v -> case v of String s -> Right $ T.unpack s; _ -> Left v)
+
+_Bool :: Prism' Value Bool
+_Bool = _Value . prism Bool (\v -> case v of Bool s -> Right s; _ -> Left v)

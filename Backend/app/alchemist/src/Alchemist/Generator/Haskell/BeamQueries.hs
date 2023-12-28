@@ -26,14 +26,22 @@ generateBeamQueries tableDef = do
       [ "Kernel.Beam.Functions",
         "Kernel.Prelude",
         "Kernel.External.Encryption",
-        "Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime)"
+        "Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime, fromMaybeM)",
+        "Kernel.Types.Error"
       ]
+        <> concatMap getStorageRelationImports tableDef.fields
     allQualifiedImports :: [String]
     allQualifiedImports =
       [ "Storage.Beam." ++ (capitalize $ tableNameHaskell tableDef) ++ " as Beam",
         "Sequelize as Se"
       ]
         <> imports tableDef
+    getStorageRelationImports :: FieldDef -> [String]
+    getStorageRelationImports fieldDef = do
+      let mbQuery = regexExec fieldDef.haskellType "^\\Kernel\\.Prelude\\.Maybe Domain\\.Types\\..*\\.(.*)$|^\\[Domain\\.Types\\..*\\.(.*)\\]$|^Domain\\.Types\\..*\\.(.*)$"
+      case mbQuery of
+        Just query -> ["Storage.Queries." ++ query]
+        Nothing -> []
 
 mkCodeBody :: StorageM ()
 mkCodeBody = do
@@ -72,6 +80,9 @@ fromTTypeInstance = do
         ++ "  fromTType' Beam."
         ++ tableNameHaskell tableDef
         ++ "T {..} = do\n"
+        ++ "    "
+        ++ intercalate ",\n         " (filter (/= "") (map (\field -> fromTTypeMConversionFunction (tableNameHaskell tableDef) (haskellType field) (fieldName field) (relation field)) (fields tableDef)))
+        ++ "\n"
         ++ "    pure $\n"
         ++ "      Just\n"
         ++ "        "
@@ -81,7 +92,7 @@ fromTTypeInstance = do
         ++ (tableNameHaskell tableDef)
         ++ "\n"
         ++ "          { "
-        ++ intercalate ",\n            " (map fromField (fields tableDef))
+        ++ intercalate ",\n           " (map fromField (fields tableDef))
         ++ "\n          }\n\n"
   where
     getFromTTypeParams :: FieldDef -> String
@@ -93,7 +104,7 @@ fromTTypeInstance = do
           let mapOperator = if isMaybeType (haskellType field) then " <$> " else " "
           let applicativeOperator = if isMaybeType (haskellType field) then " <*> " else " "
           fieldName field ++ " = EncryptedHashed" ++ mapOperator ++ "(Encrypted" ++ mapOperator ++ fieldName field ++ "Encrypted)" ++ applicativeOperator ++ fieldName field ++ "Hash"
-        else fieldName field ++ " = " ++ fromTTypeConversionFunction (fromTType field) (haskellType field) (getFromTTypeParams field)
+        else fieldName field ++ " = " ++ fromTTypeConversionFunction (fromTType field) (haskellType field) (getFromTTypeParams field) (relation field)
 
 toTTypeInstance :: StorageM ()
 toTTypeInstance = do
@@ -111,7 +122,7 @@ toTTypeInstance = do
         ++ tableNameHaskell tableDef
         ++ "T\n"
         ++ "      { "
-        ++ intercalate ",\n        " (concatMap toField (fields tableDef))
+        ++ intercalate ",\n        " (concatMap toField $ filter (isNothing . relation) (fields tableDef))
         ++ "\n      }\n\n"
   where
     toField hfield =
@@ -143,14 +154,24 @@ toTTypeConversionFunction transformer haskellType fieldName
   | "Kernel.Types.Id.ShortId " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.getShortId <$> " ++ fieldName
   | otherwise = fieldName
 
-fromTTypeConversionFunction :: Maybe String -> String -> String -> String
-fromTTypeConversionFunction fromTTypeFunc haskellType fieldName
+fromTTypeConversionFunction :: Maybe String -> String -> String -> Maybe FieldRelation -> String
+fromTTypeConversionFunction fromTTypeFunc haskellType fieldName relation
   | isJust fromTTypeFunc = fromJust fromTTypeFunc ++ " " ++ fieldName
+  | isJust relation = fieldName ++ "'"
   | "Kernel.Types.Id.Id " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.Id " ++ fieldName
   | "Kernel.Types.Id.Id " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.Id <$> " ++ fieldName
   | "Kernel.Types.Id.ShortId " `Text.isPrefixOf` Text.pack haskellType = "Kernel.Types.Id.ShortId " ++ fieldName
   | "Kernel.Types.Id.ShortId " `Text.isInfixOf` Text.pack haskellType = "Kernel.Types.Id.ShortId <$> " ++ fieldName
   | otherwise = fieldName
+
+fromTTypeMConversionFunction :: String -> String -> String -> Maybe FieldRelation -> String
+fromTTypeMConversionFunction tableNameHaskell haskellType fieldName relation
+  | isJust relation =
+    case fromJust relation of
+      OneToOne -> fieldName ++ "' <- Storage.Queries." ++ fromJust (extractIdType haskellType) ++ ".findBy" ++ tableNameHaskell ++ "Id (Kernel.Types.Id.Id id) >>= fromMaybeM (InternalError \"Failed to get " ++ fieldName ++ ".\")"
+      MaybeOneToOne -> fieldName ++ "' <- Storage.Queries." ++ fromJust (extractIdType haskellType) ++ ".findBy" ++ tableNameHaskell ++ "Id (Kernel.Types.Id.Id id)"
+      OneToMany -> fieldName ++ "' <- Storage.Queries." ++ fromJust (extractIdType haskellType) ++ ".findAllBy" ++ tableNameHaskell ++ "Id (Kernel.Types.Id.Id id)"
+  | otherwise = ""
 
 toTTypeExtractor :: Maybe String -> String -> String
 toTTypeExtractor extractor field
@@ -231,23 +252,27 @@ generateBeamFunctionCall kvFunction =
 
 generateQueryParams :: [FieldDef] -> [((String, String), Bool)] -> String
 generateQueryParams _ [] = ""
-generateQueryParams allFields params = "    [ " ++ intercalate ",\n      " (map (generateQueryParam allFields) params) ++ "\n    ]\n"
+generateQueryParams allFields params = "    [ " ++ intercalate ",\n      " (filter (/= "") $ map (generateQueryParam allFields) params) ++ "\n    ]\n"
 
 generateQueryParam :: [FieldDef] -> ((String, String), Bool) -> String
 generateQueryParam allFields ((field, tp), encrypted) =
-  let bFields = maybe (error "Param not found in data type") beamFields $ find (\f -> fieldName f == field) allFields
+  let fieldDef = fromMaybe (error "Param not found in data type") $ find (\f -> fieldName f == field) allFields
    in intercalate ",\n      " $
-        map
-          ( \bField ->
-              if encrypted
-                then do
-                  let mapOperator = if isMaybeType tp then " <&> " else " & "
-                  let encryptedField = "Se.Set Beam." ++ field ++ "Encrypted $ " ++ field ++ mapOperator ++ "unEncrypted . (.encrypted)"
-                  let hashField = "Se.Set Beam." ++ field ++ "Hash $ " ++ field ++ mapOperator ++ "(.hash)"
-                  encryptedField ++ ",\n      " ++ hashField
-                else "Se.Set Beam." ++ bFieldName bField ++ " $ " ++ correctSetField field tp bField
-          )
-          bFields
+        filter (/= "") $
+          map
+            ( \bField ->
+                if isJust fieldDef.relation
+                  then ""
+                  else
+                    if encrypted
+                      then do
+                        let mapOperator = if isMaybeType tp then " <&> " else " & "
+                        let encryptedField = "Se.Set Beam." ++ field ++ "Encrypted $ " ++ field ++ mapOperator ++ "unEncrypted . (.encrypted)"
+                        let hashField = "Se.Set Beam." ++ field ++ "Hash $ " ++ field ++ mapOperator ++ "(.hash)"
+                        encryptedField ++ ",\n      " ++ hashField
+                      else "Se.Set Beam." ++ bFieldName bField ++ " $ " ++ correctSetField field tp bField
+            )
+            fieldDef.beamFields
 
 correctSetField :: String -> String -> BeamField -> String
 correctSetField field tp beamField
@@ -271,8 +296,8 @@ mapWithIndex f = zipWith f [0 ..]
 generateClause :: [FieldDef] -> Bool -> Int -> Int -> WhereClause -> String
 generateClause _ _ _ _ EmptyWhere = ""
 generateClause allFields isFullObjInp n i (Leaf (field, tp, op)) =
-  let bFields = maybe (error "Param not found in data type") beamFields $ find (\f -> fieldName f == field) allFields
-   in intercalate " , " $ map (\bfield -> (if i == 0 then " " else spaces n) ++ "Se.Is Beam." ++ bFieldName bfield ++ " $ " ++ operator (fromMaybe Eq op) ++ " " ++ (if isFullObjInp then correctSetField field tp bfield else correctEqField field tp bfield)) bFields
+  let fieldDef = fromMaybe (error "Param not found in data type") $ find (\f -> fieldName f == field) allFields
+   in intercalate " , " $ filter (/= "") $ map (\bfield -> (if i == 0 then " " else spaces n) ++ "Se.Is Beam." ++ bFieldName bfield ++ " $ " ++ operator (fromMaybe Eq op) ++ " " ++ (if isFullObjInp then correctSetField field tp bfield else correctEqField field tp bfield)) fieldDef.beamFields
 generateClause allFields isFullObjInp n i (Query (op, clauses)) =
   (if i == 0 then " " else spaces n)
     ++ ( if op `elem` comparisonOperator
@@ -283,7 +308,7 @@ generateClause allFields isFullObjInp n i (Query (op, clauses)) =
                ++ spaces (n + 2)
                ++ "["
        )
-    ++ intercalate ",\n" (mapWithIndex (generateClause allFields isFullObjInp (n + 4)) clauses)
+    ++ intercalate ",\n" (filter (/= "") $ mapWithIndex (generateClause allFields isFullObjInp (n + 4)) clauses)
     ++ if op `elem` comparisonOperator
       then ""
       else
