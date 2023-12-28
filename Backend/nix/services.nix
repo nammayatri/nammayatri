@@ -56,7 +56,7 @@
           };
 
           settings.processes.pgBaseBackupForPrimaryDb = {
-            command = "${startScript "db-primary" "db-replica" "5432"}/bin/start-pgbasebackup";
+            command = startScript "db-primary" "db-replica" 5432;
             depends_on."db-primary".condition = "process_healthy";
           };
 
