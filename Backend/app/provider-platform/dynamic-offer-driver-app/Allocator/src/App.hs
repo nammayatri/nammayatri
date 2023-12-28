@@ -101,15 +101,10 @@ runDriverOfferAllocator configModifier = do
         migrateIfNeeded handlerCfg.appCfg.migrationPath handlerCfg.appCfg.autoMigrate handlerCfg.appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo "Setting up for signature auth..."
-        fork
-          "Fetching Kv configs"
-          ( forever $ do
-              kvConfigs <-
-                QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
-                  >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
-              L.setOption KBT.Tables kvConfigs
-              threadDelay (handlerCfg.appCfg.kvConfigUpdateFrequency * 1000000)
-          )
+        kvConfigs <-
+          findById "kv_configs" >>= pure . decodeFromText' @Tables
+            >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
+        L.setOption KBT.Tables kvConfigs
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "

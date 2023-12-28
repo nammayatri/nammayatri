@@ -24,6 +24,7 @@ import Kernel.Storage.Hedis (connectHedis, connectHedisCluster)
 import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Tools.Metrics.Init as Metrics
+import Kernel.Types.CacheFlow
 import Kernel.Types.Common (Seconds (..))
 import qualified Kernel.Types.MonadGuid as G
 import Kernel.Utils.App
@@ -66,7 +67,8 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ha
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
   consumerId <- G.generateGUIDTextIO
-  let schedulerEnv = SchedulerEnv {..}
+  let cacheConfig = CacheConfig {configsExpTime = 0}
+  let schedulerEnv = SchedulerEnv {cacheConfig, ..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
     exitFailure
