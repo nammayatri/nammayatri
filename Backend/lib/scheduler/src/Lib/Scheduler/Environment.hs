@@ -22,17 +22,21 @@ import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types
 import Kernel.Beam.Types (KafkaConn (..))
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, HedisFlow, disconnectHedis)
+import Kernel.Storage.Queries.SystemConfigs as QSC
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Flow
-import Kernel.Utils.App (Shutdown)
+import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
+import Lib.Scheduler.JobStorageType.DB.Lib ()
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types
 
@@ -100,7 +104,8 @@ data SchedulerEnv = SchedulerEnv
     enablePrometheusMetricLogging :: Bool,
     maxThreads :: Int,
     jobInfoMap :: JobInfoMap,
-    kvConfigUpdateFrequency :: Int
+    kvConfigUpdateFrequency :: Int,
+    cacheConfig :: CacheConfig
   }
   deriving (Generic)
 
@@ -136,4 +141,15 @@ runSchedulerM schedulerConfig env action = do
         )
           >> L.setOption KafkaConn env.kafkaProducerTools
       )
-    runFlowR flowRt env action
+    flowRt' <- runFlowR flowRt env $ do
+      fork
+        "Fetching Kv configs"
+        ( forever $ do
+            kvConfigs <-
+              QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
+                >>= fromMaybeM (InternalError "Couldn't find kv_configs table for scheduler app")
+            L.setOption KBT.Tables kvConfigs
+            threadDelay (env.kvConfigUpdateFrequency * 1000000)
+        )
+      pure flowRt
+    runFlowR flowRt' env action

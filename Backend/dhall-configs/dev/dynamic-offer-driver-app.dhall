@@ -155,7 +155,7 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
-let kvConfigUpdateFrequency = +0
+let kvConfigUpdateFrequency = +10
 
 let dontEnableForDb = [] : List Text
 

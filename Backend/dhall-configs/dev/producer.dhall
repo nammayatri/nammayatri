@@ -44,7 +44,7 @@ let hedisClusterCfg =
 
 let cacheConfig = { configsExpTime = +86400 }
 
-let kvConfigUpdateFrequency = +0
+let kvConfigUpdateFrequency = +10
 
 let kafkaProducerCfg =
       { brokers = [ "localhost:29092" ]

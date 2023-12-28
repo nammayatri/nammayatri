@@ -57,7 +57,7 @@ let availabilityTimeWindowOption =
 
 let cacheConfig = { configsExpTime = +86400 }
 
-let kvConfigUpdateFrequency = +0
+let kvConfigUpdateFrequency = +10
 
 in  { hedisCfg
     , hedisClusterCfg

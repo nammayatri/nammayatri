@@ -156,7 +156,7 @@ let hccfg =
       , connectTimeout = None Integer
       }
 
-let kvConfigUpdateFrequency = +0
+let kvConfigUpdateFrequency = +10
 
 let dontEnableForDb = [] : List Text
 

@@ -32,6 +32,7 @@ library
       Lib.Scheduler.Error
       Lib.Scheduler.Handler
       Lib.Scheduler.JobHandler
+      Lib.Scheduler.JobStorageType.DB.Lib
       Lib.Scheduler.JobStorageType.DB.Queries
       Lib.Scheduler.JobStorageType.DB.Table
       Lib.Scheduler.JobStorageType.Redis.Queries
