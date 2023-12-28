@@ -8,7 +8,7 @@
     beckn-gateway.url = "github:nammayatri/beckn-gateway";
     beckn-gateway.inputs.common.follows = "common";
     beckn-gateway.inputs.shared-kernel.follows = "shared-kernel";
-    passetto.url = "github:nammayatri/passetto/nixify";
+    passetto.url = "github:rsrohitsingh682/passetto/add-initial-dumps";
     passetto.inputs.nixpkgs.follows = "common/nixpkgs";
     passetto.inputs.flake-parts.follows = "common/flake-parts";
     passetto.inputs.haskell-flake.follows = "common/haskell-flake";
