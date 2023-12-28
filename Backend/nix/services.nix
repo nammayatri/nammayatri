@@ -113,8 +113,8 @@
             # FIXME: https://github.com/juspay/passetto/issues/2
             package = lib.getBin
               (if pkgs.stdenv.isDarwin
-                then inputs.passetto.packages.x86_64-darwin.passetto-service
-                else inputs'.passetto.packages.passetto-service);
+              then inputs.passetto.packages.x86_64-darwin.passetto-service
+              else inputs'.passetto.packages.passetto-service);
           };
 
           settings.processes.osrm-server = {
