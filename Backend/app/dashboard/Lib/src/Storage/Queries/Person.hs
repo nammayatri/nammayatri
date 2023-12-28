@@ -23,9 +23,9 @@ import Domain.Types.Role as Role
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.Merchant as Merchant
 import Storage.Tabular.MerchantAccess as Access
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Role as Role
@@ -88,22 +88,17 @@ findAllWithLimitOffset ::
   Maybe Integer ->
   Maybe Integer ->
   Maybe (Id Person.Person) ->
-  m [(Person, Role, [ShortId Merchant.Merchant])]
+  m [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
 findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personId =
   fromMaybeList <$> do
     findAll $ do
       merchantAccessAggTable <- with $ do
-        (merchantAccess :& merchant) <-
+        merchantAccess <-
           from $
             table @MerchantAccessT
-              `innerJoin` table @MerchantT
-                `Esq.on` ( \(merchantAccess :& merchant) ->
-                             merchantAccess ^. Access.MerchantAccessMerchantId ==. merchant ^. Merchant.MerchantTId
-                         )
         groupBy (merchantAccess ^. MerchantAccessPersonId)
-        return (merchantAccess ^. MerchantAccessPersonId, arrayAgg (merchant ^. MerchantShortId))
-
-      (person :& role :& (_, mbMerchantShortIds)) <-
+        return (merchantAccess ^. MerchantAccessPersonId, arrayAggWith AggModeAll (merchantAccess ^. MerchantAccessMerchantShortId) [desc $ merchantAccess ^. MerchantAccessCreatedAt], arrayAggWith AggModeAll (merchantAccess ^. MerchantAccessOperatingCity) [desc $ merchantAccess ^. MerchantAccessCreatedAt])
+      (person :& role :& (_, mbMerchantShortIds, mbMerchantOperatingCityIds)) <-
         from $
           table @PersonT
             `innerJoin` table @RoleT
@@ -111,7 +106,7 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
                            person ^. Person.PersonRoleId ==. role ^. Role.RoleTId
                        )
             `leftJoin` merchantAccessAggTable
-              `Esq.on` ( \(person :& _ :& (mbPersonId, _mbMerchantShortIds)) ->
+              `Esq.on` ( \(person :& _ :& (mbPersonId, _mbMerchantShortIds, _mbMerchantOperatingCityIds)) ->
                            just (person ^. Person.PersonTId) ==. mbPersonId
                        )
       where_ $
@@ -120,7 +115,7 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
       orderBy [desc $ person ^. PersonCreatedAt]
       limit limitVal
       offset offsetVal
-      return (person, role, mbMerchantShortIds)
+      return (person, role, mbMerchantShortIds, mbMerchantOperatingCityIds)
   where
     limitVal = maybe 100 fromIntegral mbLimit
     offsetVal = maybe 0 fromIntegral mbOffset
@@ -131,8 +126,8 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
           `ilike` likeSearchStr
         )
         ||. person ^. PersonMobileNumberHash ==. val searchStrDBHash --find by email also?
-    fromMaybeList :: [(Person, Role, Maybe [Text])] -> [(Person, Role, [ShortId Merchant.Merchant])]
-    fromMaybeList = map (\(person, role, mbMerchantShortIds) -> (person, role, ShortId <$> fromMaybe [] mbMerchantShortIds))
+    fromMaybeList :: [(Person, Role, Maybe [Text], Maybe [City.City])] -> [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
+    fromMaybeList = map (\(person, role, mbMerchantShortIds, mbMerchantOperatingCityIds) -> (person, role, ShortId <$> fromMaybe [] mbMerchantShortIds, fromMaybe [] mbMerchantOperatingCityIds))
 
 updatePersonRole :: Id Person -> Id Role -> SqlDB ()
 updatePersonRole personId roleId = do

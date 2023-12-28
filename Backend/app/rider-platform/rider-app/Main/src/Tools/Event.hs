@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Tools.Event where
 
@@ -55,6 +56,14 @@ data Payload
         vehVar :: VehicleVariant, --vehicle variant
         cAt :: UTCTime
       }
+  | Exophone
+      { vendor :: Maybe Text,
+        callType :: Maybe Text,
+        callSid :: Maybe Text,
+        status :: Maybe Text,
+        exophoneNumber :: Maybe Text,
+        rideId :: Maybe (Id DRide.Ride)
+      }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 data RideEventData = RideEventData
@@ -77,6 +86,18 @@ data QuoteEventData = QuoteEventData
   { quote :: DQuote.Quote,
     person :: Person,
     merchantId :: Id Merchant
+  }
+
+data ExophoneEventData = ExophoneEventData
+  { vendor :: Maybe Text,
+    callType :: Maybe Text,
+    rideId :: Maybe (Id DRide.Ride),
+    callSid :: Maybe Text,
+    status :: Maybe Text,
+    merchantId :: Maybe (Id Merchant),
+    triggeredBy :: EventTriggeredBy,
+    personId :: Maybe (Id Person),
+    exophoneNumber :: Maybe Text
   }
 
 newtype SearchEventData = SearchEventData
@@ -183,3 +204,13 @@ triggerBookingEvent eventType bookingData = do
   let bookingPayload = Booking {bId = bookingData.booking.id, bs = bookingData.booking.status, cAt = bookingData.booking.createdAt, uAt = bookingData.booking.updatedAt}
   event <- createEvent (Just $ getId bookingData.booking.riderId) (getId bookingData.booking.merchantId) eventType RIDER_APP System (Just bookingPayload) (Just $ getId bookingData.booking.id)
   triggerEvent event
+
+triggerExophoneEvent ::
+  ( EventStreamFlow m r
+  ) =>
+  ExophoneEventData ->
+  m ()
+triggerExophoneEvent ExophoneEventData {..} = do
+  let exophonePayload = Exophone {..}
+  exoevent <- createEvent (getId <$> personId) (maybe "" getId merchantId) ExophoneData RIDER_APP triggeredBy (Just exophonePayload) Nothing
+  triggerEvent exoevent

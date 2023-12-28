@@ -25,12 +25,14 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.CachedQueries.Merchant as QMerchant
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 
@@ -39,7 +41,8 @@ data FleetOwnerLoginReq = FleetOwnerLoginReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text,
     merchantId :: Text,
-    otp :: Maybe Text
+    otp :: Maybe Text,
+    city :: Context.City
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -65,6 +68,7 @@ fleetOwnerLogin req = do
   merchant <-
     QMerchant.findByShortId merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
   let useFakeOtpM = useFakeSms smsCfg
   otp <- maybe generateOTPCode (return . show) useFakeOtpM
   whenNothing_ useFakeOtpM $ do
@@ -75,12 +79,12 @@ fleetOwnerLogin req = do
     withLogTag ("mobileNumber" <> req.mobileNumber) $
       do
         message <-
-          MessageBuilder.buildSendOTPMessage merchant.id $
+          MessageBuilder.buildSendOTPMessage merchantOpCityId $
             MessageBuilder.BuildSendOTPMessageReq
               { otp = otpCode,
                 hash = otpHash
               }
-        Sms.sendSMS merchant.id (Sms.SendSMSReq message phoneNumber sender)
+        Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender)
         >>= Sms.checkSmsResult
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)

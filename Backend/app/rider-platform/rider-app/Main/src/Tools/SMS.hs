@@ -19,6 +19,7 @@ module Tools.SMS
 where
 
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Kernel.External.SMS as Reexport hiding
   ( sendSMS,
@@ -32,15 +33,15 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import Tools.Error
 
-sendSMS :: ServiceFlow m r => Id Merchant -> SendSMSReq -> m SendSMSRes
-sendSMS merchantId = Sms.sendSMS handler
+sendSMS :: ServiceFlow m r => Id Merchant -> Id DMOC.MerchantOperatingCity -> SendSMSReq -> m SendSMSRes
+sendSMS merchantId merchantOperatingCityId = Sms.sendSMS handler
   where
     handler = Sms.SmsHandler {..}
 
     getProvidersPriorityList = do
-      merchantConfig <- QMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+      merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       let smsServiceProviders = merchantConfig.smsProvidersPriorityList
-      when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantId:" <> merchantId.getId)
+      when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
       pure smsServiceProviders
 
     getProviderConfig provider = do

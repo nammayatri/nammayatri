@@ -15,6 +15,7 @@
 
 module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
+import qualified Data.HashMap as HM
 import qualified Data.Map as M
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -26,7 +27,6 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -38,8 +38,6 @@ import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverLocation as DLoc
-import SharedLogic.DriverMode as DMode
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -47,12 +45,12 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as QTC
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -67,8 +65,6 @@ import qualified Tools.Notifications as Notify
 
 cancelRideImpl ::
   ( EsqDBFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     TranslateFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasSendSearchRequestToDriverMetrics m r,
@@ -83,7 +79,8 @@ cancelRideImpl ::
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "schedulerType" r SchedulerType,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   Id DRide.Ride ->
   SBCR.BookingCancellationReason ->
@@ -95,37 +92,36 @@ cancelRideImpl rideId bookingCReason = do
   merchant <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  cancelRideTransaction booking.id ride bookingCReason merchantId
+  cancelRideTransaction booking ride bookingCReason merchantId
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
 
   fork "cancelRide - Notify driver" $ do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
     triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
-    enableLocationTrackingService <- asks (.enableLocationTrackingService)
-    when enableLocationTrackingService $
-      void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
-
     when (bookingCReason.source == SBCR.ByDriver) $
-      DS.driverScoreEventHandler DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare}
-    Notify.notifyOnCancel merchantId booking driver.id driver.deviceToken bookingCReason.source
+      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {merchantId = merchantId, driverId = driver.id, rideFare = Just booking.estimatedFare}
+    Notify.notifyOnCancel ride.merchantOperatingCityId booking driver.id driver.deviceToken bookingCReason.source
 
   fork "cancelRide - Notify BAP" $ do
     driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
     searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
     searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-    transpConf <- QTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+    transpConf <- QTC.findByMerchantOpCityId searchReq.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
     let searchRepeatLimit = transpConf.searchRepeatLimit
     now <- getCurrentTime
-    farePolicy <- getFarePolicy searchReq.providerId searchTry.vehicleVariant searchReq.area
+    farePolicy <- getFarePolicy searchReq.merchantOperatingCityId searchTry.vehicleVariant searchReq.area
+    let isSearchTryValid = searchTry.validTill > now
     let isRepeatSearch =
           searchTry.searchRepeatCounter < searchRepeatLimit
             && bookingCReason.source == SBCR.ByDriver
+            && isSearchTryValid
+            && fromMaybe False searchReq.isReallocationEnabled
             && maybe True (\nsBounds -> isJust booking.fareParams.nightShiftCharge == isNightShift nsBounds now) farePolicy.nightShiftBounds
     if isRepeatSearch
       then do
         blockListedDriverList <- addDriverToSearchCancelledList searchReq.id ride
-        driverPoolCfg <- getDriverPoolConfig merchant.id searchReq.estimatedDistance
+        driverPoolCfg <- getDriverPoolConfig ride.merchantOperatingCityId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
         logDebug $ "BlockListed Drivers-" <> show blockListedDriverList
         driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchTry.vehicleVariant) searchReq.fromLocation merchant.id True Nothing
         let newDriverPool = filter (\dpr -> cast dpr.driverId `notElem` blockListedDriverList) driverPool
@@ -147,29 +143,25 @@ cancelRideTransaction ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
-    HasField "enableLocationTrackingService" r Bool
+    LT.HasLocationService m r
   ) =>
-  Id SRB.Booking ->
+  SRB.Booking ->
   DRide.Ride ->
   SBCR.BookingCancellationReason ->
   Id DMerc.Merchant ->
   m ()
-cancelRideTransaction bookingId ride bookingCReason merchantId = do
+cancelRideTransaction booking ride bookingCReason merchantId = do
   let driverId = cast ride.driverId
-  driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  void $ DLoc.updateOnRide merchantId ride.driverId False
+  void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
+  QDI.updateOnRide (cast ride.driverId) False
+  void $ LF.rideDetails ride.id DRide.CANCELLED merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   void $ QRide.updateStatus ride.id DRide.CANCELLED
   QBCR.upsert bookingCReason
-  void $ QRB.updateStatus bookingId SRB.CANCELLED
-  void $ QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
+  void $ QRB.updateStatus booking.id SRB.CANCELLED
   when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
 
 repeatSearch ::
   ( EsqDBFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     TranslateFlow m r,
     Esq.EsqDBReplicaFlow m r,
@@ -181,7 +173,9 @@ repeatSearch ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasShortDurationRetryCfg r c,
     CacheFlow m r,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DMerc.Merchant ->
   DFP.FullFarePolicy ->
@@ -195,9 +189,10 @@ repeatSearch ::
   m ()
 repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSource now driverPoolConfig = do
   newSearchTry <- buildSearchTry searchTry
-
-  _ <- QST.create newSearchTry
-  goHomeCfg <- CQGHC.findByMerchantId merchant.id
+  void $ QST.create newSearchTry
+  void $ QRB.updateStatus booking.id SRB.REALLOCATED
+  void $ QSR.updateAutoAssign searchReq.id True
+  goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
   let driverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance searchReq.estimatedDistance <$> farePolicy.driverExtraFeeBounds
   (res, _) <-
     sendSearchRequestToDrivers'
@@ -224,13 +219,16 @@ repeatSearch merchant farePolicy searchReq searchTry booking ride cancellationSo
   where
     buildSearchTry ::
       ( MonadTime m,
-        MonadGuid m
+        MonadGuid m,
+        MonadReader r m,
+        HasField "searchRequestExpirationSeconds" r NominalDiffTime
       ) =>
       DST.SearchTry ->
       m DST.SearchTry
     buildSearchTry DST.SearchTry {..} = do
       id_ <- Id <$> generateGUID
-      let validTill_ = 120 `addUTCTime` validTill
+      searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
+      let validTill_ = searchRequestExpirationSeconds `addUTCTime` now
       pure
         DST.SearchTry
           { id = id_,

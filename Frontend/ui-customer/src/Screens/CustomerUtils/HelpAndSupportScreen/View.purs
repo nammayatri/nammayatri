@@ -36,12 +36,12 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, map, pure, unit, show, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
+import Prelude (Unit, bind, const, discard, map, pure, unit, show, not, ($), (-), (/=), (<<<), (<=), (<>), (==), (||), (<), (<>))
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibility, accessibilityHint)
 import PrestoDOM.Properties as PP
@@ -57,7 +57,6 @@ import Screens.CustomerUtils.HelpAndSupportScreen.ComponentConfig
 import Components.PrimaryEditText as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
 import Data.String as DS
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -149,7 +148,7 @@ recentRideView state push=
     , orientation HORIZONTAL
     ][  imageView
         [ background Color.greyLight
-        , imageWithFallback $ "ny_ic_help_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help_map.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_help_map"
         , PP.cornerRadii $ PTD.Corners 8.0 true false false false
         , height MATCH_PARENT
         , width $ V 130
@@ -188,7 +187,7 @@ recentRideView state push=
         , width MATCH_PARENT
         , gravity RIGHT
         ][  imageView
-            [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
             , height $ V 15
             , width $ V 15
             ]
@@ -257,7 +256,7 @@ driverRatingView state =
                         ][imageView
                             [ height $ V 14
                             , width $ V 14
-                            , imageWithFallback if item <= state.data.rating then "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_active.png" else "ny_ic_star_inactive," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_star_inactive.png"
+                            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if item <= state.data.rating then "ny_ic_star_active" else "ny_ic_star_inactive"
                             ]
                           ]) [1 ,2 ,3 ,4 ,5])
     ]
@@ -301,7 +300,7 @@ allTopicsView state push =
                 , gravity RIGHT
                 , layoutGravity "center_vertical"
                 ][  imageView
-                    [ imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
                     , height $ V 15
                     , width $ V 15  
                     ]
@@ -392,7 +391,7 @@ editTextView state push =
                   , height $ V 24
                   , padding $ PaddingVertical 5 3
                   , margin $ MarginRight 3
-                  , imageWithFallback "ny_ic_info,https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" 
+                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info" -- https://assets.juspay.in/nammayatri/images/user/ny_ic_information_grey.png" 
                   ]
                 , textView $
                   [ height WRAP_CONTENT
@@ -452,16 +451,17 @@ topicsList :: ST.HelpAndSupportScreenState ->  Array { action :: Action
   , image :: String
 }
 topicsList state = [
-  { action : ContactUs
-  , title : (getString FOR_OTHER_ISSUES_WRITE_TO_US)
-  , image : "ny_ic_clip_board," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_clip_board.png"
-  },
-  { action : CallSupport
-  , title : (getString CONTACT_SUPPORT)
-  , image : "ny_ic_help," <> (getAssetStoreLink FunctionCall) <> "ny_ic_help.png"
-  } ] <> if state.data.config.showDeleteAccount then [
-    { action : DeleteAccount
-  , title : (getString REQUEST_TO_DELETE_ACCOUNT)
-  , image : "ny_ic_delete_account,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_delete_account.png"
-  }
-  ] else []
+    { action : ContactUs
+    , title : (getString FOR_OTHER_ISSUES_WRITE_TO_US)
+    , image : fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
+    }
+  ] <> if state.data.config.feature.enableSupport then 
+        [ { action : CallSupport
+          , title : (getString CONTACT_SUPPORT)
+          , image : fetchImage FF_ASSET "ny_ic_help"
+          } ] else []
+    <> if state.data.config.showDeleteAccount then 
+        [ { action : DeleteAccount
+          , title : (getString REQUEST_TO_DELETE_ACCOUNT)
+          , image : "ny_ic_delete_account,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_delete_account.png" --update here
+          } ] else []

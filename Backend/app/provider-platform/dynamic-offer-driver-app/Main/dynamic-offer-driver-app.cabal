@@ -19,6 +19,11 @@ source-repository head
   type: git
   location: https://github.com/nammayatri/nammayatri
 
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
 library
   exposed-modules:
       API
@@ -33,38 +38,49 @@ library
       API.Beckn.Track
       API.Beckn.Update
       API.Dashboard
-      API.Dashboard.Booking
-      API.Dashboard.Driver
-      API.Dashboard.Driver.Registration
-      API.Dashboard.DriverReferral
       API.Dashboard.Exotel
+      API.Dashboard.Fleet
+      API.Dashboard.Fleet.Operations
       API.Dashboard.Fleet.Registration
-      API.Dashboard.Issue
-      API.Dashboard.Merchant
-      API.Dashboard.Message
-      API.Dashboard.Overlay
-      API.Dashboard.Revenue
-      API.Dashboard.Ride
-      API.Dashboard.Subscription
-      API.Dashboard.Volunteer
+      API.Dashboard.Management
+      API.Dashboard.Management.Booking
+      API.Dashboard.Management.Driver
+      API.Dashboard.Management.Driver.Common
+      API.Dashboard.Management.Driver.GoHome
+      API.Dashboard.Management.Driver.Referral
+      API.Dashboard.Management.Driver.Registration
+      API.Dashboard.Management.Issue
+      API.Dashboard.Management.Merchant
+      API.Dashboard.Management.Message
+      API.Dashboard.Management.Overlay
+      API.Dashboard.Management.Revenue
+      API.Dashboard.Management.Ride
+      API.Dashboard.Management.Subscription
+      API.Dashboard.RideBooking
+      API.Dashboard.RideBooking.Driver
+      API.Dashboard.RideBooking.Maps
+      API.Dashboard.RideBooking.Ride
+      API.Dashboard.RideBooking.Volunteer
       API.Internal
       API.Internal.Auth
       API.Internal.BulkLocUpdate
+      API.Internal.CustomerCancellationDues
       API.Internal.DriverReferee
       API.Internal.FeedbackForm
       API.UI
       API.UI.Call
+      API.UI.CallEvent
       API.UI.CancellationReason
+      API.UI.City
       API.UI.Driver
+      API.UI.DriverCoins
       API.UI.DriverOnboarding
       API.UI.DriverProfileSummary
       API.UI.DriverReferral
       API.UI.ExotelEndRide
-      API.UI.Frontend
       API.UI.Issue
       API.UI.KioskLocation
       API.UI.LeaderBoard
-      API.UI.Location
       API.UI.Maps
       API.UI.Message
       API.UI.OnMessage
@@ -76,6 +92,7 @@ library
       API.UI.Registration
       API.UI.Ride
       API.UI.RideRoute
+      API.UI.RideSummary
       API.UI.Route
       API.UI.Transporter
       API.UI.Vehicle
@@ -84,6 +101,7 @@ library
       App.Server
       Beckn.ACL.Cancel
       Beckn.ACL.Common
+      Beckn.ACL.Common.Order
       Beckn.ACL.Confirm
       Beckn.ACL.Init
       Beckn.ACL.OnConfirm
@@ -111,11 +129,11 @@ library
       Domain.Action.Beckn.Update
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Driver
+      Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Driver.Registration
       Domain.Action.Dashboard.DriverReferral
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Registration
-      Domain.Action.Dashboard.Issue
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Message
       Domain.Action.Dashboard.Overlay
@@ -124,11 +142,15 @@ library
       Domain.Action.Dashboard.Volunteer
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate
+      Domain.Action.Internal.CustomerCancellationDues
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
       Domain.Action.UI.Call
+      Domain.Action.UI.CallEvent
       Domain.Action.UI.CancellationReason
+      Domain.Action.UI.City
       Domain.Action.UI.Driver
+      Domain.Action.UI.DriverCoin
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DriverLicense
       Domain.Action.UI.DriverOnboarding.IdfyWebhook
@@ -139,12 +161,8 @@ library
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
       Domain.Action.UI.ExotelEndRide
-      Domain.Action.UI.Frontend
-      Domain.Action.UI.Issue
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
-      Domain.Action.UI.Location
-      Domain.Action.UI.Location.UpdateLocation
       Domain.Action.UI.Maps
       Domain.Action.UI.Message
       Domain.Action.UI.OnMessage
@@ -162,6 +180,7 @@ library
       Domain.Action.UI.Ride.StartRide
       Domain.Action.UI.Ride.StartRide.Internal
       Domain.Action.UI.RideRoute
+      Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
@@ -172,9 +191,14 @@ library
       Domain.Types.BookingCancellationReason
       Domain.Types.BusinessEvent
       Domain.Types.CallStatus
+      Domain.Types.CancellationCharges
       Domain.Types.CancellationReason
+      Domain.Types.City
+      Domain.Types.Coins.CoinHistory
+      Domain.Types.Coins.CoinsConfig
+      Domain.Types.Coins.PurchaseHistory
       Domain.Types.Common
-      Domain.Types.Driver.DriverFlowStatus
+      Domain.Types.DailyStats
       Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest
       Domain.Types.Driver.GoHomeFeature.DriverHomeLocation
       Domain.Types.DriverBlockReason
@@ -207,14 +231,10 @@ library
       Domain.Types.FareProduct
       Domain.Types.Feedback.Feedback
       Domain.Types.Feedback.FeedbackForm
+      Domain.Types.FleetDriverAssociation
       Domain.Types.Geometry
       Domain.Types.GoHomeConfig
       Domain.Types.Invoice
-      Domain.Types.Issue.Comment
-      Domain.Types.Issue.IssueCategory
-      Domain.Types.Issue.IssueOption
-      Domain.Types.Issue.IssueReport
-      Domain.Types.Issue.IssueTranslation
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
       Domain.Types.LeaderBoardConfig
@@ -222,12 +242,12 @@ library
       Domain.Types.LocationMapping
       Domain.Types.Mandate
       Domain.Types.Maps.PlaceNameCache
-      Domain.Types.MediaFile
       Domain.Types.Merchant
       Domain.Types.Merchant.DriverIntelligentPoolConfig
       Domain.Types.Merchant.DriverPoolConfig
       Domain.Types.Merchant.LeaderBoardConfig
       Domain.Types.Merchant.MerchantMessage
+      Domain.Types.Merchant.MerchantOperatingCity
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
@@ -259,12 +279,15 @@ library
       Domain.Types.Vehicle.Variant
       Domain.Types.Volunteer
       Environment
+      Lib.DriverCoins.Coins
+      Lib.DriverCoins.Types
       Lib.DriverScore
       Lib.DriverScore.Types
       Lib.LocationUpdates
       Lib.Mesh
       Lib.Schema
       SharedLogic.Allocator
+      SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
       SharedLogic.Allocator.Jobs.Mandate.Execution
       SharedLogic.Allocator.Jobs.Mandate.Notification
@@ -281,14 +304,11 @@ library
       SharedLogic.CallBAPInternal
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
-      SharedLogic.DriverLocation
-      SharedLogic.DriverMode
       SharedLogic.DriverOnboarding
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
       SharedLogic.Estimate
-      SharedLogic.External.LocationTrackingService.API.DriverDetails
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide
       SharedLogic.External.LocationTrackingService.API.NearBy
@@ -306,6 +326,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Payment
       SharedLogic.Person
+      SharedLogic.RiderDetails
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       Storage.Beam.BapMetadata
@@ -315,15 +336,18 @@ library
       Storage.Beam.BookingCancellationReason
       Storage.Beam.BusinessEvent
       Storage.Beam.CallStatus
+      Storage.Beam.CancellationCharges
       Storage.Beam.CancellationReason
+      Storage.Beam.Coins.CoinHistory
+      Storage.Beam.Coins.CoinsConfig
+      Storage.Beam.Coins.PurchaseHistory
       Storage.Beam.Common
-      Storage.Beam.Driver.DriverFlowStatus
+      Storage.Beam.DailyStats
       Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation
       Storage.Beam.DriverBlockReason
       Storage.Beam.DriverFee
       Storage.Beam.DriverInformation
-      Storage.Beam.DriverLocation
       Storage.Beam.DriverOnboarding.AadhaarOtpReq
       Storage.Beam.DriverOnboarding.AadhaarOtpVerify
       Storage.Beam.DriverOnboarding.AadhaarVerification
@@ -331,7 +355,6 @@ library
       Storage.Beam.DriverOnboarding.DriverRCAssociation
       Storage.Beam.DriverOnboarding.IdfyVerification
       Storage.Beam.DriverOnboarding.Image
-      Storage.Beam.DriverOnboarding.OperatingCity
       Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
       Storage.Beam.DriverPlan
       Storage.Beam.DriverQuote
@@ -352,27 +375,23 @@ library
       Storage.Beam.Feedback.Feedback
       Storage.Beam.Feedback.FeedbackBadge
       Storage.Beam.Feedback.FeedbackForm
+      Storage.Beam.FleetDriverAssociation
       Storage.Beam.Geometry
       Storage.Beam.GoHomeConfig
       Storage.Beam.Invoice
-      Storage.Beam.Issue.Comment
-      Storage.Beam.Issue.IssueCategory
-      Storage.Beam.Issue.IssueOption
-      Storage.Beam.Issue.IssueReport
-      Storage.Beam.Issue.IssueTranslation
+      Storage.Beam.IssueManagement
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
-      Storage.Beam.LeaderBoardConfig
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Mandate
       Storage.Beam.Maps.PlaceNameCache
-      Storage.Beam.MediaFile
       Storage.Beam.Merchant
       Storage.Beam.Merchant.DriverIntelligentPoolConfig
       Storage.Beam.Merchant.DriverPoolConfig
       Storage.Beam.Merchant.LeaderBoardConfig
       Storage.Beam.Merchant.MerchantMessage
+      Storage.Beam.Merchant.MerchantOperatingCity
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
@@ -384,7 +403,7 @@ library
       Storage.Beam.Message.MessageTranslation
       Storage.Beam.MetaData
       Storage.Beam.Notification
-      Storage.Beam.OnboardingDocumentConfig
+      Storage.Beam.Payment
       Storage.Beam.Person
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
@@ -400,6 +419,7 @@ library
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchRequestSpecialZone
       Storage.Beam.SearchTry
+      Storage.Beam.SystemConfigs
       Storage.Beam.Vehicle
       Storage.Beam.Volunteer
       Storage.CachedQueries.BapMetadata
@@ -411,18 +431,15 @@ library
       Storage.CachedQueries.FarePolicy
       Storage.CachedQueries.FareProduct
       Storage.CachedQueries.GoHomeConfig
-      Storage.CachedQueries.Issue.IssueCategory
-      Storage.CachedQueries.Issue.IssueOption
       Storage.CachedQueries.KioskLocation
       Storage.CachedQueries.KioskLocationTranslation
-      Storage.CachedQueries.LeaderBoardConfig
       Storage.CachedQueries.Maps.PlaceNameCache
-      Storage.CachedQueries.MediaFile
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
       Storage.CachedQueries.Merchant.DriverPoolConfig
       Storage.CachedQueries.Merchant.LeaderBoardConfig
       Storage.CachedQueries.Merchant.MerchantMessage
+      Storage.CachedQueries.Merchant.MerchantOperatingCity
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
@@ -439,8 +456,12 @@ library
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BusinessEvent
       Storage.Queries.CallStatus
+      Storage.Queries.CancellationCharges
       Storage.Queries.CancellationReason
-      Storage.Queries.Driver.DriverFlowStatus
+      Storage.Queries.Coins.CoinHistory
+      Storage.Queries.Coins.CoinsConfig
+      Storage.Queries.Coins.PurchaseHistory
+      Storage.Queries.DailyStats
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation
@@ -448,7 +469,6 @@ library
       Storage.Queries.DriverFee
       Storage.Queries.DriverInformation
       Storage.Queries.DriverInformation.Internal
-      Storage.Queries.DriverLocation
       Storage.Queries.DriverLocation.Internal
       Storage.Queries.DriverOnboarding.AadhaarOtp
       Storage.Queries.DriverOnboarding.AadhaarVerification
@@ -456,7 +476,6 @@ library
       Storage.Queries.DriverOnboarding.DriverRCAssociation
       Storage.Queries.DriverOnboarding.IdfyVerification
       Storage.Queries.DriverOnboarding.Image
-      Storage.Queries.DriverOnboarding.OperatingCity
       Storage.Queries.DriverOnboarding.Status
       Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate
       Storage.Queries.DriverPlan
@@ -478,29 +497,24 @@ library
       Storage.Queries.Feedback.Feedback
       Storage.Queries.Feedback.FeedbackBadge
       Storage.Queries.Feedback.FeedbackForm
+      Storage.Queries.FleetDriverAssociation
       Storage.Queries.Geometry
       Storage.Queries.GoHomeConfig
       Storage.Queries.Instances.DriverInformation
       Storage.Queries.Instances.Person
       Storage.Queries.Invoice
-      Storage.Queries.Issue.Comment
-      Storage.Queries.Issue.IssueCategory
-      Storage.Queries.Issue.IssueOption
-      Storage.Queries.Issue.IssueReport
-      Storage.Queries.Issue.IssueTranslation
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
-      Storage.Queries.LeaderBoardConfig
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Mandate
       Storage.Queries.Maps.PlaceNameCache
-      Storage.Queries.MediaFile
       Storage.Queries.Merchant
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
       Storage.Queries.Merchant.DriverPoolConfig
       Storage.Queries.Merchant.LeaderBoardConfig
       Storage.Queries.Merchant.MerchantMessage
+      Storage.Queries.Merchant.MerchantOperatingCity
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
@@ -592,7 +606,7 @@ library
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -611,6 +625,7 @@ library
     , containers
     , cryptonite
     , dashboard-helper-api
+    , data-default-class
     , either
     , esqueleto
     , euler-hs
@@ -621,6 +636,7 @@ library
     , hashmap
     , hspec
     , http-client
+    , http-types
     , lens
     , location-updates
     , mobility-core
@@ -644,6 +660,7 @@ library
     , sessionizer-metrics
     , shared-services
     , singletons
+    , singletons-th
     , special-zone-a
     , stm
     , string-conversions
@@ -652,13 +669,17 @@ library
     , text-conversions
     , time
     , unordered-containers
+    , utils
     , uuid
     , vector
     , wai
+    , wai-extra
     , warp
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
 
 executable dynamic-offer-driver-app-exe
   main-is: Main.hs
@@ -718,6 +739,7 @@ executable dynamic-offer-driver-app-exe
     , containers
     , cryptonite
     , dashboard-helper-api
+    , data-default-class
     , dynamic-offer-driver-app
     , either
     , esqueleto
@@ -729,6 +751,7 @@ executable dynamic-offer-driver-app-exe
     , hashmap
     , hspec
     , http-client
+    , http-types
     , lens
     , mobility-core
     , openapi3
@@ -749,6 +772,7 @@ executable dynamic-offer-driver-app-exe
     , servant-server
     , shared-services
     , singletons
+    , singletons-th
     , stm
     , string-conversions
     , template-haskell
@@ -759,7 +783,10 @@ executable dynamic-offer-driver-app-exe
     , uuid
     , vector
     , wai
+    , wai-extra
     , warp
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4

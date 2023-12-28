@@ -14,6 +14,8 @@
 
 module Environment where
 
+import qualified Data.HashMap as HM
+import qualified Data.Map as M
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common
@@ -40,7 +42,8 @@ data AppCfg = AppCfg
     authEntity :: AuthenticatingEntity',
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
-    kafkaConsumerCfgs :: KafkaConsumerCfgs
+    kafkaConsumerCfgs :: KafkaConsumerCfgs,
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -60,7 +63,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
     kafkaConsumerEnv :: KafkaConsumerEnv,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -73,6 +77,7 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

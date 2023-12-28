@@ -20,7 +20,7 @@ import PrestoDOM (Visibility(..))
 import Screens.HomeScreen.ScreenData (dummyAddress)
 import Screens.Types (AddNewAddressScreenState, CardType(..), Location)
 import Services.API (Prediction(..))
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
  
 initData :: AddNewAddressScreenState
 initData = {
@@ -50,7 +50,10 @@ initData = {
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
   }
   , address : ""
   , activeIndex : (Just 2)
@@ -73,7 +76,7 @@ initData = {
   , addressComponents : []
   , polygonCoordinates : ""
   , nearByPickUpPoints : []
-  , config : DC.config
+  , config : getAppConfig appConfig
   },
   props: {
   showSavePlaceView : false
@@ -99,5 +102,6 @@ dummyLocation = {
    place : "",
    lat : 0.0,
    lng : 0.0,
-   address : Nothing
+   address : Nothing,
+   city : Nothing
  }

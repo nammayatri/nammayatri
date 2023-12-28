@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.GoHomeConfig where
 
@@ -25,6 +26,7 @@ import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
 
 data GoHomeConfigT f = GoHomeConfigT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     enableGoHome :: B.C f Bool,
     startCnt :: B.C f Int,
     destRadiusMeters :: B.C f Int,
@@ -48,7 +50,7 @@ instance B.Table GoHomeConfigT where
   data PrimaryKey GoHomeConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . merchantOperatingCityId
 
 type GoHomeConfig = GoHomeConfigT Identity
 
@@ -63,6 +65,6 @@ goHomeConfigToPSModifiers :: M.Map Text (A.Value -> A.Value)
 goHomeConfigToPSModifiers =
   M.empty
 
-$(enableKVPG ''GoHomeConfigT ['merchantId] [])
+$(enableKVPG ''GoHomeConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''GoHomeConfigT "go_home_config")

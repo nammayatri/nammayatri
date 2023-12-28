@@ -17,14 +17,17 @@ module Screens.EnterMobileNumberScreen.ScreenData where
 
 import Screens.Types (EnterMobileNumberScreenState)
 import Foreign.Object (empty)
+import ConfigProvider
 
 initData :: EnterMobileNumberScreenState
 initData =  {
   data: { mobileNumber : "",
-          logField : empty
+          logField : empty,
+          config : getAppConfig appConfig
         },
   props: {
     btnActive :false,
-    isValid : false
+    isValid : false,
+    mobileNumberEditFocused : true
     }
 }

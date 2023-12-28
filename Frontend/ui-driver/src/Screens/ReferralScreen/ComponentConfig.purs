@@ -72,7 +72,7 @@ contactSupportConfig state  =
     , margin = (MarginHorizontal 12 0) }
     , backgroundClickable = true
     , secondaryText {
-      text = (getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT)
+      text = (getString $ YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT")
     , margin = (Margin 40 0 40 32) }
     , gravity = CENTER
     , margin = (MarginHorizontal 16 16)
@@ -98,7 +98,7 @@ genericHeaderConfig state = let
       }
     , padding = if state.props.stage == ST.ReferralFlow then (Padding 0 5 0 5) else (Padding 16 16 0 16)
     , textConfig {
-        text = if state.props.stage == ST.LeaderBoard then (getString RANKINGS) else if state.props.stage == ST.ReferralFlow then (getString REFERRAL_ENROLMENT) else (getString REFERRALS)
+        text = if state.props.stage == ST.LeaderBoard then (getString CONTEST) else if state.props.stage == ST.ReferralFlow then (getString REFERRAL_ENROLMENT) else (getString REFERRALS)
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {

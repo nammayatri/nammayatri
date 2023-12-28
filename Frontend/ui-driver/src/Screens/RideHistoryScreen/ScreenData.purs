@@ -15,7 +15,9 @@
 
 module Screens.RideHistoryScreen.ScreenData where
 
+import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
+import ConfigProvider
 import Prelude ((-))
 import Resource.Constants (tripDatesCount)
 import Screens.Types (AnimationState(..), RideHistoryScreenState)
@@ -47,7 +49,14 @@ initData = {
     source : "",
     destination : "",
     vehicleType : "",
-    riderName : ""
+    riderName : "",
+    customerExtraFee : Nothing,
+    purpleTagVisibility : false,
+    gotoTagVisibility : false,
+    spLocTagVisibility : false,
+    specialZoneLayoutBackground : "",
+    specialZoneImage : "",
+    specialZoneText : ""
   },
   offsetValue: 0,
   loaderButtonVisibility: false,
@@ -66,6 +75,7 @@ initData = {
   , paymentHistory : {
     paymentHistoryList : []
   }
+  , config  : getAppConfig appConfig
   }
   , props : {
     showDatePicker : false

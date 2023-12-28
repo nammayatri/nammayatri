@@ -52,6 +52,15 @@ getReadyTasks = do
     filterFunc now (AnyJob Job {scheduledAt, status}) =
       status == Pending && scheduledAt <= now
 
+getReadyTask :: SchedulerM [AnyJob SchedulerJobType]
+getReadyTask = do
+  now <- getCurrentTime
+  liftIO $ filter (filterFunc now) . Map.elems <$> readMVar jobsList
+  where
+    filterFunc :: UTCTime -> AnyJob SchedulerJobType -> Bool
+    filterFunc now (AnyJob Job {scheduledAt, status}) =
+      status == Pending && scheduledAt <= now
+
 updateStatus :: JobStatus -> Id AnyJob -> SchedulerM ()
 updateStatus newStatus jobId = do
   now <- getCurrentTime

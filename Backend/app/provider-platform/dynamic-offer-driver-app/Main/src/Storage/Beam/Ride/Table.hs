@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Ride.Table where
 
@@ -26,6 +27,7 @@ data RideT f = RideT
     bookingId :: B.C f Text,
     shortId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     status :: B.C f Domain.RideStatus,
     driverId :: B.C f Text,
     otp :: B.C f Text,
@@ -47,10 +49,12 @@ data RideT f = RideT
     updatedAt :: B.C f UTCTime,
     driverDeviatedFromRoute :: B.C f (Maybe Bool),
     numberOfSnapToRoadCalls :: B.C f (Maybe Int),
+    numberOfOsrmSnapToRoadCalls :: B.C f (Maybe Int),
     numberOfDeviation :: B.C f (Maybe Bool),
     uiDistanceCalculationWithAccuracy :: B.C f (Maybe Int),
     uiDistanceCalculationWithoutAccuracy :: B.C f (Maybe Int),
-    driverGoHomeRequestId :: B.C f (Maybe Text)
+    driverGoHomeRequestId :: B.C f (Maybe Text),
+    safetyAlertTriggered :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

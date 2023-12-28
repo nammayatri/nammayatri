@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Merchant.MerchantServiceUsageConfig where
 
@@ -28,6 +29,7 @@ import Tools.Beam.UtilsTH
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     initiateCall :: B.C f CallService,
     getDistances :: B.C f MapsService,
     getEstimatedPickupDistances :: B.C f MapsService,
@@ -40,6 +42,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     autoComplete :: B.C f MapsService,
     getDistancesForCancelRide :: B.C f MapsService,
     smsProvidersPriorityList :: B.C f [SmsService],
+    snapToRoadProvidersList :: B.C f [MapsService],
     whatsappProvidersPriorityList :: B.C f [WhatsappService],
     verificationService :: B.C f VerificationService,
     faceVerificationService :: B.C f VerificationService,
@@ -55,10 +58,10 @@ instance B.Table MerchantServiceUsageConfigT where
   data PrimaryKey MerchantServiceUsageConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . merchantOperatingCityId
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
 
-$(enableKVPG ''MerchantServiceUsageConfigT ['merchantId] [])
+$(enableKVPG ''MerchantServiceUsageConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")

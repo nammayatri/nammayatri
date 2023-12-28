@@ -21,6 +21,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person (Person)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 
 data RiderDetailsE e = RiderDetails
@@ -34,8 +35,11 @@ data RiderDetailsE e = RiderDetails
     referredAt :: Maybe UTCTime,
     hasTakenValidRide :: Bool,
     hasTakenValidRideAt :: Maybe UTCTime,
+    cancellationDues :: HighPrecMoney,
+    disputeChancesUsed :: Int,
     merchantId :: Id Merchant,
-    otpCode :: Maybe Text
+    otpCode :: Maybe Text,
+    nightSafetyChecks :: Bool
   }
   deriving (Generic)
 
@@ -55,4 +59,4 @@ instance EncryptedItem RiderDetails where
 instance EncryptedItem' RiderDetails where
   type UnencryptedItem RiderDetails = RiderDetailsDecrypted
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst

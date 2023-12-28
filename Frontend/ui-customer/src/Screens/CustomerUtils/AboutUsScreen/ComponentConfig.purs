@@ -24,20 +24,23 @@ import PrestoDOM ( Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), showTitle, isParentView)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
 genericHeaderConfig :: ST.AboutUsScreenState -> GenericHeader.Config
 genericHeaderConfig state = let 
   config = if state.appConfig.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
+  btnVisibility = if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , visibility = btnVisibility
       } 
     , textConfig {
         text = (getString ABOUT)
@@ -46,5 +49,6 @@ genericHeaderConfig state = let
     , suffixImageConfig {
         visibility = GONE
       }
+    , visibility = titleVisibility
     }
   in genericHeaderConfig'

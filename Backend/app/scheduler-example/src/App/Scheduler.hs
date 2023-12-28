@@ -38,6 +38,7 @@ schedulerHandle loggerRes =
   SchedulerHandle
     { getTasksById = QSJ.getTasksById,
       getReadyTasks = return [],
+      getReadyTask = return [],
       markAsComplete = QSJ.markAsComplete,
       markAsFailed = QSJ.markAsFailed,
       updateErrorCountAndFail = QSJ.updateErrorCountAndFail,
@@ -58,7 +59,7 @@ runExampleScheduler configModifier = do
   let loggerConfig = appCfg.loggerConfig
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   let loggerRes = LoggerResources {..}
-  runSchedulerService appCfg mempty $ schedulerHandle loggerRes
+  runSchedulerService appCfg mempty 0 $ schedulerHandle loggerRes
 
 -----------------
 
@@ -81,8 +82,9 @@ makeTestJobEntry jData =
 createBananasCountingJob :: NominalDiffTime -> Flow (Id AnyJob)
 createBananasCountingJob scheduleIn = do
   now <- getCurrentTime
+  uuid <- generateGUIDText
   bCount <- getRandomInRange (1, 10 :: Int)
-  createJobIn createJobFunc scheduleIn 1 $ makeTestJobEntry @'PrintBananasCount $ makeJobData now bCount
+  createJobIn uuid createJobFunc scheduleIn 1 $ makeTestJobEntry @'PrintBananasCount $ makeJobData now bCount
   where
     makeJobData now_ bCount_ =
       BananasCount
@@ -99,8 +101,9 @@ bananasCounterHandler job = do
 -----------------
 
 createTimePrinterJob :: NominalDiffTime -> Flow (Id AnyJob)
-createTimePrinterJob scheduleIn =
-  createJobIn createJobFunc scheduleIn 1 $ makeTestJobEntry @'PrintCurrentTimeWithErrorProbability ()
+createTimePrinterJob scheduleIn = do
+  uuid <- generateGUIDText
+  createJobIn uuid createJobFunc scheduleIn 1 $ makeTestJobEntry @'PrintCurrentTimeWithErrorProbability ()
 
 timePrinterHandler :: Job 'PrintCurrentTimeWithErrorProbability -> SchedulerT ExecutionResult
 timePrinterHandler _ = do
@@ -117,13 +120,13 @@ timePrinterHandler _ = do
 
 createFakeJob :: NominalDiffTime -> Flow (Id AnyJob)
 createFakeJob scheduleIn =
-  createJobIn createJobFunc scheduleIn 1 $ makeTestJobEntry @'FakeJobType ()
+  createJobIn "supposed to give uuid here" createJobFunc scheduleIn 1 $ makeTestJobEntry @'FakeJobType ()
 
 -----------------
 
 createIncorrectDataJob :: NominalDiffTime -> Flow (Id AnyJob)
 createIncorrectDataJob scheduleIn =
-  createJobIn createJobFunc scheduleIn 1 $ makeTestJobEntry @'IncorrectDataJobType val
+  createJobIn "but being lazy did add here" createJobFunc scheduleIn 1 $ makeTestJobEntry @'IncorrectDataJobType val
   where
     val = IncSer 2 "quux"
 
@@ -136,7 +139,7 @@ incorrectDataJobHandler _ = do
 
 createTestTerminationJob :: NominalDiffTime -> Flow (Id AnyJob)
 createTestTerminationJob scheduleIn =
-  createJobIn createJobFunc scheduleIn 1 $ makeTestJobEntry @'TestTermination ()
+  createJobIn "uuid here" createJobFunc scheduleIn 1 $ makeTestJobEntry @'TestTermination ()
 
 testTerminationHandler :: Job 'TestTermination -> SchedulerT ExecutionResult
 testTerminationHandler _ = flip C.catchAll (\_ -> pure Retry) $ do

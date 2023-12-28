@@ -25,10 +25,11 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Error
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as BeamDO
 import qualified Storage.Beam.Quote as BeamQ
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.RentalSlab as QueryRS
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
@@ -53,10 +54,10 @@ create quote = do
 createMany :: MonadFlow m => [Quote] -> m ()
 createMany = traverse_ create
 
-findById :: MonadFlow m => Id Quote -> m (Maybe Quote)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Quote -> m (Maybe Quote)
 findById quoteId = findOneWithKV [Se.Is BeamQ.id $ Se.Eq (getId quoteId)]
 
-findByBppIdAndBPPQuoteId :: MonadFlow m => Text -> Text -> m (Maybe Quote)
+findByBppIdAndBPPQuoteId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Quote)
 findByBppIdAndBPPQuoteId bppId bppQuoteId = do
   dOffer <- QueryDO.findByBPPQuoteId bppQuoteId
   quoteList <- findAllWithKV [Se.And [Se.Is BeamQ.providerId $ Se.Eq bppId, Se.Is BeamQ.driverOfferId $ Se.In (map (Just . getId . DDO.id) dOffer)]]
@@ -76,16 +77,16 @@ findByBppIdAndBPPQuoteId bppId bppQuoteId = do
           else res
         )
 
-findAllBySRId :: MonadFlow m => Id SearchRequest -> m [Quote]
+findAllBySRId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> m [Quote]
 findAllBySRId searchRequestId = findAllWithKV [Se.Is BeamQ.requestId $ Se.Eq (getId searchRequestId)]
 
-findAllByEstimateId :: MonadFlow m => Id Estimate -> DriverOfferStatus -> m [Quote]
+findAllByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> DriverOfferStatus -> m [Quote]
 findAllByEstimateId estimateId status = do
   driverOffers <- findDOfferByEstimateId estimateId status
   let offerIds = map (Just . getId . DDO.id) driverOffers
   findAllWithKV [Se.Is BeamQ.driverOfferId (Se.In offerIds)]
 
-findDOfferByEstimateId :: MonadFlow m => Id Estimate -> DriverOfferStatus -> m [DriverOffer]
+findDOfferByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> DriverOfferStatus -> m [DriverOffer]
 findDOfferByEstimateId (Id estimateId) status = findAllWithKV [Se.And [Se.Is BeamDO.estimateId $ Se.Eq estimateId, Se.Is BeamDO.status $ Se.Eq status]]
 
 instance FromTType' BeamQ.Quote Quote where
@@ -109,6 +110,7 @@ instance FromTType' BeamQ.Quote Quote where
       DFFP.ONE_WAY_SPECIAL_ZONE -> do
         qd <- getSpecialZoneQuote specialZoneQuoteId
         maybe (throwError (InternalError "No special zone details")) return qd
+    merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId
     pure $
       Just
         Quote
@@ -118,6 +120,7 @@ instance FromTType' BeamQ.Quote Quote where
             discount = roundToIntegral <$> discount,
             estimatedTotalFare = roundToIntegral estimatedTotalFare,
             merchantId = Id merchantId,
+            merchantOperatingCityId = merchantOperatingCityId',
             quoteDetails = quoteDetails,
             providerId = providerId,
             itemId = itemId,
@@ -142,6 +145,10 @@ instance FromTType' BeamQ.Quote Quote where
       getSpecialZoneQuote specialZoneQuoteId' = do
         res <- maybe (pure Nothing) (QuerySZQ.findById . Id) specialZoneQuoteId'
         maybe (pure Nothing) (pure . Just . DQ.OneWaySpecialZoneDetails) res
+
+      backfillMOCId = \case
+        Just mocId -> pure $ Id mocId
+        Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (Id merchantId)
 
 instance ToTType' BeamQ.Quote Quote where
   toTType' Quote {..} =
@@ -169,6 +176,7 @@ instance ToTType' BeamQ.Quote Quote where
             BeamQ.rentalSlabId = rentalSlabId,
             BeamQ.driverOfferId = driverOfferId,
             BeamQ.merchantId = getId merchantId,
+            BeamQ.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
             BeamQ.specialZoneQuoteId = specialZoneQuoteId,
             BeamQ.specialLocationTag = specialLocationTag,
             BeamQ.createdAt = createdAt

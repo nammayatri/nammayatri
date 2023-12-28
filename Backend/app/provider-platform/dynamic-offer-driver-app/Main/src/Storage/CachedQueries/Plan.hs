@@ -10,7 +10,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Plan as Queries
 
-findByIdAndPaymentMode :: (MonadFlow m, CacheFlow m r) => Id Plan -> PaymentMode -> m (Maybe Plan)
+findByIdAndPaymentMode :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Plan -> PaymentMode -> m (Maybe Plan)
 findByIdAndPaymentMode (Id planId) paymentMode =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makePlanIdAndPaymentModeKey (Id planId) paymentMode) >>= \case
     Just a -> pure a
@@ -22,7 +22,7 @@ cacheByIdAndPaymentMode (Id planId) paymentMode plan = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makePlanIdAndPaymentModeKey (Id planId) paymentMode) plan expTime
 
 ------------------- -----------------------
-findByMerchantId :: (CacheFlow m r, MonadFlow m) => Id Merchant -> m [Plan]
+findByMerchantId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Merchant -> m [Plan]
 findByMerchantId (Id merchantId) =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey (Id merchantId)) >>= \case
     Just a -> pure a
@@ -34,7 +34,7 @@ cacheByMerchantId (Id merchantId) plans = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdKey (Id merchantId)) plans expTime
 
 ------------------- -----------------------
-findByMerchantIdAndPaymentMode :: (CacheFlow m r, MonadFlow m) => Id Merchant -> PaymentMode -> m [Plan]
+findByMerchantIdAndPaymentMode :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Merchant -> PaymentMode -> m [Plan]
 findByMerchantIdAndPaymentMode (Id merchantId) paymentMode =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndPaymentModeKey (Id merchantId) paymentMode) >>= \case
     Just a -> pure a
@@ -45,7 +45,7 @@ cacheByMerchantIdAndPaymentMode (Id merchantId) paymentMode plans = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndPaymentModeKey (Id merchantId) paymentMode) plans expTime
 
-findByMerchantIdAndType :: (CacheFlow m r, MonadFlow m) => Id Merchant -> PlanType -> m [Plan]
+findByMerchantIdAndType :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id Merchant -> PlanType -> m [Plan]
 findByMerchantIdAndType (Id merchantId) planType =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndTypeKey (Id merchantId) planType) >>= \case
     Just a -> pure a
@@ -57,7 +57,7 @@ cacheByMerchantIdAndType (Id merchantId) planType plans = do
   Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndTypeKey (Id merchantId) planType) plans expTime
 
 ------------------- -----------------------
-fetchAllPlan :: (CacheFlow m r, MonadFlow m) => m [Plan]
+fetchAllPlan :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => m [Plan]
 fetchAllPlan =
   Hedis.withCrossAppRedis (Hedis.safeGet makeAllPlanKey) >>= \case
     Just a -> pure a

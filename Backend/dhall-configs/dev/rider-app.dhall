@@ -71,6 +71,10 @@ let sampleKafkaConfig
     : globalCommon.kafkaConfig
     = { topicName = "rider-app-events-updates", kafkaKey = "rider-app" }
 
+let exophoneKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "ExophoneData", kafkaKey = "rider-app-exophone-events" }
+
 let sampleLogConfig
     : Text
     = "log-stream"
@@ -94,6 +98,11 @@ let eventStreamMappings =
           , globalCommon.eventType.Quotes
           , globalCommon.eventType.Estimate
           ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream exophoneKafkaConfig
+        , eventTypes = [ globalCommon.eventType.ExophoneData ]
         }
       , { streamName = globalCommon.eventStreamNameType.LOG_STREAM
         , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
@@ -147,14 +156,13 @@ let hccfg =
       , connectTimeout = None Integer
       }
 
-let tables =
-      { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
-      , kafkaNonKVTables = [] : List Text
-      }
+let kvConfigUpdateFrequency = +10
 
 let dontEnableForDb = [] : List Text
+
+let maxMessages
+    : Text
+    = "5000"
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -212,6 +220,9 @@ in  { esqDBCfg
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
-    , tables
+    , kvConfigUpdateFrequency
     , dontEnableForDb
+    , maxMessages
+    , incomingAPIResponseTimeout = +15
+    , internalEndPointMap = common.internalEndPointMap
     }

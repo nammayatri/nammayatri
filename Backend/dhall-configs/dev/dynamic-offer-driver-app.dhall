@@ -28,7 +28,7 @@ let esqLocationDBCfg = esqDBCfg
 
 let esqLocationDBRepCfg =
       { connectHost = esqLocationDBCfg.connectHost
-      , connectPort = 5454
+      , connectPort = 5434
       , connectUser = esqLocationDBCfg.connectUser
       , connectPassword = esqLocationDBCfg.connectPassword
       , connectDatabase = esqLocationDBCfg.connectDatabase
@@ -36,7 +36,16 @@ let esqLocationDBRepCfg =
       , connectionPoolCount = esqLocationDBCfg.connectionPoolCount
       }
 
-let clickhouseCfg =
+let kafkaClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "xxxxx"
+      , port = 1234
+      , password = sec.clickHousePassword
+      , database = "xxxx"
+      , tls = True
+      }
+
+let driverClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "xxxxx"
       , port = 1234
@@ -83,6 +92,12 @@ let sampleKafkaConfig
       , kafkaKey = "dynamic-offer-driver"
       }
 
+let exophoneKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "ExophoneData"
+      , kafkaKey = "dynamic-offer-driver-exophone-events"
+      }
+
 let sampleLogConfig
     : Text
     = "log-stream"
@@ -102,6 +117,11 @@ let eventStreamMappings =
           , globalCommon.eventType.Quotes
           , globalCommon.eventType.Estimate
           ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream exophoneKafkaConfig
+        , eventTypes = [ globalCommon.eventType.ExophoneData ]
         }
       , { streamName = globalCommon.eventStreamNameType.LOG_STREAM
         , streamConfig = globalCommon.streamConfig.LogStream sampleLogConfig
@@ -135,12 +155,7 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
-let tables =
-      { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
-      , kafkaNonKVTables = [] : List Text
-      }
+let kvConfigUpdateFrequency = +10
 
 let dontEnableForDb = [] : List Text
 
@@ -171,12 +186,11 @@ let AllocatorJobType =
       | CalculateDriverFees
       | OrderAndNotificationStatusUpdate
       | SendOverlay
+      | BadDebtCalculation
       >
 
 let jobInfoMapx =
-      [ { mapKey = AllocatorJobType.SendSearchRequestToDriver
-        , mapValue = False
-        }
+      [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
       , { mapKey = AllocatorJobType.SendPaymentReminderToDriver
         , mapValue = False
         }
@@ -193,15 +207,28 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.SendOverlay, mapValue = True }
+      , { mapKey = AllocatorJobType.BadDebtCalculation, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
+let maxMessages
+    : Text
+    = "5000"
+
+let modelNamesMap =
+      [ { mapKey = "MARUTI ALTO (Some random verioning)"
+        , mapValue = "MARUTI ALTO"
+        }
+      , { mapKey = "MARUTI ALTO (another random verioning)"
+        , mapValue = "MARUTI ALTO"
+        }
+      ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
-    , esqLocationDBCfg
-    , esqLocationDBRepCfg
-    , clickhouseCfg
+    , kafkaClickhouseCfg
+    , driverClickhouseCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisNonCriticalCfg = rcfg
@@ -255,6 +282,7 @@ in  { esqDBCfg
     , broadcastMessageTopic = "broadcast-messages"
     , kafkaProducerCfg
     , snapToRoadSnippetThreshold = +300
+    , droppedPointsThreshold = +2000
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
     , enableRedisLatencyLogging = False
@@ -262,11 +290,14 @@ in  { esqDBCfg
     , enableAPILatencyLogging = True
     , enableAPIPrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
-    , tables
+    , kvConfigUpdateFrequency
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , schedulerSetName = "Scheduled_Jobs"
-    , schedulerType = common.schedulerType.DbBased
+    , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
-    , enableLocationTrackingService = False
     , dontEnableForDb
+    , maxMessages
+    , modelNamesMap
+    , incomingAPIResponseTimeout = +15
+    , internalEndPointMap = common.internalEndPointMap
     }

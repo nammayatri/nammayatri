@@ -19,21 +19,22 @@ import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Base64 (Base64)
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Common
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
-import Kernel.Utils.Time (Seconds)
 
 data MerchantD (s :: UsageSafety) = Merchant
   { id :: Id Merchant,
     subscriberId :: ShortId Subscriber,
     shortId :: ShortId Merchant,
     name :: Text,
-    city :: Context.City,
+    defaultCity :: Context.City,
     country :: Context.Country,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,
     registryUrl :: BaseUrl,
+    fallbackShortId :: ShortId Merchant,
     bapId :: Text,
     bapUniqueKeyId :: Text,
     driverOfferBaseUrl :: BaseUrl,
@@ -50,7 +51,14 @@ data MerchantD (s :: UsageSafety) = Merchant
     timeDiffFromUtc :: Seconds,
     isAvoidToll :: Bool,
     aadhaarVerificationTryLimit :: Int,
-    aadhaarKeyExpiryTime :: Seconds
+    aadhaarKeyExpiryTime :: Seconds,
+    mediaFileSizeUpperLimit :: Int,
+    mediaFileUrlPattern :: Text,
+    trackingShortUrlPattern :: Text,
+    editPickupDistanceThreshold :: HighPrecMeters,
+    driverDistanceThresholdFromPickup :: HighPrecMeters,
+    numOfAllowedEditPickupLocationAttemptsThreshold :: Int,
+    publicMediaFileUrlPattern :: Text
   }
   deriving (Generic, Show)
 

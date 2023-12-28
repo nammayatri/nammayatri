@@ -29,6 +29,7 @@ import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
 import Kernel.Types.Common
 import Kernel.Types.Flow
@@ -59,10 +60,9 @@ data HandlerEnv = HandlerEnv
     loggerEnv :: LoggerEnv,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
-    esqLocationDBEnv :: EsqDBEnv,
-    esqLocationDBRepEnv :: EsqDBEnv,
     encTools :: EncTools,
     hedisEnv :: HedisEnv,
+    kafkaProducerTools :: KafkaProducerTools,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -79,9 +79,9 @@ data HandlerEnv = HandlerEnv
     jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    enableLocationTrackingService :: Bool,
     ltsCfg :: LT.LocationTrackingeServiceConfig,
     schedulerSetName :: Text,
+    kvConfigUpdateFrequency :: Int,
     schedulerType :: SchedulerType
   }
   deriving (Generic)
@@ -94,8 +94,7 @@ buildHandlerEnv HandlerCfg {..} = do
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
-  esqLocationDBEnv <- prepareEsqDBEnv appCfg.esqLocationDBCfg loggerEnv
-  esqLocationDBRepEnv <- prepareEsqDBEnv appCfg.esqLocationDBRepCfg loggerEnv
+  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   hedisClusterEnv <-

@@ -24,7 +24,7 @@ import Kernel.Utils.Error.Throwing
 import Lib.LocationUpdates as API
 import Lib.LocationUpdates.Internal as I
 import Routes
-import Test.Tasty.Hspec
+import Test.Hspec
 import Utils
 
 resetRedis :: AppEnv -> Id Person -> IO ()
@@ -67,7 +67,7 @@ buildTestInterpolationHandler config = do
       expireInterpolatedPoints = expireInterpolatedPointsImplementation,
       interpolatePointsAndCalculateDistance = \req -> do
         res <- Maps.snapToRoad config $ SnapToRoadReq req
-        pure (res.distance, res.snappedPoints),
+        pure (res.distance, res.snappedPoints, Google),
       updateDistance = updateDistanceTest,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation

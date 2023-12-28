@@ -26,6 +26,7 @@ where
 
 import qualified Domain.Action.UI.Vehicle as DVehicle
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
@@ -33,6 +34,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 -- Following is vehicle flow
@@ -67,5 +69,5 @@ listVehicles admin variantM mbRegNum limitM = withFlowHandlerAPI . DVehicle.list
 updateVehicle :: SP.Person -> Id SP.Person -> DVehicle.UpdateVehicleReq -> FlowHandler DVehicle.UpdateVehicleRes
 updateVehicle admin driverId = withFlowHandlerAPI . DVehicle.updateVehicle admin driverId
 
-getVehicle :: (Id SP.Person, Id DM.Merchant) -> Maybe Text -> Maybe (Id SP.Person) -> FlowHandler DVehicle.GetVehicleRes
-getVehicle (personId, merchantId) registrationNoM = withFlowHandlerAPI . DVehicle.getVehicle (personId, merchantId) registrationNoM
+getVehicle :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe (Id SP.Person) -> FlowHandler DVehicle.GetVehicleRes
+getVehicle (personId, merchantId, merchantOpCityId) registrationNoM = withFlowHandlerAPI . DVehicle.getVehicle (personId, merchantId, merchantOpCityId) registrationNoM

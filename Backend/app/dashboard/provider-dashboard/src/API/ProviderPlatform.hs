@@ -24,8 +24,11 @@ import Servant
 
 type API =
   "bpp"
-    :> DynamicOfferDriver.API
+    :> ( DynamicOfferDriver.API
+           :<|> DynamicOfferDriver.APIV2
+       )
 
 handler :: FlowServer API
 handler =
   DynamicOfferDriver.handler
+    :<|> DynamicOfferDriver.handlerV2

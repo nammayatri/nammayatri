@@ -9,17 +9,16 @@ To build or develop the project, you need to install the following.
 
 #### Nix
 
-Nix is central to building and developing the Namamayatri project. To prepare your system for a pleasant Nix-based development, follow these four steps:
+[Nix](https://nixos.asia/en/nix) is central to building and developing the Namamayatri project. To prepare your system for a pleasant Nix-based development, follow these four steps:
 
-1. [Install **Nix**](https://github.com/DeterminateSystems/nix-installer#the-determinate-nix-installer)
-    - If you already have Nix installed, you must [enable Flakes](https://nixos.wiki/wiki/Flakes#Enable_flakes) manually.
+1. [Install **Nix**](https://nixos.asia/en/install)
+1. Run `nix run nixpkgs#nix-health github:nammayatri/nammayatri` and make sure that everything is green (✅)
 1. Setup the Nix **binary cache** (to avoid compiling locally for hours):
     ```sh
     nix run nixpkgs#cachix use nammayatri
     ```
     - For this command to succeed, you must have added yourself to the `trusted-users` list of `nix.conf`
-1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://zero-to-flakes.com/direnv).
-2. Run `nix --accept-flake-config run github:juspay/nix-browser#nix-health github:nammayatri/nammayatri` and make sure that everything is green (✅)
+1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
 
 [^hm]: Unless you are using NixOS in which case home-manager is not strictly needed.
 [^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time.
@@ -88,6 +87,16 @@ cabal run lib/location-updates
 # Run ghcid (for fast compile feedback)
 , ghcid lib/location-updates
 ```
+
+#### Faster Local Development builds
+
+For much shorter compile times and quicker feedback cycles while developing, you may want to use the builds optimized for local development.
+
+This is now easily & quickly achieved by simply un-commenting the flags under ["DEVELOPMENT FLAGS" section in cabal.project file](cabal.project) when developing.
+
+
+#### Parallel Jobs
+To speed up the compilation times, we use 6 parallel jobs by default. If you have a powerful computer with lots of cores and memory, you can increment the `jobs` setting in [cabal.project](cabal.project) file to run more parallel jobs for faster results. Inversely, if its a low-powered machine, you may consider lowering that number.
 
 #### Running external services
 
@@ -207,7 +216,6 @@ Each of the application has particular set of defined APIs and Schemas. To get a
 | Application                              | Port   |
 | -----------------------------------------|--------|
 | rider-app                                | `8013` |
-| static-offer-driver-app                  | `8014` |
 | beckn-gateway                            | `8015` |
 | dynamic-offer-driver-app                 | `8016` |
 | mock-registry                            | `8020` |
@@ -231,12 +239,6 @@ Each package has clear separation of focuses w.r.t the functionality it provides
 |       ├── Main (public-transport-rider-platform-exe)
 |       └── search-consumer	(public-transport-search-consumer-exe)
 ├── provider-platform                               : encapsulates all the provider side microservices
-|   ├── static-offer-driver-app                     : Microservices that power fixed price ride
-|   |   |                                             hailing service
-|   |   ├── Allocator (allocation-service-exe)      : Allocation service that matches a driver
-|   |   |                                             to a ride
-|   |   ├── Main (static-offer-driver-app-exe)      : Frontend facing APIs, driver app
-|   |   └── Scheduler (transporter-scheduler-exe)   : Job scheduler for scheduling rental rides
 |   ├── dynamic-offer-driver-app                    : Microservices that power dynamic pricing,
 |   |   |                                             as quoted by the driver, service
 |   |   ├── Allocator (driver-offer-allocator-exe)  : Allocation service that matches a driver
@@ -279,3 +281,7 @@ Run `nix run github:nix-community/nix-melt` to navigate and find that transitive
 [arion]: https://github.com/hercules-ci/arion
 [cabal]: https://cabal.readthedocs.io/
 [nix-shell]: https://nixos.wiki/wiki/Development_environment_with_nix-shell
+
+## Running Load Test
+
+See Documentation [README.md](load-test/README.md)

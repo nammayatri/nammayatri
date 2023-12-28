@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Invoice where
 
@@ -34,5 +35,5 @@ instance B.Table InvoiceT where
 
 type Invoice = InvoiceT Identity
 
-$(enableKVPG ''InvoiceT ['id] [])
+$(enableKVPG ''InvoiceT ['id] [['driverFeeId], ['driverId], ['invoiceShortId]])
 $(mkTableInstances ''InvoiceT "invoice")

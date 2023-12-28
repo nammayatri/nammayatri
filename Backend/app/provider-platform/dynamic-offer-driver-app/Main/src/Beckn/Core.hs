@@ -17,27 +17,22 @@
 module Beckn.Core where
 
 import Control.Lens.Operators ((?~))
-import Data.List (lookup)
-import qualified Data.Text.Encoding as T
 import Domain.Types.Merchant as DM
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import qualified Kernel.Storage.Queries.BecknRequest as QBR
-import Kernel.Tools.Metrics.CoreMetrics
-import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import Kernel.Utils.Common
-import Kernel.Utils.IOLogging (LoggerEnv)
 import Kernel.Utils.Servant.SignatureAuth
-import qualified Network.Wai.Internal as Wai
-import Servant
 import SharedLogic.CallBAP (buildBppUrl)
-import Storage.Beam.BecknRequest ()
+
+-- import Storage.Beam.BecknRequest ()
 
 withCallback ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   DM.Merchant ->
   WithBecknCallbackMig api callback_success m
@@ -45,10 +40,10 @@ withCallback = withCallback' withShortRetry
 
 withCallback' ::
   (m () -> m ()) ->
-  HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
   DM.Merchant ->
   WithBecknCallbackMig api callback_success m
-withCallback' doWithCallback transporter action api context cbUrl f = do
+withCallback' doWithCallback transporter action api context cbUrl internalEndPointHashMap f = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
@@ -56,23 +51,23 @@ withCallback' doWithCallback transporter action api context cbUrl f = do
         context
           & #bpp_uri ?~ bppUri
           & #bpp_id ?~ bppSubscriberId
-  withBecknCallbackMig doWithCallback (Just $ ET.ManagerSelector authKey) action api context' cbUrl f
+  withBecknCallbackMig doWithCallback (Just $ ET.ManagerSelector authKey) action api context' cbUrl internalEndPointHashMap f
 
-logBecknRequest ::
-  (HasField "coreMetrics" f CoreMetricsContainer) =>
-  (HasField "loggerEnv" f LoggerEnv) =>
-  (HasField "version" f DeploymentVersion) =>
-  EnvR f ->
-  Application ->
-  Application
-logBecknRequest (EnvR flowRt appEnv) f req@Wai.Request {..} respF = do
-  req' <- case lookup "Authorization" requestHeaders of
-    Nothing -> return req
-    Just header -> do
-      body <- requestBody
-      bodyMvar <- newMVar body
-      void $ runFlowR flowRt appEnv $ QBR.logBecknRequest (T.decodeUtf8 body) (T.decodeUtf8 header)
-      return req {Wai.requestBody = mkRequestBody bodyMvar}
-  f req' respF
-  where
-    mkRequestBody mvar = tryTakeMVar mvar <&> fromMaybe mempty
+-- logBecknRequest ::
+--   (HasField "coreMetrics" f CoreMetricsContainer) =>
+--   (HasField "loggerEnv" f LoggerEnv) =>
+--   (HasField "version" f DeploymentVersion) =>
+--   EnvR f ->
+--   Application ->
+--   Application
+-- logBecknRequest (EnvR flowRt appEnv) f req@Wai.Request {..} respF = do
+--   req' <- case lookup "Authorization" requestHeaders of
+--     Nothing -> return req
+--     Just header -> do
+--       body <- requestBody
+--       bodyMvar <- newMVar body
+--       void $ runFlowR flowRt appEnv $ QBR.logBecknRequest (T.decodeUtf8 body) (T.decodeUtf8 header)
+--       return req {Wai.requestBody = mkRequestBody bodyMvar}
+--   f req' respF
+--   where
+--     mkRequestBody mvar = tryTakeMVar mvar <&> fromMaybe mempty

@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Plan where
 
@@ -29,6 +30,7 @@ data PlanT f = PlanT
     name :: B.C f Text,
     description :: B.C f Text,
     maxAmount :: B.C f HighPrecMoney,
+    maxMandateAmount :: B.C f HighPrecMoney,
     registrationAmount :: B.C f HighPrecMoney,
     isOfferApplicable :: B.C f Bool,
     maxCreditLimit :: B.C f HighPrecMoney,

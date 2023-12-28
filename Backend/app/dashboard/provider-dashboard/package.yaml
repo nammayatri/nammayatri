@@ -6,6 +6,12 @@ author: "nammayatri"
 maintainer: "nammayatri"
 copyright: "2023 Juspay Technologies Private Limited"
 
+flags:
+  Local:
+    description: Enable this flag for faster compile times
+    manual: true
+    default: false
+
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
 # category:            Web
@@ -68,6 +74,7 @@ dependencies:
   - template-haskell
   - euler-hs
   - containers
+  - unordered-containers
   - dashboard-helper-api
   - http-client
   - http-client-tls
@@ -91,11 +98,27 @@ library:
   ghc-options:
     - -fhide-source-paths
     - -Wincomplete-uni-patterns
+    - -Wwarn=ambiguous-fields
+  when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
   dependencies:
     - lib-dashboard
     - dynamic-offer-driver-app
     - rider-app
     - special-zone
+    - shared-services
 
 executables:
   provider-dashboard-exe:
@@ -106,6 +129,20 @@ executables:
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
       - -Wincomplete-uni-patterns
+    when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
     dependencies:
       - provider-dashboard
       - mobility-core

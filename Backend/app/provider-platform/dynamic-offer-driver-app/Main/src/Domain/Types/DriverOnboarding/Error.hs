@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.DriverOnboarding.Error where
 
@@ -45,10 +46,6 @@ data DriverOnboardingError
   | RCActivationFailedPaymentDue Text
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema, IsBecknAPIError)
-
-instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
-
-$(mkBeamInstancesForEnum ''DriverOnboardingError)
 
 instance IsBaseError DriverOnboardingError where
   toMessage = \case
@@ -127,3 +124,7 @@ instance IsHTTPError DriverOnboardingError where
     RCActivationFailedPaymentDue _ -> E400
 
 instance IsAPIError DriverOnboardingError
+
+instanceExceptionWithParent 'HTTPException ''DriverOnboardingError
+
+$(mkBeamInstancesForEnum ''DriverOnboardingError)

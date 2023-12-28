@@ -23,7 +23,7 @@ import Prelude (show)
 import PrestoDOM (Visibility(..))
 import Screens.Types (SearchLocationModelType, LocationListItemState, LocItemType(..))
 import MerchantConfig.Types (AppConfig)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Foreign.Object (Object)
@@ -56,19 +56,20 @@ type SearchLocationModelState = {
   , isSrcServiceable :: Boolean
   , isDestServiceable :: Boolean
   , isRideServiceable :: Boolean
-  , homeScreenConfig :: AppConfig
+  , appConfig :: AppConfig
   , logField :: Object Foreign
   , crossBtnSrcVisibility :: Boolean
   , crossBtnDestVisibility :: Boolean
   , isAutoComplete :: Boolean
   , showLoader :: Boolean
   , prevLocation :: String
+  , findPlaceIllustration :: Boolean
 }
 
 dummy_data :: Array LocationListItemState
 dummy_data = [
-    { prefixImageUrl : "ny_ic_briefcase," <> (getAssetStoreLink FunctionCall) <> "ny_ic_briefcase.png"
-    , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
+    { prefixImageUrl : fetchImage FF_ASSET "ny_ic_briefcase"
+    , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
     , postfixImageVisibility : true
     , title : "Work"
     , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
@@ -90,10 +91,14 @@ dummy_data = [
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
+
     }
-  , { prefixImageUrl : "ny_ic_recent_search," <> (getAssetStoreLink FunctionCall) <> "ny_ic_recent_search.png"
-    , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
+  , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_recent_search"
+    , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
     , postfixImageVisibility : true
     , title : "Work"
     , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
@@ -115,10 +120,14 @@ dummy_data = [
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
+
     }
-  , { prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
-    , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
+  , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
+    , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
     , postfixImageVisibility : true
     , title : "Work"
     , subTitle : "KIAL Rd, Devanahalli, Bengaluru,  Karnataka"
@@ -140,6 +149,10 @@ dummy_data = [
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
+
     }
 ]

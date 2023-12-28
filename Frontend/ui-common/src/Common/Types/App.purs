@@ -26,7 +26,6 @@ import Data.Newtype (class Newtype)
 import Data.Eq.Generic (genericEq)
 import Foreign (Foreign)
 import Presto.Core.Types.API (standardEncode,class StandardEncode)
-import Presto.Core.Utils.Encoding (defaultDecode,defaultEncode) 
 import Foreign.Generic (class Decode, class Encode)
 import Control.Monad.Free (Free)
 import Control.Monad.Except.Trans (ExceptT)
@@ -125,7 +124,15 @@ newtype Payload = Payload
   , source :: Maybe LocationData
   , destination :: Maybe LocationData
   , payment_method :: Maybe String
+  , show_splash :: Maybe Boolean
+  , view_param :: Maybe String
+  , deeplinkOptions :: Maybe DeeplinkOptions
   }
+
+newtype DeeplinkOptions = DeeplinkOptions {
+    parent_view :: Maybe Boolean
+  , show_title :: Maybe Boolean
+}
 
 newtype LocationData = LocationData {
     lat :: Number
@@ -142,6 +149,11 @@ derive instance newLocationData :: Newtype LocationData _
 derive instance genericLocationData :: Generic LocationData _
 instance decodeLocationData :: Decode LocationData where decode = defaultDecode
 instance encodeLocationData :: Encode LocationData where encode = defaultEncode
+
+derive instance newDeeplinkOptions :: Newtype DeeplinkOptions _
+derive instance genericDeeplinkOptions :: Generic DeeplinkOptions _
+instance decodeDeeplinkOptions :: Decode DeeplinkOptions where decode = defaultDecode
+instance encodeDeeplinkOptions :: Encode DeeplinkOptions where encode = defaultEncode
 
 type OptionButtonList = {
     reasonCode :: String,
@@ -171,6 +183,7 @@ instance standardEncodeVersion :: StandardEncode Version where standardEncode (V
 instance showVersion :: Show Version where show = genericShow
 instance decodeVersion :: Decode Version where decode = defaultDecode
 instance encodeVersion  :: Encode Version where encode = defaultEncode
+instance eqVersion :: Eq Version where eq = genericEq
 
 newtype EventPayload = EventPayload {
     event :: String
@@ -208,7 +221,7 @@ type LayoutBound =
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup
+data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges
 derive instance genericRateCardType :: Generic RateCardType _
 instance eqRateCardType :: Eq RateCardType where eq = genericEq
 
@@ -316,6 +329,7 @@ type YoutubeData = {
   , showSeekBar :: Boolean
   , videoId :: String
   , videoType :: String
+  , videoHeight :: Int
 }
 
 type FCMBundleUpdate = {
@@ -351,4 +365,49 @@ type PolylineAnimationConfig = {
   , draw :: Int
   , fade :: Int
   , delay ::Int
+}
+
+
+data YoutubeVideoStatus = PLAY | PAUSE
+
+derive instance genericYoutubeVideoStatus:: Generic YoutubeVideoStatus _
+instance showYoutubeVideoStatus :: Show YoutubeVideoStatus where show = genericShow
+instance eqYoutubeVideoStatus :: Eq YoutubeVideoStatus where eq = genericEq
+
+type CarouselModal = {
+  carouselData ::  Array CarouselData,
+  gravity :: String 
+}
+
+type CarouselData = {
+  imageConfig :: CarouselImageConfig,
+  titleConfig :: CarouselTextConfig,
+  youtubeConfig :: YoutubeData,
+  contentType :: String,
+  gravity :: Int, 
+  descriptionConfig :: CarouselTextConfig,
+  backgroundColor :: String
+}
+
+type CarouselImageConfig = {
+  height :: Int,
+  width :: Int,
+  bgColor :: String,
+  cornerRadius :: Number,
+  image :: String
+}
+
+type CarouselTextConfig = {
+  textSize :: Int,
+  textColor :: String,
+  gravity :: String,
+  margin :: MarginConfig,
+  text :: String
+}
+
+type MarginConfig = {
+  top :: Int ,
+  right :: Int,
+  bottom :: Int,
+  left :: Int
 }

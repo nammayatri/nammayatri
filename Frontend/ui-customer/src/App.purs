@@ -15,8 +15,6 @@
 
 module Types.App where
 
-import Prelude
-
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Control.Transformers.Back.Trans (BackT)
@@ -40,15 +38,22 @@ import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
 import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage)
+import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
+import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
+import Screens.TicketingScreen.ScreenData as TicketingScreenData
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState ) 
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
+import Services.API (BookingStatus(..))
 import Foreign (Foreign)
+import MerchantConfig.Types (AppConfig)
+import Data.Maybe (Maybe(..))
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
 newtype GlobalState = GlobalState {
-    splashScreen :: SplashScreenState
+    splashScreen :: SplashScreenState ,
+    ticketingScreen :: TicketingScreenState 
   , enterMobileNumberScreen :: EnterMobileNumberScreenState
   , chooseLanguageScreen :: ChooseLanguageScreenState
   , accountSetUpScreen :: AccountSetUpScreenState
@@ -69,11 +74,15 @@ newtype GlobalState = GlobalState {
   , emergencyContactsScreen :: EmergencyContactsScreenState
   , welcomeScreen :: WelcomeScreenState
   , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
+  , ticketBookingScreen :: TicketBookingScreenState
+  , ticketInfoScreen :: TicketInfoScreenState
+  , appConfig :: Maybe AppConfig
   }
 
 defaultGlobalState :: GlobalState
 defaultGlobalState = GlobalState {
-    splashScreen : {data : {message : "pass"}}
+  ticketingScreen : TicketingScreenData.initData , 
+    splashScreen : {data : {message : "pass"}} 
   , enterMobileNumberScreen : EnterMobileNumberScreenData.initData
   , chooseLanguageScreen : ChooseLanguageScreenData.initData
   , accountSetUpScreen : AccountSetUpScreenData.initData
@@ -94,7 +103,11 @@ defaultGlobalState = GlobalState {
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
   , welcomeScreen : WelcomeScreenData.initData
   , loaderOverlay : LoaderScreenScreenData.initData
+  , ticketBookingScreen : TicketBookingScreenData.initData
+  , ticketInfoScreen : TicketInfoScreenData.initData
+  , appConfig : Nothing
   }
+
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 
 data TRIP_DETAILS_SCREEN_OUTPUT = ON_SUBMIT TripDetailsScreenState | GO_TO_INVOICE TripDetailsScreenState | GO_TO_HOME TripDetailsScreenState | GO_TO_RIDES | GO_TO_HELPSCREEN | CONNECT_WITH_DRIVER TripDetailsScreenState
@@ -112,6 +125,7 @@ data EMERGECY_CONTACTS_SCREEN_OUTPUT = GO_TO_HOME_FROM_EMERGENCY_CONTACTS
                                       | GET_CONTACTS EmergencyContactsScreenState
                                       | REFRESH_EMERGECY_CONTACTS_SCREEN EmergencyContactsScreenState
 
+data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
                         | CANCEL
@@ -122,6 +136,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_MY_RIDES
                         | CHANGE_LANGUAGE
                         | GO_TO_EMERGENCY_CONTACTS
+                        | GO_TO_MY_TICKETS
                         | GO_TO_MY_PROFILE Boolean
                         | LOCATION_SELECTED LocationListItemState Boolean
                         | HOME_SCREEN
@@ -156,10 +171,13 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | CHECK_CURRENT_STATUS
                         | CHECK_FLOW_STATUS
                         | RETRY_FINDING_QUOTES Boolean
-                        | ON_CALL HomeScreenState CallType
+                        | ON_CALL HomeScreenState CallType String
                         | TRIGGER_PERMISSION_FLOW PermissionScreenStage
                         | REPORT_ISSUE HomeScreenState
                         | RIDE_DETAILS_SCREEN HomeScreenState
+                        | GO_TO_TICKET_BOOKING_FLOW HomeScreenState
+                        | REPEAT_RIDE_FLOW_HOME Trip
+                        | EXIT_TO_TICKETING HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -182,6 +200,17 @@ data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
 data APP_UPDATE_POPUP = Later | UpdateNow
 
+data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreenState BookingStatus
+                                    | GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING TicketBookingScreenState
+                                    | GO_TO_TICKET_PAYMENT TicketBookingScreenState
+                                    | RESET_SCREEN_STATE
+                                    | GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW Number Number
+                                    | REFRESH_PAYMENT_STATUS TicketBookingScreenState
+
+data TICKETING_SCREEN_SCREEN_OUTPUT = EXIT_TO_HOME TicketingScreenState
+                                    | EXIT_TO_MY_TICKETS TicketingScreenState
+                                    | BOOK_TICKETS TicketingScreenState
+
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
@@ -198,6 +227,10 @@ data ScreenType =
   | SavedLocationScreenStateType (SavedLocationScreenState -> SavedLocationScreenState)
   | ReferralScreenStateType (ReferralScreenState -> ReferralScreenState)
   | EmergencyContactsScreenStateType (EmergencyContactsScreenState -> EmergencyContactsScreenState)
+  | TicketBookingScreenStateType (TicketBookingScreenState -> TicketBookingScreenState)
+  | TicketInfoScreenStateType (TicketInfoScreenState -> TicketInfoScreenState)
   | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
   | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)
+  | AppConfigType (Maybe AppConfig -> Maybe AppConfig)
+  | TicketingScreenStateType (TicketingScreenState -> TicketingScreenState)

@@ -33,7 +33,7 @@ main = do
   appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "dynamic-offer-driver-app"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
-  kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
+  kafkaProducerTools <- buildKafkaProducerTools' appCfg.kafkaProducerCfg appCfg.maxMessages
   bracket (async NW.runMetricServer) cancel $ \_ -> do
     R.withFlowRuntime
       (Just loggerRt)
@@ -45,11 +45,9 @@ main = do
                 ConnectionConfigDriver
                   { esqDBCfg = appCfg.esqDBCfg,
                     esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-                    hedisClusterCfg = appCfg.hedisClusterCfg,
-                    locationDbCfg = appCfg.esqLocationDBCfg,
-                    locationDbReplicaCfg = appCfg.esqLocationDBRepCfg
+                    hedisClusterCfg = appCfg.hedisClusterCfg
                   }
-                appCfg.tables
+                appCfg.kvConfigUpdateFrequency
             )
           dbSyncMetric <- Event.mkDBSyncMetric
           threadPerPodCount <- Env.getThreadPerPodCount

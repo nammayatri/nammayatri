@@ -26,7 +26,7 @@ import Language.Types (STR(..))
 import PrestoDOM
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>), ($))
 import Data.Maybe (Maybe(..))
@@ -42,7 +42,7 @@ genericHeaderConfig state= let
         height = (V 30)
       , width = (V 30)
       , margin = (Margin 16 16 25 16)
-      , imageUrl = "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+      , imageUrl = fetchImage FF_ASSET "ny_ic_back"
       , padding = (Padding 5 5 5 5 )
       , visibility = if state.props.issueReported then GONE else VISIBLE
       }
@@ -65,7 +65,7 @@ sourceToDestinationConfig state = let
       margin = (Margin 0 13 0 0)
     , id = Just $ "TripDetailsScreenSTDC_" <> state.data.tripId
     , sourceImageConfig {
-        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
@@ -74,7 +74,7 @@ sourceToDestinationConfig state = let
       , margin = (Margin 12 0 15 0)
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_red_circle"
       , margin = (MarginTop 3)
       }
     , destinationBackground = Color.blue600

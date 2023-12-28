@@ -29,6 +29,7 @@ import Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 -------- Support Flow----------
@@ -41,15 +42,23 @@ type API =
            :<|> "callbackRequest"
              :> TokenAuth
              :> Post '[JSON] APISuccess
+           :<|> "safetyCheckSupport"
+             :> TokenAuth
+             :> ReqBody '[JSON] DSupport.SafetyCheckSupportReq
+             :> Post '[JSON] DSupport.SendIssueRes
        )
 
 handler :: App.FlowServer API
 handler =
   sendIssue
     :<|> callbackRequest
+    :<|> safetyCheckSupport
 
 sendIssue :: (Id Person.Person, Id Merchant.Merchant) -> DSupport.SendIssueReq -> App.FlowHandler DSupport.SendIssueRes
 sendIssue (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSupport.sendIssue personId
 
 callbackRequest :: (Id Person.Person, Id Merchant.Merchant) -> App.FlowHandler APISuccess
 callbackRequest (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DSupport.callbackRequest personId
+
+safetyCheckSupport :: (Id Person.Person, Id Merchant.Merchant) -> DSupport.SafetyCheckSupportReq -> App.FlowHandler DSupport.SendIssueRes
+safetyCheckSupport (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSupport.safetyCheckSupport personId

@@ -49,7 +49,7 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
   deriving (Generic, Show, PrettyShow, HasCoordinates)
 
 getNearestGoHomeDrivers ::
-  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m) =>
+  (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, CacheFlow m r, EsqDBFlow m r) =>
   NearestGoHomeDriversReq ->
   m [NearestGoHomeDriversResult]
 getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do

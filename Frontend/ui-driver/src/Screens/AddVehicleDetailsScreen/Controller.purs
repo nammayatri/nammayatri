@@ -20,31 +20,36 @@ import Data.Maybe
 import Common.Types.App (LazyCheck(..))
 import Components.GenericMessageModal.Controller as GenericMessageModalController
 import Components.OnboardingHeader.Controller as OnboardingHeaderController
+import Components.PopUpModal.Controller as PopUpModal
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.PrimarySelectItem.Controller as PrimarySelectItem
 import Components.ReferralMobileNumber.Controller as ReferralMobileNumberController
 import Components.RegistrationModal.Controller as RegistrationModalController
 import Components.SelectVehicleTypeModal.Controller as SelectVehicleTypeModal
+import Components.GenericHeader as GenericHeader
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Components.TutorialModal.Controller as TutorialModalController
-import Data.String (length)
-import Data.String (length)
+import Components.ValidateDocumentModal.Controller as ValidateDocumentModal
+import Data.Array (elem)
+import Data.String (length, split, Pattern(..), toUpper)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (getNewIDWithTag)
-import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, showDialer, uploadFile)
+import Engineering.Helpers.Commons (getNewIDWithTag, setText)
+import Helpers.Utils (renderBase64ImageFile, contactSupportNumber)
+import JBridge (disableActionEditText, hideKeyboardOnNavigation, openWhatsAppSupport, renderCameraProfilePicture, showDialer, uploadFile)
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, bind, pure, ($), class Show, unit, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+))
-import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit)
+import Prelude (Unit, bind, pure, ($), class Show, unit, void, (/=), discard, (==), (&&), (||), not, (<=), (>), (<>), (<), show, (+))
+import PrestoDOM (Eval, Props, continue, continueWithCmd, exit, updateAndExit, toast)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
-import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..))
+import Screens.Types (AddVehicleDetailsScreenState, VehicalTypes(..), StageStatus(..))
 import Services.Config (getSupportNumber, getWhatsAppSupportNo)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.LogEvent (logEvent)
+import ConfigProvider
 
 instance showAction :: Show Action where
   show _ = ""
@@ -105,13 +110,56 @@ instance loggableAction :: Loggable Action where
     DatePickerAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "date_picker"
     DatePicker resp year month date -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "date_picker"
     NoAction -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "no_action"
+    PopUpModalLogoutAction act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "on_goback"
+      PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "tip_button_click"
+      PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "dismiss_popup"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "call_support"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "no_action"
+      PopUpModal.OnSecondaryTextClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "secondary_text"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "image"
+      PopUpModal.OptionWithHtmlClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "options_with_html"
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
+    ValidateDocumentModalAction act -> case act of
+      ValidateDocumentModal.BackPressed  -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "validate_document_modal" "backpressed"
+      ValidateDocumentModal.AfterRender ->  trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "validate_document_modal" "afterrender"
+      _ -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "validate_document_modal" "no_action"
+    PopUpModalActions act -> case act of
+      PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "on_goback"
+      PopUpModal.Tipbtnclick _ _ -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "tip_button_click"
+      PopUpModal.DismissPopup -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "dismiss_popup"
+      PopUpModal.OnButton2Click -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal" "call_support"
+      PopUpModal.NoAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "no_action"
+      PopUpModal.OnSecondaryTextClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "secondary_text"
+      PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "image"
+      PopUpModal.OptionWithHtmlClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "options_with_html"      
+      PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
+    RenderProfileImage image id -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "renderImage" "afterrender"
+    RedirectScreen -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "redirect_screem" "no_action"
+    ChangeLocation -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "change_location" "on_click"
+    ActivateRCbtn act -> case act of
+      PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "activate_rc_btn" "on_click"
+      PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "activate_rc_btn" "no_action"
+    CancelButtonMultiRCPopup -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "cancel_button_multi_rc_popup" "on_click"
+    AppOnboardingNavBarAC act -> case act of
+      AppOnboardingNavBar.GenericHeaderAC genericHeaderAction -> case genericHeaderAction of 
+        GenericHeader.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "generic_header_on_click"
+        GenericHeader.SuffixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "generic_header_on_click"
+      AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "onboarding_nav_bar_logout"
+      AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
+    SkipButton -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "in_screen" "skip_button_click"
 
-data ScreenOutput = GoToApplicationSubmitted AddVehicleDetailsScreenState
+data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | GoBack AddVehicleDetailsScreenState
-                    | ValidateImageAPICall AddVehicleDetailsScreenState
+                    | ValidateDataAPICall AddVehicleDetailsScreenState
                     | ReferApiCall AddVehicleDetailsScreenState
                     | ApplicationSubmittedScreen
                     | LogoutAccount
+                    | GoToRegisteration 
+                    | GoToDriverProfile
+                    | ActivateRC AddVehicleDetailsScreenState
 
 data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction PrimarySelectItem.Action | NoAction
   | VehicleRegistrationNumber String
@@ -136,13 +184,44 @@ data Action =   WhatsAppSupport | BackPressed Boolean | PrimarySelectItemAction 
   | DatePicker String Int Int Int
   | PreviewImageAction
   | DatePickerAction
+  | PopUpModalLogoutAction PopUpModal.Action
+  | ValidateDocumentModalAction ValidateDocumentModal.Action
+  | RenderProfileImage String String
+  | PopUpModalActions PopUpModal.Action
+  | RedirectScreen
+  | ChangeLocation
+  | ActivateRCbtn PrimaryButtonController.Action
+  | CancelButtonMultiRCPopup
+  | AppOnboardingNavBarAC AppOnboardingNavBar.Action
+  | SkipButton
 
 
 eval :: Action -> AddVehicleDetailsScreenState -> Eval Action ScreenOutput AddVehicleDetailsScreenState
-eval AfterRender state = continue state
+eval AfterRender state = 
+                 if (state.props.validateProfilePicturePopUp == true) then do 
+                   continueWithCmd state [do pure (RenderProfileImage state.data.rc_base64 (getNewIDWithTag "ValidateProfileImage"))]  
+                 else continue state
+
+eval (RenderProfileImage image id) state = do
+  continueWithCmd state [do 
+    _ <- liftEffect $ renderBase64ImageFile image id true "CENTER_CROP"
+    pure NoAction]
+
 eval (BackPressed flag) state = do
-            if(state.props.openRCManual) then continue state{props{openRCManual = false}}
-              else exit $ GoBack state
+    _ <- pure $ hideKeyboardOnNavigation true
+    if(state.props.validateProfilePicturePopUp) then do
+        if (state.props.fileCameraOption) then do
+            continueWithCmd (state {props{ validateProfilePicturePopUp = false,imageCaptureLayoutView = true}}) [ pure UploadFile]
+        else do
+            continueWithCmd state {props { validateProfilePicturePopUp = false, fileCameraPopupModal = false, fileCameraOption = false, imageCaptureLayoutView = false}} [do
+                _ <- liftEffect $ uploadFile false
+                pure NoAction]
+    else if(state.props.imageCaptureLayoutView) then continue state{props{imageCaptureLayoutView = false,openHowToUploadManual = true}} 
+    else if(state.props.fileCameraPopupModal) then continue state{props{fileCameraPopupModal = false, validateProfilePicturePopUp = false, imageCaptureLayoutView = false}} 
+    else if(state.props.openHowToUploadManual) then continue state{props{openHowToUploadManual = false}} 
+    else if(state.props.openRCManual) then continue state{props{openRCManual = false}}
+    else exit $ GoBack state
+
 eval (OnboardingHeaderAction (OnboardingHeaderController.TriggerRegModal)) state = continue state { props = state.props { openRegistrationModal = true } }
 eval (OnboardingHeaderAction (OnboardingHeaderController.BackPressed)) state = exit $ GoBack state
 eval (RegistrationModalAction (RegistrationModalController.OnCloseClick)) state = do
@@ -160,10 +239,10 @@ eval RemoveUploadedFile state = do
   let newState = state { props = state.props { rcAvailable = false, rc_name = "", isValidState = false }, data = state.data { rc_base64 = "" }}
   continue newState
 eval (VehicleRegistrationNumber val) state = do
-  let newState = state {data = state.data { vehicle_registration_number = val }, props = state.props{isValidState = (checkRegNum (val) && state.props.rcAvailable) }}
+  let newState = state {data = state.data { vehicle_registration_number = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
   continue newState
 eval (ReEnterVehicleRegistrationNumber val) state = do
-  let newState = state {data = state.data { reEnterVehicleRegistrationNumber = val }, props = state.props{isValidState = (checkRegNum (val) && state.props.rcAvailable) }}
+  let newState = state {data = state.data { reEnterVehicleRegistrationNumber = toUpper val }, props = state.props{isValidState = (checkRegNum (toUpper val) && state.props.rcAvailable) }}
   continue newState
 eval (VehicleModelName val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleModelName")
@@ -177,13 +256,13 @@ eval (CallBackImageUpload base_64 imageName imagePath) state = do
   _ <- pure $ printLog "base_64 CallBackImageUpload" base_64
   _ <- pure $ printLog "imageName" imageName
   if base_64 /= "" then do
-    let newState = state { props = state.props { rcAvailable = true, rc_name = imageName, isValidState = (checkRegNum (state.data.vehicle_registration_number))}, data = state.data { rc_base64 = base_64 }}
-    exit $ ValidateImageAPICall newState
+    let newState = state { props = state.props { validateProfilePicturePopUp = true, imageCaptureLayoutView = false, rcAvailable = true, rc_name = imageName, isValidState = (checkRegNum (state.data.vehicle_registration_number))}, data = state.data { rc_base64 = base_64 }}
+    continue newState
     else continue state{props{isValidState = false}}
-eval (UploadFile) state = continueWithCmd state [do
-        let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_rc_photo_button_clicked"
-        _ <- liftEffect $ uploadFile unit
-        pure NoAction]
+eval (UploadFile) state = continueWithCmd (state {props {validateProfilePicturePopUp = false, imageCaptureLayoutView = true}}) [do
+     _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")
+     pure NoAction
+      ]
 eval (VehicleRCNumber val) state = do
   _ <- pure $ disableActionEditText (getNewIDWithTag "VehicleRCNumber")
   let newState = state {data = state.data { vehicle_rc_number = val }}
@@ -223,7 +302,7 @@ eval (TutorialModalAction (TutorialModalController.OnCloseClick)) state = contin
 eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continueWithCmd state [do
   let merchant = getMerchant FunctionCall
   _ <- case merchant of
-    NAMMAYATRI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+    NAMMAYATRI -> pure $ unsafePerformEffect $ contactSupportNumber "WHATSAPP"  -- unsafePerformEffect -> Temporary fix , need to update later
     YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
     _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction
@@ -231,27 +310,29 @@ eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continu
 eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount
 eval ReferralMobileNumber state = do
   continue state{props{openReferralMobileNumber = true, btnActive = false, isEdit = true}}
-eval (ReferralMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = do
-  pure $ hideKeyboardOnNavigation true
-  continue state{props{openReferralMobileNumber = false, isValid = false}}
-eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do exit $ ReferApiCall state
+eval (ReferralMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = continue state{props{openReferralMobileNumber = false}}
+eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit $ ReferApiCall $ state { props { openReferralMobileNumber = false, referralViewstatus = true }}
 eval (ReferralMobileNumberAction (ReferralMobileNumberController.PrimaryEditTextActionController (PrimaryEditTextController.TextChanged valId newVal))) state = do
-  let var = case (charAt 0 newVal) of 
-                                      Just a -> if a=='0' || a=='1' || a=='2' || a=='3'|| a=='4' || a=='5' then false 
-                                                else true 
-                                      Nothing -> true 
+  let var =  if( (charAt 0 newVal) == Just '0' || (charAt 0 newVal) == Just '1') then true else false
   _ <- pure $ spy "new val" state
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true
             else pure unit
-  continue state {props = state.props { btnActive = if (length newVal == 10 && var) then true else false
-                                        , isValid = not var
+  continue state { props = state.props { btnActive = if (length newVal == 10 &&  not var) then true else false
+                                        , isValid = var
                                         , isEdit = if (length newVal == 10 && state.props.isEdit) then true else false }
                                         , data = state.data { referral_mobile_number = if length newVal <= 10 then newVal else state.data.referral_mobile_number}}
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
-  updateAndExit state $ (GoToApplicationSubmitted state)
+  if isJust state.data.dateOfRegistration then exit $ ValidateDataAPICall state
+  else if (state.props.openHowToUploadManual == false) then 
+    continue state {props {openHowToUploadManual = true}}
+  else  continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
+     _ <- liftEffect $ uploadFile false
+     pure NoAction]
 eval (GenericMessageModalAction (GenericMessageModalController.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = exit ApplicationSubmittedScreen
+
+eval SkipButton state = exit $ ValidateDataAPICall state
 
 eval (DatePicker resp year month date) state = do
   case resp of 
@@ -263,6 +344,57 @@ eval DatePickerAction state = continue state {props {isDateClickable = false}}
 
 eval PreviewImageAction state = continue state
 
+eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
+
+eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = do
+    _ <- pure $ hideKeyboardOnNavigation true
+    continue $ (state {props{logoutModalView = true}})
+
+eval (AppOnboardingNavBarAC AppOnboardingNavBar.PrefixImgOnClick) state = continueWithCmd state [ do pure $ BackPressed false]
+
+eval (ValidateDocumentModalAction (ValidateDocumentModal.AfterRender)) state = do
+ continueWithCmd state [do pure (AfterRender)] 
+
+eval (ValidateDocumentModalAction (ValidateDocumentModal.BackPressed)) state = do
+ continueWithCmd state [do pure (BackPressed false)]  
+
+eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionController (PrimaryButtonController.OnClick))) state = do
+   if (not state.props.errorVisibility) then do
+    updateAndExit state{props{validating = true}} $ ValidateDetails state{props{validating = true}}
+   else  
+     continueWithCmd state {props {validateProfilePicturePopUp = false, errorVisibility = false, fileCameraPopupModal = false, fileCameraOption = false}, data{errorMessage = ""}} [do
+     _ <- liftEffect $ uploadFile false
+     pure NoAction]
+
+eval (PopUpModalActions (PopUpModal.OnButton2Click)) state = do
+   continueWithCmd state {props { fileCameraPopupModal = false, fileCameraOption = false}} [do
+     _ <- liftEffect $ uploadFile false
+     pure NoAction]
+
+eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do
+       continueWithCmd (state {props{ validateProfilePicturePopUp = false,imageCaptureLayoutView = true, fileCameraPopupModal = false, fileCameraOption = true, openHowToUploadManual = false}}) [ pure UploadFile]
+
+eval RedirectScreen state = exit GoToRegisteration
+
+eval ChangeLocation state = exit $ LogoutAccount
+
+eval (ActivateRCbtn (PrimaryButtonController.OnClick)) state = case state.props.multipleRCstatus of
+                                                                COMPLETED -> exit $ ActivateRC state
+                                                                _ -> exit $ GoToDriverProfile
+
+eval CancelButtonMultiRCPopup state = case state.props.multipleRCstatus of
+                                        COMPLETED -> exit $ GoToDriverProfile
+                                        _ -> continueWithCmd state [do
+                                          let merchant = getMerchant FunctionCall
+                                          _ <- case merchant of
+                                            NAMMAYATRI -> contactSupportNumber "WHATSAPP" --getWhatsAppSupportNo $ show merchant
+                                            YATRISATHI -> openWhatsAppSupport $ getWhatsAppSupportNo $ show merchant
+                                            _ -> pure $ showDialer (getSupportNumber "") false
+                                          pure NoAction
+                                          ]
+
 eval _ state = continue state
 
 checkRegNum :: String -> Boolean
@@ -273,3 +405,9 @@ overrides _ push state = []
 
 dateFormat :: Int -> String
 dateFormat date = if date < 10 then "0" <> (show date) else (show date)
+
+validateRegistrationNumber :: String -> Boolean
+validateRegistrationNumber regNum =
+  let vehicleConfig = (getAppConfig appConfig).vehicle
+      values = split (Pattern "|") $ vehicleConfig.validationPrefix
+  in regNum `elem` values

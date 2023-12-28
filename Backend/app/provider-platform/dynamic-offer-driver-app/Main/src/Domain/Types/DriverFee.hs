@@ -12,12 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.DriverFee where
 
 import Data.Aeson
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person (Driver)
+import Domain.Types.Plan (PaymentMode, Plan)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
@@ -45,9 +47,18 @@ data DriverFee = DriverFee
     planOfferTitle :: Maybe Text,
     billNumber :: Maybe Int,
     autopayPaymentStage :: Maybe AutopayPaymentStage,
+    badDebtDeclarationDate :: Maybe UTCTime,
+    badDebtRecoveryDate :: Maybe UTCTime,
     schedulerTryCount :: Int,
+    notificationRetryCount :: Int,
     stageUpdatedAt :: Maybe UTCTime,
-    feeWithoutDiscount :: Maybe HighPrecMoney
+    amountPaidByCoin :: Maybe HighPrecMoney,
+    feeWithoutDiscount :: Maybe HighPrecMoney,
+    overlaySent :: Bool,
+    specialZoneRideCount :: Int,
+    specialZoneAmount :: HighPrecMoney,
+    planId :: Maybe (Id Plan),
+    planMode :: Maybe PaymentMode
   }
   deriving (Generic, Show, Eq)
 
@@ -58,7 +69,7 @@ data PlatformFee = PlatformFee
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
-data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
+data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE | CLEARED_BY_YATRI_COINS deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_INVOICE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
@@ -68,7 +79,7 @@ paymentProcessingLockKey :: Text -> Text
 paymentProcessingLockKey driverId = "Payment:Processing:DriverId" <> driverId
 
 mandateProcessingLockKey :: Text -> Text
-mandateProcessingLockKey mandateId = "Mandate:Processing:MandateId" <> mandateId
+mandateProcessingLockKey driverId = "Mandate:Processing:DriverId" <> driverId
 
 billNumberGenerationLockKey :: Text -> Text
 billNumberGenerationLockKey merchantId = "DriverFee:BillNumber:Processing:MerchantId" <> merchantId --- make lock on merchant Id

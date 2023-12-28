@@ -27,24 +27,29 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (countDown, getRideLabelData, getRequiredTag, clearTimer, getCurrentUTC, getCommonAssetStoreLink, getAssetStoreLink)
-import JBridge (getVersionCode, waitingCountdownTimer, toast)
+import Helpers.Utils (getRideLabelData, getRequiredTag, getCurrentUTC, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (getRideTypeColor, getCategorizedVariant)
+import JBridge (getVersionCode)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import MerchantConfig.Utils (getMerchant, getValueFromConfig, Merchant(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude ((<>))
-import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id)
+import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id, layoutGravity, horizontalScrollView, scrollBarX, fillViewport)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..), TimerStatus(..), DisabilityType(..))
+import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
-import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
 import Helpers.Utils(getRideTypeColor, getVariantRideType)
+import Helpers.Utils as HU
 import JBridge as JB
+import Data.Int as Int
+import Animation as Anim
+import ConfigProvider
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -94,7 +99,7 @@ messageButton push config =
   , alpha if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then 0.5 else 1.0
   , clickable true
   ][  imageView
-      [ imageWithFallback if config.unReadMessages then "ic_chat_badge," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat_badge.png" else "ic_chat," <> (getCommonAssetStoreLink FunctionCall) <> "ic_chat.png"
+      [ imageWithFallback $ fetchImage FF_ASSET $ if config.unReadMessages then "ic_chat_badge" else "ic_chat"
       , height $ V 20
       , width $ V 20
       ]
@@ -130,7 +135,7 @@ callButton push config =
   , onClick push (const $ CallCustomer)
   , clickable (not (config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT))
   ][  imageView
-      [ imageWithFallback $ "ic_phone," <> (getCommonAssetStoreLink FunctionCall) <> "/ic_phone.png"
+      [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_phone"
       , height $ V 20
       , width $ V 20
       ]
@@ -138,10 +143,12 @@ callButton push config =
   
 rideActionViewWithLabel :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM ( Effect Unit) w
 rideActionViewWithLabel push config =
+  let specialZoneConfig = getRideLabelData config.specialLocationTag
+  in
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , background $ getRideLabelData "backgroundColor" config.specialLocationTag config.accessibilityTag 
+  , background $ specialZoneConfig.backgroundColor
   , cornerRadii $ Corners 25.0 true true false false
   , orientation VERTICAL
   , padding $ PaddingTop 5
@@ -154,21 +161,12 @@ rideActionViewWithLabel push config =
       ][ imageView
           [ width $ V 18
           , height $ V 18
-          , imageWithFallback $ getRideLabelData "imageUrl" config.specialLocationTag config.accessibilityTag 
+          , imageWithFallback $ specialZoneConfig.imageUrl
           ]
         , textView $
           [ width WRAP_CONTENT
           , height MATCH_PARENT
-          , text $ getRideLabelData "text" config.specialLocationTag config.accessibilityTag 
-          , gravity CENTER_VERTICAL
-          , color Color.white900
-          , margin $ MarginLeft 5
-          ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
-        , textView $ 
-          [ width WRAP_CONTENT
-          , height MATCH_PARENT
-          , text "|"
-          , visibility if Maybe.isJust config.accessibilityTag then VISIBLE else GONE
+          , text $ specialZoneConfig.text
           , gravity CENTER_VERTICAL
           , color Color.white900
           , margin $ MarginLeft 5
@@ -176,24 +174,36 @@ rideActionViewWithLabel push config =
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , orientation VERTICAL
-          , margin $ MarginLeft 5
           , visibility if Maybe.isJust config.accessibilityTag then VISIBLE else GONE
-          , onClick push $ const SecondaryTextClick
-          ]
-          [ textView $ 
+          ][  textView $ 
               [ width WRAP_CONTENT
               , height MATCH_PARENT
-              , text $ getRideLabelData "secondaryText" config.specialLocationTag config.accessibilityTag 
+              , text "|"
               , gravity CENTER_VERTICAL
               , color Color.white900
+              , margin $ MarginLeft 5
               ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
-          , linearLayout
-              [ height $ V 1
-              , width MATCH_PARENT
-              , background Color.white900
-              , margin (Margin 1 0 2 0)
-              ][]
+            , linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL
+              , margin $ MarginLeft 5
+              , onClick push $ const SecondaryTextClick
+              ]
+              [ textView $ 
+                  [ width WRAP_CONTENT
+                  , height MATCH_PARENT
+                  , text $ specialZoneConfig.secondaryText
+                  , gravity CENTER_VERTICAL
+                  , color Color.white900
+                  ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
+              , linearLayout
+                  [ height $ V 1
+                  , width MATCH_PARENT
+                  , background Color.white900
+                  , margin $ MarginHorizontal 1 2
+                  ][]
+              ]
           ]
       ]
     , rideActionView (MarginTop 6) push config
@@ -288,7 +298,7 @@ openGoogleMap push config =
       ][  imageView
           [ width $ V 20
           , height $ V 20
-          , imageWithFallback $ "ny_ic_navigation," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_navigation.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_navigation"
           ]
         , textView (
           [ width WRAP_CONTENT
@@ -455,7 +465,7 @@ customerNameView push config =
           , ellipsize true
           , singleLine false
           ] <> FontStyle.subHeading2 TypoGraphy
-        ] <> if config.isDriverArrived then [arrivedButtonView push config] else [dummyView push config]
+        ]
     ]
 
 estimatedFareView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -474,15 +484,28 @@ estimatedFareView push config =
         , ellipsize true
         , singleLine true
         ] <> FontStyle.body1 TypoGraphy
-      , textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text ((getValueFromConfig "currency") <> (show config.estimatedRideFare))
-        , color Color.black900
-        , ellipsize true
-        , singleLine true
-        ] <> FontStyle.body10 TypoGraphy
+      , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ][  textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ currency <> (show config.estimatedRideFare)
+            , color Color.black900
+            , ellipsize true
+            , singleLine true
+            ] <> FontStyle.body10 TypoGraphy
+          , if config.waitTimeSeconds > (config.thresholdTime + 60) then yellowPill push pillText (not config.startRideActive) else linearLayout[visibility GONE][]
+        ]
     ]
+    where currency = getCurrency appConfig
+          pillText = "+" <> currency <> " " <> show (calculateCharges (config.waitTimeSeconds - config.thresholdTime))
+
+          calculateCharges :: Int -> Number
+          calculateCharges sec =
+            let min = Int.floor $ Int.toNumber sec / 60.0
+            in 1.5 * Int.toNumber min
 
 waitTimeView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 waitTimeView push config =
@@ -491,7 +514,7 @@ waitTimeView push config =
      , gravity START
      , orientation VERTICAL
      , weight 1.0
-     , visibility if (config.waitTime /= "__") && (config.notifiedCustomer) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "NoView" ) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "Stop" ) then VISIBLE else GONE
+     , visibility if config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered then VISIBLE else GONE
      ]
      [ linearLayout
          [
@@ -512,40 +535,86 @@ waitTimeView push config =
             , width  $ V 25
             , visibility if config.notifiedCustomer then VISIBLE else GONE
             , onClick push (const WaitingInfo)
-            , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
           ]
          ]
-        , textView $
-         [ height WRAP_CONTENT
-         , width WRAP_CONTENT
-         , text (config.waitTime)
-         , color Color.black900
-         , ellipsize true
-         , textSize FontSize.a_20
-         , singleLine true
-         , fontStyle (FontStyle.semiBold TypoGraphy)
-         ]
+       , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER_VERTICAL
+        ][ textView $
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text if config.waitTimeSeconds > config.thresholdTime then HU.formatSecIntoMinSecs config.thresholdTime else HU.formatSecIntoMinSecs config.waitTimeSeconds
+            , color Color.black900
+            , ellipsize true
+            , textSize FontSize.a_20
+            , singleLine true
+            , fontStyle $ FontStyle.semiBold TypoGraphy
+            ]
+            , if config.waitTimeSeconds > config.thresholdTime then 
+                yellowPill push ("+ " <> HU.formatSecIntoMinSecs (config.waitTimeSeconds - config.thresholdTime)) false 
+              else linearLayout[visibility GONE][]
+        ]
      ]
 
+yellowPill :: forall w. (Action -> Effect Unit) -> String -> Boolean -> PrestoDOM (Effect Unit) w
+yellowPill push text' showInfo = 
+  PrestoAnim.animationSet [Anim.fadeIn true] $
+    linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , background Color.yellow800
+    , padding $ Padding 3 2 3 2
+    , gravity CENTER_VERTICAL
+    , margin $ Margin 2 2 0 0
+    , cornerRadius 10.0
+    ][ textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text text'
+        , color Color.black800
+        , ellipsize true
+        , singleLine true
+        ] <> FontStyle.body9 TypoGraphy
+      , imageView
+        [ height $ V 12
+        , width  $ V 12
+        , margin $ Margin 1 1 0 0
+        , visibility if showInfo then VISIBLE else GONE
+        , onClick push $ const WaitingInfo
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
+        ]
+    ]
 
 rideInfoView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rideInfoView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , stroke ("1," <> Color.grey900)
+    , stroke $ "1," <> Color.grey900
     , cornerRadius 8.0
-    , padding (Padding 16 16 5 16)
+    , padding $ Padding 14 14 5 14
     , afterRender push $ const NoAction
-    ][ estimatedFareView push config
-     , separator true
-     , totalDistanceView push config
-     , separator $ (config.waitTime /= "__") && (config.notifiedCustomer) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "NoView" ) && ((getValueToLocalStore IS_WAIT_TIMER_STOP) /= "Stop" )
-     , waitTimeView push config
-     , linearLayout
-       [ weight 1.0
-       , height MATCH_PARENT
-       ][]
+    ][  horizontalScrollView
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , scrollBarX false
+        , fillViewport true
+        ][ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            ][ estimatedFareView push config
+            , separator true
+            , totalDistanceView push config
+            , separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+            , waitTimeView push config
+            , linearLayout
+              [ weight 1.0
+              , height MATCH_PARENT
+              ][]
+            ]
+          ]
     ]
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
@@ -572,13 +641,13 @@ sourceDestinationImageView  config =
         [ height $ V 14
         , width $ V 14
         , margin $ MarginTop 4
-        , imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_source_dot.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
         ]
       , SeparatorView.view separatorConfig
       , imageView
         [ height $ V 14
         , width $ V 14
-        , imageWithFallback $ "ny_ic_destination," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_destination.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_destination"
         ]
       ]
 
@@ -615,43 +684,6 @@ sourceDestinationTextView push config =
       , destAddressTextView config push
       ]
 
-arrivedButtonView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
-arrivedButtonView push config =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width WRAP_CONTENT
-  , orientation HORIZONTAL
-  , cornerRadius 24.0
-  , gravity CENTER_VERTICAL
-  , stroke $ if config.notifiedCustomer then "0," <> Color.blackLessTrans  else "1," <> Color.blue900
-  , background if config.notifiedCustomer then Color.grey700 else Color.white900
-  , padding (Padding 10 7 12 7)
-  , margin (MarginTop 12)
-  , afterRender push $ const NoAction
-  , onClick (\action -> do
-      if config.notifiedCustomer then pure unit
-        else do
-          _ <- pure $ setValueToLocalStore IS_WAIT_TIMER_STOP (show Triggered)
-          _ <- pure $ setValueToLocalStore SET_WAITING_TIME (getCurrentUTC "")
-          _ <- waitingCountdownTimer 0 push TimerCallback
-          _ <- countDown config.buttonTimeOut config.id push ButtonTimer
-          push action) (const NotifyCustomer)
-  , visibility if config.isDriverArrived then VISIBLE else GONE
-  ][  imageView
-      [ width $ V 20
-      , height $ V 20
-      , imageWithFallback if config.notifiedCustomer then "ny_ic_tick_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_tick_grey.png" else "ny_ic_hand_wave," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_hand_wave.png"
-      , margin $ MarginRight 4
-      ]
-    , textView $
-      [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , text if config.notifiedCustomer then (getString CUSTOMER_NOTIFIED) else (getString I_HAVE_ARRIVED)
-      , color if config.notifiedCustomer then Color.black800 else Color.blue900
-      , gravity CENTER
-      ]<> FontStyle.body1 TypoGraphy
-    ]
-
 destinationView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 destinationView config push =
   linearLayout
@@ -662,7 +694,7 @@ destinationView config push =
   ][  imageView
       [ height $ V 24
       , width $ V 24
-      , imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_loc_red.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_loc_red"
       , margin $ Margin 0 3 8 0
       ]
     , destAddressTextView config push
@@ -712,12 +744,10 @@ destAddressTextView config push=
       ]
   
 getTitle :: Config -> String
-getTitle config = case config.startRideActive of
-  false -> (getString YOU_ARE_ON_A_RIDE)
-  true  -> case config.isDriverArrived, config.notifiedCustomer of
-    false, false  -> (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
-    true, _       -> (getString YOU_ARE_AT_PICKUP)
-    false,true    -> case (getValueToLocalStore LANGUAGE_KEY) of
+getTitle config = case config.startRideActive,  config.notifiedCustomer of
+  false, _ -> (getString YOU_ARE_ON_A_RIDE)
+  true, false  ->  (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
+  true, true -> case (getValueToLocalStore LANGUAGE_KEY) of
       "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
       "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
       _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName
@@ -735,7 +765,7 @@ separatorConfig =
   }
 
 isSpecialRide :: Config -> Boolean
-isSpecialRide config = ((Maybe.isJust config.specialLocationTag) || (Maybe.isJust config.accessibilityTag)) && Maybe.isJust (getRequiredTag "text" config.specialLocationTag config.accessibilityTag)
+isSpecialRide config = (Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50

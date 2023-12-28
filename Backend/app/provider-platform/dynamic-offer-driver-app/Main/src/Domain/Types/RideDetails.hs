@@ -30,7 +30,8 @@ data RideDetailsE e = RideDetails
     vehicleColor :: Maybe Text,
     vehicleVariant :: Maybe SV.Variant,
     vehicleModel :: Maybe Text,
-    vehicleClass :: Maybe Text
+    vehicleClass :: Maybe Text,
+    fleetOwnerId :: Maybe Text
   }
   deriving (Generic)
 
@@ -50,7 +51,7 @@ instance EncryptedItem RideDetails where
 instance EncryptedItem' RideDetails where
   type UnencryptedItem RideDetails = RideDetailsDecrypted
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst
 
 getDriverNumber :: EncFlow m r => RideDetails -> m (Maybe Text)
 getDriverNumber rideDetails = do

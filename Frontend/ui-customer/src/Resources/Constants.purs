@@ -23,15 +23,16 @@ import Data.Int (toNumber)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
-import Helpers.Utils (parseFloat, toString)
-import Helpers.Utils (getAssetStoreLink, parseFloat, toString, extractKeyByRegex)
-import Language.Strings (getString, getEN)
+import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex)
+import Engineering.Helpers.Commons (os)
+import Language.Strings (getString)
+import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/), (*))
 import Screens.Types as ST
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
+import ConfigProvider
 
 type Language
   = { name :: String
@@ -197,10 +198,12 @@ getGender gender placeHolderText =
 
 getFaresList :: Array FareBreakupAPIEntity -> String -> Array ST.FareComponent
 getFaresList fares baseDistance =
+  let currency = (getAppConfig appConfig).currency
+  in
   map
     ( \(FareBreakupAPIEntity item) ->
           { fareType : item.description
-          , price : (getValueFromConfig "currency") <> " " <> 
+          , price : currency <> " " <> 
             (show $ case item.description of 
               "BASE_FARE" -> item.amount + getMerchSpecBaseFare fares
               "SGST" -> (item.amount * 2) + getFareFromArray fares "FIXED_GOVERNMENT_RATE"
@@ -216,7 +219,7 @@ getFaresList fares baseDistance =
                       "CUSTOMER_SELECTED_FARE" -> getEN CUSTOMER_SELECTED_FARE
                       "WAITING_CHARGES" -> getEN WAITING_CHARGE
                       "EARLY_END_RIDE_PENALTY" -> getEN EARLY_END_RIDE_CHARGES
-                      "WAITING_OR_PICKUP_CHARGES" -> getEN MISC_WAITING_CHARGE 
+                      "WAITING_OR_PICKUP_CHARGES" -> getEN WAITING_CHARGE 
                       "SERVICE_CHARGE" -> getEN SERVICE_CHARGES
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
@@ -256,7 +259,7 @@ getFilteredFares :: Array FareBreakupAPIEntity -> Array FareBreakupAPIEntity
 getFilteredFares = filter (\(FareBreakupAPIEntity item) -> (all (_ /=  item.description) (getMerchantSpecificFilteredFares (getMerchant FunctionCall))))--["EXTRA_DISTANCE_FARE", "TOTAL_FARE", "BASE_DISTANCE_FARE", "CGST", "NIGHT_SHIFT_CHARGE"]) )
 
 getKmMeter :: Int -> String
-getKmMeter distance = if (distance < 1000) then toString distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
+getKmMeter distance = if (distance < 1000) then toStringJSON distance <> " m" else (parseFloat ((toNumber distance)/ 1000.0)) 2 <> " km"
 
 -- Info ::
 -- Vehicle Variants for yatri sathi are SEDAN_TAXI (SEDAN , SUV, HATCHBACK) and NON_AC_TAXI (TAXI)
@@ -294,3 +297,15 @@ dummyDisabilityList ={
 
 areaCodeRegex :: String 
 areaCodeRegex = "\\b\\d{6}\\b"
+
+ticketPlaceId :: String
+ticketPlaceId = "1ef78db2-90de-4ed7-a38a-fcbb7ce28135"
+
+ticketEntryId :: String
+ticketEntryId = "b73378dc-427f-4efa-9b55-8efe7e3352c2"
+
+ticketAquariumId :: String
+ticketAquariumId = "a7eba6ed-99f7-442f-a9d8-00c8b380657b"
+
+ticketCamId :: String
+ticketCamId = "d8f47b42-50a5-4a97-8dda-e80a3633d7ab"

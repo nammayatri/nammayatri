@@ -35,9 +35,9 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
-import MerchantConfig.Utils(Merchant(..), getMerchant, getValueFromConfig)
+import MerchantConfig.Utils(Merchant(..), getMerchant)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
 
@@ -129,7 +129,7 @@ updateRequiredView push state =
                 , stroke ("1," <> Color.textSecondary)
                 , cornerRadius 10.0
                 , alpha 0.6
-                , PP.visibility GONE
+                -- , PP.visibility GONE
                 ][
                     textView $
                     [ width WRAP_CONTENT
@@ -158,7 +158,7 @@ updateRequiredView push state =
                   , color Color.yellowText
                   , onClick (\action -> do
                               _<- push action
-                              _ <- JB.openUrlInApp (getAppLink (getMerchant FunctionCall))
+                              _ <- JB.openUrlInApp state.config.appData.link
                               pure unit
                               ) (const OnAccept)
               ] <> FontStyle.body4 LanguageStyle
@@ -210,21 +210,10 @@ appUpdatedModelConfig state =
       margin = (Margin 12 0 12 16)
     }
   , coverImageConfig {
-      imageUrl = state.appUpdatedView.coverImageUrl <> "," <> (getAssetStoreLink FunctionCall) <> state.appUpdatedView.coverImageUrl <> ".png"
+      imageUrl = fetchImage FF_ASSET state.appUpdatedView.coverImageUrl
     , visibility = if state.appUpdatedView.coverImageUrl /= "" then VISIBLE else GONE
     , height = V 178
     , width = V 204
     }
   }
   in popUpConfig'
-
-getAppLink :: Merchant -> String 
-getAppLink merchant = 
-  case merchant of 
-    YATRI      -> case EHC.os of 
-                    "IOS" -> "https://apps.apple.com/in/app/yatri/id1615871038"
-                    _     -> "https://play.google.com/store/apps/details?id=net.openkochi.yatri"
-    NAMMAYATRI -> case EHC.os of 
-                    "IOS" -> "https://apps.apple.com/in/app/namma-yatri/id1637429831"
-                    _ -> "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
-    _          -> ""

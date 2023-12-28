@@ -21,13 +21,16 @@ where
 import qualified Domain.Action.UI.Sos as DSos
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Sos as Sos
 import Environment
 import EulerHS.Prelude
+import Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
@@ -36,20 +39,45 @@ type API =
            :> TokenAuth
            :> ReqBody '[JSON] DSos.SosReq
            :> Post '[JSON] DSos.SosRes
+           :<|> "getDetails"
+             :> Capture "rideId" (Id DRide.Ride)
+             :> TokenAuth
+             :> Get '[JSON] DSos.SosDetailsRes
            :<|> Capture "sosId" (Id Sos.Sos)
              :> "status"
              :> TokenAuth
-             :> ReqBody '[JSON] DSos.SosFeedbackReq
+             :> ReqBody '[JSON] DSos.SosUpdateReq
+             :> Post '[JSON] APISuccess.APISuccess
+           :<|> Capture "sosId" (Id Sos.Sos)
+             :> "addVideo"
+             :> TokenAuth
+             :> MultipartForm Tmp DSos.SOSVideoUploadReq
+             :> Post '[JSON] DSos.AddSosVideoRes
+           :<|> "markRideAsSafe"
+             :> TokenAuth
+             :> Capture "sosId" (Id Sos.Sos)
              :> Post '[JSON] APISuccess.APISuccess
        )
 
 handler :: FlowServer API
 handler =
   createSosDetails
+    :<|> getSosDetails
     :<|> updateSosDetails
+    :<|> addSosVideo
+    :<|> markRideAsSafe
 
 createSosDetails :: (Id Person.Person, Id Merchant.Merchant) -> DSos.SosReq -> FlowHandler DSos.SosRes
-createSosDetails (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId
+createSosDetails (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.createSosDetails personId merchantId
 
-updateSosDetails :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SosFeedbackReq -> FlowHandler APISuccess.APISuccess
-updateSosDetails sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.updateSosDetails sosId personId
+getSosDetails :: Id DRide.Ride -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DSos.SosDetailsRes
+getSosDetails rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DSos.getSosDetails rideId personId
+
+updateSosDetails :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SosUpdateReq -> FlowHandler APISuccess.APISuccess
+updateSosDetails sosId (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.updateSosDetails sosId (personId, merchantId)
+
+addSosVideo :: Id Sos.Sos -> (Id Person.Person, Id Merchant.Merchant) -> DSos.SOSVideoUploadReq -> FlowHandler DSos.AddSosVideoRes
+addSosVideo sosId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.addSosVideo sosId personId
+
+markRideAsSafe :: (Id Person.Person, Id Merchant.Merchant) -> Id Sos.Sos -> FlowHandler APISuccess.APISuccess
+markRideAsSafe (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DSos.markRideAsSafe (personId, merchantId)

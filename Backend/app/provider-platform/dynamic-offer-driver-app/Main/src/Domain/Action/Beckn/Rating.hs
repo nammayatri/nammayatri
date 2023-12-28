@@ -14,6 +14,8 @@
 
 module Domain.Action.Beckn.Rating where
 
+import Data.List.Extra ((!?))
+import Data.Maybe (listToMaybe)
 import qualified Domain.Types.Booking as DBooking
 import Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
@@ -26,6 +28,8 @@ import Kernel.Beam.Functions as B
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
@@ -36,7 +40,7 @@ import Tools.Error
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,
     ratingValue :: Int,
-    feedbackDetails :: Maybe Text
+    feedbackDetails :: [Maybe Text]
   }
 
 handler :: Id Merchant -> DRatingReq -> DRide.Ride -> Flow ()
@@ -45,21 +49,31 @@ handler merchantId req ride = do
   rating <- B.runInReplica $ QRating.findRatingForRide ride.id
   let driverId = ride.driverId
   let ratingValue = req.ratingValue
-      feedbackDetails = req.feedbackDetails
+      feedbackDetails = fromMaybe Nothing (listToMaybe req.feedbackDetails)
+      wasOfferedAssistance = case fromMaybe Nothing (req.feedbackDetails !? 1) of
+        Just "True" -> Just True
+        Just "False" -> Just False
+        _ -> Nothing
+      issueId = fromMaybe Nothing (req.feedbackDetails !? 2)
+      isSafe = Just $ isNothing issueId
   _ <- case rating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id driverId ratingValue feedbackDetails
+      newRating <- buildRating ride.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance
       QRating.create newRating
+      logDebug "Driver Rating Coin Event"
+      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance) -- doubttttt
     Just rideRating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-      QRating.updateRating rideRating.id driverId ratingValue feedbackDetails
+      QRating.updateRating rideRating.id driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance
+      logDebug "Driver Rating Coin Event"
+      fork "DriverCoinRating Event" $ DC.driverCoinsEvent driverId merchantId ride.merchantOperatingCityId (DCT.Rating ratingValue ride.chargeableDistance) -- doubttttt
   calculateAverageRating driverId merchant.minimumDriverRatesCount
 
 calculateAverageRating ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   Id DP.Person ->
   Int ->
   m ()
@@ -75,8 +89,8 @@ calculateAverageRating personId minimumDriverRatesCount = do
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     void $ QP.updateAverageRating personId newAverage
 
-buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> m DRating.Rating
-buildRating rideId driverId ratingValue feedbackDetails = do
+buildRating :: MonadFlow m => Id DRide.Ride -> Id DP.Person -> Int -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> m DRating.Rating
+buildRating rideId driverId ratingValue feedbackDetails issueId isSafe wasOfferedAssistance = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

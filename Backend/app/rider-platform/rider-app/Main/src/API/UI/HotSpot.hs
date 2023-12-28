@@ -30,6 +30,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import Storage.CachedQueries.Maps.LocationMapCache
 import Tools.Auth

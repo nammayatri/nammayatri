@@ -12,17 +12,20 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Merchant.TransporterConfig where
 
 import qualified Data.Aeson as A
 import qualified Database.Beam as B
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data TransporterConfigT f = TransporterConfigT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     pickupLocThreshold :: B.C f Meters,
     dropLocThreshold :: B.C f Meters,
     rideTimeEstimatedThreshold :: B.C f Seconds,
@@ -64,11 +67,14 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckTime :: B.C f Seconds,
     isAvoidToll :: B.C f Bool,
     timeDiffFromUtc :: B.C f Seconds,
+    driverFeeOverlaySendingTimeLimitInDays :: B.C f Int,
+    overlayBatchSize :: B.C f Int,
     subscription :: B.C f Bool,
     minLocationAccuracy :: B.C f Double,
     aadhaarVerificationRequired :: B.C f Bool,
     enableDashboardSms :: B.C f Bool,
     subscriptionStartTime :: B.C f UTCTime,
+    avgSpeedOfVehicle :: B.C f (Maybe A.Value),
     mandateValidity :: B.C f Int,
     bankErrorExpiry :: B.C f Seconds,
     driverLocationAccuracyBuffer :: B.C f Meters,
@@ -90,8 +96,43 @@ data TransporterConfigT f = TransporterConfigT
     updateOrderStatusBatchSize :: B.C f Int,
     orderAndNotificationStatusCheckTimeLimit :: B.C f Seconds,
     ratingAsDecimal :: B.C f Bool,
+    refillVehicleModel :: B.C f Bool,
+    snapToRoadConfidenceThreshold :: B.C f Double,
+    useWithSnapToRoadFallback :: B.C f Bool,
+    badDebtBatchSize :: B.C f Int,
+    badDebtRescheduleTime :: B.C f Seconds,
+    badDebtSchedulerTime :: B.C f Seconds,
+    badDebtTimeThreshold :: B.C f Int,
+    volunteerSmsSendingLimit :: B.C f (Maybe A.Value),
+    driverSmsReceivingLimit :: B.C f (Maybe A.Value),
+    languagesToBeTranslated :: B.C f [Language],
+    coinFeature :: B.C f Bool,
+    coinConversionRate :: B.C f HighPrecMoney,
+    cancellationTimeDiff :: B.C f Seconds,
+    coinExpireTime :: B.C f Seconds,
+    stepFunctionToConvertCoins :: B.C f Int,
+    cancellationDistDiff :: B.C f Int,
+    considerSpecialZoneRidesForPlanCharges :: B.C f Bool,
+    considerSpecialZoneRideChargesInFreeTrial :: B.C f Bool,
+    enableUdfForOffers :: B.C f Bool,
+    nightSafetyRouteDeviationThreshold :: B.C f Meters,
+    nightSafetyStartTime :: B.C f Seconds,
+    nightSafetyEndTime :: B.C f Seconds,
+    cancellationFee :: B.C f HighPrecMoney,
+    driverDistanceTravelledOnPickupThresholdOnCancel :: B.C f Meters,
+    driverTimeSpentOnPickupThresholdOnCancel :: B.C f Seconds,
+    cancellationFeeDisputeLimit :: B.C f Int,
+    driverDistanceToPickupThresholdOnCancel :: B.C f Meters,
+    numOfCancellationsAllowed :: B.C f Int,
+    canAddCancellationFee :: B.C f Bool,
+    allowDefaultPlanAllocation :: B.C f Bool,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    notificationRetryEligibleErrorCodes :: B.C f [Text],
+    notificationRetryCountThreshold :: B.C f Int,
+    notificationRetryTimeGap :: B.C f Seconds,
+    driverAutoPayExecutionTimeFallBack :: B.C f Seconds,
+    orderAndNotificationStatusCheckFallBackTime :: B.C f Seconds
   }
   deriving (Generic, B.Beamable)
 
@@ -99,10 +140,10 @@ instance B.Table TransporterConfigT where
   data PrimaryKey TransporterConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . merchantOperatingCityId
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG ''TransporterConfigT ['merchantId] [])
+$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])

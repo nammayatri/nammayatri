@@ -16,8 +16,10 @@
 
 module Domain.Types.Merchant.MerchantMessage where
 
+import Data.Default.Class
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
@@ -28,14 +30,20 @@ data MessageKey
   | SET_AS_DEFAULT_EMERGENCY_NUMBER
   | SEND_OTP
   | SEND_BOOKING_OTP
+  | SEND_SOS_ALERT
+  | MARK_RIDE_AS_SAFE
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''MessageKey)
 
 data MerchantMessageD (s :: UsageSafety) = MerchantMessage
   { merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     messageKey :: MessageKey,
     message :: Text,
+    templateId :: Text,
+    jsonData :: MerchantMessageDefaultDataJSON,
+    containsUrlButton :: Bool,
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
@@ -46,3 +54,18 @@ type MerchantMessage = MerchantMessageD 'Safe
 instance FromJSON (MerchantMessageD 'Unsafe)
 
 instance ToJSON (MerchantMessageD 'Unsafe)
+
+data MerchantMessageDefaultDataJSON = MerchantMessageDefaultDataJSON
+  { var1 :: Maybe Text,
+    var2 :: Maybe Text,
+    var3 :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
+
+instance Default MerchantMessageDefaultDataJSON where
+  def =
+    MerchantMessageDefaultDataJSON
+      { var1 = Nothing,
+        var2 = Nothing,
+        var3 = Nothing
+      }

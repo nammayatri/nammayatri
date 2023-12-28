@@ -19,10 +19,16 @@ source-repository head
   type: git
   location: https://github.com/nammayatri/nammayatri
 
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
 library
   exposed-modules:
       App
       Consumer.AvailabilityTime.Processor
+      Consumer.AvailabilityTime.Storage.Beam.Tables
       Consumer.AvailabilityTime.Storage.Queries
       Consumer.AvailabilityTime.Storage.Tables
       Consumer.AvailabilityTime.Types
@@ -69,11 +75,15 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns
+  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , bytestring
+    , cereal
     , containers
     , dynamic-offer-driver-app
     , errors
@@ -84,20 +94,27 @@ library
     , hw-kafka-client
     , mobility-core
     , monad-control
+    , openapi3
     , persistent
     , persistent-postgresql
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
+    , sequelize
+    , servant-openapi3
     , servant-server
     , sessionizer-metrics
     , streamly
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
 
 executable kafka-consumers-exe
   main-is: Main.hs
@@ -144,7 +161,11 @@ executable kafka-consumers-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , bytestring
+    , cereal
     , containers
     , errors
     , esqueleto
@@ -155,16 +176,23 @@ executable kafka-consumers-exe
     , kafka-consumers
     , mobility-core
     , monad-control
+    , openapi3
     , persistent
     , persistent-postgresql
+    , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , sequelize
+    , servant-openapi3
     , servant-server
     , sessionizer-metrics
     , streamly
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4

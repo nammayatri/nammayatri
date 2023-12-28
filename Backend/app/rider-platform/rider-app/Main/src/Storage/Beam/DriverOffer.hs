@@ -26,6 +26,7 @@ data DriverOfferT f = DriverOfferT
   { id :: B.C f Text,
     estimateId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     driverId :: B.C f (Maybe Text),
     driverName :: B.C f Text,
     durationToPickup :: B.C f Int,

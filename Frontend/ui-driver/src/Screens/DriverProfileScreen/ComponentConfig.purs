@@ -27,7 +27,6 @@ import Components.PopUpModal as PopUpModal
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (unit, (/=), (<>), (==))
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..), Listtype)
 import Screens.Types as ST
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -46,9 +45,9 @@ import PrestoDOM.Types.DomAttributes  (Corners(..))
 import Prelude
 import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
-import Helpers.Utils (getPeriod)
-import MerchantConfig.Utils (getValueFromConfig)
+import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
 import Font.Style (Style(..))
+import ConfigProvider
 
 logoutPopUp :: ST.DriverProfileScreenState -> PopUpModal.Config
 logoutPopUp  state = let
@@ -69,7 +68,7 @@ genericHeaderConfig state = let
       height = WRAP_CONTENT
     , prefixImageConfig {
        visibility = VISIBLE
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/common/ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , height = (V 25)
       , width = (V 25)
       , margin = (Margin 16 16 16 16)
@@ -121,7 +120,7 @@ driverGenericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = Margin 12 12 12 12
       }
     , padding = PaddingVertical 5 5
@@ -288,7 +287,7 @@ enterOtpState state = let
         text = getString OTP_SENT_TO <> fromMaybe "" state.data.driverEditAlternateMobile
       , color = Color.black800
       , margin = MarginBottom 8
-      , visibility = if state.props.otpIncorrect == false then VISIBLE else GONE
+      , visibility = if not state.props.otpIncorrect then VISIBLE else GONE
       },
       imageConfig {
           alpha = if DS.length state.props.alternateMobileOtp < 4 || state.props.otpIncorrect then 0.3 else 1.0
@@ -468,6 +467,7 @@ getChipRailArray :: Int -> String -> Array String -> String -> Array ST.ChipRail
 getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
   let
     alive = getPeriod lastRegistered
+    appData = (getAppConfig appConfig).appData
   in
     ( if lateNightTrips > 0 then
         [ { mainTxt: show lateNightTrips
@@ -478,7 +478,7 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
         []
     ) <>
     ( [ { mainTxt: if alive.periodType == "new" then "" else (show alive.period) <> " " <> alive.periodType
-          , subTxt: "on " <> getValueFromConfig "clientName"
+          , subTxt: "on " <> appData.name
           }
         ]
     )<>
@@ -492,7 +492,7 @@ getChipRailArray lateNightTrips lastRegistered lang totalDistanceTravelled =
     )<>
     (
       [ { mainTxt: totalDistanceTravelled
-        , subTxt: getString TRAVELLED_ON_APP
+        , subTxt: getString $ TRAVELLED_ON_APP "TRAVELLED_ON_APP"
         }
       ]
     )

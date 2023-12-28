@@ -27,7 +27,7 @@ import qualified Storage.Beam.Booking.BookingLocation as BeamBL
 create :: MonadFlow m => BookingLocation -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id BookingLocation -> m (Maybe BookingLocation)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BookingLocation -> m (Maybe BookingLocation)
 findById (Id bookingLocationId) = findOneWithKV [Se.Is BeamBL.id $ Se.Eq bookingLocationId]
 
 updateAddress :: MonadFlow m => Id BookingLocation -> LocationAddress -> m ()

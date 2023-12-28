@@ -15,29 +15,24 @@
 
 module Components.DriverInfoCard.Controller where
 
+import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage, ZoneType(..), SearchResultType)
+import Screens.Types(Stage, ZoneType(..), SheetState(..), SearchResultType)
 import Data.Maybe(Maybe)
-import Components.ChatView as ChatView
 import MerchantConfig.Types
 
 data Action = NoAction
-            | Support
             | PrimaryButtonAC PrimaryButtonController.Action
             | SourceToDestinationAC SourceToDestinationController.Action
             | CancelRide DriverInfoCardState
             | LocationTracking
-            | OpenEmergencyHelp
             | MessageDriver
-            | ShareRide
-            | ZoneOTPExpiryAction String String Int
             | OnNavigate
-            | RemoveNotification
             | CallDriver
-            | LoadMessages
             | OnNavigateToZone
-            | ExpandBottomSheet
+            | ToggleBottomSheet
+            | CollapseBottomSheet
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -50,19 +45,17 @@ type DriverInfoCardProps =
     currentSearchResultType :: SearchResultType,
     trackingEnabled :: Boolean,
     unReadMessages :: Boolean,
-    showChatNotification :: Boolean,
     showCallPopUp :: Boolean,
     isSpecialZone :: Boolean,
     estimatedTime :: String,
     zoneType :: ZoneType,
-    isChatOpened :: Boolean,
-    chatcallbackInitiated :: Boolean
+    merchantCity :: Maybe String
   }
 
 type DriverInfoCardData =
   { otp :: String
   , driverName :: String
-  , eta :: Int
+  , eta :: Maybe Int
   , vehicleDetails :: String
   , registrationNumber :: String
   , rating :: Number
@@ -90,7 +83,8 @@ type DriverInfoCardData =
   , isSpecialZone :: Boolean
   , isLocationTracking :: Boolean
   , bookingCreatedAt :: String
-  , lastMessage :: ChatView.ChatComponent
   , config :: AppConfig
   , vehicleVariant :: String
+  , defaultPeekHeight :: Int
+  , bottomSheetState :: SheetState
   }

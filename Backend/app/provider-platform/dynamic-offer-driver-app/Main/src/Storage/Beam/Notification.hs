@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Notification where
@@ -54,6 +55,8 @@ data NotificationT f = NotificationT
     dateCreated :: B.C f UTCTime,
     lastUpdated :: B.C f UTCTime,
     lastStatusCheckedAt :: B.C f (Maybe UTCTime),
+    responseCode :: B.C f (Maybe Text),
+    responseMessage :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.Init where
 
+import qualified Data.HashMap as HM
 import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -23,6 +24,7 @@ import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.RideRoute as RI
@@ -83,7 +85,8 @@ cancelBooking ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c
+    HasLongDurationRetryCfg r c,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   Id DM.Merchant ->
@@ -126,18 +129,12 @@ handler ::
 handler merchantId req eitherReq = do
   transporter <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   now <- getCurrentTime
-
-  mbPaymentMethod <- forM req.paymentMethodInfo $ \paymentMethodInfo -> do
-    allPaymentMethods <-
-      CQMPM.findAllByMerchantId merchantId
-    let mbPaymentMethod = find (compareMerchantPaymentMethod paymentMethodInfo) allPaymentMethods
-    mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
-  let paymentUrl = DMPM.getPrepaidPaymentUrl =<< mbPaymentMethod
   (booking, driverName, driverId) <- case req.initTypeReq of
     InitNormalReq -> do
       case eitherReq of
         Left (driverQuote, searchRequest, searchTry) -> do
-          booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag
+          (mbPaymentMethod, paymentUrl) <- fetchPaymentMethodAndUrl searchRequest.merchantOperatingCityId
+          booking <- buildBooking searchRequest driverQuote driverQuote.id.getId searchTry.startTime DRB.NormalBooking now (mbPaymentMethod <&> (.id)) paymentUrl searchRequest.disabilityTag searchRequest.merchantOperatingCityId (Just driverQuote.distanceToPickup)
           triggerBookingCreatedEvent BookingEventData {booking = booking, personId = driverQuote.driverId, merchantId = transporter.id}
           QST.updateStatus searchTry.id DST.COMPLETED
           _ <- QRB.createBooking booking
@@ -146,7 +143,8 @@ handler merchantId req eitherReq = do
     InitSpecialZoneReq -> do
       case eitherReq of
         Right (specialZoneQuote, searchRequest) -> do
-          booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing
+          (mbPaymentMethod, paymentUrl) <- fetchPaymentMethodAndUrl searchRequest.merchantOperatingCityId
+          booking <- buildBooking searchRequest specialZoneQuote specialZoneQuote.id.getId searchRequest.startTime DRB.SpecialZoneBooking now (mbPaymentMethod <&> (.id)) paymentUrl Nothing searchRequest.merchantOperatingCityId Nothing
           _ <- QRB.createBooking booking
           -- moving route from search request id to booking id
           routeInfo :: Maybe RI.RouteInfo <- Redis.safeGet (BS.searchRequestKey $ getId searchRequest.id)
@@ -182,17 +180,20 @@ handler merchantId req eitherReq = do
       Maybe (Id DMPM.MerchantPaymentMethod) ->
       Maybe Text ->
       Maybe Text ->
+      Id DMOC.MerchantOperatingCity ->
+      Maybe Meters ->
       m DRB.Booking
-    buildBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag = do
+    buildBooking searchRequest driverQuote quoteId startTime bookingType now mbPaymentMethodId paymentUrl disabilityTag merchantOpCityId distanceToPickup = do
       id <- Id <$> generateGUID
       let fromLocation = searchRequest.fromLocation
           toLocation = searchRequest.toLocation
-      exophone <- findRandomExophone merchantId
+      exophone <- findRandomExophone merchantOpCityId
       pure
         DRB.Booking
           { transactionId = searchRequest.transactionId,
             status = DRB.NEW,
             providerId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
             primaryExophone = exophone.primaryPhone,
             bapId = req.bapId,
             bapUri = req.bapUri,
@@ -215,15 +216,25 @@ handler merchantId req eitherReq = do
             disabilityTag = disabilityTag,
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
+            distanceToPickup = distanceToPickup,
             ..
           }
 
-findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m DExophone.Exophone
-findRandomExophone merchantId = do
-  merchantServiceUsageConfig <- CMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
-  exophones <- CQExophone.findByMerchantServiceAndExophoneType merchantId merchantServiceUsageConfig.getExophone DExophone.CALL_RIDE
+    fetchPaymentMethodAndUrl merchantOpCityId = do
+      mbPaymentMethod <- forM req.paymentMethodInfo $ \paymentMethodInfo -> do
+        allPaymentMethods <-
+          CQMPM.findAllByMerchantOpCityId merchantOpCityId
+        let mbPaymentMethod = find (compareMerchantPaymentMethod paymentMethodInfo) allPaymentMethods
+        mbPaymentMethod & fromMaybeM (InvalidRequest "Payment method not allowed")
+      let paymentUrl = DMPM.getPrepaidPaymentUrl =<< mbPaymentMethod
+      pure (mbPaymentMethod, paymentUrl)
+
+findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m DExophone.Exophone
+findRandomExophone merchantOpCityId = do
+  merchantServiceUsageConfig <- CMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  exophones <- CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone DExophone.CALL_RIDE
   nonEmptyExophones <- case exophones of
-    [] -> throwError $ ExophoneNotFound merchantId.getId
+    [] -> throwError $ ExophoneNotFound merchantOpCityId.getId
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones
 

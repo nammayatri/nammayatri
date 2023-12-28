@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Types.Merchant.MerchantPaymentMethod where
 
@@ -20,6 +21,7 @@ import qualified Data.List as List
 import Data.OpenApi
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Text.Show
@@ -28,6 +30,7 @@ import Tools.Beam.UtilsTH
 data MerchantPaymentMethodD (s :: UsageSafety) = MerchantPaymentMethod
   { id :: Id MerchantPaymentMethod,
     merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     paymentType :: PaymentType,
     paymentInstrument :: PaymentInstrument,
     collectedBy :: PaymentCollector,

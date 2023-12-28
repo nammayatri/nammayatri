@@ -33,6 +33,7 @@ import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import JBridge (renderBase64Image)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w. (Action -> Effect Unit) -> ViewImageModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -85,7 +86,7 @@ headerLayout push state =
         [ imageView
             [ width $ V 30
             , height $ V 30
-            , imageWithFallback "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left_white"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
             , onClick push $ const BackPressed
             , padding $ Padding 2 2 2 2
             , margin $ MarginLeft 5

@@ -44,7 +44,12 @@
     <string name="tip">ടിപ്പ്</string>
     <string name="qr_for_your_vpa_is_downloaded">നിങ്ങളുടെ vpa-യുടെ QR ഡൗൺലോഡ് ചെയ്തു!!!</string>
     <string name="invoice_downloaded">ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്തു!!!</string>
+    <string name="driver_receipt_downloaded">ഡ്രൈവർ രസീത് ഡൗൺലോഡ് ചെയ്തു!!!</string>
+    <string name="driver_receipt_for_your_ride_is_downloaded">നിങ്ങളുടെ യാത്രയ്ക്കുള്ള ഡ്രൈവർ രസീത് ഡൗൺലോഡ് ചെയ്തു!!!</string>
     <string name="invoice_for_your_ride_is_downloaded">നിങ്ങളുടെ യാത്രയ്ക്കുള്ള ഇൻവോയ്സ് ഡൗൺലോഡ് ചെയ്തു!!!</string>
     <string name="qr_downloaded">QR ഡ download ൺലോഡ് ചെയ്തു !!!</string>
+    <string name="accept_goto">Accept “Go To”</string>
+    <string name="take_a_clear_selfie">അടയാളപ്പെടുത്തിയ സ്ഥലത്തിനുള്ളിൽ നിങ്ങളുടെ \n ഡ്രൈവിംഗ് ലൈസൻസിനൊപ്പം വ്യക്തമായ ഫോട്ടോ എടുക്കുക</string>
+    <string name="need_help">സഹായം ആവശ്യമുണ്ടോ?</string>
 
 </resources>

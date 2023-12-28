@@ -15,34 +15,53 @@
 
 module Screens.UploadDrivingLicenseScreen.View where
 
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen,Visibility(..), afterRender, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, weight, width, layoutGravity, alpha, singleLine, visibility, scrollBarY, textFromHtml, imageWithFallback)
-import PrestoDOM.Types.DomAttributes as PTD
-import PrestoDOM.Properties as PP
+import Common.Types.App
+import Data.Maybe
+import Debug
+import Screens.UploadDrivingLicenseScreen.ComponentConfig
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Animation as Anim
-import Effect (Effect)
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
-import Screens.Types as ST
-import Styles.Colors as Color
-import Font.Style as FontStyle
-import Components.RegistrationModal.View as RegistrationModal
+import Common.Types.App (LazyCheck(..))
+import Components.GenericMessageModal as GenericMessageModal
+import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
+import Components.RegistrationModal.View as RegistrationModal
 import Components.TutorialModal.View as TutorialModal
-import JBridge as JB
-import Components.GenericMessageModal as GenericMessageModal
+import Components.ValidateDocumentModal as ValidateDocumentModal
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Trans.Class (lift)
+import Control.Transformers.Back.Trans (runBackT)
+import Data.String as DS
+import Effect (Effect)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Data.Maybe
-import Log (printLog)
-import Data.String as DS 
-import Common.Types.App
-import Screens.UploadDrivingLicenseScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, consumeBP)
-import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (getValueFromConfig)
+import PaymentPage (consumeBP)
 import Effect.Uncurried (runEffectFn1)
+import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons as EHC
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (fetchImage, FetchImageFrom(..) )
+import JBridge as JB
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Log (printLog)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (<>), (/=), (==), (&&), (>), (<), discard, void, not, (||))
+import Presto.Core.Types.Language.Flow (doAff)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, editText, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties as PP
+import PrestoDOM.Types.DomAttributes as PTD
+import Screens.AddVehicleDetailsScreen.Views (redirectScreen, rightWrongView)
+import Screens.Types as ST
+import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
+import Styles.Colors as Color
+import Types.App (defaultGlobalState)
+import Screens.RegistrationScreen.ComponentConfig (logoutPopUp) as LP
+import Data.String.Common as DSC
+import ConfigProvider
+
 
 screen :: ST.UploadDrivingLicenseState -> Screen Action ST.UploadDrivingLicenseState ScreenOutput
 screen initialState =
@@ -52,9 +71,16 @@ screen initialState =
   , globalEvents : [(\push -> do
     _ <- JB.storeCallBackImageUpload push CallBackImageUpload
     _ <- runEffectFn1 consumeBP unit
+    if initialState.props.successfulValidation then do
+      _ <- launchAff $ flowRunner defaultGlobalState $ redirectScreen push RedirectScreen
+      pure unit
+    else pure unit
+    void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $
+              if initialState.props.validateProfilePicturePopUp  then  lift $ lift $ doAff do liftEffect $ push $ AfterRender  else pure unit 
     pure $ pure unit)]
   , eval : \action state -> do
       let _ = printLog  "UploadDrivingLicenseScreen state -----" state
+          _ = spy "UploadDrivingLicenseScreen action -----" action
       eval action state
   }
 
@@ -68,7 +94,7 @@ view push state =
   frameLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
-  ][
+  ]([
 linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -79,7 +105,8 @@ linearLayout
                       _<- push action
                       pure unit
                       ) $ const (AfterRender)
-    ][ headerLayout state push
+    ][ PrestoAnim.animationSet  [ Anim.fadeIn true ] 
+      $ headerView state push 
       , linearLayout
         [ width MATCH_PARENT
         , weight 1.0
@@ -93,12 +120,22 @@ linearLayout
                 , width MATCH_PARENT
                 , orientation VERTICAL
                 , padding (PaddingHorizontal 20 20)
-                ][ enterLicenceNumber state push
-                , reEnterLicenceNumber state push
+                ][ textView $
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , text $ getString DL_VERIFICATION_FAILED
+                      , color Color.black800
+                      , background Color.redOpacity10
+                      , padding $ Padding 16 12 16 12
+                      , margin $ Margin 16 16 16 16
+                      , cornerRadius 8.0
+                      , visibility $ fromMaybeVisibility state.data.dateOfIssue
+                      ] <> FontStyle.body3 TypoGraphy
+                , enterLicenceNumber state push
+                , if state.data.cityConfig.uploadRCandDL then reEnterLicenceNumber state push else dummyLinearLayout
                 , dateOfBirth push state
                 , dateOfIssue push state
-                , frontUploadSection state push
-                -- , backUploadSection state push
+                , howToUpload push state
                 ]
               ]
           ]
@@ -107,16 +144,17 @@ linearLayout
         , width MATCH_PARENT
         , gravity CENTER
         , orientation VERTICAL
-        ][ textView
-           [ width MATCH_PARENT
-           , height WRAP_CONTENT
-           , text state.data.errorMessage
-           , visibility $ if state.props.errorVisibility then VISIBLE else GONE
-           , color Color.red
-           , padding( PaddingHorizontal 20 20)
-           , margin (MarginBottom 10)
-           ]
-           , PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)]
+        ][  textView
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , text state.data.errorMessage
+            , visibility $ fromBooleanVisibility (not $ DSC.null state.data.errorMessage)
+            , color Color.red
+            , padding( PaddingHorizontal 20 20)
+            , margin (MarginBottom 10)
+            ]
+          , PrimaryButton.view (push <<< PrimaryButtonAction) (primaryButtonConfig state)
+          , if state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL then skipButton push state else dummyLinearLayout]
 
     ]   
     , if state.props.openRegistrationModal then 
@@ -128,19 +166,25 @@ linearLayout
       linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
-      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_driver_license_card," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_driver_license_card.png"}] else linearLayout [][]
+      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_driver_license_card" }] else linearLayout [][]
     , if state.props.openDateOfIssueManual then 
       linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
-      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : "ny_ic_date_of_issue," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_date_of_issue.png"}] else linearLayout [][]
+      ] [TutorialModal.view (push <<< TutorialModalAction) {imageUrl : fetchImage FF_ASSET "ny_ic_date_of_issue"}] else linearLayout [][]
     , if state.props.openGenericMessageModal then 
       linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
       ] [GenericMessageModal.view (push <<< GenericMessageModalAction) {text : (getString ISSUE_WITH_DL_IMAGE), openGenericMessageModal : state.props.openGenericMessageModal, buttonText : (getString NEXT) }] else linearLayout [][]
-  ] 
+  ] <> if state.props.logoutPopupModal then [logoutPopupModal push state] else []
+    <> if state.props.imageCaptureLayoutView then [imageCaptureLayout push state] else []
+    <> if state.props.validateProfilePicturePopUp then [validateProfilePictureModal push state] else []
+    <> if state.props.fileCameraPopupModal then [fileCameraLayout push state] else [] )
   
+headerView :: forall w. ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
+
 registrationModalView :: ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 registrationModalView state push = 
   RegistrationModal.view (push <<< RegistrationModalAction) ({
@@ -153,25 +197,12 @@ enterLicenceNumber state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , margin (MarginTop 10)
-  ][ textView
-      ([ width WRAP_CONTENT
-      , text (getString ADD_DRIVING_LICENSE)
-      , color Color.black800
-      , margin (MarginVertical 20 20)
-      ] <> FontStyle.h1 TypoGraphy)
-      , textView
-      ([ width WRAP_CONTENT
-      , textFromHtml (getString PROVIDE_DATE_OF_ISSUE_TEXT)
-      , color Color.black800
-      , margin (MarginVertical 20 20)
-      , visibility if state.data.dateOfIssue == Nothing then GONE else VISIBLE
-      ] <> FontStyle.subHeading2 TypoGraphy)
-      , linearLayout
+  , margin (MarginTop 30)
+  , visibility $ fromBooleanVisibility $ not state.props.openHowToUploadManual
+  ][   linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
-        , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
         ][
           PrimaryEditText.view (push <<< PrimaryEditTextActionController) (primaryEditTextConfig state)
         ]
@@ -180,7 +211,7 @@ enterLicenceNumber state push =
         , height WRAP_CONTENT
         , gravity RIGHT
         , orientation VERTICAL
-        , margin (MarginBottom 20)
+        , margin (MarginBottom 10)
         ][ textView
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -199,31 +230,33 @@ reEnterLicenceNumber state push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
+  , visibility $ fromBooleanVisibility (not state.props.openHowToUploadManual)
+  , margin (MarginBottom 10)
   ][ PrimaryEditText.view (push <<< PrimaryEditTextActionControllerReEnter) (primaryEditTextConfigReEnterDl state)
    , textView
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , text (getString SAME_REENTERED_DL_MESSAGE)
-      , visibility $ if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && not (DS.null state.data.reEnterDriverLicenseNumber)) then VISIBLE else GONE
+      , visibility $ fromBooleanVisibility (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && not (DSC.null state.data.reEnterDriverLicenseNumber))
       , color Color.red
-      , margin (MarginBottom 10)
       ]
  ]
 
 frontUploadSection :: ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 frontUploadSection state push =
+  let feature = (getAppConfig appConfig).feature 
+  in
   linearLayout
   [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin (MarginTop 20)
     , onClick push (const( UploadFileAction "front"))
-    , clickable $ state.data.imageFront == ""
-    , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
+    , clickable $ DSC.null state.data.imageFront
+    , visibility $ fromBooleanVisibility (not state.props.openHowToUploadManual)
   ][
     textView
-    ([ text $ (getString FRONT_SIDE) <> if getValueFromConfig "imageUploadOptional" then (getString OPTIONAL) else ""
+    ([ text (getString FRONT_SIDE)
     , color Color.greyTextColor
     ] <> FontStyle.body3 TypoGraphy)
   , linearLayout
@@ -236,7 +269,7 @@ frontUploadSection state push =
     ][ imageView
       [ width MATCH_PARENT
       , height ( V 166 )
-      , imageWithFallback $ "ny_ic_dl_demo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_dl_demo.png"
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_dl_demo"
       ]
     ]
   , linearLayout
@@ -249,17 +282,17 @@ frontUploadSection state push =
     , stroke ("1," <> Color.borderGreyColor)
     ][ 
       textView
-      ([ text if (state.data.imageFront == "") then (getString UPLOAD_FRONT_SIDE) else state.data.imageNameFront
-      , color if (state.data.imageFront == "") then Color.darkGrey else Color.greyTextColor
+      ([ text if (DSC.null state.data.imageFront) then (getString UPLOAD_FRONT_SIDE) else state.data.imageNameFront
+      , color if (DSC.null state.data.imageFront) then Color.darkGrey else Color.greyTextColor
       , weight 1.0
       , singleLine true
       , padding (PaddingRight 15)
       ] <> FontStyle.subHeading1 TypoGraphy)
-    , if (state.data.imageFront /= "") then previewIcon state push "front" else
+    , if not (DSC.null state.data.imageFront) then previewIcon state push "front" else
       imageView
       [ width ( V 20 )
       , height ( V 20 )
-      , imageWithFallback $ "ny_ic_camera_front," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_front.png"
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_camera_front"
       ]
     ]
   ]
@@ -272,7 +305,8 @@ backUploadSection state push =
   , margin (MarginTop 20)
   , orientation VERTICAL
   , onClick push (const (UploadFileAction "back"))
-  , clickable $ state.data.imageBack == ""
+  , clickable $ DSC.null state.data.imageBack
+  , visibility $ fromBooleanVisibility (not state.props.openHowToUploadManual)
   ][
     textView
     ([ text (getString BACK_SIDE)
@@ -288,17 +322,17 @@ backUploadSection state push =
     , stroke ("1," <> Color.borderGreyColor)
     ][
       textView
-      ([ text if (state.data.imageBack == "") then (getString UPLOAD_BACK_SIDE) else state.data.imageNameBack
-      , color if (state.data.imageBack == "") then Color.darkGrey else Color.greyTextColor
+      ([ text if (DSC.null state.data.imageBack) then (getString UPLOAD_BACK_SIDE) else state.data.imageNameBack
+      , color if (DSC.null state.data.imageBack) then Color.darkGrey else Color.greyTextColor
       , weight 1.0
       , padding (PaddingRight 15)
       , singleLine true
       ] <> FontStyle.subHeading1 TypoGraphy)
-    , if (state.data.imageBack /= "") then previewIcon state push "back" else
+    , if not (DSC.null state.data.imageBack) then previewIcon state push "back" else
       imageView
       [ width ( V 20 )
       , height ( V 20 )
-      , imageWithFallback $ "ny_ic_camera_front," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_front.png"
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_camera_front"
       ]
     ]
   ]
@@ -322,7 +356,7 @@ previewIcon state push previewType =
           [ height (V 10)
           , width (V 10)
           , margin (MarginLeft 10)
-          , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
           , onClick push (const( RemoveUploadedFile previewType))
           ]
     ]
@@ -343,7 +377,7 @@ headerLayout state push =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
         , layoutGravity "center_vertical"
         , padding (PaddingHorizontal 2 2)
         , margin (MarginLeft 5)
@@ -383,7 +417,7 @@ dateOfBirth push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if state.data.dateOfIssue /= Nothing then GONE else VISIBLE
+  , visibility $ fromBooleanVisibility (not state.props.openHowToUploadManual) 
   ][ textView
     ([ text (getString DATE_OF_BIRTH)
     , color Color.greyTextColor
@@ -406,15 +440,15 @@ dateOfBirth push state =
                       ) (const SelectDateOfBirthAction)
         , clickable state.props.isDateClickable 
       ][ textView
-        ([ text if state.data.dob == "" then (getString SELECT_DATE_OF_BIRTH) else state.data.dobView
-        , color if (state.data.dob == "") then Color.darkGrey else Color.greyTextColor
+        ([ text if DSC.null state.data.dob then (getString SELECT_DATE_OF_BIRTH) else state.data.dobView
+        , color if DSC.null state.data.dob then Color.darkGrey else Color.greyTextColor
         , weight 1.0
         , padding (PaddingRight 15)
         ] <> FontStyle.subHeading1 TypoGraphy)
       , imageView
         [ width ( V 20 )
         , height ( V 20 )
-        , imageWithFallback $ "ny_ic_calendar," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_calendar.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar"
         ]
       ]
     ]
@@ -426,7 +460,7 @@ dateOfIssue push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if state.data.dateOfIssue == Nothing then GONE else VISIBLE
+  , visibility $ fromMaybeVisibility state.data.dateOfIssue
   ][ textView $ 
     [ text $ getString DATE_OF_ISSUE
     , color Color.greyTextColor
@@ -457,7 +491,7 @@ dateOfIssue push state =
       , imageView
         [ width $ V 20
         , height $ V 20
-        , imageWithFallback $ "ny_ic_calendar," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_calendar.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_calendar"
         ]
       ]
     ]
@@ -474,3 +508,132 @@ dateOfIssue push state =
         ] <> FontStyle.tags TypoGraphy
       ]
   ]
+
+howToUpload :: (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> forall w . PrestoDOM (Effect Unit) w
+howToUpload push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , margin (MarginTop 20) 
+  , visibility $ fromBooleanVisibility state.props.openHowToUploadManual
+  ][ textView $ 
+    [ text $ getString HOW_TO_UPLOAD
+    , color Color.greyTextColor
+    ] <> FontStyle.h3 TypoGraphy
+  , linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginVertical 0 10
+    , padding $ Padding 0 16 0 16
+    ][ 
+      textView $ 
+      [ text $ getString TAKE_CLEAR_PICTURE_DL
+      , color Color.black800
+      , margin $ MarginBottom 18
+      ] <> FontStyle.body3 TypoGraphy
+    , textView $ 
+      [ text $ getString ENSURE_ADEQUATE_LIGHT
+      , color Color.black800
+      , margin $ MarginBottom 18
+      ] <> FontStyle.body3 TypoGraphy
+    , textView $ 
+      [ text $ getString FIT_DL_CORRECTLY
+      , color Color.black800
+      , margin $ MarginBottom 40
+      ] <> FontStyle.body3 TypoGraphy
+    , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , cornerRadius 4.0
+      , margin $ MarginTop 20
+      , stroke $ "1," <> Color.borderGreyColor
+      , padding $ Padding 16 16 16 0
+      ][ rightWrongView true
+       , rightWrongView false
+      ]  
+    ]
+  ]
+
+logoutPopupModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+logoutPopupModal push state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , background Color.blackLessTrans
+  ][ PopUpModal.view (push <<<PopUpModalLogoutAction) (LP.logoutPopUp Language) ]
+
+
+validateProfilePictureModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+validateProfilePictureModal push state =
+  ValidateDocumentModal.view (push <<< ValidateDocumentModalAction) (validateProfilePictureModalState state)
+
+validateProfilePictureModalState :: ST.UploadDrivingLicenseState -> ValidateDocumentModal.ValidateDocumentModalState
+validateProfilePictureModalState state = let
+  status = if state.props.validating then ST.InProgress 
+                          else if not (DSC.null state.data.errorMessage) then ST.Failure
+                          else if (not (DSC.null state.data.imageIDFront)) || (not ( DSC.null state.data.imageIDBack)) then ST.Success
+                          else ST.None
+  config' = ValidateDocumentModal.config
+  inAppModalConfig' = config'{
+    background = Color.black,
+    profilePictureCapture = false,
+    verificationStatus = status,
+    verificationType = "DL",
+    failureReason = state.data.errorMessage,
+    headerConfig {
+      imageConfig {
+      color = Color.white900
+    },
+      headTextConfig {
+        text = getString TAKE_PHOTO,
+        color = Color.white900
+      }
+    }
+  }
+  in inAppModalConfig'
+
+skipButton :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+skipButton push state =
+  textView $
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , color Color.black
+  , gravity CENTER
+  , onClick push $ const SkipButton
+  , text $ getString SKIP
+  , margin $ MarginBottom 15
+  ] <> FontStyle.body1 TypoGraphy
+
+imageCaptureLayout :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+imageCaptureLayout push state  =  
+  ValidateDocumentModal.view  (push <<< ValidateDocumentModalAction) 
+      (ValidateDocumentModal.config 
+        { background = Color.black
+        , profilePictureCapture = true 
+        , headerConfig 
+          { headTextConfig 
+            { text = getString TAKE_PHOTO
+            }
+          }
+        })
+
+fileCameraLayout :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
+fileCameraLayout push state =
+  PopUpModal.view (push <<< PopUpModalActions)  (fileCameraLayoutConfig state)
+
+fromMaybeVisibility :: forall a . Maybe a -> Visibility
+fromMaybeVisibility val = if isNothing val
+                        then GONE else VISIBLE
+
+fromBooleanVisibility :: Boolean -> Visibility
+fromBooleanVisibility val = if val then VISIBLE else GONE
+
+dummyLinearLayout :: forall w . PrestoDOM (Effect Unit) w
+dummyLinearLayout =
+  linearLayout
+    [ width WRAP_CONTENT
+    , height $ V 0
+    ][]

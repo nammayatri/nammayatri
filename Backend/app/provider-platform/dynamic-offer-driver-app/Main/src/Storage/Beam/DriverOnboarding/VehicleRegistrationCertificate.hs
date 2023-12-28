@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate where
 
@@ -40,6 +41,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleEnergyType :: B.C f (Maybe Text),
     verificationStatus :: B.C f Domain.VerificationStatus,
     failedRules :: B.C f [Text],
+    fleetOwnerId :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Lib.SessionizerMetrics.EventStream where
 
@@ -55,7 +56,7 @@ createEvent personId merchantId eventType service triggredBy payload primaryId =
             personId = personId,
             merchantId = merchantId,
             deploymentVersion = version.getDeploymentVersion,
-            at = now,
+            at = utcToMilliseconds now,
             eventType = eventType,
             subType = Nothing,
             primaryId = primaryId,

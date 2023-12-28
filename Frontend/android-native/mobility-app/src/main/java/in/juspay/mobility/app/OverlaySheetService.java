@@ -18,11 +18,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -46,6 +48,7 @@ import androidx.annotation.Nullable;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.facebook.shimmer.ShimmerFrameLayout;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -62,20 +65,27 @@ import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.hyper.bridge.HBridge;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 
 import in.juspay.mobility.app.TranslatorMLKit;
@@ -107,7 +117,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private ArrayList<TextView> tipsList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private String key = "";
-
+    private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+    private SheetModel modelForLogs;
+    private static Boolean enableCleverTapEvents;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -123,20 +135,26 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     @SuppressLint("SetTextI18n")
-    private void updateTipView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
+    private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String variant = model.getRequestedVehicleVariant();
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
-                holder.customerTipBlock.setVisibility(View.VISIBLE);
-                if (model.getDisabilityTag()) {
-                    holder.accessibilityTag.setVisibility(View.VISIBLE);
-                    holder.accessibilityTagText.setText(getString(R.string.assistance_required));
-                }  else{
-                    holder.accessibilityTag.setVisibility(View.GONE);
-                }
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
+                String pickupChargesText = model.getCustomerTip() > 0 ?
+                        getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
+                        getString(R.string.includes_pickup_charges_10);
+                holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE : View.GONE);
+                holder.textIncludesCharges.setText(pickupChargesText);
+                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
+                holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
+                holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
+                holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
+                        ColorStateList.valueOf(getColor(R.color.Black900)) :
+                        ColorStateList.valueOf(getColor(R.color.green900)));
 
                 if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
-                    if (getVariantType(variant).equals(VariantType.AC)) {
+                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
                         holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
                         holder.rideTypeTag.setVisibility(View.VISIBLE);
                     } else {
@@ -146,21 +164,16 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     }
                     holder.rideTypeText.setText(variant);
                 }
-                
-                if(model.getCustomerTip() > 0){
-                    holder.customerTipTag.setVisibility(View.VISIBLE);
-                    holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
-                    holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip));
-                }
             } else {
-                holder.customerTipBlock.setVisibility(View.GONE);
-                holder.textIncludesCharges.setText(getString(R.string.includes_pickup_charges_10));
+                holder.tagsBlock.setVisibility(View.GONE);
             }
         });
     }
 
     private void updateIncreaseDecreaseButtons(SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
+            holder.buttonIncreasePrice.setVisibility(model.getDriverMaxExtraFee() == 0 ? View.GONE : View.VISIBLE);
+            holder.buttonDecreasePrice.setVisibility(model.getDriverMaxExtraFee() == 0 ? View.GONE : View.VISIBLE);
             holder.buttonDecreasePrice.setAlpha(model.getButtonDecreasePriceAlpha());
             holder.buttonDecreasePrice.setClickable(model.isButtonDecreasePriceClickable());
             holder.buttonIncreasePrice.setAlpha(model.getButtonIncreasePriceAlpha());
@@ -190,6 +203,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         @Override
         public void onViewHolderBind(SheetAdapter.SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> payloads) {
             SheetModel model = sheetArrayList.get(position);
+            modelForLogs = model;
             String x = payloads.size() > 0 ? (String) payloads.get(0) : "";
             switch (x) {
                 case "inc":
@@ -199,7 +213,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     updateIncreaseDecreaseButtons(holder, model);
                     return;
                 case "time":
-                    updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
+                    updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), (model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer)));
                     updateProgressBars(true);
                     return;
             }
@@ -241,28 +255,26 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             if (model.getspecialLocationTag() != null) {
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
             }
-            if (model.getDriverMaxExtraFee() == 0) {
-                holder.buttonIncreasePrice.setVisibility(View.GONE);
-                holder.buttonDecreasePrice.setVisibility(View.GONE);
-            } else {
-                holder.buttonIncreasePrice.setVisibility(View.VISIBLE);
-                holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
-            }
-
             sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", null);
-            if (useMLKit != null && useMLKit.equals("true")) updateViewFromMlTranslation(holder, model);
-            updateTipView(holder, model);
+            String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", "false");
+            if (useMLKit.equals("false") && !model.isTranslated()) RideRequestUtils.updateViewFromMlTranslation(holder, model, sharedPref, OverlaySheetService.this);
 
-            if (key != null && (key.equals("yatrisathiprovider") || key.equals("yatriprovider"))) {
+            if (key.equals("yatrisathiprovider") || key.equals("yatriprovider")) {
                 holder.textIncludesCharges.setVisibility(View.GONE);
             }
-            updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), getString(R.string.accept_offer));
+            updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
+            updateTagsView(holder, model);
+            CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(getApplicationContext());
+            String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
                 if (key != null && key.equals("nammayatriprovider"))
                     startApiLoader();
+                if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
+                    LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
+                    lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
+                }
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 Handler handler = new Handler(Looper.getMainLooper());
                 executor.execute(() -> {
@@ -276,6 +288,18 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             }
                             String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
                             firebaseLogEvent(logEvent);
+                            if (enableCleverTapEvents) {
+                                HashMap<String, Object> cleverTapParams = new HashMap<>();
+                                try {
+                                    cleverTapParams.put("searchRequestId", model.getSearchRequestId());
+                                    cleverTapParams.put("rideRequestPopupDelayDuration", model.getRideRequestPopupDelayDuration());
+                                    cleverTapParams.put("vehicleVariant", vehicleVariant);
+                                    cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+                                    clevertapDefaultInstance.pushEvent(logEvent, cleverTapParams);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
                             isRideAcceptedOrRejected = true;
                             handler.post(() -> {
                                 startLoader(model.getSearchRequestId());
@@ -314,9 +338,22 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         handler.post(() -> {
                             String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
                             Utils.logEvent (logEvent, getApplicationContext());
+                            if (enableCleverTapEvents) {
+                                HashMap<String, Object> cleverTapParams = new HashMap<>();
+                                try {
+                                    cleverTapParams.put("searchRequestId", model.getSearchRequestId());
+                                    cleverTapParams.put("rideRequestPopupDelayDuration", model.getRideRequestPopupDelayDuration());
+                                    cleverTapParams.put("vehicleVariant", vehicleVariant);
+                                    cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+                                    String event = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_rejected" : "ride_rejected";
+                                    clevertapDefaultInstance.pushEvent(event, cleverTapParams);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
                             removeCard(position);
                             executor.shutdown();
-                            Toast.makeText(getApplicationContext(), getApplicationContext().getResources().getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
                         });
                     } catch (Exception e) {
                         firebaseLogEventWithParams("exception", "reject_button_click", e.toString());
@@ -390,18 +427,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         }
     });
 
-    private void updateViewFromMlTranslation(SheetAdapter.SheetViewHolder holder,  SheetModel model) {
-
-        String lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
-        TranslatorMLKit translate = new TranslatorMLKit("en", lang, this);
-
-        translate.translateStringInTextView(model.getSourceArea(), holder.sourceArea);
-        translate.translateStringInTextView(model.getSourceAddress(),  holder.sourceAddress);
-        translate.translateStringInTextView(model.getDestinationArea(), holder.destinationArea);
-        translate.translateStringInTextView(model.getDestinationAddress(),  holder.destinationAddress);
-
-    }
-
     private void removeCard(int position) {
         try {
             Handler handler = new Handler(Looper.getMainLooper());
@@ -431,6 +456,33 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void cleanUp() {
         if (!isRideAcceptedOrRejected) {
             firebaseLogEvent("ride_ignored");
+            try {
+                if (enableCleverTapEvents) {
+                    HashMap<String, Object> cleverTapParams = new HashMap<>();
+                    CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(getApplicationContext());
+
+                    if (modelForLogs != null) {
+                        cleverTapParams.put("searchRequestId", modelForLogs.getSearchRequestId());
+                        cleverTapParams.put("rideRequestPopupDelayDuration", modelForLogs.getRideRequestPopupDelayDuration());
+                    }
+
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                        String formattedDateTime = utcDateTime.format(formatter);
+                        long millisecondsSinceEpoch = Instant.now().toEpochMilli();
+                        cleverTapParams.put("timeStampString", formattedDateTime);
+                        cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
+                    }
+
+                    cleverTapParams.put("vehicleVariant", sharedPref.getString("VEHICLE_VARIANT", null));
+                    cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+
+                    clevertapDefaultInstance.pushEvent("ride_ignored", cleverTapParams);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         try {
             callBack.clear();
@@ -500,8 +552,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         try {
             Handler handler = new Handler(Looper.getMainLooper());
             handler.postDelayed(() -> executor.execute(() -> {
-                if (sheetArrayList.size() >= 3 || findCardById(rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID))))
+                String searchRequestId = rideRequestBundle.getString("searchRequestId");
+                boolean isClearedReq = MyFirebaseMessagingService.clearedRideRequest.containsKey(searchRequestId);
+                boolean requestAlreadyPresent = findCardById(searchRequestId);
+                if (sheetArrayList.size() >= 3 || requestAlreadyPresent || isClearedReq ){
+                    if (isClearedReq) MyFirebaseMessagingService.clearedRideRequest.remove(searchRequestId);
                     return;
+                }
                 if (progressDialog == null || apiLoader == null) {
                     if (mediaPlayer != null) {
                         mediaPlayer.start();
@@ -509,7 +566,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     }
                 }
                 handler.post(() -> {
-                    String searchRequestId = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID));
                     String searchRequestValidTill = rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQ_VALID_TILL));
                     int baseFare = rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE));
                     String currency = rideRequestBundle.getString("currency");
@@ -529,6 +585,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     DecimalFormat df = new DecimalFormat("###.##", new DecimalFormatSymbols(new Locale("en", "us")));
                     String requestedVehicleVariant = rideRequestBundle.getString("requestedVehicleVariant");
                     Boolean disabilityTag = rideRequestBundle.getBoolean("disabilityTag");
+                    Boolean isTranslated = rideRequestBundle.getBoolean("isTranslated");
                     df.setMaximumFractionDigits(2);
                     final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", new Locale("en", "us"));
                     f.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -539,6 +596,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int negotiationUnit = Integer.parseInt(sharedPref.getString( "NEGOTIATION_UNIT", "10"));
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
+                    boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
 
@@ -564,10 +622,13 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             sourcePinCode,
                             destinationPinCode,
                             requestedVehicleVariant,
-                            disabilityTag);
+                            disabilityTag,
+                            isTranslated,
+                            gotoTag);
+
                     if (floatyView == null) {
                         startTimer();
-                        showOverLayPopup();
+                        showOverLayPopup(rideRequestBundle);
                     }
                     sheetArrayList.add(sheetModel);
                     sheetAdapter.updateSheetList(sheetArrayList);
@@ -583,13 +644,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     public boolean removeCardById(String id){
-        if (sheetArrayList!=null){
-            if (sheetArrayList.size()>0){
-                for (int i = 0; i<sheetArrayList.size(); i++){
-                    if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
-                        removeCard(i);
-                        return true;
-                    }
+        if (sheetArrayList.size()>0){
+            for (int i = 0; i<sheetArrayList.size(); i++){
+                if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
+                    removeCard(i);
+                    return true;
                 }
             }
         }
@@ -597,9 +656,37 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     }
 
     @SuppressLint("InflateParams")
-    private void showOverLayPopup() {
-        firebaseLogEvent("Overlay_is_popped_up");
-        if (!Settings.canDrawOverlays(this)) return;
+    private void showOverLayPopup(Bundle rideRequestBundle) {
+        String merchantId = getResources().getString(R.string.merchant_id);
+        try{
+            if (remoteConfigs.hasKey("enable_clevertap_events")){
+                JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_clevertap_events"));
+                if (clevertapConfig.has(merchantId)){
+                    enableCleverTapEvents = clevertapConfig.getBoolean(merchantId);
+                }
+            }
+            if (enableCleverTapEvents) {
+                CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(getApplicationContext());
+                HashMap<String, Object> cleverTapParams = new HashMap<>();
+                cleverTapParams.put("searchRequestId", rideRequestBundle.getString("searchRequestId"));
+                cleverTapParams.put("rideRequestPopupDelayDuration", rideRequestBundle.getInt("rideRequestPopupDelayDuration"));
+                cleverTapParams.put("keepHiddenForSeconds", rideRequestBundle.getInt("keepHiddenForSeconds", 0));
+                cleverTapParams.put("requestedVehicleVariant", rideRequestBundle.getString("requestedVehicleVariant"));
+                cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                    String formattedDateTime = utcDateTime.format(formatter);
+                    long millisecondsSinceEpoch = Instant.now().toEpochMilli();
+                    cleverTapParams.put("timeStampString", formattedDateTime);
+                    cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
+                }
+                clevertapDefaultInstance.pushEvent("overlay_is_popped_up", cleverTapParams);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (!Settings.canDrawOverlays(getApplicationContext())) return;
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         int layoutParamsType;
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -617,7 +704,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         params.dimAmount = 0.6f;
         params.gravity = Gravity.CENTER;
         params.screenOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT;
-        LayoutInflater inflater = ((LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE));
+        LayoutInflater inflater = ((LayoutInflater) getApplicationContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE));
         floatyView = inflater.inflate(R.layout.viewpager_layout_view, null);
         TextView merchantLogo = floatyView.findViewById(R.id.merchantLogo);
         if (key != null && key.equals("yatrisathiprovider")){
@@ -644,6 +731,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         viewPager.setAdapter(sheetAdapter);
         windowManager.addView(floatyView, params);
         setIndicatorClickListener();
+        firebaseLogEvent("Overlay_is_popped_up");
     }
 
     private void startTimer() {
@@ -691,10 +779,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         String sessionToken = sharedPref.getString("SESSION_ID", "null");
         String deviceDetails = sharedPref.getString("DEVICE_DETAILS", "null");
         String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
-        if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
-            LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
-            lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
-        }
         try {
             String orderUrl = baseUrl + "/driver/searchRequest/quote/respond";
             HttpURLConnection connection = (HttpURLConnection) (new URL(orderUrl).openConnection());
@@ -736,7 +820,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 if (errorPayload.has(getResources().getString(R.string.ERROR_MESSAGE))) {
                     handler.post(() -> {
                         try {
-                            Toast.makeText(getApplicationContext(), errorPayload.getString(getResources().getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), errorPayload.getString(getString(R.string.ERROR_MESSAGE)), Toast.LENGTH_SHORT).show();
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -892,7 +976,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         float currentVolume = (float) audio.getStreamVolume(AudioManager.STREAM_MUSIC);
         int maxVolume = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         if (currentVolume / maxVolume < 0.7) {
-            audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
+            try{
+                audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
+            }catch (Exception e){
+                RideRequestUtils.firebaseLogEventWithParams("exception", "increase_volume", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+            }
         }
     }
 
@@ -1042,14 +1130,5 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             return OverlaySheetService.this;
         }
     }
-
-    private VariantType getVariantType(String variant) {
-        if (variant.equals("Non AC Taxi")) {
-            return VariantType.NON_AC;
-        }
-        return VariantType.AC;
-    }
-
-    private enum VariantType { AC, NON_AC }
 
 }

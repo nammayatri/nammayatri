@@ -38,7 +38,8 @@ data TrackBuildReq = TrackBuildReq
     bppId :: Text,
     bppUrl :: BaseUrl,
     transactionId :: Text,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: Context.City
   }
 
 buildTrackReq ::
@@ -52,7 +53,8 @@ buildTrackReq res = do
   messageId <- generateGUID
   Redis.setExp (key messageId) res.bppRideId 1800 --30 mins
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.TRACK messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildTaxiContext Context.TRACK messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.defaultCity res.merchant.country False
   pure $ BecknReq context $ mkTrackMessage res
   where
     key messageId = "Track:bppRideId:" <> messageId

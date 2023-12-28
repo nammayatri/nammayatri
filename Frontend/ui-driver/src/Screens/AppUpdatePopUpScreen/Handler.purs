@@ -38,5 +38,5 @@ handleAppUpdatePopUp  = do
   case act of
     CD.Accept -> App.BackT $ App.NoBack <$> pure UpdateNow
     CD.Decline -> App.BackT $ App.BackPoint <$> pure Later
-    CD.DateAndTime -> pure Later
+    CD.Exit -> pure Later
   

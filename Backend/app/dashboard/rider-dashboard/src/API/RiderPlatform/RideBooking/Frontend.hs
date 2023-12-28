@@ -22,9 +22,10 @@ import qualified "rider-app" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified RiderPlatformClient.RiderApp as Client
+import qualified RiderPlatformClient.RiderApp.RideBooking as Client
 import Servant
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth
@@ -38,10 +39,10 @@ type API =
              :> BAP.NotifyEventAPI
        )
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  callGetPersonFlowStatus merchantId
-    :<|> callNotifyEvent merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  callGetPersonFlowStatus merchantId city
+    :<|> callNotifyEvent merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -54,14 +55,14 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.FlowStatusAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callGetPersonFlowStatus :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
-callGetPersonFlowStatus merchantShortId apiTokenInfo personId isPolling = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callRiderApp checkedMerchantId (.rideBooking.flowStatus.personFlowStatus) personId isPolling
+callGetPersonFlowStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
+callGetPersonFlowStatus merchantShortId opCity apiTokenInfo personId isPolling = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderApp checkedMerchantId opCity (.rideBooking.flowStatus.personFlowStatus) personId isPolling
 
-callNotifyEvent :: ShortId DM.Merchant -> ApiTokenInfo -> Id DP.Person -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
-callNotifyEvent merchantShortId apiTokenInfo personId req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+callNotifyEvent :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
+callNotifyEvent merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.NotifyEventEndPoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
-    Client.callRiderApp checkedMerchantId (.rideBooking.flowStatus.notifyEvent) personId req
+    Client.callRiderApp checkedMerchantId opCity (.rideBooking.flowStatus.notifyEvent) personId req

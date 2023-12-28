@@ -1,4 +1,3 @@
--- WARNING: after this migration all users will have access to BECKN_TRANSPORT
 INSERT INTO atlas_bpp_dashboard.server_access (id, person_id, server_name, created_at)
     SELECT
         md5(random()::text || clock_timestamp()::text)::uuid,

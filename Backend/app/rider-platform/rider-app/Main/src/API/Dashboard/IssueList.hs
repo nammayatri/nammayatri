@@ -14,16 +14,17 @@
 
 module API.Dashboard.IssueList where
 
-import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified Domain.Action.Dashboard.IssueList as DDI
 import qualified Domain.Action.Dashboard.IssueList as DI
 import qualified Domain.Types.Merchant as DM
 import Environment
+import qualified IssueManagement.Common.Dashboard.Issue as Common
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 
 type API =
   "issue"

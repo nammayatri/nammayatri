@@ -153,7 +153,8 @@ mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPh
             person =
               mbRiderName <&> \riderName ->
                 OnConfirm.OrderPerson
-                  { name = riderName
+                  { name = riderName,
+                    tags = Nothing
                   }
           },
       agent =
@@ -214,7 +215,8 @@ mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType rid
             person =
               mbRiderName <&> \riderName ->
                 OnConfirm.OrderPerson
-                  { name = riderName
+                  { name = riderName,
+                    tags = Nothing
                   }
           },
       agent = Nothing

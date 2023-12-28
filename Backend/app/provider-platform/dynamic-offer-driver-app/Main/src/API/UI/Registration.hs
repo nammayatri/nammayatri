@@ -25,6 +25,7 @@ where
 
 import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
@@ -34,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
@@ -71,5 +73,5 @@ verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId
 resend :: Id SR.RegistrationToken -> FlowHandler DRegistration.ResendAuthRes
 resend = withFlowHandlerAPI . DRegistration.resend
 
-logout :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
+logout :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 logout = withFlowHandlerAPI . DRegistration.logout

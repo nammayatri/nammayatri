@@ -24,16 +24,17 @@ import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id (..))
+import Kernel.Utils.Common
 import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry as BeamG
 
-findGeometriesContaining :: MonadFlow m => LatLong -> [Text] -> m [Geometry]
+findGeometriesContaining :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
   dbConf <- getMasterBeamConfig
   geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] geoms)
 
-someGeometriesContain :: MonadFlow m => LatLong -> [Text] -> m Bool
+someGeometriesContain :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries
@@ -44,12 +45,13 @@ instance FromTType' BeamG.Geometry Geometry where
       Just
         Geometry
           { id = Id id,
-            region = region
+            ..
           }
 
 instance ToTType' BeamG.Geometry Geometry where
   toTType' Geometry {..} =
     BeamG.GeometryT
       { BeamG.id = getId id,
-        BeamG.region = region
+        BeamG.region = region,
+        BeamG.city = city
       }

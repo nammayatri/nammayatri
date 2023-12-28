@@ -35,7 +35,7 @@ import Common.Types.App (LazyCheck(..))
 referralScreen:: FlowBT String REFERRAL_SCREEN_OUTPUT
 referralScreen = do
   (GlobalState state) <- getState
-  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen{ props{ stage = getReferralStage (getMerchant FunctionCall) } }
+  action <- lift $ lift $ runScreen $ ReferralScreen.screen state.referralScreen{ props{ stage = getReferralStage state.referralScreen } }
   case action of
     GoBack -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)

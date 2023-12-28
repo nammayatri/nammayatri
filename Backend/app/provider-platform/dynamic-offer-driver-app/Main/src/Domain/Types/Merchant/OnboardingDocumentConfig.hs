@@ -11,10 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Merchant.OnboardingDocumentConfig where
 
-import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Vehicle (Variant)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -40,12 +42,14 @@ data VehicleClassVariantMap = VehicleClassVariantMap
 
 data OnboardingDocumentConfig = OnboardingDocumentConfig
   { merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     documentType :: DocumentType,
     checkExtraction :: Bool,
     checkExpiry :: Bool,
     supportedVehicleClasses :: SupportedVehicleClasses,
     vehicleClassCheckType :: VehicleClassCheckType,
     rcNumberPrefix :: Text,
+    rcNumberPrefixList :: [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

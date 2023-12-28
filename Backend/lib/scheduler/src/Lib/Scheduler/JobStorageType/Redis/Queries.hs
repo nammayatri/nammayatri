@@ -14,16 +14,20 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Lib.Scheduler.JobStorageType.Redis.Queries where
 
+import Control.Concurrent (myThreadId)
 import qualified Data.Aeson as A
-import qualified Data.Aeson as DA
+import qualified Data.Aeson.Key as AesonKey
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
-import Data.HashMap.Strict as HM hiding (map)
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
 import Data.Text.Encoding as DT
+import qualified EulerHS.Language as L
 import Kernel.Prelude
 import Kernel.Storage.Hedis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -36,22 +40,22 @@ import Lib.Scheduler.Environment
 import qualified Lib.Scheduler.ScheduleJob as ScheduleJob
 import Lib.Scheduler.Types
 
-createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Int -> JobContent e -> m ()
-createJob maxShards jobData = do
-  void $ ScheduleJob.createJob @t @e createJobFunc maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
+createJob :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> Int -> JobContent e -> m ()
+createJob uuid maxShards jobData = do
+  void $ ScheduleJob.createJob @t @e uuid createJobFunc maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
-createJobIn :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => NominalDiffTime -> Int -> JobContent e -> m ()
-createJobIn inTime maxShards jobData = do
-  void $ ScheduleJob.createJobIn @t @e createJobFunc inTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
+createJobIn :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> NominalDiffTime -> Int -> JobContent e -> m ()
+createJobIn uuid inTime maxShards jobData = do
+  void $ ScheduleJob.createJobIn @t @e uuid createJobFunc inTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
 createJobFunc :: (HedisFlow m r, HasField "schedulerSetName" r Text) => AnyJob t -> m ()
 createJobFunc (AnyJob job) = do
   key <- asks (.schedulerSetName)
   Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds job.scheduledAt, AnyJob job)]
 
-createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => UTCTime -> Int -> JobContent e -> m ()
-createJobByTime byTime maxShards jobData = do
-  void $ ScheduleJob.createJobByTime @t @e createJobFunc byTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
+createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> UTCTime -> Int -> JobContent e -> m ()
+createJobByTime uuid byTime maxShards jobData = do
+  void $ ScheduleJob.createJobByTime @t @e uuid createJobFunc byTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
 findAll :: (JobExecutor r m, JobProcessor t) => m [AnyJob t]
 findAll = return []
@@ -86,7 +90,41 @@ getReadyTasks _ = do
   let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
   let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
   let textJob = map snd result
-  let parsedJobs = map (DA.eitherDecode . BL.fromStrict . DT.encodeUtf8) textJob
+  let parsedJobs = map (A.eitherDecode . BL.fromStrict . DT.encodeUtf8) textJob
+  case sequence parsedJobs of
+    Right jobs -> return $ zip jobs recordIds
+    Left err -> do
+      logDebug $ "error" <> T.pack err
+      return []
+
+getReadyTask ::
+  ( JobExecutor r m,
+    JobProcessor t,
+    HasField "version" r DeploymentVersion,
+    HasField "consumerId" r Text,
+    HasField "block" r Integer,
+    HasField "readCount" r Integer
+  ) =>
+  m [(AnyJob t, BS.ByteString)]
+getReadyTask = do
+  key <- asks (.streamName)
+  groupName <- asks (.groupName)
+  consumerId <- asks (.consumerId)
+  let lastEntryId :: Text = "$"
+  version <- asks (.version)
+  threadId <- L.runIO myThreadId
+  let consumerName = version.getDeploymentVersion <> consumerId <> show threadId
+  let nextId :: Text = ">"
+  block <- asks (.block)
+  readCount <- asks (.readCount)
+  isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key
+  unless isGroupExist $ do
+    Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
+  result' <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xReadGroupOpts groupName consumerName [(key, nextId)] (Just block) (Just readCount)
+  let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
+  let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
+  let textJob = map snd result
+  let parsedJobs = map (A.eitherDecode . BL.fromStrict . DT.encodeUtf8) textJob
   case sequence parsedJobs of
     Right jobs -> return $ zip jobs recordIds
     Left err -> do
@@ -103,25 +141,22 @@ markAsFailed :: (JobExecutor r m) => Id AnyJob -> m ()
 markAsFailed _ = pure ()
 
 updateErrorCountAndFail :: (JobExecutor r m, Forkable m, CoreMetrics m) => Id AnyJob -> Int -> m ()
-updateErrorCountAndFail _ _ = fork "" $ incrementSchedulerFailureCounter "RedisBased_Scheduler"
+updateErrorCountAndFail _ _ = pure ()
 
-updateKey :: Text -> Text -> Value -> Value
+updateKey :: AesonKey.Key -> Text -> Value -> Value
 updateKey key newString (A.Object obj) =
   let updateKey' (A.String _) = A.String newString
       updateKey' other = other
-   in A.Object $ HM.adjust updateKey' key obj
+   in A.Object $ AKM.fromHashMap . HMS.adjust updateKey' key . AKM.toHashMap $ obj
 updateKey _ _ other = other
 
 reSchedule :: forall t m r. (JobCreator r m, HasField "schedulerSetName" r Text, JobProcessor t, ToJSON t) => AnyJob t -> UTCTime -> m ()
 reSchedule j byTime = do
   let jobJson = toJSON j
-  uuid <- generateGUIDText
   key <- asks (.schedulerSetName)
   let A.String newScheduleTime = toJSON byTime
   let newJOB = updateKey "scheduledAt" newScheduleTime jobJson
-  let newJOB' = updateKey "id" uuid newJOB
-  let newJOB'' = updateKey "parentJobId" uuid newJOB'
-  Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds byTime, newJOB'')]
+  Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds byTime, newJOB)]
 
 updateFailureCount :: (JobExecutor r m) => Id AnyJob -> Int -> m ()
 updateFailureCount _ _ = pure ()

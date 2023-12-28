@@ -24,7 +24,6 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/medium"
                     android:layout_marginTop="3px"
                     android:lineHeight="28px"
                     android:text="Hey "
@@ -37,7 +36,6 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3px"
-                    android:fontFamily="@font/medium"
                     android:lineHeight="28px"
                     android:text=""
                     android:textColor="@color/Black800"
@@ -48,9 +46,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="3px"
-                    android:fontFamily="@font/medium"
                     android:lineHeight="28px"
-                    android:text=", here’s your invoice"
+                    android:id="@+id/headingText"
+                    android:text=", here’s your driver receipt"
                     android:textColor="@color/Black800"
                     android:textFontWeight="500"
                     android:textSize="24px" />
@@ -70,7 +68,6 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="For ride taken on"
                     android:textColor="@color/Black700"
@@ -81,7 +78,6 @@
                     android:id="@+id/rideDate"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/semibold"
                     android:lineHeight="20px"
                     android:text="Wed, 8th Nov 2022"
                     android:textColor="@color/Black800"
@@ -105,7 +101,6 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/semibold"
                 android:lineHeight="24px"
                 android:text="Payment Details"
                 android:textColor="@color/green"
@@ -122,7 +117,6 @@
                 android:id="@+id/paymentDetail"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/semibold"
                 android:lineHeight="24px"
                 android:text="₹220"
                 android:textColor="@color/green"
@@ -159,7 +153,6 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="Final Amount Paid"
                     android:textColor="@color/Black800"
@@ -174,7 +167,6 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="₹180"
                     android:textColor="@color/Black800"
@@ -193,7 +185,6 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/semibold"
                 android:lineHeight="24px"
                 android:text="Ride Details"
                 android:textColor="@color/green"
@@ -209,7 +200,6 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/semibold"
                 android:lineHeight="24px"
                 android:text="Ride ID: "
                 android:textColor="@color/green"
@@ -221,7 +211,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/rideId"
-                android:fontFamily="@font/semibold"
                 android:lineHeight="24px"
                 android:text="475DGBC589"
                 android:textColor="@color/green"
@@ -247,7 +236,6 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="Driver Name"
                     android:textColor="@color/Black700"
@@ -262,7 +250,6 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:id="@+id/driverName"
                     android:text="Rajiv Kumar"
@@ -278,7 +265,6 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="License Plate"
                     android:textColor="@color/Black700"
@@ -294,7 +280,6 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:id="@+id/lincensePlate"
-                    android:fontFamily="@font/regular"
                     android:lineHeight="20px"
                     android:text="KA05AG1110"
                     android:textColor="@color/Black700"
@@ -346,7 +331,6 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/regular"
                         android:lineHeight="20px"
                         android:text="8:41 AM"
                         android:textColor="@color/Black800"
@@ -357,7 +341,6 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/regular"
                         android:id="@+id/source"
                         android:ellipsize="end"
                         android:maxLines="2"
@@ -370,7 +353,6 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/regular"
                         android:lineHeight="20px"
                         android:text="9:21 AM"
                         android:id="@+id/rideEndTime"
@@ -382,7 +364,6 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:fontFamily="@font/regular"
                         android:lineHeight="20px"
                         android:id="@+id/destination"
                         android:ellipsize="end"
@@ -398,7 +379,6 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="@font/regular"
             android:layout_marginTop="35px"
             android:lineHeight="16px"
             android:id="@+id/referenceText"

@@ -16,6 +16,7 @@ module API.UI.Whatsapp where
 
 import qualified Domain.Action.UI.Whatsapp as DWhatsapp
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment (FlowHandler, FlowServer)
 import EulerHS.Prelude
@@ -24,6 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI)
 import Kernel.Utils.Logging
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
@@ -37,5 +39,5 @@ type API =
 handler :: FlowServer API
 handler = whatsAppOptAPI
 
-whatsAppOptAPI :: (Id Person.Person, Id DM.Merchant) -> DWhatsapp.OptAPIRequest -> FlowHandler APISuccess
-whatsAppOptAPI (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DWhatsapp.whatsAppOptAPI (personId, merchantId)
+whatsAppOptAPI :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DWhatsapp.OptAPIRequest -> FlowHandler APISuccess
+whatsAppOptAPI (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DWhatsapp.whatsAppOptAPI (personId, merchantId, merchantOpCityId)

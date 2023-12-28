@@ -48,8 +48,16 @@ instance IsBaseError EstimateError where
   toMessage EstimateNotFound = Just "Estimate not found. "
 
 instance IsHTTPError EstimateError where
-  toErrorCode _ = "ESTIMATE_DOES_NOT_EXIST"
-  toHttpCode _ = E400
+  toErrorCode = \case
+    EstimateNotFound -> "ESTIMATE_NOT_FOUND"
+    EstimateDoesNotExist _ -> "ESTIMATE_DOES_NOT_EXIST"
+    EstimateCancelled _ -> "ESTIMATE_CANCELLED"
+    EstimateStatusDoesNotExist _ -> "ESTIMATE_STATUS_DOES_NOT_EXIST"
+  toHttpCode = \case
+    EstimateNotFound -> E400
+    EstimateDoesNotExist _ -> E400
+    EstimateCancelled _ -> E403
+    EstimateStatusDoesNotExist _ -> E400
 
 instance IsAPIError EstimateError
 
@@ -127,6 +135,32 @@ instance IsHTTPError PersonStatsError where
 
 instance IsAPIError PersonStatsError
 
+data MediaFileError
+  = FileSizeExceededError Text
+  | FileDoNotExist Text
+  | FileFormatNotSupported Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''MediaFileError
+
+instance IsHTTPError MediaFileError where
+  toErrorCode = \case
+    FileSizeExceededError _ -> "FILE_SIZE_EXCEEDED"
+    FileDoNotExist _ -> "FILE_DO_NOT_EXIST"
+    FileFormatNotSupported _ -> "FILE_FORMAT_NOT_SUPPORTED"
+  toHttpCode = \case
+    FileSizeExceededError _ -> E413
+    FileDoNotExist _ -> E400
+    FileFormatNotSupported _ -> E415
+
+instance IsAPIError MediaFileError
+
+instance IsBaseError MediaFileError where
+  toMessage = \case
+    FileSizeExceededError fileSize -> Just $ "Filesize is " <> fileSize <> " Bytes, which is more than the allowed 10MB limit."
+    FileDoNotExist fileId -> Just $ "MediaFile with fileId \"" <> show fileId <> "\" do not exist."
+    FileFormatNotSupported fileFormat -> Just $ "MediaFile with fileFormat \"" <> show fileFormat <> "\" not supported."
+
 newtype DisabilityError
   = DisabilityDoesNotExist Text
   deriving (Eq, Show, IsBecknAPIError)
@@ -177,3 +211,69 @@ instance IsHTTPError AadhaarError where
     GenerateAadhaarOtpExceedLimit _ -> E429
 
 instance IsAPIError AadhaarError
+
+data TicketBookingError
+  = TicketServiceNotFound Text
+  | TicketBookingNotFound Text
+  | TicketBookingServiceNotFound Text
+  | TicketPlaceNotFound Text
+  | BusinessHourNotFound Text
+  | ServiceCategoryNotFound Text
+  | TicketSeatManagementNotFound Text Text
+  | PeopleCategoryNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''TicketBookingError
+
+instance IsBaseError TicketBookingError where
+  toMessage (TicketServiceNotFound serviceId) = Just $ "Ticker service not found: " <> show serviceId
+  toMessage (TicketBookingNotFound bookingId) = Just $ "Ticket booking not found: " <> show bookingId
+  toMessage (TicketBookingServiceNotFound bookingServiceId) = Just $ "Ticket booking service not found: " <> show bookingServiceId
+  toMessage (TicketPlaceNotFound placeId) = Just $ "Ticket place not found: " <> show placeId
+  toMessage (BusinessHourNotFound businessHourId) = Just $ "Business hour not found: " <> show businessHourId
+  toMessage (ServiceCategoryNotFound sCategoryId) = Just $ "Service category not found: " <> show sCategoryId
+  toMessage (TicketSeatManagementNotFound seatMId curDate) = Just $ "Seat management details not found for seat management id: " <> show seatMId <> " and date: " <> show curDate
+  toMessage (PeopleCategoryNotFound pCatId) = Just $ "People category not found: " <> show pCatId
+
+instance IsHTTPError TicketBookingError where
+  toErrorCode = \case
+    TicketServiceNotFound _ -> "TICKET_SERVICE_NOT_FOUND"
+    TicketBookingNotFound _ -> "TICKET_BOOKING_NOT_FOUND"
+    TicketBookingServiceNotFound _ -> "TICKET_BOOKING_SERVICE_NOT_FOUND"
+    TicketPlaceNotFound _ -> "TICKET_PLACE_NOT_FOUND"
+    BusinessHourNotFound _ -> "BUSINESS_HOUR_NOT_FOUND"
+    ServiceCategoryNotFound _ -> "SERVICE_CATEGORY_NOT_FOUND"
+    TicketSeatManagementNotFound _ _ -> "TICKET_SEAT_MANAGEMENT_NOT_FOUND"
+    PeopleCategoryNotFound _ -> "PEOPLE_CATEGORY_NOT_FOUND"
+  toHttpCode = \case
+    TicketServiceNotFound _ -> E500
+    TicketBookingNotFound _ -> E500
+    TicketBookingServiceNotFound _ -> E400
+    TicketPlaceNotFound _ -> E500
+    BusinessHourNotFound _ -> E500
+    ServiceCategoryNotFound _ -> E500
+    TicketSeatManagementNotFound _ _ -> E500
+    PeopleCategoryNotFound _ -> E500
+
+instance IsAPIError TicketBookingError
+
+data RiderError
+  = RiderConfigNotFound Text
+  | RiderConfigDoesNotExist Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RiderError
+
+instance IsBaseError RiderError where
+  toMessage (RiderConfigNotFound merchantOperatingCityId) = Just $ "Rider with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" not found."
+  toMessage (RiderConfigDoesNotExist merchantOperatingCityId) = Just $ "Rider with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" does not exist."
+
+instance IsHTTPError RiderError where
+  toErrorCode = \case
+    RiderConfigNotFound _ -> "RIDER_NOT_FOUND"
+    RiderConfigDoesNotExist _ -> "RIDER_NOT_EXISTS"
+  toHttpCode = \case
+    RiderConfigNotFound _ -> E500
+    RiderConfigDoesNotExist _ -> E400
+
+instance IsAPIError RiderError

@@ -26,7 +26,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), (<<<), (==))
@@ -108,7 +108,7 @@ zoneView state =
      [ width (V 15)
      , height (V 15)
      , margin (MarginRight 6)
-     , imageWithFallback "ny_ic_metro_white,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_metro_white.png"
+     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_metro_white"
      ]
    , textView
      [ width WRAP_CONTENT
@@ -199,7 +199,7 @@ sourceAndDestination push =
       , height WRAP_CONTENT
       , width MATCH_PARENT
       ][  imageView
-          [ imageWithFallback $ "ny_ic_source_dot," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_source_dot.png"
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_source_dot"
           , height $ V 15
           , accessibility ENABLE 
           , accessibilityHint "Source Location is :"
@@ -224,7 +224,7 @@ sourceAndDestination push =
       , width MATCH_PARENT
       , background if os == "IOS" then Color.transparent else Color.white900
       ][  imageView
-          [ imageWithFallback $ "ny_ic_loc_red," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_loc_red.png"
+          [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_loc_red"
           , height $ V 16
           , width $ V 16
           , accessibility ENABLE 
@@ -310,7 +310,7 @@ sourceAndDestinationShimmerView state =
   , PrestoList.visibilityHolder "shimmerVisibility"
   , margin $ MarginVertical 20 20
   ][sfl $  imageView[
-    imageWithFallback $ "ny_ic_shimmer_img," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_shimmer_img.png"
+    imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_shimmer_img"
   , height $ V 57
   , margin (MarginLeft 4)
   , weight 1.0

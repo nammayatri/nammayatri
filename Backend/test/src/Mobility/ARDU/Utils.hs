@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
 
 module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 
@@ -40,6 +41,7 @@ import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 import qualified Mobility.ARDU.APICalls as API
@@ -52,7 +54,6 @@ import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.Merch
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as TQRB
 import qualified "rider-app" Storage.Queries.Booking as BQRB
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as QTDrInfo
-import "dynamic-offer-driver-app" Storage.Queries.DriverLocation
 import qualified Storage.Queries.DriverQuote as TDQ
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as TQRide
 import qualified "rider-app" Storage.Queries.Ride as BQRide
@@ -105,19 +106,6 @@ getBPPRideById rideId = do
   mbRide `shouldSatisfy` isJust
   return $ fromJust mbRide
 
-getBPPDriverLocation ::
-  Id TPerson.Person ->
-  ClientsM LatLong
-getBPPDriverLocation driverId = do
-  mbRes <- liftIO $ runARDUFlow "" $ findById driverId
-  mbRes `shouldSatisfy` isJust
-  let res = fromJust mbRes
-  pure $
-    LatLong
-      { lat = res.lat,
-        lon = res.lon
-      }
-
 getBPPDriverInformation ::
   Id TPerson.Person ->
   ClientsM TDrInfo.DriverInformation
@@ -126,12 +114,10 @@ getBPPDriverInformation driverId =
 
 -- driver setup/reset
 setupDriver :: DriverTestData -> LatLong -> ClientsM ()
-setupDriver driver initialPoint = do
+setupDriver driver _initialPoint = do
   void . callBPP $ API.ui.driver.setDriverOnline driver.token True (Just TDrInfo.ONLINE)
-  -- Moves driver to the pickup point
-  preUpdate <- liftIO $ API.buildUpdateLocationRequest $ initialPoint :| []
-  void . callBPP $
-    API.ui.location.updateLocation driver.token preUpdate
+
+-- Moves driver to the pickup point
 
 resetDriver :: DriverTestData -> IO ()
 resetDriver driver = runARDUFlow "" $ do
@@ -364,10 +350,10 @@ clearCachedMapsConfig = runARDUFlow "clear cached maps config" do
   TCQMSC.clearCache Fixtures.nammaYatriPartnerMerchantId (TDMSC.MapsService Maps.Google)
   TCQMSC.clearCache Fixtures.otherMerchant2Id (TDMSC.MapsService Maps.Google)
 
-rideSync :: ShortId TDM.Merchant -> Id TRide.Ride -> ClientsM ()
-rideSync merchantId rideId = do
-  let dashboardAPI = API.dashboard merchantId Fixtures.dashboardToken
-  void . callBPP $ dashboardAPI.ride.rideSync (cast rideId)
+rideSync :: ShortId TDM.Merchant -> Context.City -> Id TRide.Ride -> ClientsM ()
+rideSync merchantId city rideId = do
+  let dashboardAPI = API.dashboard merchantId city Fixtures.dashboardToken
+  void . callBPP $ dashboardAPI.management.ride.rideSync (cast rideId)
 
 withFakeBapUrl :: TRB.Booking -> ClientsM () -> ClientsM ()
 withFakeBapUrl booking action = do

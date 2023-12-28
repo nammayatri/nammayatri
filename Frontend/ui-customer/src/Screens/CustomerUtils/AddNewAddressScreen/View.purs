@@ -31,14 +31,15 @@ import Components.PrimaryEditText as PrimaryEditText
 import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Effect.Uncurried (runEffectFn5)
+import Effect.Uncurried (runEffectFn1)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetLink)
 import Helpers.Utils as HU
 import JBridge as JB
-import Language.Strings (LANGUAGE_KEY(..), getString, getKey)
+import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (*), (-), (/), (/=), (<<<), (<>), (==), (||), (>))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility)
@@ -48,6 +49,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Debug (spy)
 import Data.String as DS
 import Styles.Colors as Color
+import Common.Resources.Constants (pickupZoomLevel)
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -58,7 +60,7 @@ screen initialState =
                       if initialState.props.isLocateOnMap then do
                         pure (pure unit)
                       else do
-                        _ <- HU.storeCallBackLocateOnMap push UpdateLocation
+                        _ <- JB.storeCallBackLocateOnMap push UpdateLocation
                         pure (pure unit))]
   , eval : \action state -> do
         let _ = spy "AddNewAddressScreenState action " action
@@ -78,10 +80,10 @@ view push state =
   , accessibility DISABLE
   , afterRender
     (\action -> do
-          _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" (19.0) push MAPREADY)
+          _ <- (JB.showMap (EHC.getNewIDWithTag "AddNewAddressHomeScreenMap") true "satellite" pickupZoomLevel push MAPREADY)
           pure $ HU.setText (EHC.getNewIDWithTag "SavedLocationEditText") (state.data.address)
           pure $ HU.setText (EHC.getNewIDWithTag "SaveAsEditText") (state.data.addressSavedAs)
-          _ <- runEffectFn5 JB.locateOnMap true 0.0 0.0 "" []
+          _ <- runEffectFn1 JB.locateOnMap JB.locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "", points = [], zoomLevel = pickupZoomLevel, labelId = EHC.getNewIDWithTag "AddAddressPin"}
           _ <- if (state.data.activeIndex == Just 2 && state.props.showSavePlaceView) then JB.requestKeyboardShow (EHC.getNewIDWithTag ("SaveAsEditText")) else pure unit
           pure unit
           ) (const AfterRender)
@@ -104,27 +106,28 @@ view push state =
       , height MATCH_PARENT
       , background Color.transparent
       , accessibility DISABLE_DESCENDANT
-      , padding (PaddingBottom if showLabel then (if EHC.os == "IOS" then 40 else 70) else (if EHC.os == "IOS" then 5 else 34))
+      , padding $ PaddingBottom 80
       , gravity CENTER
       , orientation VERTICAL
       ][ textView
          [ width WRAP_CONTENT
          , height WRAP_CONTENT
-         , background Color.black800
+         , background Color.black900
          , color Color.white900
-         , text if DS.length state.props.defaultPickUpPoint > 30 then
-                  (DS.take 28 state.props.defaultPickUpPoint) <> "..."
-                else
-                  state.props.defaultPickUpPoint
-         , padding (Padding 5 5 5 5)
+         , text if DS.length state.props.defaultPickUpPoint > state.data.config.mapConfig.labelTextSize then
+                     (DS.take (state.data.config.mapConfig.labelTextSize - 3) state.props.defaultPickUpPoint) <> "..."
+                  else
+                     state.props.defaultPickUpPoint
+         , padding (Padding 7 7 7 7)
          , margin (MarginBottom 5)
          , cornerRadius 5.0
-         , visibility if showLabel then VISIBLE else GONE
+         , visibility if showLabel then VISIBLE else INVISIBLE
+         , id (EHC.getNewIDWithTag "AddAddressPin")
          ]
        , imageView
          [ width $ V 60
          , height $ V 60 
-         , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetStoreLink FunctionCall) <> "ny_ic_customer_current_location.png"
+         , imageWithFallback $ (HU.getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) <> "," <> (getAssetLink FunctionCall) <> "ny_ic_customer_current_location.png"
          ]
        ]
     , relativeLayout
@@ -171,7 +174,7 @@ recenterButtonView state push =
   , accessibility DISABLE_DESCENDANT
   , gravity RIGHT
   ][  imageView
-      [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
+      [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"
       , height $ V 40 
       , width $ V 40 
       , onClick (\action -> do
@@ -249,8 +252,8 @@ bottomBtnsView state push =
         ]) $ btnData state)]
 
 btnData :: ST.AddNewAddressScreenState ->  Array {text :: String, imageUrl :: String, action :: Action, tag :: String}
-btnData state = [ {text : (getString SELECT_ON_MAP), imageUrl : "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png", action : SetLocationOnMap, tag : "LOCATE_ON_MAP"}
-                  -- ,{text : (getString CURRENT_LOCATION), imageUrl : "ny_ic_current_location," <> (getAssetStoreLink FunctionCall) <> "ny_ic_current_location.png", action : CurrentLocationAction, tag : "CURRENT_LOCATION"}
+btnData state = [ {text : (getString SELECT_ON_MAP), imageUrl : fetchImage FF_ASSET "ny_ic_locate_on_map", action : SetLocationOnMap, tag : "LOCATE_ON_MAP"}
+                  -- ,{text : (getString CURRENT_LOCATION), imageUrl : "ny_ic_current_location," <> (getAssetLink FunctionCall) <> "ny_ic_current_location.png", action : CurrentLocationAction, tag : "CURRENT_LOCATION"}
                   ]
 
 addNewScreenView :: forall w. ST.AddNewAddressScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -313,7 +316,7 @@ addNewScreenView state push =
           ][imageView
             [ height $ V 16
             , width $ V 16
-            , imageWithFallback $ "ny_ic_clear," <> (getAssetStoreLink FunctionCall) <> "ny_ic_clear.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_clear"
             , accessibilityHint "Clear Text : Button"
             , accessibility ENABLE
             ]
@@ -331,7 +334,7 @@ addNewScreenView state push =
         , clickable true
         , visibility if state.props.isLocateOnMap then VISIBLE else GONE
       ][  imageView
-          [ imageWithFallback $ "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_loc_grey"
           , height $ V 21
           , width $ V 18
           , margin (MarginRight 11)
@@ -361,7 +364,7 @@ textViews state push =
   , gravity CENTER_VERTICAL
   , cornerRadius 8.0
 ][  imageView
-    [ imageWithFallback $ "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
+    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_loc_grey"
     , height $ V 21
     , width $ V 18
     , margin (MarginRight 11)
@@ -420,7 +423,7 @@ searchResultsView state push =
 
 bottomBtnsData :: ST.AddNewAddressScreenState ->  Array ST.LocationListItemState 
 bottomBtnsData state = 
-  [ { prefixImageUrl : "ny_ic_locate_on_map," <> (getAssetStoreLink FunctionCall) <> "ny_ic_locate_on_map.png"
+  [ { prefixImageUrl : fetchImage FF_ASSET "ny_ic_locate_on_map"
     , title : (getString CHOOSE_ON_MAP)
     , subTitle :  (getString DRAG_THE_MAP )
     , placeId : Nothing
@@ -443,9 +446,12 @@ bottomBtnsData state =
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
+    , frequencyCount : Nothing
+    , recencyDate : Nothing
+    , locationScore : Nothing
     }
-  , { prefixImageUrl : "ny_ic_current_location," <> (getAssetStoreLink FunctionCall) <> "ny_ic_current_location.png"
+  , { prefixImageUrl : fetchImage FF_ASSET "ny_ic_current_location"
     , title :  (getString USE_CURRENT_LOCATION)
     , subTitle : (getString FAVOURITE_YOUR_CURRENT_LOCATION)
     , placeId : Nothing
@@ -468,7 +474,11 @@ bottomBtnsData state =
     , locationItemType : Nothing
     , distance : Nothing
     , showDistance : Just false
-    , actualDistance : 0
+    , actualDistance : Nothing
+    , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
+
     }
 
   ]
@@ -610,9 +620,9 @@ tagView state push =
               , gravity CENTER
               , color if (Just index) == state.data.activeIndex then Color.blue900 else Color.black800
               ] <> FontStyle.tags LanguageStyle
-          ]) [  { activeImageUrl : "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png", inActiveImageUrl : "ny_ic_home," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home.png", text : (getString HOME), tag : "HOME"},
-                { activeImageUrl : "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png", inActiveImageUrl : "ny_ic_work," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work.png", text : (getString WORK), tag : "WORK"},
-                { activeImageUrl : "ny_ic_fav_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_blue.png",inActiveImageUrl : "ny_ic_fav_tag," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_inactive.png", text : (getString FAVOURITE), tag : "FAVOURITE"}] )
+          ]) [  { activeImageUrl : fetchImage FF_ASSET "ny_ic_home_blue", inActiveImageUrl : fetchImage FF_ASSET "ny_ic_home", text : (getString HOME), tag : "HOME"},
+                { activeImageUrl : fetchImage FF_ASSET "ny_ic_work_blue", inActiveImageUrl : fetchImage FF_ASSET "ny_ic_work", text : (getString WORK), tag : "WORK"},
+                { activeImageUrl : fetchImage FF_ASSET "ny_ic_fav_blue",inActiveImageUrl : fetchImage FF_ASSET "ny_ic_fav_tag", text : (getString FAVOURITE), tag : "FAVOURITE"}] )
 
   ]
 
@@ -627,7 +637,7 @@ locationUnserviceableView state push =
   , background "#F5F5F5"
   , gravity CENTER
   ][  imageView 
-      [ imageWithFallback $ "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
+      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_location_unserviceable"
       , height $ V 99
       , width $ V 133
       , margin $ (MarginBottom 20)
@@ -648,7 +658,7 @@ locationUnserviceableView state push =
       , height WRAP_CONTENT
       , gravity CENTER
       ][  textView $
-          [ text (getString  CURRENTLY_WE_ARE_LIVE_IN_)
+          [ text $ getString $ CURRENTLY_WE_ARE_LIVE_IN_ "CURRENTLY_WE_ARE_LIVE_IN_"
           , gravity CENTER
           , color Color.black700
           ] <> FontStyle.paragraphText LanguageStyle

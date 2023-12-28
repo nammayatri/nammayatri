@@ -36,6 +36,7 @@ import Kernel.Utils.Servant.BasicAuth ()
 import Kernel.Utils.Servant.HTML
 import Servant hiding (serveDirectoryWebApp, throwError)
 import Servant.OpenApi
+import Storage.Beam.SystemConfigs ()
 
 type API =
   MainAPI
@@ -51,7 +52,8 @@ type MainAPI =
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Juspay.JuspayWebhookAPI
          )
-    :<|> Dashboard.API
+    :<|> Dashboard.API -- TODO :: Needs to be deprecated
+    :<|> Dashboard.APIV2
     :<|> Internal.API
 
 handler :: FlowServer API
@@ -69,6 +71,7 @@ mainServer =
     :<|> MetroBeckn.handler
     :<|> juspayWebhookHandler
     :<|> Dashboard.handler
+    :<|> Dashboard.handlerV2
     :<|> Internal.handler
 
 type SwaggerAPI = "swagger" :> Get '[HTML] BS.ByteString

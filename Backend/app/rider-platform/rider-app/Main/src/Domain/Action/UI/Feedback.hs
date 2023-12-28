@@ -19,24 +19,31 @@ module Domain.Action.UI.Feedback
   )
 where
 
+import qualified Domain.Action.Internal.Rating as DRating
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Environment as App
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Issues as QIssue
+import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 data FeedbackReq = FeedbackReq
   { rideId :: Id DRide.Ride,
     rating :: Int,
-    feedbackDetails :: Maybe Text
+    feedbackDetails :: Maybe Text,
+    nightSafety :: Maybe Bool,
+    wasOfferedAssistance :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -47,7 +54,10 @@ data FeedbackRes = FeedbackRes
     providerId :: Text,
     providerUrl :: BaseUrl,
     transactionId :: Text,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    wasOfferedAssistance :: Maybe Bool,
+    city :: Context.City,
+    issueId :: Maybe Text
   }
 
 feedback :: FeedbackReq -> App.Flow FeedbackRes
@@ -61,13 +71,31 @@ feedback request = do
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  issueId' <- getIssueIdForRide booking
   _ <- QPFS.updateStatus booking.riderId DPFS.IDLE
   _ <- QRide.updateRideRating rideId ratingValue
   QPFS.clearCache booking.riderId
+  ratingu <- QRating.findRatingForRide rideId
+  _ <- case ratingu of
+    Nothing -> do
+      newRating <- DRating.buildRating rideId booking.riderId ratingValue feedbackDetails request.wasOfferedAssistance
+      QRating.create newRating
+    Just rideRating -> do
+      QRating.updateRating rideRating.id booking.riderId ratingValue feedbackDetails request.wasOfferedAssistance
+  let merchantOperatingCityId = booking.merchantOperatingCityId
+  city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   pure
     FeedbackRes
-      { providerId = booking.providerId,
+      { wasOfferedAssistance = request.wasOfferedAssistance,
+        providerId = booking.providerId,
         providerUrl = booking.providerUrl,
         transactionId = booking.transactionId,
+        issueId = issueId',
         ..
       }
+  where
+    getIssueIdForRide booking = do
+      res <- QIssue.findNightIssueByBookingId booking.id
+      case res of
+        Just issue -> return $ Just issue.id.getId
+        Nothing -> return Nothing

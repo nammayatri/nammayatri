@@ -56,8 +56,10 @@ in  { loggerConfig =
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , groupName = "myGroup"
-    , schedulerType = common.schedulerType.DbBased
+    , schedulerType = common.schedulerType.RedisBased
     , schedulerSetName = "Scheduled_Jobs"
     , streamName = "Available_Jobs"
     , maxThreads = +5
+    , block = +10000
+    , readCount = +1
     }

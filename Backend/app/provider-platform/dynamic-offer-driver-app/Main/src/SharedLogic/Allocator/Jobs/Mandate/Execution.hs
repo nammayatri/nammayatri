@@ -1,5 +1,6 @@
 module SharedLogic.Allocator.Jobs.Mandate.Execution where
 
+import Data.List (nubBy)
 import qualified Data.Map.Strict as Map
 import Domain.Types.DriverFee as DF
 import Domain.Types.DriverInformation as DI
@@ -22,6 +23,9 @@ import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, roundToHalf)
+import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
@@ -44,9 +48,12 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
   (response, timetaken) <- measureDuration $ do
     let jobData = jobInfo.jobData
         merchantId = jobData.merchantId
+        mbMerchantOpCityId = jobData.merchantOperatingCityId
         startTime = jobData.startTime
         endTime = jobData.endTime
-    transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+    merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
+    transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     let limit = transporterConfig.driverFeeMandateExecutionBatchSize
     executionDate' <- getCurrentTime
     driverFees <- QDF.findDriverFeeInRangeWithOrderNotExecutedAndPending merchantId limit startTime endTime
@@ -56,7 +63,7 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
         activeSubscribedDrivers <- QDI.findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee
         driverIdsAndDriverPlanToNotify <- driverIdAndDriverPlanTuple <$> QDP.findAllByDriverIdsAndPaymentMode (DI.driverId <$> activeSubscribedDrivers) AUTOPAY
-        successfulNotifications <- QNTF.findAllByDriverFeeIdAndStatus (driverFees <&> (.id)) JuspayTypes.SUCCESS --- notification_success instead of success in shared kernel---
+        successfulNotifications <- nubBy (\x y -> x.driverFeeId == y.driverFeeId) <$> QNTF.findAllByDriverFeeIdAndStatus (driverFees <&> (.id)) JuspayTypes.SUCCESS --- notification_success instead of success in shared kernel---
         let mapDriverFeeById_ = Map.fromList (map (\driverFee_ -> (driverFee_.id, driverFee_)) driverFees)
             mapDriverPlanByDriverId = Map.fromList driverIdsAndDriverPlanToNotify
         driverExecutionRequests <- mapMaybe identity <$> sequence (mapExecutionRequestAndInvoice mapDriverFeeById_ mapDriverPlanByDriverId executionDate' successfulNotifications)
@@ -87,7 +94,9 @@ startMandateExecutionForDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.ge
         )
 
 buildExecutionRequestAndInvoice ::
-  ( MonadFlow m
+  ( MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r
   ) =>
   DF.DriverFee ->
   NTF.Notification ->
@@ -139,10 +148,15 @@ asyncExecutionCall ::
   Id Merchant ->
   m ()
 asyncExecutionCall ExecutionData {..} merchantId = do
-  exec <- try @_ @SomeException $ withShortRetry (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId))
-  case exec of
-    Left err -> do
-      QINV.updateInvoiceStatusByDriverFeeIds INV.INACTIVE [driverFee.id]
-      QDF.updateAutoPayToManual driverFee.id
-      logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
-    Right _ -> pure ()
+  driverFeeForExecution <- QDF.findById driverFee.id
+  if (driverFeeForExecution <&> (.status)) == Just PAYMENT_PENDING && (driverFeeForExecution <&> (.feeType)) == Just DF.RECURRING_EXECUTION_INVOICE
+    then do
+      exec <- try @_ @SomeException $ withShortRetry (APayments.createExecutionService (executionRequest, invoice.id.getId) (cast merchantId) (TPayment.mandateExecution merchantId))
+      case exec of
+        Left err -> do
+          QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFee.id] Nothing
+          QDF.updateAutoPayToManual driverFee.id
+          logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
+        Right _ -> pure ()
+    else do
+      QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverFee.id] Nothing

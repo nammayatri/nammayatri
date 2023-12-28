@@ -18,6 +18,7 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
@@ -118,10 +119,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     @Override
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
+        Log.e("onMessageReceived", remoteMessage.getData().toString());
         firebaseLogEventWithParams("notification_received", "type", remoteMessage.getData().get("notification_type"));
 
         super.onMessageReceived(remoteMessage);
-        Log.e("onMessageReceived", remoteMessage.getData().toString());
         JSONObject payload = new JSONObject();
         JSONObject notification_payload = new JSONObject();
         JSONObject entity_payload = new JSONObject();
@@ -192,7 +193,11 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
                                 String driverNotification = remoteMessage.getData().get("driver_notification_payload");
                                 if (driverNotification != null){
-                                    showOverlayMessage(new JSONObject(driverNotification));
+                                    JSONObject driverNotificationJsonObject = new JSONObject(driverNotification);
+                                    showOverlayMessage(driverNotificationJsonObject);
+                                    if (driverNotificationJsonObject.has("showPushNotification") && !driverNotificationJsonObject.isNull("showPushNotification") ? driverNotificationJsonObject.getBoolean("showPushNotification") : false) {
+                                       NotificationUtils.showNotification(this, title, body, payload, null);
+                                    }
                                 }
                             }
                             break;
@@ -413,7 +418,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private void showRR(JSONObject entity_payload, JSONObject payload){
         SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
         sharedPref.edit().putString(getString(R.string.RIDE_STATUS), getString(R.string.NEW_RIDE_AVAILABLE)).apply();
-        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy")) || sharedPref.getString("IS_VALID_TIME","true").equals("false")) {
+        if (sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onPause") || sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))) {
             startWidgetService(null, payload, entity_payload);
         } else {
             NotificationUtils.showAllocationNotification(this, payload, entity_payload);
@@ -422,9 +427,18 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     private void showOverlayMessage(JSONObject payload) {
         try {
-            Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
-            showMessage.putExtra("payload", payload.toString());
-            startService(showMessage);
+            int delay = payload.optInt("delay", 0);
+            HandlerThread handlerThread = new HandlerThread("OverlayHandlerThread");
+            handlerThread.start();
+
+            Handler handler = new Handler(handlerThread.getLooper());
+
+            handler.postDelayed(() -> {
+                Intent showMessage = new Intent(getApplicationContext(), OverlayMessagingService.class);
+                showMessage.putExtra("payload", payload.toString());
+                startService(showMessage);
+            }, delay * 1000);
+
         } catch (Exception e) {
             e.printStackTrace();
         }

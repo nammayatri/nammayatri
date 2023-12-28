@@ -21,6 +21,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FarePolicy.FareBreakup as BeamFB
 
@@ -30,8 +31,11 @@ create = createWithKV
 createMany :: MonadFlow m => [FareBreakup] -> m ()
 createMany = traverse_ create
 
-findAllByBookingId :: MonadFlow m => Id Booking -> m [FareBreakup]
+findAllByBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m [FareBreakup]
 findAllByBookingId bookingId = findAllWithKV [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
+
+deleteAllByBookingId :: MonadFlow m => Id Booking -> m ()
+deleteAllByBookingId bookingId = deleteWithKV [Se.Is BeamFB.bookingId $ Se.Eq $ getId bookingId]
 
 instance FromTType' BeamFB.FareBreakup FareBreakup where
   fromTType' BeamFB.FareBreakupT {..} = do

@@ -1,0 +1,30 @@
+name: Build-FE-Customer
+
+on:
+  pull_request:
+    paths:
+      - 'Frontend/ui-customer/**'
+      - 'Frontend/ui-common/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Frontend/ui-customer
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '19.x'
+
+      - name: Install dependencies
+        run: npm install && npm install purescript
+
+      - name: Build code
+        run: npm run compile:purs

@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Plan where
 
@@ -39,6 +40,7 @@ data Plan = Plan
     registrationAmount :: HighPrecMoney,
     isOfferApplicable :: Bool,
     maxCreditLimit :: HighPrecMoney,
+    maxMandateAmount :: HighPrecMoney,
     planBaseAmount :: PlanBaseAmount,
     freeRideCount :: Int,
     frequency :: Frequency,

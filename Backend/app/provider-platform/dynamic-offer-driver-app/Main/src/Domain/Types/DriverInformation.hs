@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Domain.Types.DriverInformation where
@@ -22,7 +23,6 @@ import Data.Time (UTCTime)
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
-import Kernel.External.Encryption
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
@@ -60,7 +60,7 @@ $(mkBeamInstancesForEnum ''DriverAutoPayStatus)
 
 $(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 
-data DriverInformationE e = DriverInformation
+data DriverInformation = DriverInformation
   { driverId :: Id Person,
     adminId :: Maybe (Id Person),
     merchantId :: Maybe (Id DMerchant.Merchant),
@@ -72,7 +72,9 @@ data DriverInformationE e = DriverInformation
     verified :: Bool,
     subscribed :: Bool,
     paymentPending :: Bool,
-    referralCode :: Maybe (EncryptedHashedField e Text),
+    referralCode :: Maybe Text,
+    referredByDriverId :: Maybe (Id Person),
+    totalReferred :: Maybe Int,
     lastEnabledOn :: Maybe UTCTime,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
@@ -87,7 +89,9 @@ data DriverInformationE e = DriverInformation
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     compAadhaarImagePath :: Maybe Text,
-    availableUpiApps :: Maybe Text
+    availableUpiApps :: Maybe Text,
+    blockStateModifier :: Maybe Text,
+    driverDob :: Maybe UTCTime
   }
   deriving (Generic)
 
@@ -118,12 +122,6 @@ data Badges = Badges
     badgeCount :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
-
-type DriverInformation = DriverInformationE 'AsEncrypted
-
-instance FromJSON (EncryptedHashed Text)
-
-instance ToJSON (EncryptedHashed Text)
 
 instance FromJSON DriverInformation
 

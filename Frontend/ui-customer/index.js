@@ -1,26 +1,75 @@
-require("regenerator-runtime/runtime");
+import "core-js";
+import "presto-ui";
+import "regenerator-runtime/runtime";
 
-// This will make sure init() is called. It will make available JBridge and Android variables
-require("presto-ui");
-require('core-js');
+if (!window.__OS) {
+  const getOS = function () { //taken from getOS() in presto-ui
+    const userAgent = navigator.userAgent;
+    if (!userAgent) return console.error(new Error("UserAgent is null"));
+    if (userAgent.indexOf("Android") != -1 && userAgent.indexOf("Version") != -1) return "ANDROID";
+    if (userAgent.indexOf("iPhone") != -1 && userAgent.indexOf("Version") == -1) return "IOS";
+    return "WEB";
+  }
+  window.__OS = getOS();
+}
+
+const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
+
+if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
+  Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
+    return blackListFunctions.indexOf(fnName) == -1
+  }).forEach(fnName => {
+    window.JBridgeProxy = window.JBridgeProxy || {};
+    window.JBridgeProxy[fnName] = window.JBridge[fnName];
+    window.JBridge[fnName] = function () {
+      let params = Object.values(arguments).join(", ");
+      if (fnName === "callAPI") {
+        params = arguments[1].split("/").splice(6).join("/");
+      }
+      let shouldLog = true;
+      if (window.appConfig) {
+        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+      }
+      if (shouldLog) {
+        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+      }
+      const result = window.JBridgeProxy[fnName](...arguments);
+      return result;
+    };
+  });
+}
+
+function guid() {
+  function s4() {
+    return Math.floor((1 + Math.random()) * 0x10000)
+      .toString(16)
+      .substring(1);
+  }
+  return s4() + s4() + "-" + s4() + "-" + s4() + "-" +
+    s4() + "-" + s4() + s4() + s4();
+}
+
+function loadConfig() {
+  const config = require("./output/ConfigProvider/index.js");
+  config.loadAppConfig("");
+}
+
 window.session_id = guid();
-window.version = __VERSION__;
+window.version = window.version || {};
+window.version["app"] = __VERSION__;
 // JBridge.setSessionId(window.session_id);
 console.warn("Hello World MASTER ONE");
 let previousDateObject = new Date();
 const refreshThreshold = 30;
-loadConfig();
+const JBridge = window.JBridge;
+const JOS = window.JOS;
+const Android = window.Android;
 
-let eventObject = {
+const eventObject = {
   type : ""
-, data : ""
+  , data : ""
 }
 
-var jpConsumingBackpress = {
-  event: "jp_consuming_backpress",
-  payload: { jp_consuming_backpress: true }
-}
-JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
 
 window.isObject = function (object) {
   return (typeof object == "object");
@@ -30,30 +79,30 @@ window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRI
 
 // setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 
-var isUndefined = function (val) {
+const isUndefined = function (val) {
   return (typeof val == "undefined");
 }
 
-var logger = function()
+const logger = function()
 {
-    var oldConsoleLog = null;
-    var pub = {};
+  let oldConsoleLog = null;
+  const pub = {};
 
-    pub.enableLogger =  function enableLogger()
-                        {
-                            if(oldConsoleLog == null)
-                                return;
+  pub.enableLogger =  function enableLogger()
+  {
+    if(oldConsoleLog === null)
+      return;
 
-                            window['console']['log'] = oldConsoleLog;
-                        };
+    window["console"]["log"] = oldConsoleLog;
+  };
 
-    pub.disableLogger = function disableLogger()
-                        {
-                            oldConsoleLog = console.log;
-                            window['console']['log'] = function() {};
-                        };
+  pub.disableLogger = function disableLogger()
+  {
+    oldConsoleLog = console.log;
+    window["console"]["log"] = function() {};
+  };
 
-    return pub;
+  return pub;
 }();
 
 function setManualEvents(eventName, callbackFunction) {
@@ -70,72 +119,53 @@ function setManualEvents(eventName, callbackFunction) {
 
 window.setManualEvents = setManualEvents;
 
-function guid() {
-  function s4() {
-    return Math.floor((1 + Math.random()) * 0x10000)
-      .toString(16)
-      .substring(1);
-  }
-  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-    s4() + '-' + s4() + s4() + s4();
-}
-
 window.__FN_INDEX = 0;
 window.__PROXY_FN = top.__PROXY_FN || {};
 
-if (!window.__OS) {
-  var getOS = function () { //taken from getOS() in presto-ui
-    var userAgent = navigator.userAgent;
-    if (!userAgent) return console.error(new Error("UserAgent is null"));
-    if (userAgent.indexOf("Android") != -1 && userAgent.indexOf("Version") != -1) return "ANDROID";
-    if (userAgent.indexOf("iPhone") != -1 && userAgent.indexOf("Version") == -1) return "IOS";
-    return "WEB";
-  }
-  window.__OS = getOS();
-}
-
-var purescript = require("./output/Main");
+const purescript = require("./output/Main");
 // if (window.__OS == "WEB") {
 //   purescript.main();
 // }
 
-window.onMerchantEvent = function (event, payload) {
-  console = top.console;
-  console.log(payload);
-  var clientPaylod = JSON.parse(payload).payload;
-  if (event == "initiate") {
-    let payload = {
-      event: "initiate_result"
-      , service: "in.juspay.becknui"
-      , payload: { status: "SUCCESS" }
-      , error: false
-      , errorMessage: ""
-      , errorCode: ""
-    }
-    var clientId = clientPaylod.clientId;
+function callInitiateResult () {
+  const payload = {
+    event: "initiate_result"
+    , service: "in.juspay.becknui"
+    , payload: { status: "SUCCESS" }
+    , error: false
+    , errorMessage: ""
+    , errorCode: ""
+  }
+  const jpConsumingBackpress = {
+    event: "jp_consuming_backpress",
+    payload: { jp_consuming_backpress: true }
+  }
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(jpConsumingBackpress), "");
+  JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
+}
+
+window.onMerchantEvent = function (_event, GlobalPayload) {
+  console.log(GlobalPayload);
+  const clientPaylod = JSON.parse(GlobalPayload).payload;
+  if (_event == "initiate") {
+    let clientId = clientPaylod.clientId;
     if (clientId.includes("_ios"))
     {
       clientId = clientId.replace("_ios","");
     }
-    if (clientId == "open-kochi" || clientId == "yatriconsumer") {
-      window.merchantID = "YATRI"
-    } else if (clientId == "jatrisaathi" || clientId == "jatrisaathiconsumer"){
-      window.merchantID = "YATRISATHI"
-    } else if (clientId.includes("mobility")) {
-      var merchant = clientId.replace("mobility","")
-      merchant = merchant.replace("consumer","")
-      merchant = merchant.toUpperCase();
-      window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
-    } else if (clientId.includes("consumer")) {
-      var merchant = clientId.replace("mobility","")
+    if (!clientId.startsWith("mobility") && clientId.includes("consumer")) {
+      let merchant = clientId.replace("mobility","")
       merchant = merchant.replace("consumer","")
       window.merchantID = merchant.toUpperCase();
     } else {
-      window.merchantID = clientId.toUpperCase();
+      let merchant = clientId.replace("mobility","")
+      merchant = merchant.replace("consumer","")
+      merchant = merchant.toUpperCase();
+      window.merchantID = "MOBILITY_" + merchant.charAt(0) + merchant.charAt(merchant.length - 1);
     }
     console.log(window.merchantID);
-    JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
-  } else if (event == "process") {
+    callInitiateResult();
+  } else if (_event == "process") {
     console.warn("Process called");
     window.__payload.sdkVersion = "2.0.1"
     if (clientPaylod.action == "notification") {
@@ -154,8 +184,8 @@ window.onMerchantEvent = function (event, payload) {
       eventObject["data"] = "";
       if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
         eventObject["type"] = "CHAT_MESSAGE";
-       }
-      window.__payload = JSON.parse(payload);
+      }
+      window.__payload = JSON.parse(GlobalPayload);
       console.log("window Payload: ", window.__payload);
       purescript.main(eventObject)();
     }
@@ -163,9 +193,9 @@ window.onMerchantEvent = function (event, payload) {
 }
 
 window.callUICallback = function () {
-  var args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
-  var fName = args[0]
-  var functionArgs = args.slice(1)
+  const args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
+  const fName = args[0]
+  const functionArgs = args.slice(1)
 
   try {
     window.__PROXY_FN[fName].call(null, ...functionArgs);
@@ -186,9 +216,9 @@ window.onResume = function () {
     for (let i = 0; i < window.onResumeListeners.length;i++) {
       window.onResumeListeners[i].call();
     }
-  if(window.scrollAction) {
-    window.scrollAction();
-  }
+    if(window.scrollAction) {
+      window.scrollAction();
+    }
   }
 }
 
@@ -216,31 +246,11 @@ window.onActivityResult = function (requestCode, resultCode, bundle) {
   }
 }
 
-window["onEvent'"] = function (event, args) {
-  console.log(event, args);
-  if (event == "onPause") {
-    previousDateObject = new Date();
-    window.onPause();
-  } else if (event == "onResume") {
-    window.onResume();
-    refreshFlow();
-  } else if (event == "onLocationChanged" && !(window.receiverFlag)) {
-    purescript.onConnectivityEvent("LOCATION_DISABLED")();
-  } else if (event == "onInternetChanged") {
-    purescript.onConnectivityEvent("INTERNET_ACTION")();
-  }else if(event == "onBundleUpdated"){
-    purescript.onBundleUpdatedEvent(JSON.parse(args))();
-  } else if ((event == "onKeyboardOpen" || event == "onKeyboardClose") && window.keyBoardCallback) {
-      window.keyBoardCallback(event);
-  }
-  purescript.onEvent(event)();
-}
-
 function refreshFlow(){
-  let currentDate = new Date();
-  let diff = Math.abs(previousDateObject - currentDate) / 1000;
-  let token = (window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN"));
-  let currentState = (window.JBridge.getKeysInSharedPref("LOCAL_STAGE"));
+  const currentDate = new Date();
+  const diff = Math.abs(previousDateObject - currentDate) / 1000;
+  const token = (window.JBridge.getKeysInSharedPref("REGISTERATION_TOKEN"));
+  const currentState = (window.JBridge.getKeysInSharedPref("LOCAL_STAGE"));
   if ((diff > refreshThreshold) && 
       (token != "__failed") && 
       (token != "(null)") &&
@@ -253,9 +263,55 @@ function refreshFlow(){
   }
 }
 
+window["onEvent'"] = function (_event, args) {
+  console.log(_event, args);
+  if (_event == "onBackPressed") {
+    if (JBridge.onBackPressedPP && JBridge.onBackPressedPP()) {
+      console.log("Backpress Consumed by PP")
+    } else {
+      purescript.onEvent(_event)();
+    }
+  } else if (_event == "onPause") {
+    previousDateObject = new Date();
+    window.onPause();
+  } else if (_event == "onResume") {
+    window.onResume();
+    refreshFlow();
+  } else if (_event == "onLocationChanged" && !(window.receiverFlag)) {
+    purescript.onConnectivityEvent("LOCATION_DISABLED")();
+  } else if (_event == "onInternetChanged") {
+    purescript.onConnectivityEvent("INTERNET_ACTION")();
+  }else if(_event == "onBundleUpdated"){
+    purescript.onBundleUpdatedEvent(JSON.parse(args))();
+  } else if ((_event == "onKeyboardOpen" || _event == "onKeyboardClose") && window.keyBoardCallback) {
+    window.keyBoardCallback(_event);
+  } else {
+    purescript.onEvent(_event)();
+  }
+}
+
+window["onEvent"] = function (jsonPayload, args, callback) { // onEvent from hyperPay
+  console.log("onEvent Payload", jsonPayload);
+  const payload = JSON.parse(jsonPayload)
+  switch (payload.event) {
+    case "initiate_result":
+      window.isPPInitiated = true;
+      break;
+    case "process_result":
+      if (window.processCallBack) window.processCallBack(0)(jsonPayload)();
+      break;
+    case "log_stream":
+      const logs = require("./output/Engineering.Helpers.LogEvent/index.js");
+      logs.handleLogStream(payload.payload);
+      break;
+    default:
+      console.log("Unknown Event");
+  }
+}
 
 if (typeof window.JOS != "undefined") {
   window.JOS.addEventListener("onEvent'")();
+  window.JOS.addEventListener("onEvent")();
   window.JOS.addEventListener("onMerchantEvent")();
   window.JOS.addEventListener("onActivityResult")();
   console.error("Calling action DUI_READY");
@@ -264,14 +320,10 @@ if (typeof window.JOS != "undefined") {
   console.error("JOS not present")
 }
 
-var sessionInfo = JSON.parse(JBridge.getDeviceInfo())
+const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")){
   logger.enableLogger();
 }else{
   logger.disableLogger();
-}
-
-function loadConfig() {
-  var config = require("./output/Helpers.FileProvider.Utils");
-  config.loadAppConfig("");
+  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;","null");
 }

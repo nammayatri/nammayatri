@@ -34,7 +34,7 @@ import Screens.HelpAndSupportScreen.ScreenData (otherIssueList,IssueOptions(..))
 import Services.API (FetchIssueListResp(..),FetchIssueListReq(..))
 import Services.Backend as Remote
 import Effect.Aff (launchAff)
-import Helpers.Utils (toString, getCommonAssetStoreLink, getAssetStoreLink)
+import Helpers.Utils (toStringJSON, fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (flowRunner, screenWidth)
 import Effect.Class (liftEffect)
 import Language.Types(STR(..))
@@ -126,7 +126,7 @@ headerLayout state push =
         [ imageView
             [ width $ V 30
             , height $ V 30
-            , imageWithFallback $ "ny_ic_chevron_left," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
             , onClick push $ const BackPressed
             , padding $ Padding 2 2 2 2
             , margin $ MarginLeft 5
@@ -282,18 +282,18 @@ allOtherTopics state push =
               , height WRAP_CONTENT
               , orientation HORIZONTAL
               , gravity CENTER_VERTICAL
-              , padding (Padding 15 17 15 17)
+              , padding $ Padding 15 17 15 17
               ][  textView $
                   [ height WRAP_CONTENT
                   , weight 1.0
-                  , text  (if (optionItem.menuOptions) == OngoingIssues then ((getIssueTitle optionItem.menuOptions) <> " : " <> (toString (length (state.data.ongoingIssueList)))) else if (optionItem.menuOptions) == ResolvedIssues then (getIssueTitle optionItem.menuOptions)  else (getIssueTitle optionItem.menuOptions))
+                  , text  (if (optionItem.menuOptions) == OngoingIssues then ((getIssueTitle optionItem.menuOptions) <> " : " <> (toStringJSON (length (state.data.ongoingIssueList)))) else if (optionItem.menuOptions) == ResolvedIssues then (getIssueTitle optionItem.menuOptions)  else (getIssueTitle optionItem.menuOptions))
                   , margin (MarginLeft 10)
                   , color Color.black800
                   ] <> FontStyle.body5 LanguageStyle
                   , imageView
                   [ width $ V 20
                   , height $ V 20
-                  , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
                   ]
               ]
               , horizontalLineView
@@ -314,7 +314,7 @@ issueListState state = let
         issueListTypeModal = state.data.issueListType ,
         headerConfig {
           headTextConfig {
-            text = (if (state.data.issueListType == ST.ONGOING_ISSUES_MODAL) then (( getString ONGOING_ISSUE) <>(" : ") <> (toString (length state.data.ongoingIssueList))) else ((getString RESOLVED_ISSUE)))
+            text = (if (state.data.issueListType == ST.ONGOING_ISSUES_MODAL) then (( getString ONGOING_ISSUE) <>(" : ") <> (toStringJSON (length state.data.ongoingIssueList))) else ((getString RESOLVED_ISSUE)))
           }
         },
         fourthTextConfig {

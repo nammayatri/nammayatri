@@ -1,3 +1,12 @@
+/*
+ *  Copyright 2022-23, Juspay India Pvt Ltd
+ *  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
+ *  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ *  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ *  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ *  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package in.juspay.mobility.driver;
 
 import static android.Manifest.permission.CAMERA;
@@ -7,14 +16,24 @@ import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.WINDOW_SERVICE;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import com.google.common.util.concurrent.ListenableFuture;
+
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageProxy;
+import androidx.camera.core.Preview;
+import androidx.lifecycle.LifecycleOwner;
+
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.net.Uri;
@@ -28,19 +47,27 @@ import android.util.Base64;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.ActionMode;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import androidx.camera.core.ImageCapture;
+import androidx.camera.core.ImageCaptureException;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
+
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -60,12 +87,7 @@ import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer;
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener;
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerFullScreenListener;
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.YouTubePlayerListener;
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.options.IFramePlayerOptions;
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView;
-import com.pierfrancescosoffritti.androidyoutubeplayer.core.ui.DefaultPlayerUiController;
 import com.theartofdev.edmodo.cropper.CropImage;
 
 import org.json.JSONArray;
@@ -90,6 +112,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import in.juspay.hyper.core.BridgeComponents;
@@ -121,9 +144,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public static float videoDuration = 0;
     public static ArrayList<MediaPlayerView> audioPlayers = new ArrayList<>();
     private AudioRecorder audioRecorder = null;
+    private static final int IMAGE_PERMISSION_REQ_CODE_PROFILE = 1243;
 
     // Others
-    public static boolean isUploadPopupOpen = false;
+    private static boolean isUploadPopupOpen = false;
 
     // CallBacks
     private String storeDriverCallBack = null;
@@ -131,10 +155,17 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     private String storeImageUploadCallBack = null;
     private CallBack callBack;
     private LocationUpdateService.UpdateTimeCallback locationCallback;
+    private PreviewView previewView;
+    private ImageCapture imageCapture;
+    private Button bCapture;
+    private TranslatorMLKit translator;
+    public static Runnable cameraPermissionCallback;
+    public static Boolean considerCameraOption = true;
 
     public MobilityDriverBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
         registerCallBacks();
+        translator = new TranslatorMLKit(bridgeComponents.getContext());
     }
 
     //region Store and Trigger CallBack
@@ -149,6 +180,21 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     storeDriverCallBack, notificationType);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
+    }
+
+    @JavascriptInterface
+    public void deleteTranslatorModel(String model) {
+        if(translator!=null) translator.deleteDownloadedModel(model);
+    }
+
+    @JavascriptInterface
+    public void listDownloadedTranslationModels(String callback) {
+        if(translator!=null) translator.listDownloadedModels(callback, bridgeComponents);
+    }
+
+    @JavascriptInterface
+    public void triggerDownloadForML(String language) {
+        if(translator!=null) translator.triggerDownloadForLang(language);
     }
 
     @JavascriptInterface
@@ -293,97 +339,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //endregion
 
     //region Media Utils
-    @JavascriptInterface
-    public void setYoutubePlayer(String rawJson, final String playerId, String videoStatus) {
-        if (bridgeComponents.getActivity() != null) {
-            videoDuration = 0;
-            ExecutorManager.runOnMainThread(() -> {
-                try {
-                    if (videoStatus.equals("PAUSE")) {
-                        pauseYoutubeVideo();
-                    } else {
-                        JSONObject json = new JSONObject(rawJson);
-                        if (youTubePlayerView != null)
-                            youTubePlayerView.release();
-                        boolean showMenuButton = json.getBoolean("showMenuButton");
-                        boolean showDuration = json.getBoolean("showDuration");
-                        boolean setVideoTitle = json.getBoolean("setVideoTitle");
-                        boolean showSeekBar = json.getBoolean("showSeekBar");
-                        String videoTitle = json.getString("videoTitle");
-                        String videoId = json.getString("videoId");
-                        String videoType = "VIDEO";
-                        if (json.has("videoType")) {
-                            videoType = json.getString("videoType");
-                        }
-                        youTubePlayerView = new YouTubePlayerView(bridgeComponents.getContext());
-                        LinearLayout layout = bridgeComponents.getActivity().findViewById(Integer.parseInt(playerId));
-                        layout.addView(youTubePlayerView);
-                        youTubePlayerView.setEnableAutomaticInitialization(false);
-                        YouTubePlayerListener youTubePlayerListener = new AbstractYouTubePlayerListener() {
-                            @Override
-                            public void onReady(@NonNull YouTubePlayer youTubePlayer) {
-                                try {
-                                    youtubePlayer = youTubePlayer;
-                                    DefaultPlayerUiController playerUiController = new DefaultPlayerUiController(youTubePlayerView, youTubePlayer);
-                                    playerUiController.showMenuButton(showMenuButton);
-                                    playerUiController.showDuration(showDuration);
-                                    playerUiController.showSeekBar(showSeekBar);
-                                    playerUiController.showFullscreenButton(true);
-                                    if (setVideoTitle) {
-                                        playerUiController.setVideoTitle(videoTitle);
-                                    }
-                                    playerUiController.showYouTubeButton(false);
-                                    youTubePlayerView.setCustomPlayerUi(playerUiController.getRootView());
-
-                                    youTubePlayer.seekTo(videoDuration);
-                                    youTubePlayer.loadVideo(videoId, 0);
-                                    youTubePlayer.play();
-
-                                } catch (Exception e) {
-                                    Log.e("error inside setYoutubePlayer onReady", String.valueOf(e));
-                                }
-                            }
-
-                            @Override
-                            public void onCurrentSecond(@NonNull YouTubePlayer youTubePlayer, float second) {
-                                videoDuration = second;
-                            }
-                        };
-
-                        String finalVideoType = videoType;
-                        youTubePlayerView.addFullScreenListener(new YouTubePlayerFullScreenListener() {
-                            @Override
-                            public void onYouTubePlayerExitFullScreen() {
-                            }
-
-                            @Override
-                            public void onYouTubePlayerEnterFullScreen() {
-                                Intent newIntent = new Intent(bridgeComponents.getContext(), YoutubeVideoView.class);
-                                newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                newIntent.putExtra("videoId", videoId);
-                                newIntent.putExtra("videoDuration", videoDuration);
-                                newIntent.putExtra("videoType", finalVideoType);
-                                bridgeComponents.getContext().startActivity(newIntent);
-                            }
-                        });
-
-                        IFramePlayerOptions options = new IFramePlayerOptions.Builder().controls(0).rel(0).build();
-                        youTubePlayerView.initialize(youTubePlayerListener, options);
-                    }
-                } catch (Exception e) {
-                    Log.e("exception in setYoutubePlayer", String.valueOf(e));
-                }
-            });
-        }
-    }
-
-    @JavascriptInterface
-    public void pauseYoutubeVideo() {
-        if (youTubePlayerView != null) {
-            youtubePlayer.pause();
-        }
-    }
-
     @JavascriptInterface
     public void pauseMediaPlayer() {
         if (DefaultMediaPlayerControl.mediaPlayer.isPlaying()) {
@@ -1119,7 +1074,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 break;
             case CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE:
                 if (resultCode == RESULT_OK) {
-                    new Thread(() -> Utils.encodeImageToBase64(data, bridgeComponents.getContext())).start();
+                    new Thread(() -> Utils.encodeImageToBase64(data, bridgeComponents.getContext(), null)).start();
                 } else if (resultCode == CropImage.CROP_IMAGE_ACTIVITY_RESULT_ERROR_CODE) {
                     CropImage.ActivityResult result = CropImage.getActivityResult(data);
                     Log.e(OVERRIDE, result.getError().toString());
@@ -1185,6 +1140,106 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 break;
         }
         return super.onRequestPermissionResult(requestCode, permissions, grantResults);
+    }
+
+    private void requestCameraPermission(Runnable callback) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CAMERA}, IMAGE_PERMISSION_REQ_CODE_PROFILE);
+            cameraPermissionCallback = callback;
+        }
+    }
+
+    public void analyze(@NonNull ImageProxy image) {
+        Log.d("TAG", "analyze: got the frame at: " + image.getImageInfo().getTimestamp());
+        image.close();
+    }
+
+    @SuppressLint("RestrictedApi")
+    private void startCameraX(ProcessCameraProvider cameraProvider) {
+        cameraProvider.unbindAll();
+        CameraSelector cameraSelector = new CameraSelector.Builder()
+//                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
+                .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
+                .build();
+        Preview preview = new Preview.Builder()
+                .build();
+        preview.setSurfaceProvider(previewView.getSurfaceProvider());
+        imageCapture = new ImageCapture.Builder()
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                .build();
+        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build();
+//        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(bridgeComponents.getActivity()), bridgeComponents.getActivity()::analyze);
+        cameraProvider.bindToLifecycle((LifecycleOwner) bridgeComponents.getActivity(), cameraSelector, preview, imageCapture);
+    }
+
+
+
+    @JavascriptInterface
+    public void renderCameraProfilePicture(String id) {
+        Activity activity = bridgeComponents.getActivity();
+        Context context = bridgeComponents.getContext();
+        if(activity!=null)
+        {
+            activity.runOnUiThread(() -> {
+                if (isCameraPermissionGranted())
+                {
+                    View profilePictureLayout = LayoutInflater.from(context).inflate(R.layout.validate_documents_preview, null, false);
+                    previewView = profilePictureLayout.findViewById(R.id.previewView);
+                    bCapture = profilePictureLayout.findViewById(R.id.bCapture);
+                    bCapture.setOnClickListener(view -> capturePhoto());
+                    ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(context);
+                    cameraProviderFuture.addListener(() -> {
+                        try {
+                            ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                            startCameraX(cameraProvider);
+                        } catch (ExecutionException | InterruptedException e) {
+                            e.printStackTrace();
+                            return ;
+                        }
+                    }, ContextCompat.getMainExecutor(activity));
+                    LinearLayout layout = activity.findViewById(Integer.parseInt(id));
+                    layout.removeAllViews();
+                    layout.addView(profilePictureLayout);
+                } else
+                {
+                    requestCameraPermission(() -> renderCameraProfilePicture(id));
+                }
+            });
+        }
+    }
+
+    private void capturePhoto() {
+        long timestamp = System.currentTimeMillis();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, timestamp);
+        contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
+        if (imageCapture == null)
+            return;
+        imageCapture.takePicture(
+                new ImageCapture.OutputFileOptions.Builder(bridgeComponents.getContext().getContentResolver(), MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues).build(),
+                ContextCompat.getMainExecutor(bridgeComponents.getActivity()),
+                new ImageCapture.OnImageSavedCallback() {
+                    @Override
+                    public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
+                        Uri imageUri = outputFileResults.getSavedUri();
+                        Utils.encodeImageToBase64(null, bridgeComponents.getContext(), imageUri);
+                    }
+                    @Override
+                    public void onError(@NonNull ImageCaptureException exception) {
+                        Toast.makeText(bridgeComponents.getActivity(), "error", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
+    }
+
+    private boolean isCameraPermissionGranted() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            int cameraPermission = ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CAMERA);
+            return cameraPermission == PackageManager.PERMISSION_GRANTED;
+        }
+        return true;
     }
     //endregion
 }

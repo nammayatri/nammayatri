@@ -158,7 +158,7 @@ eval ShowOptions state = do
                 <> joinWith "\n" options'
   let messages' = snoc state.data.chatConfig.messages
                     (makeChatComponent' message "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" 500)
-  continue state { data { chatConfig { enableSuggestionClick = false, messages = messages', suggestionsList = options' } } }
+  continue state { data { chatConfig { enableSuggestionClick = false, messages = messages', chatSuggestionsList = options' } } }
 
 ---------------------------------------------------- Add Media ----------------------------------------------------
 eval AddImage state =
@@ -235,7 +235,7 @@ eval (AddAudioModelAction (AudioModel.OnClickDelete)) state =
 eval (AddImagesModelAction (ImageModel.AddImage)) state =
   continueWithCmd state [do
     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson = "primary_button_loader.json", lottieId = getNewIDWithTag "add_images_model_done_button" }
-    _ <- liftEffect $ uploadFile unit
+    _ <- liftEffect $ uploadFile false
     pure NoAction
   ]
 
@@ -391,7 +391,7 @@ eval (ChatViewActionController (ChatView.SendSuggestion optionName)) state = do
         continue state { props { showCallCustomerModel = true, isPopupModelOpen = true } }
       else do
         let messages' = snoc state.data.chatConfig.messages (makeChatComponent optionName "Driver" (convertUTCtoISC (getCurrentUTC "") "hh:mm A"))
-        continueWithCmd state { data { chatConfig { messages = messages', suggestionsList = [] }, selectedOptionId = Just selectedOption.issueOptionId } } [do
+        continueWithCmd state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOptionId = Just selectedOption.issueOptionId } } [do
           if state.props.isReversedFlow
           then
             let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" 500
@@ -435,7 +435,7 @@ eval (ConfirmCall (PrimaryButton.OnClick)) state =
   case find (\x -> x.label == "CALL_THE_CUSTOMER") state.data.options of
     Just selectedOption -> do
       let messages' = snoc state.data.chatConfig.messages (makeChatComponent selectedOption.option "Driver" (convertUTCtoISC (getCurrentUTC "") "hh:mm A"))
-      exit $ CallCustomer state { data { chatConfig { messages = messages', suggestionsList = [] }, selectedOptionId = Just selectedOption.issueOptionId }, props { isPopupModelOpen = false, showCallCustomerModel = false } }
+      exit $ CallCustomer state { data { chatConfig { messages = messages', chatSuggestionsList = [] }, selectedOptionId = Just selectedOption.issueOptionId }, props { isPopupModelOpen = false, showCallCustomerModel = false } }
     Nothing -> do
       _ <- pure $ toast "Can't find option"
       continue state

@@ -12,12 +12,14 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Message.Message where
 
 import Data.Map as HM
-import qualified Domain.Types.MediaFile as MF
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified IssueManagement.Domain.Types.MediaFile as MF
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -41,6 +43,7 @@ data Message = Message
     mediaFiles :: [Id MF.MediaFile],
     messageTranslations :: [MessageTranslation],
     merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     createdAt :: UTCTime
   }
 

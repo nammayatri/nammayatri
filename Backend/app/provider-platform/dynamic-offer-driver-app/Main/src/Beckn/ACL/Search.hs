@@ -20,31 +20,53 @@ import qualified Beckn.Types.Core.Taxi.Search as Search
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search as DSearch
-import Kernel.External.Maps.Interface (LatLong (..))
+import qualified Domain.Types.Merchant as Merchant
+import Kernel.Beam.Functions
+import Kernel.External.Maps.Types hiding (geometry)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Product.Validation.Context
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Geofencing
+import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.Queries.Geometry
 import Tools.Error
 import qualified Tools.Maps as Maps
 
 buildSearchReq ::
-  (HasFlowEnv m r '["coreVersion" ::: Text]) =>
+  (HasFlowEnv m r '["coreVersion" ::: Text], CacheFlow m r, EsqDBFlow m r) =>
+  Id Merchant.Merchant ->
   Subscriber.Subscriber ->
   Search.SearchReq ->
   m DSearch.DSearchReq
-buildSearchReq subscriber req = do
+buildSearchReq merchantId subscriber req = do
   now <- getCurrentTime
   let context = req.context
   validateContext Context.SEARCH context
   let intent = req.message.intent
   let pickup = intent.fulfillment.start
       dropOff = intent.fulfillment.end
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  let geoRestriction = merchant.geofencingConfig.origin
+  city <-
+    case geoRestriction of
+      Unrestricted -> pure merchant.city
+      Regions regions -> do
+        geometry <-
+          runInReplica $
+            findGeometriesContaining LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon} regions >>= \case
+              [] -> do
+                logError $ "No geometry found for pickup: " <> show pickup <> " for regions: " <> show regions
+                pure Nothing
+              (g : _) -> pure $ Just g
+        pure $ fromMaybe merchant.city ((.city) <$> geometry)
   let distance = getDistance =<< intent.fulfillment.tags
   let duration = getDuration =<< intent.fulfillment.tags
   let customerLanguage = buildCustomerLanguage =<< intent.fulfillment.customer
+  let isReallocationEnabled = getIsReallocationEnabled =<< intent.fulfillment.tags
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
@@ -58,7 +80,7 @@ buildSearchReq subscriber req = do
         transactionId = transactionId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
-        bapCity = context.city,
+        bapCity = city,
         bapCountry = context.country,
         pickupLocation = LatLong {lat = pickup.location.gps.lat, lon = pickup.location.gps.lon},
         pickupTime = now,
@@ -70,7 +92,9 @@ buildSearchReq subscriber req = do
         device = Nothing,
         routePoints = buildRoutePoints =<< intent.fulfillment.tags, --------TODO------Take proper input---------
         customerLanguage = customerLanguage,
-        disabilityTag = disabilityTag
+        disabilityTag = disabilityTag,
+        customerPhoneNum = buildCustomerPhoneNumber =<< intent.fulfillment.customer,
+        ..
       }
 
 getDistance :: Search.TagGroups -> Maybe Meters
@@ -84,6 +108,11 @@ getDuration tagGroups = do
   tagValue <- getTag "route_info" "duration_info_in_s" tagGroups
   durationValue <- readMaybe $ T.unpack tagValue
   Just $ Seconds durationValue
+
+getIsReallocationEnabled :: Search.TagGroups -> Maybe Bool
+getIsReallocationEnabled tagGroups = do
+  tagValue <- getTag "reallocation_info" "is_reallocation_enabled" tagGroups
+  readMaybe $ T.unpack tagValue
 
 buildCustomerLanguage :: Search.Customer -> Maybe Language
 buildCustomerLanguage Search.Customer {..} = do
@@ -99,3 +128,8 @@ buildRoutePoints :: Search.TagGroups -> Maybe [Maps.LatLong]
 buildRoutePoints tagGroups = do
   tagValue <- getTag "route_info" "route_points" tagGroups
   decode $ encodeUtf8 tagValue
+
+buildCustomerPhoneNumber :: Search.Customer -> Maybe Text
+buildCustomerPhoneNumber Search.Customer {..} = do
+  tagValue <- getTag "customer_info" "customer_phone_number" person.tags
+  readMaybe $ T.unpack tagValue

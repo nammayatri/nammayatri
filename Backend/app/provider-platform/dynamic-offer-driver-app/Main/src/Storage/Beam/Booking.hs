@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Booking where
 
@@ -35,6 +36,7 @@ data BookingT f = BookingT
     disabilityTag :: B.C f (Maybe Text),
     area :: B.C f (Maybe FareProductD.Area),
     providerId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     primaryExophone :: B.C f Text,
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
@@ -54,7 +56,8 @@ data BookingT f = BookingT
     paymentUrl :: B.C f (Maybe Text),
     paymentMethodId :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    distanceToPickup :: B.C f (Maybe Meters)
   }
   deriving (Generic, B.Beamable)
 

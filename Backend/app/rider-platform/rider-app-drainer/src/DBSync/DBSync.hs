@@ -9,9 +9,9 @@ import DBSync.Create
 import DBSync.Delete
 import DBSync.Update
 import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as T
+import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as DTE
 import qualified Data.Vector as V
 import qualified Database.Redis as R
@@ -74,12 +74,12 @@ parseDBCommand dbStreamKey entries =
     getActionAndModelName dbCommandByteString = do
       case A.decode $ BL.fromStrict dbCommandByteString of
         Just _decodedDBCommandObject@(A.Object o) ->
-          let mbAction = case HM.lookup "tag" o of
+          let mbAction = case AKM.lookup "tag" o of
                 Just (A.String actionTag) -> return actionTag
                 _ -> Nothing
-              mbModel = case HM.lookup "contents" o of
+              mbModel = case AKM.lookup "contents" o of
                 Just _commandArray@(A.Array a) -> case V.last a of
-                  A.Object command -> case HM.lookup "tag" command of
+                  A.Object command -> case AKM.lookup "tag" command of
                     Just (A.String modelTag) -> return modelTag
                     _ -> Nothing
                   _ -> Nothing
@@ -102,7 +102,6 @@ dropDBCommand dbStreamKey entryId = do
 runCriticalDBSyncOperations :: Text -> [(CreateDBCommand, ByteString)] -> [(UpdateDBCommand, ByteString)] -> [(DeleteDBCommand, ByteString)] -> ExceptT Int Flow Int
 runCriticalDBSyncOperations dbStreamKey createEntries updateEntries deleteEntries = do
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
-
   (cSucc, cFail) <- pureRightExceptT $ foldM runCreateCommandsAndMergeOutput ([], []) =<< runCreateCommands createEntries dbStreamKey
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)

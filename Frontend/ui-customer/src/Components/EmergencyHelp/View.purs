@@ -35,11 +35,10 @@ import Components.GenericHeader.View as GenericHeader
 import Common.Types.App
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, isPreviousVersion)
-import Helpers.Utils (getPreviousVersion)
 import Storage (getValueToLocalStore, KeyStore(..))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (getValueFromConfig)
+import ConfigProvider
 import JBridge as JB
 
 view :: forall w .  (Action  -> Effect Unit) -> EmergencyHelpModelState  -> PrestoDOM (Effect Unit) w
@@ -135,7 +134,7 @@ supportButtonViewContent state push item index =  linearLayout
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
-                , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
                 , margin $ MarginTop 4
                 , color Color.black900
                 ]
@@ -161,7 +160,7 @@ emergencyHelpLogoContainer state =
     ][  imageView
         [ height $ V 128
         , width MATCH_PARENT
-        , imageWithFallback $ "ny_ic_emergency_shield," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_shield.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_emergency_shield"
         , margin (MarginBottom 24)
         ]
       , textView (
@@ -212,7 +211,7 @@ contactSupportConfig state  =
   config' = PopUpModalConfig.config
   popUpConfig' = config' {
     primaryText {
-      text = (<>) (getString CALL_NAMMA_YATRI_SUPPORT) "?"
+      text = (<>) (getString $ CALL_NAMMA_YATRI_SUPPORT "CALL_NAMMA_YATRI_SUPPORT") "?"
     , margin = (Margin 40 23 40 12)
     }
     , option1 {
@@ -229,7 +228,7 @@ contactSupportConfig state  =
     }
     , backgroundClickable = true
     , secondaryText {
-      text = getString YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT
+      text = getString $ YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT"
     , margin = (Margin 40 0 40 32) }
     , gravity = CENTER
     , margin = (MarginHorizontal 16 16)
@@ -344,12 +343,14 @@ popUpViewCallSuccessful state push =
 
 showEmergencyContact :: forall w . EmergencyHelpModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 showEmergencyContact state push =
+  let feature = (getAppConfig appConfig).feature
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , margin $ Margin 16 20 16 12
-    , visibility if(getValueFromConfig "isEmergencyContacts" == "false") then GONE else VISIBLE
+    , visibility if feature.enableEmergencyContacts then VISIBLE else GONE
     , onClick push $ const (if (DA.null state.emergencyContactData) then  AddedEmergencyContacts else NoAction)
     ][  linearLayout
         [ width MATCH_PARENT
@@ -367,7 +368,7 @@ showEmergencyContact state push =
             ][  imageView
                 [ height $ V 12
                 , width $ V 12
-                , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
                 , margin $ MarginTop 6
                 , color Color.black900
                 ]
@@ -464,7 +465,7 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       } 
     , suffixImageConfig {
         visibility = GONE }
@@ -486,11 +487,12 @@ type CardData =  { action :: Action
  }
 
 supportList :: EmergencyHelpModelState -> Array (CardData)
-supportList state = [
-  { action :  ContactSupportPopup
-  , title : getString CALL_NAMMA_YATRI_SUPPORT
-  , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION },
-  { action : CallPolicePopup
-  , title : getString CALL_EMERGENCY_CENTRE
-  , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION }
-]
+supportList state = 
+  (if state.config.feature.enableSupport then 
+    [{ action :  ContactSupportPopup
+    , title : getString $ CALL_NAMMA_YATRI_SUPPORT "CALL_NAMMA_YATRI_SUPPORT"
+    , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION }]
+  else [])
+  <> ([{ action : CallPolicePopup
+      , title : getString CALL_EMERGENCY_CENTRE
+      , secondaryTitle : getString ALSO_SHARE_YOUR_RIDE_STATUS_AND_LOCATION }])

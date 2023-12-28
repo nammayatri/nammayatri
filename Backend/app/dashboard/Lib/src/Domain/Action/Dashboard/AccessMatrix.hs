@@ -22,9 +22,18 @@ import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM)
 import qualified Storage.Queries.AccessMatrix as QMatrix
+import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import Tools.Error
+
+getMerchantWithCityList ::
+  EsqDBReplicaFlow m r =>
+  m [DMatrix.MerchantCityList]
+getMerchantWithCityList = do
+  merchantList <- runInReplica QMerchant.findAllMerchants
+  let merchantCityList = map (\merchant -> DMatrix.MerchantCityList merchant.shortId merchant.supportedOperatingCities) merchantList
+  pure merchantCityList
 
 getAccessMatrix ::
   EsqDBReplicaFlow m r =>

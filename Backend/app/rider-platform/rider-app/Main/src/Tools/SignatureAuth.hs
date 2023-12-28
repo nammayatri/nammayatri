@@ -15,8 +15,7 @@
 module Tools.SignatureAuth where
 
 import Control.Arrow
-import Control.Lens ((.=), (?=))
-import Control.Lens.At (at)
+import Control.Lens (at, (.=), (.~), (?=))
 import qualified Crypto.Hash as Hash
 import qualified Crypto.PubKey.RSA.PKCS15 as RSA
 import qualified Crypto.Store.X509 as CryptoStore
@@ -31,7 +30,7 @@ import qualified Data.Text.Encoding as TE
 import Data.Typeable (typeRep)
 import Data.X509 (PubKey (PubKeyRSA))
 import Domain.Types.Merchant (Merchant)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (fromList, (.~))
 import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)

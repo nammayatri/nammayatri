@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.SearchRequestForDriver where
 
@@ -20,6 +21,7 @@ import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeReques
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSSL
@@ -54,6 +56,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     requestId :: Id DSR.SearchRequest,
     searchTryId :: Id DST.SearchTry,
     merchantId :: Maybe (Id DM.Merchant),
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     driverId :: Id Person,
@@ -78,7 +81,9 @@ data SearchRequestForDriver = SearchRequestForDriver
     driverSpeed :: Maybe Double,
     keepHiddenForSeconds :: Seconds,
     mode :: Maybe DI.DriverMode,
-    goHomeRequestId :: Maybe (Id DriverGoHomeRequest)
+    goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+    rideFrequencyScore :: Maybe Double,
+    customerCancellationDues :: HighPrecMoney
   }
   deriving (Generic, Show, PrettyShow)
 
@@ -106,12 +111,14 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     disabilityTag :: Maybe Text,
     keepHiddenForSeconds :: Seconds,
     goHomeRequestId :: Maybe (Id DriverGoHomeRequest),
-    requestedVehicleVariant :: Variant.Variant
+    requestedVehicleVariant :: Variant.Variant,
+    isTranslated :: Bool,
+    customerCancellationDues :: HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
-makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> SearchRequestForDriverAPIEntity
-makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant =
+makeSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> DSR.SearchRequest -> DST.SearchTry -> Maybe DSM.BapMetadata -> Seconds -> Seconds -> Variant.Variant -> Bool -> SearchRequestForDriverAPIEntity
+makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata delayDuration keepHiddenForSeconds requestedVehicleVariant isTranslated =
   SearchRequestForDriverAPIEntity
     { searchRequestId = nearbyReq.searchTryId,
       searchTryId = nearbyReq.searchTryId,
@@ -140,6 +147,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       disabilityTag = searchRequest.disabilityTag,
       keepHiddenForSeconds = keepHiddenForSeconds,
       goHomeRequestId = nearbyReq.goHomeRequestId,
+      customerCancellationDues = nearbyReq.customerCancellationDues,
       ..
     }
 

@@ -18,6 +18,7 @@ import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.Plan as DPlan
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Plan as DPlan
 import Environment
@@ -27,6 +28,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.DriverInformation as DI
 import Tools.Auth
 
@@ -65,27 +67,27 @@ handler =
     :<|> planSubscribe
     :<|> planSelect
 
-planList :: (Id SP.Person, Id DM.Merchant) -> Maybe Int -> Maybe Int -> FlowHandler DPlan.PlanListAPIRes
-planList (driverId, merchantId) mbLimit = withFlowHandlerAPI . DPlan.planList (driverId, merchantId) mbLimit
+planList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> FlowHandler DPlan.PlanListAPIRes
+planList (driverId, merchantId, merchantOpCityId) mbLimit = withFlowHandlerAPI . DPlan.planList (driverId, merchantId, merchantOpCityId) mbLimit
 
-planSuspend :: (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
+planSuspend :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 planSuspend = withFlowHandlerAPI . DPlan.planSuspend False
 
-planResume :: (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
+planResume :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 planResume = withFlowHandlerAPI . DPlan.planResume
 
-currentPlan :: (Id SP.Person, Id DM.Merchant) -> FlowHandler DPlan.CurrentPlanRes
+currentPlan :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.CurrentPlanRes
 currentPlan = withFlowHandlerAPI . DPlan.currentPlan
 
-planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant) -> FlowHandler DPlan.PlanSubscribeRes
-planSubscribe planId (personId, merchantId) = withFlowHandlerAPI $ do
+planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.PlanSubscribeRes
+planSubscribe planId (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ do
   driverInfo <- DI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   if driverInfo.autoPayStatus == Just DI.SUSPENDED
     then do
-      void $ DPlan.planResume (personId, merchantId)
-      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId)
+      void $ DPlan.planResume (personId, merchantId, merchantOpCityId)
+      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId)
       return $ DPlan.PlanSubscribeRes {..}
-    else do DPlan.planSubscribe planId False (personId, merchantId) driverInfo
+    else do DPlan.planSubscribe planId False (personId, merchantId, merchantOpCityId) driverInfo
 
-planSelect :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant) -> FlowHandler APISuccess
+planSelect :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 planSelect planId = withFlowHandlerAPI . DPlan.planSelect planId

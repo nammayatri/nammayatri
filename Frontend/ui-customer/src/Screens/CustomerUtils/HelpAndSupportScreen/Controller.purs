@@ -25,7 +25,7 @@ import Components.SourceToDestination as SourceToDestination
 import Data.Array ((!!), null, filter)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Helpers.Utils (validateEmail,strLenWithSpecificCharacters)
+import Helpers.Utils (validateEmail,strLenWithSpecificCharacters, isParentView, emitTerminateApp)
 import JBridge (showDialer, hideKeyboardOnNavigation,toast)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -45,11 +45,10 @@ import Data.String (length, trim)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Common.Types.App (LazyCheck(..))
 import Screens.HelpAndSupportScreen.ScreenData (initData)
-import MerchantConfig.DefaultConfig as DC
-import MerchantConfig.Utils (getValueFromConfig)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import Foreign.Object (empty)
+import ConfigProvider
 
 instance showAction :: Show Action where
     show _ = ""
@@ -98,7 +97,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.NoAction -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "no_action"
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "primary_edit_text"
-        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "countdown_updated"
+        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "countdown_updated"
         PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "secondary_text_clicked"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "popup_dismissed"
@@ -128,7 +127,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "primary_edit_text"
         PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "secondary_text_clicked"
-        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
+        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "tip_clicked"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
@@ -141,7 +140,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "primary_edit_text"
         PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "secondary_text_clicked"
-        PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "countdown_updated"
+        PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "tip_clicked"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "popup_dismissed"
@@ -183,7 +182,12 @@ eval (BackPressed flag ) state = if state.props.isCallConfirmation
   else if state.data.accountStatus == CONFIRM_REQ then continue state{data{accountStatus = ACTIVE}}
   else if state.data.accountStatus == DEL_REQUESTED then updateAndExit (state {data{accountStatus = ACTIVE}} ) $ GoHome
   else if state.props.showDeleteAccountView then continue state{props {showDeleteAccountView = false}}
-  else exit GoBack
+  else 
+    if isParentView FunctionCall 
+      then do 
+        void $ pure $ emitTerminateApp Nothing true
+        continue state
+      else exit GoBack
 
 eval ContactUs state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_email"
@@ -256,6 +260,7 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
     baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
     updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
+    config = getAppConfig appConfig
       in  {
         data:{
           date : (convertUTCtoISC (ride.createdAt) "ddd, Do MMM"),
@@ -264,7 +269,7 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           destination: (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
           rating: (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
           driverName :((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName) ,
-          totalAmount : ((getValueFromConfig "currency") <> " " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
+          totalAmount : (config.currency <> " " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
           status : (ride.status),
           isNull : false,
           rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime )"h:mm A"),
@@ -274,7 +279,7 @@ myRideListTransform listRes = filter (\item -> (item.data.status == "COMPLETED")
           tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),
           bookingId : ride.id,
           faresList : updatedFareList,
-          config : DC.config,
+          config : config,
           email : "",
           description : "",
           accountStatus : ACTIVE,

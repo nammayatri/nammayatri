@@ -15,15 +15,15 @@ import Components.GenericRadioButton as GenericRadioButton
 import Components.SelectListModal as SelectListModal
 import Resources.Constants as Constants
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow ,firebaseLogEvent, pauseYoutubeVideo)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, pure, unit, ($), discard, bind, not, (<>), (<), (==), (&&), (/=), (||), (>=))
+import Prelude (class Show, pure, unit, ($), discard, bind, not, void, (<>), (<), (==), (&&), (/=), (||), (>=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (MyProfileScreenState, DeleteStatus(..), FieldType(..), ErrorType(..), Gender(..), DisabilityT(..), DisabilityData(..))
 import Services.API (GetProfileRes(..))
-import Helpers.Utils (validateEmail)
+import Helpers.Utils (validateEmail, emitTerminateApp, isParentView)
 import Data.String(length,trim)
 import Storage(KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Engineering.Helpers.Commons(getNewIDWithTag, setText)
@@ -31,6 +31,7 @@ import Effect.Unsafe
 import Engineering.Helpers.LogEvent (logEvent)
 import Data.Array as DA
 import Data.Lens ((^.))
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -86,7 +87,7 @@ data Action = GenericHeaderActionController GenericHeader.Action
             | AccessibilityPopUpAC PopUpModal.Action
             | MoreInfo FieldType
 
-data ScreenOutput = GoToHomeScreen | UpdateProfile MyProfileScreenState | GoToHome
+data ScreenOutput = UpdateProfile MyProfileScreenState | GoToHome MyProfileScreenState
 eval :: Action -> MyProfileScreenState -> Eval Action ScreenOutput MyProfileScreenState
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure $ BackPressed state]
 
@@ -94,11 +95,16 @@ eval (BackPressed backpressState) state = do
   if state.props.isSpecialAssistList then continue state {props{isSpecialAssistList = false}}
     else if state.props.updateProfile && state.props.fromHomeScreen then do
       _ <- pure $ hideKeyboardOnNavigation true
-      exit $ GoToHomeScreen
+      exit $ GoToHome state
     else if state.props.updateProfile then do
       _ <- pure $ hideKeyboardOnNavigation true
       continue state { props { updateProfile = false, genderOptionExpanded = false , expandEnabled = false, isEmailValid = true} }
-        else exit $ GoToHomeScreen
+        else 
+          if isParentView FunctionCall 
+            then do 
+              void $ pure $ emitTerminateApp Nothing true
+              continue state
+            else exit $ GoToHome state
 
 eval (EditProfile fieldType) state = do
   case fieldType of
@@ -184,7 +190,9 @@ eval (SpecialAssistanceListAC action) state = do
 
 eval (MoreInfo fieldType) state = continue state {props { showAccessibilityPopUp = true}}
 
-eval (AccessibilityPopUpAC (PopUpModal.OnButton1Click)) state = continue state {props{showAccessibilityPopUp = false}}
+eval (AccessibilityPopUpAC (PopUpModal.OnButton1Click)) state = do 
+  _ <- pure $ pauseYoutubeVideo unit
+  continue state {props{showAccessibilityPopUp = false}}
 
 eval _ state = continue state
 
@@ -237,6 +245,7 @@ updateProfile (GetProfileRes profile) state = do
                                               , selectedDisability = disability
                                               , specialAssistActiveIndex = getActiveIndex disability state.data.disabilityOptions.disabilityOptionList}
   _ <- pure $ setValueToLocalStore DISABILITY_UPDATED if (isJust hasDisability) then  "true" else "false"
+  _ <- pure $ setValueToLocalStore DISABILITY_NAME if (isJust disability) then  (fromMaybe "" profile.disability) else ""
   continue state { data { name = name, editedName = name, gender = gender,editedGender = gender, emailId = profile.email
                         , hasDisability = hasDisability
                         , disabilityType = disability

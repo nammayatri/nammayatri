@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.SearchRequestForDriver where
 
@@ -37,6 +38,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     requestId :: B.C f Text,
     searchTryId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     startTime :: B.C f UTCTime,
     actualDistanceToPickup :: B.C f Meters,
     straightLineDistanceToPickup :: B.C f Meters,
@@ -61,6 +63,8 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     keepHiddenForSeconds :: B.C f Seconds,
     mode :: B.C f (Maybe D.DriverMode),
     goHomeRequestId :: B.C f (Maybe Text),
+    rideFrequencyScore :: B.C f (Maybe Double),
+    customerCancellationDues :: B.C f (Maybe HighPrecMoney),
     createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)

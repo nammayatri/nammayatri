@@ -16,6 +16,7 @@ module Service.Runner where
 
 import qualified Beckn.ACL.Search as BecknACL
 import Control.Concurrent.STM.TMVar
+import qualified Data.HashMap as HM
 import qualified Domain.Action.Search as DSearch
 import qualified ExternalAPI.Flow as ExternalAPI
 import GHC.Conc
@@ -36,6 +37,7 @@ run ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     MonadConsumer PublicTransportSearch m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     EsqDBFlow m r
   ) =>
   m ()

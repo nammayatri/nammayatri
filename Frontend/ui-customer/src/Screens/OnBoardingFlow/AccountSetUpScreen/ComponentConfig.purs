@@ -33,7 +33,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Animation.Config (AnimConfig, animConfig)
 import PrestoDOM.Animation as PrestoAnim
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 
 primaryButtonConfig :: ST.AccountSetUpScreenState -> PrimaryButton.Config
@@ -60,7 +60,7 @@ genericHeaderConfig =
         , prefixImageConfig
           { height = V 25
           , width = V 25
-          , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+          , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
           , margin = (Margin 12 12 12 12)
           }
         , background = Color.white900

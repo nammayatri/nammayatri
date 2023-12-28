@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -21,7 +22,7 @@ module Storage.Queries.Merchant.TransporterConfig
 where
 
 import qualified Data.Aeson as A
-import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import Kernel.Beam.Functions
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -31,29 +32,29 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.TransporterConfig as BeamTC
 
-findByMerchantId :: MonadFlow m => Id Merchant -> m (Maybe TransporterConfig)
-findByMerchantId (Id merchantId) = findOneWithKV [Se.Is BeamTC.merchantId $ Se.Eq merchantId]
+findByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+findByMerchantOpCityId (Id merchantOperatingCityId) = findOneWithKV [Se.Is BeamTC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId]
 
-updateFCMConfig :: MonadFlow m => Id Merchant -> BaseUrl -> Text -> m ()
-updateFCMConfig (Id merchantId) fcmUrl fcmServiceAccount = do
+updateFCMConfig :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
+updateFCMConfig (Id merchantOperatingCityId) fcmUrl fcmServiceAccount = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamTC.fcmUrl $ showBaseUrl fcmUrl,
       Se.Set BeamTC.fcmServiceAccount fcmServiceAccount,
       Se.Set BeamTC.updatedAt now
     ]
-    [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
+    [Se.Is BeamTC.merchantOperatingCityId (Se.Eq merchantOperatingCityId)]
 
-updateReferralLinkPassword :: MonadFlow m => Id Merchant -> Text -> m ()
-updateReferralLinkPassword (Id merchantId) newPassword = do
+updateReferralLinkPassword :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> m ()
+updateReferralLinkPassword (Id merchantOperatingCityId) newPassword = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamTC.referralLinkPassword newPassword,
       Se.Set BeamTC.updatedAt now
     ]
-    [Se.Is BeamTC.merchantId (Se.Eq merchantId)]
+    [Se.Is BeamTC.merchantOperatingCityId (Se.Eq merchantOperatingCityId)]
 
-update :: MonadFlow m => TransporterConfig -> m ()
+update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => TransporterConfig -> m ()
 update config = do
   now <- getCurrentTime
   updateOneWithKV
@@ -86,9 +87,11 @@ update config = do
       Se.Set BeamTC.driverFeeCalculatorBatchGap (nominalDiffTimeToSeconds <$> config.driverFeeCalculatorBatchGap),
       Se.Set BeamTC.orderAndNotificationStatusCheckTime (nominalDiffTimeToSeconds config.orderAndNotificationStatusCheckTime),
       Se.Set BeamTC.orderAndNotificationStatusCheckTimeLimit (nominalDiffTimeToSeconds config.orderAndNotificationStatusCheckTimeLimit),
+      Se.Set BeamTC.snapToRoadConfidenceThreshold config.snapToRoadConfidenceThreshold,
+      Se.Set BeamTC.useWithSnapToRoadFallback config.useWithSnapToRoadFallback,
       Se.Set BeamTC.updatedAt now
     ]
-    [Se.Is BeamTC.merchantId (Se.Eq $ getId config.merchantId)]
+    [Se.Is BeamTC.merchantOperatingCityId (Se.Eq $ getId config.merchantOperatingCityId)]
 
 instance FromTType' BeamTC.TransporterConfig TransporterConfig where
   fromTType' BeamTC.TransporterConfigT {..} = do
@@ -97,6 +100,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
       Just
         TransporterConfig
           { merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             fcmConfig =
               FCM.FCMConfig
                 { fcmUrl = fcmUrl',
@@ -109,6 +113,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             driverPaymentReminderInterval = secondsToNominalDiffTime driverPaymentReminderInterval,
             driverAutoPayNotificationTime = secondsToNominalDiffTime driverAutoPayNotificationTime,
             driverAutoPayExecutionTime = secondsToNominalDiffTime driverAutoPayExecutionTime,
+            languagesToBeTranslated,
+            avgSpeedOfVehicle = valueToMaybe =<< avgSpeedOfVehicle,
             aadhaarImageResizeConfig = valueToMaybe =<< aadhaarImageResizeConfig,
             mandateNotificationRescheduleInterval = secondsToNominalDiffTime mandateNotificationRescheduleInterval,
             mandateExecutionRescheduleInterval = secondsToNominalDiffTime mandateExecutionRescheduleInterval,
@@ -119,6 +125,20 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             updateOrderStatusBatchSize,
             orderAndNotificationStatusCheckTime = secondsToNominalDiffTime orderAndNotificationStatusCheckTime,
             orderAndNotificationStatusCheckTimeLimit = secondsToNominalDiffTime orderAndNotificationStatusCheckTimeLimit,
+            volunteerSmsSendingLimit = valueToMaybe =<< volunteerSmsSendingLimit,
+            driverSmsReceivingLimit = valueToMaybe =<< driverSmsReceivingLimit,
+            coinFeature = coinFeature,
+            coinConversionRate = coinConversionRate,
+            cancellationTimeDiff = secondsToNominalDiffTime cancellationTimeDiff,
+            coinExpireTime = secondsToNominalDiffTime coinExpireTime,
+            stepFunctionToConvertCoins = stepFunctionToConvertCoins,
+            cancellationDistDiff = cancellationDistDiff,
+            notificationRetryTimeGap = secondsToNominalDiffTime notificationRetryTimeGap,
+            badDebtRescheduleTime = secondsToNominalDiffTime badDebtRescheduleTime,
+            badDebtSchedulerTime = secondsToNominalDiffTime badDebtSchedulerTime,
+            badDebtTimeThreshold = badDebtTimeThreshold,
+            driverAutoPayExecutionTimeFallBack = secondsToNominalDiffTime driverAutoPayExecutionTimeFallBack,
+            orderAndNotificationStatusCheckFallBackTime = secondsToNominalDiffTime orderAndNotificationStatusCheckFallBackTime,
             ..
           }
     where
@@ -128,9 +148,11 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
         A.Error _ -> Nothing
 
 instance ToTType' BeamTC.TransporterConfig TransporterConfig where
+  toTType' :: TransporterConfig -> BeamTC.TransporterConfig
   toTType' TransporterConfig {..} = do
     BeamTC.TransporterConfigT
       { BeamTC.merchantId = getId merchantId,
+        BeamTC.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamTC.pickupLocThreshold = pickupLocThreshold,
         BeamTC.dropLocThreshold = dropLocThreshold,
         BeamTC.rideTimeEstimatedThreshold = rideTimeEstimatedThreshold,
@@ -177,13 +199,12 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.enableDashboardSms = enableDashboardSms,
         BeamTC.subscriptionStartTime = subscriptionStartTime,
         BeamTC.bankErrorExpiry = nominalDiffTimeToSeconds bankErrorExpiry,
-        BeamTC.createdAt = createdAt,
-        BeamTC.updatedAt = updatedAt,
         BeamTC.rcLimit = rcLimit,
         BeamTC.mandateValidity = mandateValidity,
         BeamTC.driverLocationAccuracyBuffer = driverLocationAccuracyBuffer,
         BeamTC.routeDeviationThreshold = routeDeviationThreshold,
         BeamTC.automaticRCActivationCutOff = automaticRCActivationCutOff,
+        BeamTC.languagesToBeTranslated = languagesToBeTranslated,
         BeamTC.isPlanMandatory = isPlanMandatory,
         BeamTC.freeTrialDays = freeTrialDays,
         BeamTC.openMarketUnBlocked = openMarketUnBlocked,
@@ -193,11 +214,50 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.canSuvDowngradeToTaxi = canSuvDowngradeToTaxi,
+        BeamTC.avgSpeedOfVehicle = toJSON <$> avgSpeedOfVehicle,
         BeamTC.aadhaarImageResizeConfig = toJSON <$> aadhaarImageResizeConfig,
         BeamTC.enableFaceVerification = enableFaceVerification,
         BeamTC.isAvoidToll = isAvoidToll,
         BeamTC.specialZoneBookingOtpExpiry = specialZoneBookingOtpExpiry,
         BeamTC.updateNotificationStatusBatchSize = updateNotificationStatusBatchSize,
         BeamTC.updateOrderStatusBatchSize = updateOrderStatusBatchSize,
-        BeamTC.ratingAsDecimal = ratingAsDecimal
+        BeamTC.ratingAsDecimal = ratingAsDecimal,
+        BeamTC.coinFeature = coinFeature,
+        BeamTC.refillVehicleModel = refillVehicleModel,
+        BeamTC.coinConversionRate = coinConversionRate,
+        BeamTC.driverFeeOverlaySendingTimeLimitInDays = driverFeeOverlaySendingTimeLimitInDays,
+        BeamTC.overlayBatchSize = overlayBatchSize,
+        BeamTC.volunteerSmsSendingLimit = toJSON <$> volunteerSmsSendingLimit,
+        BeamTC.driverSmsReceivingLimit = toJSON <$> driverSmsReceivingLimit,
+        BeamTC.snapToRoadConfidenceThreshold = snapToRoadConfidenceThreshold,
+        BeamTC.useWithSnapToRoadFallback = useWithSnapToRoadFallback,
+        BeamTC.badDebtRescheduleTime = nominalDiffTimeToSeconds badDebtRescheduleTime,
+        BeamTC.badDebtSchedulerTime = nominalDiffTimeToSeconds badDebtSchedulerTime,
+        BeamTC.badDebtBatchSize = badDebtBatchSize,
+        BeamTC.badDebtTimeThreshold = badDebtTimeThreshold,
+        BeamTC.cancellationTimeDiff = nominalDiffTimeToSeconds cancellationTimeDiff,
+        BeamTC.cancellationDistDiff = cancellationDistDiff,
+        BeamTC.coinExpireTime = nominalDiffTimeToSeconds coinExpireTime,
+        BeamTC.stepFunctionToConvertCoins = stepFunctionToConvertCoins,
+        BeamTC.considerSpecialZoneRidesForPlanCharges = considerSpecialZoneRidesForPlanCharges,
+        BeamTC.considerSpecialZoneRideChargesInFreeTrial = considerSpecialZoneRideChargesInFreeTrial,
+        BeamTC.enableUdfForOffers = enableUdfForOffers,
+        BeamTC.nightSafetyRouteDeviationThreshold = nightSafetyRouteDeviationThreshold,
+        BeamTC.nightSafetyStartTime = nightSafetyStartTime,
+        BeamTC.nightSafetyEndTime = nightSafetyEndTime,
+        BeamTC.cancellationFee = cancellationFee,
+        BeamTC.driverDistanceTravelledOnPickupThresholdOnCancel = driverDistanceTravelledOnPickupThresholdOnCancel,
+        BeamTC.driverTimeSpentOnPickupThresholdOnCancel = driverTimeSpentOnPickupThresholdOnCancel,
+        BeamTC.driverDistanceToPickupThresholdOnCancel = driverDistanceToPickupThresholdOnCancel,
+        BeamTC.cancellationFeeDisputeLimit = cancellationFeeDisputeLimit,
+        BeamTC.numOfCancellationsAllowed = numOfCancellationsAllowed,
+        BeamTC.canAddCancellationFee = canAddCancellationFee,
+        BeamTC.allowDefaultPlanAllocation = allowDefaultPlanAllocation,
+        BeamTC.notificationRetryEligibleErrorCodes = notificationRetryEligibleErrorCodes,
+        BeamTC.notificationRetryCountThreshold = notificationRetryCountThreshold,
+        BeamTC.notificationRetryTimeGap = nominalDiffTimeToSeconds notificationRetryTimeGap,
+        BeamTC.driverAutoPayExecutionTimeFallBack = nominalDiffTimeToSeconds driverAutoPayExecutionTimeFallBack,
+        BeamTC.orderAndNotificationStatusCheckFallBackTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckFallBackTime,
+        BeamTC.createdAt = createdAt,
+        BeamTC.updatedAt = updatedAt
       }

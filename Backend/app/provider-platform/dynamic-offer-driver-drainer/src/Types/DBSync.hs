@@ -18,6 +18,7 @@ module Types.DBSync
 where
 
 import EulerHS.KVConnector.DBSync
+import EulerHS.KVConnector.Types
 import EulerHS.Language as EL
 import EulerHS.Prelude
 import EulerHS.Types as ET hiding (Tag)

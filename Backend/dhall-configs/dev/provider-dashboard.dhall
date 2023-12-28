@@ -38,20 +38,26 @@ let shareRideApiRateLimitOptions = { limit = +20, limitResetTimeInSec = +60 }
 
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
-let becknTransport =
-      { name = common.ServerName.BECKN_TRANSPORT
-      , url = "http://localhost:8014/"
-      , token = sec.becknTransportToken
-      }
-
 let driverOfferBpp =
       { name = common.ServerName.DRIVER_OFFER_BPP
       , url = "http://localhost:8016/"
       , token = sec.driverOfferBppToken
       }
 
+let driverOfferBppManagement =
+      { name = common.ServerName.DRIVER_OFFER_BPP_MANAGEMENT
+      , url = "http://localhost:8016/"
+      , token = sec.driverOfferBppToken
+      }
+
 let appBackend =
       { name = common.ServerName.APP_BACKEND
+      , url = "http://localhost:8013/"
+      , token = sec.appBackendToken
+      }
+
+let appBackendManagement =
+      { name = common.ServerName.APP_BACKEND_MANAGEMENT
       , url = "http://localhost:8013/"
       , token = sec.appBackendToken
       }
@@ -98,7 +104,11 @@ in  { esqDBCfg
     , registrationTokenExpiry = +365
     , encTools
     , exotelToken = sec.exotelToken
-    , dataServers = [ becknTransport, driverOfferBpp, appBackend, specialZone ]
+    , dataServers =
+      [ driverOfferBpp, driverOfferBppManagement, appBackend, specialZone ]
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , slackToken = sec.slackToken
+    , slackChannel = "CXXXXXXXXXF"
+    , internalEndPointMap = common.internalEndPointMap
     }

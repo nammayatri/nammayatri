@@ -45,7 +45,7 @@ instance EncryptedItem PersonDefaultEmergencyNumber where
 instance EncryptedItem' PersonDefaultEmergencyNumber where
   type UnencryptedItem PersonDefaultEmergencyNumber = DecryptedPersonDefaultEmergencyNumber
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst
 
 data PersonDefaultEmergencyNumberAPIEntity = PersonDefaultEmergencyNumberAPIEntity
   { personId :: Id Person,

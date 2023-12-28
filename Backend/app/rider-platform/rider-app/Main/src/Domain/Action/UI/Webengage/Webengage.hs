@@ -14,7 +14,7 @@
 
 module Domain.Action.UI.Webengage.Webengage where
 
-import qualified Domain.Types.Person as Person hiding (id)
+import qualified Domain.Types.Person as Person hiding (PersonAPIEntity (id), PersonE (id))
 import Domain.Types.Webengage
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Infobip.Flow as IF
@@ -70,6 +70,7 @@ newtype WebengageRes = WebengageRes
 callInfobip ::
   ( HasFlowEnv m r '["infoBIPCfg" ::: EIF.InfoBIPConfig],
     EncFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     CoreMetrics m
   ) =>

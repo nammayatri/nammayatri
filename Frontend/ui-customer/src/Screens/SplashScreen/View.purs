@@ -12,31 +12,54 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-
 module Screens.SplashScreen.View where
 
-import Prelude (Unit, bind, pure, unit, const)
-import PrestoDOM (PrestoDOM, Screen, linearLayout, afterRender)
+import Animation (screenAnimation)
+import Common.Types.App (LazyCheck(..))
+import Data.Maybe (Maybe(..))
 import Effect (Effect)
-import Screens.SplashScreen.Controller (Action(..), eval, getCordinateAndLocation)
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import Helpers.Utils (getAssetsBaseUrl)
+import JBridge (lottieAnimationConfig, startLottieProcess)
+import Prelude (Unit, const, discard, pure, void, ($), (<>))
+import PrestoDOM (Gravity(..), Length(..), PrestoDOM, ScopedScreen, afterRender, background, clickable, gravity, height, id, linearLayout, lottieAnimationView, width)
+import Screens.SplashScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (SplashScreenState)
-import Debug (spy)
-import Prelude (($))
+import Styles.Colors as Color
 
-screen :: SplashScreenState -> Screen Action SplashScreenState Unit
+screen :: SplashScreenState -> ScopedScreen Action SplashScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
-  , name : "SplashScreen" -- _ <- getCurrentPosition push CurrentLocation
-  , globalEvents : [getCordinateAndLocation initialState]
+  , name: "SplashScreen"
+  , globalEvents: []
   , eval
+  , parent : Just "SplashScreen"
   }
-view
-  :: forall w
-  . (Action -> Effect Unit)
-  -> SplashScreenState
-  -> PrestoDOM (Effect Unit) w
-view push state =
-  linearLayout
-  [ afterRender push  (const AfterRender)
-  ][]
+
+view ::
+  forall w.
+  (Action -> Effect Unit) ->
+  SplashScreenState ->
+  PrestoDOM (Effect Unit) w
+view push _ =
+  screenAnimation
+    $ linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , background Color.black900
+        , gravity CENTER
+        , clickable true
+        ]
+        [ lottieAnimationView
+            [ height MATCH_PARENT
+            , width MATCH_PARENT
+            , id (getNewIDWithTag "splashLottieAnimation")
+            , afterRender
+                ( \action -> do
+                    void $ pure $ startLottieProcess lottieAnimationConfig { rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/splash_lottie.json", lottieId = (getNewIDWithTag "splashLottieAnimation"), speed = 1.8 }
+                    push action
+                )
+                (const AfterRender)
+            ]
+        ]

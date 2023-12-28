@@ -1,3 +1,4 @@
+{-# LANGUAGE StandaloneKindSignatures #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -16,9 +17,11 @@
 module Domain.Types.AccessMatrix where
 
 import Data.Singletons.TH
+import Domain.Types.Merchant
 import Domain.Types.Role as DRole
 import Domain.Types.ServerName as DSN
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 
 -------- Possible user action for helper API --------
@@ -38,6 +41,8 @@ data UserActionType
   | BLOCK
   | BLOCK_WITH_REASON
   | BLOCK_REASON_LIST
+  | CUSTOMER_CANCELLATION_DUES_SYNC
+  | CUSTOMER_CANCELLATION_DUES_DETAILS
   | UNBLOCK
   | LOCATION
   | INFO
@@ -52,9 +57,14 @@ data UserActionType
   | ADD_VEHICLE
   | ADD_VEHICLE_FLEET
   | GET_ALL_VEHICLE_FOR_FLEET
+  | GET_ALL_DRIVERS_FOR_FLEET
   | FLEET_UNLINK_VEHICLE
   | FLEET_REMOVE_VEHICLE
+  | FLEET_REMOVE_DRIVER
   | FLEET_STATS
+  | FLEET_TOTAL_EARNING
+  | FLEET_VEHICLE_EARNING
+  | FLEET_DRIVER_EARNING
   | UPDATE_DRIVER_NAME
   | STUCK_BOOKING_CANCEL
   | REFERRAL_PROGRAM_PASSWORD_UPDATE
@@ -152,6 +162,7 @@ data UserActionType
   | GET_DRIVER_HOME_LOCATION
   | UPDATE_DRIVER_HOME_LOCATION
   | INCREMENT_DRIVER_GO_TO_COUNT
+  | GET_DRIVER_GO_HOME_INFO
   | AADHAAR_INFO_PHONE
   | AADHAAR_UPDATE
   | CREATE_FP_DRIVER_EXTRA_FEE
@@ -162,6 +173,7 @@ data UserActionType
   | CURRENT_ACTIVE_RIDE
   | LIST_PLAN
   | SELECT_PLAN
+  | PAYMENT_STATUS
   | SUSPEND_PLAN
   | SUBSCRIBE_PLAN
   | CURRENT_PLAN
@@ -173,6 +185,18 @@ data UserActionType
   | OVERLAY_INFO
   | SCHEDULE_OVERLAY
   | DRIVER_SUBSCRIPTION_DRIVER_FEE_AND_INVOICE_UPDATE
+  | GET_ALL_DRIVER_VEHICLE_ASSOCIATION_FOR_FLEET
+  | SET_VEHICLE_DRIVER_RC_STATUS_FOR_FLEET
+  | GET_DRIVER_VEHICLE_ASSOCIATION
+  | GET_DRIVER_ASSOCIATION
+  | GET_VEHICLE_ASSOCIATION
+  | SEND_DASHBOARD_MESSAGE
+  | VERIFY_BOOKING_DETAILS
+  | GET_TICKET_SERVICES
+  | UPDATE_SEAT_MANAGEMENT
+  | SEND_DUMMY_NOTIFICATION
+  | CHANGE_OPERATING_CITY
+  | SCHEDULER_TRIGGER
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]
@@ -203,6 +227,12 @@ data AccessMatrixItem = AccessMatrixItem
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
+
+data MerchantCityList = MerchantCityList
+  { merchantId :: ShortId Merchant,
+    cityList :: [City.City]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype AccessMatrixAPIEntity = AccessMatrixAPIEntity
   {accessMatrix :: [AccessMatrixRowAPIEntity]}

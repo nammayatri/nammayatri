@@ -15,6 +15,7 @@ where
 
 import qualified Domain.Action.UI.RideRoute as DRideRoute
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DM
 import qualified Domain.Types.Person as Person
 import Domain.Types.Ride
 import Domain.Types.RideRoute
@@ -23,6 +24,7 @@ import EulerHS.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
@@ -35,5 +37,5 @@ handler :: FlowServer API
 handler =
   rideRoute
 
-rideRoute :: Id Ride -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler RouteInfo
-rideRoute rideId (personId, merchantId) = withFlowHandlerAPI $ withPersonIdLogTag personId $ DRideRoute.rideRoute rideId (personId, merchantId)
+rideRoute :: Id Ride -> (Id Person.Person, Id Merchant.Merchant, Id DM.MerchantOperatingCity) -> FlowHandler RouteInfo
+rideRoute rideId (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ withPersonIdLogTag personId $ DRideRoute.rideRoute rideId (personId, merchantId, merchantOpCityId)

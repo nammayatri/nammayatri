@@ -3,10 +3,10 @@ plugins {
 }
 
 android {
-    compileSdkVersion 33
+    compileSdk 33
 
     defaultConfig {
-        minSdkVersion 23
+        minSdk 21
         targetSdkVersion 33
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -39,7 +39,8 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.6.0'
     implementation project(':mobility-app')
-    implementation 'in.juspay:hyper:2.1.19-rc.01'
+    implementation 'in.juspay:hyper:2.1.20-nammayatri.11'
+    compileOnly 'in.juspay:hypersdk:2.1.14'
     implementation 'com.facebook.shimmer:shimmer:0.5.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
@@ -49,5 +50,6 @@ dependencies {
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.google.android.play:review:2.0.1'
+    compileOnly 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
     implementation 'androidx.browser:browser:1.2.0'
 }

@@ -24,19 +24,25 @@ import Engineering.Helpers.Commons (convertUTCtoISC)
 import Helpers.Utils (getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Types (GradientConfig)
 import Screens.SubscriptionScreen.Transformer (decodeOfferPlan, getFeeBreakup, getPromoConfig)
 import Screens.Types (PromoConfig)
 import Screens.Types as ST
 import Services.API (FeeType(..), OfferEntity(..))
 import Services.API as API
+import Data.Int as INT
 
-buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> ST.TransactionInfo
-buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
+buildTransactionDetails :: API.HistoryEntryDetailsEntityV2Resp -> Array GradientConfig -> Boolean -> ST.TransactionInfo
+buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfig showFeeBreakup =
     let filteredDriverFees = if (resp.feeType == AUTOPAY_REGISTRATION && length resp.driverFeeInfo > 1)  then filter (\ (API.DriverFeeInfoEntity driverFee) -> driverFee.driverFeeAmount > 0.0) resp.driverFeeInfo else resp.driverFeeInfo
         (API.DriverFeeInfoEntity driverFee') = case (filteredDriverFees !! 0) of
                                                   Just (API.DriverFeeInfoEntity driverFee) -> (API.DriverFeeInfoEntity driverFee)
                                                   Nothing -> dummyDriverFee
         statusTime = if resp.feeType == AUTOPAY_PAYMENT then resp.executionAt else resp.createdAt
+        boothCharges specialZoneRideCount totalSpecialZoneCharges = case specialZoneRideCount,totalSpecialZoneCharges of
+                      Just count, Just charges | count /= 0 && charges /= 0.0 -> Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
+                      _, _ -> Nothing
+        fareBreakup fee = getFeeBreakup fee.maxRidesEligibleForCharge (fee.planAmount - (fromMaybe 0.0 fee.totalSpecialZoneCharges)) fee.totalRides
         autoPaySpecificKeys = do
           let offerAndPlanDetails = fromMaybe "" driverFee'.offerAndPlanDetails
               planOfferData = decodeOfferPlan $ offerAndPlanDetails
@@ -56,7 +62,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                   {
                     key : "NUMBER_OF_RIDES",
                     title : getString NUMBER_OF_RIDES,
-                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else rideNumberPrefix <> show driverFee'.totalRides 
+                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else rideNumberPrefix <> show (driverFee'.totalRides + fromMaybe 0 driverFee'.specialZoneRideCount)
                   },
                   {
                     key : "YOUR_EARNINGS",
@@ -66,7 +72,12 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                   {
                     key : "FEE_BREAKUP",
                     title : getString FEE_BREAKUP,
-                    val : if resp.feeType == AUTOPAY_REGISTRATION then "" else (getFeeBreakup offerAndPlanDetails driverFee'.totalRides <> " "<> getString GST_INCLUDE)
+                    val : if (resp.feeType == AUTOPAY_REGISTRATION || not showFeeBreakup) then "" else fareBreakup driverFee'
+                  },
+                  {
+                    key : "BOOTH_CHARGES",
+                    title : getString BOOTH_CHARGES,
+                    val : fromMaybe "" $ boothCharges driverFee'.specialZoneRideCount driverFee'.totalSpecialZoneCharges
                   },
                   {
                     key : "OFFER",
@@ -94,7 +105,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
               },
               {
                 key : "AMOUNT_PAID",
-                title : getString AMOUNT,
+                title : getString TOTAL_AMOUNT,
                 val : "₹" <> getFixedTwoDecimals resp.amount
               },
               { key : "PAYMENT_MODE",
@@ -111,18 +122,20 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) =
                             {
                                 date : convertUTCtoISC driverFee.rideTakenOn "Do MMM YYYY",
                                 planType : planOfferData.plan,
-                                offerApplied : (getPromoConfig [OfferEntity{title : Just planOfferData.offer, description : Nothing, tnc : Nothing}]) !! 0,
-                                noOfRides : driverFee.totalRides,
+                                offerApplied : (getPromoConfig [OfferEntity{title : Just planOfferData.offer, description : Nothing, tnc : Nothing, offerId : "", gradient : Nothing}] gradientConfig) !! 0,
+                                noOfRides : driverFee.totalRides + fromMaybe 0 driverFee.specialZoneRideCount,
                                 totalEarningsOfDay : driverFee.totalEarnings,
                                 dueAmount : driverFee.driverFeeAmount,
-                                fareBreakup : getFeeBreakup offerAndPlanDetails driverFee.totalRides,
+                                fareBreakup : fareBreakup driverFee,
                                 expanded : false,
                                 isAutoPayFailed : isJust driverFee.autoPayStage && resp.feeType == MANUAL_PAYMENT,
                                 isSplitPayment : driverFee.isSplit,
                                 id : show ind,
+                                isDue : false,
                                 scheduledAt : if (resp.feeType == AUTOPAY_REGISTRATION && isJust  resp.executionAt) then Just (convertUTCtoISC (fromMaybe "" resp.executionAt) "Do MMM YYYY, h:mm A") else Nothing,
                                 paymentMode : resp.feeType,
-                                paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing
+                                paymentStatus :  if resp.feeType == AUTOPAY_REGISTRATION then Just (autoPayStageData.stage) else Nothing,
+                                boothCharges : boothCharges driverFee.specialZoneRideCount driverFee.totalSpecialZoneCharges
                             }
                             ) filteredDriverFees
                         false -> []          
@@ -175,6 +188,9 @@ dummyDriverFee =
       isSplit : false,
       offerAndPlanDetails : Just "",
       rideTakenOn : "",
-      driverFeeAmount : 0.0
+      driverFeeAmount : 0.0,
+      specialZoneRideCount : Nothing,
+      totalSpecialZoneCharges : Nothing,
+      maxRidesEligibleForCharge : Nothing
   }
 

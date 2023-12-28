@@ -16,10 +16,10 @@ Then navigate to the frontend > ui-customer/ui-driver both and install the npm d
   npm i
 ```
 
-
-
-
-
+Start the development server by running the following command:
+```bash
+  npm start
+```
 
 
 ## Android
@@ -29,7 +29,9 @@ To start the frontend app for Android, follow these steps:
     1. Open `android-native` in Android Studio
     2. select build variant
     3. Add the google-services.json file to the app folder.
-    4. In the terminal, run 'gradlew createJSaFiles'
+    4. Add the MAPS_API_KEY to the local.properties file.
+    5. Add USER_MERCHANT_ID and DRIVER_MERCHANT_ID to the local.properties file.
+    6. Run the app after selecting a device and build variant.
 
 To create bundle for the app, follow these steps:
     1. Open `android-native` in terminal

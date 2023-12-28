@@ -6,6 +6,7 @@ cabal-version: 1.12
 
 name:           rider-app
 version:        0.1.0.0
+synopsis:       The nammayatri rider application
 description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
 homepage:       https://github.com/nammayatri/nammayatri#readme
 bug-reports:    https://github.com/nammayatri/nammayatri/issues
@@ -18,6 +19,11 @@ build-type:     Simple
 source-repository head
   type: git
   location: https://github.com/nammayatri/nammayatri
+
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
 
 library
   exposed-modules:
@@ -34,6 +40,7 @@ library
       API.Dashboard.Booking
       API.Dashboard.Customer
       API.Dashboard.Exotel
+      API.Dashboard.Issue
       API.Dashboard.IssueList
       API.Dashboard.Merchant
       API.Dashboard.Ride
@@ -48,6 +55,7 @@ library
       API.Dashboard.RideBooking.Registration
       API.Dashboard.RideBooking.Search
       API.Dashboard.RideBooking.Select
+      API.Dashboard.Tickets
       API.Internal
       API.Internal.Rating
       API.MetroBeckn
@@ -57,6 +65,7 @@ library
       API.UI.AppInstalls
       API.UI.Booking
       API.UI.Call
+      API.UI.CallEvent
       API.UI.Cancel
       API.UI.CancellationReason
       API.UI.Confirm
@@ -66,6 +75,7 @@ library
       API.UI.Frontend
       API.UI.GoogleTranslate
       API.UI.HotSpot
+      API.UI.Issue
       API.UI.Maps
       API.UI.Payment
       API.UI.PersonStats
@@ -125,6 +135,7 @@ library
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.Booking
       Domain.Action.UI.Call
+      Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.Confirm
@@ -150,6 +161,7 @@ library
       Domain.Action.UI.Serviceability
       Domain.Action.UI.Sos
       Domain.Action.UI.Support
+      Domain.Action.UI.TicketService
       Domain.Action.UI.Webengage.InfoBIPWebhook
       Domain.Action.UI.Webengage.Webengage
       Domain.Action.UI.Whatsapp
@@ -182,9 +194,11 @@ library
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.MerchantMessage
+      Domain.Types.Merchant.MerchantOperatingCity
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
+      Domain.Types.Merchant.RiderConfig
       Domain.Types.MerchantConfig
       Domain.Types.OnSearchEvent
       Domain.Types.Person
@@ -242,18 +256,20 @@ library
       Storage.Beam.Geometry
       Storage.Beam.HotSpotConfig
       Storage.Beam.Issue
+      Storage.Beam.IssueManagement
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage
+      Storage.Beam.Merchant.MerchantOperatingCity
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
+      Storage.Beam.Merchant.RiderConfig
       Storage.Beam.MerchantConfig
       Storage.Beam.OnSearchEvent
-      Storage.Beam.Payment.PaymentOrder
-      Storage.Beam.Payment.PaymentTransaction
+      Storage.Beam.Payment
       Storage.Beam.Person
       Storage.Beam.Person.PersonDefaultEmergencyNumber
       Storage.Beam.Person.PersonDisability
@@ -269,6 +285,7 @@ library
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.Sos
       Storage.Beam.SpecialZoneQuote
+      Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
       Storage.Beam.Webengage
       Storage.CachedQueries.BlackListOrg
@@ -279,10 +296,13 @@ library
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
       Storage.CachedQueries.Merchant.MerchantMessage
+      Storage.CachedQueries.Merchant.MerchantOperatingCity
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
+      Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
+      Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
       Storage.Queries.AadhaarVerification.AadhaarOtp
@@ -310,9 +330,11 @@ library
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.MerchantMessage
+      Storage.Queries.Merchant.MerchantOperatingCity
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
+      Storage.Queries.Merchant.RiderConfig
       Storage.Queries.MerchantConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.Person
@@ -352,10 +374,46 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.UI.TicketService
+      API.Types.UI.TicketService
+      Domain.Types.BusinessHour
+      Domain.Types.SeatManagement
+      Domain.Types.ServiceCategory
+      Domain.Types.ServicePeopleCategory
+      Domain.Types.SpecialOccasion
+      Domain.Types.TicketBooking
+      Domain.Types.TicketBookingPeopleCategory
+      Domain.Types.TicketBookingService
+      Domain.Types.TicketBookingServiceCategory
+      Domain.Types.TicketPlace
+      Domain.Types.TicketService
+      Storage.Beam.BusinessHour
+      Storage.Beam.SeatManagement
+      Storage.Beam.ServiceCategory
+      Storage.Beam.ServicePeopleCategory
+      Storage.Beam.SpecialOccasion
+      Storage.Beam.TicketBooking
+      Storage.Beam.TicketBookingPeopleCategory
+      Storage.Beam.TicketBookingService
+      Storage.Beam.TicketBookingServiceCategory
+      Storage.Beam.TicketPlace
+      Storage.Beam.TicketService
+      Storage.Queries.BusinessHour
+      Storage.Queries.SeatManagement
+      Storage.Queries.ServiceCategory
+      Storage.Queries.ServicePeopleCategory
+      Storage.Queries.SpecialOccasion
+      Storage.Queries.TicketBooking
+      Storage.Queries.TicketBookingPeopleCategory
+      Storage.Queries.TicketBookingService
+      Storage.Queries.TicketBookingServiceCategory
+      Storage.Queries.TicketPlace
+      Storage.Queries.TicketService
   other-modules:
       Paths_rider_app
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -390,9 +448,10 @@ library
       TypeSynonymInstances
       UndecidableInstances
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
+    , alchemist
     , amazonka
     , amazonka-core
     , amazonka-ses
@@ -411,9 +470,12 @@ library
     , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , data-default-class
+    , directory
     , euler-hs
     , extra
+    , filepath
     , geohash ==1.0.1
+    , hashmap
     , http-media
     , http-types
     , lens
@@ -426,6 +488,7 @@ library
     , prometheus-client
     , prometheus-metrics-ghc
     , random
+    , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
     , sequelize
@@ -435,6 +498,7 @@ library
     , servant-openapi3
     , servant-server
     , sessionizer-metrics
+    , shared-services
     , special-zone
     , special-zone-a
     , template-haskell
@@ -443,14 +507,19 @@ library
     , time
     , unliftio-core
     , unordered-containers
+    , utils
+    , uuid
     , vector
     , wai
+    , wai-extra
     , wai-middleware-prometheus
     , warp
     , x509
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
 
 executable rider-app-exe
   main-is: Main.hs
@@ -495,6 +564,7 @@ executable rider-app-exe
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
+    , alchemist
     , amazonka
     , amazonka-core
     , amazonka-ses
@@ -512,9 +582,12 @@ executable rider-app-exe
     , cryptostore >=0.2.3.0
     , dashboard-helper-api
     , data-default-class
+    , directory
     , euler-hs
     , extra
+    , filepath
     , geohash ==1.0.1
+    , hashmap
     , http-media
     , http-types
     , lens
@@ -526,6 +599,7 @@ executable rider-app-exe
     , prometheus-client
     , prometheus-metrics-ghc
     , random
+    , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
@@ -541,11 +615,15 @@ executable rider-app-exe
     , time
     , unliftio-core
     , unordered-containers
+    , uuid
     , vector
     , wai
+    , wai-extra
     , wai-middleware-prometheus
     , warp
     , x509
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4

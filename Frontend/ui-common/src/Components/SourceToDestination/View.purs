@@ -25,7 +25,7 @@ import Font.Size as FontSize
 import Common.Types.App (LazyCheck(..))
 import Components.SeparatorView.View as SeparatorView
 import Engineering.Helpers.Commons (getNewIDWithTag, os)
-import Engineering.Helpers.Utils (defaultSeparatorCount, getSeparatorFactor)
+import Constants (defaultSeparatorCount, getSeparatorFactor)
 import Data.Maybe (Maybe(..), isNothing, fromMaybe)
 import Data.Function.Uncurried (runFn1)
 import JBridge (getLayoutBounds)
@@ -58,50 +58,60 @@ view push config =
 sourceLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
 sourceLayout config =
   linearLayout
-  [ orientation HORIZONTAL
-  , height WRAP_CONTENT
-  , width MATCH_PARENT
-  , margin config.sourceMargin
-  , accessibility DISABLE
-  ][  imageView
-      [ width config.sourceImageConfig.width
-      , height config.sourceImageConfig.height
-      , accessibility DISABLE
-      , imageWithFallback config.sourceImageConfig.imageUrl
-      , margin config.sourceImageConfig.margin
-      ]
-    , linearLayout
-      ([ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , accessibility ENABLE
-      , accessibilityHint $ "PickUp Location Is " <> config.sourceTextConfig.text
-      , gravity CENTER_VERTICAL
-      ] <> case config.id of
-        Just layoutId -> [id $ getNewIDWithTag $ "source_layout_" <> layoutId]
-        Nothing -> [])
-        $ [  textView $
-          [ text config.sourceTextConfig.text
-          , width MATCH_PARENT
-          , accessibility DISABLE
-          , padding config.sourceTextConfig.padding
-          , margin config.sourceTextConfig.margin
-          , color config.sourceTextConfig.color
-          , ellipsize config.sourceTextConfig.ellipsize
-          , maxLines config.sourceTextConfig.maxLines
-          ] <> (FontStyle.getFontStyle config.sourceTextConfig.textStyle LanguageStyle)
-        , textView $
-          [ text config.rideStartedAtConfig.text
-          , color config.rideStartedAtConfig.color
-          , accessibility DISABLE
-          , visibility config.rideStartedAtConfig.visibility
-          , margin config.rideStartedAtConfig.margin
-          , padding config.rideStartedAtConfig.padding
-          , maxLines config.rideStartedAtConfig.maxLines
-          , ellipsize config.rideStartedAtConfig.ellipsize
-          ] <> (FontStyle.getFontStyle config.rideStartedAtConfig.textStyle LanguageStyle)
+    [ orientation HORIZONTAL
+    , height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin config.sourceMargin
+    , accessibility DISABLE
+    ][  imageView
+        [ width config.sourceImageConfig.width
+        , height config.sourceImageConfig.height
+        , accessibility DISABLE
+        , imageWithFallback config.sourceImageConfig.imageUrl
+        , margin config.sourceImageConfig.margin
         ]
-    ]
+      , linearLayout
+        ([ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , accessibility ENABLE
+        , accessibilityHint $ "PickUp Location Is " <> config.sourceTextConfig.text
+        , gravity CENTER_VERTICAL
+        ] <> case config.id of
+          Just layoutId -> [id $ getNewIDWithTag $ "source_layout_" <> layoutId]
+          Nothing -> [])
+          $ [  textView $
+            [ text config.sourceTextConfig.text
+            , width MATCH_PARENT
+            , accessibility DISABLE
+            , padding config.sourceTextConfig.padding
+            , margin config.sourceTextConfig.margin
+            , color config.sourceTextConfig.color
+            , ellipsize config.sourceTextConfig.ellipsize
+            , maxLines config.sourceTextConfig.maxLines
+            ] <> (FontStyle.getFontStyle config.sourceTextConfig.textStyle LanguageStyle)
+          , textView $
+            [ text config.rideStartedAtConfig.text
+            , color config.rideStartedAtConfig.color
+            , accessibility DISABLE
+            , visibility config.rideStartedAtConfig.visibility
+            , margin config.rideStartedAtConfig.margin
+            , padding config.rideStartedAtConfig.padding
+            , maxLines config.rideStartedAtConfig.maxLines
+            , ellipsize config.rideStartedAtConfig.ellipsize
+            ] <> (FontStyle.getFontStyle config.rideStartedAtConfig.textStyle LanguageStyle)
+          , linearLayout
+              [ height $ config.horizontalSeperatorConfig.height
+              , width $ config.horizontalSeperatorConfig.width
+              , margin $ config.horizontalSeperatorConfig.margin
+              , background $ config.horizontalSeperatorConfig.background
+              , visibility $ config.horizontalSeperatorConfig.visibility
+              , padding $ config.horizontalSeperatorConfig.padding
+              ][]
+          ]
+      ]
+    
+
 
 destinationLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
 destinationLayout config =

@@ -12,6 +12,7 @@ module SharedLogic.FarePolicy where
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as FareProductD
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -30,25 +31,25 @@ data FarePoliciesProduct = FarePoliciesProduct
     specialLocationTag :: Maybe Text
   }
 
-getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Variant -> Maybe FareProductD.Area -> m FarePolicyD.FullFarePolicy
-getFarePolicy merchantId vehVariant Nothing = do
-  fareProduct <- QFareProduct.findByMerchantVariantArea merchantId vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
+getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> Variant -> Maybe FareProductD.Area -> m FarePolicyD.FullFarePolicy
+getFarePolicy merchantOpCityId vehVariant Nothing = do
+  fareProduct <- QFareProduct.findByMerchantVariantArea merchantOpCityId vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
   farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
   return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
-getFarePolicy merchantId vehVariant (Just area) = do
-  mbFareProduct <- QFareProduct.findByMerchantVariantArea merchantId vehVariant area
+getFarePolicy merchantOpCityId vehVariant (Just area) = do
+  mbFareProduct <- QFareProduct.findByMerchantVariantArea merchantOpCityId vehVariant area
   case mbFareProduct of
     Just fareProduct -> do
       farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
     Nothing -> do
-      fareProduct <- QFareProduct.findByMerchantVariantArea merchantId vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
+      fareProduct <- QFareProduct.findByMerchantVariantArea merchantOpCityId vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
       farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant farePolicy
 
-getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> LatLong -> LatLong -> m FarePoliciesProduct
-getAllFarePoliciesProduct merchantId fromlocaton toLocation = do
-  allFareProducts <- FareProduct.getAllFareProducts merchantId fromlocaton toLocation
+getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> m FarePoliciesProduct
+getAllFarePoliciesProduct merchantId merchantOpCityId fromlocaton toLocation = do
+  allFareProducts <- FareProduct.getAllFareProducts merchantId merchantOpCityId fromlocaton toLocation
   farePolicies <-
     mapM
       ( \fareProduct -> do

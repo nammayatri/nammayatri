@@ -21,15 +21,18 @@ import Services.API (DriverProfileStatsResp(..), Status(..))
 import Data.Maybe
 import Foreign.Object (empty)
 import Common.Types.App as Common
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 
 initData :: HomeScreenState
 initData = {
     data: {
-        config : DC.config,
+        snappedOrigin : Nothing,
+        config : getAppConfig appConfig,
         driverName : "",
         vehicleType : "",
+        profileImg : Nothing,
         driverAlternateMobile : Nothing,
+        gender : "UNKNOWN",
         activeRide : {
           id : "",
           source : "",
@@ -44,11 +47,11 @@ initData = {
           duration : 0,
           riderName : "",
           estimatedFare : 0,
-          isDriverArrived : false,
+          waitTimerId : "",
           notifiedCustomer : false,
           exoPhone : "",
           specialLocationTag : Nothing,
-          waitingTime : "__",
+          waitTimeSeconds : -1,
           waitTimeInfo : false,
           rideCreatedAt : "",
           requestedVehicleVariant : Nothing,
@@ -77,10 +80,10 @@ initData = {
         },
         messages : [],
         messagesSize : "-1",
-        suggestionsList : [],
+        chatSuggestionsList : [],
         messageToBeSent : "",
-        logField : empty
-      ,  paymentState : {
+        logField : empty, 
+        paymentState : {
           rideCount : 0,
           totalMoneyCollected : 0,
           payableAndGST : 0,
@@ -110,7 +113,6 @@ initData = {
           showBlockingPopup : false,
           autoPayStatus : NO_AUTOPAY
         },
-        profileImg : Nothing,
         triggerPatchCounter : 0,
         peekHeight : 0,
         endRideData : {
@@ -123,6 +125,23 @@ initData = {
           feedback : "",
           disability : Nothing,
           payerVpa : ""
+        },
+        driverGotoState : {
+          gotoCount : 0,
+          goToInfo : false,
+          selectedGoTo : "",
+          savedLocationsArray : [],
+          showGoto : false,
+          gotoValidTill : "-",
+          timerInMinutes : "-",
+          isGotoEnabled : false,
+          timerId : "",
+          gotoReducedCount : Nothing,
+          gotoLocInRange : false,
+          goToPopUpType : NO_POPUP_VIEW,
+          gotoEnabledForMerchant : false,
+          confirmGotoCancel : false,
+          savedLocationCount : 0
         }
     },
     props: {
@@ -156,9 +175,7 @@ initData = {
         showGenderBanner : false,
         notRemoveBanner : true,
         showBonusInfo : false,
-        timerRefresh : true,
         showlinkAadhaarPopup : false,
-        isChatOpened : false,
         showAadharPopUp : true,
         canSendSuggestion : true,
         showOffer : false,
@@ -171,7 +188,11 @@ initData = {
         showContactSupportPopUp : false,
         showChatBlockerPopUp : false,
         subscriptionPopupType : NO_SUBSCRIPTION_POPUP,
-        showGenericAccessibilityPopUp : false
+        showGenericAccessibilityPopUp : false,
+        waitTimeStatus : NoStatus,
+        isMockLocation : false,
+        accountBlockedPopup : false,
+        tobeLogged : false
     }
 }
 

@@ -5,13 +5,15 @@ module DBSync.Update where
 
 import Config.Env
 import Data.Aeson as A
+import qualified Data.Aeson.Key as AesonKey
+import qualified Data.Aeson.KeyMap as AKM
+import qualified Data.Bifunctor as BiFunctor
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
-import qualified Data.HashMap.Strict as HM
 import Data.Maybe (fromJust)
 import qualified Data.Serialize as Serialize
-import Data.Text as T
+import Data.Text as T hiding (elem, map)
 import qualified Data.Text.Encoding as TE
 import Database.Beam as B hiding (runUpdate)
 import EulerHS.CachedSqlDBQuery as CDB
@@ -23,10 +25,10 @@ import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
 import qualified Kernel.Beam.Functions as BeamFunction
+import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
 import Sequelize (Model, Set, Where)
-import System.Timeout (timeout)
-import Text.Casing
+import Text.Casing (pascal)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -93,11 +95,11 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (BusinessEventOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("BusinessEvent" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (CallStatusOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("CallStatus" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (CancellationReasonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("CancellationReason" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (DriverFlowStatusOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverFlowStatus" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverBlockReasonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverBlockReason" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (DriverPlanOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverPlan" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (FleetDriverAssociationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("FleetDriverAssociation" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverFeeOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverFee" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverInformationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverInformation" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (DriverLocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverLocation" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (AadhaarOtpReqOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("AadhaarOtpReq" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (AadhaarOtpVerifyOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("AadhaarOtpVerify" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (AadhaarVerificationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("AadhaarVerification" :: Text) =<< dbConf
@@ -105,7 +107,6 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (DriverRcAssociationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverRcAssociation" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (IdfyVerificationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("IdfyVerification" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (ImageOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Image" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (OperatingCityOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("OperatingCity" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (VehicleRegistrationCertificateOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("VehicleRegistrationCertificate" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverQuoteOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverQuote" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverReferralOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverReferral" :: Text) =<< dbConf
@@ -128,12 +129,12 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (IssueOptionOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("IssueOption" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (IssueReportOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("IssueReport" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (IssueTranslationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("IssueTranslation" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (LeaderBoardConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("LeaderBoardConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (PlaceNameCacheOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("PlaceNameCache" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (MediaFileOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("MediaFile" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (MerchantOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Merchant" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverIntelligentPoolConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverIntelligentPoolConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (DriverPoolConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("DriverPoolConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (MandateOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Mandate" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (MerchantLeaderBoardConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("MerchantLeaderBoardConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (MerchantMessageOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("MerchantMessage" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (MerchantPaymentMethodOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("MerchantPaymentMethod" :: Text) =<< dbConf
@@ -145,7 +146,6 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (MessageReportOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("MessageReport" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (MessageTranslationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("MessageTranslation" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (MetaDataOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("MetaData" :: Text) =<< dbConf
-    UpdateDBCommand id _ tag _ _ (OnboardingDocumentConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("OnboardingDocumentConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (PersonOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Person" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (QuoteSpecialZoneOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("QuoteSpecialZone" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (RatingOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("Rating" :: Text) =<< dbConf
@@ -168,6 +168,8 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (GoHomeConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("GoHomeConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (LocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("LocationConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (LocationMappingOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("LocationMappingConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (PaymentOrderOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("PaymentOrder" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (PaymentTransactionOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("PaymentTransaction" :: Text) =<< dbConf
   where
     runUpdate id value _ setClause whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries
@@ -183,8 +185,9 @@ runUpdateCommands (cmd, val) dbStreamKey = do
           case res of
             Right dataObj -> do
               Env {..} <- ask
-              let updatedJSON = getDbUpdateDataJson model dataObj
-              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+              let mappings = getMappings [dataObj]
+                  newObject = replaceMappings (toJSON dataObj) mappings
+              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
                 ( \_ -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -194,9 +197,9 @@ runUpdateCommands (cmd, val) dbStreamKey = do
                 (\_ -> pure $ Right id)
                 res''
             Left _ -> do
-              let updatedJSON = getDbUpdateDataJson model $ updValToJSON $ jsonKeyValueUpdates setClause <> getPKeyandValuesList tag
+              let updatedJSON = getDbUpdateDataJson model (A.String "No Data in Redis for updated condition")
               Env {..} <- ask
-              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey'
+              res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
               either
                 ( \_ -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -229,18 +232,14 @@ runUpdateCommands (cmd, val) dbStreamKey = do
         (Right _, _) -> do
           pure $ Right id
 
-streamDriverDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
-streamDriverDrainerUpdates producer dbObject dbStreamKey = do
-  let topicName = "driver-drainer"
-  void $ KafkaProd.produceMessage producer (message topicName dbObject)
-  flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
-  case flushResult of
-    Just _ -> do
-      pure $ Right ()
-    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
+streamDriverDrainerUpdates :: ToJSON a => Producer.KafkaProducer -> a -> Text -> Text -> IO (Either Text ())
+streamDriverDrainerUpdates producer dbObject dbStreamKey model = do
+  let topicName = "adob-sessionizer-" <> T.toLower model
+  result' <- KafkaProd.produceMessage producer (message topicName dbObject)
+  case result' of
+    Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
+    _ -> pure $ Right ()
   where
-    prodPush producer' = KafkaProd.flushProducer producer' >> pure True
-
     message topicName event =
       ProducerRecord
         { prTopic = TopicName topicName,
@@ -259,13 +258,13 @@ getDbUpdateDataJson model a =
     ]
 
 updValToJSON :: [(Text, A.Value)] -> A.Value
-updValToJSON keyValuePairs = A.Object $ HM.fromList keyValuePairs
+updValToJSON keyValuePairs = A.Object $ AKM.fromList . map (BiFunctor.first AesonKey.fromText) $ keyValuePairs
 
 getPKeyandValuesList :: Text -> [(Text, A.Value)]
-getPKeyandValuesList pKeyAndValue = go (splitOn "_" pKeyTrimmed) []
+getPKeyandValuesList pKeyAndValue = go (T.splitOn "_" pKeyTrimmed) []
   where
     go (tName : k : v : rest) acc = go (tName : rest) ((k, A.String v) : acc)
     go _ acc = acc
-    pKeyTrimmed = case splitOn "{" pKeyAndValue of
+    pKeyTrimmed = case T.splitOn "{" pKeyAndValue of
       [] -> ""
       (x : _) -> x

@@ -8,6 +8,7 @@
  */
 
 package in.juspay.mobility.app;
+import static android.graphics.Color.rgb;
 
 import android.Manifest;
 import android.app.Notification;
@@ -125,6 +126,25 @@ public class RideRequestUtils {
         }
     }
 
+    public static void updateViewFromMlTranslation(SheetAdapter.SheetViewHolder holder, SheetModel model, SharedPreferences sharedPref, Context context){
+        String lang = sharedPref.getString( "LANGUAGE_KEY", "ENGLISH");
+        TranslatorMLKit translate = new TranslatorMLKit("en", lang, context);
+        translate.translateStringInTextView(removeCommas(model.getSourceArea()), holder.sourceArea);
+        translate.translateStringInTextView(model.getSourceAddress(),  holder.sourceAddress);
+        translate.translateStringInTextView(removeCommas(model.getDestinationArea()), holder.destinationArea);
+        translate.translateStringInTextView(model.getDestinationAddress(),  holder.destinationAddress);
+    }
+
+    public static String removeCommas(String input) {
+        String str = input;
+        input = input.trim();
+        input = input.replaceAll(",+\\s*$", "");
+        if (str.trim().endsWith(",")) {
+            input += " ,";
+        }
+        return input;
+    }
+
 
     public static int calculateExpireTimer(String expireTimeTemp, String currTimeTemp) {
         if (expireTimeTemp == null || currTimeTemp == null) return 0;
@@ -171,7 +191,8 @@ public class RideRequestUtils {
         mBuilder.setLargeIcon(BitmapFactory.decodeResource(context.getResources(), R.mipmap.ic_launcher));
         mBuilder.setContentTitle(context.getString(R.string.new_ride_req))
                 .setContentText(context.getString(R.string.new_ride_available_for_offering))
-                .setSmallIcon((R.mipmap.ic_launcher))
+                .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap"))
+                .setColor(rgb(253, 197, 44))
                 .setAutoCancel(true)
                 .setVibrate(vibrationPattern)
                 .setSound(null)

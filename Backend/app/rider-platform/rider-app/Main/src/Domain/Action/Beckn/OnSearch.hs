@@ -165,9 +165,10 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
 
+  let merchantOperatingCityId = _searchRequest.merchantOperatingCityId
   estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
-  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest.merchantId) quotesInfo
-  merchantPaymentMethods <- CQMPM.findAllByMerchantId merchant.id
+  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest) quotesInfo
+  merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
   let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
   forM_ estimates $ \est -> do
     triggerEstimateEvent EstimateEventData {estimate = est, personId = _searchRequest.riderId, merchantId = _searchRequest.merchantId}
@@ -193,6 +194,7 @@ buildEstimate providerInfo now _searchRequest EstimateInfo {..} = do
       { id = uid,
         requestId = _searchRequest.id,
         merchantId = Just _searchRequest.merchantId,
+        merchantOperatingCityId = Just _searchRequest.merchantOperatingCityId,
         providerMobileNumber = providerInfo.mobileNumber,
         providerName = providerInfo.name,
         providerCompletedRidesCount = providerInfo.ridesCompleted,
@@ -226,10 +228,10 @@ buildQuote ::
   Id DSearchReq.SearchRequest ->
   ProviderInfo ->
   UTCTime ->
-  Id DMerchant.Merchant ->
+  SearchRequest ->
   QuoteInfo ->
   m DQuote.Quote
-buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
+buildQuote requestId providerInfo now _searchRequest QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   quoteDetails' <- case quoteDetails of
@@ -249,7 +251,8 @@ buildQuote requestId providerInfo now merchantId QuoteInfo {..} = do
         providerUrl = providerInfo.url,
         createdAt = now,
         quoteDetails = quoteDetails',
-        merchantId,
+        merchantId = _searchRequest.merchantId,
+        merchantOperatingCityId = _searchRequest.merchantOperatingCityId,
         ..
       }
 

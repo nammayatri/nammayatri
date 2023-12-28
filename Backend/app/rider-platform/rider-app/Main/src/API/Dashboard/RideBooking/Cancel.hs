@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant
+import Storage.Beam.SystemConfigs ()
 
 data RideCancelEndPoint = RideBookingCancelEndPoint
   deriving (Show, Read)

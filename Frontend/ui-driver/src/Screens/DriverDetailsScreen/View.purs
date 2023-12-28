@@ -40,11 +40,10 @@ import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import Screens.DriverDetailsScreen.ComponentConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import MerchantConfig.Utils (getValueFromConfig)
-
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import ConfigProvider
 
 screen :: ST.DriverDetailsScreenState -> Screen Action ST.DriverDetailsScreenState ScreenOutput
 screen initialState =
@@ -66,6 +65,8 @@ view
   -> ST.DriverDetailsScreenState
   -> PrestoDOM (Effect Unit) w
 view push state =
+  let feature = (getAppConfig appConfig).feature
+  in
   Anim.screenAnimation $
   relativeLayout
   [height MATCH_PARENT
@@ -84,7 +85,7 @@ view push state =
       profilePictureLayout state push
      , driverDetailsView push state
     ]
-  , if state.props.genderSelectionModalShow && (getValueFromConfig "showGenderBanner") then selectYourGender push state else textView[]
+  , if state.props.genderSelectionModalShow && feature.enableGender then selectYourGender push state else textView[]
   , if state.props.keyboardModalType == ST.MOBILE__NUMBER then enterMobileNumberModal push state else textView[height $ V 0,
   width $ V 0]
  , if state.props.keyboardModalType == ST.OTP then enterOtpModal push state else textView[height $ V 0,
@@ -113,7 +114,7 @@ profilePictureLayout state push =
                 , layoutGravity "center"
                 , cornerRadius 45.0
                 , id (EHC.getNewIDWithTag "EditProfileImage")
-                , imageWithFallback $ "ny_ic_profile_image," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_profile_image.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_profile_image"
                 -- TODO : after 15 aug
                 -- , afterRender push (const RenderBase64Image)
                 ]
@@ -130,7 +131,7 @@ profilePictureLayout state push =
                         , height $ V 30
                         , gravity RIGHT
                         , cornerRadius 45.0
-                        , imageWithFallback $ "ny_ic_camera_white," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_camera_white.png"
+                        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_camera_white"
                         , visibility GONE 
                         -- To be added after 15 aug
                         -- , onClick (\action-> do
@@ -161,7 +162,7 @@ headerLayout state push =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)
@@ -221,7 +222,7 @@ driverDetailsView push state =
                   , alpha 0.9
                   ] <> FontStyle.body1 TypoGraphy
                   , driverSubsection push state optionItem
-                  , if(optionItem.title == DRIVER_MOBILE_INFO && state.props.checkAlternateNumber == true && state.props.keyboardModalType == ST.NONE && state.data.driverAlternateMobile == Nothing) then addAlternateNumber push state else dummyTextView
+                  , if(optionItem.title == DRIVER_MOBILE_INFO && state.props.checkAlternateNumber && state.props.keyboardModalType == ST.NONE && state.data.driverAlternateMobile == Nothing) then addAlternateNumber push state else dummyTextView
                   , horizontalLineView 0 0
               ]
 

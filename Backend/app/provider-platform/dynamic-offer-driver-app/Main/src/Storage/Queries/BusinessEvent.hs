@@ -24,10 +24,11 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Storage.Beam.BusinessEvent as BeamBE
 
 logBusinessEvent ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Maybe (Id Driver) ->
   EventType ->
   Maybe (Id Booking) ->
@@ -55,7 +56,7 @@ logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distan
           }
   createWithKV bE
 
-logDriverAssignedEvent :: MonadFlow m => Id Driver -> Id Booking -> Id Ride -> m ()
+logDriverAssignedEvent :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Id Booking -> Id Ride -> m ()
 logDriverAssignedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
@@ -67,7 +68,7 @@ logDriverAssignedEvent driverId bookingId rideId = do
     Nothing
     (Just rideId)
 
-logRideConfirmedEvent :: MonadFlow m => Id Booking -> m ()
+logRideConfirmedEvent :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m ()
 logRideConfirmedEvent bookingId = do
   logBusinessEvent
     Nothing
@@ -79,7 +80,7 @@ logRideConfirmedEvent bookingId = do
     Nothing
     Nothing
 
-logRideCommencedEvent :: MonadFlow m => Id Driver -> Id Booking -> Id Ride -> m ()
+logRideCommencedEvent :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Id Booking -> Id Ride -> m ()
 logRideCommencedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)

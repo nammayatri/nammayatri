@@ -34,6 +34,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Servant
 import qualified SharedLogic.CallBAP as BP
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as QPerson
 
 type API =
@@ -62,19 +63,20 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
           dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
           case dConfirmRes.booking.bookingType of
             DBooking.NormalBooking -> do
-              ride <- dConfirmRes.ride & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
+              normalBookingInfo <- dConfirmRes.normalBookingInfo & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
               driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
               --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
               driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
               -- driver <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
+              let booking = dConfirmRes.booking
               fork "on_confirm/on_update" $ do
                 handle (errHandler dConfirmRes transporter (Just driver)) $ do
                   onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
                   void $
                     BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
                   void $
-                    BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
-              DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
+                    BP.sendRideAssignedUpdateToBAP dConfirmRes.booking normalBookingInfo.ride driver normalBookingInfo.vehicle
+              DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
             DBooking.SpecialZoneBooking -> do
               fork "on_confirm/on_update" $ do
                 handle (errHandler' dConfirmRes transporter) $ do

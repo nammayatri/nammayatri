@@ -15,6 +15,8 @@
 module API.UI.Profile
   ( DProfile.ProfileRes,
     DProfile.UpdateProfileReq (..),
+    DProfile.UpdateEmergencySettingsReq (..),
+    DProfile.UpdateEmergencySettingsResp,
     DProfile.UpdateProfileResp,
     DProfile.UpdateProfileDefaultEmergencyNumbersReq (..),
     DProfile.PersonDefaultEmergencyNumber (..),
@@ -36,6 +38,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
@@ -45,6 +48,14 @@ type API =
            :<|> TokenAuth
              :> ReqBody '[JSON] DProfile.UpdateProfileReq
              :> Post '[JSON] APISuccess.APISuccess
+           :<|> "updateEmergencySettings"
+             :> ( TokenAuth
+                    :> ReqBody '[JSON] DProfile.UpdateEmergencySettingsReq
+                    :> Put '[JSON] APISuccess.APISuccess
+                )
+           :<|> "getEmergencySettings"
+             :> TokenAuth
+             :> Get '[JSON] DProfile.EmergencySettingsRes
            :<|> "defaultEmergencyNumbers"
              :> ( TokenAuth
                     :> ReqBody '[JSON] DProfile.UpdateProfileDefaultEmergencyNumbersReq
@@ -58,6 +69,8 @@ handler :: FlowServer API
 handler =
   getPersonDetails
     :<|> updatePerson
+    :<|> updateEmergencySettings
+    :<|> getEmergencySettings
     :<|> updateDefaultEmergencyNumbers
     :<|> getDefaultEmergencyNumbers
 
@@ -72,3 +85,9 @@ updateDefaultEmergencyNumbers (personId, _) = withFlowHandlerAPI . withPersonIdL
 
 getDefaultEmergencyNumbers :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.GetProfileDefaultEmergencyNumbersResp
 getDefaultEmergencyNumbers = withFlowHandlerAPI . DProfile.getDefaultEmergencyNumbers
+
+updateEmergencySettings :: (Id Person.Person, Id Merchant.Merchant) -> DProfile.UpdateEmergencySettingsReq -> FlowHandler DProfile.UpdateEmergencySettingsResp
+updateEmergencySettings (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId . DProfile.updateEmergencySettings personId
+
+getEmergencySettings :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.EmergencySettingsRes
+getEmergencySettings (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DProfile.getEmergencySettings personId

@@ -34,9 +34,11 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import Screens.Types(KeyboardModalType(..)) as KeyboardModalType
 import Language.Strings (getString)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Debug (spy)
+import Data.Array as DA
 
 view :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -73,7 +75,7 @@ view push state =
                 ][  imageView
                     [ width (V 35)
                     , height (V 35)
-                    , imageWithFallback $ "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
                     , onClick push (const BackPressed)
                     , padding (Padding 5 5 5 5)
                     ]
@@ -109,8 +111,8 @@ textBoxes push state =
   , clickable false
   ](mapWithIndex (\index item ->
       textView $
-      [ width (V 48)
-      , height (V 56)
+      [ width state.textBoxConfig.width
+      , height state.textBoxConfig.height
       , color Color.greyTextColor
       , text ( take 1 (drop index state.inputTextConfig.text) )
       , gravity CENTER
@@ -118,7 +120,7 @@ textBoxes push state =
       , stroke ("1," <> if (state.otpIncorrect || state.otpAttemptsExceeded ) then Color.textDanger else if state.inputTextConfig.focusIndex == index then Color.highlightBorderColor else Color.borderColorLight )
       , margin (Margin ((screenWidth unit)/30) 0 ((screenWidth unit)/30) 0)
       , onClick push (const (OnclickTextBox index))
-      ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) [1,2,3,4])
+      ]<> (FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle)) state.textBoxConfig.textBoxesArray)
 
 singleTextBox :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 singleTextBox push state =
@@ -131,7 +133,7 @@ singleTextBox push state =
   , visibility if state.modalType == KeyboardModalType.MOBILE__NUMBER then VISIBLE else GONE
   , clickable false
   , padding (Padding 16 16 16 16)
-  , stroke ("1," <> if (state.isValidAlternateNumber == false ) then Color.textDanger else Color.borderColorLight )
+  , stroke ("1," <> if not state.isValidAlternateNumber then Color.textDanger else Color.borderColorLight )
   ][textView $
       [ width state.inputTextConfig.width
       , height state.inputTextConfig.height
@@ -148,7 +150,7 @@ singleTextBox push state =
     imageView
         [ width $ V 23
          , height $ V 23
-         , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
          , visibility if (state.inputTextConfig.text == (getString ENTER_MOBILE_NUMBER)) then GONE else VISIBLE
          , onClick push (const (OnClickTextCross))
         ]
@@ -237,21 +239,21 @@ keyboard push state =
            , cornerRadius 4.0
            , cornerRadii $ if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
            , onClick push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
-           , clickable if key == "back" then true else 
-                      if ((length state.inputTextConfig.text == 4  && state.modalType == KeyboardModalType.OTP && state.otpIncorrect == false) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber==true)) then true else false 
+           , clickable if key == "back" then true 
+                      else ((length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && state.modalType == KeyboardModalType.OTP && not state.otpIncorrect ) || (length state.inputTextConfig.text == 10  && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber))
            ][ 
                 if key == "back" then 
                 imageView
                   [ width $ V 24
                   , height $ V 24
-                  , imageWithFallback $ "ny_ic_delete," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_delete.png"
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_delete"
                   , margin (Margin 0 18 0 18)
                   ]
                 else
                   imageView
                   [ width $ V 24
                   , height $ V 24
-                  , imageWithFallback $ "ny_ic_tick_white," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_tick_white.png"
+                  , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_tick_white"
                   , margin (Margin 0 18 0 18)
                   ]
            ]

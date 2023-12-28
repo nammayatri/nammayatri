@@ -26,7 +26,7 @@ import PrestoDOM.Properties (background, color, cornerRadius, fontStyle, gravity
 import Engineering.Helpers.Commons (screenWidth, screenHeight, flowRunner)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Helpers.Utils (countDown, toString, parseFloat)
+import Helpers.Utils (toStringJSON, parseFloat)
 import Effect.Class (liftEffect)
 import Effect.Aff (launchAff_)
 import Control.Monad.Trans.Class (lift)
@@ -34,7 +34,8 @@ import Presto.Core.Types.Language.Flow (doAff)
 import Control.Transformers.Back.Trans (runBackT)
 import Control.Monad.Except.Trans (runExceptT)
 import Common.Types.App
-import MerchantConfig.Utils(getValueFromConfig)
+import ConfigProvider
+import Timers (countDown)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -266,7 +267,7 @@ reducePrice push config =
   ][  textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text ("- " <> toString(config.reducePrice))
+      , text ("- " <> toStringJSON(config.reducePrice))
       , color if (config.totalPrice > config.basePrice) then Color.greyTextColor else Color.borderGreyColor
       ] <> FontStyle.h3 LanguageStyle
   ]
@@ -277,7 +278,7 @@ totalPrice config =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , color Color.greyTextColor
-  , text ((getValueFromConfig "currency") <> " " <>  (parseFloat config.totalPrice 2))
+  , text ((getCurrency appConfig) <> " " <>  (parseFloat config.totalPrice 2))
   , margin (Margin 20 0 20 0)
   ] <> FontStyle.body8 LanguageStyle
 
@@ -296,7 +297,7 @@ increasePrice push config =
   ][  textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text ("+ " <> toString(config.increasePrice))
+      , text ("+ " <> toStringJSON(config.increasePrice))
       , color if (config.totalPrice >= config.basePrice + config.increasePrice * 3.0) then Color.borderGreyColor else Color.greyTextColor
       ] <> FontStyle.h3 LanguageStyle
   ]

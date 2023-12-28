@@ -21,16 +21,17 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverOffer as BeamDO
 
 createDriverOffer :: MonadFlow m => DriverOffer -> m ()
 createDriverOffer = createWithKV
 
-findById :: MonadFlow m => Id DriverOffer -> m (Maybe DriverOffer)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DriverOffer -> m (Maybe DriverOffer)
 findById (Id driverOfferId) = findOneWithKV [Se.Is BeamDO.id $ Se.Eq driverOfferId]
 
-findByBPPQuoteId :: MonadFlow m => Text -> m [DriverOffer]
+findByBPPQuoteId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [DriverOffer]
 findByBPPQuoteId bppQuoteId = findAllWithKV [Se.Is BeamDO.bppQuoteId $ Se.Eq bppQuoteId]
 
 updateStatus :: MonadFlow m => Id Estimate -> DriverOfferStatus -> m ()
@@ -50,6 +51,7 @@ instance FromTType' BeamDO.DriverOffer DriverOffer where
           { id = Id id,
             estimateId = Id estimateId,
             merchantId = Id <$> merchantId,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
             driverId = driverId,
             driverName = driverName,
             durationToPickup = durationToPickup,
@@ -67,6 +69,7 @@ instance ToTType' BeamDO.DriverOffer DriverOffer where
       { BeamDO.id = getId id,
         BeamDO.estimateId = getId estimateId,
         BeamDO.merchantId = getId <$> merchantId,
+        BeamDO.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamDO.driverName = driverName,
         BeamDO.driverId = driverId,
         BeamDO.durationToPickup = durationToPickup,

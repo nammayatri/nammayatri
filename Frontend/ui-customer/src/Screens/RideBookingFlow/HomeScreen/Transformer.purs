@@ -28,29 +28,33 @@ import Data.Int (toNumber, round)
 import Data.Lens ((^.))
 import Data.Ord
 import Data.Eq
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String (Pattern(..), drop, indexOf, length, split, trim)
+import Data.Function.Uncurried (runFn1)
 import Helpers.Utils (parseFloat, withinTimeRange,isHaveFare, getVehicleVariantImage)
-import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC)
-import Data.Number (ceil)
+import Engineering.Helpers.Commons (convertUTCtoISC, getExpiryTime, getCurrentUTC, getMapsLanguageFormat)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Visibility(..))
-import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant)
+import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
-import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..))
+import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
-import JBridge (fromMetersToKm, Paths)
-import MerchantConfig.DefaultConfig as DC
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import JBridge (fromMetersToKm, Paths, getLatLonFromAddress)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
-import Language.Strings (getEN)
+import MerchantConfig.Utils (Merchant(..), getMerchant)
+import Resources.Localizable.EN (getEN)
 import MerchantConfig.Types (EstimateAndQuoteConfig)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Engineering.Helpers.LogEvent
+import Control.Monad.Except.Trans (lift)
+import Presto.Core.Types.Language.Flow (getLogFields)
+import ConfigProvider
 
 
 getLocationList :: Array Prediction -> Array LocationListItemState
@@ -58,8 +62,8 @@ getLocationList prediction = map (\x -> getLocation x) prediction
 
 getLocation :: Prediction -> LocationListItemState
 getLocation prediction = {
-    prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
-  , postfixImageUrl : "ny_ic_fav," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav.png"
+    prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
+  , postfixImageUrl : fetchImage FF_ASSET "ny_ic_fav"
   , postfixImageVisibility : true
   , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
   , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))
@@ -81,34 +85,39 @@ getLocation prediction = {
   , locationItemType : Just PREDICTION
   , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^._distance)))
   , showDistance : Just $ checkShowDistance (fromMaybe 0 (prediction ^._distance))
-  , actualDistance : fromMaybe 0 (prediction ^._distance)
+  , actualDistance : (prediction ^._distance)
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
 }
 
 checkShowDistance :: Int ->  Boolean
 checkShowDistance distance = (distance > 0 && distance <= 50000)
 
-getQuoteList :: Array QuoteAPIEntity -> Array QLI.QuoteListItemState
-getQuoteList quotesEntity = (map (\x -> (getQuote x)) quotesEntity)
+getQuoteList :: Array QuoteAPIEntity -> Maybe String -> Array QLI.QuoteListItemState
+getQuoteList quotesEntity city = (map (\x -> (getQuote x city)) quotesEntity)
 
-getQuote :: QuoteAPIEntity -> QLI.QuoteListItemState
-getQuote (QuoteAPIEntity quoteEntity) = do
+getQuote :: QuoteAPIEntity -> Maybe String -> QLI.QuoteListItemState
+getQuote (QuoteAPIEntity quoteEntity) city = do
   case (quoteEntity.quoteDetails)^._contents of
     (ONE_WAY contents) -> QLI.config
     (SPECIAL_ZONE contents) -> QLI.config
-    (DRIVER_OFFER contents) -> let (DriverOfferAPIEntity quoteDetails) = contents
-        in {
-      seconds : (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
-    , id : quoteEntity.id
-    , timer : show $ (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
-    , timeLeft : if (quoteDetails.durationToPickup<60) then (quoteDetails.durationToPickup/60) else (quoteDetails.durationToPickup/60)
-    , driverRating : fromMaybe 0.0 quoteDetails.rating
-    , profile : ""
-    , price :  show quoteEntity.estimatedTotalFare
-    , vehicleType : "auto"
-    , driverName : quoteDetails.driverName
-    , selectedQuote : Nothing
-    , appConfig : DC.config
-    }
+    (DRIVER_OFFER contents) -> 
+      let (DriverOfferAPIEntity quoteDetails) = contents
+          expiryTime = (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
+      in {  seconds : expiryTime
+          , id : quoteEntity.id
+          , timer : show expiryTime
+          , timeLeft : quoteDetails.durationToPickup/60
+          , driverRating : fromMaybe 0.0 quoteDetails.rating
+          , profile : ""
+          , price :  show quoteEntity.estimatedTotalFare
+          , vehicleType : "auto"
+          , driverName : quoteDetails.driverName
+          , selectedQuote : Nothing
+          , appConfig : getAppConfig appConfig
+          , city : city
+        }
 
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
@@ -118,8 +127,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
                         (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
-      , eta : 0
-      , currentSearchResultType : if isQuote == true then QUOTES else ESTIMATES
+      , eta : Nothing
+      , currentSearchResultType : if isQuote then QUOTES else ESTIMATES
       , vehicleDetails : rideList.vehicleModel
       , registrationNumber : rideList.vehicleNumber
       , rating : (fromMaybe 0.0 rideList.driverRatings)
@@ -133,6 +142,8 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , sourceLng : resp.fromLocation ^._lon
       , destinationLat : (resp.bookingDetails ^._contents^._toLocation ^._lat)
       , destinationLng : (resp.bookingDetails ^._contents^._toLocation ^._lon)
+      , sourceAddress : getAddressFromBooking resp.fromLocation
+      , destinationAddress : getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
       , estimatedDistance : parseFloat ((toNumber (fromMaybe 0 (resp.bookingDetails ^._contents ^._estimatedDistance)))/1000.0) 2
       , createdAt : resp.createdAt
       , driverLat : 0.0
@@ -145,7 +156,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , driverNumber : rideList.driverNumber
       , merchantExoPhone : resp.merchantExoPhone
       , initDistance : Nothing
-      , config : DC.config
+      , config : getAppConfig appConfig
       , vehicleVariant : if rideList.vehicleVariant /= "" 
                             then rideList.vehicleVariant 
                          else
@@ -205,38 +216,38 @@ dummyRideAPIEntity = RideAPIEntity{
 isForLostAndFound :: Boolean
 isForLostAndFound = false
 
-getPlaceNameResp :: Maybe String -> Number -> Number -> LocationListItemState -> FlowBT String GetPlaceNameResp
-getPlaceNameResp placeId lat lon item = do
-    case item.locationItemType of
-      Just PREDICTION ->
-          case placeId of
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                            "HI_IN" -> "HINDI"
-                                                                                            "KN_IN" -> "KANNADA"
-                                                                                            "BN_IN" -> "BENGALI"
-                                                                                            "ML_IN" -> "MALAYALAM"
-                                                                                            _       -> "ENGLISH"))
-            Nothing       ->  pure $ makePlaceNameResp lat lon
-      _ ->  do
-        case item.lat, item.lon of
-          Nothing, Nothing -> case placeId of
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                            "HI_IN" -> "HINDI"
-                                                                                            "KN_IN" -> "KANNADA"
-                                                                                            "BN_IN" -> "BENGALI"
-                                                                                            "ML_IN" -> "MALAYALAM"
-                                                                                            _       -> "ENGLISH"))
-            Nothing       ->  pure $ makePlaceNameResp lat lon
-          Just 0.0, Just 0.0 -> case placeId of
-            Just placeID  -> Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID (case (getValueToLocalStore LANGUAGE_KEY) of
-                                                                                            "HI_IN" -> "HINDI"
-                                                                                            "KN_IN" -> "KANNADA"
-                                                                                            "BN_IN" -> "BENGALI"
-                                                                                            "ML_IN" -> "MALAYALAM"
-                                                                                            _       -> "ENGLISH"))
-            Nothing       ->  pure $ makePlaceNameResp lat lon
-          _ , _ -> pure $ makePlaceNameResp lat lon
 
+
+getPlaceNameResp :: String -> Maybe String -> Number -> Number -> LocationListItemState -> FlowBT String GetPlaceNameResp
+getPlaceNameResp address placeId lat lon item = do
+  case item.locationItemType of
+    Just PREDICTION -> getPlaceNameRes
+    _ -> checkLatLon
+  where
+    getPlaceNameRes :: FlowBT String GetPlaceNameResp
+    getPlaceNameRes =
+      case placeId of
+        Just placeID  -> checkLatLonFromAddress placeID
+        Nothing       ->  pure $ makePlaceNameResp lat lon
+    
+    checkLatLonFromAddress :: String -> FlowBT String GetPlaceNameResp
+    checkLatLonFromAddress placeID = do
+      let {latitude, longitude} = runFn1 getLatLonFromAddress address
+      config <- getAppConfigFlowBT appConfig
+      logField_ <- lift $ lift $ getLogFields
+      if latitude /= 0.0 && longitude /= 0.0 && config.geoCoder.enableAddressToLL then do
+        void $ liftFlowBT $ logEvent logField_ "ny_geocode_address_ll_found"
+        pure $ makePlaceNameResp latitude longitude
+      else do
+        void $ liftFlowBT $ logEvent logField_ "ny_geocode_address_ll_fallback"
+        Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
+    
+    checkLatLon :: FlowBT String GetPlaceNameResp
+    checkLatLon = 
+      case item.lat, item.lon of
+        Nothing, Nothing -> getPlaceNameRes
+        Just 0.0, Just 0.0 -> getPlaceNameRes
+        _ , _ -> pure $ makePlaceNameResp lat lon
 
 makePlaceNameResp :: Number ->  Number -> GetPlaceNameResp
 makePlaceNameResp lat lon =
@@ -248,7 +259,8 @@ makePlaceNameResp lat lon =
             lon : lon
           },
           plusCode : Nothing,
-          addressComponents : []
+          addressComponents : [],
+          placeId : Nothing
         }
         ])
 
@@ -280,7 +292,7 @@ updateSavedLocation item lat lon = do
       address = item.description
       tag = item.tag
   resp <- Remote.deleteSavedLocationBT (DeleteSavedLocationReq (trim item.tag))
-  (GetPlaceNameResp placeNameResp) <- getPlaceNameResp item.placeId lat lon item
+  (GetPlaceNameResp placeNameResp) <- getPlaceNameResp item.address item.placeId lat lon item
   let (PlaceName placeName) = (fromMaybe dummyLocationName (placeNameResp DA.!! 0))
   let (LatLong placeLatLong) = (placeName.location)
   _ <- Remote.addSavedLocationBT (encodeAddressDescription address tag (item.placeId) (Just placeLatLong.lat) (Just placeLatLong.lon) placeName.addressComponents)
@@ -307,13 +319,14 @@ getSpecialZoneQuote quote index =
         vehicleImage = getVehicleVariantImage quoteEntity.vehicleVariant
       , isSelected = (index == 0)
       , vehicleVariant = quoteEntity.vehicleVariant
-      , price = getValueFromConfig "currency" <> (show quoteEntity.estimatedTotalFare)
+      , price = (getCurrency appConfig) <> (show quoteEntity.estimatedTotalFare)
       , activeIndex = 0
       , index = index
       , id = trim quoteEntity.id
       , capacity = getVehicleCapacity quoteEntity.vehicleVariant
       , showInfo = (getMerchant FunctionCall) == YATRI
       , searchResultType = ChooseVehicle.QUOTES
+      , pickUpCharges = 0
       }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
@@ -387,8 +400,10 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                                                                                           ) quotes) variant)
 
 getEstimates :: EstimateAPIEntity -> Int -> Boolean -> ChooseVehicle.Config
-getEstimates (EstimateAPIEntity estimate) index isFareRangePresent =
-  let currency = getValueFromConfig "currency"
+getEstimates (EstimateAPIEntity estimate) index isFareRange =
+  let currency = getCurrency appConfig
+      estimateFareBreakup = fromMaybe [] estimate.estimateFareBreakup
+      pickUpCharges = fetchPickupCharges estimateFareBreakup
   in ChooseVehicle.config {
         vehicleImage = getVehicleVariantImage estimate.vehicleVariant
       , vehicleVariant = estimate.vehicleVariant
@@ -402,7 +417,8 @@ getEstimates (EstimateAPIEntity estimate) index isFareRangePresent =
       , capacity = getVehicleCapacity estimate.vehicleVariant
       , showInfo = (getMerchant FunctionCall) == YATRI
       , basePrice = estimate.estimatedTotalFare
-      , searchResultType = if isFareRangePresent then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
+      , searchResultType = if isFareRange then ChooseVehicle.ESTIMATES else ChooseVehicle.QUOTES
+      , pickUpCharges = pickUpCharges
       }
 
 dummyFareRange :: FareRange
@@ -447,7 +463,7 @@ getTripDetailsState (RideBookingRes ride) state = do
         baseDistance = baseDistanceVal,
         referenceString = (if (nightChargesVal && (getMerchant FunctionCall) /= YATRI) then "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) else "")
                         <> (if (isHaveFare "DRIVER_SELECTED_FARE" (updatedFareList)) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) else "")
-                        <> (if (isHaveFare "WAITING_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
+                        <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
                         <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else "")
       },
@@ -488,9 +504,7 @@ getEstimatesInfo estimates vehicleVariant state =
           Nothing -> []
         else
           []
-      pickUpCharges = case (DA.head (filter (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup)) of
-        Just deadKmFare -> deadKmFare ^. _price
-        Nothing -> 0
+      pickUpCharges = fetchPickupCharges estimateFareBreakup 
       additionalFare =
         if isJust (estimatedVarient DA.!! 0) then case (fromMaybe dummyEstimateEntity (estimatedVarient DA.!! 0)) ^. _totalFareRange of
           Just fareRange -> (fareRange ^. _maxFare - fareRange ^. _minFare)
@@ -570,3 +584,26 @@ getZoneType tag =
     Just "SureMetro" -> METRO
     Just "SureBlockedAreaForAutos" -> AUTO_BLOCKED
     _                -> NOZONE
+
+getTripFromRideHistory :: MyRidesScreenState -> Trip
+getTripFromRideHistory state = {
+    source :  state.data.selectedItem.source
+  , destination : state.data.selectedItem.destination
+  , sourceAddress : getAddressFromBooking state.data.selectedItem.sourceLocation
+  , destinationAddress : getAddressFromBooking state.data.selectedItem.destinationLocation
+  , sourceLat : state.data.selectedItem.sourceLocation^._lat
+  , sourceLong : state.data.selectedItem.sourceLocation^._lon
+  , destLat : state.data.selectedItem.destinationLocation^._lat
+  , destLong : state.data.selectedItem.destinationLocation^._lon
+  , isSpecialZone : state.data.selectedItem.isSpecialZone
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
+  }
+
+fetchPickupCharges :: Array EstimateFares -> Int 
+fetchPickupCharges estimateFareBreakup = 
+  let 
+    deadKmFare = DA.head (filter (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup)
+  in 
+    maybe 0 (\fare -> fare ^. _price) deadKmFare

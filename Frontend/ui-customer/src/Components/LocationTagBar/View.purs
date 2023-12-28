@@ -29,42 +29,46 @@ import Data.Maybe (Maybe(..))
 import Language.Types (STR(..))
 import Engineering.Helpers.Commons(os, screenWidth)
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import ConfigProvider
 
 view :: forall w. (Action -> Effect Unit) -> LocationTagBarState -> PrestoDOM ( Effect Unit ) w
 view push state = 
+  let config = (getAppConfig appConfig).locationTagBar
+  in
  linearLayout
  [ width MATCH_PARENT
  , height WRAP_CONTENT
  , orientation VERTICAL
+ , gravity CENTER 
  ][ linearLayout
     [ width $ V (screenWidth unit - 32)
     , height WRAP_CONTENT 
     ](mapWithIndex (\index item -> 
         linearLayout
         [ height WRAP_CONTENT
-        , stroke $ "1," <> Color.grey900
+        , stroke $ config.stroke
         , gravity CENTER
         , weight 1.0
         , background Color.white900
         , padding $ Padding 6 8 6 8
         , margin $ MarginRight if index == 2 then 0 else 8
         , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
-        , cornerRadius 8.0
+        , cornerRadius config.cornerRadius
         ][ imageView
             [ width $ V 15
             , height $ V 17
-            , imageWithFallback case item of
-                        HOME_TAG -> if (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address," <> (getAssetStoreLink FunctionCall) <> "ny_ic_add_address.png" else "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png"
-                        WORK_TAG -> if  (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address," <> (getAssetStoreLink FunctionCall) <> "ny_ic_add_address.png" else "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png"
-                        _      -> "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
+            , imageWithFallback $ fetchImage FF_ASSET $  case item of
+                        HOME_TAG -> if (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address" else "ny_ic_home_blue"
+                        WORK_TAG -> if  (getSavedLocationByTag state item) == Nothing then "ny_ic_add_address" else "ny_ic_work_blue"
+                        _      -> "ny_ic_fav_red"
             ]
           , textView $
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
             , margin $ MarginLeft 8
             , singleLine true
-            , color Color.black800
+            , color config.textColor
             , gravity CENTER_VERTICAL
             , lineHeight "18"
             , padding $ PaddingBottom 1

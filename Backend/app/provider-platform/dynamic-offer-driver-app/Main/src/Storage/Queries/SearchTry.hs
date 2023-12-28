@@ -20,31 +20,41 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.SearchTry as BeamST
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.SearchRequest as QR
 
-create :: MonadFlow m => SearchTry -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchTry -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id SearchTry -> m (Maybe SearchTry)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchTry -> m (Maybe SearchTry)
 findById (Id searchTry) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTry]
 
 findLastByRequestId ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchRequest ->
   m (Maybe SearchTry)
 findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
-findActiveTryByRequestId ::
-  MonadFlow m =>
+findTryByRequestId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchRequest ->
   m (Maybe SearchTry)
-findActiveTryByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.And [Se.Is BeamST.requestId $ Se.Eq searchRequest, Se.Is BeamST.status $ Se.Eq ACTIVE]] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
+findTryByRequestId (Id searchRequest) =
+  findAllWithOptionsKV
+    [Se.Is BeamST.requestId $ Se.Eq searchRequest]
+    (Se.Desc BeamST.searchRepeatCounter)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
 
 cancelActiveTriesByRequestId ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchRequest ->
   m ()
 cancelActiveTriesByRequestId (Id searchId) = do
@@ -60,7 +70,7 @@ cancelActiveTriesByRequestId (Id searchId) = do
     ]
 
 updateStatus ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchTry ->
   SearchTryStatus ->
   m ()
@@ -73,13 +83,19 @@ updateStatus (Id searchId) status_ = do
     [Se.Is BeamST.id $ Se.Eq searchId]
 
 getSearchTryStatusAndValidTill ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchTry ->
   m (Maybe (UTCTime, SearchTryStatus))
 getSearchTryStatusAndValidTill (Id searchTryId) = findOneWithKV [Se.Is BeamST.id $ Se.Eq searchTryId] <&> fmap (\st -> (Domain.validTill st, Domain.status st))
 
 instance FromTType' BeamST.SearchTry SearchTry where
   fromTType' BeamST.SearchTryT {..} = do
+    merchant <- case merchantId of
+      Nothing -> do
+        searchReq <- QR.findById (Id requestId) >>= fromMaybeM (InternalError $ "Search request not found - " <> requestId)
+        CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
+      Just mId -> CQM.findById (Id mId) >>= fromMaybeM (MerchantNotFound mId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
     pure $
       Just
         SearchTry
@@ -87,6 +103,7 @@ instance FromTType' BeamST.SearchTry SearchTry where
             requestId = Id requestId,
             estimateId = Id estimateId,
             merchantId = Id <$> merchantId,
+            merchantOperatingCityId = merchantOpCityId,
             messageId = messageId,
             startTime = startTime,
             validTill = validTill,
@@ -107,6 +124,7 @@ instance ToTType' BeamST.SearchTry SearchTry where
         requestId = getId requestId,
         estimateId = getId estimateId,
         merchantId = getId <$> merchantId,
+        merchantOperatingCityId = Just $ getId merchantOperatingCityId,
         messageId = messageId,
         startTime = startTime,
         validTill = validTill,

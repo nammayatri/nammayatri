@@ -21,7 +21,9 @@ where
 
 import Dashboard.Common as Reexport
 import Dashboard.ProviderPlatform.Driver (DriverFeeStatus)
+import Data.Aeson
 import Data.Text
+import Data.Time (Day)
 import GHC.Int
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -47,24 +49,22 @@ data AllFees = AllFees
   { status :: DriverFeeStatus,
     numRides :: Int,
     numDrivers :: Int,
-    totalAmount :: HighPrecMoney
+    totalAmount :: Centesimal
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data CollectionListRes = CollectionListRes
-  { totalCount :: Int,
-    totalFeeCollected :: HighPrecMoney,
+data CollectionListElem = CollectionListElem
+  { totalAmount :: Centesimal,
     totalRides :: Int,
-    totalDrivers :: Int,
-    collectionsTs :: [(HighPrecMoney, Maybe UTCTime)],
-    numRidesTs :: [(Int, Maybe UTCTime)],
-    paymentTs :: [(Int, Maybe UTCTime)]
+    numDrivers :: Int,
+    date :: Day,
+    hour :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data CollectionList = CollectionList
-  { onlineCollection :: CollectionListRes,
-    offlineCollection :: CollectionListRes
+  { onlineCollection :: [CollectionListElem],
+    offlineCollection :: [CollectionListElem]
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -81,5 +81,15 @@ data DriverFeeAPIEntity = DriverFeeAPIEntity
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     collectedAt :: Maybe UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data DriverFee = DriverFee -- clickhouse specific
+  { status :: Maybe String,
+    numRides :: Maybe String,
+    numDrivers :: Maybe String,
+    totalAmount :: Maybe Centesimal,
+    date :: Maybe String,
+    hour :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

@@ -12,6 +12,9 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wwarn=orphans #-}
 
 module Storage.Beam.SearchRequestSpecialZone where
 
@@ -28,6 +31,7 @@ data SearchRequestSpecialZoneT f = SearchRequestSpecialZoneT
     startTime :: B.C f UTCTime,
     validTill :: B.C f UTCTime,
     providerId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
     area :: B.C f (Maybe FareProductD.Area),

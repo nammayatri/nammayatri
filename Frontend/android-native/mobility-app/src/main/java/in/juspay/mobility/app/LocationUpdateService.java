@@ -10,6 +10,7 @@
 package in.juspay.mobility.app;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.graphics.Color.rgb;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -169,19 +170,22 @@ public class LocationUpdateService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         /* Start the service if the driver is active*/
         startForeground(notificationServiceId, createNotification());
-        if(intent!=null){
+		if (intent != null) {
             String startDistanceCalStr = intent.hasExtra("TRIP_STATUS") ? intent.getStringExtra("TRIP_STATUS") : null;
             if (!isDistanceCalulation && startDistanceCalStr != null && startDistanceCalStr.equals("started")) {
                 Log.d(LOG_TAG, "OnStart - StartDistanceCalculation");
-                startDistanceCalculation();
-            }else if(startDistanceCalStr != null && startDistanceCalStr.equals("ended")){
-                Log.d(LOG_TAG, "OnStart - StopDistanceCalculation with values - FinalDistance: " + finalDistance + ", FinalAccDistance: "+finalDistanceWithAcc);
-                finalDistanceWithAcc = 0;
-                finalDistance =0;
-                if (fusedLocClientForDistanceCal != null && calDistanceCallback != null) fusedLocClientForDistanceCal.removeLocationUpdates(calDistanceCallback);
-                isDistanceCalulation=false;
                 updateStorage("TRIP_DISTANCE_ACC", "0");
                 updateStorage("TRIP_DISTANCE", "0");
+                finalDistanceWithAcc = 0;
+                finalDistance = 0;
+                startDistanceCalculation();
+            } else if (startDistanceCalStr != null && startDistanceCalStr.equals("ended")) {
+                Log.d(LOG_TAG, "OnStart - StopDistanceCalculation with values - FinalDistance: " + finalDistance + ", FinalAccDistance: " + finalDistanceWithAcc + " LFinalDistance - " + getValueFromStorage("TRIP_DISTANCE") + " LFinalAccDistance - " + getValueFromStorage("TRIP_DISTANCE_ACC"));
+                if (fusedLocClientForDistanceCal != null && calDistanceCallback != null)
+                    fusedLocClientForDistanceCal.removeLocationUpdates(calDistanceCallback);
+                finalDistanceWithAcc = 0;
+                finalDistance = 0;
+                isDistanceCalulation = false;
             }
         }
         initialiseJSONObjects();
@@ -198,7 +202,7 @@ public class LocationUpdateService extends Service {
 
     private void startDistanceCalculation() {
         LocationCallback locCallback = getDistanceCalCallback();
-        LocationRequest locReq = createDistanceCalculation(2000, 0, 2000);
+        LocationRequest locReq = createDistanceCalculation(3000, 20, 3000);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
@@ -214,20 +218,20 @@ public class LocationUpdateService extends Service {
                 }
                 fusedLocClientForDistanceCal.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationTokenSource.getToken())
                         .addOnSuccessListener(location -> {
-                            if(location!=null) {
+                            if (location != null) {
                                 isDistanceCalulation = true;
-                                int distanceBtLatLng = 0, distanceBtLatLngWithAcc = 0;
+                                int distanceBtLatLng, distanceBtLatLngWithAcc;
                                 String accHolder = getValueFromStorage("ACCURACY_THRESHOLD");
                                 String accuracyThreshold = accHolder == null ? "100.0" : accHolder;
                                 if (prevLocation != null && prevAccLocation != null) {
                                     distanceBtLatLng = (int) location.distanceTo(prevLocation);
 
-                                    finalDistance+=distanceBtLatLng;
-                                    Log.d(LOG_TAG, "LiveFinalDistanceVal - " + finalDistance );
+                                    finalDistance += distanceBtLatLng;
+                                    Log.d(LOG_TAG, "LiveFinalDistanceVal - " + finalDistance);
                                     if (checkLocationAcc(location, accuracyThreshold)) {
                                         distanceBtLatLngWithAcc = (int) location.distanceTo(prevAccLocation);
-                                        finalDistanceWithAcc+=distanceBtLatLngWithAcc;
-                                        Log.d(LOG_TAG, "LiveFinalDistanceVal With Acc - " + finalDistanceWithAcc );
+                                        finalDistanceWithAcc += distanceBtLatLngWithAcc;
+                                        Log.d(LOG_TAG, "LiveFinalDistanceVal With Acc - " + finalDistanceWithAcc);
                                         updateStorage("TRIP_DISTANCE_ACC", Integer.toString(finalDistanceWithAcc));
                                         prevAccLocation = location;
                                     }
@@ -237,7 +241,8 @@ public class LocationUpdateService extends Service {
                                         prevAccLocation = location;
                                 }
                                 prevLocation = location;
-                            }else Log.d(LOG_TAG, "Got NULL in location service to calculate distance");
+                            } else
+                                Log.d(LOG_TAG, "Got NULL in location service to calculate distance");
                         });
             }
         };
@@ -330,10 +335,10 @@ public class LocationUpdateService extends Service {
         if (fusedLocationProviderClient != null && locationCallback != null) {
             fusedLocationProviderClient.removeLocationUpdates(locationCallback);
         }
-        if (fusedLocClientForDistanceCal != null && calDistanceCallback != null){
+        if (fusedLocClientForDistanceCal != null && calDistanceCallback != null) {
             fusedLocClientForDistanceCal.removeLocationUpdates(calDistanceCallback);
         }
-        if (executorLocUpdate!=null) executorLocUpdate.shutdown();
+        if (executorLocUpdate != null) executorLocUpdate.shutdown();
         stopForeground(true);
         stopSelf();
     }
@@ -374,13 +379,12 @@ public class LocationUpdateService extends Service {
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String baseUrl = sharedPref.getString("BASE_URL", "null");
             String modeStatus = status ? "ONLINE" : "OFFLINE";
-            String orderUrl = baseUrl + "/driver/setActivity?active=" + status + "&mode="+modeStatus;
+            String orderUrl = baseUrl + "/driver/setActivity?active=" + status + "&mode=" + modeStatus;
             try {
                 MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
                 Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(context);
                 MobilityAPIResponse apiResponse = mobilityApiHandler.callAPI(orderUrl, baseHeaders);
                 if (!status) {
-                    updateStorage("LOCATION_STATUS", "PAUSE"); // TO-ASK:: Can we remove it, don't think it's being used
                     updateStorage("DRIVER_STATUS", "__failed");//
                     showAlertNotification(); // To notify the driver that he is offline.
                     cancelTimer();
@@ -397,7 +401,7 @@ public class LocationUpdateService extends Service {
 
     @Nullable
     private String getValueFromStorage(String k) {
-        return KeyValueStore.read(getApplicationContext(),getApplicationContext().getString(R.string.preference_file_key),k,null);
+        return KeyValueStore.read(getApplicationContext(), getApplicationContext().getString(R.string.preference_file_key), k, null);
     }
 
     private JSONObject getLatLng(Double lat, Double lng) throws JSONException {
@@ -493,7 +497,7 @@ public class LocationUpdateService extends Service {
         }
     }
 
-    private void updateMetaData(String triggerFunctionValue){ // TODO:: Deprecate the function after some time - 21st Sept 2023
+    private void updateMetaData(String triggerFunctionValue) { // TODO:: Deprecate the function after some time - 21st Sept 2023
         try {
             BatteryManager bm = (BatteryManager) context.getSystemService(BATTERY_SERVICE);
             int batteryPercentageValue = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
@@ -507,17 +511,17 @@ public class LocationUpdateService extends Service {
         }
     }
 
-    private JSONArray updateLocationPayload(SharedPreferences sharedPref){
+    private JSONArray updateLocationPayload(SharedPreferences sharedPref) {
         JSONArray locationPayload;
         String bufferedLocationObjects = sharedPref.getString(LOCATION_PAYLOAD, null);
         if (bufferedLocationObjects != null) {
             try {
                 locationPayload = new JSONArray(bufferedLocationObjects);
                 String rideStatus = getValueFromStorage("IS_RIDE_ACTIVE");
-                if (rideStatus!=null && rideStatus.equals("false")){
+                if (rideStatus != null && rideStatus.equals("false")) {
                     return new JSONArray();
                 }
-                while ( locationPayload.length() >1 && locationPayload.length() >= maximumLimit) {
+                while (locationPayload.length() > 1 && locationPayload.length() >= maximumLimit) {
                     locationPayload.remove(0);
                     if (pointsToRemove > 1000000) pointsToRemove = 1;
                 }
@@ -545,7 +549,7 @@ public class LocationUpdateService extends Service {
         }
     }
 
-    private JSONObject getLocationUpdatePoints(double latitude, double longitude, SharedPreferences sharedPref, String locTime){
+    private JSONObject getLocationUpdatePoints(double latitude, double longitude, SharedPreferences sharedPref, String locTime) {
         try {
             JSONObject point = new JSONObject();
             String makeNullAPICall = sharedPref.getString("MAKE_NULL_API_CALL", "NO");
@@ -569,6 +573,22 @@ public class LocationUpdateService extends Service {
                         point.put("lat", 12.522069908884921);
                         point.put("lon", 76.89518072273476);
                         break;
+                    case "7891789":
+                        point.put("lat", 23.06194031948526);
+                        point.put("lon", 88.7637073215878);
+                        break;
+                    case "7891788":
+                        point.put("lat", 24.338294091147212);
+                        point.put("lon", 88.1949706368274);
+                        break;
+                    case "7891567":
+                        point.put("lat", 9.869715234892222);
+                        point.put("lon", 76.37632251438302);
+                        break;
+                    case "7891678":
+                        point.put("lat", 9.955097514840311);
+                        point.put("lon", 76.37173322025349);
+                        break;
                     default:
                         point.put("lat", latitude);
                         point.put("lon", longitude);
@@ -587,14 +607,18 @@ public class LocationUpdateService extends Service {
                 }
             }
             return point;
-        }catch (Exception e){
+        } catch (Exception e) {
             return null;
         }
     }
 
     /*Location update API call*/
-    private void callDriverCurrentLocationAPI(double latitude, double longitude, float accuracy, String locTime, String log, String locationSource, String triggerFunctionValue) {
+    private void callDriverCurrentLocationAPI(Location location, String locTime, String log, String locationSource, String triggerFunctionValue) {
         try {
+            float accuracy = location != null ? location.getAccuracy() : 0;
+            double latitude = location != null ? location.getLatitude() : 0.0;
+            double longitude = location != null ? location.getLongitude() : 0.0;
+            double locSpeed = location.hasSpeed() ? location.getSpeed() : 0.0;
             Log.d(LOG_TAG, "DriverUpdateLoc Initiated");
             Handler handler = new Handler(Looper.getMainLooper());
             SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -612,6 +636,7 @@ public class LocationUpdateService extends Service {
             locationData.put("ts", locTime);
             locationData.put("acc", accuracy);
             locationData.put("source", locationSource);
+            locationData.put("v", locSpeed);
             if (!locationData.has("pt")) return;
             locationPayload.put(locationData);
             updateStorage(LOCATION_PAYLOAD, locationPayload.toString());
@@ -625,32 +650,29 @@ public class LocationUpdateService extends Service {
                 executorLocUpdate.execute(() -> {
                     Log.d(LOG_TAG, "DriverUpdateLoc Executor Executed");
                     Map<String, String> baseHeaders = callAPIHandler.getBaseHeaders(context);
-
-                    String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
-
                     String baseUrl = sharedPref.getString("BASE_URL", "null");
                     String orderUrl = baseUrl + "/driver/location";
                     String result = null;
 
-                    if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed") && isValidTime.equals("true")) {
+                    if (baseHeaders.containsKey("token") && !Objects.equals(baseHeaders.get("token"), "__failed")) {
                         Log.d(LOG_TAG, "DriverUpdateLoc TOKEN | ValidTime Passed");
                         baseHeaders.put("source", log);
                         String merchantId = getValueFromStorage("MERCHANT_ID");
                         String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
                         String driverMode = getValueFromStorage("DRIVER_STATUS_N");
-                        if (merchantId != null && vehicleVariant != null && driverMode != null){
+                        if (merchantId != null && vehicleVariant != null && driverMode != null) {
                             baseHeaders.put("mId", merchantId);
                             baseHeaders.put("vt", vehicleVariant);
                             baseHeaders.put("dm", driverMode.toUpperCase());
-                        }else if( vVariant != null && drMode != null && merchantID != null) {
+                        } else if (vVariant != null && drMode != null && merchantID != null) {
                             baseHeaders.put("mId", merchantID);
                             baseHeaders.put("vt", vVariant);
                             baseHeaders.put("dm", drMode);
-                        }else{
+                        } else {
                             MobilityAPIResponse apiResponse = callAPIHandler.callAPI(orderUrl, baseHeaders, locationPayload.toString());
                             try {
                                 JSONObject resp = new JSONObject(apiResponse.getResponseBody());
-                                if(resp.has("mode")){
+                                if (resp.has("mode")) {
                                     drMode = resp.get("mode").toString().toUpperCase();
                                     baseHeaders.put("dm", drMode);
                                 }
@@ -681,7 +703,8 @@ public class LocationUpdateService extends Service {
                         int respCode = apiResponse.getStatusCode();
 
                         if ((respCode < 200 || respCode >= 300) && respCode != 302) {
-                            if(respCode >= 400 && respCode <500) updateStorage(LOCATION_PAYLOAD, new JSONArray().toString());
+                            if (respCode >= 400 && respCode < 500)
+                                updateStorage(LOCATION_PAYLOAD, new JSONArray().toString());
                             System.out.println("LOCATION_UPDATE: ERROR API respReader :- " + apiResponse.getResponseBody());
                             Log.d(LOG_TAG, "in error " + apiResponse.getResponseBody());
                         } else {
@@ -702,8 +725,9 @@ public class LocationUpdateService extends Service {
                     handler.post(() -> {
                         try {
                             JSONObject resp = new JSONObject(String.valueOf(finalResult));
-                            if(resp.has("errorCode")) Log.d(LOG_TAG, "API RESP - " + resp + resp.has("errorCode") + " -- " + resp.get("errorCode") + " -- " + resp.get("errorCode").equals("INVALID_TOKEN"));
-                            if (resp.has("errorCode") && resp.get("errorCode").equals("INVALID_TOKEN")) {
+                            if (resp.has("errorCode"))
+                                Log.d(LOG_TAG, "API RESP - " + resp + resp.has("errorCode") + " -- " + resp.get("errorCode") + " -- " + resp.get("errorCode").equals("INVALID_TOKEN"));
+                            if (resp.has("errorCode") && (resp.get("errorCode").equals("INVALID_TOKEN") || resp.get("errorCode").equals("TOKEN_EXPIRED"))) {
                                 Log.d(LOG_TAG, "Invalid token while updating location API " + resp.get("errorCode"));
                                 updateStorage("REGISTERATION_TOKEN", "__failed");
                                 cancelTimer();
@@ -716,12 +740,12 @@ public class LocationUpdateService extends Service {
                     });
 
                 });
-            } else if (canCallAPI(!executorLocUpdate.isShutdown()) && executorBusy++ > (delayForGNew > 5000 ? 1 : 3)){
+            } else if (canCallAPI(!executorLocUpdate.isShutdown()) && executorBusy++ > (delayForGNew > 5000 ? 1 : 3)) {
                 Log.e(LOG_TAG, "Executor status is busy with - " + executorBusy);
                 executorLocUpdate.shutdownNow();
-                executorBusy=0;
+                executorBusy = 0;
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -735,7 +759,7 @@ public class LocationUpdateService extends Service {
                 .build();
     }
 
-    private LocationRequest createDistanceCalculation(int intervalForLocationUpdate, float minDispDistance, int minInterval){
+    private LocationRequest createDistanceCalculation(int intervalForLocationUpdate, float minDispDistance, int minInterval) {
         return new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY)
                 .setIntervalMillis(intervalForLocationUpdate)
                 .setMinUpdateDistanceMeters(minDispDistance)
@@ -763,7 +787,8 @@ public class LocationUpdateService extends Service {
                 new NotificationCompat.Builder(this, LOCATION_UPDATES)
                         .setContentTitle("Updating")
                         .setContentText(getString(R.string.your_location_is_being_updated))
-                        .setSmallIcon(Utils.getResIdentifier(context,"ic_launcher", "drawable"))
+                        .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
+                        .setColor(rgb(252, 198, 44))
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);
@@ -779,9 +804,10 @@ public class LocationUpdateService extends Service {
         Intent notificationIntent = getPackageManager().getLaunchIntentForPackage(context.getPackageName());
         PendingIntent pendingIntent = PendingIntent.getActivity(this, alertNotificationId, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, "General");
-        mBuilder.setLargeIcon(BitmapFactory.decodeResource(getResources(), Utils.getResIdentifier(context,"ic_launcher", "drawable")));
+        mBuilder.setLargeIcon(BitmapFactory.decodeResource(getResources(), Utils.getResIdentifier(context, "ic_launcher", "drawable")));
         mBuilder.setContentTitle(getString(R.string.we_made_you_offline))
-                .setSmallIcon(Utils.getResIdentifier(context,"ic_launcher", "drawable"))
+                .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
+                .setColor(rgb(252, 195, 44))
                 .setContentText(getString(R.string.location_is_turned_off_permission_is_disabled))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX);
@@ -846,12 +872,9 @@ public class LocationUpdateService extends Service {
                     Date locTime = new Date(locTimeMilliSeconds);
                     String thisLocationTimeStamp = sdf.format(locTime);
                     SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                    String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
-                    if (isValidTime.equals("true")) {
-                        updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                        updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                        callDriverCurrentLocationAPI(lat, lng, acc, thisLocationTimeStamp, "fused_location_callback", LocationSource.LastLocation.toString(), TriggerFunction.GoogleCallback.toString());
-                    }
+                    updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
+                    updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                    callDriverCurrentLocationAPI(lastLocation, thisLocationTimeStamp, "fused_location_callback", LocationSource.LastLocation.toString(), TriggerFunction.GoogleCallback.toString());
                     prevLat = lastLatitudeValue;
                     prevLon = lastLongitudeValue;
                 }
@@ -860,8 +883,8 @@ public class LocationUpdateService extends Service {
         return locationCallback;
     }
 
-    private boolean checkLocationAcc(Location location, String accuracyThreshold){
-        return (location.getAccuracy() < Double.parseDouble(accuracyThreshold)) && (location.hasSpeed() && location.getSpeed() > 0.55f);
+    private boolean checkLocationAcc(Location location, String accuracyThreshold) {
+        return (location.getAccuracy() < Double.parseDouble(accuracyThreshold)) && (location.hasSpeed() && location.getSpeed() > 1.0f);
     }
 
     /* check all the cases of location permission */
@@ -887,10 +910,6 @@ public class LocationUpdateService extends Service {
     private boolean isLocationEnabled() {
         LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         return locationManager != null && LocationManagerCompat.isLocationEnabled(locationManager);
-    }
-
-    private void calculateRideDistance(Location location){
-
     }
 
     /* create timer task */
@@ -919,15 +938,12 @@ public class LocationUpdateService extends Service {
                                         Date locTime = new Date(locTimeMilliSeconds);
                                         String thisLocationTimeStamp = sdf.format(locTime);
                                         SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                                        String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
-                                        if (isValidTime.equals("true")) {
-                                            updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
-                                            updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
-                                            callDriverCurrentLocationAPI(location.getLatitude(), location.getLongitude(), location.getAccuracy(), thisLocationTimeStamp, "timer_task", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
-                                        }
+                                        updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
+                                        updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
+                                        callDriverCurrentLocationAPI(location, thisLocationTimeStamp, "timer_task", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
                                     } else {
                                         System.out.println("LOCATION_UPDATE: CURRENT LOCATION IS NULL");
-                                        callDriverCurrentLocationAPI(0.0, 0.0, 0, sdf.format(new Date()), "timer_task_null_location", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
+                                        callDriverCurrentLocationAPI(location, sdf.format(new Date()), "timer_task_null_location", LocationSource.CurrentLocation.toString(), TriggerFunction.TimerTask.toString());
                                     }
                                 })
                                 .addOnFailureListener(Throwable::printStackTrace);
@@ -936,8 +952,7 @@ public class LocationUpdateService extends Service {
                         fusedLocationProviderClient.getLastLocation()
                                 .addOnSuccessListener(location -> {
                                     SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-                                    String isValidTime = sharedPref.getString("IS_VALID_TIME", "true");
-                                    if (location != null && isValidTime.equals("true")) {
+                                    if (location != null) {
                                         updateStorage("LAST_KNOWN_LAT", String.valueOf(lastLatitudeValue));
                                         updateStorage("LAST_KNOWN_LON", String.valueOf(lastLongitudeValue));
                                         long locTimeMilliSeconds = location.getTime();
@@ -945,7 +960,7 @@ public class LocationUpdateService extends Service {
                                         sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
                                         Date locTime = new Date(locTimeMilliSeconds);
                                         String thisLocationTimeStamp = sdf.format(locTime);
-                                        callDriverCurrentLocationAPI(location.getLatitude(), location.getLongitude(), location.getAccuracy(), thisLocationTimeStamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
+                                        callDriverCurrentLocationAPI(location, thisLocationTimeStamp, "COMING FROM TIMER", LocationSource.LastLocation.toString(), TriggerFunction.TimerTask.toString());
                                     }
                                 })
                                 .addOnFailureListener(Throwable::printStackTrace);

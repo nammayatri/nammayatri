@@ -26,8 +26,8 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Storage as Storage
-import Prelude ((<>))
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Prelude (not, (&&))
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 import Common.Types.App (LazyCheck(..))
 
 apiErrorModalConfig :: ST.MyRidesScreenState -> ErrorModal.Config 
@@ -35,7 +35,7 @@ apiErrorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_error_404," <> (getAssetStoreLink FunctionCall) <> "ny_ic_error_404.png"
+        imageUrl = fetchImage FF_ASSET "ny_ic_error_404"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 32)
@@ -64,7 +64,7 @@ errorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_no_past_rides," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_no_past_rides.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_no_past_rides"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 32)
@@ -83,7 +83,7 @@ errorModalConfig state = let
       , margin = (Margin 16 0 16 16)
       , background = state.data.config.primaryBackground
       , color = state.data.config.primaryTextColor
-      , visibility = if (Storage.isLocalStageOn ST.HomeScreen) then VISIBLE else GONE
+      , visibility = if (Storage.isLocalStageOn ST.HomeScreen) && not (isParentView FunctionCall) then VISIBLE else GONE
       }
     }
   in errorModalConfig' 
@@ -91,13 +91,16 @@ errorModalConfig state = let
 genericHeaderConfig :: ST.MyRidesScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
+  btnVisibility =  if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , visibility = btnVisibility
       } 
     , textConfig {
         text = (getString MY_RIDES)
@@ -106,6 +109,7 @@ genericHeaderConfig state = let
     , suffixImageConfig {
         visibility = GONE
       }
+    , visibility = titleVisibility
     }
   in genericHeaderConfig'
  

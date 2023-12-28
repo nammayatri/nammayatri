@@ -14,9 +14,6 @@
 
 module SharedLogic.External.LocationTrackingService.Flow where
 
--- import qualified Data.Text as T
-
-import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -29,7 +26,6 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.External.LocationTrackingService.API.DriverDetails as DriverDetailsAPI
 import qualified SharedLogic.External.LocationTrackingService.API.DriversLocation as DriversLocationAPI
 import qualified SharedLogic.External.LocationTrackingService.API.EndRide as EndRideAPI
 import qualified SharedLogic.External.LocationTrackingService.API.NearBy as NearByAPI
@@ -89,21 +85,6 @@ nearBy lat lon onRide vt radius merchantId = do
       >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NEAR_BY_API") url)
   logDebug $ "lts nearBy: " <> show nearByRes
   return nearByRes
-
-driverDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DP.Person -> DI.DriverMode -> m APISuccess
-driverDetails driverId driverMode = do
-  ltsCfg <- asks (.ltsCfg)
-  let url = ltsCfg.url
-  let req =
-        DriverDetailsReq
-          { driverId,
-            driverMode
-          }
-  driverDetailsRes <-
-    callAPI url (DriverDetailsAPI.driverDetails req) "driverDetails" DriverDetailsAPI.locationTrackingServiceAPI
-      >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_DETAILS_API") url)
-  logDebug $ "lts driverDetails: " <> show driverDetailsRes
-  return driverDetailsRes
 
 rideDetails :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]) => Id DR.Ride -> DR.RideStatus -> Id DM.Merchant -> Id DP.Person -> Double -> Double -> m APISuccess
 rideDetails rideId rideStatus merchantId driverId lat lon = do

@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import Storage.Beam.SystemConfigs ()
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -49,7 +50,7 @@ search ::
 search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Search API Flow" "Reached"
-    dSearchReq <- ACL.buildSearchReq subscriber req
+    dSearchReq <- ACL.buildSearchReq transporterId subscriber req
     Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
       merchant <- DSearch.validateRequest transporterId dSearchReq
       fork "search request processing" $
@@ -57,8 +58,9 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
           dSearchRes <- DSearch.handler merchant dSearchReq
           let context = req.context
           let callbackUrl = gateway.subscriber_url
+          internalEndPointHashMap <- asks (.internalEndPointHashMap)
           void $
-            CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
+            CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context callbackUrl internalEndPointHashMap $ do
               pure $ ACL.mkOnSearchMessage dSearchRes
     pure Ack
 

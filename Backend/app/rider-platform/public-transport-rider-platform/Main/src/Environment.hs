@@ -14,6 +14,8 @@
 
 module Environment where
 
+import qualified Data.HashMap as HM
+import qualified Data.Map as M
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis
@@ -58,7 +60,8 @@ data AppCfg = AppCfg
     hostName :: Text,
     kafkaProducerCfg :: KafkaProducerCfg,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -93,7 +96,8 @@ data AppEnv = AppEnv
     kafkaEnvs :: BAPKafkaEnvs,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -119,6 +123,7 @@ buildAppEnv AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisNonCriticalEnv
       else connectHedisCluster hedisNonCriticalClusterCfg publicTransportBapPrefix
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

@@ -21,7 +21,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(.
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Prelude ((<>))
-import MerchantConfig.Utils (getValueFromConfig)
+import ConfigProvider
 
 data Action = SuffixImgOnClick | PrefixImgOnClick
 
@@ -38,6 +38,7 @@ type Config =
   , prefixImageConfig :: ImageConfig
   , textConfig :: TextConfig
   , suffixImageConfig :: ImageConfig
+  , visibility :: Visibility
   }
 
 type ImageConfig =
@@ -62,7 +63,10 @@ type TextConfig =
   }
 
 config :: Config
-config = {
+config = 
+  let 
+    config = getAppConfig appConfig
+  in {
     height : V 56
   , width : MATCH_PARENT
   , margin : (Margin 0 0 0 0)
@@ -74,7 +78,7 @@ config = {
   , prefixImageConfig : {
       height : V 25
     , width : V 25
-    , imageUrl : getValueFromConfig "addFavouriteScreenBackArrow"
+    , imageUrl : config.genericHeaderConfig.backArrow
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 12 12 12 12)
     , visibility : VISIBLE
@@ -98,11 +102,14 @@ config = {
     , accessibility : DISABLE 
     , accessibilityHint : ""
     }
-
+  , visibility : VISIBLE
 }
 
 merchantConfig :: Config
-merchantConfig = {
+merchantConfig = 
+  let 
+    config = getAppConfig appConfig
+  in {
     height : V 56
   , width : MATCH_PARENT
   , margin : (Margin 0 0 0 0)
@@ -114,7 +121,7 @@ merchantConfig = {
   , prefixImageConfig : {
       height : V 25
     , width : V 25
-    , imageUrl : getValueFromConfig "addFavouriteScreenBackArrow"
+    , imageUrl : config.genericHeaderConfig.backArrow
     , padding : (Padding 0 0 0 0)
     , margin : (Margin 16 16 16 12)
     , visibility : VISIBLE
@@ -138,5 +145,5 @@ merchantConfig = {
     , accessibility : DISABLE 
     , accessibilityHint : ""
     }
-
+  , visibility : VISIBLE
 }

@@ -15,7 +15,7 @@
 
 module Screens.DriverProfileScreen.View where
 
-import Common.Types.App
+import Common.Types.Config
 import Data.List
 import Screens.DriverProfileScreen.ComponentConfig
 import Screens.SubscriptionScreen.Transformer
@@ -37,10 +37,12 @@ import Control.Applicative (unless)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (length, mapWithIndex, null, any, (!!), take)
+import Data.Array (length, mapWithIndex, null, any, (!!), take, range)
 import Data.Either (Either(..))
 import Data.List (elem)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Number (round)
+import Data.Int (toNumber)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff)
@@ -50,13 +52,12 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getVehicleType)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getVehicleType, parseFloat, getCityConfig)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import MerchantConfig.Utils as MU
-import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (<<<), (>), pure, discard, show, (&&), void, negate, not)
+import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
 import PrestoDOM.Animation as PrestoAnim
@@ -64,17 +65,20 @@ import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens as ScreenNames
 import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, getTitle, checkGenderSelect, getGenderName, optionList)
-import Screens.DriverProfileScreen.ScreenData (MenuOptions(..))
 import Screens.Types as ST
-import Screens.Types (AutoPayStatus(..))
-import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..), GetAllRcDataResp(..))
+import Screens.Types(MenuOptions(..), AutoPayStatus(..))
+import Services.API (GetDriverInfoReq(..), GetDriverInfoResp(..), GetAllRcDataReq(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Helpers.Utils as HU
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Resource.Constants as Const
+import Data.Either (Either (..))
+import Data.Enum (enumFromThenTo)
+import Data.String as DS
 
 screen :: ST.DriverProfileScreenState -> Screen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
@@ -113,7 +117,7 @@ view push state =
   frameLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    ][  linearLayout
+    ][  relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
@@ -126,7 +130,7 @@ view push state =
         [ width MATCH_PARENT
           , height MATCH_PARENT
           , background Color.lightBlack900
-          , visibility if state.props.logoutModalView == true then VISIBLE else GONE
+          , visibility if state.props.logoutModalView then VISIBLE else GONE
           ][ PopUpModal.view (push <<<PopUpModalAction) (logoutPopUp state) ]
         , if state.props.upiQrView then renderQRView state push  else dummyTextView
         , if state.props.showLiveDashboard then showLiveStatsDashboard push state else dummyTextView
@@ -167,6 +171,8 @@ updateDetailsView state push =
 
 renderQRView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit )-> PrestoDOM (Effect Unit) w
 renderQRView state push =
+  let pspIcon = (Const.getPspIcon state.data.payerVpa)
+  in
   linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -212,7 +218,7 @@ renderQRView state push =
               width $ V 24
             , height  $ V 24
             , margin $ MarginRight 6
-            , imageWithFallback $ (Const.getPspIcon state.data.payerVpa)
+            , imageWithFallback $ fetchImage FF_ASSET pspIcon
           ]
           , textView $ [
             text state.data.payerVpa
@@ -290,7 +296,7 @@ headerView state push =
   ][ imageView
       [ width $ V 30
       , height $ V 30
-      , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , onClick push $ const BackPressed
       ]
     , textView
@@ -309,7 +315,7 @@ headerView state push =
           [ height $ V 20
           , width $ V 20
           , margin $ MarginRight 4
-          , imageWithFallback "ic_settings,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+          , imageWithFallback $ fetchImage FF_ASSET "ic_settings"
           ]
         , textView
           ([ text (getString SETTINGS)
@@ -380,6 +386,11 @@ tabView state push =
 ------------------------------------------ TAB IMAGE VIEW ---------------------------------------------------------
 tabImageView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 tabImageView state push =
+  let driverImage = case (fromMaybe "UNKNOWN" state.data.driverGender) of
+                      "MALE" -> "ny_ic_new_avatar_profile"
+                      "FEMALE" -> "ny_ic_profile_female"
+                      _ -> "ny_ic_generic_mascot"
+  in
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -402,7 +413,7 @@ tabImageView state push =
           imageView[ 
             height $ V 88
           , width $ V 88
-          , imageWithFallback $ "ny_ic_user," <> getAssetStoreLink FunctionCall <> "ic_new_avatar.png"
+          , imageWithFallback $ fetchImage FF_ASSET driverImage
           ]
         else 
           linearLayout [
@@ -424,12 +435,28 @@ tabImageView state push =
         , gravity CENTER
         , alpha if (state.props.screenType == ST.VEHICLE_DETAILS) then 1.0 else 0.4
         ][  imageView
-            [ imageWithFallback if state.data.driverVehicleType == "AUTO_RICKSHAW" then "ny_ic_auto_side_view,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" else "ny_ic_silhouette,https://assets.juspay.in/nammayatri/images/common/ic_navigation_blue11.png" --change this image link after uploading in asset store
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET $ getVehicleImage state
             , height $ V 68
             , width $ V 68
             ]
         ]
   ]
+  where 
+    getVehicleImage :: ST.DriverProfileScreenState -> String 
+    getVehicleImage state = mkAsset $ getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+
+    mkAsset :: CityConfig -> String
+    mkAsset cityConfig = 
+      if state.data.driverVehicleType == "AUTO_RICKSHAW" 
+        then (getAutoImage cityConfig)
+        else "ny_ic_silhouette"
+    
+    getAutoImage :: CityConfig -> String
+    getAutoImage cityConfig = 
+      if cityConfig.cityCode == "std:040" 
+        then "ny_ic_black_yellow_auto_side_view"
+        else "ny_ic_auto_side_view"
+
 
 ---------------------------------------------- DRIVER DETAILS VIEW ------------------------------------------------------------
 
@@ -472,10 +499,11 @@ missedOpportunityView state push  =
   ]
 
 missedOppArray :: ST.AnalyticsData -> Array MissedOpportunity
-missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> "%"), value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
-  {key : (getString RIDES_CANCELLED), value : show analyticsData.ridesCancelled , value1 : show analyticsData.totalRidesAssigned , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
-    {key : (getString EARNINGS_MISSED), value : "₹" <> EHC.formatCurrencyWithCommas (show analyticsData.missedEarnings) , value1 : "", infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+missedOppArray analyticsData = [{key : (getString CANCELLATION_RATE), value :  (show analyticsData.cancellationRate <> "%"), value1 : "" , infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
+  {key : (getString RIDES_CANCELLED), value : show analyticsData.ridesCancelled , value1 : show analyticsData.totalRidesAssigned , infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction},
+    {key : (getString EARNINGS_MISSED), value : "₹" <> EHC.formatCurrencyWithCommas (show analyticsData.missedEarnings) , value1 : "", infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 ------------------------------------------- DRIVER ANALYTICS VIEW  ----------------------------------------------------------
+
 driverAnalyticsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 driverAnalyticsView state push =
   let analyticsData = state.data.analyticsData
@@ -492,7 +520,7 @@ driverAnalyticsView state push =
         , color Color.black900
         , fontStyle $ FontStyle.semiBold LanguageStyle
       ]
-    , let bonusActivated = getValueFromConfig "BONUS_EARNED" == "true"  in
+    , let bonusActivated = state.data.config.feature.enableBonus in
       linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -505,7 +533,7 @@ driverAnalyticsView state push =
             , width MATCH_PARENT
             ]
             [
-              infoTileView state {primaryText: "₹ " <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), subText: (getString EARNED_ON_APP), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
+              infoTileView state {primaryText: "₹ " <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings), subText: (getString $ EARNED_ON_APP "EARNED_ON_APP"), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
             , linearLayout
               [ height MATCH_PARENT
               , width (V 1)
@@ -514,13 +542,13 @@ driverAnalyticsView state push =
               ][]
             , infoTileView state {primaryText: "₹ " <> EHC.formatCurrencyWithCommas analyticsData.bonusEarned , subText: (getString NAMMA_BONUS), postImgVisibility : false, seperatorView : false, margin : Margin 0 0 0 0}
             ]
-          else infoCard state push {key : (getString EARNED_ON_APP), value : "₹" <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings) , value1 : "", infoImageUrl : "", postfixImage : "", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}
+          else infoCard state push {key : (getString $ EARNED_ON_APP "EARNED_ON_APP"), value : "₹" <> (EHC.formatCurrencyWithCommas analyticsData.totalEarnings) , value1 : "", infoImageUrl : "", postfixImage : "", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}
         ]
       , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ Margin 0 12 0 12
-        ][  infoTileView state {primaryText: (show $ fromMaybe 0.0 analyticsData.rating), subText: (getString RATED_BY_USERS1)<> " " <> show analyticsData.totalUsersRated <> " " <> (getString RATED_BY_USERS2), postImgVisibility : true, seperatorView : true, margin : MarginRight 6}
+        ][  infoTileView state {primaryText: (parseFloat (fromMaybe 0.0 analyticsData.rating) 1), subText: (getString RATED_BY_USERS1)<> " " <> show analyticsData.totalUsersRated <> " " <> (getString RATED_BY_USERS2), postImgVisibility : true, seperatorView : true, margin : MarginRight 6}
           , infoTileView state {primaryText: show analyticsData.totalCompletedTrips, subText: (getString TRIPS_COMPLETED), postImgVisibility : false, seperatorView : true, margin : MarginLeft 6}
         ]
       , horizontalScrollView
@@ -586,7 +614,7 @@ additionalRcsView state push config =
                 [ height $ V 11
                 , width $ V 11
                 , margin $ MarginLeft 7
-                , imageWithFallback if elem config.idx state.data.openInactiveRCViewOrNotArray then "ny_ic_chevron_up,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_up.png" else "ny_ic_chevron_down,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_chevron_down.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if elem config.idx state.data.openInactiveRCViewOrNotArray then "ny_ic_chevron_up" else "ny_ic_chevron_down"
                 ]] )
             ],
             linearLayout[
@@ -655,7 +683,7 @@ detailsViewForInactiveRcs state push config =
                 [ height $ V 11
                 , width $ V 11
                 , margin $ MarginLeft 7
-                , imageWithFallback "ic_edit_pencil,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ic_edit_pencil"
                 ]]  else [])
           , linearLayout
             [ height $ V 1
@@ -761,31 +789,31 @@ badgeView state =
 
 ------------------------------------------------- BADGE DATA -----------------------------------------------------------------
 getBadgeData :: ST.DriverProfileScreenState -> Array {badgeImage :: String, primaryText :: String, subText :: String}
-getBadgeData state = [{badgeImage: "ny_ic_five_star_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_five_star_badge.png"
+getBadgeData state = [{badgeImage: fetchImage FF_ASSET "ny_ic_five_star_badge"
                      , primaryText: "5-Star Rides"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_safe_ride,https://assets.juspay.in/nammayatri/images/driver/ny_ic_safe_ride.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_safe_ride"
                      , primaryText: "Safe Rides"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_clean_auto_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_clean_auto_badge.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_clean_auto_badge"
                      , primaryText: "Clean Auto"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_expert_driver,https://assets.juspay.in/nammayatri/images/driver/ny_ic_expert_driver.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_expert_driver"
                      , primaryText: "Expert Driving"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_navigator_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_navigator_badge.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_navigator_badge"
                      , primaryText: "Navigator"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_ontime_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_ontime_badge.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_ontime_badge"
                      , primaryText: "On Time"
                      , subText: "235"
                       },
-                      {badgeImage: "ny_ic_polite_driver_badge,https://assets.juspay.in/nammayatri/images/driver/ny_ic_polite_driver_badge.png"
+                      {badgeImage: fetchImage FF_ASSET "ny_ic_polite_driver_badge"
                      , primaryText: "Professional"
                      , subText: "235"
                       }
@@ -1002,6 +1030,7 @@ showLiveStatsDashboard push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , background Color.grey800
+  , visibility if (DS.null state.data.config.dashboard.url) then GONE else VISIBLE
   , afterRender
         ( \action -> do
             JB.initialWebViewSetUp push (getNewIDWithTag "webview") HideLiveDashboard
@@ -1011,8 +1040,8 @@ showLiveStatsDashboard push state =
   ] [ webView
       [ height MATCH_PARENT
       , width MATCH_PARENT
-      , id (getNewIDWithTag "webview")
-      , url if (isPreviousVersion (getValueToLocalStore VERSION_NAME) ("1.2.8")) then "https://nammayatri.in/open/" else "https://nammayatri.in/open?source=in-app"
+      , id $ getNewIDWithTag "webview"
+      , url state.data.config.dashboard.url
       ]]
 
 --------------------------------------------------- SETTINGS VIEW ------------------------------------------
@@ -1054,10 +1083,8 @@ profileOptionsLayout state push =
               , orientation VERTICAL
               , gravity CENTER_VERTICAL
               , onClick push $ const $ OptionClick optionItem.menuOptions
-              ] <>  if (optionItem.menuOptions == DRIVER_BOOKING_OPTIONS) && ((null state.data.downgradeOptions && not state.props.showBookingOptionForTaxi) || not state.data.activeRCData.rcStatus) then 
-                      [ alpha 0.5
-                      , clickable false] 
-                    else [])
+              , visibility if visibilityCondition optionItem then VISIBLE else GONE
+              ] <> if disableCondition optionItem then [ alpha 0.5, clickable $ disabledOptionClickable optionItem] else [])
               [ linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
@@ -1092,15 +1119,27 @@ profileOptionsLayout state push =
                       , imageView
                         [ width $ V 18
                         , height $ V 18
-                        , imageWithFallback $ "ny_ic_chevron_right_grey," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_right_grey.png"
+                        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
                         ]
                     ]
                 ]
-                , if (index == length (optionList "lazyEvaluation") - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
+                , if (index == length (optionList state) - 2) then (horizontalLineView 7 0.5 0 20 0) else if(optionItem.menuOptions == DRIVER_LOGOUT) then dummyTextView else horizontalLineView 1 1.0 15 15 15
               ]
-            ) (optionList "")
+            ) (optionList state)
       )
   ]
+  where visibilityCondition optionItem = 
+          case optionItem.menuOptions of
+            GO_TO_LOCATIONS -> state.props.enableGoto
+            DRIVER_BOOKING_OPTIONS -> state.data.config.profile.showBookingOption && not (null state.data.downgradeOptions)
+            LIVE_STATS_DASHBOARD -> state.data.config.dashboard.enable && not DS.null state.data.config.dashboard.url
+            _ -> true
+        disableCondition optionItem = 
+          case optionItem.menuOptions of
+            DRIVER_BOOKING_OPTIONS -> not state.data.activeRCData.rcStatus
+            GO_TO_LOCATIONS -> state.data.goHomeActive || state.props.isRideActive
+            _ -> false
+        disabledOptionClickable optionItem = optionItem.menuOptions /= DRIVER_BOOKING_OPTIONS
 
 
 ----------------------------------------------- UPDATE LANGUAGE VIEW ------------------------------------------------------------------
@@ -1249,7 +1288,7 @@ infoTileView state config =
                 , width WRAP_CONTENT
                 , margin $ MarginLeft 9
                 , visibility if config.postImgVisibility then VISIBLE else GONE
-                ](mapWithIndex (\index item ->
+                ](map (\item ->
                     linearLayout
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
@@ -1257,9 +1296,12 @@ infoTileView state config =
                     ][imageView
                         [ height $ V 13
                         , width $ V 13
-                        , imageWithFallback if item <= (fromMaybe 0.0 state.data.analyticsData.rating) then "ny_ic_star_active,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_active.png" else "ny_ic_star_inactive,https://assets.juspay.in/nammayatri/images/common/ny_ic_star_inactive.png"
+                        , imageWithFallback case item of
+                                                0.5 -> fetchImage FF_COMMON_ASSET "ny_ic_star_half_active"
+                                                1.0 -> fetchImage FF_COMMON_ASSET  "ny_ic_star_active"
+                                                _ -> fetchImage FF_COMMON_ASSET "ny_ic_star_inactive"
                         ]
-                    ]) [1.0,2.0,3.0,4.0,5.0])
+                    ]) (getStarsForRating 5 (fromMaybe 0.0 state.data.analyticsData.rating)))
           ]
       , textView
         ([ width WRAP_CONTENT
@@ -1270,6 +1312,15 @@ infoTileView state config =
         , color Color.black700
         ] <> FontStyle.body3 TypoGraphy)
     ]
+
+getStarsForRating :: Int -> Number -> Array Number
+getStarsForRating outOf currRating = map calculateRating (range 1 outOf)
+  where
+    calculateRating :: Int -> Number
+    calculateRating x
+        | currRating - (toNumber x) < -0.50 = 0.0
+        | currRating - (toNumber x) >= 0.00 = 1.0
+        | otherwise = 0.5
 
 -------------------------------------------- MENU BUTTON VIEW COMPONENT ---------------------------------------------
 
@@ -1294,7 +1345,7 @@ showMenuButtonView state push genderName genderType=
       ][  imageView
           [ width $ V 10
           , height $ V 10
-          , imageWithFallback "ny_ic_radio_button,https://assets.juspay.in/nammayatri/images/common/ny_ic_radio_button.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_button"
           , visibility if checkGenderSelect state.data.genderTypeSelect genderType then VISIBLE else GONE
           ]
         ]
@@ -1362,7 +1413,7 @@ detailsListViewComponent state push config =
                     , margin $ Margin 7 3 0 0
                     , onClick push $ const PaymentInfo
                     , visibility if item.keyInfo then VISIBLE else GONE
-                    , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+                    , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue"
                     ]
                 ]
               , linearLayout
@@ -1389,13 +1440,13 @@ detailsListViewComponent state push config =
                 , width $ V 11
                 , margin $ MarginLeft 7
                 , onClick push $ const item.action
-                , imageWithFallback "ic_edit_pencil,https://assets.juspay.in/nammayatri/images/driver/ic_edit_pencil.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ic_edit_pencil"
                 ]] else if item.isRightInfo then [imageView
                 [ height $ V 12
                 , width $ V 12
                 , margin $ MarginLeft 7
                 , onClick push $ const PaymentInfo
-                , imageWithFallback "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue"
                 ]] else [])
           , linearLayout
             [ height $ V 1
@@ -1532,7 +1583,7 @@ genderOptionsArray _ =
   ]
 
 vehicleSummaryArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: String, value1 :: String, infoImageUrl :: String, postfixImage :: String, showInfoImage :: Boolean , showPostfixImage :: Boolean , action :: Action, valueColor :: String}
-vehicleSummaryArray state = [{key : (getString TRAVELLED_ON_APP), value : (state.data.analyticsData.totalDistanceTravelled) , value1 : "" , infoImageUrl : "ny_ic_info_blue,https://assets.juspay.in/nammayatri/images/common/ny_ic_info_blue.png", postfixImage : "ny_ic_api_failure_popup,https://assets.juspay.in/nammayatri/images/driver/ny_ic_api_failure_popup.png", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
+vehicleSummaryArray state = [{key : (getString $ TRAVELLED_ON_APP "TRAVELLED_ON_APP"), value : (state.data.analyticsData.totalDistanceTravelled) , value1 : "" , infoImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_info_blue", postfixImage : fetchImage FF_ASSET "ny_ic_api_failure_popup", showPostfixImage : false, showInfoImage : false, valueColor : Color.charcoalGrey, action : NoAction}]
 
 vehicleAboutMeArray :: ST.DriverProfileScreenState -> Array {key :: String, value :: Maybe String, action :: Action , isEditable :: Boolean , keyInfo :: Boolean, isRightInfo :: Boolean}
 vehicleAboutMeArray state =  [{ key : (getString YEARS_OLD) , value : Nothing , action : UpdateValue ST.VEHICLE_AGE , isEditable : true , keyInfo : false, isRightInfo : false }
@@ -1650,11 +1701,11 @@ rcEditPopUpView push state =
 rcEditPopUpData :: ST.DriverProfileScreenState -> Array { text :: String, imageWithFallback :: String, type :: ST.EditRc }
 rcEditPopUpData state =
   [ { text: if state.data.isRCActive then (getString DEACTIVATE_RC) else (getString ACTIVATE_RC)
-    , imageWithFallback: if state.data.isRCActive then "ny_ic_deactivate,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_deactivate.png" else "ny_ic_activate,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_activate.png"
+    , imageWithFallback: fetchImage FF_ASSET $ if state.data.isRCActive then "ny_ic_deactivate" else "ny_ic_activate"
     , type: if state.data.isRCActive then ST.ACTIVATING_RC else ST.DEACTIVATING_RC
     }
   , { text: (getString DELETE_RC)
-    , imageWithFallback: "ny_ic_bin,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_bin.png"
+    , imageWithFallback: fetchImage FF_ASSET "ny_ic_bin"
     , type: ST.DELETING_RC
     }
   ]
@@ -1689,7 +1740,7 @@ trackingCardRcEditView push state item =
       , width MATCH_PARENT
       , gravity RIGHT
       ][ imageView
-         [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevron_right.png"
+         [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
          , height $ V 30
          , width $ V 32
          , gravity RIGHT
@@ -1869,7 +1920,7 @@ trackingCardRcActiveOnAnotherDriverProfileView push state item =
           gravity RIGHT
         ][
           imageView
-          [ imageWithFallback "ny_ic_chevron_right,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevron_right.png"
+          [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
           , height $ V 30
           , width $ V 32
           , gravity RIGHT

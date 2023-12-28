@@ -1,3 +1,9 @@
+window.version = window.version || {};
+let version = "1.0.0";
+if (typeof __VERSION__ !== "undefined") {
+  version = __VERSION__
+}
+window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "RC_VALIDATION_TEXT": "KL",
@@ -22,11 +28,11 @@ window.getMerchantConfig = function () {
       "name": "Français",
       "value": "FR_FR",
       "subtitle": "French"
-      },
-      { "name": "English",
-        "value": "EN_US",
-        "subtitle": "Anglaise"
-      }],
+    },
+    { "name": "English",
+      "value": "EN_US",
+      "subtitle": "Anglaise"
+    }],
     "englishInNative" : "Anglaise",
     "englishStrings": {
       "WELCOME_TEXT": "Welcome to the Alliance Taxis",
@@ -51,8 +57,32 @@ window.getMerchantConfig = function () {
     , "defaultLanguage" : "FR_FR"
     , "allowAllMobileNumber" : true
     , "navigationAppConfig" : {
-      "query" : "https://waze.com/ul?ll=%f,%f"
-    , "packageName" : "com.waze"
-  }
+      "android" : {
+        "query" : "https://waze.com/ul?ll=%f,%f"
+        , "packageName" : "com.waze"
+      }
+    }
+    , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
+    , "termsLink" : "https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0"
+    , "privacyLink" : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8"
+    , "feature" : {
+      "enableBonus" : false
+      , "enableImageUpload" : true
+      , "enableGender" : false
+      , "enableOtpRide" : false
+    }
+    , "appData" : {
+      "link" : "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner"
+      , "name" : "Pass Culture"
+    }
+    , "vehicle" : {
+      "validationPrefix" :  "KL"
+    }
+    , "banners" :{
+      "autoPay" : false
+    }
+    , "referral": {
+      "link" : "https://yatricustomer.page.link/pcJb"
+    }
   })
 }

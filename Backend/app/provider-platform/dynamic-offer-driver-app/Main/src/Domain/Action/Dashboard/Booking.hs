@@ -24,27 +24,23 @@ import qualified Data.HashMap.Internal as HashMap
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as DCR
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Beam.Functions as B
-import Kernel.External.Maps (LatLong (..))
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
-import qualified SharedLogic.DriverLocation as SDrLoc
-import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDrInfo
-import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.Ride as QRide
 
 ---------------------------------------------------------------------
@@ -55,39 +51,27 @@ import qualified Storage.Queries.Ride as QRide
 
 stuckBookingsCancel ::
   ShortId DM.Merchant ->
+  Context.City ->
   Common.StuckBookingsCancelReq ->
   Flow Common.StuckBookingsCancelRes
-stuckBookingsCancel merchantShortId req = do
+stuckBookingsCancel merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let reqBookingIds = cast @Common.Booking @DBooking.Booking <$> req.bookingIds
 
   now <- getCurrentTime
-  stuckBookingIds <- B.runInReplica $ QBooking.findStuckBookings merchant.id reqBookingIds now
-  stuckRideItems <- B.runInReplica $ QRide.findStuckRideItems merchant.id reqBookingIds now
+  stuckBookingIds <- B.runInReplica $ QBooking.findStuckBookings merchant merchantOpCity reqBookingIds now
+  stuckRideItems <- B.runInReplica $ QRide.findStuckRideItems merchant merchantOpCity reqBookingIds now
   let bcReasons = mkBookingCancellationReason (merchant.id) Common.bookingStuckCode Nothing <$> stuckBookingIds
   let bcReasonsWithRides = (\item -> mkBookingCancellationReason merchant.id Common.rideStuckCode (Just item.rideId) item.bookingId) <$> stuckRideItems
   let allStuckBookingIds = stuckBookingIds <> (stuckRideItems <&> (.bookingId))
   let stuckPersonIds = stuckRideItems <&> (.driverId)
   let stuckDriverIds = cast @DP.Person @DP.Driver <$> stuckPersonIds
   -- drivers going out of ride, update location from redis to db
-  enableLocationTrackingService <- asks (.enableLocationTrackingService)
-  driverLocations <-
-    if enableLocationTrackingService
-      then do
-        LF.driversLocation stuckPersonIds
-      else do
-        catMaybes <$> traverse SDrLoc.findById stuckPersonIds
   QRide.updateStatusByIds (stuckRideItems <&> (.rideId)) DRide.CANCELLED
   QBooking.cancelBookings allStuckBookingIds now
   for_ (bcReasons <> bcReasonsWithRides) QBCR.upsert
   QDrInfo.updateNotOnRideMultiple stuckDriverIds
-  for_ stuckRideItems $ \item -> do
-    if item.driverActive
-      then QDFS.updateStatus item.driverId DDFS.ACTIVE
-      else QDFS.updateStatus item.driverId DDFS.IDLE
-  for_ driverLocations $ \location -> do
-    let latLong = LatLong location.lat location.lon
-    void $ QDrLoc.upsertGpsCoord location.driverId latLong location.coordinatesCalculatedAt merchant.id
   logTagInfo "dashboard -> stuckBookingsCancel: " $ show allStuckBookingIds
   pure $ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems
 
@@ -124,13 +108,15 @@ mkStuckBookingsCancelRes stuckBookingIds stuckRideItems = do
 ---------------------------------------------------------------------
 multipleBookingSync ::
   ShortId DM.Merchant ->
+  Context.City ->
   Common.MultipleBookingSyncReq ->
   Flow Common.MultipleBookingSyncResp
-multipleBookingSync merchantShortId req = do
+multipleBookingSync merchantShortId opCity req = do
   runRequestValidation Common.validateMultipleBookingSyncReq req
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let reqBookingIds = cast @Common.Booking @DBooking.Booking . (.bookingId) <$> req.bookings
-  rideBookingsMap <- B.runInReplica $ QRide.findRideBookingsById merchant.id reqBookingIds
+  rideBookingsMap <- B.runInReplica $ QRide.findRideBookingsById merchant merchantOpCity reqBookingIds
   respItems <- forM req.bookings $ \reqItem -> do
     info <- handle Common.listItemErrHandler $ do
       let bookingId = cast @Common.Booking @DBooking.Booking reqItem.bookingId

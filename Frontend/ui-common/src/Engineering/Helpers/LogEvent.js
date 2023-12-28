@@ -1,3 +1,3 @@
 export const getLogDestination = function () {
-    return window.appConfig.logs;
+  return window.appConfig.logs;
 }

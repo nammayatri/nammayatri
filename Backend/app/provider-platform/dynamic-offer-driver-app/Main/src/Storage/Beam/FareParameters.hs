@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.FareParameters where
 
@@ -27,11 +28,13 @@ data FareParametersT f = FareParametersT
     driverSelectedFare :: B.C f (Maybe Money),
     customerExtraFee :: B.C f (Maybe Money),
     waitingCharge :: B.C f (Maybe Money),
+    rideExtraTimeFare :: B.C f (Maybe Money),
     nightShiftCharge :: B.C f (Maybe Money),
     nightShiftRateIfApplies :: B.C f (Maybe Double),
     serviceCharge :: B.C f (Maybe Money),
     fareParametersType :: B.C f Domain.FareParametersType,
-    govtCharges :: B.C f (Maybe Money)
+    govtCharges :: B.C f (Maybe Money),
+    customerCancellationDues :: B.C f (Maybe HighPrecMoney)
   }
   deriving (Generic, B.Beamable)
 

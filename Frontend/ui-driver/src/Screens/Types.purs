@@ -19,6 +19,7 @@ import Common.Types.App as Common
 import Components.ChatView.Controller as ChatView
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
+import Components.GoToLocationModal.Controller as GoToModal
 import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Components.RecordAudioModel.Controller as RecordAudioModel
@@ -30,14 +31,16 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import MerchantConfig.Types (AppConfig)
+import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig)
 import Prelude (class Eq, class Show)
+import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
 import Screens (ScreenName)
-import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..))
+import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..))
 import Styles.Types (FontSize)
+import Common.Types.Config
 
 type EditTextInLabelState =
  {
@@ -137,7 +140,10 @@ type AddVehicleDetailsScreenData =  {
   errorMessage :: String,
   dateOfRegistration :: Maybe String,
   dateOfRegistrationView :: String,
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  driverMobileNumber :: String,
+  cityConfig :: CityConfig,
+  config :: AppConfig
  }
 
 type AddVehicleDetailsScreenProps =  {
@@ -159,8 +165,24 @@ type AddVehicleDetailsScreenProps =  {
   errorVisibility :: Boolean,
   openRegistrationDateManual :: Boolean,
   addRcFromProfile :: Boolean,
-  isDateClickable :: Boolean
+  isDateClickable :: Boolean,
+  openHowToUploadManual :: Boolean,
+  logoutModalView :: Boolean,
+  validateProfilePicturePopUp :: Boolean,
+  imageCaptureLayoutView :: Boolean,
+  fileCameraOption :: Boolean,
+  fileCameraPopupModal :: Boolean,
+  validating :: Boolean,
+  successfulValidation :: Boolean,
+  multipleRCstatus :: StageStatus
  }
+
+data ValidationStatus  =  Success | Failure | InProgress | None
+
+derive instance genericValidationStatus :: Generic ValidationStatus _
+instance showValidationStatus :: Show ValidationStatus where show = genericShow
+instance eqValidationStatus :: Eq ValidationStatus where eq = genericEq
+
 
 data VehicalTypes = Sedan | Hatchback | SUV | Auto
 
@@ -188,6 +210,9 @@ type UploadDrivingLicenseStateData = {
   , dateOfIssueView :: String
   , imageFrontUrl :: String
   , logField :: Object Foreign
+  , mobileNumber :: String
+  , cityConfig :: CityConfig
+  , config :: AppConfig
 }
 
 type UploadDrivingLicenseStateProps = {
@@ -199,6 +224,14 @@ type UploadDrivingLicenseStateProps = {
   , errorVisibility :: Boolean
   , openDateOfIssueManual :: Boolean
   , isDateClickable :: Boolean
+  , openHowToUploadManual :: Boolean
+  , logoutPopupModal :: Boolean
+  , validateProfilePicturePopUp :: Boolean
+  , imageCaptureLayoutView :: Boolean 
+  , fileCameraPopupModal :: Boolean
+  , fileCameraOption :: Boolean
+  , validating :: Boolean
+  , successfulValidation :: Boolean
 }
 
  -- ############################################################# RegistrationScreen ################################################################################
@@ -206,8 +239,43 @@ type RegistrationScreenState = {
   data :: RegistrationScreenData,
   props :: RegistrationScreenProps
 }
-type RegistrationScreenData = {}
-type RegistrationScreenProps = {}
+type RegistrationScreenData = {
+  activeIndex :: Int,
+  registerationSteps :: Array StepProgress,
+  phoneNumber :: String,
+  drivingLicenseStatus :: StageStatus,
+  vehicleDetailsStatus :: StageStatus,
+  permissionsStatus :: StageStatus,
+  subscriptionStatus :: StageStatus,
+  lastUpdateTime :: String,
+  cityConfig :: CityConfig,
+  config :: AppConfig,
+  referralCode :: String,
+  referral_code_input_data :: String,
+  logField :: Object Foreign
+}
+
+type StepProgress = {
+  stageName :: String,
+  stage :: RegisterationStep
+}
+
+type RegistrationScreenProps = {
+  logoutModalView :: Boolean,
+  limitReachedFor :: Maybe String,
+  isValidReferralCode :: Boolean,
+  enterOtpFocusIndex :: Int,
+  enterReferralCodeModal :: Boolean,
+  referralCodeSubmitted :: Boolean
+}
+
+data RegisterationStep = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION | GRANT_PERMISSION | SUBSCRIPTION_PLAN
+derive instance genericRegisterationStep :: Generic RegisterationStep _
+instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
+
+data StageStatus = COMPLETED | IN_PROGRESS | NOT_STARTED | FAILED
+derive instance genericStageStatus :: Generic StageStatus _
+instance eqStageStatus :: Eq StageStatus where eq = genericEq
 
  -- ############################################################# UploadAdhaarScreen ################################################################################
 
@@ -283,7 +351,8 @@ type DriverProfileScreenData = {
   profileImg :: Maybe String,
   payerVpa :: String,
   autoPayStatus :: AutoPayStatus,
-  config :: AppConfig
+  config :: AppConfig,
+  goHomeActive :: Boolean
 }
 
 type RcData = {
@@ -359,7 +428,9 @@ type DriverProfileScreenProps = {
   btnActive :: Boolean,
   showBookingOptionForTaxi :: Boolean,
   upiQrView :: Boolean,
-  paymentInfoView :: Boolean
+  paymentInfoView :: Boolean,
+  enableGoto :: Boolean,
+  isRideActive :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -409,12 +480,14 @@ type EnterMobileNumberScreenState = {
 
 type EnterMobileNumberScreenStateData = {
     mobileNumber :: String,
-    logField :: Object Foreign
+    logField :: Object Foreign,
+    config :: AppConfig
 }
 
 type EnterMobileNumberScreenStateProps = {
   btnActive :: Boolean,
-  isValid :: Boolean
+  isValid :: Boolean,
+  mobileNumberEditFocused :: Boolean
 }
 
 --------------------------------------------------------------- BankDetailScreenState -----------------------------------------------------------------------------
@@ -446,13 +519,17 @@ type EnterOTPScreenStateData = {
   attemptCount :: Int,
   mobileNo :: String,
   timer :: String,
-  capturedOtp :: String
+  capturedOtp :: String,
+  focusedIndex :: Int,
+  editTextId :: String,
+  config :: AppConfig
 }
 
 type EnterOTPScreenStateProps = {
   btnActive :: Boolean,
   isValid :: Boolean,
-  resendEnabled :: Boolean
+  resendEnabled :: Boolean,
+  otpTmp :: Boolean
 }
 
 ---------------------PrimaryButtonState----------------------------------------
@@ -506,6 +583,7 @@ type RideHistoryScreenStateProps = {
 type RideHistoryScreenStateData = {
     pastDays :: Int
   , paymentHistory :: PaymentHistoryModelState
+  , config :: AppConfig
 }
 
 data EditRc = DEACTIVATING_RC | DELETING_RC | ACTIVATING_RC
@@ -612,7 +690,14 @@ type IndividualRideCardState =
     source :: String,
     destination :: String,
     vehicleType :: String,
-    riderName :: String
+    riderName :: String,
+    customerExtraFee :: Maybe Int,
+    purpleTagVisibility :: Boolean,
+    gotoTagVisibility :: Boolean,
+    specialZoneLayoutBackground :: String,
+    specialZoneImage :: String,
+    specialZoneText :: String,
+    spLocTagVisibility :: Boolean
   }
 
 
@@ -637,11 +722,13 @@ type ItemState =
     destination :: PropValue,
     amountColor :: PropValue,
     riderName :: PropValue,
-    metroTagVisibility :: PropValue,
-    accessibilityTagVisibility :: PropValue,
+    spLocTagVisibility :: PropValue,
     specialZoneText :: PropValue,
     specialZoneImage :: PropValue,
-    specialZoneLayoutBackground :: PropValue
+    specialZoneLayoutBackground :: PropValue,
+    gotoTagVisibility :: PropValue,
+    purpleTagVisibility :: PropValue,
+    tipTagVisibility :: PropValue
   }
 -----------------------------------------------ApplicationStatusScreen -------------------
 
@@ -765,7 +852,7 @@ type HomeScreenData =  {
   cancelRideConfirmationPopUp :: CancelRidePopUpData,
   messages :: Array ChatView.ChatComponent,
   messagesSize :: String,
-  suggestionsList :: Array String,
+  chatSuggestionsList :: Array String,
   messageToBeSent :: String,
   driverAlternateMobile :: Maybe String,
   logField :: Object Foreign,
@@ -774,8 +861,30 @@ type HomeScreenData =  {
   endRideData :: EndRideData,
   config :: AppConfig,
   triggerPatchCounter :: Int,
-  peekHeight :: Int
+  peekHeight :: Int,
+  driverGotoState :: DriverGoToState,
+  snappedOrigin :: Maybe Location,
+  gender :: String
 }
+
+type DriverGoToState = {
+  gotoCount :: Int,
+  goToInfo :: Boolean,
+  selectedGoTo :: String,
+  showGoto :: Boolean,
+  savedLocationsArray :: Array GoToLocation,
+  gotoValidTill :: String,
+  timerInMinutes :: String,
+  isGotoEnabled :: Boolean,
+  timerId :: String,
+  gotoReducedCount :: Maybe Int,
+  gotoLocInRange :: Boolean,
+  goToPopUpType :: GoToPopUpType,
+  gotoEnabledForMerchant :: Boolean,
+  confirmGotoCancel :: Boolean,
+  savedLocationCount :: Int
+}
+
 
 type EndRideData = {
     rideId :: String,
@@ -873,14 +982,14 @@ type ActiveRide = {
   duration :: Int,
   riderName :: String,
   estimatedFare :: Int,
-  isDriverArrived :: Boolean,
+  waitTimerId :: String,
   notifiedCustomer :: Boolean,
-  waitingTime :: String,
   waitTimeInfo :: Boolean,
   rideCreatedAt :: String,
   specialLocationTag :: Maybe String,
   requestedVehicleVariant :: Maybe String,
-  disabilityTag :: Maybe DisabilityType
+  disabilityTag :: Maybe DisabilityType,
+  waitTimeSeconds :: Int
 }
 
 type HomeScreenProps =  {
@@ -914,9 +1023,7 @@ type HomeScreenProps =  {
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
   showBonusInfo :: Boolean,
-  timerRefresh :: Boolean,
   showlinkAadhaarPopup :: Boolean,
-  isChatOpened :: Boolean,
   showAadharPopUp :: Boolean,
   canSendSuggestion :: Boolean,
   showOffer :: Boolean,
@@ -929,7 +1036,11 @@ type HomeScreenProps =  {
   showRideRating :: Boolean,
   showContactSupportPopUp :: Boolean,
   showChatBlockerPopUp :: Boolean,
-  showGenericAccessibilityPopUp :: Boolean
+  showGenericAccessibilityPopUp :: Boolean,
+  waitTimeStatus :: TimerStatus,
+  isMockLocation :: Boolean,
+  accountBlockedPopup :: Boolean,
+  tobeLogged :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -958,10 +1069,13 @@ instance decodePwdType :: Decode DisabilityType where decode = defaultEnumDecode
 
 data DriverStatus = Online | Offline | Silent
 
-data TimerStatus = Triggered | PostTriggered | Stop | NoView
+data TimerStatus = Triggered | PostTriggered | NoStatus
 
 derive instance genericTimerStatus :: Generic TimerStatus _
+instance eqTimerStatus :: Eq TimerStatus where eq = genericEq
 instance showTimerStatus :: Show TimerStatus where show = genericShow
+instance encodeTimerStatus :: Encode TimerStatus where encode = defaultEnumEncode
+instance decodeTimerStatus :: Decode TimerStatus where decode = defaultEnumDecode
 
 type PillButtonState = {
   status :: DriverStatus,
@@ -999,7 +1113,10 @@ type BottomNavBarState = {
 type NavIcons = {
   activeIcon :: String,
   defaultIcon :: String,
-  text :: String
+  text :: String,
+  screenName :: ScreenName,
+  showNewBanner :: Boolean,
+  isVisible :: Boolean
 }
  -- ######################################  TripDetailsScreenState   ######################################
 
@@ -1031,7 +1148,15 @@ type TripDetailsScreenData =
     paymentMode :: PaymentMode,
     distance :: String,
     status :: String,
-    vehicleType :: String
+    vehicleType :: String,
+    customerExtraFee :: Maybe Int,
+    purpleTagVisibility :: Boolean,
+    gotoTagVisibility :: Boolean,
+    spLocTagVisibility :: Boolean,
+    specialZoneLayoutBackground :: String,
+    specialZoneImage :: String,
+    specialZoneText :: String,
+    config :: AppConfig
   }
 
 type TripDetailsScreenProps =
@@ -1143,16 +1268,20 @@ type PermissionsScreenState = {
 }
 
 type PermissionsScreenData = {
-  logField :: Object Foreign
-
+  logField :: Object Foreign,
+  driverMobileNumber :: String,
+  config :: AppConfig
 }
 
 type PermissionsScreenProps = {
-  isLocationPermissionChecked :: Boolean
+  isNotificationPermissionChecked :: Boolean
   , isOverlayPermissionChecked :: Boolean
   , isAutoStartPermissionChecked :: Boolean
   , androidVersion :: Int
   , isBatteryOptimizationChecked :: Boolean
+  , isLocationPermissionChecked :: Boolean
+  , logoutModalView :: Boolean
+  , isDriverEnabled :: Boolean
 }
 
 ------------------------------------------- OnBoardingSubscriptionScreenState ---------------------------
@@ -1163,12 +1292,14 @@ type OnBoardingSubscriptionScreenState = {
 
 type OnBoardingSubscriptionScreenData = {
   plansList :: Array PlanCardConfig,
-  selectedPlanItem :: Maybe PlanCardConfig
+  selectedPlanItem :: Maybe PlanCardConfig,
+  subscriptionConfig :: SubscriptionConfig
 }
 
 type OnBoardingSubscriptionScreenProps = {
   isSelectedLangTamil :: Boolean,
-  screenCount :: Int
+  screenCount :: Int,
+  supportPopup :: Boolean
 }
 
 
@@ -1393,7 +1524,8 @@ type NotificationsScreenState = {
   notifsDetailModelVisibility :: Visibility,
   loadMore :: Boolean,
   selectedNotification :: Maybe String,
-  deepLinkActivated :: Boolean
+  deepLinkActivated :: Boolean,
+  config :: AppConfig
 }
 
 type NotificationCardState = {
@@ -1506,6 +1638,7 @@ type RankCardData = {
   , profileUrl :: Maybe String
   , rank :: Int
   , rides :: Int
+  , gender :: String
 }
 
 type AcknowledgementScreenState = {
@@ -1570,9 +1703,11 @@ instance eqAadhaarStage :: Eq AadhaarStage where eq = genericEq
 
 type GlobalProps = {
   aadhaarVerificationRequired :: Boolean,
-  driverInformation :: GetDriverInfoResp,
-  driverRideStats :: DriverProfileStatsResp,
-  callScreen :: ScreenName
+  driverInformation :: Maybe GetDriverInfoResp,
+  driverRideStats :: Maybe DriverProfileStatsResp,
+  callScreen :: ScreenName,
+  gotoPopupType :: GoToPopUpType,
+  addTimestamp :: Boolean
 }
 
 --------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------
@@ -1591,7 +1726,8 @@ type SubscriptionScreenData = {
   paymentMode :: String,
   planId :: String,
   orderId :: Maybe String,
-  errorMessage :: String
+  errorMessage :: String,
+  config :: AppConfig
 }
 
 type AutoPayDetails = {
@@ -1627,7 +1763,7 @@ type SubscriptionScreenProps = {
   noKioskLocation :: Boolean,
   optionsMenuState :: OptionsMenuState,
   redirectToNav :: String,
-  lastPaymentType :: Maybe String,
+  lastPaymentType :: Maybe LastPaymentType,
   offerBannerProps :: OfferBanner,
   isEndRideModal :: Boolean
 }
@@ -1645,7 +1781,8 @@ type JoinPlanData = {
 
 type JoinPlanProps = {
   paymentMode :: String,
-  selectedPlanItem :: Maybe PlanCardConfig
+  selectedPlanItem :: Maybe PlanCardConfig,
+  isIntroductory :: Boolean
 }
 
 type ManagePlanData = {
@@ -1669,7 +1806,8 @@ type MyPlanData = {
   autoPayDueAmount :: Number,
   manualDueAmount :: Number,
   mandateStatus :: String,
-  selectedDue :: String
+  selectedDue :: String,
+  dueBoothCharges :: Maybe Number
 }
 
 type MyPlanProps = {
@@ -1692,7 +1830,9 @@ type DueItem = {
   plan :: String,
   mode :: FeeType,
   autoPayStage :: Maybe AutopayPaymentStage,
-  isSplit :: Boolean
+  isSplit :: Boolean,
+  specialZoneRideCount :: Maybe Int,
+  totalSpecialZoneCharges :: Maybe Number
 }
 
 type KioskLocation = {
@@ -1734,7 +1874,7 @@ instance eqSubscribePopupType :: Eq SubscribePopupType where eq = genericEq
 instance decodeSubscribePopupType :: Decode SubscribePopupType where decode = defaultEnumDecode
 instance encodeSubscribePopupType :: Encode SubscribePopupType where encode = defaultEnumEncode
 
-data AutoPayStatus = ACTIVE_AUTOPAY | SUSPENDED | PAUSED_PSP | CANCELLED_PSP | NO_AUTOPAY | PENDING | MANDATE_FAILED
+data AutoPayStatus = ACTIVE_AUTOPAY | SUSPENDED | PAUSED_PSP | CANCELLED_PSP | NO_AUTOPAY | PENDING | MANDATE_FAILED | RESUME_PENDING
 
 derive instance genericAutoPayStatus:: Generic AutoPayStatus _
 instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
@@ -1772,7 +1912,9 @@ type PaymentHistoryScreenData = {
   transactionDetails :: TransactionInfo,
   planData :: PlanCardConfig,
   autoPayList :: Array PaymentListItem,
-  manualPayList :: Array PaymentListItem
+  manualPayList :: Array PaymentListItem,
+  gradientConfig :: Array GradientConfig,
+  autoPayStatus :: AutoPayStatus
 }
 
 type TransactionInfo = {
@@ -1821,7 +1963,9 @@ type DueCard = {
   id :: String,
   scheduledAt :: Maybe String,
   paymentMode :: FeeType,
-  paymentStatus :: Maybe String
+  paymentStatus :: Maybe String,
+  boothCharges :: Maybe String,
+  isDue :: Boolean
 }
 
 type PaymentHistoryScreenProps = {
@@ -1841,10 +1985,157 @@ instance eqPaymentHistorySubview :: Eq PaymentHistorySubview where eq = genericE
 instance decodePaymentHistorySubview :: Decode PaymentHistorySubview where decode = defaultEnumDecode
 instance encodePaymentHistorySubview :: Encode PaymentHistorySubview where encode = defaultEnumEncode
 
-type UpiApps
-  = { supportsPay :: Boolean
-    , supportsMandate :: Boolean
-    , packageName :: String
-    , appName :: String
+
+type DriverSavedLocationScreenState = {
+  data :: DriverSavedLocationScreenData,
+  props :: DriverSavedLocationScreenProps
+}
+
+type DriverSavedLocationScreenData = {
+  address :: String,
+  currentLat :: Maybe String,
+  currentLon :: Maybe String,
+  savedLocationsArray :: Array GoToLocation,
+  predictions :: Array PredictionItem,
+  saveLocationObject :: SaveLocationObject,
+  maxGotoLocations :: Int
+}
+
+type GoToLocation = {
+  id :: String,
+  lat :: Number,
+  lon :: Number,
+  address :: String,
+  tag :: String,
+  disabled :: Boolean
+}
+
+type PredictionItem = {
+ description :: String,
+ title :: String,
+ placeId :: Maybe String,
+ distance :: Maybe Int
+}
+
+
+type DriverSavedLocationScreenProps = {
+  viewType :: SavedLocationScreenType,
+  selectedPrediction :: PredictionItem,
+  confirmDelete :: Boolean,
+  selectedLocation :: GoToModal.GoToModalConfig,
+  fromEditButton :: Maybe GoToScrEntryType,
+  gotBackToHomeScreen :: Boolean,
+  errorText :: Maybe String,
+  defTag :: String
+}
+
+data GoToScrEntryType = FromEdit | FromPrediction
+
+derive instance genericGoToScrEntryType :: Generic GoToScrEntryType _
+instance eqGoToScrEntryType :: Eq GoToScrEntryType where eq = genericEq
+
+data SavedLocationScreenType = GoToList | SearchLocation | LOCATE_ON_MAP | ConfirmLocation
+
+derive instance genericSavedLocationScreenType :: Generic SavedLocationScreenType _
+instance eqSavedLocationScreenType :: Eq SavedLocationScreenType where eq = genericEq
+
+data GoToPopUpType = REDUCED Int | MORE_GOTO_RIDES | VALIDITY_EXPIRED | REACHED_HOME | NO_POPUP_VIEW
+
+derive instance genericGoToPopUpType :: Generic GoToPopUpType _
+instance showGoToPopUpType :: Show GoToPopUpType where show = genericShow
+instance eqGoToPopUpType :: Eq GoToPopUpType where eq = genericEq
+instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where standardEncode _ = standardEncode {}
+instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
+instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
+
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked
+
+derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
+instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow
+instance eqHomeScreenPopUpTypes :: Eq HomeScreenPopUpTypes where eq = genericEq
+instance standardEncodeHomeScreenPopUpTypes :: StandardEncode HomeScreenPopUpTypes where standardEncode _ = standardEncode {}
+instance decodeHomeScreenPopUpTypes :: Decode HomeScreenPopUpTypes where decode = defaultDecode
+instance encodeHomeScreenPopUpTypes  :: Encode HomeScreenPopUpTypes where encode = defaultEncode
+
+data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD | GO_TO_LOCATIONS
+derive instance genericMenuoptions :: Generic MenuOptions _
+instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
+
+type Listtype =
+    { icon :: String,
+      menuOptions :: MenuOptions
     }
 
+type SaveLocationObject = {
+  position :: Location,
+  address :: String,
+  tag :: String
+}
+
+type Tag = {
+  background :: String, 
+  image :: String, 
+  visibility :: Boolean, 
+  text :: String, 
+  textColor :: String
+}
+
+---------------------------------------------ChooseCityScreen -------------------------------------
+
+type ChooseCityScreenState = {
+  data :: ChooseCityScreenData,
+  props :: ChooseCityScreenProps
+}
+
+type ChooseCityScreenData = {
+  config :: AppConfig,
+  locationSelected :: Maybe String,
+  locationDetectionFailed :: Boolean,
+  merchantOperatingCityConfig :: Array CityConfig,
+  logField :: Object Foreign
+}
+
+type ChooseCityScreenProps = {
+  selectedLanguage :: String,
+  currentStage :: ChooseCityScreenStage,
+  isLocationPermissionGiven :: Boolean,
+  radioMenuFocusedLang :: String,
+  radioMenuFocusedCity :: String,
+  locationUnserviceable :: Boolean,
+  isMockLocation :: Boolean
+}
+
+data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DETECT_LOCATION
+
+derive instance genericChooseCityScreenStage :: Generic ChooseCityScreenStage _
+instance showChooseCityScreenStage :: Show ChooseCityScreenStage where show = genericShow
+instance eqChooseCityScreenStage :: Eq ChooseCityScreenStage where eq = genericEq
+
+---------------------------------------------WelcomeScreen -------------------------------------
+
+type WelcomeScreenState = {
+  data :: WelcomeScreenData
+}
+
+type WelcomeScreenData = {
+  logField :: Object Foreign
+}
+
+---------------------------------------------DriverReferralScreen -------------------------------------
+
+type DriverReferralScreenState = {
+  data :: DriverReferralScreenData,
+  props :: DriverReferralScreenProps
+}
+
+type DriverReferralScreenData = {
+    logField :: Object Foreign
+  , config :: AppConfig
+  , referredDrivers :: String
+  , referralCode :: String
+}
+
+type DriverReferralScreenProps = {
+  showDriverReferralQRCode :: Boolean
+, showNewDriverReferralText :: Boolean
+}

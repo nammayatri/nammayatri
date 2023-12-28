@@ -5,6 +5,9 @@
   perSystem = { config, self', system, pkgs, lib, ... }:
     let easy-ps = import inputs.easy-purescript-nix { inherit pkgs; };
     in {
+      pre-commit.settings.imports = [
+        ./nix/pre-commit.nix
+      ];
       treefmt.config = {
         # Suppress autoformatting of frontend dhall files.
         settings.formatter.dhall.excludes = [
@@ -13,7 +16,8 @@
       };
       devShells = lib.optionalAttrs (system != "aarch64-linux") {
         frontend = pkgs.mkShell {
-          name = "ps-dev-shell";
+          name = "ny-frontend";
+          meta.description = "Frontend development environment for nammayatri";
           inputsFrom = [
             config.pre-commit.devShell
           ];

@@ -25,8 +25,12 @@ module API.UI.Search
 where
 
 -- import qualified Beckn.ACL.Metro.Search as MetroACL
+
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
+-- import qualified SharedLogic.MerchantConfig as SMC
+
+import qualified Data.HashMap as HM
 import Data.OpenApi hiding (Header)
 import qualified Data.OpenApi as OpenApi hiding (Header)
 import qualified Data.Text as T
@@ -54,8 +58,8 @@ import Kernel.Utils.SlidingWindowLimiter
 import Lib.SessionizerMetrics.Types.Event
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
--- import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.PublicTransport as PublicTransport
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Person as Person
 import Tools.Auth
 import qualified Tools.JSON as J
@@ -132,6 +136,7 @@ oneWaySearch ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     HasBAPMetrics m r,
     MonadProducer PublicTransportSearch m,
     EventStreamFlow m r
@@ -155,11 +160,13 @@ oneWaySearch personId bundleVersion clientVersion device req = do
 
 rentalSearch ::
   ( CacheFlow m r,
+    EncFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     HasBAPMetrics m r
   ) =>
   Id Person.Person ->
@@ -197,7 +204,7 @@ checkSearchRateLimit personId = do
 searchHitsCountKey :: Id Person.Person -> Text
 searchHitsCountKey personId = "BAP:Ride:search:" <> getId personId <> ":hitsCount"
 
-updateVersions :: EsqDBFlow m r => Id Person.Person -> Maybe Version -> Maybe Version -> m ()
+updateVersions :: (CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> Maybe Version -> Maybe Version -> m ()
 updateVersions personId mbBundleVersion mbClientVersion = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   -- DB.runTransaction $ Person.updatePersonVersions person mbBundleVersion mbClientVersion

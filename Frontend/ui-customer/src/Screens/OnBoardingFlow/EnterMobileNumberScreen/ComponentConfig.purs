@@ -27,7 +27,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils (mobileNumberMaxLength)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -74,7 +74,7 @@ whatsAppOTPButtonConfig state = let
       , stroke = ("1," <> Color.borderColorLight)
       , isSuffixImage = true
       , suffixImageConfig {
-        imageUrl = "ny_ic_whatsapp_logo," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_whatsapp_logo.png",
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_whatsapp_logo",
         margin = MarginLeft 10,
         gravity = CENTER
         }
@@ -186,7 +186,7 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = (Margin 12 12 12 12)
       , visibility = if state.props.enterOTP then VISIBLE else GONE-- config.prefixImageConfig.visibility -- Removed choose langauge screen
       } 

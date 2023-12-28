@@ -32,6 +32,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -56,8 +57,9 @@ init transporterId (SignatureAuthResult _ subscriber) req =
       fork "init request processing" $ do
         Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
           dInitRes <- DInit.handler transporterId dInitReq validatedRes
+          internalEndPointHashMap <- asks (.internalEndPointHashMap)
           void . handle (errHandler dInitRes.booking) $
-            CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
+            CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri internalEndPointHashMap $
               pure $ ACL.mkOnInitMessage dInitRes
       return ()
     pure Ack

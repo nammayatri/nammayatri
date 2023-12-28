@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=ambiguous-fields #-}
 
 module Environment where
 
@@ -18,6 +19,7 @@ import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis
+import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common hiding (id)
@@ -47,11 +49,14 @@ data AppCfg = AppCfg
     cacheConfig :: CF.CacheConfig,
     schedulerSetName :: Text,
     entryId :: Text,
-    reviverInterval :: Milliseconds,
+    reviverInterval :: Minutes,
     reviveThreshold :: Seconds,
     maxShards :: Int,
+    metricsPort :: Int,
     schedulerType :: SchedulerType,
-    tables :: Tables
+    kvConfigUpdateFrequency :: Int,
+    runReviver :: Bool,
+    kafkaProducerCfg :: KafkaProducerCfg
   }
   deriving (Generic, FromDhall)
 
@@ -80,8 +85,10 @@ data AppEnv = AppEnv
     schedulerSetName :: Text,
     entryId :: Text,
     schedulerType :: SchedulerType,
-    reviverInterval :: Milliseconds,
-    reviveThreshold :: Seconds
+    reviverInterval :: Minutes,
+    reviveThreshold :: Seconds,
+    runReviver :: Bool,
+    kafkaProducerTools :: KafkaProducerTools
   }
   deriving (Generic)
 
@@ -92,6 +99,7 @@ buildAppEnv AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   hedisClusterEnv <-
     if cutOffHedisCluster

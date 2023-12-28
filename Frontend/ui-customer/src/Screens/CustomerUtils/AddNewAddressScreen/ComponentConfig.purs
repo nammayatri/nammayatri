@@ -31,7 +31,7 @@ import PrestoDOM (Length(..), Margin(..), Visibility(..), Accessiblity(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
 primaryButtonConfigConfirmLoc :: ST.AddNewAddressScreenState -> PrimaryButton.Config
@@ -64,13 +64,11 @@ genericHeaderConfig state = let
       , accessibilityHint = if state.props.showSavePlaceView then "Close : Button" else "Back : Button"
       , visibility = VISIBLE
       , accessibility = ENABLE
-      , imageUrl = if state.data.config.nyBrandingVisibility && (not state.props.showSavePlaceView) then config.prefixImageConfig.imageUrl 
-                    else if state.props.showSavePlaceView then if state.data.config.nyBrandingVisibility then "ny_ic_close,"<> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
-                      else  "ny_ic_close_white," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_white.png" else config.prefixImageConfig.imageUrl
+      , imageUrl = if state.props.showSavePlaceView then fetchImage FF_COMMON_ASSET "ny_ic_close_white" else config.prefixImageConfig.imageUrl
       }
     , textConfig {
         text = if state.props.showSavePlaceView then (getString FAVOURITE_LOCATION) else if state.props.editLocation then (getString EDIT_FAVOURITE) else (getString ADD_FAVOURITE)
-      , color = state.data.config.quoteListModel.textColor
+      , color = state.data.config.searchLocationConfig.editTextColor
       }
     , suffixImageConfig {
         visibility = GONE

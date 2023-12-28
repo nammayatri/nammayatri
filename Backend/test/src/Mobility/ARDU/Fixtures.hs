@@ -16,6 +16,7 @@ module Mobility.ARDU.Fixtures where
 
 import "dynamic-offer-driver-app" Domain.Types.Merchant as DM
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Money)
 import Kernel.Types.Id
 import Kernel.Types.Time
@@ -50,6 +51,9 @@ nammaYatriPartnerMerchantId = "favorit0-0000-0000-0000-00000favorit"
 
 nammaYatriPartnerMerchantShortId :: ShortId DM.Merchant
 nammaYatriPartnerMerchantShortId = "NAMMA_YATRI_PARTNER"
+
+nammaYatriDefaultOperatingCity :: Context.City
+nammaYatriDefaultOperatingCity = Context.Bangalore
 
 otherMerchant2Id :: Id DM.Merchant
 otherMerchant2Id = "nearest-drivers-testing-organization"

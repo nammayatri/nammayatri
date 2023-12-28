@@ -37,9 +37,10 @@ buildEstimate ::
   UTCTime ->
   Meters ->
   Maybe Text ->
+  HighPrecMoney ->
   FullFarePolicy ->
   m DEst.Estimate
-buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
+buildEstimate searchReqId startTime dist specialLocationTag customerCancellationDues farePolicy = do
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
@@ -47,9 +48,12 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
           distance = dist,
           rideTime = startTime,
           waitingTime = Nothing,
+          actualRideDuration = Nothing,
+          avgSpeedOfVehicle = Nothing,
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
-          nightShiftCharge = Nothing
+          nightShiftCharge = Nothing,
+          customerCancellationDues = customerCancellationDues
         }
   let baseFare = fareSum fareParams
       estimateBreakups = mkBreakupList mkPrice mkBreakupItem fareParams
@@ -112,6 +116,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             || breakup.title == "DEAD_KILOMETER_FARE"
             || breakup.title == "DRIVER_MIN_EXTRA_FEE"
             || breakup.title == "DRIVER_MAX_EXTRA_FEE"
+            || breakup.title == "CUSTOMER_CANCELLATION_DUES"
         DFParams.Slab ->
           breakup.title == "BASE_DISTANCE_FARE"
             || breakup.title == "SERVICE_CHARGE"
@@ -121,6 +126,7 @@ buildEstimate searchReqId startTime dist specialLocationTag farePolicy = do
             || breakup.title == "CGST"
             || breakup.title == "FIXED_GOVERNMENT_RATE"
             || breakup.title == "NIGHT_SHIFT_CHARGE"
+            || breakup.title == "CUSTOMER_CANCELLATION_DUES"
 
 mkAdditionalBreakups :: (Money -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> Meters -> FullFarePolicy -> [breakupItem]
 mkAdditionalBreakups mkPrice mkBreakupItem distance farePolicy = do

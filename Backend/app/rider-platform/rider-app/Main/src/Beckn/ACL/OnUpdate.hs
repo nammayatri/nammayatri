@@ -15,11 +15,10 @@
 module Beckn.ACL.OnUpdate (buildOnUpdateReq) where
 
 import Beckn.ACL.Common (getTag)
+import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as OnUpdate
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
-import qualified Domain.Types.BookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Product.Validation.Context (validateContext)
@@ -67,6 +66,10 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
   let rating :: Maybe HighPrecMeters =
         readMaybe . T.unpack
           =<< getTag "driver_details" "rating" tagsGroup
+      mbIsDriverBirthDay = getTag "driver_details" "is_driver_birthday" tagsGroup
+      isDriverBirthDay = case T.toLower <$> mbIsDriverBirthDay of
+        Just "true" -> True
+        _ -> False
   authorization <- fromMaybeM (InvalidRequest "authorization is not present in RideAssigned Event.") $ taEvent.fulfillment.start.authorization
   return $
     DOnUpdate.RideAssignedReq
@@ -79,6 +82,7 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
         driverRating = realToFrac <$> rating,
         driverImage = agent.image,
         driverRegisteredAt = registeredAt,
+        isDriverBirthDay,
         vehicleNumber = vehicle.registration,
         vehicleColor = vehicle.color,
         vehicleModel = vehicle.model
@@ -120,14 +124,14 @@ parseEvent _ (OnUpdate.BookingCancelled tcEvent) = do
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id $ tcEvent.id,
-        cancellationSource = castCancellationSource tcEvent.cancellation_reason
+        cancellationSource = Common.castCancellationSource tcEvent.cancellation_reason
       }
 parseEvent _ (OnUpdate.BookingReallocation rbrEvent) = do
   return $
     DOnUpdate.BookingReallocationReq
       { bppBookingId = Id $ rbrEvent.id,
         bppRideId = Id rbrEvent.fulfillment.id,
-        reallocationSource = castCancellationSource rbrEvent.reallocation_reason
+        reallocationSource = Common.castCancellationSource rbrEvent.reallocation_reason
       }
 parseEvent _ (OnUpdate.DriverArrived daEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in DriverArrived Event.") daEvent.fulfillment.tags
@@ -164,13 +168,17 @@ parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
         bppEstimateId = Id erEvent.item.id,
         bppBookingId = Id $ erEvent.id,
         bppRideId = Id erEvent.fulfillment.id,
-        cancellationSource = castCancellationSource cancellationReason
+        cancellationSource = Common.castCancellationSource cancellationReason
       }
-
-castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
-castCancellationSource = \case
-  OnUpdate.ByUser -> SBCR.ByUser
-  OnUpdate.ByDriver -> SBCR.ByDriver
-  OnUpdate.ByMerchant -> SBCR.ByMerchant
-  OnUpdate.ByAllocator -> SBCR.ByAllocator
-  OnUpdate.ByApplication -> SBCR.ByApplication
+parseEvent _ (OnUpdate.SafetyAlert saEvent) = do
+  tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in SafetyAlert Event.") saEvent.fulfillment.tags
+  deviation :: Text <-
+    fromMaybeM (InvalidRequest "deviation is not present.") $
+      getTag "safety_alert" "deviation" tagsGroup
+  return $
+    DOnUpdate.SafetyAlertReq
+      { bppBookingId = Id saEvent.id,
+        bppRideId = Id saEvent.fulfillment.id,
+        reason = deviation,
+        code = "deviation"
+      }

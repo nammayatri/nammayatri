@@ -15,16 +15,17 @@
 module API.RiderPlatform.IssueList where
 
 import qualified "rider-app" API.Dashboard.IssueList as BAP
-import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified "rider-app" Domain.Action.Dashboard.IssueList as DI
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import IssueManagement.Common.Dashboard.Issue as Common hiding (IssueListAPI, TicketStatusCallBackAPI)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified RiderPlatformClient.RiderApp as Client
+import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth
@@ -37,17 +38,17 @@ type API =
        )
 
 type IssueListAPI =
-  ApiAuth 'APP_BACKEND 'CUSTOMERS 'LIST_ISSUE
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'CUSTOMERS 'LIST_ISSUE
     :> BAP.ListCustomerIssue
 
 type TicketStatusCallBackAPI =
-  ApiAuth 'APP_BACKEND 'ISSUE 'TICKET_STATUS_CALL_BACK
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'ISSUE 'TICKET_STATUS_CALL_BACK
     :> BAP.TicketStatusCallBack
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  listIssue merchantId
-    :<|> ticketStatusCallBack merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  listIssue merchantId city
+    :<|> ticketStatusCallBack merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -57,15 +58,15 @@ buildTransaction ::
   ApiTokenInfo ->
   Maybe request ->
   m DT.Transaction
-buildTransaction endpoint apiTokenInfo = T.buildTransaction (DT.IssueAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
+buildTransaction endpoint apiTokenInfo = T.buildTransaction (DT.IssueAPI endpoint) (Just APP_BACKEND_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
-listIssue :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler DI.IssueListRes
-listIssue merchantShortId apiTokenInfo mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callRiderApp checkedMerchantId (.issues.listIssue) mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
+listIssue :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler DI.IssueListRes
+listIssue merchantShortId opCity apiTokenInfo mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callRiderAppOperations checkedMerchantId opCity (.issues.listIssue) mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbFrom mbTo
 
-ticketStatusCallBack :: ShortId DM.Merchant -> ApiTokenInfo -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
-ticketStatusCallBack merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+ticketStatusCallBack :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.TicketStatusCallBackReq -> FlowHandler APISuccess
+ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
-  T.withTransactionStoring transaction $ Client.callRiderApp checkedMerchantId (.issues.ticketStatusCallBack) req
+  T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.issues.ticketStatusCallBack) req

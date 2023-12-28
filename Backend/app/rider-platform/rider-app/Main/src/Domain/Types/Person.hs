@@ -18,11 +18,14 @@ module Domain.Types.Person where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant as DMerchant
+import Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Merchant.RiderConfig as DRC
 import qualified Domain.Types.MerchantConfig as DMC
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (Centesimal, maskText)
@@ -82,6 +85,8 @@ data PersonE e = Person
     notificationToken :: Maybe Text,
     description :: Maybe Text,
     merchantId :: Id DMerchant.Merchant,
+    currentCity :: Context.City,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
     referralCode :: Maybe Text,
     referredAt :: Maybe UTCTime,
@@ -93,7 +98,13 @@ data PersonE e = Person
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    shareEmergencyContacts :: Bool,
+    nightSafetyChecks :: Bool,
+    triggerSupport :: Bool,
+    hasCompletedSafetySetup :: Bool,
+    registrationLat :: Maybe Double,
+    registrationLon :: Maybe Double
   }
   deriving (Generic)
 
@@ -133,16 +144,26 @@ data PersonAPIEntity = PersonAPIEntity
     hasDisability :: Maybe Bool,
     disability :: Maybe Text,
     gender :: Gender,
+    hasCompletedSafetySetup :: Bool,
+    enableLocalPoliceSupport :: Maybe Bool,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-makePersonAPIEntity :: DecryptedPerson -> Maybe Text -> PersonAPIEntity
-makePersonAPIEntity Person {..} disability =
+data PersonCityInformation = PersonCityInformation
+  { personId :: Id Person,
+    currentCity :: Context.City,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+makePersonAPIEntity :: DecryptedPerson -> Maybe Text -> Maybe DRC.RiderConfig -> PersonAPIEntity
+makePersonAPIEntity Person {..} disability riderConfig =
   PersonAPIEntity
     { maskedMobileNumber = maskText <$> mobileNumber,
       maskedDeviceToken = maskText <$> deviceToken,
       hasTakenRide = hasTakenValidRide,
+      enableLocalPoliceSupport = (.enableLocalPoliceSupport) <$> riderConfig,
       ..
     }

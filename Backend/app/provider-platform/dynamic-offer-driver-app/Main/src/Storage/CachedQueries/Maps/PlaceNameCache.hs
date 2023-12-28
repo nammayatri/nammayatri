@@ -35,7 +35,7 @@ findPlaceByGeoHash geoHash =
     Just a -> return a
     Nothing -> cachedPlaceByGeoHash geoHash /=<< Queries.findPlaceByGeoHash geoHash
 
-create :: MonadFlow m => PlaceNameCache -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => PlaceNameCache -> m ()
 create = Queries.create
 
 -- test with empty list

@@ -12,11 +12,14 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.DriverFee where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverFee as Domain
+import Domain.Types.Plan (PaymentMode)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -44,7 +47,16 @@ data DriverFeeT f = DriverFeeT
     billNumber :: B.C f (Maybe Int),
     autopayPaymentStage :: B.C f (Maybe Domain.AutopayPaymentStage),
     schedulerTryCount :: B.C f Int,
+    notificationRetryCount :: B.C f Int,
     feeWithoutDiscount :: B.C f (Maybe HighPrecMoney),
+    amountPaidByCoin :: B.C f (Maybe HighPrecMoney),
+    badDebtDeclarationDate :: B.C f (Maybe UTCTime),
+    badDebtRecoveryDate :: B.C f (Maybe UTCTime),
+    overlaySent :: B.C f Bool,
+    specialZoneRideCount :: B.C f Int,
+    specialZoneAmount :: B.C f HighPrecMoney,
+    planId :: B.C f (Maybe Text),
+    planMode :: B.C f (Maybe PaymentMode),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

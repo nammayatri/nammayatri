@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.FareParameters where
 
@@ -29,9 +30,11 @@ data FareParameters = FareParameters
     govtCharges :: Maybe Money,
     baseFare :: Money,
     waitingCharge :: Maybe Money,
+    rideExtraTimeFare :: Maybe Money,
     nightShiftCharge :: Maybe Money,
     nightShiftRateIfApplies :: Maybe Double,
-    fareParametersDetails :: FareParametersDetails
+    fareParametersDetails :: FareParametersDetails,
+    customerCancellationDues :: HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow)
 
@@ -45,7 +48,7 @@ data FParamsProgressiveDetails = FParamsProgressiveDetails
   deriving (Generic, Show, Eq, PrettyShow)
 
 data FParamsSlabDetails = FParamsSlabDetails
-  { platformFee :: Maybe Money,
+  { platformFee :: Maybe HighPrecMoney,
     sgst :: Maybe HighPrecMoney,
     cgst :: Maybe HighPrecMoney
   }

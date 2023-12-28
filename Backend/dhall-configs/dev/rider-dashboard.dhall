@@ -44,6 +44,12 @@ let appBackend =
       , token = sec.appBackendToken
       }
 
+let appBackendManagement =
+      { name = common.ServerName.APP_BACKEND_MANAGEMENT
+      , url = "http://localhost:8013/"
+      , token = sec.appBackendToken
+      }
+
 let rccfg =
       { connectHost = "localhost"
       , connectPort = 30001
@@ -80,7 +86,10 @@ in  { esqDBCfg
     , registrationTokenExpiry = +365
     , encTools
     , exotelToken = ""
-    , dataServers = [ appBackend ]
+    , dataServers = [ appBackend, appBackendManagement ]
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , slackToken = sec.slackToken
+    , slackChannel = "CXXXXXXXXXF"
+    , internalEndPointMap = common.internalEndPointMap
     }

@@ -44,68 +44,61 @@ import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.StyleSpan;
 import android.util.Log;
-
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.firebase.analytics.FirebaseAnalytics;
-
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.io.BufferedReader;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.HashMap;
 import java.util.TimeZone;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import javax.net.ssl.HttpsURLConnection;
-
 import in.juspay.mobility.app.callbacks.CallBack;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 
 
 public class NotificationUtils {
 
     private static final String LOG_TAG = "LocationServices";
     private static final String TAG = "NotificationUtils";
-
     public static String CHANNEL_ID = "General";
     public static String FLOATING_NOTIFICATION = "FLOATING_NOTIFICATION";
     public static String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
     public static String ALLOCATION_TYPE = "NEW_RIDE_AVAILABLE";
-    public static String TRIP_CHANNEL_ID = "TRIP_STARTED";
+    public static String TRIP_STARTED = "TRIP_STARTED";
     public static String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
     public static String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
     public static String TRIP_FINISHED = "TRIP_FINISHED";
-    public static String RINGING_CHANNEL_ID = "RINGING_ALERT";
     public static String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
     public static String DRIVER_REACHED = "DRIVER_REACHED";
+    public static String RIDE_STARTED = "RIDE_STARTED";
     public static String NO_VARIANT = "NO_VARIANT";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();
-
     @SuppressLint("MissingPermission")
     private static FirebaseAnalytics mFirebaseAnalytics;
     static Random rand = new Random();
     public static int notificationId = rand.nextInt(1000000);
     public static MediaPlayer mediaPlayer;
     public static Bundle lastRideReq = new Bundle();
-//    public static  String versionName = BuildConfig.VERSION_NAME;
-
+    private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+    private static Boolean enableCleverTapEvents;
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
     public static void registerCallback(CallBack notificationCallback) {
@@ -128,16 +121,46 @@ public class NotificationUtils {
                 MyFirebaseMessagingService.clearedRideRequest.remove(data.getString("entity_ids"));
                 return;
             }
+            SharedPreferences sharedPref = context.getSharedPreferences(
+                    context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("In_if_in_notification before");
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                 mFirebaseAnalytics.logEvent("ride_request_received", params);
+                String merchantId = context.getResources().getString(R.string.merchant_id);
+                try{
+                    if (remoteConfigs.hasKey("enable_clevertap_events")){
+                        JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_clevertap_events"));
+                        if (clevertapConfig.has(merchantId)){
+                            enableCleverTapEvents = clevertapConfig.getBoolean(merchantId);
+                        }
+                    }
+                    if (enableCleverTapEvents) {
+                        HashMap<String, Object> cleverTapParams = new HashMap<>();
+                        cleverTapParams.put("searchRequestId", entity_payload.getString("searchRequestId"));
+                        cleverTapParams.put("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
+                        cleverTapParams.put("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
+                        cleverTapParams.put("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
+                        cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                            LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
+                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                            String formattedDateTime = utcDateTime.format(formatter);
+                            long millisecondsSinceEpoch = Instant.now().toEpochMilli();
+                            cleverTapParams.put("timeStampString", formattedDateTime);
+                            cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
+                        }
+                        clevertapDefaultInstance.pushEvent("ride_request_received", cleverTapParams);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
                 //Recieved Notification && checking for permission if overlay permission is given, if not then it will redirect to give permission
 
                 Intent svcT = new Intent(context, OverlaySheetService.class);
-                SharedPreferences sharedPref = context.getSharedPreferences(
-                        context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                 svcT.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 System.out.println("Call Service before");
                 Bundle sheetData = new Bundle();
@@ -163,10 +186,12 @@ public class NotificationUtils {
                     sheetData.putInt("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
                     sheetData.putInt("customerExtraFee", (entity_payload.has("customerExtraFee") && !entity_payload.isNull("customerExtraFee") ? entity_payload.getInt("customerExtraFee") : 0));
                     sheetData.putInt("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
+                    sheetData.putBoolean("isTranslated", (!entity_payload.has("isTranslated") || entity_payload.isNull("isTranslated") || entity_payload.getBoolean("isTranslated")));
                     sheetData.putString("sourcePinCode", addressPickUp.has("areaCode") && !addressPickUp.isNull("areaCode") ? addressPickUp.getString("areaCode"): "");
                     sheetData.putString("destinationPinCode", addressDrop.has("areaCode") && !addressDrop.isNull("areaCode") ? addressDrop.getString("areaCode") : "");
                     sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
+                    sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);
@@ -217,25 +242,34 @@ public class NotificationUtils {
                         }, BIND_AUTO_CREATE);
                     } else {
                         if (overlayFeatureNotAvailable(context)) {
-                            try {
-                                mFirebaseAnalytics.logEvent("low_ram_device", params);
-                                if (RideRequestActivity.getInstance() == null) {
-                                    Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
-                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                                    intent.putExtras(sheetData);
-                                    context.getApplicationContext().startActivity(intent);
-                                } else {
-                                    RideRequestActivity.getInstance().addToList(sheetData);
+                            Handler handler = new Handler(Looper.getMainLooper());
+                            handler.postDelayed(() -> {
+                                try {
+                                    String reqId = entity_payload.getString("searchRequestId");
+                                    boolean isClearedReq = MyFirebaseMessagingService.clearedRideRequest.containsKey(reqId);
+                                    if (isClearedReq){
+                                        MyFirebaseMessagingService.clearedRideRequest.remove(reqId);
+                                        return;
+                                    }
+                                    mFirebaseAnalytics.logEvent("low_ram_device", params);
+                                    if (RideRequestActivity.getInstance() == null) {
+                                        Intent intent = new Intent(context.getApplicationContext(), RideRequestActivity.class);
+                                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                                        intent.putExtras(sheetData);
+                                        context.getApplicationContext().startActivity(intent);
+                                    } else {
+                                        RideRequestActivity.getInstance().addToList(sheetData);
+                                    }
+                                    lastRideReq = new Bundle();
+                                    lastRideReq.putAll(sheetData);
+                                    lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
+                                    startMediaPlayer(context, R.raw.allocation_request, true);
+                                    RideRequestUtils.createRideRequestNotification(context);
+                                } catch (Exception e) {
+                                    params.putString("exception", e.toString());
+                                    mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
                                 }
-                                lastRideReq = new Bundle();
-                                lastRideReq.putAll(sheetData);
-                                lastRideReq.putBoolean("rideReqExpired", rideReqExpired);
-                                startMediaPlayer(context, R.raw.allocation_request, true);
-                                RideRequestUtils.createRideRequestNotification(context);
-                            } catch (Exception e) {
-                                params.putString("exception", e.toString());
-                                mFirebaseAnalytics.logEvent("exception_in_opening_ride_req_activity", params);
-                            }
+                            }, (sheetData.getInt("keepHiddenForSeconds", 0) * 1000L));
                         }
 
 //                        Log.i("notificationCallback_size", Integer.toString(notificationCallback.size()));
@@ -257,6 +291,27 @@ public class NotificationUtils {
                     overlayParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
                     mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                     mFirebaseAnalytics.logEvent("overlay_popup_expired", overlayParams);
+                    try {
+                        if (enableCleverTapEvents) {
+                            HashMap<String, Object> cleverTapParams = new HashMap<>();
+                            cleverTapParams.put("searchRequestId", entity_payload.getString("searchRequestId"));
+                            cleverTapParams.put("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
+                            cleverTapParams.put("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
+                            cleverTapParams.put("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
+                            cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
+                                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                                String formattedDateTime = utcDateTime.format(formatter);
+                                long millisecondsSinceEpoch = Instant.now().toEpochMilli();
+                                cleverTapParams.put("timeStampString", formattedDateTime);
+                                cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
+                            }
+                            clevertapDefaultInstance.pushEvent("overlay_popup_expired", cleverTapParams);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
                 notificationId++;
                 for(Iterator<Map.Entry<String, Long>> iterator = MyFirebaseMessagingService.clearedRideRequest.entrySet().iterator(); iterator.hasNext(); ) {
@@ -266,34 +321,53 @@ public class NotificationUtils {
                       }
                   }
             }
-
-            if (notificationType.equals(context.getString(R.string.CLEARED_FARE)) || notificationType.equals(context.getString(R.string.CANCELLED_SEARCH_REQUEST))) {
-                if (binder != null) {
-                    if (!binder.getService().removeCardById(data.getString(context.getString(R.string.entity_ids))))
-                    {
-                        MyFirebaseMessagingService.clearedRideRequest.put(data.getString("entity_ids"),System.currentTimeMillis());
-                    }
-                }
-            }
+            handleClearedReq(context, notificationType, data);
         } catch (Exception e) {
             e.printStackTrace();
+
+        }
+    }
+
+
+
+    private static void handleClearedReq (Context context, String notificationType, JSONObject data) throws JSONException {
+        if (notificationType.equals(context.getString(R.string.CLEARED_FARE)) || notificationType.equals(context.getString(R.string.CANCELLED_SEARCH_REQUEST))) {
+            if (binder != null) {
+                if (!binder.getService().removeCardById(data.getString(context.getString(R.string.entity_ids))))
+                {
+                    MyFirebaseMessagingService.clearedRideRequest.put(data.getString("entity_ids"),System.currentTimeMillis());
+                }
+            }
+            if (overlayFeatureNotAvailable(context)){
+                RideRequestActivity requestActivity =  RideRequestActivity.getInstance();
+                if (requestActivity != null){
+                    boolean isCardRemoved = RideRequestActivity.getInstance().removeCardById(data.getString(context.getString(R.string.entity_ids)));
+                    if (!isCardRemoved) {
+                        MyFirebaseMessagingService.clearedRideRequest.put(data.getString("entity_ids"),System.currentTimeMillis());
+                    }
+                } else {
+                    MyFirebaseMessagingService.clearedRideRequest.put(data.getString("entity_ids"),System.currentTimeMillis());
+                }
+            }
         }
     }
 
     public static void showNotification(Context context, String title, String msg, JSONObject data, String imageUrl) throws JSONException {
         Log.e(TAG, "SHOWNOTIFICATION MESSAGE");
-        int smallIcon = Utils.getResIdentifier(context,"ic_launcher", "drawable");
+        int smallIcon =  Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", "drawable") ;
         Bitmap bitmap = null;
         if (imageUrl != null) {
             bitmap = getBitmapfromUrl(imageUrl);
         }
+        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+        String disabilityName = sharedPref.getString("DISABILITY_NAME", "");
         final PackageManager pm = context.getPackageManager();
         Intent intent = pm.getLaunchIntentForPackage(context.getPackageName());
         System.out.println("Notificationn Utils Data" + data.toString());
         System.out.println("Notificationn111" + data.getString("notification_type"));
         System.out.println("Notificationn222" + (data.getString("entity_ids")));
         System.out.println("imageUrl" + imageUrl);
-        System.out.println("imageUrl" + imageUrl);
+        System.out.println("smallIcon" + smallIcon);
         intent.putExtra("NOTIFICATION_DATA", data.toString());
         //            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
@@ -303,14 +377,15 @@ public class NotificationUtils {
         String merchantType = context.getString(R.string.service);
         String key = merchantType.contains("provider") ? "DRIVER" : "USER";
         System.out.println("key" + key);
-        if (ALLOCATION_TYPE.equals(notificationType)) {
-            System.out.println("showNotification:- " + notificationType);
-            channelId = RINGING_CHANNEL_ID;
-        } else if (TRIP_CHANNEL_ID.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType)) {
-            System.out.println("showNotification:- " + notificationType);
+        System.out.println("showNotification:- " + notificationType);
+        if (TRIP_STARTED.equals(notificationType)) {
+            channelId = RIDE_STARTED;
+        } else if (CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType)) {
             channelId = notificationType;
-        } else {
-            System.out.println("showNotification:- " + notificationType);
+        } else if (TRIP_FINISHED.equals(notificationType) && disabilityName.equals("BLIND_LOW_VISION")){
+            channelId = TRIP_FINISHED;
+        }
+        else {
             channelId = FLOATING_NOTIFICATION;
         }
 
@@ -318,6 +393,7 @@ public class NotificationUtils {
         if (imageUrl != null) {
             mBuilder.setLargeIcon(bitmap)
                     .setSmallIcon(smallIcon)
+                    .setColor(rgb(252, 197, 43))
                     .setContentTitle(title)
                     .setContentText(msg)
                     .setAutoCancel(true)
@@ -329,6 +405,7 @@ public class NotificationUtils {
                                     .bigLargeIcon(null));
         } else {
             mBuilder.setSmallIcon(smallIcon)
+                    .setColor(rgb(252, 197, 42))
                     .setContentTitle(title)
                     .setContentText(msg)
                     .setAutoCancel(true)
@@ -336,34 +413,39 @@ public class NotificationUtils {
                     .setChannelId(channelId);
         }
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             System.out.println("Default sound");
             Uri notificationSound;
             if (notificationType.equals(ALLOCATION_TYPE)) {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
-            } else if (notificationType.equals(TRIP_CHANNEL_ID)) {
-                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_otp_sound);
+            } else if (notificationType.equals(TRIP_STARTED)) {
+                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_started);
                 mBuilder.setSound(notificationSound);
             } else if (notificationType.equals(CANCELLED_PRODUCT) || notificationType.equals(REALLOCATE_PRODUCT)){
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
                 mBuilder.setSound(notificationSound);
-             } else {
+             } else if (notificationType.equals(TRIP_FINISHED) && disabilityName.equals("BLIND_LOW_VISION")){
+                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_completed_talkback);
+                mBuilder.setSound(notificationSound);
+            }else {
                 notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             }
             System.out.println("Default sound" + notificationSound);
-        }
+       }
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
         System.out.println("In clean notification before notify");
 
         if (notificationType.equals(ALLOCATION_TYPE)) {
             System.out.println("In clean notification if");
         }
-        SharedPreferences sharedPref = context.getSharedPreferences(
-                context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+
                 
-        if (TRIP_CHANNEL_ID.equals(notificationType)) {
+        if (TRIP_STARTED.equals(notificationType)) {
             if (key.equals("USER")) {
                 Utils.logEvent ("ny_user_ride_started", context);
+                if (disabilityName.equals("BLIND_LOW_VISION")) {
+                    startMediaPlayer(context, R.raw.ride_started_talkback, false);
+                }
             }
             else
                 Utils.logEvent("ride_started", context);
@@ -393,19 +475,29 @@ public class NotificationUtils {
             if (key.equals("DRIVER") && msg.contains("Customer had to cancel your ride")) {
                 startMediaPlayer(context, R.raw.ride_cancelled_media, true);
             } else {
-                startMediaPlayer(context, R.raw.cancel_notification_sound, false);
+                int cancellationSound = R.raw.cancel_notification_sound;
+                if (disabilityName.equals("BLIND_LOW_VISION"))
+                {  if (msg.contains("The driver had to cancel the ride"))
+                    cancellationSound = R.raw.ride_cancelled_by_driver;
+                    else
+                        cancellationSound = R.raw.you_have_cancelled_the_ride;
+                }
+                startMediaPlayer(context, cancellationSound, false);
             }
         }
         if (DRIVER_ASSIGNMENT.equals(notificationType)) {
             mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
+            int audio = R.raw.ride_assigned;
             if (key.equals("USER")) {
                 Utils.logEvent ("ny_user_ride_assigned", context);
             }
-            else
-                Utils.logEvent("driver_assigned", context);
             if (key.equals("DRIVER")) {
-                startMediaPlayer(context, R.raw.ride_assigned, true);
+                Utils.logEvent("driver_assigned", context);
             }
+            if(key.equals("USER") && disabilityName.equals("BLIND_LOW_VISION")) {
+                audio = R.raw.ride_assigned_talkback;
+            }
+            startMediaPlayer(context, audio, !key.equals("USER"));
         }
         notificationId++;
         if (DRIVER_ASSIGNMENT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_REACHED.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType)) {
@@ -413,7 +505,7 @@ public class NotificationUtils {
                 callBack.get(i).driverCallBack(notificationType);
             }
         }
-        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_CHANNEL_ID.equals(notificationType)) && (key.equals("USER"))) {
+        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_STARTED.equals(notificationType)) && (key.equals("USER"))) {
             for (int i = 0; i < callBack.size(); i++) {
                 callBack.get(i).customerCallBack(notificationType);
             }
@@ -443,7 +535,7 @@ public class NotificationUtils {
     }
 
     private static boolean checkPermission(Context context) {
-        return Settings.canDrawOverlays(context);
+        return Settings.canDrawOverlays(context.getApplicationContext());
     }
 
     public static void createNotificationChannel(Context context, String channel_Id) {
@@ -456,19 +548,17 @@ public class NotificationUtils {
                 }
                 NotificationChannel channel = new NotificationChannel(channel_Id, channel_Id, importance);
                 channel.setDescription(description);
-                System.out.println("Channel" + channel_Id);
-                if (channel_Id.equals(RINGING_CHANNEL_ID)) {
-                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
-                } else if (channel_Id.equals(TRIP_CHANNEL_ID)) {
-                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.notify_otp_sound);
+                if (channel_Id.equals(RIDE_STARTED)) {
+                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_started);
                 } else if (channel_Id.equals(CANCELLED_PRODUCT)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
                 } else if (channel_Id.equals(DRIVER_HAS_REACHED)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.driver_arrived);
+                } else if (channel_Id.equals(TRIP_FINISHED)) {
+                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_completed_talkback);
                 } else {
                     soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                 }
-                System.out.println("Channel" + soundUri);
                 AudioAttributes attributes = new AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION)
@@ -521,9 +611,9 @@ public class NotificationUtils {
                 new NotificationCompat.Builder(context, "MessageUpdates")
                         .setContentTitle(titleBold)
                         .setAutoCancel(true)
-                        .setColor(rgb(33,148,255))
+                        .setColor(rgb(251, 197, 44))
                         .setContentText(message)
-                        .setSmallIcon(R.drawable.ny_ic_launcher)
+                        .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)
                         .setContentIntent(pendingIntent)

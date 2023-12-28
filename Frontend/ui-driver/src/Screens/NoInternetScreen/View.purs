@@ -17,7 +17,7 @@ module Screens.NoInternetScreen.View where
 
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>))
 import Effect (Effect)
-import PrestoDOM (Length(..), Margin(..), Gravity(..), Padding(..), Orientation(..), Visibility(..), PrestoDOM, ScopedScreen, linearLayout, clickable, height, width, gravity, background, padding, orientation, imageView, textView, text, imageUrl, textSize, fontStyle, color, margin, lineHeight, relativeLayout, alignParentBottom, onClick, visibility, afterRender, imageWithFallback)
+import PrestoDOM (Length(..), Margin(..), Gravity(..), Padding(..), Orientation(..), Visibility(..), PrestoDOM, Screen, linearLayout, clickable, height, width, gravity, background, padding, orientation, imageView, textView, text, imageUrl, textSize, fontStyle, color, margin, lineHeight, relativeLayout, alignParentBottom, onClick, visibility, afterRender, imageWithFallback)
 import Screens.NoInternetScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Components.PrimaryButton as PrimaryButton
@@ -30,10 +30,10 @@ import Language.Strings (getString)
 import Language.Types(STR(..))
 import Common.Types.App
 import Screens.NoInternetScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
-screen :: ST.NoInternetScreenState -> String -> ScopedScreen Action ST.NoInternetScreenState ScreenOutput
+screen :: ST.NoInternetScreenState -> String -> Screen Action ST.NoInternetScreenState ScreenOutput
 screen initialState triggertype = 
   { initialState
   , view : view triggertype
@@ -43,7 +43,6 @@ screen initialState triggertype =
     _ <- JB.storeCallBackInternetAction push InternetActionCallBack
     pure $ pure unit)]
   , eval
-  , parent : Just "NoInternetScreen"
   }
 
 view :: forall w . String -> (Action -> Effect Unit) -> ST.NoInternetScreenState -> PrestoDOM (Effect Unit) w 
@@ -78,7 +77,7 @@ locationAccessPermissionView push state triggertype =
           , margin (MarginVertical 22 16)
           ] <> FontStyle.h1 LanguageStyle
         , textView $
-          [ text (getString YOUR_LOCATION_HELPS_OUR_SYSTEM)
+          [ text $ getString $ YOUR_LOCATION_HELPS_OUR_SYSTEM "YOUR_LOCATION_HELPS_OUR_SYSTEM"
           , color Color.black800
           ] <> FontStyle.body5 TypoGraphy
         ]
@@ -87,7 +86,7 @@ locationAccessPermissionView push state triggertype =
         , width MATCH_PARENT
         , gravity CENTER
         ][  imageView
-            [ imageWithFallback $ "ny_ic_location_access," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_location_access.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_location_access"
             , height $ V 213
             , width $ V 240
             , gravity CENTER
@@ -109,7 +108,7 @@ noInternetScreenView push state triggertype =
       , orientation VERTICAL
       , clickable false
       ][imageView
-        [ imageWithFallback $ "ny_ic_offline," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_offline.png"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_offline"
         , height $ V 213
         , width $ V 240
         , gravity CENTER

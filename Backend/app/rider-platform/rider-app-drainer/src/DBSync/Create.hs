@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 {-# OPTIONS_GHC -Wno-unused-local-binds #-}
 
@@ -7,6 +8,7 @@ import Config.Env
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromJust)
+import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
 import EulerHS.Language as EL
@@ -15,8 +17,8 @@ import EulerHS.Prelude
 import EulerHS.Types as ET
 import Kafka.Producer as KafkaProd
 import Kafka.Producer as Producer
+import Kernel.Beam.Lib.Utils (getMappings, replaceMappings)
 import qualified Kernel.Beam.Types as KBT
-import System.Timeout (timeout)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -39,6 +41,11 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("FareBreakup" :: Text) [(obj, val, entryId, FareBreakupObject obj) | (CreateDBCommand entryId _ _ _ _ (FareBreakupObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Geometry" :: Text) [(obj, val, entryId, GeometryObject obj) | (CreateDBCommand entryId _ _ _ _ (GeometryObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Issue" :: Text) [(obj, val, entryId, IssueObject obj) | (CreateDBCommand entryId _ _ _ _ (IssueObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Comment" :: Text) [(obj, val, entryId, CommentObject obj) | (CreateDBCommand entryId _ _ _ _ (CommentObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("IssueCategory" :: Text) [(obj, val, entryId, IssueCategoryObject obj) | (CreateDBCommand entryId _ _ _ _ (IssueCategoryObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("IssueOption" :: Text) [(obj, val, entryId, IssueOptionObject obj) | (CreateDBCommand entryId _ _ _ _ (IssueOptionObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("IssueReport" :: Text) [(obj, val, entryId, IssueReportObject obj) | (CreateDBCommand entryId _ _ _ _ (IssueReportObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("IssueTranslation" :: Text) [(obj, val, entryId, IssueTranslationObject obj) | (CreateDBCommand entryId _ _ _ _ (IssueTranslationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("PlaceNameCache" :: Text) [(obj, val, entryId, PlaceNameCacheObject obj) | (CreateDBCommand entryId _ _ _ _ (PlaceNameCacheObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Merchant" :: Text) [(obj, val, entryId, MerchantObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("MerchantMessage" :: Text) [(obj, val, entryId, MerchantMessageObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantMessageObject obj), val) <- cmds]
@@ -46,6 +53,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("MerchantServiceConfig" :: Text) [(obj, val, entryId, MerchantServiceConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceConfigObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("MerchantServiceUsageConfig" :: Text) [(obj, val, entryId, MerchantServiceUsageConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantServiceUsageConfigObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("MerchantConfig" :: Text) [(obj, val, entryId, MerchantConfigObject obj) | (CreateDBCommand entryId _ _ _ _ (MerchantConfigObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("MediaFile" :: Text) [(obj, val, entryId, MediaFileObject obj) | (CreateDBCommand entryId _ _ _ _ (MediaFileObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("OnSearchEvent" :: Text) [(obj, val, entryId, OnSearchEventObject obj) | (CreateDBCommand entryId _ _ _ _ (OnSearchEventObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("PaymentOrder" :: Text) [(obj, val, entryId, PaymentOrderObject obj) | (CreateDBCommand entryId _ _ _ _ (PaymentOrderObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("PaymentTransaction" :: Text) [(obj, val, entryId, PaymentTransactionObject obj) | (CreateDBCommand entryId _ _ _ _ (PaymentTransactionObject obj), val) <- cmds]
@@ -76,7 +84,7 @@ runCreateCommands cmds streamKey = do
           cmdsToErrorQueue = map ("command" :: String,) byteStream
       Env {..} <- ask
       maxRetries <- EL.runIO getMaxRetries
-      if null object || model `elem` _dontEnableDbTables then pure [Right []] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
+      if null object || model `elem` _dontEnableDbTables then pure [Right entryIds] else runCreateWithRecursion dbConf model dbObjects cmdsToErrorQueue entryIds 0 maxRetries False
     -- If KAFKA_PUSH is false then entry will be there in DB Else Create entry in Kafka only.
     runCreateInKafka dbConf streamKey' model object = do
       isPushToKafka' <- EL.runIO isPushToKafka
@@ -86,10 +94,12 @@ runCreateCommands cmds streamKey = do
           if null object
             then pure [Right []]
             else do
-              let dataObjects = map (\(_, _, _, dataObject) -> dataObject) object
+              let objectIdentity = map (\(a, _, _, _) -> a) object
+                  mappings = getMappings objectIdentity
+                  newObjects = map (\object' -> replaceMappings (toJSON object') mappings) objectIdentity
                   entryIds = map (\(_, _, entryId', _) -> entryId') object
               Env {..} <- ask
-              res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection dataObjects streamKey'
+              res <- EL.runIO $ streamRiderDrainerCreates _kafkaConnection newObjects streamKey' model
               either
                 ( \_ -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
@@ -135,18 +145,12 @@ runCreateCommands cmds streamKey = do
           EL.logError ("Create failed: " :: Text) (show cmdsToErrorQueue <> "\n Error: " <> show x :: Text)
           pure [Left entryIds]
 
-streamRiderDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> IO (Either Text ())
-streamRiderDrainerCreates producer dbObject streamKey = do
-  let topicName = "rider-drainer"
-  mapM_ (KafkaProd.produceMessage producer . message topicName) dbObject
-  flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
-  case flushResult of
-    Just _ -> do
-      pure $ Right ()
-    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
+streamRiderDrainerCreates :: ToJSON a => Producer.KafkaProducer -> [a] -> Text -> Text -> IO (Either Text ())
+streamRiderDrainerCreates producer dbObject streamKey model = do
+  let topicName = "aap-sessionizer-" <> T.toLower model
+  result' <- mapM (KafkaProd.produceMessage producer . message topicName) dbObject
+  if any isJust result' then pure $ Left ("Kafka Error: " <> show result') else pure $ Right ()
   where
-    prodPush producer' = KafkaProd.flushProducer producer' >> pure True
-
     message topicName event =
       ProducerRecord
         { prTopic = TopicName topicName,

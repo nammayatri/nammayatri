@@ -14,6 +14,8 @@
 
 module Environment where
 
+import qualified Data.HashMap as HM
+import qualified Data.Map as M
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App
@@ -39,7 +41,8 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     shortDurationRetryCfg :: RetryCfg,
     longDurationRetryCfg :: RetryCfg,
-    disableSignatureAuth :: Bool
+    disableSignatureAuth :: Bool,
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -60,7 +63,8 @@ data AppEnv = AppEnv
     longDurationRetryCfg :: RetryCfg,
     hostName :: Text,
     disableSignatureAuth :: Bool,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -71,7 +75,8 @@ buildAppEnv AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
-  return $ AppEnv {..}
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} =

@@ -37,7 +37,7 @@ import Screens.HomeScreen.View as HomeScreen
 import Screens.Types (KeyboardModalType(..))
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
-
+import Debug
 
 homeScreen :: FlowBT String HOME_SCREENOUTPUT
 homeScreen = do
@@ -64,19 +64,19 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> pure (DRIVER_AVAILABILITY_STATUS updatedState status)
     StartRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 700
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: updatedState.data.activeRide.id, otp : updatedState.props.rideOtp , lat : lat , lon : lon } updatedState) 
+      LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 700 false false
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: updatedState.data.activeRide.id, otp : updatedState.props.rideOtp , lat : lat , lon : lon , ts :ts} updatedState) 
     StartZoneRide  updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 1000
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : updatedState.props.rideOtp , lat : lat , lon : lon }) 
+      LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 1000 true false
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_ZONE_RIDE {otp : updatedState.props.rideOtp , lat : lat , lon : lon ,ts :ts}) 
     EndRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      LatLon lat lon <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : lat, lon : lon})
+      LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700 false false
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_END_RIDE {id : updatedState.data.activeRide.id, lat : lat, lon : lon, ts :ts} updatedState)
     SelectListModal updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : updatedState.data.activeRide.id , info : updatedState.data.cancelRideModal.selectedReasonDescription, reason : updatedState.data.cancelRideModal.selectedReasonCode}updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_CANCEL_RIDE {id : updatedState.data.activeRide.id , info : updatedState.data.cancelRideModal.selectedReasonDescription, reason : updatedState.data.cancelRideModal.selectedReasonCode} updatedState)
     Refresh updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure REFRESH_HOME_SCREEN_FLOW
@@ -88,7 +88,7 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> pure (UPDATE_ROUTE updatedState)
     FcmNotification notificationType screenState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → screenState)
-      App.BackT $ App.BackPoint <$> (pure $ FCM_NOTIFICATION notificationType)
+      App.BackT $ App.BackPoint <$> (pure $ FCM_NOTIFICATION notificationType screenState)
     NotifyDriverArrived updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NOTIFY_CUSTOMER updatedState)
@@ -101,9 +101,9 @@ homeScreen = do
     AddAlternateNumber updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ ADD_ALTERNATE_HOME)
-    CallCustomer updatedState -> do
+    CallCustomer updatedState exophoneNumber -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState exophoneNumber)
     OpenPaymentPage updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ OPEN_PAYMENT_PAGE updatedState)
@@ -112,7 +112,7 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION)
     SubscriptionScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $  App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription)
+      App.BackT $ App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription)
     GoToRideDetailsScreen updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_DETAILS_SCREEN)
@@ -122,8 +122,19 @@ homeScreen = do
     ClearPendingDues updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)
--- DTHS.GoToStart screenState -> do
---       (Location startRideCurrentLat startRideCurrentLiong) <- spy "george2" <$> (lift $ lift $ doAff $ makeAff \cb -> getCurrentPosition (cb <<< Right) Location $> nonCanceler)
---       _ <- pure $ spy "lat handler" startRideCurrentLat
---       _ <- pure $ spy "lon handler" startRideCurrentLong
---       App.BackT $ App.BackPoint <$> (pure $ ReachedPickUp screenState startRideCurrentLat startRideCurrentLong)
+    EnableGoto updatedState locationId -> do
+      LatLon lat lon _ <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700 false true
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ ENABLE_GOTO_API updatedState locationId (lat <> "," <> lon))
+    LoadGotoLocations updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ LOAD_GOTO_LOCATIONS updatedState)
+    DisableGoto updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ DISABLE_GOTO updatedState)
+    ExitGotoLocation updatedState addLocation -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GOTO_LOCATION_FLOW updatedState addLocation)
+    RefreshGoTo updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ REFRESH_GOTO updatedState)

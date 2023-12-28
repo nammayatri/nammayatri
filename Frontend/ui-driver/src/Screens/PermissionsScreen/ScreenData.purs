@@ -15,24 +15,33 @@
 
 module Screens.PermissionsScreen.ScreenData where
 
-import Prelude (class Eq)
+import Prelude (class Eq, (<>), (>=))
 import Screens.Types(PermissionsScreenState)
 import Data.Eq.Generic (genericEq)
 import Foreign.Object (empty)
 import Data.Generic.Rep (class Generic)
+import ConfigProvider
+
 initData :: PermissionsScreenState
 initData = {
-    data:{ logField : empty },
+    data:{ 
+      logField : empty,
+      driverMobileNumber : "",
+      config : getAppConfig appConfig
+    },
     props:{
-      isLocationPermissionChecked : false
+      isNotificationPermissionChecked : false
     , isOverlayPermissionChecked : false
     , isAutoStartPermissionChecked : false
     , isBatteryOptimizationChecked : false
+    , isLocationPermissionChecked : false
     , androidVersion : 0
+    , logoutModalView : false
+    , isDriverEnabled : false
     }
 }
 
-data Permissions = Overlay | Battery | AutoStart | Location
+data Permissions = Overlay | Battery | AutoStart | Notifications | LocationPermission
 derive instance genericPermissions :: Generic Permissions _
 instance eqPermissions :: Eq Permissions where eq = genericEq
 
@@ -41,11 +50,10 @@ type Listtype =
       permission :: Permissions
     }
 
-permissionsList :: Array Listtype
-permissionsList =
+permissionsList :: PermissionsScreenState -> Array Listtype
+permissionsList state =
     [
-      {permission: Location , icon:""},
       {permission: Overlay , icon:"" },
-      {permission: Battery , icon:""},
-      {permission: AutoStart , icon:""}
-    ]
+      {permission: AutoStart , icon:""},
+      {permission: Battery , icon:""}
+    ] <> if state.data.config.permissions.locationPermission then [{permission: LocationPermission , icon:""}] else []

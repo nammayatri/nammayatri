@@ -16,13 +16,16 @@ module Domain.Types.Merchant where
 
 import qualified Domain.Types.ServerName as DSN
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 
 data Merchant = Merchant
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
-    serverName :: DSN.ServerName,
+    serverNames :: [DSN.ServerName],
     is2faMandatory :: Bool,
+    defaultOperatingCity :: City.City,
+    supportedOperatingCities :: [City.City],
     createdAt :: UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq, Ord)

@@ -159,6 +159,14 @@ rotateAnim config =
     , PrestoAnim.repeatCount PrestoAnim.Infinite
     ] config.ifAnim
 
+shimmerAnimation :: Int -> Int -> Int -> PrestoAnim.Animation
+shimmerAnimation from' to' duration' = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration'
+    , PrestoAnim.fromX $ from'
+    , PrestoAnim.toX $ to'
+    , PrestoAnim.repeatCount PrestoAnim.Infinite
+    ] true
 
 translateInXForwardAnim :: Boolean -> PrestoAnim.Animation
 translateInXForwardAnim =
@@ -211,6 +219,7 @@ translateOutXForwardAnim =
     -- , PrestoAnim.interpolator $ PrestoAnim.EaseOut
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
+
 translateOutXBackwardAnim :: Boolean -> PrestoAnim.Animation
 translateOutXBackwardAnim =
   PrestoAnim.Animation
@@ -220,6 +229,16 @@ translateOutXBackwardAnim =
     -- , PrestoAnim.interpolator PrestoAnim.EaseOut
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
+
+translateOutXBackwardAnimY :: AnimConfig -> PrestoAnim.Animation
+translateOutXBackwardAnimY config =
+  PrestoAnim.Animation
+    [ PrestoAnim.duration config.duration
+    , PrestoAnim.fromX config.fromX
+    , PrestoAnim.toX config.toX
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ] config.ifAnim
+
 fadeInWithDelay :: Int -> Boolean -> PrestoAnim.Animation
 fadeInWithDelay delay = 
   PrestoAnim.Animation
@@ -229,6 +248,26 @@ fadeInWithDelay delay =
     , PrestoAnim.interpolator $ PrestoAnim.EaseIn
     , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     , PrestoAnim.delay delay
+    ]
+
+fadeInWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+fadeInWithDuration duration = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.toAlpha 1.0
+    , PrestoAnim.fromAlpha 0.0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
+    ]
+
+fadeOutWithDuration :: Int -> Boolean -> PrestoAnim.Animation
+fadeOutWithDuration duration = 
+  PrestoAnim.Animation
+    [ PrestoAnim.duration duration
+    , PrestoAnim.toAlpha 0.0
+    , PrestoAnim.fromAlpha 1.0
+    , PrestoAnim.interpolator $ PrestoAnim.EaseIn
+    , PrestoAnim.repeatCount PrestoAnim.NoRepeat
     ]
 
 translateYAnimFromTopWithAlpha:: AnimConfig -> PrestoAnim.Animation
@@ -337,3 +376,9 @@ scaleYAnimWithDelay delay =
     , PrestoAnim.repeatCount (PrestoAnim.Repeat 0)
     , PrestoAnim.interpolator $ PrestoAnim.Bezier 0.94 0.94 1.0 1.0
     ] true
+
+triggerOnAnimationEnd :: Boolean -> PrestoAnim.Animation
+triggerOnAnimationEnd ifAnim =
+  PrestoAnim.Animation
+    [ PrestoAnim.duration 250
+    ] ifAnim

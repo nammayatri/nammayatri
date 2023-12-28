@@ -26,7 +26,7 @@ rideAllocationModalConfig state item = let
     id = item.id,
     seconds = item.seconds,
     countDown {
-      text = HU.toString(item.timer)
+      text = HU.toStringJSON(item.timer)
     },
     source {
       text = item.sourceAddress

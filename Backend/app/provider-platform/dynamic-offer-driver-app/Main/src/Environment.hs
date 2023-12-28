@@ -16,6 +16,7 @@
 module Environment where
 
 import AWS.S3
+import qualified Data.HashMap as HM
 import qualified Data.Map as M
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -30,7 +31,7 @@ import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Cache
-import Kernel.Types.Common (HighPrecMeters, Seconds, Tables)
+import Kernel.Types.Common (HighPrecMeters, Seconds)
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id (Id (..))
@@ -55,23 +56,17 @@ import Storage.CachedQueries.RegistryMapFallback as CRM
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
--- data Tables = Tables {
---   kVTables :: [Text],
---   kVHardKilledTables :: [Text]
---   }
---   deriving (Generic, Show, ToJSON, FromJSON, FromDhall)
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
-    esqLocationDBCfg :: EsqDBConfig,
-    esqLocationDBRepCfg :: EsqDBConfig,
     hedisMigrationStage :: Bool, -- TODO: remove once data migration is done.
     cutOffHedisCluster :: Bool,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
-    clickhouseCfg :: ClickhouseCfg,
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    driverClickhouseCfg :: ClickhouseCfg,
     port :: Int,
     metricsPort :: Int,
     hostName :: Text,
@@ -111,6 +106,7 @@ data AppCfg = AppCfg
     driverLocationUpdateTopic :: Text,
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
+    droppedPointsThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int,
     enableRedisLatencyLogging :: Bool,
@@ -118,14 +114,17 @@ data AppCfg = AppCfg
     enableAPILatencyLogging :: Bool,
     enableAPIPrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
-    tables :: Tables,
+    kvConfigUpdateFrequency :: Int,
     locationTrackingServiceKey :: Text,
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
     jobInfoMapx :: M.Map AllocatorJobType Bool,
     ltsCfg :: LocationTrackingeServiceConfig,
-    enableLocationTrackingService :: Bool,
-    dontEnableForDb :: [Text]
+    dontEnableForDb :: [Text],
+    modelNamesMap :: M.Map Text Text,
+    maxMessages :: Text,
+    incomingAPIResponseTimeout :: Int,
+    internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -144,9 +143,8 @@ data AppEnv = AppEnv
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
     esqDBReplicaEnv :: EsqDBEnv,
-    esqLocationDBEnv :: EsqDBEnv,
-    esqLocationDBRepEnv :: EsqDBEnv,
-    clickhouseEnv :: ClickhouseEnv,
+    kafkaClickhouseEnv :: ClickhouseEnv,
+    driverClickhouseEnv :: ClickhouseEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     hedisEnv :: HedisEnv,
@@ -185,6 +183,7 @@ data AppEnv = AppEnv
     driverLocationUpdateTopic :: Text,
     broadcastMessageTopic :: Text,
     snapToRoadSnippetThreshold :: HighPrecMeters,
+    droppedPointsThreshold :: HighPrecMeters,
     minTripDistanceForReferralCfg :: Maybe HighPrecMeters,
     maxShards :: Int,
     version :: Metrics.DeploymentVersion,
@@ -198,8 +197,11 @@ data AppEnv = AppEnv
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
     ltsCfg :: LocationTrackingeServiceConfig,
-    enableLocationTrackingService :: Bool,
-    dontEnableForDb :: [Text]
+    dontEnableForDb :: [Text],
+    maxMessages :: Text,
+    modelNamesHashMap :: HM.Map Text Text,
+    incomingAPIResponseTimeout :: Int,
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -217,8 +219,6 @@ buildAppEnv cfg@AppCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   eventRequestCounter <- registerEventRequestCounterMetric
-  esqLocationDBEnv <- prepareEsqDBEnv esqLocationDBCfg loggerEnv
-  esqLocationDBRepEnv <- prepareEsqDBEnv esqLocationDBRepCfg loggerEnv
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
@@ -233,13 +233,15 @@ buildAppEnv cfg@AppCfg {..} = do
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   ssrMetrics <- registerSendSearchRequestToDriverMetricsContainer
   coreMetrics <- Metrics.registerCoreMetricsContainer
-  clickhouseEnv <- createConn clickhouseCfg
+  kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
+  driverClickhouseEnv <- createConn driverClickhouseCfg
   let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
-  return AppEnv {..}
+  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

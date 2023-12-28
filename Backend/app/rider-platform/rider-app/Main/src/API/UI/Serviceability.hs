@@ -30,6 +30,7 @@ import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 -------- Serviceability----------
@@ -60,4 +61,4 @@ checkServiceability ::
   ServiceabilityReq ->
   FlowHandler DServiceability.ServiceabilityRes
 checkServiceability settingAccessor (personId, merchantId) ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  DServiceability.checkServiceability settingAccessor (personId, merchantId) location
+  DServiceability.checkServiceability settingAccessor (personId, merchantId) location True

@@ -167,7 +167,7 @@ in  upstream
       , "web-dom"
       , "web-events"
       ]
-    , repo = "https://github.com/juspay/purescript-presto-dom.git"
+    , repo = "https://github.com/Vignesh-772/purescript-presto-dom.git"
     , version = "nammayatri"
     }
   with halogen-vdom =
@@ -282,3 +282,4 @@ in  upstream
     , version = "3a5c85bf41b5abb2c774ab98180c5608adb83551"
     }
   with beckn-common = ./ui-common/spago.dhall as Location
+  

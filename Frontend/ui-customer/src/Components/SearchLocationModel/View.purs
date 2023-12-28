@@ -24,30 +24,30 @@ import Components.LocationListItem as LocationListItem
 import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
-import Data.Array (mapWithIndex, length)
+import Components.SeparatorView.View as SeparatorView
+import Data.Array (mapWithIndex, length, take)
 import Data.Function (flip)
 import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String as DS
 import Debug (spy)
 import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenHeight, screenWidth, setText)
 import Engineering.Helpers.LogEvent (logEvent)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (debounceFunction, getLocationName, getPreviousVersion, getSearchType)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getAssetsBaseUrl)
-import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent, startLottieProcess, lottieAnimationConfig)
+import Helpers.Utils (getLocationName, getSearchType, getAssetsBaseUrl, fetchImage, FetchImageFrom(..))
+import JBridge (getBtnLoader, showKeyboard, getCurrentPosition, firebaseLogEvent, startLottieProcess, lottieAnimationConfig, debounceFunction)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Accessiblity(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), accessibilityHint ,adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, lineHeight, linearLayout, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, lottieAnimationView, layoutGravity)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
-import Data.String as DS
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -60,14 +60,13 @@ view push state =
                     _           -> Color.transparent --"#FFFFFF"
       , margin $ MarginBottom (if state.isSearchLocation == LocateOnMap then bottomSpacing else 0)
       , onBackPressed push (const $ GoBack)
-      ][PrestoAnim.animationSet
-        (if os == "IOS" then [] else [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ])
-        $ linearLayout
-         -- Temporary fix for iOS.
-            [ height WRAP_CONTENT
+      ][ PrestoAnim.animationSet
+          [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]
+          $ linearLayout
+          [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            , background Color.black900
+            , background state.appConfig.searchLocationConfig.backgroundColor
             , padding $ PaddingVertical safeMarginTop 16
             ][  linearLayout
                 [ orientation HORIZONTAL
@@ -87,12 +86,21 @@ view push state =
                       , width $ V 23
                       , accessibilityHint "Back : Button"
                       , accessibility ENABLE
-                      , imageWithFallback state.homeScreenConfig.searchLocationConfig.backArrow
+                      , imageWithFallback state.appConfig.searchLocationConfig.backArrow
                       ]
                   ]
                   , sourceDestinationImageView state
                   , sourceDestinationEditTextView state push
                   ]]
+                  , PrestoAnim.animationSet
+                    [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]
+                    $ linearLayout
+                      [ height $ V 1
+                      , width MATCH_PARENT
+                      , background state.appConfig.searchLocationConfig.separatorColor
+                      , visibility if state.appConfig.searchLocationConfig.showSeparator then VISIBLE else GONE
+                      ]
+                      []
                   , relativeLayout 
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
@@ -118,27 +126,33 @@ searchResultsParentView state push =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
-  , margin $ MarginHorizontal 16 16
+  , margin $ Margin 16 15 16 0
   , orientation VERTICAL
   , visibility if state.isSearchLocation == SearchLocation && state.isRideServiceable && not state.showLoader then VISIBLE else GONE
     ][  savedLocationBar state push
+      , findPlacesIllustration  push state
       , searchResultsView state push ]
 
 searchLottieLoader :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 searchLottieLoader push state =
-  lottieAnimationView
-  [ height $ if os == "IOS" then V 60 else V 130
-  , width $ if os == "IOS" then V 80 else V 130
-  , padding $ PaddingBottom 80
-  , margin (Margin ((screenWidth unit)/ 2 - 50) ((screenHeight unit)/ 7 - 90) 0 0)
-  , gravity CENTER
-  , id (getNewIDWithTag "searchLoader")
-  , visibility if state.showLoader then VISIBLE else GONE
-  , afterRender (\action -> do
-    void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader.json", lottieId = (getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
-    push action
-    ) (const NoAction)
-  ]
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_HORIZONTAL
+  ][  lottieAnimationView
+      [ height $ if os == "IOS" then V 170 else V 130
+      , width $ V 130
+      , padding $ PaddingBottom 80
+      , margin (MarginTop ((screenHeight unit)/ 7 - (if os == "IOS" then 140 else 90)))
+      , gravity CENTER
+      , id (getNewIDWithTag "searchLoader")
+      , visibility if state.showLoader then VISIBLE else GONE
+      , afterRender (\action -> do
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
+        push action
+        ) (const NoAction)
+      ]
+    ]
 
 locationUnserviceableView :: forall w. SearchLocationModelState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 locationUnserviceableView state push =
@@ -151,7 +165,7 @@ locationUnserviceableView state push =
     , gravity CENTER_HORIZONTAL
     ]
     [ imageView
-        [ imageWithFallback $ "ny_ic_location_unserviceable," <> (getAssetStoreLink FunctionCall) <> "ny_ic_location_unserviceable.png"
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_location_unserviceable"
         , height $ V 99
         , width $ V 133
         , margin $ (MarginBottom 20)
@@ -174,7 +188,7 @@ locationUnserviceableView state push =
         , gravity CENTER
         ]
         [ textView $
-            [ text (getString CURRENTLY_WE_ARE_LIVE_IN_)
+            [ text (getString$ CURRENTLY_WE_ARE_LIVE_IN_ "CURRENTLY_WE_ARE_LIVE_IN_")
             , gravity CENTER
             , color Color.black700
             ] <> FontStyle.paragraphText LanguageStyle
@@ -184,37 +198,32 @@ locationUnserviceableView state push =
 ---------------------------- sourceDestinationImageView ---------------------------------
 sourceDestinationImageView :: forall w. SearchLocationModelState -> PrestoDOM (Effect Unit) w
 sourceDestinationImageView state =
-  frameLayout
-    [ height $ V 100
-    , width $ V 35
-    , margin $ MarginTop 9
+  linearLayout
+    [ height WRAP_CONTENT
+    , width $ V 20
+    , margin $ Margin 8 9 8 0
+    , orientation VERTICAL
+    , gravity CENTER
     ][ linearLayout
-        [ height WRAP_CONTENT
-        , width $ V 30
+        [ height $ V 15
+        , width $  V 15
         , gravity CENTER
         , margin $ Margin 2 20 2 0
         ][  imageView
             [ height $ V 15
             , width $ V 15
-            , imageWithFallback $ "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
             ]
           ]
-      , imageView
-        [ height $ V 40
-        , width $ V 20
-        , gravity CENTER
-        , imageUrl if os == "IOS" then ( if isPreviousVersion (getValueToLocalStore VERSION_NAME) (getPreviousVersion "") then  "ic_line_img" else "ny_ic_line_img") else "ic_line"
-        , margin if os == "IOS" then (Margin 7 35 0 0) else (Margin 16 30 0 0)
-        ]
+    , SeparatorView.view separatorConfig
     , linearLayout
-        [ height WRAP_CONTENT
-        , width $ V 30
+        [ height $ V 15
+        , width $  V 15
         , gravity CENTER
-        , margin (Margin 2 70 2 0)
         ][  imageView
             [ height $ V 15
             , width $ V 15
-            , imageWithFallback $ "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_red_circle"
             ]
         ]
     ]
@@ -232,27 +241,25 @@ sourceDestinationEditTextView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation HORIZONTAL
-      , background Color.darkGreyishBlue
+      , background state.appConfig.searchLocationConfig.editTextBackground
       , cornerRadius 4.0 
       , stroke $ if state.isSource == Just true && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
       ][ editText $
             [ height $ V 37
             , weight 1.0
             , text state.source
-            , color if not(state.isSource == Just true) then Color.black600 else Color.white900
-            , background Color.darkGreyishBlue
+            , color if state.isSource == Just true then state.appConfig.searchLocationConfig.editTextColor else state.appConfig.searchLocationConfig.editTextDefaultColor
             , singleLine true
             , ellipsize true
             , cornerRadius 4.0
             , padding (Padding 8 7 32 7)
             , lineHeight "24"
-            , cursorColor state.homeScreenConfig.primaryTextColor
             , accessibilityHint "Pickup Location Editable field"
             , accessibility ENABLE
             , hint (getString START_)
-            , hintColor Color.black600
+            , hintColor state.appConfig.searchLocationConfig.hintColor
             , id $ getNewIDWithTag "SourceEditText"
-            , afterRender (\action -> do
+            , afterRender (\_ -> do
                   _ <- pure $ showKeyboard case state.isSource of
                                             Just true  -> (getNewIDWithTag "SourceEditText")
                                             Just false -> (getNewIDWithTag "DestinationEditText")
@@ -268,6 +275,7 @@ sourceDestinationEditTextView state push =
                 SourceChanged
             , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
             , onFocus push $ const $ EditTextFocusChanged "S"
+              , selectAllOnFocus true
             , autoCorrectionType 1
             ] <> FontStyle.subHeading1 LanguageStyle
         , linearLayout
@@ -287,7 +295,7 @@ sourceDestinationEditTextView state push =
             [ imageView
                 [ height $ V 19
                 , width $ V 19
-                , imageWithFallback $ "ny_ic_close_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_grey.png"
+                , imageWithFallback $ fetchImage FF_ASSET state.appConfig.searchLocationConfig.clearTextImage
                 ]
             ]
         ]
@@ -305,23 +313,22 @@ sourceDestinationEditTextView state push =
         , cornerRadius 4.0
         , orientation HORIZONTAL
         , margin $ MarginTop 12
-        , background Color.darkGreyishBlue
+        , background state.appConfig.searchLocationConfig.editTextBackground
         , stroke if state.isSource == Just false && state.isSearchLocation == LocateOnMap then "1," <> Color.yellowText else "0," <> Color.yellowText
         ]
         [ editText
             ( [ height $ V 37
               , weight 1.0
               , text state.destination
-              , color if (state.isSource == Just true) then Color.black600 else Color.white900
+              , color if state.isSource == Just true then state.appConfig.searchLocationConfig.editTextDefaultColor else state.appConfig.searchLocationConfig.editTextColor
               , stroke $ "0," <> Color.black
               , padding (Padding 8 7 4 7)
               , hint (getString WHERE_TO)
-              , hintColor Color.black600
+              , hintColor state.appConfig.searchLocationConfig.hintColor
               , singleLine true
               , ellipsize true
               , accessibilityHint "Destination Location Editable field"
               , accessibility ENABLE
-              , cursorColor state.homeScreenConfig.primaryTextColor
               , id $ getNewIDWithTag "DestinationEditText"
               , afterRender (\action -> do
                   _ <- pure $ showKeyboard case state.isSource of
@@ -339,6 +346,7 @@ sourceDestinationEditTextView state push =
                   DestinationChanged
               , inputTypeI if state.isSearchLocation == LocateOnMap then 0 else 1
               , onFocus push $ const $ EditTextFocusChanged "D"
+              , selectAllOnFocus true
               , autoCorrectionType 1
               ]
                 <> FontStyle.subHeading1 TypoGraphy
@@ -360,7 +368,7 @@ sourceDestinationEditTextView state push =
             [ imageView
                 [ height $ V 19
                 , width $ V 19
-                , imageWithFallback $ "ny_ic_close_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_close_grey.png"
+                , imageWithFallback $ fetchImage FF_ASSET state.appConfig.searchLocationConfig.clearTextImage
                 ]
             ]
         ]
@@ -377,22 +385,31 @@ sourceDestinationEditTextView state push =
 ---------------------------- searchResultsView ---------------------------------
 searchResultsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 searchResultsView state push =
+    let searchResultText = if state.isAutoComplete 
+                            then getString SEARCH_RESULTS
+                            else if state.isSource == Just false then getString SUGGESTED_DESTINATION
+                            else getString PAST_SEARCHES
+    in 
     scrollView
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding (PaddingBottom 60)
-    , margin $ MarginTop 15
     , background Color.white900
     , scrollBarY false
-    , visibility if (length state.locationList == 0) then GONE else VISIBLE
+    , visibility if (length state.locationList == 0 || state.findPlaceIllustration) then GONE else VISIBLE
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        ][  linearLayout
+        ][  textView $
+              [ text searchResultText
+              , color Color.black700
+              , margin $ MarginVertical 16 8
+              ] <> FontStyle.body3 TypoGraphy
+          , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , cornerRadius state.homeScreenConfig.primaryButtonCornerRadius
+            , cornerRadius state.appConfig.primaryButtonCornerRadius
             , stroke $ "1," <> Color.grey900
             , orientation VERTICAL
             ](mapWithIndex (\index item ->
@@ -422,13 +439,13 @@ primaryButtonConfig state =
     primaryButtonConfig' = config
       { textConfig
         { text = if state.isSearchLocation == LocateOnMap then if state.isSource == Just true then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION) else ""
-        , color = state.homeScreenConfig.primaryTextColor
+        , color = state.appConfig.primaryTextColor
         , height = V 40
         }
-      , height = V state.homeScreenConfig.searchLocationConfig.primaryButtonHeight
+      , height = V state.appConfig.searchLocationConfig.primaryButtonHeight
       , gravity = CENTER
-      , cornerRadius = state.homeScreenConfig.primaryButtonCornerRadius
-      , background = state.homeScreenConfig.primaryBackground
+      , cornerRadius = state.appConfig.primaryButtonCornerRadius
+      , background = state.appConfig.primaryBackground
       , margin = (MarginHorizontal 16 16)
       , isClickable = true
       , id = "SelectLocationFromMap"
@@ -440,7 +457,7 @@ savedLocationBar state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , margin $ if os == "IOS" then MarginVertical 15 15 else MarginTop 15
+  , margin $ MarginVertical 15 15
   , accessibility DISABLE_DESCENDANT
   , visibility if (not state.isAutoComplete) then VISIBLE else GONE
   ][ linearLayout
@@ -475,7 +492,7 @@ recenterButtonView push state =
   , disableClickFeedback true
   ][
       imageView
-        [ imageWithFallback $ "ny_ic_recenter_btn," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_recenter_btn.png"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_recenter_btn"
         , onClick (\action -> do
             _ <- push action
             _ <- getCurrentPosition push UpdateCurrentLocation
@@ -486,6 +503,47 @@ recenterButtonView push state =
         , width $ V 40
         ]
   ]
+
+findPlacesIllustration :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
+findPlacesIllustration push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , visibility if state.findPlaceIllustration then VISIBLE else GONE
+    , gravity CENTER_HORIZONTAL
+    , margin $ Margin 7 ((screenHeight unit)/7) 16 0
+    ]
+    [ imageView
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_empty_suggestions"
+        , height $ V 99
+        , width $ V 133
+        , margin $ MarginBottom 12
+        ]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , margin $ MarginBottom 5
+        ]
+        [ textView $
+            [ text $ getString (WELCOME_TEXT "WELCOME_TEXT") <> "!"
+            , color Color.black700
+            , gravity CENTER
+            ] <> FontStyle.body4 LanguageStyle
+        ]
+    , linearLayout
+        [ width $ V (screenWidth unit - 40)
+        , height WRAP_CONTENT
+        , gravity CENTER
+        ]
+        [ textView $
+            [ text $ getString START_TYPING_TO_SEARCH_PLACES
+            , gravity CENTER
+            , color Color.black700
+            ] <> FontStyle.body3 LanguageStyle
+        ]
+    ]
 
 bottomBtnsView :: forall w . SearchLocationModelState -> (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 bottomBtnsView state push =
@@ -557,7 +615,7 @@ bottomBtnsView state push =
                       , background Color.brownishGrey
                       , alpha 0.25
                       , layoutGravity "center"
-                      , margin $ MarginTop if os == "IOS" then 15 else 0
+                      , margin $ if os == "IOS" then MarginVertical 7 7 else MarginVertical 0 0
                       , visibility if length (if (state.isSource == Just true && state.isSearchLocation /= LocateOnMap) then srcBtnData state else destBtnData state) - 1 == idx then GONE else VISIBLE
                       ]
                       []
@@ -577,3 +635,13 @@ destBtnData state =
   [ { text: (getString SELECT_LOCATION_ON_MAP), imageUrl: "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png", action: SetLocationOnMap, buttonType: "LocateOnMap" }]
 
 
+separatorConfig :: SeparatorView.Config
+separatorConfig = 
+  {
+    orientation : VERTICAL
+  , count : 3
+  , height : V 4
+  , width : V 1
+  , layoutWidth : V 12
+  , layoutHeight : V 15
+  }

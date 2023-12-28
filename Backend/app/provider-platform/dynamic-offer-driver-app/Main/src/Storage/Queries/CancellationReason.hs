@@ -16,13 +16,17 @@
 module Storage.Queries.CancellationReason where
 
 import Domain.Types.CancellationReason
+  ( CancellationReason (..),
+    CancellationReasonCode (CancellationReasonCode),
+  )
 import Kernel.Beam.Functions
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Types.Common
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.CancellationReason as BeamCR
 
-findAll :: MonadFlow m => m [CancellationReason]
+findAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [CancellationReason]
 findAll = findAllWithOptionsDb [Se.Is BeamCR.enabled $ Se.Eq True] (Se.Desc BeamCR.priority) Nothing Nothing
 
 instance FromTType' BeamCR.CancellationReason CancellationReason where

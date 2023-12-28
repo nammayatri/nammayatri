@@ -32,3 +32,10 @@ findByShortId shortId = do
     merchant <- from $ table @MerchantT
     where_ $ merchant ^. MerchantShortId ==. val (getShortId shortId)
     return merchant
+
+findAllMerchants ::
+  Transactionable m =>
+  m [Merchant]
+findAllMerchants = do
+  Esq.findAll $ do
+    from $ table @MerchantT

@@ -57,12 +57,7 @@ let availabilityTimeWindowOption =
 
 let cacheConfig = { configsExpTime = +86400 }
 
-let tables =
-      { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
-      , kafkaNonKVTables = [] : List Text
-      }
+let kvConfigUpdateFrequency = +10
 
 in  { hedisCfg
     , hedisClusterCfg
@@ -84,5 +79,5 @@ in  { hedisCfg
         //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
-    , tables
+    , kvConfigUpdateFrequency
     }

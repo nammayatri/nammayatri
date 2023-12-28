@@ -28,11 +28,10 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, accessibility, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarY, scrollView, text, textSize, textView, visibility, weight, width, accessibilityHint)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
@@ -102,7 +101,7 @@ topTextView push state =
       , textView $
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , text (getString ABOUT_APP_DESCRIPTION)
+        , text (getString $ ABOUT_APP_DESCRIPTION "ABOUT_APP_DESCRIPTION")
         , color Color.black800
         , gravity LEFT
         , lineHeight "22"
@@ -174,7 +173,7 @@ bottomLinksView state =
             [ imageView
                 [ height $ V 20
                 , width $ V 20
-                , imageWithFallback $ "ic_launcher," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_launcher.png"
+                , imageWithFallback $ fetchImage FF_ASSET "ic_launcher"
                 ]
             , textView
                 $ [ text $ "namma yatri"
@@ -243,7 +242,7 @@ termsAndConditionsView state =
         , color Color.blue900
         , onClick (\action -> do
             _ <- pure action
-            _ <- JB.openUrlInApp $ getValueFromConfig "DOCUMENT_LINK" 
+            _ <- JB.openUrlInApp $ state.appConfig.termsLink
             pure unit
           ) (const TermsAndConditions)
         , margin (Margin 0 20 0 0)
@@ -272,7 +271,7 @@ privacyPolicyView state =
         , margin (Margin 0 20 0 0)
         , onClick (\action -> do
             _ <- pure action
-            _ <- JB.openUrlInApp $ getValueFromConfig "PRIVACY_POLICY_LINK" 
+            _ <- JB.openUrlInApp $ state.appConfig.privacyLink
             pure unit
           ) (const PrivacyPolicy)
         ] <> FontStyle.paragraphText LanguageStyle
@@ -286,11 +285,11 @@ privacyPolicyView state =
 contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
 contactUsData state = [
   { title : (getString CORPORATE_ADDRESS)
-  , subTitle : (getString CORPORATE_ADDRESS_DESCRIPTION)
-  , addtionalData : Just (getString CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL)
+  , subTitle : (getString $ CORPORATE_ADDRESS_DESCRIPTION "CORPORATE_ADDRESS_DESCRIPTION")
+  , addtionalData : Just (getString $ CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL")
   }
 , { title : (getString REGISTERED_ADDRESS)
-  , subTitle : (getString REGISTERED_ADDRESS_DESCRIPTION)
-  , addtionalData : Just (getString REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL)
+  , subTitle : (getString $ REGISTERED_ADDRESS_DESCRIPTION "REGISTERED_ADDRESS_DESCRIPTION")
+  , addtionalData : Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
   }
 ]

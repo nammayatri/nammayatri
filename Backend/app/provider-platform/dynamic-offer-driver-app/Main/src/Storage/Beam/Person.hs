@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Person where
 
@@ -47,6 +48,7 @@ data PersonT f = PersonT
     isNew :: B.C f Bool,
     onboardedFromDashboard :: B.C f Bool,
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     deviceToken :: B.C f (Maybe FCMRecipientToken),
     language :: B.C f (Maybe Language),
     whatsappNotificationEnrollStatus :: B.C f (Maybe OptApiMethods),
@@ -58,7 +60,11 @@ data PersonT f = PersonT
     updatedAt :: B.C f UTCTime,
     bundleVersion :: B.C f (Maybe Text),
     clientVersion :: B.C f (Maybe Text),
-    faceImageId :: B.C f (Maybe Text)
+    faceImageId :: B.C f (Maybe Text),
+    totalEarnedCoins :: B.C f Int,
+    usedCoins :: B.C f Int,
+    registrationLat :: B.C f (Maybe Double),
+    registrationLon :: B.C f (Maybe Double)
   }
   deriving (Generic, B.Beamable)
 

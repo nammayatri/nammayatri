@@ -46,6 +46,7 @@ import Domain.Types.DriverFee (DriverFeeStatus)
 import Domain.Types.DriverInformation as DI
 import Domain.Types.Invoice (InvoicePaymentMode)
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id, state)
@@ -54,6 +55,7 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
@@ -190,6 +192,15 @@ type API =
                :> "entity"
                :> TokenAuth
                :> Get '[JSON] DDriver.HistoryEntryDetailsEntityV2
+             :<|> ( "city"
+                      :> ReqBody '[JSON] DDriver.GetCityReq
+                      :> Post '[JSON] DDriver.GetCityResp
+                  )
+             :<|> "invoice"
+               :> TokenAuth
+               :> MandatoryQueryParam "from" Day
+               :> QueryParam "to" Day
+               :> Get '[JSON] [DDriver.DriverFeeResp]
          )
 
 handler :: FlowServer API
@@ -226,34 +237,36 @@ handler =
              :<|> clearDriverDues
              :<|> getDriverPaymentsHistoryV2
              :<|> getDriverPaymentsHistoryEntityDetailsV2
+             :<|> getCity
+             :<|> getDownloadInvoiceData
          )
 
 createDriver :: SP.Person -> DDriver.OnboardDriverReq -> FlowHandler DDriver.OnboardDriverRes
 createDriver admin = withFlowHandlerAPI . DDriver.createDriver admin
 
-getInformation :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.DriverInformationRes
+getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.DriverInformationRes
 getInformation = withFlowHandlerAPI . DDriver.getInformation
 
-setActivity :: (Id SP.Person, Id Merchant.Merchant) -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
-setActivity (personId, driverId) isActive = withFlowHandlerAPI . DDriver.setActivity (personId, driverId) isActive
+setActivity :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
+setActivity (personId, driverId, merchantOpCityId) isActive = withFlowHandlerAPI . DDriver.setActivity (personId, driverId, merchantOpCityId) isActive
 
-activateGoHomeFeature :: (Id SP.Person, Id Merchant.Merchant) -> Id DDHL.DriverHomeLocation -> LatLong -> FlowHandler APISuccess
-activateGoHomeFeature (personId, driverId) homeLocationId = withFlowHandlerAPI . DDriver.activateGoHomeFeature (personId, driverId) homeLocationId
+activateGoHomeFeature :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> FlowHandler APISuccess
+activateGoHomeFeature (personId, driverId, merchantOpCityId) homeLocationId = withFlowHandlerAPI . DDriver.activateGoHomeFeature (personId, driverId, merchantOpCityId) homeLocationId
 
-deactivateGoHomeFeature :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
+deactivateGoHomeFeature :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 deactivateGoHomeFeature = withFlowHandlerAPI . DDriver.deactivateGoHomeFeature
 
-addHomeLocation :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.AddHomeLocationReq -> FlowHandler APISuccess
-addHomeLocation (personId, driverId) = withFlowHandlerAPI . DDriver.addHomeLocation (personId, driverId)
+addHomeLocation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.AddHomeLocationReq -> FlowHandler APISuccess
+addHomeLocation (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.addHomeLocation (personId, driverId, merchantOpCityId)
 
-updateHomeLocation :: (Id SP.Person, Id Merchant.Merchant) -> Id DDHL.DriverHomeLocation -> DDriver.UpdateHomeLocationReq -> FlowHandler APISuccess
-updateHomeLocation (personId, driverId) homeLocationId = withFlowHandlerAPI . DDriver.updateHomeLocation (personId, driverId) homeLocationId
+updateHomeLocation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> DDriver.UpdateHomeLocationReq -> FlowHandler APISuccess
+updateHomeLocation (personId, driverId, merchantOpCityId) homeLocationId = withFlowHandlerAPI . DDriver.updateHomeLocation (personId, driverId, merchantOpCityId) homeLocationId
 
-getHomeLocations :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.GetHomeLocationsRes
+getHomeLocations :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.GetHomeLocationsRes
 getHomeLocations = withFlowHandlerAPI . DDriver.getHomeLocations
 
-deleteHomeLocation :: (Id SP.Person, Id Merchant.Merchant) -> Id DDHL.DriverHomeLocation -> FlowHandler APISuccess
-deleteHomeLocation (personId, driverId) = withFlowHandlerAPI . DDriver.deleteHomeLocation (personId, driverId)
+deleteHomeLocation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> FlowHandler APISuccess
+deleteHomeLocation (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.deleteHomeLocation (personId, driverId, merchantOpCityId)
 
 listDriver :: SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DDriver.ListDriverRes
 listDriver admin mbSearchString mbLimit = withFlowHandlerAPI . DDriver.listDriver admin mbSearchString mbLimit
@@ -264,58 +277,64 @@ changeDriverEnableState admin personId = withFlowHandlerAPI . DDriver.changeDriv
 deleteDriver :: SP.Person -> Id SP.Person -> FlowHandler APISuccess
 deleteDriver admin = withFlowHandlerAPI . DDriver.deleteDriver admin
 
-updateDriver :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.UpdateDriverReq -> FlowHandler DDriver.UpdateDriverRes
+updateDriver :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.UpdateDriverReq -> FlowHandler DDriver.UpdateDriverRes
 updateDriver personId = withFlowHandlerAPI . DDriver.updateDriver personId
 
 getNearbySearchRequests ::
-  (Id SP.Person, Id Merchant.Merchant) ->
+  (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
   FlowHandler DDriver.GetNearbySearchRequestsRes
 getNearbySearchRequests = withFlowHandlerAPI . DDriver.getNearbySearchRequests
 
 offerQuote ::
-  (Id SP.Person, Id Merchant.Merchant) ->
+  (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
   DDriver.DriverOfferReq ->
   FlowHandler APISuccess
-offerQuote (personId, driverId) = withFlowHandlerAPI . DDriver.offerQuote (personId, driverId)
+offerQuote (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.offerQuote (personId, driverId, merchantOpCityId)
 
 respondQuote ::
-  (Id SP.Person, Id Merchant.Merchant) ->
+  (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
   DDriver.DriverRespondReq ->
   FlowHandler APISuccess
-respondQuote (personId, driverId) = withFlowHandlerAPI . DDriver.respondQuote (personId, driverId)
+respondQuote (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.respondQuote (personId, driverId, merchantOpCityId)
 
-getStats :: (Id SP.Person, Id Merchant.Merchant) -> Day -> FlowHandler DDriver.DriverStatsRes
+getStats :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> FlowHandler DDriver.DriverStatsRes
 getStats day = withFlowHandlerAPI . DDriver.getStats day
 
-updateMetaData :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.MetaDataReq -> FlowHandler APISuccess
+updateMetaData :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.MetaDataReq -> FlowHandler APISuccess
 updateMetaData req = withFlowHandlerAPI . DDriver.updateMetaData req
 
-fetchDriverPhoto :: (Id SP.Person, Id Merchant.Merchant) -> Text -> FlowHandler Text
+fetchDriverPhoto :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler Text
 fetchDriverPhoto ids = withFlowHandlerAPI . DDriver.fetchDriverPhoto ids
 
-uploadDriverPhoto :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverPhotoUploadReq -> FlowHandler APISuccess
+uploadDriverPhoto :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverPhotoUploadReq -> FlowHandler APISuccess
 uploadDriverPhoto req = withFlowHandlerAPI . DDriver.driverPhotoUpload req
 
-validate :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.DriverAlternateNumberRes
+validate :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.DriverAlternateNumberRes
 validate alternateNumber = withFlowHandlerAPI . DDriver.validate alternateNumber
 
-verifyAuth :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverAlternateNumberOtpReq -> FlowHandler APISuccess
+verifyAuth :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverAlternateNumberOtpReq -> FlowHandler APISuccess
 verifyAuth otp = withFlowHandlerAPI . DDriver.verifyAuth otp
 
-resendOtp :: (Id SP.Person, Id Merchant.Merchant) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.ResendAuth
+resendOtp :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverAlternateNumberReq -> FlowHandler DDriver.ResendAuth
 resendOtp req = withFlowHandlerAPI . DDriver.resendOtp req
 
-remove :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
+remove :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 remove = withFlowHandlerAPI . DDriver.remove
 
-getDriverPayments :: (Id SP.Person, Id Merchant.Merchant) -> Maybe Day -> Maybe Day -> Maybe DriverFeeStatus -> Maybe Int -> Maybe Int -> FlowHandler [DDriver.DriverPaymentHistoryResp]
+getDriverPayments :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Day -> Maybe Day -> Maybe DriverFeeStatus -> Maybe Int -> Maybe Int -> FlowHandler [DDriver.DriverPaymentHistoryResp]
 getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPayments mbFrom mbTo mbStatus mbLimit mbOffset
 
-clearDriverDues :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.ClearDuesRes
+clearDriverDues :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.ClearDuesRes
 clearDriverDues = withFlowHandlerAPI . DDriver.clearDriverDues
 
-getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant) -> Maybe InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler DDriver.HistoryEntityV2
+getDriverPaymentsHistoryV2 :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe InvoicePaymentMode -> Maybe Int -> Maybe Int -> FlowHandler DDriver.HistoryEntityV2
 getDriverPaymentsHistoryV2 pMode mbLimit mbOffset = withFlowHandlerAPI . DDriver.getDriverPaymentsHistoryV2 pMode mbLimit mbOffset
 
-getDriverPaymentsHistoryEntityDetailsV2 :: Text -> (Id SP.Person, Id Merchant.Merchant) -> FlowHandler DDriver.HistoryEntryDetailsEntityV2
-getDriverPaymentsHistoryEntityDetailsV2 invoiceId (driverId, merchantId) = withFlowHandlerAPI $ DDriver.getHistoryEntryDetailsEntityV2 (driverId, merchantId) invoiceId
+getDriverPaymentsHistoryEntityDetailsV2 :: Text -> (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.HistoryEntryDetailsEntityV2
+getDriverPaymentsHistoryEntityDetailsV2 invoiceId (driverId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DDriver.getHistoryEntryDetailsEntityV2 (driverId, merchantId, merchantOpCityId) invoiceId
+
+getCity :: DDriver.GetCityReq -> FlowHandler DDriver.GetCityResp
+getCity = withFlowHandlerAPI . DDriver.getCity
+
+getDownloadInvoiceData :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Day -> FlowHandler [DDriver.DriverFeeResp]
+getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate = withFlowHandlerAPI . DDriver.getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate

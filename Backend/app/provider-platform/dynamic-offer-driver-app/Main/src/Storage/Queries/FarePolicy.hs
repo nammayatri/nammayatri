@@ -39,10 +39,10 @@ import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QueriesDEFB
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QueriesFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab as QueriesFPSDS
 
-findById :: MonadFlow m => Id FarePolicy -> m (Maybe FarePolicy)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
 findById (Id farePolicyId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq farePolicyId]
 
-update :: MonadFlow m => FarePolicy -> m ()
+update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
 update farePolicy = do
   now <- getCurrentTime
   void $
@@ -71,7 +71,7 @@ update farePolicy = do
       _ <- QueriesFPSDS.deleteAll' farePolicy.id
       mapM_ (create'' farePolicy.id) slabs
   where
-    create'' :: MonadFlow m => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
+    create'' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FarePolicy -> FPSlabsDetailsSlab -> m ()
     create'' id' slab = createWithKV (id', slab)
 
 instance ToTType' BeamFP.FarePolicy FarePolicy where
@@ -84,6 +84,7 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.maxAllowedTripDistance = Domain.maxAllowedTripDistance <$> allowedTripDistanceBounds,
         BeamFP.minAllowedTripDistance = Domain.minAllowedTripDistance <$> allowedTripDistanceBounds,
         BeamFP.govtCharges = govtCharges,
+        BeamFP.perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
         BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
         BeamFP.description = description,
         BeamFP.createdAt = createdAt,
@@ -124,6 +125,7 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
                 govtCharges = govtCharges,
                 driverExtraFeeBounds = nonEmpty fDEFB,
                 farePolicyDetails,
+                perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
                 description = description,
                 createdAt = createdAt,
                 updatedAt = updatedAt

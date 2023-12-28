@@ -14,7 +14,7 @@
 
 module Utils where
 
-import qualified Data.HashMap.Internal as HMap
+import qualified Data.HashMap.Strict as HMS
 import qualified EulerHS.Runtime as R
 import Kernel.External.Encryption (EncTools (..))
 import Kernel.External.Maps
@@ -62,7 +62,7 @@ runFlow tag appEnv flow = do
     R.withFlowRuntime Nothing $ \flowRt -> do
       flowRt' <-
         runFlowR flowRt appEnv $
-          addAuthManagersToFlowRt flowRt [(Just defaultHttpClientOptions.timeoutMs, HMap.singleton "default" defaultManagerSettings)]
+          addAuthManagersToFlowRt flowRt [(Just defaultHttpClientOptions.timeoutMs, HMS.singleton "default" defaultManagerSettings)]
       -- FIXME: this is a termporary solution, better fix core code relating to these managers
       runFlowR flowRt' appEnv $ withLogTag tag flow
 
@@ -95,8 +95,8 @@ wrapTests func = do
 incrDistance :: Id Person -> Double -> TestM Double
 incrDistance driverId = Hedis.incrByFloat driverId.getId
 
-updateDistanceTest :: Id Person -> HighPrecMeters -> Int -> TestM ()
-updateDistanceTest driverId dist _ = void $ incrDistance driverId (realToFrac dist)
+updateDistanceTest :: Id Person -> HighPrecMeters -> Int -> Int -> TestM ()
+updateDistanceTest driverId dist _ _ = void $ incrDistance driverId (realToFrac dist)
 
 checkTraveledDistance :: Id Person -> TestM Double
 checkTraveledDistance driverId = incrDistance driverId 0

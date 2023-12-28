@@ -1,6 +1,7 @@
 module Domain.Action.UI.Performance where
 
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Domain.Types.RiderDetails ()
 import qualified Kernel.Beam.Functions as B
@@ -23,8 +24,8 @@ newtype PerformanceRes = PerformanceRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getDriverPerformance :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant) -> m PerformanceRes
-getDriverPerformance (driverId, _) = do
+getDriverPerformance :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m PerformanceRes
+getDriverPerformance (driverId, _, _) = do
   _ <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   allRefferedCustomers <- QRD.findAllReferredByDriverId driverId
   let ridesTakenList = filter (.hasTakenValidRide) allRefferedCustomers

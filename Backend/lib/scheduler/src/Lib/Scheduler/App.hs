@@ -21,9 +21,12 @@ import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config (prepareEsqDBEnv)
 import Kernel.Storage.Hedis (connectHedis, connectHedisCluster)
+import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Tools.Metrics.Init as Metrics
+import Kernel.Types.CacheFlow
 import Kernel.Types.Common (Seconds (..))
+import qualified Kernel.Types.MonadGuid as G
 import Kernel.Utils.App
 import Kernel.Utils.Common (threadDelaySec)
 import Kernel.Utils.IOLogging (prepareLoggerEnv)
@@ -41,14 +44,16 @@ runSchedulerService ::
   (JobProcessor t, FromJSON t) =>
   SchedulerConfig ->
   JobInfoMap ->
+  Int ->
   SchedulerHandle t ->
   IO ()
-runSchedulerService s@SchedulerConfig {..} jobInfoMap handle_ = do
+runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency handle_ = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- Metrics.registerCoreMetricsContainer
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg (\k -> hedisPrefix <> ":" <> k)
   hedisNonCriticalClusterEnv <-
@@ -61,7 +66,9 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap handle_ = do
       else connectHedisCluster hedisClusterCfg (\k -> hedisPrefix <> ":" <> k)
   metrics <- setupSchedulerMetrics
   isShuttingDown <- mkShutdown
-  let schedulerEnv = SchedulerEnv {..}
+  consumerId <- G.generateGUIDTextIO
+  let cacheConfig = CacheConfig {configsExpTime = 0}
+  let schedulerEnv = SchedulerEnv {cacheConfig, ..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
     exitFailure

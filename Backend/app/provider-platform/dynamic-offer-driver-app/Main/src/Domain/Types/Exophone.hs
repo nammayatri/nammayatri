@@ -11,10 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Exophone where
 
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -23,6 +25,7 @@ import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 data Exophone = Exophone
   { id :: Id Exophone,
     merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     primaryPhone :: Text,
     backupPhone :: Text,
     isPrimaryDown :: Bool,

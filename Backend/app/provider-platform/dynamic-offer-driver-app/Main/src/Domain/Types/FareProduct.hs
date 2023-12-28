@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.FareProduct where
 
@@ -19,6 +20,7 @@ import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -67,6 +69,7 @@ instance Show Area where
 data FareProduct = FareProduct
   { id :: Id FareProduct,
     merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     farePolicyId :: Id FarePolicyD.FarePolicy,
     vehicleVariant :: Variant.Variant,
     area :: Area,

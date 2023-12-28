@@ -16,6 +16,7 @@ module API.Handler where
 
 import qualified API.Types as API
 import qualified Data.ByteString as BS
+import qualified Data.HashMap as HM
 import Environment
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
@@ -32,7 +33,7 @@ handler :: FlowServer API.API
 handler = trigger :<|> callbackReceiver
 
 trigger :: Text -> BS.ByteString -> FlowHandler AckResponse
-trigger urlText body = withFlowHandlerBecknAPI $ do
+trigger urlText body = withFlowHandlerBecknAPI' $ do
   url <- parseBaseUrl urlText
   logInfo $ decodeUtf8 body
   callBAP url body
@@ -40,6 +41,7 @@ trigger urlText body = withFlowHandlerBecknAPI $ do
 callBAP ::
   ( MonadFlow m,
     HasFlowEnv m r '["selfId" ::: Text],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     CoreMetrics m
   ) =>
   BaseUrl ->
@@ -48,12 +50,13 @@ callBAP ::
 callBAP uri body = do
   selfId <- asks (.selfId)
   let authKey = getHttpManagerKey selfId
-  Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri body
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing "Some action" fakeAPI uri internalEndPointHashMap body
   where
     fakeAPI :: Proxy (ReqBody '[JSONBS] BS.ByteString :> Post '[JSON] AckResponse)
     fakeAPI = Proxy
 
 callbackReceiver :: SignatureAuthResult -> Text -> BS.ByteString -> FlowHandler AckResponse
-callbackReceiver _ action body = withFlowHandlerBecknAPI $ do
+callbackReceiver _ action body = withFlowHandlerBecknAPI' $ do
   logInfo $ "Received " <> action <> " callback with body: " <> decodeUtf8 body
   return Ack

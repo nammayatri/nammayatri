@@ -1,13 +1,13 @@
 
 @driver-offer-bpp-host = http://localhost:8016
-@token = favorit-suv-000000000000000000-token
+@token = 503d9b3b-18ef-4101-a68c-0bac45e3406e
 
 @today = {{$localDatetime 'YYYY-MM-DD'}}
 
 # @name setActive
 POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
 content-type: application/json
-token: c69f5849-9081-4374-bae9-99d6589688b9
+token: {{token}}
 
 ###
 
@@ -49,9 +49,9 @@ x-bundle-version: 1.0.0
 x-client-version: 1.0.0
 
 {
-  "mobileNumber" : "9000000001",
+  "mobileNumber" : "6666666666",
   "mobileCountryCode": "+91",
-  "merchantId": "7f7896dd-787e-4a0b-8675-e9e6fe93bb8"
+  "merchantId": "favorit0-0000-0000-0000-00000favorit"
 }
 
 ###
@@ -75,5 +75,16 @@ GET {{driver-offer-bpp-host}}/ui/driver/profile/stats?day={{today}}
 content-type: application/json
 # token: = favorit-auto1-0000000000000000-token
 token: {{token}}
+
+###
+
+# @name verifyDriver
+POST {{driver-offer-bpp-host}}/ui/auth/6c6d5f17-e79a-43f2-9dd1-46a6bf280ebe/verify
+content-type: application/json
+
+{
+  "otp" : "7891",
+  "deviceToken": "+91"
+}
 
 ###

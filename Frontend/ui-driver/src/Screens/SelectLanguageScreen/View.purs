@@ -19,7 +19,7 @@ import Screens.SelectLanguageScreen.ComponentConfig
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
 import Components.PrimaryButton as PrimaryButton
-import Components.SelectMenuButton.View as MenuButton
+import Components.SelectMenuButton as MenuButton
 import Data.Array as DA
 import Effect (Effect)
 import Font.Size as FontSize
@@ -32,9 +32,10 @@ import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Debug(spy)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import PrestoDOM.Animation as PrestoAnim
 import Debug
 
 screen :: ST.SelectLanguageScreenState -> Screen Action ST.SelectLanguageScreenState ScreenOutput
@@ -56,7 +57,7 @@ view
   -> ST.SelectLanguageScreenState
   -> PrestoDOM (Effect Unit) w
 view push state =
-  Anim.screenAnimation $
+  PrestoAnim.animationSet [Anim.fadeIn true] $
   linearLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -85,7 +86,7 @@ headerLayout push state =
     ][ imageView
         [ width $ V 25
         , height MATCH_PARENT
-        , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
         , padding (Padding 2 2 2 2)
@@ -124,8 +125,6 @@ menuButtonsView state push =
       , background Color.white900
       ](DA.mapWithIndex
           (\ index language ->
-          MenuButton.view
-              (push <<< (MenuButtonAction))
-              { text: {name: language.name, value: language.value, subtitle: language.subtitle}, isSelected: (state.props.selectedLanguage == language.value), index : index, lineVisiblity : false}) (state.data.config.languageList)
+          MenuButton.view (push <<< MenuButtonAction) (menuButtonConfig state language index)) (state.data.config.languageList)
       )
   ]

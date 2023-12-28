@@ -29,7 +29,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, getNewIDWithTag, flowRunner, screenWidth, getCurrentUTC)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge (openUrlInApp, startTimerWithTime, toast)
+import JBridge (openUrlInApp, toast)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, discard, show, (>), void, (/=), (/), (*), (+), not, (||), negate, (<=), (&&), (-), (<))
@@ -54,13 +54,14 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (setRefreshing, countDown, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, getAssetStoreLink)
+import Helpers.Utils (setRefreshing, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, fetchImage, FetchImageFrom(..))
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Debug (spy)
+import Timers (countDown)
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -164,7 +165,7 @@ view push state =
                    ][ imageView
                       [ width (V 16)
                       , height (V 16)
-                      , imageWithFallback "ny_ic_reward,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_reward.png"
+                      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_reward"
                       , margin (MarginRight 5)
                       ]
                     , textView
@@ -278,7 +279,7 @@ noDataView state =
         ][  imageView
             [ width $ V $ (screenWidth unit) - 48
             , height $ V $ ceil ((toNumber ((screenWidth unit) - 48)) * 1.25)
-            , imageWithFallback "ny_ic_leaderboard_no_data,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_leaderboard_no_data.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_leaderboard_no_data"
             ]
           , textView
             [ width MATCH_PARENT
@@ -348,10 +349,7 @@ dateAndTime push state =
             [ width (V 24)
             , height (V 24)
             , margin (MarginLeft 12)
-            , imageWithFallback if state.props.showDateSelector then
-                                  "ny_ic_chevron_up_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_chevron_up_blue.png"
-                                else
-                                  "ny_ic_calendar_blue,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_calendar_blue.png"
+            , imageWithFallback $ fetchImage FF_ASSET $ if state.props.showDateSelector then "ny_ic_chevron_up_blue" else "ny_ic_calendar_blue"
             ]
         ]
       , textView
@@ -477,6 +475,10 @@ otherRankers state =
 rankCard :: forall w . ST.RankCardData -> Boolean -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 rankCard item aboveThreshold state =
   let currentDriverData = state.props.currentDriverData
+      driverImage = case item.gender of
+                      "MALE" -> "ny_ic_general_profile"
+                      "FEMALE" -> "ny_ic_general_profile_female"
+                      _ -> "ny_ic_generic_mascot"
   in
     linearLayout
     ([ width MATCH_PARENT
@@ -512,7 +514,7 @@ rankCard item aboveThreshold state =
           , height (V 40)
           , cornerRadius 30.0
           , margin (MarginHorizontal 8 10)
-          , imageWithFallback "ny_ic_general_profile,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_general_profile.png"
+          , imageWithFallback $ fetchImage FF_ASSET driverImage
           ]
         , textView
           [ width WRAP_CONTENT
@@ -544,9 +546,9 @@ rankCard item aboveThreshold state =
 topRankers :: forall w . ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
 topRankers state =
   let rankersList = state.props.rankersData
-      rank1 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 0)
-      rank2 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 1)
-      rank3 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 2)
+      personDetail1 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 0)
+      personDetail2 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 1)
+      personDetail3 = fromMaybe ReferralScreenData.dummyRankData (index rankersList 2)
   in
     linearLayout
     [ width MATCH_PARENT
@@ -558,12 +560,23 @@ topRankers state =
     , padding (PaddingVertical 20 24)
     , cornerRadius 16.0
     , visibility if not state.props.showShimmer then VISIBLE else GONE
-    ][ rankers 72 2 Color.darkMint false FontSize.a_16 rank2 "ny_ic_rank2,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_rank2.png"
-    , rankers 102 1 Color.yellow900 true FontSize.a_22 rank1 "ny_ic_rank1,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_rank1.png"
-    , rankers 72 3 Color.orange900 false FontSize.a_16 rank3 "ny_ic_rank3,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_rank3.png"
+    ][ rankers 72 2 Color.darkMint false FontSize.a_16 personDetail2  (imageWrtGenderRank personDetail2.gender personDetail2.rank)
+    , rankers 102 1 Color.yellow900 true FontSize.a_22 personDetail1 (imageWrtGenderRank personDetail1.gender  personDetail1.rank)
+    , rankers 72 3 Color.orange900 false FontSize.a_16 personDetail3 (imageWrtGenderRank personDetail3.gender  personDetail3.rank) 
     ]
 
-rankers :: forall w . Int -> Int -> String -> Boolean -> Font.FontSize -> ST.RankCardData -> String -> PrestoDOM (Effect Unit) w
+imageWrtGenderRank :: String -> Int -> String
+imageWrtGenderRank gender rank =
+  case gender , rank  of
+    "MALE", 1 -> "ny_ic_rank1"
+    "MALE", 2 -> "ny_ic_rank2"
+    "MALE", 3 -> "ny_ic_rank3"
+    "FEMALE", 1 -> "ny_ic_rank1_female"
+    "FEMALE", 2 -> "ny_ic_rank2_female"
+    "FEMALE", 3 -> "ny_ic_rank3_female"
+    _,  _ -> "ny_ic_generic_mascot"
+
+rankers :: forall w . Int -> Int -> String -> Boolean -> Font.FontSize -> ST.RankCardData  -> String -> PrestoDOM (Effect Unit) w
 rankers size rank themeColor showCrown fontSize detail imageUrl =
   let bottomMargin = ceil ( (toNumber size) / 7.0 )
       rankWidth = bottomMargin * 2 + 5
@@ -585,7 +598,7 @@ rankers size rank themeColor showCrown fontSize detail imageUrl =
           ][ imageView
              [ height (V 31)
              , width (V 31)
-             , imageWithFallback "ny_ic_crown,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_crown.png"
+             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_crown"
              , visibility if rank == 1 then VISIBLE else GONE
              , padding (PaddingBottom 5)
              ]
@@ -600,7 +613,7 @@ rankers size rank themeColor showCrown fontSize detail imageUrl =
           ][ imageView
              [ width MATCH_PARENT
              , height MATCH_PARENT
-             , imageWithFallback imageUrl
+             , imageWithFallback $ fetchImage FF_ASSET imageUrl
              ]
            ]
         , linearLayout
@@ -747,7 +760,7 @@ bottomNavBarView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  ][BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.REFERRAL_SCREEN)]
+  ][BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.REFERRAL_SCREEN state.data.config.bottomNavConfig)]
 
 
 commonView :: forall w . (Action -> Effect Unit) -> String -> String -> String -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w
@@ -759,8 +772,7 @@ commonView push img title description state=
     , afterRender (\action -> do
                         if state.props.stage == ST.SuccessScreen then do
                           void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do
-                            if (os == "IOS") then liftEffect $ startTimerWithTime (show state.props.seconds) state.props.id "1" push SuccessScreenExpireCountDwon
-                              else liftEffect $ countDown state.props.seconds state.props.id push SuccessScreenExpireCountDwon
+                            liftEffect $ countDown state.props.seconds state.props.id push SuccessScreenExpireCountDwon
                         else pure unit
                         push action
                   ) (const SuccessScreenRenderAction)
@@ -1067,7 +1079,7 @@ qrScreen push state =
               [ height $ V 30
               , width $ V 30
               , padding (PaddingLeft 10)
-              , imageWithFallback $ "ny_ic_share_grey," <> getAssetStoreLink FunctionCall <> "ny_ic_share_grey.png"
+              , imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_grey"
               ]
             , textView
               [ height MATCH_PARENT
@@ -1236,21 +1248,21 @@ checkDate state = if state.props.leaderBoardType == ST.Daily then (getcurrentdat
                   else (getcurrentdate "") <= (convertUTCtoISC state.props.selectedWeek.utcEndDate "YYYY-MM-DD") 
 
 getReferralScreenIcon :: Merchant -> String
-getReferralScreenIcon merchant =
+getReferralScreenIcon merchant = fetchImage FF_ASSET $
   case merchant of
-    NAMMAYATRI -> "ny_namma_yatri," <> (getAssetStoreLink FunctionCall) <> "ny_namma_yatri.png"
-    YATRI -> "ny_ic_yatri_logo_dark," <> (getAssetStoreLink FunctionCall) <> "ny_ic_yatri_logo_dark.png"
-    YATRISATHI -> "ny_ic_yatri_sathi_logo_black_icon," <> (getAssetStoreLink FunctionCall) <> "ny_ic_yatri_sathi_logo_black_icon.png"
-    _ -> "ny_namma_yatri," <> (getAssetStoreLink FunctionCall) <> "ny_namma_yatri.png"
+    NAMMAYATRI -> "ny_namma_yatri"
+    YATRI -> "ny_ic_yatri_logo_dark"
+    YATRISATHI -> "ny_ic_yatri_sathi_logo_black_icon"
+    _ -> "ny_namma_yatri"
 
 getActiveReferralBannerIcon :: String -> String
-getActiveReferralBannerIcon vehicleType =
+getActiveReferralBannerIcon vehicleType = fetchImage FF_ASSET $
   case vehicleType of
-    "AUTO_RICKSHAW" -> "ny_ic_auto2," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto2.png"
-    _ -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    "AUTO_RICKSHAW" -> "ny_ic_auto2"
+    _ -> "ny_ic_car_referral_banner"
 
 getReferralBannerIcon :: String -> String
-getReferralBannerIcon vehicleType =
+getReferralBannerIcon vehicleType = fetchImage FF_ASSET $
   case vehicleType of
-    "AUTO_RICKSHAW" -> "ny_ic_auto1," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto1.png"
-    _ -> "ny_ic_car_referral_banner," <> (getAssetStoreLink FunctionCall) <> "ny_ic_car_referral_banner.png"
+    "AUTO_RICKSHAW" -> "ny_ic_auto1"
+    _ -> "ny_ic_car_referral_banner"

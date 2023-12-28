@@ -22,16 +22,17 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 
-create :: MonadFlow m => Domain.Estimate -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.Estimate -> m ()
 create = createWithKV
 
-createMany :: MonadFlow m => [Estimate] -> m ()
+createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Estimate] -> m ()
 createMany = traverse_ create
 
-findById :: MonadFlow m => Id Estimate -> m (Maybe Estimate)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Estimate -> m (Maybe Estimate)
 findById (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId]
 
 instance FromTType' BeamE.Estimate Estimate where

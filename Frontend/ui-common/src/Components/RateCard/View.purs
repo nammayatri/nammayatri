@@ -37,7 +37,7 @@ import Halogen.VDom.DOM.Prop (Prop)
 import Data.Array as DA
 import Data.Maybe (Maybe(..))
 import Components.PrimaryButton as PrimaryButton
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (os, screenWidth)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
@@ -75,10 +75,10 @@ view push config =
          , imageView
            [ width MATCH_PARENT
            , height $ V 90
-           , imageWithFallback case config.currentRateCardType of
+           , imageWithFallback $ fetchImage FF_COMMON_ASSET $ 
+              case config.currentRateCardType of
               PaymentFareBreakup -> ""
-              _ -> if config.nightCharges then "ny_ic_night," <> (getAssetStoreLink FunctionCall) <> "https://assets.juspay.in/nammayatri/images/user/ny_ic_night.png" 
-                                          else "ny_ic_day,"<> (getAssetStoreLink FunctionCall) <>"https://assets.juspay.in/nammayatri/images/user/ny_ic_day.png"
+              _ -> if config.nightCharges then "ny_ic_night" else "ny_ic_day"
            ]  
          ]
       ,linearLayout
@@ -91,6 +91,7 @@ view push config =
             DriverAddition -> driverAdditionView push config 
             FareUpdate -> fareUpdateView push config
             PaymentFareBreakup -> paymentfareBreakup push config
+            WaitingCharges -> waitingChargesView push config
             _ -> defaultRateCardView push config 
         ]     
       ,linearLayout
@@ -151,7 +152,7 @@ defaultRateCardView push config =
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation VERTICAL
-      ][ linearLayout
+      ] $ [ linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , padding $ PaddingHorizontal 20 20
@@ -159,7 +160,7 @@ defaultRateCardView push config =
         , imageView
           [ width MATCH_PARENT
           , height $ V 2 
-          , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_horizontal_dash"
           , margin $ Margin 20 20 20 12
           ]
         , textView $
@@ -182,7 +183,7 @@ defaultRateCardView push config =
           [ width MATCH_PARENT
           , height $ V 2 
           , visibility if config.showDetails then VISIBLE else GONE
-          , imageWithFallback $ "ny_ic_horizontal_dash," <> (getAssetStoreLink FunctionCall) <> "ny_ic_horizontal_dash.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_horizontal_dash"
           , margin $ Margin 20 12 20 0
           ]
         , linearLayout
@@ -204,6 +205,7 @@ defaultRateCardView push config =
                       , onClick push $ const case item.key of
                         "DRIVER_ADDITIONS" -> GoToDriverAddition
                         "FARE_UPDATE_POLICY" -> GoToFareUpdate
+                        "WAITING_CHARGES" -> GoToWaitingCharges
                         _  -> NoAction
                     ][  textView
                         [ width WRAP_CONTENT
@@ -225,7 +227,7 @@ defaultRateCardView push config =
                           imageView
                           [ height $ V 12
                           , width $ V 12
-                          , imageWithFallback $ "ny_ic_chevron_right," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_right.png"
+                          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right"
                           , margin $ MarginTop 4
                           , color Color.black900
                           , fontStyle $ FontStyle.semiBold LanguageStyle
@@ -241,9 +243,31 @@ defaultRateCardView push config =
                   ][]
                 ]
               )config.otherOptions)
-      ]
+      ] <> if config.fareInfoText /= "" then [fareInfoTextView push config] else []  
   ]
       
+fareInfoTextView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+fareInfoTextView push config = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , padding $ PaddingHorizontal 20 20
+  , margin $ MarginTop 8
+  ][  textView $ 
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , color Color.red
+      , text "*"
+      , padding $ PaddingRight 5
+      ] <> FontStyle.body3 LanguageStyle
+    , textView $ 
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , color Color.black700
+      , text $ config.fareInfoText
+      ] <> FontStyle.paragraphText LanguageStyle
+  ]
+
 driverAdditionView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 driverAdditionView push config = 
     linearLayout
@@ -269,7 +293,7 @@ fareUpdateView push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding $ Padding 20 0 20 180
+  , padding $ Padding 20 0 20 160
   ][  commonTV push (getStringByKey config "FARE_UPDATE_POLICY") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction
     , commonTV push (getStringByKey config "YOU_MAY_SEE_AN_UPDATED_FINAL_FARE_DUE_TO_ANY_OF_THE_BELOW_REASONS") Color.black650 FontStyle.body3 LEFT 12 NoAction
     , textView
@@ -282,7 +306,29 @@ fareUpdateView push config =
       , textFromHtml $ getStringByKey config "REASON_CHANGE_IN_ROUTE"
       , margin $ MarginTop 20
       ]
+    , textView
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , textSize FontSize.a_14
+      , lineHeight "16"
+      , fontStyle $ FontStyle.regular LanguageStyle
+      , color Color.black650
+      , textFromHtml $ getStringByKey config "WAITING_CHARGES_APPLICABLE"
+      , margin $ MarginTop 12
+      ]
   ]
+
+waitingChargesView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
+waitingChargesView push config = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ Padding 20 0 20 180
+  ][  commonTV push (getStringByKey config "WAITING_CHARGE") Color.black800 FontStyle.subHeading1 LEFT 8 NoAction
+    , commonTV push (getStringByKey config "WAITING_CHARGE_RATECARD_DESCRIPTION") Color.black650 FontStyle.body3 LEFT 12 NoAction
+  ]
+
 
 paymentfareBreakup :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 paymentfareBreakup push config = 
@@ -297,7 +343,7 @@ paymentfareBreakup push config =
       [ width MATCH_PARENT
       , height $ V 2 
       , margin $ MarginTop 10
-      , imageWithFallback $ "ny_ic_horizontal_dash,"<> (getAssetStoreLink FunctionCall) <>"https://assets.juspay.in/nammayatri/images/user/ny_ic_horizontal_dash.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_horizontal_dash"
       ]
     , linearLayout
       [ width MATCH_PARENT

@@ -24,6 +24,7 @@ where
 import Control.Monad
 import Domain.Action.UI.HotSpot
 import qualified Domain.Action.UI.Search.Common as DSearch
+import qualified Domain.Action.UI.Serviceability as Serviceability
 import Domain.Types.HotSpot
 import Domain.Types.HotSpotConfig
 import Domain.Types.Merchant
@@ -33,10 +34,11 @@ import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
-import Kernel.Serviceability
 import Kernel.Storage.Esqueleto
+import Kernel.Types.Beckn.Context (City)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (Version)
@@ -46,10 +48,10 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
-import Storage.Queries.Geometry
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -64,7 +66,8 @@ data OneWaySearchReq = OneWaySearchReq
   { origin :: DSearch.SearchReqLocation,
     destination :: DSearch.SearchReqLocation,
     isSourceManuallyMoved :: Maybe Bool,
-    isSpecialLocation :: Maybe Bool
+    isSpecialLocation :: Maybe Bool,
+    isReallocationEnabled :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -76,10 +79,13 @@ data OneWaySearchRes = OneWaySearchRes
     gatewayUrl :: BaseUrl,
     searchRequestExpiry :: UTCTime,
     merchant :: DM.Merchant,
+    city :: City,
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
     device :: Maybe Text,
-    shortestRouteInfo :: Maybe Maps.RouteInfo
+    shortestRouteInfo :: Maybe Maps.RouteInfo,
+    phoneNumber :: Maybe Text,
+    isReallocationEnabled :: Maybe Bool
   }
 
 hotSpotUpdate ::
@@ -133,6 +139,7 @@ oneWaySearch ::
   m OneWaySearchRes
 oneWaySearch personId req bundleVersion clientVersion device = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  phoneNumber <- mapM decrypt person.mobileNumber
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
     _ -> return Nothing
@@ -143,17 +150,25 @@ oneWaySearch personId req bundleVersion clientVersion device = do
   when shouldTakeHotSpot do
     _ <- hotSpotUpdate person.merchantId mbFavourite req
     updateForSpecialLocation person.merchantId req
-  validateServiceability merchant.geofencingConfig
 
-  let sourceLatlong = req.origin.gps
+  let sourceLatLong = req.origin.gps
   let destinationLatLong = req.destination.gps
+
+  originCity <- validateServiceability sourceLatLong destinationLatLong person <&> fromMaybe merchant.defaultCity <$> (.city)
+  -- merchant operating city of search-request-origin-location
+  merchantOperatingCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id originCity
+      >>= fromMaybeM
+        ( MerchantOperatingCityNotFound $
+            "merchantId: " <> merchant.id.getId <> " ,city: " <> show originCity
+        )
   let request =
         Maps.GetRoutesReq
-          { waypoints = [sourceLatlong, destinationLatLong],
+          { waypoints = [sourceLatLong, destinationLatLong],
             calcPoints = True,
             mode = Just Maps.CAR
           }
-  routeResponse <- Maps.getRoutes person.merchantId request
+  routeResponse <- Maps.getRoutes person.id person.merchantId (Just merchantOperatingCity.id) request
   let durationWeightage = 100 - merchant.distanceWeightage
   let shortestRouteInfo = getEfficientRouteInfo routeResponse merchant.distanceWeightage durationWeightage
   let longestRouteDistance = (.distance) =<< getLongestRouteDistance routeResponse
@@ -167,6 +182,7 @@ oneWaySearch personId req bundleVersion clientVersion device = do
     DSearch.buildSearchRequest
       person
       fromLocation
+      merchantOperatingCity
       (Just toLocation)
       (metersToHighPrecMeters <$> longestRouteDistance)
       (metersToHighPrecMeters <$> shortestRouteDistance)
@@ -192,21 +208,26 @@ oneWaySearch personId req bundleVersion clientVersion device = do
             gatewayUrl = merchant.gatewayUrl,
             searchRequestExpiry = searchRequest.validTill,
             customerLanguage = searchRequest.language,
+            city = originCity,
             disabilityTag = tag,
             device,
             shortestRouteInfo,
+            isReallocationEnabled = req.isReallocationEnabled,
             ..
           }
   fork "updating search counters" $ do
-    merchantConfigs <- QMC.findAllByMerchantId person.merchantId
+    merchantConfigs <- QMC.findAllByMerchantOperatingCityId person.merchantOperatingCityId
     SMC.updateSearchFraudCounters personId merchantConfigs
-    mFraudDetected <- SMC.anyFraudDetected personId person.merchantId merchantConfigs
+    mFraudDetected <- SMC.anyFraudDetected personId merchantOperatingCity.id merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer personId (Just mc.id)
   return dSearchRes
   where
-    validateServiceability geoConfig =
-      unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps (Just req.destination.gps)) $
-        throwError RideNotServiceable
+    validateServiceability origin destination person' = do
+      originServiceability <- Serviceability.checkServiceabilityAndGetCity (.origin) (person'.id, person'.merchantId) origin False
+      destinationServiceability <- Serviceability.checkServiceabilityAndGetCity (.destination) (person'.id, person'.merchantId) destination False
+      if originServiceability.serviceable && destinationServiceability.serviceable && originServiceability.city == destinationServiceability.city
+        then pure originServiceability
+        else throwError RideNotServiceable
 
 getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo
 getLongestRouteDistance [] = Nothing

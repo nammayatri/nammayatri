@@ -20,6 +20,7 @@ where
 
 import qualified Domain.Action.UI.Rating as Domain
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude
@@ -28,6 +29,7 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Servant (JSON, Post, ReqBody, type (:>))
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
@@ -40,5 +42,5 @@ handler :: FlowServer API
 handler =
   rating
 
-rating :: (Id SP.Person, Id DM.Merchant) -> CallBAPInternal.FeedbackReq -> FlowHandler APISuccess
-rating (_, _) req = withFlowHandlerAPI $ Domain.rating req
+rating :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> CallBAPInternal.FeedbackReq -> FlowHandler APISuccess
+rating (_, _, _) req = withFlowHandlerAPI $ Domain.rating req

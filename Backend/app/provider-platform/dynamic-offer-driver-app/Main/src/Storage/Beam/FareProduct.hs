@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.FareProduct where
 
@@ -24,6 +25,7 @@ import Tools.Beam.UtilsTH
 data FareProductT f = FareProductT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     farePolicyId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
     area :: B.C f Domain.Area,
@@ -39,6 +41,6 @@ instance B.Table FareProductT where
 
 type FareProduct = FareProductT Identity
 
-$(enableKVPG ''FareProductT ['id] [['merchantId, 'area]])
+$(enableKVPG ''FareProductT ['id] [['merchantOperatingCityId, 'area]])
 
 $(mkTableInstances ''FareProductT "fare_product")

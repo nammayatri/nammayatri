@@ -12,12 +12,19 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Dashboard.Common where
+module Dashboard.Common
+  ( module Dashboard.Common,
+    module Reexport,
+  )
+where
 
 import Data.Aeson
 import Data.OpenApi
 import Kernel.Prelude
+import Kernel.Types.HideSecrets as Reexport
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 data Customer
 
@@ -45,25 +52,13 @@ data FarePolicy
 
 data DriverHomeLocation
 
+data DriverGoHomeRequest
+
 data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
   deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
--- | Hide secrets before storing request (or response) to DB.
---
--- By default considered that request type has no secrets.
--- So you need to provide manual type instance to hide secrets, if there are.
-class ToJSON (ReqWithoutSecrets req) => HideSecrets req where
-  type ReqWithoutSecrets req
-  hideSecrets :: req -> ReqWithoutSecrets req
-  type ReqWithoutSecrets req = req
-
--- FIXME next default implementation is not working
--- default hideSecrets :: req -> req
--- hideSecrets = identity
-
-instance HideSecrets () where
-  hideSecrets = identity
+$(mkHttpInstancesForEnum ''Variant)
 
 data Summary = Summary
   { totalCount :: Int, --TODO add db indexes

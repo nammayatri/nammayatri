@@ -22,16 +22,16 @@ module Helpers.Utils
 import Screens.Types (AllocationData, DisabilityType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Data.Array ((!!), elemIndex) as DA
+import Data.Array ((!!), elemIndex, length, slice, last, find) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
-
+import Data.String.Common as DSC
 import MerchantConfig.Utils
-
 import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
-import Types.App (FlowBT)
-import Control.Monad.Except (runExcept)
-import Data.Array ((!!), fold) as DA
+import Common.Types.Config (CityConfig(..))
+import Types.App (FlowBT, defaultGlobalState)
+import Control.Monad.Except (runExcept, runExceptT)
+import Data.Array ((!!), fold, any, head, filter) as DA
 import Data.Array.NonEmpty (fromArray)
 import Data.Either (Either(..), hush)
 import Data.Eq.Generic (genericEq)
@@ -57,43 +57,51 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>),(<))
 import Prelude (class Eq, class Show, (<<<))
-import Prelude (map, (*), (-), (/), (==))
+import Prelude (map, (*), (-), (/), (==), div, mod)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
-import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3)
+import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5)
 import Common.Types.App (OptionButtonList)
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
-import Services.API(PaymentPagePayload)
+import Engineering.Helpers.Commons (flowRunner)
+import PaymentPage(PaymentPagePayload, UpiApps(..))
 import Presto.Core.Types.Language.Flow (Flow, doAff, loadS)
 import Control.Monad.Except.Trans (lift)
 import Foreign.Generic (Foreign, decodeJSON, encodeJSON)
 import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
-import Services.API (PaymentPagePayload, PromotionPopupConfig)
+import Services.API (PromotionPopupConfig)
 import Storage (KeyStore) 
-import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout)
+import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
-import Screens.Types (UpiApps(..), LocalStoreSubscriptionInfo)
+import Screens.Types (LocalStoreSubscriptionInfo)
 import Data.Int (fromString, even, fromNumber)
+import Data.Int as Int
 import Data.Number.Format (fixed, toStringWith)
 import Data.Function.Uncurried (Fn1)
+import Storage (getValueToLocalStore)
+import Services.Config (getWhatsAppSupportNo, getSupportNumber)
+import Engineering.Helpers.BackTrack (liftFlowBT)
+import Control.Transformers.Back.Trans (runBackT)
+import ConfigProvider
+import Screens.Types as ST
+import MerchantConfig.Types as MCT
 
+type AffSuccess s = (s -> Effect Unit)
 
 foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
 foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> Effect Unit
 foreign import getTime :: Unit -> Int
-foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
 foreign import hideSplash :: Effect Unit
 foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
 foreign import differenceBetweenTwoUTC :: String -> String -> Int
 foreign import clearTimer :: String -> Unit
-foreign import clearPopUpTimer :: String -> Unit
 foreign import clearAllTimer :: String -> Unit
-foreign import toString :: forall a. a-> String
+foreign import toStringJSON :: forall a. a-> String
 foreign import toInt :: forall a. a -> String
 foreign import setRefreshing :: String -> Boolean -> Unit
 foreign import setEnabled :: String -> Boolean -> Unit
@@ -114,28 +122,31 @@ foreign import startAudioRecording :: String -> Effect Boolean
 foreign import stopAudioRecording :: String -> Effect String
 foreign import renderBase64ImageFile :: String -> String -> Boolean -> String ->  Effect Unit
 foreign import removeMediaPlayer :: String -> Effect Unit
-foreign import getVideoID :: String -> String
-foreign import getImageUrl :: String -> String
 foreign import parseNumber :: Int -> String
 foreign import getPixels :: Fn1 String Number
+foreign import setValueToLocalStore :: Fn2 String String Unit
 foreign import getDeviceDefaultDensity ::Fn1 String Number
 foreign import isYesterday :: String -> Boolean
 
 -- -- ####### MAP FFI ######## -----
 foreign import currentPosition  :: String -> Effect Unit
-foreign import getRideLabelConfig :: forall f a. Fn4 (f -> Maybe f) (Maybe f) String String (Maybe String)
 foreign import getPeriod :: String -> Period
 foreign import clampNumber :: Number -> Number -> Int -> Int
 foreign import getPopupObject :: forall f a. Fn3 (f -> Maybe f) (Maybe f) String (Maybe PromotionPopupConfig)
+foreign import countDownInMinutes :: forall action. EffectFn3 Int (action -> Effect Unit) (String -> String -> Int -> action) Unit
+foreign import istToUtcDate :: String -> String
 
 foreign import preFetch :: Effect (Array RenewFile)
 
 foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
-foreign import  downloadQR  :: String -> Effect Unit
+foreign import downloadQR  :: String -> Effect Unit
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
+foreign import setPopupType :: ST.GoToPopUpType -> Unit
+foreign import getPopupType :: forall f. Fn2 (f -> Maybe f) (Maybe f) (Maybe ST.GoToPopUpType)
+
 
 generateQR:: EffectFn4 String String Int Int Unit
 generateQR  = mkEffectFn4 \qrString viewId size margin ->  launchAff_  $ void $ makeAff $
@@ -156,11 +167,33 @@ type RenewFile = {
   location :: String
 }
 
+type LabelConfig = { 
+  label :: String,
+  backgroundColor :: String,
+  text :: String,
+  secondaryText :: String,
+  imageUrl :: String,
+  cancelText :: String,
+  cancelConfirmImage :: String
+}
+
+dummyLabelConfig = { 
+  label : "",
+  backgroundColor : "",
+  text : "",
+  secondaryText : "",
+  imageUrl : "",
+  cancelText : "",
+  cancelConfirmImage : ""
+}
+
 otpRule :: Reader.OtpRule
-otpRule = Reader.OtpRule {
+otpRule =
+  let others = getAppConfig appConfig
+  in Reader.OtpRule {
   matches : {
     sender : [],
-    message : (getValueFromConfig "OTP_MESSAGE_REGEX")
+    message : others.otpRegex
   },
   otp : "\\d{4}",
   group : Nothing
@@ -231,26 +264,47 @@ getDistanceBwCordinates lat1 long1 lat2 long2 = do
 toRad :: Number -> Number
 toRad n = (n * pi) / 180.0
 
-
-
-capitalizeFirstChar :: String -> String
-capitalizeFirstChar inputStr =
-  let splitedArray = DS.split (DS.Pattern " ") (inputStr)
-      output = map (\item -> (DS.toUpper (DS.take 1 item)) <> (DS.toLower (DS.drop 1 item))) splitedArray
-    in DS.joinWith " " output
-
 getDowngradeOptions :: String -> Array String
-getDowngradeOptions variant = case getMerchant FunctionCall of
+getDowngradeOptions variant = case (getMerchant FunctionCall) of
                                 YATRISATHI -> case variant of
-                                                "TAXI" -> []
-                                                "SUV"  -> ["HATCHBACK", "SEDAN"]
-                                                _      -> ["TAXI"]
-                                _          -> case variant of
-                                                "SEDAN" -> ["HATCHBACK"]
-                                                "SUV" -> ["HATCHBACK", "SEDAN"]
-                                                "TAXI_PLUS" -> ["TAXI"]
-                                                _ -> []
+                                                "TAXI"  -> []
+                                                "SUV"   -> ["SEDAN", "HATCHBACK"]
+                                                "SEDAN" -> ["TAXI", "HATCHBACK"] 
+                                                _       -> ["TAXI"]
+                                _ -> case variant of
+                                        "SUV"   -> ["SEDAN", "HATCHBACK"]
+                                        "SEDAN" -> ["HATCHBACK"]
+                                        _       -> []
 
+
+getDowngradeOptionsText :: String -> String
+getDowngradeOptionsText vehicleType = do
+  let
+    downgradeFrom = getVariantRideType vehicleType
+    downgradeOptions = getUIDowngradeOptions vehicleType
+    subsetArray = DA.slice 0 (DA.length downgradeOptions - 1) downgradeOptions
+    lastElement = DA.last downgradeOptions
+    modifiedArray = DS.joinWith ", " $  map (\item -> getVehicleType item) subsetArray
+    prefixString = if (DA.length downgradeOptions > 1) then ", " else " "
+    downgradedToString = ( prefixString
+                        <> modifiedArray 
+                        <> case lastElement of 
+                            Just lastElem -> (getString AND) <> " " <> (getVehicleType lastElem)
+                            _ -> "" )
+  getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_1 <> downgradeFrom <> downgradedToString <> getString DOWNGRADING_VEHICLE_WILL_ALLOW_YOU_TO_TAKE_BOTH_3
+
+getUIDowngradeOptions :: String -> Array String
+getUIDowngradeOptions variant = case (getMerchant FunctionCall) of
+                                YATRISATHI -> case variant of
+                                                "TAXI"  -> []
+                                                "SUV"   -> ["SEDAN"]
+                                                "SEDAN" -> ["TAXI"] 
+                                                _       -> ["TAXI"]
+                                _ -> case variant of
+                                        "SUV"   -> ["SEDAN", "HATCHBACK"]
+                                        "SEDAN" -> ["HATCHBACK"]
+                                        _       -> []
+  
 getVehicleType :: String -> String
 getVehicleType vehicleType =
   case vehicleType of
@@ -262,35 +316,58 @@ getVehicleType vehicleType =
     "TAXI_PLUS" -> (getString TAXI_PLUS)
     _ -> ""
 
-getRideLabelData :: String -> Maybe String -> Maybe DisabilityType -> String
-getRideLabelData prop tag accessibilityTag = do
-  case getRequiredTag prop tag accessibilityTag of
-    Nothing -> ""
-    Just tag' -> tag'
+getRideLabelData :: Maybe String -> LabelConfig
+getRideLabelData maybeLabel = fromMaybe dummyLabelConfig (getRequiredTag maybeLabel)
 
-getRequiredTag :: String -> Maybe String -> Maybe DisabilityType -> Maybe String
-getRequiredTag prop tag accessibilityTag = do
-  let rideType = if (isJust accessibilityTag) then "Accessibility" else fromMaybe "" tag 
-  case rideType of
-    "Accessibility" -> case (runFn4 getRideLabelConfig Just Nothing prop ("Accessibility")) of
-                                Nothing -> Nothing
-                                Just val -> Just val
-    "Purple_Ride" -> case (runFn4 getRideLabelConfig Just Nothing prop ("Purple_Ride")) of
-                                Nothing -> Nothing
-                                Just val -> Just val
-    tag' -> do
-        let arr = DS.split (DS.Pattern "_") tag'
-        let pickup = fromMaybe "" (arr DA.!! 0)
-        let drop = fromMaybe "" (arr DA.!! 1)
-        let priority = fromMaybe "" (arr DA.!! 2)
-        case priority of
-          "PriorityPickup" -> case (runFn4 getRideLabelConfig Just Nothing prop (pickup <> "_Pickup")) of
-                                Nothing -> Nothing
-                                Just val -> Just val
-          "PriorityDrop" -> case (runFn4 getRideLabelConfig Just Nothing prop (drop <> "_Drop")) of
-                                Nothing -> Nothing
-                                Just val -> Just val
-          _ -> Nothing
+getRequiredTag :: Maybe String -> Maybe LabelConfig
+getRequiredTag maybeLabel  =
+  case maybeLabel of
+    Just label -> if DA.any (_ == label) ["Accessibility", "GOTO"] then
+                    DA.head (DA.filter (\item -> item.label == label) rideLabelConfig)
+                  else do
+                    let arr = DS.split (DS.Pattern "_") label
+                    let pickup = fromMaybe "" (arr DA.!! 0)
+                    let drop = fromMaybe "" (arr DA.!! 1)
+                    let priority = fromMaybe "" (arr DA.!! 2)
+                    DA.head (DA.filter (\item -> item.label == (pickup <> "_Pickup")) rideLabelConfig)
+
+    Nothing    -> Nothing
+
+rideLabelConfig :: Array LabelConfig
+rideLabelConfig = [
+    { label: "SureMetro_Pickup",
+      backgroundColor : "#2194FF",
+      text : "Metro Pickup",
+      secondaryText : "",
+      imageUrl : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      cancelText : "ZONE_CANCEL_TEXT_PICKUP",
+      cancelConfirmImage : "ic_cancelride_metro_pickup,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_pickup.png"
+    },
+    { label : "SureMetro_Drop",
+      backgroundColor : "#2194FF",
+      text : "Metro Drop",
+      secondaryText : "",
+      imageUrl : "ic_metro_white,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_metro_white.png",
+      cancelText : "ZONE_CANCEL_TEXT_DROP",
+      cancelConfirmImage : "ic_cancelride_metro_drop,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancelride_metro_drop.png"
+    },
+    { label : "Accessibility",
+      backgroundColor : "#9747FF",
+      text : getString ASSISTANCE_REQUIRED,
+      secondaryText : getString LEARN_MORE,
+      imageUrl : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
+      cancelText : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
+      cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+    },
+    { label : "GOTO",
+      backgroundColor : "#2C2F3A",
+      text : getString GO_TO,
+      secondaryText : "",
+      imageUrl : "ny_pin_check_white,",
+      cancelText : "GO_TO_CANCELLATION_TITLE",
+      cancelConfirmImage : "ny_ic_gotodriver_zero,"
+    }
+]
 
 getGenderIndex :: String -> Array OptionButtonList -> Maybe Int
 getGenderIndex req arr = do
@@ -303,8 +380,8 @@ getMerchantVehicleSize unit =
   case getMerchant FunctionCall of 
     _ -> 90
 
-getAssetStoreLink :: LazyCheck -> String
-getAssetStoreLink lazy = case (getMerchant lazy) of
+getAssetLink :: LazyCheck -> String
+getAssetLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/driver/images/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/driver/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/driver/images/"
@@ -321,8 +398,8 @@ getAssetsBaseUrl lazy = case (getMerchant lazy) of
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/driver"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/driver"
 
-getCommonAssetStoreLink :: LazyCheck -> String
-getCommonAssetStoreLink lazy = case (getMerchant lazy) of
+getCommonAssetLink :: LazyCheck -> String
+getCommonAssetLink lazy = case (getMerchant lazy) of
   NAMMAYATRI -> "https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/"
   YATRISATHI -> "https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/"
   YATRI -> "https://assets.juspay.in/beckn/yatri/yatricommon/images/"
@@ -330,55 +407,58 @@ getCommonAssetStoreLink lazy = case (getMerchant lazy) of
   PASSCULTURE -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
   MOBILITY_RS -> "https://assets.juspay.in/beckn/passculture/passculturecommon/"
 
+fetchImage :: FetchImageFrom -> String -> String
+fetchImage fetchImageFrom imageName =   
+  if imageName  == "" then ","
+  else 
+    case fetchImageFrom of
+      FF_ASSET -> imageName <> "," <> (getAssetLink FunctionCall) <> imageName <> ".png"
+      FF_COMMON_ASSET -> imageName <> "," <> (getCommonAssetLink FunctionCall) <> imageName <> ".png"
 
-type AffSuccess s = (s -> Effect Unit)
-type MicroAPPInvokeSignature = String -> (AffSuccess String) ->  Effect Unit
+data FetchImageFrom = FF_ASSET | FF_COMMON_ASSET
 
-
-foreign import startPP :: MicroAPPInvokeSignature
-
-foreign import initiatePP :: EffectFn1 Unit Unit
-
-foreign import getAvailableUpiApps :: EffectFn1 ((Array UpiApps) -> Effect Unit) Unit
-
-foreign import checkPPInitiateStatus :: EffectFn1 (Unit -> Effect Unit) Unit
-
-foreign import consumeBP :: EffectFn1 Unit Unit
+derive instance genericFetchImageFrom :: Generic FetchImageFrom _
+instance eqFetchImageFrom :: Eq FetchImageFrom where eq = genericEq
+instance showFetchImageFrom :: Show FetchImageFrom where show = genericShow
+instance encodeFetchImageFrom :: Encode FetchImageFrom where encode = defaultEnumEncode
+instance decodeFetchImageFrom :: Decode FetchImageFrom where decode = defaultEnumDecode
 
 foreign import isDateGreaterThan :: String -> Boolean
 
-paymentPageUI :: PaymentPagePayload -> FlowBT String String
-paymentPageUI payload = lift $ lift $ doAff $ makeAff (\cb -> (startPP (encodeJSON payload) (Right >>> cb) ) *> pure nonCanceler)
-
-getNegotiationUnit :: String -> String
-getNegotiationUnit varient = case varient of
-  "AUTO_RICKSHAW" -> "10"
-  _ -> "20"
+getNegotiationUnit :: String -> MCT.NegotiationUnit -> String
+getNegotiationUnit varient negotiationUnit = case varient of
+  "AUTO_RICKSHAW" -> negotiationUnit.auto
+  _ -> negotiationUnit.cab
   
 getValueBtwRange :: forall a. EuclideanRing a => a -> a -> a -> a -> a -> a
 getValueBtwRange  x  in_min  in_max  out_min  out_max = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min 
 
-data LatLon = LatLon String String
+data LatLon = LatLon String String String
 
 data Translation = Translation String
 
-getCurrentLocation :: Number -> Number -> Number -> Number -> Int -> FlowBT String LatLon
-getCurrentLocation currentLat currentLon sourceLat sourceLon timeOut = do
-  (LatLon startRideCurrentLat startRideCurrentLong) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) LatLon timeOut $> nonCanceler)
-  if(startRideCurrentLat /= "0.0" && startRideCurrentLong /= "0.0") then
-    pure (LatLon startRideCurrentLat startRideCurrentLong)
+getCurrentLocation :: Number -> Number -> Number -> Number -> Int -> Boolean -> Boolean -> FlowBT String LatLon
+getCurrentLocation currentLat currentLon defaultLat defaultLon timeOut specialLocation shouldFallback = do
+  (LatLon startRideCurrentLat startRideCurrentLong ts) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) LatLon timeOut shouldFallback $> nonCanceler)
+  if (startRideCurrentLat /= "0.0" && startRideCurrentLong /= "0.0") then
+    pure (LatLon startRideCurrentLat startRideCurrentLong ts)
   else do
-    if sourceLat /= 0.0 && sourceLon /= 0.0 && currentLat /= 0.0 && currentLon /= 0.0 then do
-      let distanceDiff = (getDistanceBwCordinates currentLat currentLon sourceLat sourceLon)
-          rideLat = show $ if distanceDiff <= 0.10 then  currentLat else sourceLat
-          rideLong = show $ if distanceDiff <= 0.10 then currentLon else sourceLon
-      pure (LatLon rideLat rideLong)
-      else do
+    mbLastKnownTs <- lift $ lift $ loadS $ show LAST_KNOWN_LOCATION_TS
+    let currentUtc = ReExport.getCurrentUTC ""
+        lastKnownTs = fromMaybe currentUtc mbLastKnownTs
+    if defaultLat /= 0.0 && defaultLon /= 0.0 && currentLat /= 0.0 && currentLon /= 0.0 then do
+      let distanceDiff = (getDistanceBwCordinates currentLat currentLon defaultLat defaultLon)
+          rideLat = show $ if distanceDiff <= 0.10 then  currentLat else defaultLat
+          rideLong = show $ if distanceDiff <= 0.10 then currentLon else defaultLon
+          timeStamp = show $ if distanceDiff <= 0.10 then lastKnownTs else currentUtc
+      pure (LatLon rideLat rideLong timeStamp)
+      else if specialLocation then do
         rideLat <- lift $ lift $ loadS $ show LAST_KNOWN_LAT 
         rideLong <- lift $ lift $ loadS $ show LAST_KNOWN_LON
         case rideLat,rideLong of
-          Just lat, Just lon -> pure (LatLon lat lon)
-          _,_ -> pure (LatLon "0.0" "0.0")
+          Just lat, Just lon -> pure (LatLon lat lon lastKnownTs)
+          _,_ -> pure (LatLon "0.0" "0.0" currentUtc)
+        else pure (LatLon (show defaultLat) (show defaultLon) currentUtc)
 
 translateString :: String -> Int -> FlowBT String String 
 translateString toTranslate timeOut = do
@@ -427,21 +507,22 @@ onBoardingSubscriptionScreenCheck onBoardingSubscriptionViewCount isEnabled = is
                                                                               getValueToLocalNativeStore DRIVER_SUBSCRIBED == "false" && 
                                                                               even onBoardingSubscriptionViewCount && 
                                                                               onBoardingSubscriptionViewCount <5 && 
-                                                                              isOnFreeTrial FunctionCall
+                                                                              isOnFreeTrial FunctionCall && 
+                                                                              getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"
 
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
-  let url = getAssetStoreLink FunctionCall
-      commonUrl = getCommonAssetStoreLink FunctionCall
+  let url = getAssetLink FunctionCall
+      commonUrl = getCommonAssetLink FunctionCall
   in case getMerchant FunctionCall of
         YATRISATHI -> case variant of
                         "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
                         "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
                         _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
         _          -> case variant of
-                        "SEDAN"     -> "ic_sedan," <> url <> "ic_sedan.png"
-                        "SUV"       -> "ic_suv," <> url <> "ic_suv.png"
-                        "HATCHBACK" -> "ic_hatchback," <> url <> "ic_hatchback.png"
+                        "SEDAN"     -> "ny_ic_sedan_car_side," <> url <> "ny_ic_sedan_car_side.png"
+                        "SUV"       -> "ny_ic_suv_car_side," <> url <> "ny_ic_suv_car_side.png"
+                        "HATCHBACK" -> "ny_ic_hatchback_car_side," <> url <> "ny_ic_hatchback_car_side.png"
                         "TAXI"      -> "ic_sedan_non_ac," <> url <> "ic_sedan_non_ac.png"
                         "TAXI_PLUS" -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
                         _           -> "ic_sedan_ac," <> url <> "ic_sedan_ac.png"
@@ -474,3 +555,65 @@ getFixedTwoDecimals :: Number -> String
 getFixedTwoDecimals amount = case (fromNumber amount) of
                                 Just value -> show value
                                 Nothing ->  toStringWith (fixed 2) amount
+
+incrementValueOfLocalStoreKey :: KeyStore -> Effect Unit
+incrementValueOfLocalStoreKey key = do
+  let value = fromString $ runFn1 getValueToLocalNativeStore key
+  case value of
+    Just val -> do
+      let _ = runFn2 setValueToLocalStore (show key) (show (val + 1))
+      pure unit
+    Nothing -> do
+      let _ = runFn2 setValueToLocalStore (show key) "1"  
+      pure unit
+
+contactSupportNumber :: String -> Effect Unit
+contactSupportNumber supportType = do
+  void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT do 
+    config <- getAppConfigFlowBT appConfig
+    let city = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+        supportNumber = if DSC.null city.supportNumber then getSupportNumber "" else city.supportNumber
+    if supportType == "WHATSAPP" && DSC.null city.supportNumber then 
+      liftFlowBT $ openWhatsAppSupport $ getWhatsAppSupportNo $ show (getMerchant FunctionCall) 
+      else
+        pure $ showDialer supportNumber false
+
+
+getCityConfig :: Array CityConfig -> String -> CityConfig
+getCityConfig cityConfig cityName = do
+  let dummyCityConfig = {
+                          cityName : "",
+                          mapImage : "",
+                          cityCode : "",
+                          showSubscriptions : false,
+                          cityLat : 0.0,
+                          cityLong : 0.0,
+                          supportNumber : "",
+                          languageKey : "",
+                          showDriverReferral : false,
+                          uploadRCandDL : true
+                        }
+  fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
+  
+formatSecIntoMinSecs :: Int -> String
+formatSecIntoMinSecs seconds = 
+  let
+    mins = seconds `div` 60
+    secs = seconds `mod` 60
+  in 
+    show mins <> ":" <> (if secs < 10 then "0" else "") <> show secs
+
+splitBasedOnLanguage :: String -> String
+splitBasedOnLanguage str = 
+    let strArray = DS.split (DS.Pattern "-*$*-") str
+    in
+    fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
+    where 
+        getLanguage len = do
+            case getValueToLocalStore LANGUAGE_KEY of
+                "KN_IN" | len > 1 -> 1
+                "HI_IN" | len > 2 -> 2
+                "BN_IN" | len > 3 -> 3
+                "ML_IN" | len > 4 -> 4
+                "TA_IN" | len > 5 -> 5
+                _ -> 0

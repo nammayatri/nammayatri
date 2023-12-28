@@ -12,6 +12,8 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wwarn=orphans #-}
 
 module Storage.Beam.SearchTry where
 
@@ -27,6 +29,7 @@ data SearchTryT f = SearchTryT
     messageId :: B.C f Text,
     requestId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     startTime :: B.C f UTCTime,
     validTill :: B.C f UTCTime,
     estimateId :: B.C f Text,

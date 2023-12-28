@@ -30,7 +30,7 @@ sendFcm ::
   Maybe FCMAuthToken ->
   FCMRequest Value ->
   FlowHandler FCMResponse
-sendFcm _authToken (FCMRequest ntf) = withFlowHandler $ do
+sendFcm _authToken (FCMRequest ntf) = withFlowHandler' $ do
   to <- ntf.fcmToken & fromMaybeM (InvalidRequest "No token")
   logPretty INFO ("Message for " <> encodeToText to) ntf
   asks notificationsMap >>= liftIO . (`modifyMVar_` (pure . set to))
@@ -39,7 +39,7 @@ sendFcm _authToken (FCMRequest ntf) = withFlowHandler $ do
     set to ntfs = Map.insert to (ntf : fromMaybe [] (Map.lookup to ntfs)) ntfs
 
 readFcm :: FCMRecipientToken -> FlowHandler ReadFcmRes
-readFcm number = withFlowHandler $ do
+readFcm number = withFlowHandler' $ do
   asks notificationsMap >>= liftIO . (`modifyMVar` (pure . take'))
   where
     take' ntfs = Map.lookup number ntfs & maybe (ntfs, []) (Map.delete number ntfs,)

@@ -46,13 +46,14 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
-import Kernel.Types.APISuccess (APISuccess (Success))
+import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
@@ -161,6 +162,7 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
   let mbShortRideId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbReqShortRideId
   mbCustomerPhoneDBHash <- getDbHash `traverse` mbCustomerPhone
   now <- getCurrentTime
+  when (isNothing mbBookingStatus && isNothing mbShortRideId && isNothing mbCustomerPhoneDBHash && isNothing mbDriverPhone) $ throwError $ InvalidRequest "Atleast one of the filter is required"
   rideItems <- B.runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
@@ -209,7 +211,7 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
   let rideItem = DL.sortBy (\a b -> compare b.ride.createdAt a.ride.createdAt) rideItems
   let lastNRides = map (.ride) rideItem
       lastNBookingStatus = map (.bookingStatus) rideItem
-  ridesDetail <- mapM (\ride -> rideInfo merchantShortId (cast ride.id)) lastNRides
+  ridesDetail <- mapM (\ride -> rideInfo merchant.id (cast ride.id)) lastNRides
   let rdList = map (makeRequiredRideDetail personId) (zip3 lastNRides ridesDetail lastNBookingStatus)
   return Common.TicketRideListRes {rides = rdList}
   where
@@ -247,8 +249,8 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           classification = Ticket.CUSTOMER
         }
 
-rideInfo :: ShortId DM.Merchant -> Id Common.Ride -> Flow Common.RideInfoRes
-rideInfo merchantShortId reqRideId = do
+rideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id Common.Ride -> m Common.RideInfoRes
+rideInfo merchantId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
@@ -263,8 +265,7 @@ rideInfo merchantShortId reqRideId = do
             Nothing -> pure Nothing
         Nothing -> pure Nothing
     Nothing -> pure Nothing
-  merchant <- findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
+  unless (merchantId == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
   person <- B.runInReplica $ QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
   mbBCReason <-
     if ride.status == DRide.CANCELLED
@@ -326,7 +327,7 @@ castCancellationSource = \case
   DBCReason.ByApplication -> Common.ByApplication
 
 bookingCancel ::
-  EsqDBFlow m r =>
+  (CacheFlow m r, EsqDBFlow m r) =>
   BookingCancelledReq ->
   m ()
 bookingCancel BookingCancelledReq {..} = do
@@ -381,7 +382,10 @@ rideSync merchant reqRideId = do
 
   unless (merchant.id == booking.merchantId) $
     throwError (RideDoesNotExist rideId.getId)
-  let dStatusReq = DStatusReq {booking, merchant}
+  city <- case ride.merchantOperatingCityId of
+    Nothing -> pure merchant.defaultCity
+    Just merchantOperatingCityId -> CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+  let dStatusReq = DStatusReq {booking, merchant, city}
   becknStatusReq <- buildStatusReq dStatusReq
   void $ withShortRetry $ CallBPP.callStatus booking.providerUrl becknStatusReq
   pure Success

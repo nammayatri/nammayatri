@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   ( DriverPoolBatchesConfig (..),
@@ -21,6 +22,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
   )
 where
 
+import Database.Beam.Backend
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
@@ -49,5 +51,8 @@ type HasDriverPoolBatchesConfig r =
 data PoolSortingType = Intelligent | Random
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, FromDhall)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BatchSplitByPickupDistance where
+  sqlValueSyntax = autoSqlValueSyntax
 
 $(mkBeamInstancesForEnum ''PoolSortingType)

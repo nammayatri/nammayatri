@@ -17,8 +17,10 @@ module Domain.Types.Merchant.TransporterConfig where
 import Data.Time (NominalDiffTime, UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Notification.FCM.Types (FCMConfig)
+import Kernel.External.Types (Language)
 import Kernel.Types.Common
 import Kernel.Types.Id
 
@@ -28,9 +30,28 @@ data AadhaarImageResizeConfig = AadhaarImageResizeConfig
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm -- FIXME make datatype to [(Variant, Kilometers)]
+  { sedan :: Kilometers,
+    suv :: Kilometers,
+    hatchback :: Kilometers,
+    autorickshaw :: Kilometers,
+    taxi :: Kilometers,
+    taxiplus :: Kilometers
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data DashboardMediaSendingLimit = DashboardMediaSendingLimit
+  { sms :: Int,
+    whatsapp :: Int,
+    overlay :: Int,
+    alert :: Int
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
 -- ProviderConfig?
 data TransporterConfigD u = TransporterConfig
   { merchantId :: Id Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     pickupLocThreshold :: Meters,
     dropLocThreshold :: Meters,
     rideTimeEstimatedThreshold :: Seconds,
@@ -70,9 +91,14 @@ data TransporterConfigD u = TransporterConfig
     driverFeeRetryThresholdConfig :: Int,
     orderAndNotificationStatusCheckTime :: NominalDiffTime,
     orderAndNotificationStatusCheckTimeLimit :: NominalDiffTime,
+    badDebtBatchSize :: Int,
+    badDebtRescheduleTime :: NominalDiffTime,
+    badDebtSchedulerTime :: NominalDiffTime,
+    badDebtTimeThreshold :: Int,
     timeDiffFromUtc :: Seconds,
     subscription :: Bool,
     subscriptionStartTime :: UTCTime,
+    avgSpeedOfVehicle :: Maybe AvgSpeedOfVechilePerKm,
     updateNotificationStatusBatchSize :: Int,
     updateOrderStatusBatchSize :: Int,
     mandateValidity :: Int,
@@ -84,10 +110,9 @@ data TransporterConfigD u = TransporterConfig
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSuvDowngradeToTaxi :: Bool,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
+    languagesToBeTranslated :: [Language],
     isAvoidToll :: Bool,
     aadhaarImageResizeConfig :: Maybe AadhaarImageResizeConfig,
     enableFaceVerification :: Bool,
@@ -97,7 +122,41 @@ data TransporterConfigD u = TransporterConfig
     openMarketUnBlocked :: Bool,
     cacheOfferListByDriverId :: Bool,
     useOfferListCache :: Bool,
-    ratingAsDecimal :: Bool
+    ratingAsDecimal :: Bool,
+    coinFeature :: Bool,
+    coinConversionRate :: HighPrecMoney,
+    refillVehicleModel :: Bool,
+    driverFeeOverlaySendingTimeLimitInDays :: Int,
+    overlayBatchSize :: Int,
+    snapToRoadConfidenceThreshold :: Double,
+    useWithSnapToRoadFallback :: Bool,
+    volunteerSmsSendingLimit :: Maybe DashboardMediaSendingLimit,
+    driverSmsReceivingLimit :: Maybe DashboardMediaSendingLimit,
+    cancellationTimeDiff :: NominalDiffTime,
+    coinExpireTime :: NominalDiffTime,
+    stepFunctionToConvertCoins :: Int,
+    cancellationDistDiff :: Int,
+    considerSpecialZoneRidesForPlanCharges :: Bool,
+    considerSpecialZoneRideChargesInFreeTrial :: Bool,
+    enableUdfForOffers :: Bool,
+    nightSafetyRouteDeviationThreshold :: Meters,
+    nightSafetyStartTime :: Seconds,
+    nightSafetyEndTime :: Seconds,
+    cancellationFee :: HighPrecMoney,
+    driverDistanceTravelledOnPickupThresholdOnCancel :: Meters,
+    driverTimeSpentOnPickupThresholdOnCancel :: Seconds,
+    cancellationFeeDisputeLimit :: Int,
+    driverDistanceToPickupThresholdOnCancel :: Meters,
+    numOfCancellationsAllowed :: Int,
+    canAddCancellationFee :: Bool,
+    allowDefaultPlanAllocation :: Bool,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime,
+    notificationRetryEligibleErrorCodes :: [Text],
+    notificationRetryCountThreshold :: Int,
+    notificationRetryTimeGap :: NominalDiffTime,
+    driverAutoPayExecutionTimeFallBack :: NominalDiffTime,
+    orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime
   }
   deriving (Generic, Show)
 

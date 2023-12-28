@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.FarePolicy where
 
@@ -30,6 +31,7 @@ data FarePolicyT f = FarePolicyT
     maxAllowedTripDistance :: B.C f (Maybe Meters),
     minAllowedTripDistance :: B.C f (Maybe Meters),
     govtCharges :: B.C f (Maybe Double),
+    perMinuteRideExtraTimeCharge :: B.C f (Maybe HighPrecMoney),
     description :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime

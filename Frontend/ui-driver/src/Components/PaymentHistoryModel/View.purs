@@ -12,7 +12,7 @@ import Components.PaymentHistoryModel.Controller (Action(..))
 import Data.Array (length, take)
 import Effect (Effect)
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, height, imageView, imageWithFallback, linearLayout, margin, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width)
@@ -74,7 +74,7 @@ downloadStatementView push state =
     , imageView
         [ height $ V 16
         , width $ V 16
-        , imageWithFallback "ny_ic_download_button,https://assets.juspay.in/nammayatri/images/driver/ny_ic_download_button.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_download_button"
         ]
     ]
 
@@ -103,7 +103,7 @@ genericHeaderConfig state =
       { height = (V 30)
       , width = (V 30)
       , margin = (Margin 0 16 16 16)
-      , imageUrl = "ny_ic_back,https://assets.juspay.in/nammayatri/images/driver/ny_ic_back.png"
+      , imageUrl = fetchImage FF_ASSET "ny_ic_back"
       , padding = (Padding 5 5 5 5)
       }
     , textConfig
@@ -119,7 +119,7 @@ errorModalConfig :: PaymentHistoryModelState -> ErrorModal.Config
 errorModalConfig state =
   ErrorModal.config
     { imageConfig
-      { imageUrl = "ny_ic_no_payments," <> getAssetStoreLink FunctionCall <> "ny_ic_no_past_rides.png"
+      { imageUrl = fetchImage FF_ASSET "ny_ic_no_payments"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 61)

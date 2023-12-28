@@ -16,27 +16,39 @@
 module Language.Strings where
 
 import Data.String.Common (trim)
-import Language.Types (STR, getKeyString)
-import MerchantConfig.Utils (getENStrings, getStringFromConfig, getStringWithVar)
+import Language.Types (STR)
+import MerchantConfig.Utils (getStringFromConfig, getStringWithVar)
 import Prelude (($))
+import Data.Maybe (Maybe(..))
+import Debug (spy)
+import ConfigJBridge (getKeyInSharedPrefKeysConfig)
+import Resources.Localizable.BN (getBN)
+import Resources.Localizable.EN (getEN)
+import Resources.Localizable.HI (getHI)
+import Resources.Localizable.KN (getKN)
+import Resources.Localizable.ML (getML)
+import Resources.Localizable.FR (getFR)
 
-data LANGUAGE_KEY = EN_US | KN_IN | HI_IN | BN_IN | ML_IN
-
-getKey :: String -> LANGUAGE_KEY
-getKey key = do
-    case key of 
-        "EN_US" -> EN_US
-        "KN_IN" -> KN_IN
-        "HI_IN" -> HI_IN
-        "BN_IN" -> BN_IN
-        "ML_IN" -> ML_IN
-        _ -> EN_US
---TODO: Translate in OR AS
 getString :: STR -> String
-getString key = getStringFromConfig $ trim $ getKeyString key
+getString key = 
+  let language = getKeyInSharedPrefKeysConfig "LANGUAGE_KEY"
+  in getStringFromConfigOrLocal language key
 
+getStringFromConfigOrLocal :: String -> STR -> String
+getStringFromConfigOrLocal language key = 
+  case (getStringFromConfig key Just Nothing) of
+    Just value -> value
+    Nothing    -> getStringFromLocal language key
+  
 getVarString :: STR -> Array String -> String
-getVarString key vals = getStringWithVar (trim $ getKeyString key) vals
+getVarString key vals = getStringWithVar (getString key) vals
 
-getEN :: STR -> String
-getEN key = getENStrings $ trim $ getKeyString key
+getStringFromLocal :: String -> STR -> String
+getStringFromLocal language key = 
+  case language of
+    "BN_IN" -> getBN key
+    "HI_IN" -> getHI key
+    "KN_IN" -> getKN key
+    "ML_IN" -> getML key
+    "FR_FR" -> getFR key
+    _       -> getEN key

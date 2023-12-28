@@ -17,11 +17,13 @@ module Screens.Types where
 
 import MerchantConfig.Types
 
-import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer)
+import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer, CarouselModal)
+import Common.Types.App as Common
 import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
+import Data.Map (Map)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe)
@@ -32,8 +34,13 @@ import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
+import Data.Argonaut.Decode (class DecodeJson)
+import Data.Argonaut.Decode.Generic (genericDecodeJson)
+import Data.Argonaut.Encode (class EncodeJson)
+import Data.Argonaut.Encode.Generic (genericEncodeJson)
 import PrestoDOM (LetterSpacing, BottomSheetState(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, RideBookingRes, Route)
+import Services.API (ServiceExpiry(..), AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..))
+import Components.SettingSideBar.Controller as SideBar
 
 type Contacts = {
   name :: String,
@@ -124,18 +131,15 @@ type SplashScreenData =  {
 
 -- ############################################################# WelcomeScreen ################################################################################
 
-type CarouselModel = {
-  image :: String,
-  title :: String,
-  description :: String
-}
+
+
 
 type WelcomeScreenState = {
   data :: WelcomeScreenData
 }
 
 type WelcomeScreenData = {
-  carouselModel :: Array CarouselModel,
+  carouselModal :: CarouselModal,
   logField :: Object Foreign
 }
 
@@ -309,7 +313,8 @@ type InvoiceScreenData =
     date :: String ,
     selectedItem :: IndividualRideCardState,
     config :: AppConfig,
-    logField :: Object Foreign
+    logField :: Object Foreign,
+    pdfHeading :: String
   }
 
 type InvoiceScreenProps =
@@ -515,6 +520,7 @@ data Stage = HomeScreen
            | FindingEstimate
            | ConfirmingRide
            | RideAccepted
+           | ReAllocated
            | RideStarted
            | RideCompleted
            | PricingTutorial
@@ -531,6 +537,8 @@ data Stage = HomeScreen
            | ChatWithDriver
            | FindEstimateAndSearch
            | RetryFindingQuote
+           | PickUpFarFromCurrentLocation
+           | LoadMap
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -568,6 +576,8 @@ type HomeScreenStateData =
   , locationList :: Array LocationListItemState
   , savedLocations :: Array LocationListItemState
   , recentSearchs :: RecentlySearchedObject
+  , destinationSuggestions :: Array LocationListItemState
+  , tripSuggestions :: Array Trip
   , selectList :: Array QuoteAPIEntity
   , quoteListModelState :: Array QuoteListItemState
   , driverInfoCardState :: DriverInfoCard
@@ -587,7 +597,7 @@ type HomeScreenStateData =
   , previousCurrentLocations:: PreviousCurrentLocations
   , messages :: Array ChatComponent
   , messagesSize :: String
-  , suggestionsList :: Array String
+  , chatSuggestionsList :: Array String
   , messageToBeSent :: String
   , nearByPickUpPoints :: Array Location
   , polygonCoordinates :: String
@@ -604,7 +614,24 @@ type HomeScreenStateData =
   , nearByDrivers :: Maybe Int
   , disability :: Maybe DisabilityT
   , searchLocationModelData :: SearchLocationModelData
+  , waitTimeInfo :: Boolean
+  , lastSentMessage :: ChatComponent
+  , lastReceivedMessage :: ChatComponent
+  , triggerPatchCounter :: Int
+  , infoCardPeekHeight :: Int
+  , suggestionsData :: SuggestionsData
+  , peekHeight :: Int
+  , rideHistoryTrip :: Maybe Trip
   }
+
+type LocationDetails = {
+    formattedAddress :: String,
+    location :: LatLong,
+    plusCode :: Maybe String,
+    addressComponents :: Array AddressComponents,
+    placeId :: Maybe String
+  }
+
 
 type DisabilityT = 
   {
@@ -697,12 +724,31 @@ type HomeScreenStateProps =
   , findingQuotesProgress :: Number
   , confirmLocationCategory :: String
   , zoneTimerExpired :: Boolean
-  , isChatOpened :: Boolean
   , canSendSuggestion :: Boolean
   , sheetState :: BottomSheetState
+  , showOfferedAssistancePopUp :: Boolean
   , showDisabilityPopUp :: Boolean
   , isChatNotificationDismissed :: Boolean
   , searchLocationModelProps :: SearchLocationModelProps
+  , flowWithoutOffers :: Boolean
+  , showEducationalCarousel :: Boolean
+  , locateOnMapLocation :: LocateOnMapLocation
+  , specialZoneType :: String
+  , currentLocation :: Location
+  , isShorterTrip :: Boolean
+  , isNotificationExpanded :: Boolean
+  , bottomSheetState :: SheetState
+  , removeNotification :: Boolean
+  , city :: Maybe String
+  , isHomescreenExpanded :: Boolean
+  , isRepeatRide :: Boolean
+  , currSlideIndex :: Number
+  , suggestionsListExpanded :: Boolean
+  , repeatRideTimer :: String
+  , repeatRideTimerId :: String
+  , showShimmer :: Boolean
+  , nightSafetyFlow :: Boolean 
+  , reAllocation :: ReAllocationProp
   }
 
 type SearchLocationModelProps = {
@@ -710,10 +756,22 @@ type SearchLocationModelProps = {
   , showLoader :: Boolean
   , crossBtnSrcVisibility :: Boolean
   , crossBtnDestVisibility :: Boolean
+  , findPlaceIllustration :: Boolean
 }
 
 type SearchLocationModelData = {
     prevLocation :: String
+}
+
+type LocateOnMapLocation = {
+    source :: String
+  , sourceAddress :: Address
+  , sourceLat :: Number
+  , sourceLng :: Number
+  , destination :: String
+  , destinationAddress :: Address
+  , destinationLat :: Number
+  , destinationLng :: Number
 }
 
 type RouteEndPoints = {
@@ -743,7 +801,8 @@ type RatingViewState = {
     doneButtonVisibility :: Boolean,
     issueReason :: Maybe String,
     issueDescription :: String,
-    rideBookingRes :: RideBookingRes
+    rideBookingRes :: RideBookingRes,
+    wasOfferedAssistance :: Maybe Boolean
 }
 
 type CustomerTipProps = {
@@ -753,10 +812,19 @@ type CustomerTipProps = {
   , isTipSelected :: Boolean
 }
 
+data SheetState = STATE_DRAGGING | STATE_SETTLING | STATE_EXPANDED | STATE_COLLAPSED | STATE_HIDDEN | STATE_HALF_EXPANDED
+
+derive instance genericSheetState :: Generic SheetState _
+instance showSheetState :: Show SheetState where show = genericShow
+instance eqSheetState :: Eq SheetState where eq = genericEq
+instance encodeSheetState :: Encode SheetState where encode = defaultEnumEncode
+instance decodeSheetState :: Decode SheetState where decode = defaultEnumDecode
+
 data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_SEARCH_WITH_TIP
 
 derive instance genericTipViewStage :: Generic TipViewStage _
 instance showTipViewStage :: Show TipViewStage where show = genericShow
+instance eqTipViewStage :: Eq TipViewStage where eq = genericEq
 instance encodeTipViewStage :: Encode TipViewStage where encode = defaultEncode
 instance decodeTipViewStage :: Decode TipViewStage where decode = defaultDecode
 
@@ -959,14 +1027,15 @@ type Location = {
   place :: String,
   lat :: Number,
   lng :: Number,
-  address :: Maybe String
+  address :: Maybe String,
+  city :: Maybe String
 }
 
 type DriverInfoCard =
   { otp :: String
   , driverName :: String
   , currentSearchResultType :: SearchResultType
-  , eta :: Int
+  , eta :: Maybe Int
   , vehicleDetails :: String
   , registrationNumber :: String
   , rating :: Number
@@ -994,6 +1063,8 @@ type DriverInfoCard =
   , initDistance :: Maybe Int
   , config :: AppConfig
   , vehicleVariant :: String
+  , sourceAddress :: Address
+  , destinationAddress :: Address
   }
 
 type RatingCard =
@@ -1140,7 +1211,8 @@ type AppUpdatePopUpState =
  { version :: Int ,
    logField :: Object Foreign,
    updatePopup :: UpdatePopupType,
-   appUpdatedView :: AppUpdatedViewState
+   appUpdatedView :: AppUpdatedViewState,
+   config :: AppConfig
  }
 
 type AppUpdatedViewState = {
@@ -1204,16 +1276,51 @@ type LocationListItemState = {
   , locationItemType :: Maybe LocationItemType
   , distance :: Maybe String
   , showDistance :: Maybe Boolean
-  , actualDistance :: Int
+  , actualDistance :: Maybe Int
+  , frequencyCount :: Maybe Int
+  , recencyDate :: Maybe String
+  , locationScore :: Maybe Number
 }
 
-data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION
+type SuggestionsMap = Map SourceGeoHash Suggestions
+type SourceGeoHash = String
+type DestinationGeoHash = String
+
+type Suggestions = {
+    destinationSuggestions :: Array LocationListItemState
+  , tripSuggestions :: Array Trip
+}
+
+type Trip = {
+    sourceLat :: Number
+  , source :: String 
+  , destination :: String
+  , sourceAddress :: Address 
+  , destinationAddress :: Address
+  , sourceLong :: Number
+  , destLat :: Number
+  , destLong :: Number
+  , frequencyCount :: Maybe Int
+  , recencyDate :: Maybe String
+  , locationScore :: Maybe Number
+  , isSpecialZone :: Boolean
+}
+type SuggestionsData =  {
+    suggestionsMap :: SuggestionsMap
+}
+
+data LocationItemType = RECENTS | PREDICTION | SAVED_LOCATION | SUGGESTED_DESTINATIONS
 
 derive instance genericLocationItemType :: Generic LocationItemType _
 instance eqLocationItemType :: Eq LocationItemType where eq = genericEq
 instance showLocationItemType :: Show LocationItemType where show = genericShow
 instance encodeLocationItemType :: Encode LocationItemType where encode = defaultEnumEncode
 instance decodeLocationItemType:: Decode LocationItemType where decode = defaultEnumDecode
+instance encodeJsonLocationItemType :: EncodeJson LocationItemType where
+  encodeJson = genericEncodeJson
+instance decodeJsonLocationItemType :: DecodeJson LocationItemType where
+  decodeJson = genericDecodeJson
+  
 
 type SaveFavouriteCardState =
   {
@@ -1293,3 +1400,271 @@ derive instance genericTipViewData :: Generic TipViewData _
 instance showTipViewData :: Show TipViewData where show = genericShow
 instance encodeTipViewData :: Encode TipViewData where encode = defaultEncode
 instance decodeTipViewData :: Decode TipViewData where decode = defaultDecode
+
+-- ###################################### TicketInfoScreen ######################################
+
+type TicketInfoScreenState =
+  { data :: TicketInfoScreenData,
+    props :: TicketInfoScreenProps
+  }
+
+type TicketInfoScreenData = {
+  selectedBookingInfo :: IndividualBookingItem
+}
+
+type TicketInfoScreenProps = {
+  activeListItem :: TicketBookingServiceDetails,
+  activeIndex :: Int,
+  leftButtonDisable :: Boolean,
+  rightButtonDisable :: Boolean
+}
+
+
+-- ######################################  TicketBookingScreen   ######################################
+
+type TicketBookingScreenState =
+  { data :: TicketBookingScreenData,
+    props :: TicketBookingScreenProps
+  }
+
+
+----- data for the screen internally (transformed data from the response) ------
+type Ticket = 
+  { title :: String
+  , shortDesc :: Maybe String
+  , ticketID :: String
+  , isExpanded :: Boolean
+  , businessHours :: Array TicketBusinessHoursOptionData
+  , timeIntervals :: Array TimeInterval
+  , slot :: Array SlotInterval
+  , selectedBHid :: Maybe String
+  , selectedSlot :: Maybe String
+  , expiry :: ServiceExpiry
+  }
+
+type TicketBusinessHoursOptionData =
+  { ticketID :: String,
+    bhourId :: String,
+    categories :: Array TicketCategoriesOptionData,
+    operationalDays :: Array String
+  }
+
+type TicketCategoriesOptionData =
+  {   ticketID :: String,
+      categoryName :: String, -- (SEAT-TYPES, DESTINATION, ZOO)
+      categoryId :: String,
+      availableSeats :: Maybe Int,
+      allowedSeats :: Maybe Int,
+      bookedSeats :: Int,
+      peopleCategories :: Array TicketPeopleCategoriesOptionData,
+      isSelected :: Boolean
+  }
+
+type TicketPeopleCategoriesOptionData =
+  { ticketID :: String,
+    title ::String,
+    subcategory :: String,
+    currentValue :: Int,
+    pricePerUnit :: Int,
+    ticketLimitCrossed :: Boolean,
+    peopleCategoryId :: String
+  }
+
+---- data for the --------------------------------------------------------
+type TicketServiceData =
+  { id :: String,
+    serviceName :: String,
+    allowFutureBooking :: Boolean,
+    shortDesc :: Maybe String,
+    expiry :: ServiceExpiry,
+    businessHours :: Array BusinessHoursData,
+    timeIntervalData :: Array SlotsAndTimeIntervalData,
+    isExpanded :: Boolean,
+    selectedBHid :: Maybe String,
+    selectedSlot :: Maybe String
+  }
+
+type BusinessHoursData = {
+  bhourId :: String,
+  slot :: Maybe String,
+  startTime :: Maybe String, -- TimeOfDay -- OpenTimings CloseTimings
+  endTime :: Maybe String,
+  categories :: Array TicketCategoriesData,
+  operationalDays :: Array String
+}
+
+type SlotsAndTimeIntervalData = {
+  operationalDays :: Array String,
+  slot :: Array SlotInterval,
+  timeIntervals :: Array TimeInterval
+}
+
+type SlotInterval = {
+  bhourId :: String,
+  slot :: String
+}
+type TimeInterval = {
+  bhourId :: String,
+  startTime :: String,
+  endTime :: String
+}
+
+type TicketCategoriesData = {
+  categoryName :: String, -- (SEAT-TYPES, DESTINATION, ZOO)
+  categoryId :: String,
+  availableSeats :: Maybe Int,
+  allowedSeats :: Maybe Int,
+  bookedSeats :: Int,
+  peopleCategories :: Array PeopleCategoriesRespData,
+  isSelected :: Boolean
+}
+
+type PeopleCategoriesRespData =
+  { peopleCategoryName :: String,
+    pricePerUnit :: Int,
+    currentValue :: Int,
+    peopleCategoryId :: String,
+    ticketLimitCrossed :: Boolean
+  }
+
+type TiketingListTransformedData =
+  { timings :: Array KeyVal,
+    fees :: Array KVPairArr
+  }
+
+type KVPairArr =
+  { key :: String
+  , val :: Array KeyVal
+  , disableCategory :: Boolean
+  }
+
+type TicketBookingScreenData = {
+  servicesAvailing :: Array TicketServiceI, -- TODO:: Use this for generic handling
+  dateOfVisit :: String,
+  keyValArray :: Array KeyVal,
+  transactionId :: String,
+  bookedForArray :: Array String,
+  zooName :: String,
+  totalAmount :: Int,
+  placeInfo :: Maybe TicketPlaceResp,
+  servicesInfo :: Array TicketServiceData,
+  shortOrderId :: String,
+  selectedPlaceType :: PlaceType
+}
+
+type TicketServiceI = {
+  id :: String,
+  peopleCategoryName :: String,
+  numberOfUnits :: Int
+}
+
+type KeyVal = {
+  key :: String,
+  val :: String
+}
+
+type TicketBookingItem = 
+  { shortId :: String,
+    ticketPlaceName :: String,
+    amount :: Number,
+    visitDate :: String,
+    status :: BookingStatus,
+    ticketPlaceId ::  String,
+    personId :: String
+  }
+
+type TicketBookings = 
+  { pendingBooking :: Array TicketBookingItem,
+    booked :: Array TicketBookingItem
+  }
+
+type TicketBookingScreenProps = {
+  currentStage :: TicketBookingScreenStage,
+  previousStage :: TicketBookingScreenStage,
+  termsAndConditionsSelected :: Boolean,
+  validDate :: Boolean,
+  showShimmer :: Boolean,
+  paymentStatus :: Common.PaymentStatus,
+  ticketBookingList :: TicketBookings,
+  selectedBookingId :: String,
+  selectedBookingInfo :: IndividualBookingItem,
+  activeListItem :: TicketBookingServiceDetails,
+  activeIndex :: Int,
+  rightButtonDisable :: Boolean,
+  leftButtonDisable :: Boolean,
+  navigateToHome :: Boolean,
+  selectedOperationalDay :: String
+}
+
+type TicketItem = {
+  ticketType :: String,
+  fare :: Int,
+  time :: String,
+  serviceId :: String,
+  validTill :: String
+  }
+
+type IndividualBookingItem =
+  { shortId :: String,
+    ticketPlaceId :: String,
+    ticketPlaceName :: String,
+    personId :: String,
+    amount :: Number,
+    visitDate :: String,
+    status :: BookingStatus,
+    services :: Array TicketBookingServiceDetails
+  }
+
+type TicketBookingServiceDetails =
+  { amount :: Number,
+    status :: String,
+    verificationCount :: Int,
+    expiryDate :: Maybe String,
+    ticketServiceName :: String,
+    categories :: Array TicketBookingCategoryDetails,
+    ticketServiceShortId :: String,
+    slot :: Maybe String
+  }
+
+type TicketBookingCategoryDetails =
+  { amount :: Number,
+    bookedSeats :: Int,
+    name :: String,
+    peopleCategories :: Array TicketBookingPeopleCategoryDetails
+  }
+
+type TicketBookingPeopleCategoryDetails =
+  { name :: String,
+    numberOfUnits ::Int,
+    pricePerUnit :: Number
+  }
+
+data TicketBookingScreenStage = DescriptionStage 
+                              | ChooseTicketStage
+                              | BookingConfirmationStage
+                              | ViewTicketStage
+                              | MyTicketsStage
+                              | TicketInfoStage
+
+derive instance genericTicketBookingScreenStage :: Generic TicketBookingScreenStage _
+instance showTicketBookingScreenStage :: Show TicketBookingScreenStage where show = genericShow
+instance eqTicketBookingScreenStage :: Eq TicketBookingScreenStage where eq = genericEq
+
+
+-- ######################################### TicketingScreenState ####################################################
+
+type TicketingScreenState = {
+  data :: TicketingScreenData ,
+  props :: TicketingScreenProps
+}
+
+type TicketingScreenData = {
+  placeInfoArray :: Array TicketPlaceResp
+} 
+
+type TicketingScreenProps = {
+  hideMyTickets :: Boolean
+} 
+type ReAllocationProp =
+  { showPopUp :: Boolean
+  }

@@ -19,14 +19,16 @@ import JBridge (getLayoutBounds)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), const, pure, unit, not, show, (<<<), (==), (>=), (*), (+), (<=), (&&))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageView, letterSpacing, lineHeight, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, onAnimationEnd, disableClickFeedback)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
-import MerchantConfig.Utils (getValueFromConfig)
+import ConfigProvider
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
+  let estimateConfig = (getAppConfig appConfig).estimateAndQuoteConfig
+  in
   PrestoAnim.animationSet (if EHC.os == "IOS" then [fadeIn true]
   else [ translateYAnimFromTop $ Animation.translateYAnimHomeConfig Animation.BOTTOM_TOP ]) $
   linearLayout
@@ -39,7 +41,7 @@ view push config =
       , height WRAP_CONTENT
       , gravity RIGHT
       , margin $ MarginRight 15
-      , visibility if (isJust config.nearByDrivers) && (getValueFromConfig "showNearByDrivers") then VISIBLE else GONE
+      , visibility if (isJust config.nearByDrivers) && estimateConfig.showNearByDrivers then VISIBLE else GONE
       , disableClickFeedback true
       ][ textView
          [ width WRAP_CONTENT
@@ -156,6 +158,7 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
   { textConfig
     { text = (getString CONFIRM_AND_BOOK)
     , color = Color.yellow900
+    , accessibilityHint = "Confirm And Book Button"
     }
   , id = "ConfirmAndBookButton"
   , background = Color.black900

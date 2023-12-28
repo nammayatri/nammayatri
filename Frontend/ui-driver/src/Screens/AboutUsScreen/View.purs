@@ -21,11 +21,10 @@ import Components.PopUpModal as PopUpModal
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width)
 import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
@@ -33,6 +32,7 @@ import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import ConfigProvider
 
 screen :: ST.AboutUsScreenState -> Screen Action ST.AboutUsScreenState ScreenOutput
 screen initialState =
@@ -114,7 +114,7 @@ headerLayout state push =
         [ imageView
             [ width $ V 25
             , height MATCH_PARENT
-            , imageWithFallback $ "ny_ic_back," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_back.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
             , gravity CENTER_VERTICAL
             , onClick push (const $ BackPressed state.props.demoModePopup)
             , padding (Padding 2 2 2 2)
@@ -156,6 +156,8 @@ footerView state =
 --------------------------------- applicationInformationLayout ----------------------------
 applicationInformationLayout :: ST.AboutUsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 applicationInformationLayout state push =
+  let config = getAppConfig appConfig
+  in
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -167,14 +169,14 @@ applicationInformationLayout state push =
         ( [ width $ V 150
           , height $ V 100
           , layoutGravity "center_horizontal"
-          , imageWithFallback $ "ic_launcher," <> (getAssetStoreLink FunctionCall) <> "ic_launcher.png"
+          , imageWithFallback $ fetchImage FF_ASSET "ic_launcher"
           ]
             <> if getValueToLocalStore DRIVER_STATUS == "true" then [ onClick push (const ShowDemoPopUp) ] else []
         )
     , textView
         $ [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , text $ getString ABOUT_TEXT
+          , text $ getString $ ABOUT_TEXT "ABOUT_TEXT"
           , color Color.black800
           , gravity LEFT
           , margin (MarginTop 20)
@@ -184,7 +186,7 @@ applicationInformationLayout state push =
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , visibility if getValueFromConfig "showCorporateAddress" then VISIBLE else GONE
+        , visibility if config.showCorporateAddress then VISIBLE else GONE
         ][ComplaintsModel.view (ComplaintsModel.config { cardData = contactUsData state })]
     , underlinedTextView (getString T_C) push
     , underlinedTextView (getString PRIVACY_POLICY) push
@@ -193,6 +195,8 @@ applicationInformationLayout state push =
 --------------------------------- underlinedTextView ----------------------
 underlinedTextView :: String -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 underlinedTextView value push =
+  let config = getAppConfig appConfig
+  in
   linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
@@ -203,9 +207,9 @@ underlinedTextView value push =
             _ <-
               JB.openUrlInApp
                 if (value == (getString T_C)) then
-                  (getValueFromConfig "DOCUMENT_LINK")
+                  config.termsLink
                 else
-                  (getValueFromConfig "PRIVACY_POLICY_LINK")
+                  config.privacyLink
             pure unit
         )
         (const TermsAndConditionAction)
@@ -240,12 +244,12 @@ horizontalLine marginLeft marginRight =
 
 contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
 contactUsData state =
-  [ { title: (getString CORPORATE_ADDRESS)
-    , subTitle: (getString CORPORATE_ADDRESS_DESCRIPTION)
-    , addtionalData: Just (getString CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL)
+  [ { title: (getString $ CORPORATE_ADDRESS "CORPORATE_ADDRESS")
+    , subTitle: (getString $ CORPORATE_ADDRESS_DESCRIPTION "CORPORATE_ADDRESS_DESCRIPTION")
+    , addtionalData: Just (getString $ CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL")
     }
-  , { title: (getString REGISTERED_ADDRESS)
-    , subTitle: (getString REGISTERED_ADDRESS_DESCRIPTION)
-    , addtionalData: Just (getString REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL)
+  , { title: (getString $ REGISTERED_ADDRESS "REGISTERED_ADDRESS")
+    , subTitle: (getString $ REGISTERED_ADDRESS_DESCRIPTION "REGISTERED_ADDRESS_DESCRIPTION")
+    , addtionalData: Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
     }
   ]

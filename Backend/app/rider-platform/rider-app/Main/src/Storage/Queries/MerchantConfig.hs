@@ -20,17 +20,18 @@ module Storage.Queries.MerchantConfig
     #-}
 where
 
-import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.MerchantConfig as DMC
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantConfig as BeamMC
 
-findAllByMerchantId :: MonadFlow m => Id Merchant -> m [DMC.MerchantConfig]
-findAllByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamMC.merchantId $ Se.Eq merchantId, Se.Is BeamMC.enabled $ Se.Eq True]]
+findAllByMerchantOperatingCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DMC.MerchantConfig]
+findAllByMerchantOperatingCityId (Id merchantOperatingCityId) = findAllWithKV [Se.And [Se.Is BeamMC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId, Se.Is BeamMC.enabled $ Se.Eq True]]
 
 instance FromTType' BeamMC.MerchantConfig MerchantConfig where
   fromTType' BeamMC.MerchantConfigT {..} = do
@@ -39,6 +40,7 @@ instance FromTType' BeamMC.MerchantConfig MerchantConfig where
         MerchantConfig
           { id = Id id,
             merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
             fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
             fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,
@@ -56,6 +58,7 @@ instance ToTType' BeamMC.MerchantConfig MerchantConfig where
     BeamMC.MerchantConfigT
       { BeamMC.id = getId id,
         BeamMC.merchantId = getId merchantId,
+        BeamMC.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamMC.fraudBookingCancellationCountThreshold = fraudBookingCancellationCountThreshold,
         BeamMC.fraudBookingCancellationCountWindow = fraudBookingCancellationCountWindow,
         BeamMC.fraudBookingTotalCountThreshold = fraudBookingTotalCountThreshold,

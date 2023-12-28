@@ -22,15 +22,14 @@ import Storage.Beam.CallStatus
 import Storage.Beam.Driver.GoHomeFeature.DriverGoHomeRequest
 import Storage.Beam.DriverFee
 import Storage.Beam.DriverInformation
-import Storage.Beam.DriverLocation
 import Storage.Beam.DriverOnboarding.DriverLicense
 import Storage.Beam.DriverOnboarding.DriverRCAssociation
 import Storage.Beam.DriverOnboarding.IdfyVerification
 import Storage.Beam.DriverOnboarding.Image
-import Storage.Beam.DriverOnboarding.OperatingCity
 import Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
 import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
+import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.Geometry
 import Storage.Beam.Invoice
 import Storage.Beam.Message.Message
@@ -49,11 +48,9 @@ atlasDB :: B.DatabaseSettings be AtlasDB
 atlasDB =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { driverLocation = driverLocationTable,
-        exophone = exophoneTable,
+      { exophone = exophoneTable,
         geometry = geometryTable,
         vehicle = vehicleTable,
-        operatingCity = operatingCityTable,
         image = imageTable,
         person = personTable,
         driverLicense = driverLicenseTable,
@@ -76,15 +73,14 @@ atlasDB =
         message = messageTable,
         messageTranslation = messageTranslationTable,
         driverGoHomeRequest = driverGoHomeRequestTable,
-        driverReferral = driverReferralTable
+        driverReferral = driverReferralTable,
+        fleetDriverAssociation = fleetDriverAssociationTable
       }
 
 data AtlasDB f = AtlasDB
-  { driverLocation :: f (B.TableEntity DriverLocationT),
-    exophone :: f (B.TableEntity ExophoneT),
+  { exophone :: f (B.TableEntity ExophoneT),
     geometry :: f (B.TableEntity GeometryT),
     vehicle :: f (B.TableEntity VehicleT),
-    operatingCity :: f (B.TableEntity OperatingCityT),
     image :: f (B.TableEntity ImageT),
     person :: f (B.TableEntity PersonT),
     driverLicense :: f (B.TableEntity DriverLicenseT),
@@ -107,6 +103,7 @@ data AtlasDB f = AtlasDB
     driverReferral :: f (B.TableEntity DriverReferralT),
     driverFee :: f (B.TableEntity DriverFeeT),
     notification :: f (B.TableEntity NotificationT),
-    invoice :: f (B.TableEntity InvoiceT)
+    invoice :: f (B.TableEntity InvoiceT),
+    fleetDriverAssociation :: f (B.TableEntity FleetDriverAssociationT)
   }
   deriving (Generic, B.Database be)

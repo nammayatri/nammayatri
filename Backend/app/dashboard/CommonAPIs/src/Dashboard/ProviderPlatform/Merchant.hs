@@ -174,7 +174,9 @@ data MerchantCommonConfigUpdateReq = MerchantCommonConfigUpdateReq
     driverFeeCalculatorBatchSize :: Maybe (OptionalValue Int),
     driverFeeCalculatorBatchGap :: Maybe (OptionalValue NominalDiffTime),
     orderAndNotificationStatusCheckTime :: Maybe (OptionalValue NominalDiffTime),
-    orderAndNotificationStatusCheckTimeLimit :: Maybe (OptionalValue NominalDiffTime)
+    orderAndNotificationStatusCheckTimeLimit :: Maybe (OptionalValue NominalDiffTime),
+    snapToRoadConfidenceThreshold :: Maybe (MandatoryValue Double),
+    useWithSnapToRoadFallback :: Maybe (MandatoryValue Bool)
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -260,6 +262,7 @@ type DriverPoolConfigUpdateAPI =
     :> "driverPool"
     :> "update"
     :> MandatoryQueryParam "tripDistance" Meters
+    :> QueryParam "vehicleVariant" Variant
     :> ReqBody '[JSON] DriverPoolConfigUpdateReq
     :> Post '[JSON] APISuccess
 
@@ -310,6 +313,7 @@ type DriverPoolConfigCreateAPI =
     :> "driverPool"
     :> "create"
     :> MandatoryQueryParam "tripDistance" Meters
+    :> QueryParam "vehiclevariant" Variant
     :> ReqBody '[JSON] DriverPoolConfigCreateReq
     :> Post '[JSON] APISuccess
 
@@ -379,7 +383,7 @@ data DriverIntelligentPoolConfigRes = DriverIntelligentPoolConfigRes
     acceptanceRatioWeightage :: Int,
     acceptanceRatioWindowOption :: SWC.SlidingWindowOptions,
     cancellationRatioWeightage :: Int,
-    cancellationRatioWindowOption :: SWC.SlidingWindowOptions,
+    cancellationAndRideFrequencyRatioWindowOption :: SWC.SlidingWindowOptions,
     minQuotesToQualifyForIntelligentPool :: Int,
     minQuotesToQualifyForIntelligentPoolWindowOption :: SWC.SlidingWindowOptions,
     intelligentPoolPercentage :: Maybe Int,
@@ -410,7 +414,7 @@ data DriverIntelligentPoolConfigUpdateReq = DriverIntelligentPoolConfigUpdateReq
     acceptanceRatioWeightage :: Maybe (MandatoryValue Int),
     acceptanceRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
     cancellationRatioWeightage :: Maybe (MandatoryValue Int),
-    cancellationRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
+    cancellationAndRideFrequencyRatioWindowOption :: Maybe SWC.SlidingWindowOptions,
     minQuotesToQualifyForIntelligentPool :: Maybe (MandatoryValue Int),
     minQuotesToQualifyForIntelligentPoolWindowOption :: Maybe SWC.SlidingWindowOptions,
     intelligentPoolPercentage :: Maybe (OptionalValue Int),
@@ -436,8 +440,8 @@ validateDriverIntelligentPoolConfigUpdateReq DriverIntelligentPoolConfigUpdateRe
       whenJust acceptanceRatioWindowOption $ \obj ->
         validateObject "acceptanceRatioWindowOption" obj validateSlidingWindowOptions,
       validateField "cancellationRatioWeightage" cancellationRatioWeightage $ InMaybe $ InValue $ InRange @Int (-100) 100,
-      whenJust cancellationRatioWindowOption $ \obj ->
-        validateObject "cancellationRatioWindowOption" obj validateSlidingWindowOptions,
+      whenJust cancellationAndRideFrequencyRatioWindowOption $ \obj ->
+        validateObject "cancellationAndRideFrequencyRatioWindowOption" obj validateSlidingWindowOptions,
       validateField "minQuotesToQualifyForIntelligentPool" minQuotesToQualifyForIntelligentPool $ InMaybe $ InValue $ Min @Int 1,
       whenJust minQuotesToQualifyForIntelligentPoolWindowOption $ \obj ->
         validateObject "minQuotesToQualifyForIntelligentPoolWindowOption" obj validateSlidingWindowOptions,
@@ -471,6 +475,7 @@ data OnboardingDocumentConfigItem = OnboardingDocumentConfigItem
     supportedVehicleClasses :: SupportedVehicleClasses,
     vehicleClassCheckType :: VehicleClassCheckType,
     rcNumberPrefix :: Text,
+    rcNumberPrefixList :: Maybe [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -551,6 +556,7 @@ data OnboardingDocumentConfigUpdateReq = OnboardingDocumentConfigUpdateReq
     checkExpiry :: Maybe (MandatoryValue Bool),
     supportedVehicleClasses :: Maybe SupportedVehicleClasses, -- value wrapper make no sense for lists and objects
     rcNumberPrefix :: Maybe (MandatoryValue Text),
+    rcNumberPrefixList :: Maybe (MandatoryValue [Text]),
     vehicleClassCheckType :: Maybe (MandatoryValue VehicleClassCheckType)
   }
   deriving stock (Show, Generic)
@@ -575,6 +581,7 @@ data OnboardingDocumentConfigCreateReq = OnboardingDocumentConfigCreateReq
     checkExpiry :: Bool,
     supportedVehicleClasses :: SupportedVehicleClasses,
     rcNumberPrefix :: Text,
+    rcNumberPrefixList :: Maybe [Text],
     vehicleClassCheckType :: VehicleClassCheckType
   }
   deriving stock (Show, Generic)
@@ -618,3 +625,26 @@ type UpdateFPDriverExtraFee =
     :> MandatoryQueryParam "startDistance" Meters
     :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
     :> Post '[JSON] APISuccess
+
+---- generic trigger for schedulers ----
+
+type SchedulerTriggerAPI =
+  "scheduler"
+    :> "trigger"
+    :> ReqBody '[JSON] SchedulerTriggerReq
+    :> Post '[JSON] APISuccess
+
+data SchedulerTriggerReq = SchedulerTriggerReq
+  { scheduledAt :: Maybe UTCTime,
+    jobName :: Maybe JobName,
+    jobData :: Text
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data JobName = BadDebtCalculationTrigger | DriverFeeCalculationTrigger
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets SchedulerTriggerReq where
+  hideSecrets = identity

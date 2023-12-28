@@ -13,7 +13,6 @@ pipeline {
                         // - macOS: Provide Nix cache to devs using macOS
                         // - Linux ARM: For AWS graviton deployment
                         branch 'main'
-                        changeRequest target: 'main'
                     }
                 }
                 axes {

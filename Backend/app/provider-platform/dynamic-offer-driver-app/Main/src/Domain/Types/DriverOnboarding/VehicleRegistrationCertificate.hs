@@ -41,6 +41,7 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
     verificationStatus :: VerificationStatus,
+    fleetOwnerId :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -67,6 +68,7 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
     verificationStatus :: VerificationStatus,
+    fleetOwnerId :: Maybe Text,
     createdAt :: UTCTime
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
@@ -74,7 +76,7 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)
   encryptItem (VehicleRegistrationCertificate {..}, salt) = do
-    certificateNumber_ <- encryptItem $ (,salt) certificateNumber
+    certificateNumber_ <- encryptItem (certificateNumber, salt)
     return VehicleRegistrationCertificate {certificateNumber = certificateNumber_, ..}
   decryptItem VehicleRegistrationCertificate {..} = do
     certificateNumber_ <- fst <$> decryptItem certificateNumber
@@ -83,7 +85,7 @@ instance EncryptedItem VehicleRegistrationCertificate where
 instance EncryptedItem' VehicleRegistrationCertificate where
   type UnencryptedItem VehicleRegistrationCertificate = DecryptedVehicleRegistrationCertificate
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst
 
 makeRCAPIEntity :: VehicleRegistrationCertificate -> Text -> VehicleRegistrationCertificateAPIEntity
 makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
@@ -92,8 +94,8 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
       ..
     }
 
-makeVehicleFromRC :: UTCTime -> Id Person -> Id Merchant -> Text -> VehicleRegistrationCertificate -> Maybe Text -> Vehicle
-makeVehicleFromRC now driverId merchantId certificateNumber rc fleetOwnerId =
+makeVehicleFromRC :: UTCTime -> Id Person -> Id Merchant -> Text -> VehicleRegistrationCertificate -> Vehicle
+makeVehicleFromRC now driverId merchantId certificateNumber rc =
   Vehicle
     { driverId,
       capacity = rc.vehicleCapacity,
@@ -108,7 +110,6 @@ makeVehicleFromRC now driverId merchantId certificateNumber rc fleetOwnerId =
       registrationNo = certificateNumber,
       registrationCategory = Nothing,
       vehicleClass = fromMaybe "Unkown" rc.vehicleClass,
-      fleetOwnerId = fleetOwnerId,
       vehicleName = Nothing,
       createdAt = now,
       updatedAt = now

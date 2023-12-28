@@ -11,25 +11,13 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE TemplateHaskell #-}
-
 module Domain.Types.Issue where
 
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
+import IssueManagement.Common
 import Kernel.Prelude
 import Kernel.Types.Id
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
-
-data IssueStatus
-  = OPEN
-  | PENDING_INTERNAL
-  | PENDING_EXTERNAL
-  | RESOLVED
-  | CLOSED
-  deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)
-
-$(mkBeamInstancesForEnum ''IssueStatus)
 
 data Issue = Issue
   { id :: Id Issue,
@@ -40,6 +28,7 @@ data Issue = Issue
     description :: Text,
     ticketId :: Maybe Text,
     status :: IssueStatus,
+    nightSafety :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

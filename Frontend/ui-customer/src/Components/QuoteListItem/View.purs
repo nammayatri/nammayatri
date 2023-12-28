@@ -28,11 +28,10 @@ import Data.Number (ceil)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, os, countDown)
+import Engineering.Helpers.Commons (flowRunner, os)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
-import JBridge (startTimerWithTime)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, pure, show, unit, ($), (/=), (<>), (==))
@@ -42,6 +41,9 @@ import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Timers
+import Debug
+import Engineering.Helpers.Commons (liftFlow)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -57,9 +59,7 @@ view push state =
           , stroke if state.selectedQuote == Just state.id then ("1,"<>Color.blue700') else ("1," <> Color.grey)
           , afterRender (\action -> do
                           _ <- push action
-                          _ <- launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do
-                            if (os == "IOS") then liftEffect $ startTimerWithTime (show state.seconds) state.id "1" push CountDown
-                              else liftEffect $ countDown state.seconds state.id push CountDown
+                          _ <- launchAff $ flowRunner defaultGlobalState $ liftFlow $ startTimer state.seconds state.id "1" push CountDown
                           pure unit
                         ) (const NoAction)
           , onClick push (const $ Click state)
@@ -125,7 +125,7 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback if state.vehicleType == "auto" then "ny_ic_auto_quote_list," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_quote_list.png" else "ny_ic_auto_quote_list," <> (getAssetStoreLink FunctionCall) <> "ny_ic_auto_quote_list.png"
+        , imageWithFallback $ fetchImage FF_ASSET $ if state.city == Just "std:040" then "ny_ic_black_yellow_auto_quote_list" else "ny_ic_auto_quote_list"
         , weight 1.0
         ]
       ]
@@ -143,7 +143,7 @@ driverRatingView state  =
     ][  imageView
         [ height $ V 13
         , width $ V 13
-        , imageWithFallback $ "ny_ic_star_active," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_star_active.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_star_active"
         , margin (MarginRight 6)
         ]
       , textView (
@@ -222,7 +222,7 @@ primaryButtonView state push =
   , cornerRadius state.appConfig.quoteListItemConfig.primaryButtonCorner
   , onClick push $ const ConfirmRide
   , gravity CENTER
-  ] <> if state.appConfig.isGradient == "true" then [gradient (Linear 90.0 state.appConfig.gradient)] else [background state.appConfig.primaryBackground])
+  ] <> if state.appConfig.primaryButtonConfig.isGradient then [gradient (Linear 90.0 state.appConfig.primaryButtonConfig.gradient)] else [background state.appConfig.primaryBackground])
   [ textView (
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
@@ -275,7 +275,7 @@ autoAcceptingView state push =
           , imageView
             [ height $ V 18
             , width $ V 18
-            , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_close"
             , onClick push $ const CancelAutoAssigning
             ]
         ]

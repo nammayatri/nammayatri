@@ -15,20 +15,70 @@
 
 module Screens.RegistrationScreen.ScreenData where
 
-import Screens.Types (RegistrationScreenState)
-import Prelude (class Eq)
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
-
-data ListOptions = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION
-derive instance genericListOptions :: Generic ListOptions _
-instance eqListOptions :: Eq ListOptions where eq = genericEq
+import Data.Maybe (Maybe(..))
+import Language.Strings (getString)
+import Common.Types.Config (CityConfig)
+import Prelude (class Eq)
+import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
+import ConfigProvider
+import Foreign.Object (empty)
 
 initData :: RegistrationScreenState
 initData = {
-      data: {},
-      props: {}
-    }
+      data: {
+        activeIndex : 1,
+        registerationSteps : [
+          {
+            stageName : "Driving License",
+            stage : DRIVING_LICENSE_OPTION
+          },
+          {
+            stageName : "Vehicle Registration",
+            stage : VEHICLE_DETAILS_OPTION
+          },
+          {
+            stageName : "Grant Permission",
+            stage : GRANT_PERMISSION
+          },
+          {
+            stageName : "Namma Yatri Plan",
+            stage : SUBSCRIPTION_PLAN
+          }
+        ],
+        drivingLicenseStatus : NOT_STARTED,
+        vehicleDetailsStatus : NOT_STARTED,
+        permissionsStatus : NOT_STARTED,
+        subscriptionStatus : NOT_STARTED,
+        phoneNumber : "",
+        lastUpdateTime : "",
+        cityConfig : dummyCityConfig,
+        config : getAppConfig appConfig,
+        referralCode : "",
+        referral_code_input_data : "",
+        logField : empty
+      },
+      props: {
+        limitReachedFor : Nothing,
+        logoutModalView : false,
+        isValidReferralCode : true,
+        enterOtpFocusIndex : 0,
+        enterReferralCodeModal : false,
+        referralCodeSubmitted : false
+      }
+  }
 
-optionList :: Array ListOptions
-optionList = [ DRIVING_LICENSE_OPTION, VEHICLE_DETAILS_OPTION ]
+dummyCityConfig :: CityConfig
+dummyCityConfig = {
+                    cityName : "",
+                    mapImage : "",
+                    cityCode : "",
+                    showSubscriptions : false,
+                    cityLat : 0.0,
+                    cityLong : 0.0,
+                    supportNumber : "",
+                    languageKey : "",
+                    showDriverReferral : false,
+                    uploadRCandDL : true
+                  }

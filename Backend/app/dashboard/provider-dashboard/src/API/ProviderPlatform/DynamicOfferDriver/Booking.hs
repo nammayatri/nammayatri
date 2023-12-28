@@ -23,13 +23,14 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
+import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI')
 import Kernel.Utils.Validation (runRequestValidation)
-import qualified ProviderPlatformClient.DynamicOfferDriver as Client
+import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
-import "lib-dashboard" Tools.Auth hiding (BECKN_TRANSPORT)
+import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
@@ -39,17 +40,17 @@ type API =
        )
 
 type StuckBookingsCancelAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'STUCK_BOOKING_CANCEL -- ApiAuth 'DRIVER_OFFER_BPP 'BOOKINGS ?
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'RIDES 'STUCK_BOOKING_CANCEL
     :> Common.StuckBookingsCancelAPI
 
 type MultipleBookingSyncAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'RIDES 'MULTIPLE_BOOKING_SYNC
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'RIDES 'MULTIPLE_BOOKING_SYNC
     :> Common.MultipleBookingSyncAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  stuckBookingsCancel merchantId
-    :<|> multipleBookingSync merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  stuckBookingsCancel merchantId city
+    :<|> multipleBookingSync merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -60,19 +61,19 @@ buildTransaction ::
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.BookingAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.BookingAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
-stuckBookingsCancel :: ShortId DM.Merchant -> ApiTokenInfo -> Common.StuckBookingsCancelReq -> FlowHandler Common.StuckBookingsCancelRes
-stuckBookingsCancel merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+stuckBookingsCancel :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.StuckBookingsCancelReq -> FlowHandler Common.StuckBookingsCancelRes
+stuckBookingsCancel merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.StuckBookingsCancelEndpoint apiTokenInfo (Just req)
   T.withResponseTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.bookings.stuckBookingsCancel) req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.bookings.stuckBookingsCancel) req
 
-multipleBookingSync :: ShortId DM.Merchant -> ApiTokenInfo -> Common.MultipleBookingSyncReq -> FlowHandler Common.MultipleBookingSyncResp
-multipleBookingSync merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
+multipleBookingSync :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleBookingSyncReq -> FlowHandler Common.MultipleBookingSyncResp
+multipleBookingSync merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   runRequestValidation Common.validateMultipleBookingSyncReq req
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.MultipleBookingSyncEndpoint apiTokenInfo (Just req)
   T.withResponseTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.bookings.multipleBookingSync) req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.bookings.multipleBookingSync) req

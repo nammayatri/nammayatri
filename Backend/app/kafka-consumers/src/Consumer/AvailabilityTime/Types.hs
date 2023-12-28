@@ -11,11 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingStrategies #-}
 
 module Consumer.AvailabilityTime.Types where
 
+import Data.OpenApi
 import Data.Time
-import qualified Domain.Action.UI.Location.UpdateLocation as LU
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Types.Id (Id)
@@ -33,13 +34,20 @@ data DriverAvailability = DriverAvailability
   }
   deriving (Show)
 
+data RideStatus
+  = ON_RIDE
+  | ON_PICKUP
+  | IDLE
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LocationUpdates = LocationUpdates
   { rId :: Maybe Text,
     ts :: UTCTime,
     st :: Maybe UTCTime,
     pt :: LatLong,
     acc :: Maybe Double,
-    rideStatus :: LU.RideStatus,
+    rideStatus :: RideStatus,
     mId :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)

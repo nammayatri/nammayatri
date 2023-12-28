@@ -31,7 +31,7 @@ import Styles.Colors as Color
 import Common.Types.App
 import Engineering.Helpers.Commons as EHC
 import Data.Maybe 
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 import Prelude ((<>))
 
 requestDeletePopUp :: ST.SavedLocationScreenState -> PopUpModal.Config 
@@ -83,6 +83,8 @@ primaryButtonConfig state = let
 genericHeaderConfig :: ST.SavedLocationScreenState -> GenericHeader.Config 
 genericHeaderConfig state = let 
   config = if state.data.config.nyBrandingVisibility then GenericHeader.merchantConfig else GenericHeader.config
+  btnVisibility =  if isParentView FunctionCall then GONE else config.prefixImageConfig.visibility
+  titleVisibility = if showTitle FunctionCall then config.visibility else GONE
   genericHeaderConfig' = config 
     {
       height = WRAP_CONTENT
@@ -91,7 +93,8 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , visibility = btnVisibility
       } 
     , textConfig {
         text = (getString FAVOURITES)
@@ -99,6 +102,7 @@ genericHeaderConfig state = let
     , suffixImageConfig {
         visibility = GONE
       }
+    , visibility = titleVisibility
     }
   in genericHeaderConfig'
 
@@ -107,7 +111,7 @@ errorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = "ny_ic_no_saved_address," <> (getAssetStoreLink FunctionCall) <> "ny_ic_no_saved_address.png"
+        imageUrl = fetchImage FF_ASSET  "ny_ic_no_saved_address"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 31)

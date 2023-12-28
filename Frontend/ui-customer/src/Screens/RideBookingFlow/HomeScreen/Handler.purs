@@ -52,6 +52,9 @@ homeScreen = do
     GoToEmergencyContacts updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_EMERGENCY_CONTACTS)
+    GoToMyTickets updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure GO_TO_MY_TICKETS)
     GoToAbout updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_ABOUT)
@@ -70,6 +73,9 @@ homeScreen = do
     GetQuotes updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.NoBack <$> (pure $ GET_QUOTES updatedState)
+    GoToTicketBookingFlow updatedState -> do 
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_TICKETING updatedState)
     LogoutUser -> App.BackT $ App.NoBack <$> (pure $ LOGOUT)
     SelectEstimate updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
@@ -143,9 +149,6 @@ homeScreen = do
     FetchContacts updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_FETCH_CONTACTS updatedState)
-    OnResumeApp updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure ON_RESUME_APP)
     CheckCurrentStatus -> App.BackT $ App.NoBack <$> (pure $ CHECK_CURRENT_STATUS)
     CheckFlowStatus updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
@@ -153,9 +156,9 @@ homeScreen = do
     RetryFindingQuotes showLoader updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ RETRY_FINDING_QUOTES showLoader)
-    CallDriver updatedState callType-> do
+    CallDriver updatedState callType exophoneNumber -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState callType)
+      App.BackT $ App.BackPoint <$> (pure $ ON_CALL updatedState callType exophoneNumber)
     ExitToPermissionFlow flowType -> App.BackT $ App.NoBack <$> (pure $ TRIGGER_PERMISSION_FLOW flowType)
     ReportIssue updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
@@ -164,3 +167,9 @@ homeScreen = do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       modifyScreenState $ TripDetailsScreenStateType (\_ -> getTripDetailsState updatedState.data.ratingViewState.rideBookingRes state.tripDetailsScreen)
       App.BackT $ App.BackPoint <$> (pure $ RIDE_DETAILS_SCREEN updatedState)
+    RepeatTrip state trip-> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
+      App.BackT $ App.BackPoint <$> (pure $ REPEAT_RIDE_FLOW_HOME trip)
+    ExitToTicketing updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ EXIT_TO_TICKETING updatedState)

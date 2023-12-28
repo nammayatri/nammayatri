@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-if [ -z "$1" ]
-then
-    echo "src path is empty"
-    exit 0;
+if [ -z "$1" ]; then
+  echo "src path is empty"
+  exit 0
 fi
 
 echo "$1"
@@ -48,8 +47,6 @@ ans=${ans}${layout%,}
 
 touch "$FILE"
 
-output="<?xml version=\"1.0\" encoding=\"utf-8\"?>\n\
-<resources xmlns:tools=\"http://schemas.android.com/tools\"\n\
-    tools:keep=\"$ans\" />"
+output="<?xml version=\"1.0\" encoding=\"utf-8\"?><resources xmlns:tools=\"http://schemas.android.com/tools\" tools:keep=\"$ans\" />"
 
-echo "$output" > "$FILE"
+echo "$output" >"$FILE"

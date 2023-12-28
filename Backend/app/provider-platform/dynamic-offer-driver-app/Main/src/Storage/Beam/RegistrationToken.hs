@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.RegistrationToken where
 
@@ -33,6 +34,7 @@ data RegistrationTokenT f = RegistrationTokenT
     tokenExpiry :: B.C f Int,
     entityId :: B.C f Text,
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     entityType :: B.C f Domain.RTEntityType,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,

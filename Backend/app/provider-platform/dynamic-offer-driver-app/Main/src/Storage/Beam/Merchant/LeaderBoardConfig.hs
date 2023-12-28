@@ -12,6 +12,8 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Merchant.LeaderBoardConfig where
 
@@ -29,7 +31,8 @@ data LeaderBoardConfigsT f = LeaderBoardConfigsT
     zScoreBase :: B.C f Int,
     leaderBoardLengthLimit :: B.C f Int,
     isEnabled :: B.C f Bool,
-    merchantId :: B.C f Text
+    merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
@@ -41,6 +44,6 @@ instance B.Table LeaderBoardConfigsT where
 
 type LeaderBoardConfigs = LeaderBoardConfigsT Identity
 
-$(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantId, 'leaderBoardType]])
+$(enableKVPG ''LeaderBoardConfigsT ['id] [['merchantOperatingCityId, 'leaderBoardType]])
 
 $(mkTableInstances ''LeaderBoardConfigsT "leader_board_configs")

@@ -29,6 +29,7 @@ data Action = Support
             | BannerAction Banner.Action
             
 type Config = {
+  isDriver :: Boolean,
   topCard :: TopCard,
   customerIssueCard :: CustomerIssueCard,
   customerBottomCard :: CustomerBottomCard,
@@ -43,7 +44,8 @@ type Config = {
   theme :: Theme,
   isPrimaryButtonSticky :: Boolean,
   bannerConfig :: Banner.Config,
-  viewsByOrder :: Array RideCompletedElements
+  viewsByOrder :: Array RideCompletedElements,
+  enableContactSupport :: Boolean
 }
 
 data Theme = DARK | LIGHT
@@ -61,8 +63,10 @@ instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericE
 
 config :: Config 
 config = {
+  isDriver : true,
   topCard : {
     title : "",
+    titleColor : Color.grey900,
     finalAmount : 0,
     initalAmount : 0,
     fareUpdatedVisiblity : false,
@@ -99,7 +103,10 @@ config = {
     option1Text : "",
     option2Text : "",
     yesText : "",
-    noText : ""
+    noText : "",
+    isNightRide : false,
+    showCallSupport : false,
+    wasOfferedAssistanceCardView : false
   },
   customerBottomCard : {
     visible : false,
@@ -121,7 +128,8 @@ config = {
     text2Color : Color.darkCharcoal,
     image : "",
     imageWidth : V 0, 
-    imageHeight : V 0
+    imageHeight : V 0,
+    stroke : "1," <> Color.grey900
   },
   driverUpiQrCard : {
     text : "",
@@ -141,7 +149,8 @@ config = {
   theme : DARK,
   isPrimaryButtonSticky : false,
   bannerConfig : Banner.config,
-  viewsByOrder : []
+  viewsByOrder : [],
+  enableContactSupport : true
 }
 
 type CustomerIssueCard = {
@@ -154,11 +163,15 @@ type CustomerIssueCard = {
   option1Text :: String,
   option2Text :: String,
   yesText :: String,
-  noText :: String
+  noText :: String,
+  showCallSupport :: Boolean,
+  isNightRide :: Boolean,
+  wasOfferedAssistanceCardView :: Boolean
 }
 
 type TopCard = {
   title :: String,
+  titleColor :: String,
   finalAmount :: Int,
   initalAmount :: Int,
   fareUpdatedVisiblity :: Boolean,
@@ -210,7 +223,8 @@ type BadgeCard = {
   text2Color :: String,
   image :: String,
   imageWidth :: Length, 
-  imageHeight :: Length
+  imageHeight :: Length,
+  stroke :: String
 }
 
 type DriverUpiQrCard = {

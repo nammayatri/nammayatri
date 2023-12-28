@@ -21,14 +21,16 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common
 import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
+import Tools.Auth
 
 type API =
-  "exotel"
+  DashboardTokenAuth
+    :> "exotel"
     :> Common.ExotelHeartbeatAPI
 
 handler :: FlowServer API
-handler =
-  exotelHeartbeat
+handler _ = do exotelHeartbeat
 
 exotelHeartbeat :: Common.ExotelHeartbeatReq -> FlowHandler APISuccess
 exotelHeartbeat = withFlowHandlerAPI . DExotel.exotelHeartbeat

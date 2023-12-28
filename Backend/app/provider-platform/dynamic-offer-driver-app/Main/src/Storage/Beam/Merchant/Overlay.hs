@@ -12,10 +12,12 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Merchant.Overlay where
 
 import Data.Aeson
+import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
 import GHC.Generics (Generic)
@@ -27,6 +29,7 @@ import Tools.Beam.UtilsTH
 data OverlayT f = OverlayT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     overlayKey :: B.C f Text,
     language :: B.C f Language,
     udf1 :: B.C f (Maybe Text),
@@ -39,7 +42,12 @@ data OverlayT f = OverlayT
     link :: B.C f (Maybe Text),
     method :: B.C f (Maybe Text),
     reqBody :: B.C f Value,
-    endPoint :: B.C f (Maybe Text)
+    endPoint :: B.C f (Maybe Text),
+    delay :: B.C f (Maybe Int),
+    contactSupportNumber :: B.C f (Maybe Text),
+    toastMessage :: B.C f (Maybe Text),
+    secondaryActions :: B.C f (Maybe [Text]),
+    socialMediaLinks :: B.C f (Maybe A.Value)
   }
   deriving (Generic, B.Beamable)
 
@@ -51,6 +59,6 @@ instance B.Table OverlayT where
 
 type Overlay = OverlayT Identity
 
-$(enableKVPG ''OverlayT ['id] [['merchantId, 'overlayKey]])
+$(enableKVPG ''OverlayT ['id] [['merchantOperatingCityId, 'overlayKey]])
 
 $(mkTableInstances ''OverlayT "merchant_overlay")

@@ -22,7 +22,7 @@ where
 
 import qualified Database.Beam as B
 import Domain.Types.Exophone as DE (Exophone (..), ExophoneType (..))
-import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Call.Types (CallService)
@@ -33,28 +33,28 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Exophone as BeamE
 
-create :: MonadFlow m => DE.Exophone -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DE.Exophone -> m ()
 create = createWithKV
 
-findAllMerchantIdsByPhone :: MonadFlow m => Text -> m [Id DM.Merchant]
-findAllMerchantIdsByPhone phone = findAllWithKV [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]] <&> (DE.merchantId <$>)
+findAllMerchantIdsByPhone :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Id DMOC.MerchantOperatingCity]
+findAllMerchantIdsByPhone phone = findAllWithKV [Se.Or [Se.Is BeamE.primaryPhone $ Se.Eq phone, Se.Is BeamE.backupPhone $ Se.Eq phone]] <&> (DE.merchantOperatingCityId <$>)
 
-findAllByPhone :: MonadFlow m => Text -> m [Exophone]
+findAllByPhone :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [Exophone]
 findAllByPhone phone = do
   merchIds <- findAllMerchantIdsByPhone phone
-  findAllWithKV [Se.Is BeamE.merchantId $ Se.In $ getId <$> merchIds]
+  findAllWithKV [Se.Is BeamE.merchantOperatingCityId $ Se.In $ getId <$> merchIds]
 
-findAllByMerchantId :: MonadFlow m => Id DM.Merchant -> m [Exophone]
-findAllByMerchantId (Id merchantId) = do
-  findAllWithKV [Se.Is BeamE.merchantId $ Se.Eq merchantId]
+findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m [Exophone]
+findAllByMerchantOpCityId (Id merchantOpCityId) = do
+  findAllWithKV [Se.Is BeamE.merchantOperatingCityId $ Se.Eq merchantOpCityId]
 
-findAllExophones :: MonadFlow m => m [Exophone]
+findAllExophones :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Exophone]
 findAllExophones = findAllWithDb [Se.Is BeamE.id $ Se.Not $ Se.Eq $ getId ""]
 
-findByMerchantServiceAndExophoneType :: MonadFlow m => Id DM.Merchant -> CallService -> DE.ExophoneType -> m [Exophone]
-findByMerchantServiceAndExophoneType merchantId service exophoneType = findAllWithKV [Se.And [Se.Is BeamE.merchantId $ Se.Eq merchantId.getId, Se.Is BeamE.callService $ Se.Eq service, Se.Is BeamE.exophoneType $ Se.Eq exophoneType]]
+findByMerchantOpCityIdServiceAndExophoneType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> CallService -> DE.ExophoneType -> m [Exophone]
+findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId service exophoneType = findAllWithKV [Se.And [Se.Is BeamE.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId, Se.Is BeamE.callService $ Se.Eq service, Se.Is BeamE.exophoneType $ Se.Eq exophoneType]]
 
-updateAffectedPhones :: MonadFlow m => [Text] -> m ()
+updateAffectedPhones :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m ()
 updateAffectedPhones primaryPhones = do
   now <- getCurrentTime
   dbConf <- getMasterBeamConfig
@@ -77,8 +77,8 @@ updateAffectedPhones primaryPhones = do
                 B.||?. B.sqlBool_ (B.concat_ [B.val_ indianMobileCode, primaryPhone] `B.in_` (B.val_ <$> primaryPhones))
           )
 
-deleteByMerchantId :: MonadFlow m => Id DM.Merchant -> m ()
-deleteByMerchantId (Id merchantId) = deleteWithKV [Se.Is BeamE.merchantId (Se.Eq merchantId)]
+deleteByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m ()
+deleteByMerchantOpCityId (Id merchantOpCityId) = deleteWithKV [Se.Is BeamE.merchantOperatingCityId (Se.Eq merchantOpCityId)]
 
 instance FromTType' BeamE.Exophone Exophone where
   fromTType' BeamE.ExophoneT {..} = do
@@ -87,6 +87,7 @@ instance FromTType' BeamE.Exophone Exophone where
         Exophone
           { id = Id id,
             merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
             primaryPhone = primaryPhone,
             backupPhone = backupPhone,
             isPrimaryDown = isPrimaryDown,
@@ -101,6 +102,7 @@ instance ToTType' BeamE.Exophone Exophone where
     BeamE.ExophoneT
       { BeamE.id = getId id,
         BeamE.merchantId = getId merchantId,
+        BeamE.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamE.primaryPhone = primaryPhone,
         BeamE.backupPhone = backupPhone,
         BeamE.isPrimaryDown = isPrimaryDown,

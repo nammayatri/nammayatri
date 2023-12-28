@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.SystemConfigs ()
 
 type API =
   "ride"
@@ -83,7 +84,9 @@ callRideInfo ::
   ShortId DM.Merchant ->
   Id Common.Ride ->
   FlowHandler Common.RideInfoRes
-callRideInfo merchantShortId rideId = withFlowHandlerAPI $ DRide.rideInfo merchantShortId rideId
+callRideInfo merchantShortId rideId = withFlowHandlerAPI $ do
+  merchant <- findMerchantByShortId merchantShortId
+  DRide.rideInfo merchant.id rideId
 
 multipleRideCancel ::
   DRide.MultipleRideCancelReq ->

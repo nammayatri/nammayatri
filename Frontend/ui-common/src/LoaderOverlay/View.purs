@@ -24,7 +24,7 @@ import Prelude (Unit, ($), (<>), (/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, background, cornerRadius, gravity, height, linearLayout, margin, orientation, padding, progressBar, stroke, text, textView, width, color, clickable)
 import Styles.Colors as Color
 import Engineering.Helpers.Commons as EHC
-import MerchantConfig.Utils(getValueFromConfig)
+import ConfigProvider
 
 screen :: LoaderOverlayState -> ScopedScreen Action LoaderOverlayState ScreenOutput
 screen initialState =
@@ -38,6 +38,8 @@ screen initialState =
 
 view :: forall w .(Action -> Effect Unit) -> LoaderOverlayState ->  PrestoDOM (Effect Unit) w
 view _ state =
+  let config = (getAppConfig appConfig).loaderConfig
+  in
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -57,7 +59,7 @@ view _ state =
     ][ progressBar $
       [ height $ V 60
       , width $ V 60
-      ] <> if EHC.os /= "IOS" then [stroke if (getValueFromConfig "loaderColor") /= "" then (getValueFromConfig "loaderColor") else Color.black900] else []
+      ] <> if EHC.os /= "IOS" then [stroke config.color] else []
     , textView $ 
       [ height WRAP_CONTENT
       , width WRAP_CONTENT

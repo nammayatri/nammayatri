@@ -14,20 +14,21 @@
 
 module Domain.Types.Transaction where
 
-import qualified "dynamic-offer-driver-app" API.Dashboard.Overlay as BPP
+import qualified "dynamic-offer-driver-app" API.Dashboard.Management.Overlay as BPP
+import qualified "dynamic-offer-driver-app" API.Dashboard.Management.Subscription as BPP
 import qualified "rider-app" API.Dashboard.RideBooking.Booking as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Cancel as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Confirm as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Frontend as BAP
+import qualified "dynamic-offer-driver-app" API.Dashboard.RideBooking.Maps as BPP
 import qualified "rider-app" API.Dashboard.RideBooking.Maps as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Profile as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Registration as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Search as BAP
 import qualified "rider-app" API.Dashboard.RideBooking.Select as BAP
-import qualified "dynamic-offer-driver-app" API.Dashboard.Subscription as BPP
+import qualified "rider-app" API.Dashboard.Tickets as ADT
 import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Exotel as Common
-import qualified "dashboard-helper-api" Dashboard.Common.Issue as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Merchant as Common
 import qualified "dashboard-helper-api" Dashboard.Common.Message as Common
 import qualified "dashboard-helper-api" Dashboard.Common.SpecialZone as Common
@@ -40,6 +41,7 @@ import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Customer as Comm
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServerName as DSN
+import qualified IssueManagement.Common.Dashboard.Issue as Common
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -82,4 +84,6 @@ data Endpoint
   | SpecialZoneAPI Common.SpecialZoneEndpoint
   | SubscriptionAPI BPP.SubscriptionEndpoint
   | OverlayAPI BPP.OverlayEndpoint
+  | TicketsAPI ADT.TicketBookingEndpoint
+  | MapAPI BPP.MapEndPoint
   deriving (Show, Read)

@@ -13,6 +13,7 @@
 -}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Domain.Types.Person where
@@ -20,9 +21,10 @@ module Domain.Types.Person where
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
-import qualified Domain.Types.MediaFile as M
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import EulerHS.Prelude hiding (id)
+import qualified IssueManagement.Domain.Types.MediaFile as M
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
@@ -92,7 +94,12 @@ data PersonE e = Person
     clientVersion :: Maybe Version,
     unencryptedAlternateMobileNumber :: Maybe Text,
     alternateMobileNumber :: Maybe (EncryptedHashedField e Text),
-    faceImageId :: Maybe (Id M.MediaFile)
+    faceImageId :: Maybe (Id M.MediaFile),
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    totalEarnedCoins :: Int,
+    usedCoins :: Int,
+    registrationLat :: Maybe Double,
+    registrationLon :: Maybe Double
   }
   deriving (Generic)
 
@@ -116,7 +123,7 @@ instance EncryptedItem Person where
 instance EncryptedItem' Person where
   type UnencryptedItem Person = DecryptedPerson
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a
+  fromUnencrypted = fst
 
 data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,

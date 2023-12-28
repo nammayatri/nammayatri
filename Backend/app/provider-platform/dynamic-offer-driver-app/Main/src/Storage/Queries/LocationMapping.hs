@@ -22,29 +22,31 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.LocationMapping as BeamLM
 
-create :: MonadFlow m => LocationMapping -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LocationMapping -> m ()
 create = createWithKV
 
-countOrders :: MonadFlow m => Text -> m Int
-countOrders entityId = findAllWithKV [Se.Is BeamLM.entityId $ Se.Eq entityId] <&> length
+countOrders :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
+countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing <&> length
 
-findByEntityId :: MonadFlow m => Text -> m [LocationMapping] --TODO : SORT BY ORDER
-findByEntityId entityId = findAllWithKV [Se.Is BeamLM.entityId $ Se.Eq entityId]
+findByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
+findByEntityId entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] (Just (Se.Desc BeamLM.createdAt))
 
-findAllByEntityIdAndOrder :: MonadFlow m => Text -> Int -> m [LocationMapping]
+findAllByEntityIdAndOrder :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> m [LocationMapping]
 findAllByEntityIdAndOrder entityId order =
-  findAllWithKV
+  findAllWithKVAndConditionalDB
     [Se.And [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]]
+    Nothing
 
-updatePastMappingVersions :: MonadFlow m => Text -> Int -> m ()
+updatePastMappingVersions :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> m ()
 updatePastMappingVersions entityId order = do
   mappings <- findAllByEntityIdAndOrder entityId order
   traverse_ incrementVersion mappings
 
-incrementVersion :: MonadFlow m => LocationMapping -> m ()
+incrementVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => LocationMapping -> m ()
 incrementVersion mapping = do
   let newVersion = getNewVersion mapping.version
   updateVersion mapping.entityId mapping.order newVersion
@@ -55,10 +57,13 @@ getNewVersion oldVersion =
     ["v", versionNum] -> "v-" <> T.pack (show (read (T.unpack versionNum) + 1))
     _ -> "v-1"
 
-updateVersion :: MonadFlow m => Text -> Int -> Text -> m ()
-updateVersion entityId order version =
-  updateOneWithKV
-    [Se.Set BeamLM.version version]
+updateVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Int -> Text -> m ()
+updateVersion entityId order version = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamLM.version version,
+      Se.Set BeamLM.updatedAt now
+    ]
     [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]
 
 instance FromTType' BeamLM.LocationMapping LocationMapping where
@@ -71,7 +76,11 @@ instance FromTType' BeamLM.LocationMapping LocationMapping where
             locationId = Id locationId,
             entityId = entityId,
             order = order,
-            version = version
+            version = version,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            merchantId = Id <$> merchantId,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId
           }
 
 instance ToTType' BeamLM.LocationMapping LocationMapping where
@@ -82,5 +91,9 @@ instance ToTType' BeamLM.LocationMapping LocationMapping where
         BeamLM.locationId = getId locationId,
         BeamLM.entityId = entityId,
         BeamLM.order = order,
-        BeamLM.version = version
+        BeamLM.version = version,
+        BeamLM.createdAt = createdAt,
+        BeamLM.updatedAt = updatedAt,
+        BeamLM.merchantId = getId <$> merchantId,
+        BeamLM.merchantOperatingCityId = getId <$> merchantOperatingCityId
       }

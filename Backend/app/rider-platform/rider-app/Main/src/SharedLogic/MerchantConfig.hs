@@ -27,7 +27,7 @@ where
 
 import Data.Foldable.Extra
 import qualified Domain.Types.Booking.Type as BT
-import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.Person as Person
 import Kernel.Beam.Functions as B
@@ -78,7 +78,7 @@ updateCustomerFraudCounters riderId merchantConfigs = Redis.withNonCriticalCross
   where
     incrementCount ind = SWC.incrementWindowCount (mkCancellationKey ind riderId.getId)
 
-updateTotalRidesCounters :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m ()
+updateTotalRidesCounters :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m ()
 updateTotalRidesCounters riderId = Redis.withNonCriticalCrossAppRedis $ do
   _ <- getTotalRidesCount riderId
   let key = mkTotalRidesKey riderId.getId
@@ -90,7 +90,7 @@ updateTotalRidesInWindowCounters riderId merchantConfigs = Redis.withNonCritical
   where
     incrementCount ind = SWC.incrementWindowCount (mkRideWindowCountKey ind riderId.getId)
 
-getTotalRidesCount :: (HedisFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m Int
+getTotalRidesCount :: (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> m Int
 getTotalRidesCount riderId = Redis.withNonCriticalCrossAppRedis $ do
   let key = mkTotalRidesKey riderId.getId
   mbTotalCount <- Redis.safeGet key
@@ -103,7 +103,7 @@ getTotalRidesCount riderId = Redis.withNonCriticalCrossAppRedis $ do
       pure totalCount
 
 getRidesCountInWindow ::
-  (HedisFlow m r, EsqDBReplicaFlow m r) =>
+  (HedisFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   Id Person.Person ->
   Int ->
   Int ->
@@ -115,12 +115,12 @@ getRidesCountInWindow riderId start window currTime =
         endTime = addUTCTime (fromIntegral window) startTime
     B.runInReplica $ QB.findCountByRideIdStatusAndTime riderId BT.COMPLETED startTime endTime
 
-anyFraudDetected :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-anyFraudDetected riderId merchantId = checkFraudDetected riderId merchantId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides, TotalRidesInWindow]
+anyFraudDetected :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
+anyFraudDetected riderId merchantOperatingCityId = checkFraudDetected riderId merchantOperatingCityId [MoreCancelling, MoreCancelledByDriver, MoreSearching, TotalRides, TotalRidesInWindow]
 
-checkFraudDetected :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DM.Merchant -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
-checkFraudDetected riderId merchantId factors merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
-  useFraudDetection <- maybe False (.useFraudDetection) <$> CMSUC.findByMerchantId merchantId
+checkFraudDetected :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [Factors] -> [DMC.MerchantConfig] -> m (Maybe DMC.MerchantConfig)
+checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs = Redis.withNonCriticalCrossAppRedis $ do
+  useFraudDetection <- maybe False (.useFraudDetection) <$> CMSUC.findByMerchantOperatingCityId merchantOperatingCityId
   if useFraudDetection
     then findM (\mc -> and <$> mapM (getFactorResult mc) factors) merchantConfigs
     else pure Nothing

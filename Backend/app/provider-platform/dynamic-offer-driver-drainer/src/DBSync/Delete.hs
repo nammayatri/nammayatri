@@ -2,14 +2,12 @@ module DBSync.Delete where
 
 import Config.Env
 import Data.Aeson
-import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Either.Extra (mapLeft)
 import Data.Maybe
-import Data.Text as T
+import qualified Data.Text as T hiding (elem)
 import qualified Data.Text.Encoding as TE
 import EulerHS.CachedSqlDBQuery as CDB
-import EulerHS.KVConnector.DBSync
 import EulerHS.KVConnector.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
@@ -17,9 +15,6 @@ import Kafka.Producer
 import qualified Kafka.Producer as KafkaProd
 import qualified Kafka.Producer as Producer
 import qualified Kernel.Beam.Types as KBT
-import Sequelize
-import System.Timeout (timeout)
-import Text.Casing
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -35,19 +30,18 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (BusinessEventDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("BusinessEvent" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (CallStatusDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("CallStatus" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (CancellationReasonDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("CancellationReason" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (DriverFlowStatusDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverFlowStatus" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverBlockReasonDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverBlockReason" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (FleetDriverAssociationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("FleetDriverAssociation" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverFeeDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverFee" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverInformationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverInformation" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (DriverLocationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverLocation" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (AadhaarOtpReqDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("AadhaarOtpReq" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (AadhaarOtpVerifyDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("AadhaarOtpVerify" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (AadhaarVerificationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("AadhaarVerification" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (DriverPlanDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverPlan" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverLicenseDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverLicense" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverRcAssociationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverRcAssociation" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (IdfyVerificationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("IdfyVerification" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (ImageDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Image" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (OperatingCityDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("OperatingCity" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (VehicleRegistrationCertificateDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("VehicleRegistrationCertificate" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverQuoteDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverQuote" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (DriverReferralDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("DriverReferral" :: Text) =<< dbConf
@@ -70,7 +64,6 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (IssueOptionDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("IssueOption" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (IssueReportDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("IssueReport" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (IssueTranslationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("IssueTranslation" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (LeaderBoardConfigDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("LeaderBoardConfig" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (PlaceNameCacheDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("PlaceNameCache" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (MediaFileDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("MediaFile" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (MerchantDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Merchant" :: Text) =<< dbConf
@@ -83,11 +76,11 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (MerchantServiceUsageConfigDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("MerchantServiceUsageConfig" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (MerchantOnboardingDocumentConfigDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("MerchantOnboardingDocumentConfig" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (TransporterConfigDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("TransporterConfig" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (MandateDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Mandate" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (MessageDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Message" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (MessageReportDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("MessageReport" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (MessageTranslationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("MessageTranslation" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (MetaDataDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("MetaData" :: Text) =<< dbConf
-    DeleteDBCommand id _ _ _ _ (OnboardingDocumentConfigDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("OnboardingDocumentConfig" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (PersonDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Person" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (QuoteSpecialZoneDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("QuoteSpecialZone" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (RatingDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Rating" :: Text) =<< dbConf
@@ -110,6 +103,8 @@ runDeleteCommands (cmd, val) dbStreamKey = do
     DeleteDBCommand id _ _ _ _ (GoHomeConfigDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("GoHomeConfig" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (LocationDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("Location" :: Text) =<< dbConf
     DeleteDBCommand id _ _ _ _ (LocationMappingDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("LocationMapping" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (PaymentOrderDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("PaymentOrder" :: Text) =<< dbConf
+    DeleteDBCommand id _ _ _ _ (PaymentTransactionDeleteOptions _ whereClause) -> runDeleteInKafkaAndDb id val dbStreamKey whereClause ("PaymentTransaction" :: Text) =<< dbConf
   where
     runDelete id value _ whereClause model dbConf = do
       maxRetries <- EL.runIO getMaxRetries
@@ -117,28 +112,30 @@ runDeleteCommands (cmd, val) dbStreamKey = do
       if model `elem` _dontEnableDbTables then pure $ Right id else runDeleteWithRetries id value whereClause model dbConf 0 maxRetries
     -- If KAFKA_PUSH is false then entry will be there in DB Else Delete entry in Kafka only.
     runDeleteInKafka id value dbstremKey whereClause model dbConf = do
-      isPushToKafka' <- EL.runIO isPushToKafka
-      if not isPushToKafka'
-        then runDelete id value dbstremKey whereClause model dbConf
-        else do
-          Env {..} <- ask
-          res <- EL.runIO $ streamDriverDrainerDeletes _kafkaConnection (getDbDeleteDataJson model whereClause) dbstremKey
-          either
-            ( \_ -> do
-                void $ publishDBSyncMetric Event.KafkaPushFailure
-                EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
-                pure $ Left (UnexpectedError "Kafka Error", id)
-            )
-            (\_ -> pure $ Right id)
-            res
-    -- Delete entry in DB if KAFKA_PUSH key is set to false. Else Delete in both.
+      runDelete id value dbstremKey whereClause model dbConf -- we are not pushing delete events to kafka | Todo : To be removed in new drainer PR
+      -- isPushToKafka' <- EL.runIO isPushToKafka
+      -- if not isPushToKafka'
+      --   then runDelete id value dbstremKey whereClause model dbConf
+      --   else do
+      --     Env {..} <- ask
+      --     res <- EL.runIO $ streamRiderDrainerDeletes _kafkaConnection (getDbDeleteDataJson model whereClause) dbstremKey
+      --     either
+      --       ( \_ -> do
+      --           void $ publishDBSyncMetric Event.KafkaPushFailure
+      --           EL.logError ("ERROR:" :: Text) ("Kafka Create Error " :: Text)
+      --           pure $ Left (UnexpectedError "Kafka Error", id)
+      --       )
+      --       (\_ -> pure $ Right id)
+      --       res
+      -- Delete entry in DB if KAFKA_PUSH key is set to false. Else Delete in both.
+      -- Delete entry in DB if KAFKA_PUSH key is set to false. Else Delete in both.
     runDeleteInKafkaAndDb id value dbStreamKey' whereClause model dbConf = do
       isPushToKafka' <- EL.runIO isPushToKafka
       if not isPushToKafka'
         then runDelete id value dbStreamKey' whereClause model dbConf
         else do
-          res <- runDeleteInKafka id value dbStreamKey' whereClause model dbConf
-          either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runDelete id value dbStreamKey' whereClause model dbConf) res
+          runDeleteInKafka id value dbStreamKey' whereClause model dbConf
+    -- either (\_ -> pure $ Left (UnexpectedError "Kafka Error", id)) (\_ -> runDelete id value dbStreamKey' whereClause model dbConf) res
 
     runDeleteWithRetries id value whereClause model dbConf retryIndex maxRetries = do
       res <- mapLeft MDBError <$> CDB.deleteAllReturning dbConf whereClause
@@ -157,15 +154,11 @@ runDeleteCommands (cmd, val) dbStreamKey = do
 streamDriverDrainerDeletes :: ToJSON a => Producer.KafkaProducer -> a -> Text -> IO (Either Text ())
 streamDriverDrainerDeletes producer dbObject dbStreamKey = do
   let topicName = "driver-drainer"
-  void $ KafkaProd.produceMessage producer (message topicName dbObject)
-  flushResult <- timeout (5 * 60 * 1000000) $ prodPush producer
-  case flushResult of
-    Just _ -> do
-      pure $ Right ()
-    Nothing -> pure $ Left "KafkaProd.flushProducer timed out after 5 minutes"
+  result' <- KafkaProd.produceMessage producer (message topicName dbObject)
+  case result' of
+    Just err -> pure $ Left $ T.pack ("Kafka Error: " <> show err)
+    _ -> pure $ Right ()
   where
-    prodPush producer' = KafkaProd.flushProducer producer' >> pure True
-
     message topicName event =
       ProducerRecord
         { prTopic = TopicName topicName,
@@ -173,14 +166,3 @@ streamDriverDrainerDeletes producer dbObject dbStreamKey = do
           prKey = Just $ TE.encodeUtf8 dbStreamKey,
           prValue = Just . LBS.toStrict $ encode event
         }
-
-getDbDeleteDataJson :: forall be table. (Model be table, MeshMeta be table) => Text -> Where be table -> A.Value
-getDbDeleteDataJson model whereClause =
-  A.object
-    [ "contents"
-        .= A.object
-          [ "where" .= modelEncodeWhere whereClause
-          ],
-      "tag" .= T.pack (pascal (T.unpack model)),
-      "type" .= ("DELETE" :: Text)
-    ]

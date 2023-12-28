@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
@@ -33,6 +34,7 @@ data FarePolicyD (s :: UsageSafety) = FarePolicy
     nightShiftBounds :: Maybe NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
+    perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     createdAt :: UTCTime,
@@ -87,6 +89,7 @@ data FullFarePolicy = FullFarePolicy
     nightShiftBounds :: Maybe NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
+    perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     farePolicyDetails :: FarePolicyDetails,
     description :: Maybe Text,
     createdAt :: UTCTime,

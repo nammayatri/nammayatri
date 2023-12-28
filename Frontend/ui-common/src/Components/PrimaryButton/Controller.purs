@@ -19,11 +19,11 @@ import Font.Size as FontSize
 import Font.Style (Style(..))
 import Prelude ((<>), (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Gradient(..), height, width)
-import MerchantConfig.Utils(getValueFromConfig)
 import Common.Styles.Colors as Color
 import Common.Types.App
 import Data.Maybe (Maybe(..))
 import PrestoDOM.Animation (Animation(..))
+import ConfigProvider 
 
 data Action = OnClick | NoAction
 
@@ -65,6 +65,7 @@ type TextConfig =
   , width :: Length
   , accessibilityHint :: String
   , weight :: Maybe Number
+  , textFromHtml :: Maybe String
   }
 
 
@@ -82,10 +83,14 @@ type LottieConfig =
   { height :: Length
   , width :: Length
   , lottieURL :: String
+  , autoDisableLoader :: Boolean
   }
 
 config :: Config
-config =   {
+config = 
+  let 
+    btnConfig = (getAppConfig appConfig).primaryButtonConfig
+  in {
     textConfig  :
     { text : ""
     , textStyle : SubHeading1
@@ -96,6 +101,7 @@ config =   {
     , width : WRAP_CONTENT
     , accessibilityHint : ""
     , weight : Nothing
+    , textFromHtml : Nothing
     }
   , width: MATCH_PARENT
   , height: V 50
@@ -132,12 +138,13 @@ config =   {
     }
   , id : ""
   , enableLoader : false
-  , isGradient : if (getValueFromConfig "isGradient") == "true" then true else false
-  , gradient : (Linear 90.0 (getValueFromConfig "gradient"))
+  , isGradient : btnConfig.isGradient
+  , gradient : (Linear 90.0 btnConfig.gradient)
   , padding : Padding 0 0 0 0
   , lottieConfig : {
     height : V 30
   , width : V 150
-  , lottieURL : getValueFromConfig "apiLoaderLottie"
+  , lottieURL : btnConfig.loaderUrl
+  , autoDisableLoader : true
   }
   }

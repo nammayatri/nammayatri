@@ -14,7 +14,7 @@
 -}
 module Components.PopUpModal.View where
 
-import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map)
+import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map, when)
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id)
 import Components.PopUpModal.Controller (Action(..), Config, CoverVideoConfig)
@@ -23,20 +23,24 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
 import Common.Styles.Colors as Color
 import Font.Size as FontSize
-import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, getNewIDWithTag, getVideoID, getYoutubeData)
 import PrestoDOM.Properties (cornerRadii)
 import Common.Types.App
 import Components.PrimaryEditText.View as PrimaryEditText
 import Components.PrimaryEditText.Controller as PrimaryEditTextConfig
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (os, clearTimer, countDown)
+import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
-import JBridge (startTimerWithTime, setYoutubePlayer, getVideoID)
+import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer)
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
+import Data.Function.Uncurried (runFn3)
 import PrestoDOM.Animation as PrestoAnim
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
+import Timers
+import Debug
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -49,16 +53,11 @@ view push state =
     , background state.backgroundColor
     , afterRender
         ( \action -> do
-            if (state.option2.enableTimer || state.option1.enableTimer) then do
-              let
-                timerValue' = if state.option2.enableTimer then state.option2.timerValue else state.option1.timerValue
-              if os == "IOS" then
-                liftEffect $ startTimerWithTime (show timerValue') "" "1" push CountDown
-              else
-                countDown timerValue' "" push CountDown
-              pure unit
-            else
-              pure unit
+            when 
+              (state.option2.enableTimer || state.option1.enableTimer)
+                $ do
+                  let timerValue' = if state.option2.enableTimer then state.option2.timerValue else state.option1.timerValue
+                  startTimer timerValue' state.timerId "1" push CountDown
         )
         (const NoAction)
     , onClick
@@ -78,7 +77,7 @@ view push state =
         ][ imageView
             [ height $ V 21
             , width $ V 21
-            , imageWithFallback "ny_ic_dismiss,https://assets.juspay.in/nammayatri/images/user/ny_ic_dismiss.png" 
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_dismiss" 
             ]
         ]
      , linearLayout
@@ -135,32 +134,35 @@ view push state =
                 , text state.topTitle.text
                 , visibility state.topTitle.visibility
                 ] <> (FontStyle.h2 LanguageStyle)
-                , linearLayout[
-                    height state.coverVideoConfig.height
-                , visibility state.coverVideoConfig.visibility 
+              , linearLayout[
+                  height $ state.coverVideoConfig.height
+                , width state.coverVideoConfig.width
                 , width MATCH_PARENT
                 , gravity CENTER
-                ][PrestoAnim.animationSet [Anim.fadeIn (state.coverVideoConfig.visibility == VISIBLE) ] $ linearLayout
-                [ height WRAP_CONTENT
-                , width state.coverVideoConfig.width
-                , margin state.coverVideoConfig.margin
-                , padding state.coverVideoConfig.padding
-                , cornerRadius 16.0
-                , visibility state.coverVideoConfig.visibility
-                , id (getNewIDWithTag "popUpModalCoverVideo")
-                , onAnimationEnd
-                    ( \action -> do
-                        let
-                            mediaType = state.coverVideoConfig.mediaType
-                            id = (getNewIDWithTag "popUpModalCoverVideo")
-                            url = state.coverVideoConfig.mediaUrl
-                        case mediaType of
-                            "VideoLink" -> pure $ setYoutubePlayer (youtubeData state.coverVideoConfig "VIDEO") id ("PLAY")
-                            "PortraitVideoLink" -> pure $ setYoutubePlayer (youtubeData state.coverVideoConfig "PORTRAIT_VIDEO") id ("PLAY")
-                            _ -> pure unit
-                    )(const NoAction)
-                ][]
-            ]]
+                ][  PrestoAnim.animationSet [Anim.fadeIn (state.coverVideoConfig.visibility == VISIBLE) ] $   linearLayout
+                    [ height WRAP_CONTENT
+                    , width state.coverVideoConfig.width
+                    , margin state.coverVideoConfig.margin
+                    , padding state.coverVideoConfig.padding
+                    , cornerRadius 16.0
+                    , visibility state.coverVideoConfig.visibility
+                    , id (getNewIDWithTag  state.coverVideoConfig.id)
+                    , onAnimationEnd
+                        ( \action -> do
+                            let
+                                mediaType = state.coverVideoConfig.mediaType
+                                id = getNewIDWithTag state.coverVideoConfig.id
+                                url = state.coverVideoConfig.mediaUrl
+                            if (supportsInbuildYoutubePlayer unit) then 
+                                case mediaType of
+                                    "VideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
+                                    "PortraitVideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0) id (show PLAY)
+                                    _ -> pure unit
+                                else pure unit
+                        )(const NoAction)
+                    ][]
+                  ]
+                ]
         , linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
@@ -205,6 +207,7 @@ view push state =
             , gravity CENTER
             , margin $ state.secondaryText.margin
             , padding state.secondaryText.padding
+            , visibility $ state.secondaryText.visibility
             , onClick push $ const OnSecondaryTextClick
           ][ textView $
              [ width WRAP_CONTENT
@@ -215,7 +218,7 @@ view push state =
              , accessibility ENABLE
              , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") state.secondaryText.text
              , visibility $ state.secondaryText.visibility
-             ] <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
+             ]  <> (FontStyle.getFontStyle state.secondaryText.textStyle LanguageStyle)
             , imageView [
                width state.secondaryText.suffixImage.width
                , height state.secondaryText.suffixImage.height
@@ -248,7 +251,7 @@ view push state =
                 [ linearLayout
                     [ if state.option2.visibility then width state.option1.width else weight 1.0
                     , background state.option1.background
-                    , height $ V 48
+                    , height $ state.option1.height
                     , cornerRadius 8.0
                     , visibility $ if state.option1.visibility then VISIBLE else GONE
                     , stroke $ "1," <> state.option1.strokeColor
@@ -282,7 +285,7 @@ view push state =
                         [ width $ MATCH_PARENT
                         , height $ MATCH_PARENT
                         , visibility $ if state.option1.showShimmer then GONE else VISIBLE
-                        , gravity $ CENTER
+                        , gravity state.option1.gravity
                         ]
                         [ imageView [
                             imageWithFallback state.option1.image.imageUrl
@@ -322,6 +325,7 @@ view push state =
                     , padding state.option2.padding
                     , accessibility DISABLE
                     , orientation VERTICAL
+                    , gravity state.option2.gravity
                     , clickable state.option2.isClickable
                     , alpha (if state.option2.isClickable then 1.0 else 0.5)
                     ]
@@ -408,7 +412,7 @@ listView push state =
         , margin $ Margin 12 0 0 4
         , orientation HORIZONTAL
         ][  imageView
-            [ imageWithFallback $ "ny_ic_circle,https://assets.juspay.in/beckn/nammayatri/nammayatricommon/images/ny_ic_circle.png"
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_circle"
             , height $ V 6 
             , alpha 0.7
             , width $ V 6
@@ -480,7 +484,7 @@ tipsView push state =
             , width MATCH_PARENT
             ]
             [   imageView
-                [ imageWithFallback "ny_ic_wallet_filled,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_wallet_filled.png"
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_wallet_filled"
                 , width $ V 20
                 , height $ V 20
                 , margin $ MarginRight 5
@@ -509,7 +513,7 @@ tipsView push state =
             , margin $ MarginTop 14
             ]
             [   imageView
-                [ imageWithFallback "ny_ic_stop_circle_yellow,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_stop_circle_yellow.png"
+                [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_stop_circle_yellow"
                 , width $ V 20
                 , height $ V 20
                 , margin $ MarginRight 5
@@ -536,9 +540,9 @@ tipsView push state =
 clearTheTimer :: Config -> Effect Unit
 clearTheTimer config =
   if config.option1.enableTimer then do
-    pure $ clearTimer config.option1.timerID
+    pure $ clearTimerWithId config.option1.timerID
   else if config.option2.enableTimer then do
-    pure $ clearTimer config.option2.timerID
+    pure $ clearTimerWithId config.option2.timerID
   else
     pure unit
 
@@ -583,13 +587,4 @@ contactView push state =
         ]
     ]
 
-youtubeData :: CoverVideoConfig -> String -> YoutubeData
-youtubeData state mediaType =
-  { videoTitle: "title"
-  , setVideoTitle: false
-  , showMenuButton: false
-  , showDuration: true
-  , showSeekBar: true
-  , videoId: getVideoID state.mediaUrl
-  , videoType: mediaType
-  }
+

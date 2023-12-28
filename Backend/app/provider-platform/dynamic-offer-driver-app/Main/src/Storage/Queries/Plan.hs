@@ -26,25 +26,26 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id as KTI
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Plan as BeamP
 
-create :: MonadFlow m => Plan -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Plan -> m ()
 create = createWithKV
 
-fetchAllPlan :: MonadFlow m => m [Plan]
+fetchAllPlan :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Plan]
 fetchAllPlan = findAllWithKV [Se.Is BeamP.id $ Se.Not $ Se.Eq $ getId ""]
 
-findByIdAndPaymentMode :: MonadFlow m => Id Plan -> PaymentMode -> m (Maybe Plan)
+findByIdAndPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Plan -> PaymentMode -> m (Maybe Plan)
 findByIdAndPaymentMode (Id planId) paymentMode = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq planId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
 
-findByMerchantId :: MonadFlow m => Id Merchant -> m [Plan]
+findByMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [Plan]
 findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamP.merchantId $ Se.Eq merchantId]
 
-findByMerchantIdAndPaymentMode :: MonadFlow m => Id Merchant -> PaymentMode -> m [Plan]
+findByMerchantIdAndPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> PaymentMode -> m [Plan]
 findByMerchantIdAndPaymentMode (Id merchantId) paymentMode = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
 
-findByMerchantIdAndType :: MonadFlow m => Id Merchant -> PlanType -> m [Plan]
+findByMerchantIdAndType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> PlanType -> m [Plan]
 findByMerchantIdAndType (Id merchantId) planType = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.planType $ Se.Eq planType]]
 
 instance FromTType' BeamP.Plan Plan where
@@ -66,7 +67,8 @@ instance FromTType' BeamP.Plan Plan where
             frequency = frequency,
             cgstPercentage = cgstPercentage,
             sgstPercentage = sgstPercentage,
-            planType = planType
+            planType = planType,
+            maxMandateAmount = maxMandateAmount
           }
 
 instance ToTType' BeamP.Plan Plan where
@@ -86,5 +88,6 @@ instance ToTType' BeamP.Plan Plan where
         BeamP.frequency = frequency,
         BeamP.cgstPercentage = cgstPercentage,
         BeamP.sgstPercentage = sgstPercentage,
-        BeamP.planType = planType
+        BeamP.planType = planType,
+        BeamP.maxMandateAmount = maxMandateAmount
       }

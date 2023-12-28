@@ -22,13 +22,14 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Id as KTI
+import Kernel.Utils.Common
 import Sequelize as Se
 import Storage.Beam.FareParameters.FareParametersSlabDetails as BeamFPSD
 
-create :: MonadFlow m => FullFareParametersSlabDetails -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FullFareParametersSlabDetails -> m ()
 create = createWithKV
 
-findById' :: MonadFlow m => KTI.Id Domain.FareParameters -> m (Maybe BeamFPSD.FullFareParametersSlabDetails)
+findById' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id Domain.FareParameters -> m (Maybe BeamFPSD.FullFareParametersSlabDetails)
 findById' (KTI.Id fareParametersId') = findOneWithKV [Se.Is fareParametersId $ Se.Eq fareParametersId']
 
 instance ToTType' FareParametersSlabDetails BeamFPSD.FullFareParametersSlabDetails where

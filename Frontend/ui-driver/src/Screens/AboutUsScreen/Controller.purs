@@ -26,6 +26,7 @@ import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Data.String (length)
 import JBridge (toast)
 import Storage (KeyStore(..), setValueToLocalStore, getValueToLocalStore)
+import Data.Array (elem)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -47,7 +48,7 @@ instance loggableAction :: Loggable Action where
         PrimaryEditTextController.TextChanged valId newVal -> trackAppTextInput appId (getScreen ABOUT_US_SCREEN) "popup_modal_password_text_changed" "primary_edit_text"
         PrimaryEditTextController.FocusChanged _ -> trackAppTextInput appId (getScreen ABOUT_US_SCREEN) "popup_modal_password_text_focus_changed" "primary_edit_text"
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal" "no_action"
-      PopUpModal.CountDown seconds id status timerID -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal_cancel_confirmation" "countdown_onclick"
+      PopUpModal.CountDown seconds status timerID -> trackAppActionClick appId (getScreen ABOUT_US_SCREEN) "popup_modal_cancel_confirmation" "countdown_onclick"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "popup_dismissed"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen ABOUT_US_SCREEN) "popup_modal_action" "secondary_text_clicked"
@@ -79,4 +80,5 @@ eval (PopUpModalDemoModeAction (PopUpModal.ETextController (PrimaryEditTextContr
   continue state{ props{ enableConfirmPassword = (validateDemoMode newVal) }}
 eval _ state = continue state
 
-validateDemoMode newVal = ((length newVal) >= 7 && (newVal == "7891234" || newVal ==  "8917234" || newVal ==  "9178234" || newVal ==  "1789234")) && (length newVal) >= 7
+validateDemoMode :: String -> Boolean
+validateDemoMode newVal = length newVal >= 7 && newVal `elem` ["7891234", "8917234", "9178234", "1789234","7891789","7891788", "7891567", "7891678"]

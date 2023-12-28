@@ -15,7 +15,7 @@
 
 module Screens.HelpAndSupportScreen.Controller where
 
-import Prelude (class Show, pure, unit, ($), discard, bind,map,(||),(==),(&&),(/=),(>),(<>),(/))
+import Prelude (class Show, pure, unit, ($), discard, bind,map,(||),(==),(&&),(/=),(>),(<>),(/), void)
 import PrestoDOM (Eval, continue, exit)
 import Screens.Types (CategoryListType,HelpAndSupportScreenState,IssueModalType(..),IssueInfo)
 import PrestoDOM.Types.Core (class Loggable)
@@ -24,16 +24,15 @@ import Screens.HelpAndSupportScreen.ScreenData (IssueOptions(..))
 import Language.Strings (getString)
 import Services.API (GetRidesHistoryResp,IssueReportDriverListItem(..),Status(..))
 import Language.Types(STR(..))
-import Services.Config (getSupportNumber)
 import JBridge (showDialer)
-import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC,toString)
+import Helpers.Utils (getTime,getCurrentUTC,differenceBetweenTwoUTC,toStringJSON, contactSupportNumber)
 import Data.Array (foldr,cons,filter,reverse)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Components.IssueListFlow as IssueListFlow
 import Screens (ScreenName(..), getScreen)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
+import Effect.Unsafe (unsafePerformEffect)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -95,13 +94,13 @@ eval (OptionClick optionIndex) state = do
     OngoingIssues -> exit $ OngoingIssuesScreen state {data {issueListType = ONGOING_ISSUES_MODAL}}
     ResolvedIssues -> exit $ ResolvedIssuesScreen state {data {issueListType = RESOLVED_ISSUES_MODAL}}
     CallSupportCenter -> do
-      _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+      void $ pure $ unsafePerformEffect $ contactSupportNumber "" -- TODO: FIX_DIALER -- unsafePerformEffect is temporary fix
       continue state
 eval (IssueScreenModal (IssueListFlow.AfterRender )) state = continue state
 eval (IssueScreenModal (IssueListFlow.BackPressed )) state = exit (GoBack state {data {issueListType =  HELP_AND_SUPPORT_SCREEN_MODAL  }})
 eval (IssueScreenModal  (IssueListFlow.Remove issueId  )) state = exit $ RemoveIssue issueId state
 eval (IssueScreenModal (IssueListFlow.CallSupportCenter )) state = do
-       _ <- pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+       void $ pure $ unsafePerformEffect $ contactSupportNumber ""-- TODO: FIX_DIALER -- unsafePerformEffect is temporary fix
        continue state
 eval (FetchIssueListApiCall issueList) state = do
      let apiIssueList = getApiIssueList issueList
@@ -132,12 +131,12 @@ getApiIssueList issueList = (map (\(IssueReportDriverListItem issue) -> {
 }) issueList)
 
 getExactTime :: Int -> String
-getExactTime sec = if (sec > 31536000) then (toString (sec / 31536000)) <> (" ") <> (getString YEARS_AGO)
-                    else if (sec > 2592000) then (toString (sec / 2592000)) <> (" ") <> (getString MONTHS_AGO)
-                    else if  (sec > 86400) then (toString (sec / 86400)) <> (" ") <> (getString DAYS_AGO)
-                    else if (sec > 3600) then (toString (sec / 3600)) <> (" ") <> (getString HOURS_AGO)
-                    else if  (sec > 60) then (toString (sec / 60)) <> (" ") <> (getString MIN_AGO)
-                    else (toString (sec) <> (" ") <> (getString SEC_AGO))
+getExactTime sec = if (sec > 31536000) then (toStringJSON (sec / 31536000)) <> (" ") <> (getString YEARS_AGO)
+                    else if (sec > 2592000) then (toStringJSON (sec / 2592000)) <> (" ") <> (getString MONTHS_AGO)
+                    else if  (sec > 86400) then (toStringJSON (sec / 86400)) <> (" ") <> (getString DAYS_AGO)
+                    else if (sec > 3600) then (toStringJSON (sec / 3600)) <> (" ") <> (getString HOURS_AGO)
+                    else if  (sec > 60) then (toStringJSON (sec / 60)) <> (" ") <> (getString MIN_AGO)
+                    else (toStringJSON (sec) <> (" ") <> (getString SEC_AGO))
 
 getUpdatedIssueList :: String -> Array IssueInfo -> Array IssueInfo
 getUpdatedIssueList status list = (filter (\(issue) -> ((issue.status == status)||(status /= "RESOLVED" && issue.status /= "RESOLVED")) ) list )

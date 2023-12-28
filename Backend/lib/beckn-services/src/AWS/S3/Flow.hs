@@ -17,7 +17,7 @@ module AWS.S3.Flow (get', put', get'', put'', mockGet, mockPut) where
 import AWS.S3.Error
 import AWS.S3.Types
 import AWS.S3.Utils
-import Data.List (last)
+import qualified Data.List as DL (last)
 import Data.String.Conversions
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -95,8 +95,9 @@ callS3API :: CallAPI env api a
 callS3API =
   callApiUnwrappingApiError
     (identity @S3Error)
-    (Just $ ET.ManagerSelector $ T.pack s3AuthManagerKey)
+    (Just $ ET.ManagerSelector s3AuthManagerKey)
     (Just "S3_NOT_AVAILABLE")
+    Nothing
 
 get'' ::
   ( CoreMetrics m,
@@ -134,7 +135,7 @@ put'' bucketName path img = withLogTag "S3" $ do
       Posix.closeFd fd
 
 getTmpPath :: String -> String
-getTmpPath = (<>) "/tmp/" . T.unpack . last . T.split (== '/') . T.pack
+getTmpPath = (<>) "/tmp/" . T.unpack . DL.last . T.split (== '/') . T.pack
 
 mockPut ::
   (MonadIO m, Log m) =>

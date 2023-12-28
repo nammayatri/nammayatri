@@ -25,7 +25,8 @@ import Kernel.Types.Beckn.Ack
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Servant
+import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
 
 type API =
   Capture "merchantId" (Id Merchant)

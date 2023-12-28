@@ -18,6 +18,7 @@ import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import Kernel.Prelude
+import Kernel.Types.Common
 import Kernel.Types.Id
 
 data DriverPlan = DriverPlan
@@ -27,6 +28,8 @@ data DriverPlan = DriverPlan
     mandateId :: Maybe (Id DM.Mandate),
     mandateSetupDate :: Maybe UTCTime,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    coinCovertedToCashLeft :: HighPrecMoney,
+    totalCoinsConvertedCash :: HighPrecMoney
   }
   deriving (Generic, Show)

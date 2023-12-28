@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Tools.Error (module Tools.Error) where
 
@@ -23,8 +24,6 @@ data RatingError
   = InvalidRatingValue
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''RatingError
-
 instance IsBaseError RatingError
 
 instance IsHTTPError RatingError where
@@ -33,10 +32,13 @@ instance IsHTTPError RatingError where
 
 instance IsAPIError RatingError
 
+instanceExceptionWithParent 'HTTPException ''RatingError
+
 data FarePolicyError
   = NoFarePolicy
   | NoPerExtraKmRate
   | CantCalculateDistance
+  | AverageVehicleSpeedLessThanZero
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FarePolicyError
@@ -49,6 +51,7 @@ instance IsHTTPError FarePolicyError where
   toErrorCode NoFarePolicy = "NO_FARE_POLICY"
   toErrorCode NoPerExtraKmRate = "NO_PER_EXTRA_KM_RATE"
   toErrorCode CantCalculateDistance = "CANT_CALCULATE_DISTANCE"
+  toErrorCode AverageVehicleSpeedLessThanZero = "AVERAGE_SPEED_OF_VEHICLE LESS THAN ZERO"
   toHttpCode _ = E500
 
 instance IsAPIError FarePolicyError
@@ -117,19 +120,6 @@ instance IsHTTPError AllocationError where
   toErrorCode EmptyDriverPool = "EMPTY_DRIVER_POOL"
 
 instance IsAPIError AllocationError
-
-data LocationTrackingError
-  = InvalidLocationTrackingException
-  deriving (Eq, Show, IsBecknAPIError)
-
-instanceExceptionWithParent 'HTTPException ''LocationTrackingError
-
-instance IsBaseError LocationTrackingError
-
-instance IsHTTPError LocationTrackingError where
-  toErrorCode InvalidLocationTrackingException = "INVALID_LOCATION_TRACKING_EXCEPTION"
-
-instance IsAPIError LocationTrackingError
 
 data DriverInformationError
   = DriverInfoNotFound
@@ -206,8 +196,8 @@ instance IsHTTPError DriverError where
     DriverAlreadyLinkedWithVehicle _ -> "DRIVER_ALREADY_LINKED"
   toHttpCode = \case
     DriverAccountDisabled -> E403
-    DriverWithoutVehicle _ -> E500
-    NoPlanSelected _ -> E500
+    DriverWithoutVehicle _ -> E400
+    NoPlanSelected _ -> E400
     DriverAccountBlocked -> E403
     DriverAccountAlreadyBlocked -> E403
     DriverUnsubscribed -> E403
@@ -287,6 +277,7 @@ data DriverQuoteError
   | DriverOnRide
   | DriverQuoteExpired
   | NoSearchRequestForDriver
+  | RideRequestAlreadyAccepted
   | QuoteAlreadyRejected
   | UnexpectedResponseValue
   | NoActiveRidePresent
@@ -300,6 +291,7 @@ instance IsBaseError DriverQuoteError where
   toMessage DriverOnRide = Just "Unable to offer a quote while being on ride"
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
+  toMessage RideRequestAlreadyAccepted = Just "Ride request already accepted by other driver"
   toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
   toMessage UnexpectedResponseValue = Just "The response type is unexpected"
   toMessage NoActiveRidePresent = Just "No active ride is present for this driver registered with given vehicle Number"
@@ -311,6 +303,7 @@ instance IsHTTPError DriverQuoteError where
     DriverOnRide -> "DRIVER_ON_RIDE"
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
+    RideRequestAlreadyAccepted -> "RIDE_REQUEST_ALREADY_ACCEPTED"
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
     UnexpectedResponseValue -> "UNEXPECTED_RESPONSE_VALUE"
     NoActiveRidePresent -> "NO_ACTIVE_RIDE_PRESENT"
@@ -321,6 +314,7 @@ instance IsHTTPError DriverQuoteError where
     DriverOnRide -> E400
     DriverQuoteExpired -> E400
     NoSearchRequestForDriver -> E400
+    RideRequestAlreadyAccepted -> E400
     QuoteAlreadyRejected -> E400
     UnexpectedResponseValue -> E400
     NoActiveRidePresent -> E400
@@ -359,15 +353,15 @@ data OnboardingDocumentConfigError
 instanceExceptionWithParent 'HTTPException ''OnboardingDocumentConfigError
 
 instance IsBaseError OnboardingDocumentConfigError where
-  toMessage (OnboardingDocumentConfigNotFound merchantId doctype) =
+  toMessage (OnboardingDocumentConfigNotFound merchantOperatingCityId doctype) =
     Just $
-      "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "\" and docType \"" <> show doctype <> "\" not found."
-  toMessage (OnboardingDocumentConfigDoesNotExist merchantId doctype) =
+      "OnboardingDocumentConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" not found."
+  toMessage (OnboardingDocumentConfigDoesNotExist merchantOperatingCityId doctype) =
     Just $
-      "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "\" and docType \"" <> show doctype <> "\" does not exist."
-  toMessage (OnboardingDocumentConfigAlreadyExists merchantId doctype) =
+      "OnboardingDocumentConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" does not exist."
+  toMessage (OnboardingDocumentConfigAlreadyExists merchantOperatingCityId doctype) =
     Just $
-      "OnboardingDocumentConfig with merchantId \"" <> show merchantId <> "\" and docType \"" <> show doctype <> "\" already exists."
+      "OnboardingDocumentConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and docType \"" <> show doctype <> "\" already exists."
 
 instance IsHTTPError OnboardingDocumentConfigError where
   toErrorCode = \case
@@ -479,9 +473,9 @@ newtype DriverIntelligentPoolConfigError
 instanceExceptionWithParent 'HTTPException ''DriverIntelligentPoolConfigError
 
 instance IsBaseError DriverIntelligentPoolConfigError where
-  toMessage (DriverIntelligentPoolConfigNotFound merchantId) =
+  toMessage (DriverIntelligentPoolConfigNotFound merchantOperatingCityId) =
     Just $
-      "DriverIntelligentPoolConfig with merchantId \"" <> show merchantId <> "\" not found."
+      "DriverIntelligentPoolConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" not found."
 
 instance IsHTTPError DriverIntelligentPoolConfigError where
   toErrorCode = \case
@@ -499,12 +493,12 @@ data DriverPoolConfigError
 instanceExceptionWithParent 'HTTPException ''DriverPoolConfigError
 
 instance IsBaseError DriverPoolConfigError where
-  toMessage (DriverPoolConfigDoesNotExist merchantId tripDistance) =
+  toMessage (DriverPoolConfigDoesNotExist merchantOperatingCityId tripDistance) =
     Just $
-      "DriverPoolConfig with merchantId \"" <> show merchantId <> "\" and tripDistance " <> show tripDistance <> " does not exist."
-  toMessage (DriverPoolConfigAlreadyExists merchantId tripDistance) =
+      "DriverPoolConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and tripDistance " <> show tripDistance <> " does not exist."
+  toMessage (DriverPoolConfigAlreadyExists merchantOperatingCityId tripDistance) =
     Just $
-      "DriverPoolConfig with merchantId \"" <> show merchantId <> "\" and tripDistance " <> show tripDistance <> " already exists."
+      "DriverPoolConfig with merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and tripDistance " <> show tripDistance <> " already exists."
 
 instance IsHTTPError DriverPoolConfigError where
   toErrorCode = \case
@@ -515,6 +509,23 @@ instance IsHTTPError DriverPoolConfigError where
     DriverPoolConfigAlreadyExists {} -> E400
 
 instance IsAPIError DriverPoolConfigError
+
+newtype VehicleRegCertError = VehicleRegCertNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''VehicleRegCertError
+
+instance IsBaseError VehicleRegCertError where
+  toMessage = \case
+    VehicleRegCertNotFound vehicleNo -> Just $ "Fleet-driver association with vehicle no. \"" <> show vehicleNo <> "\"not found. "
+
+instance IsHTTPError VehicleRegCertError where
+  toErrorCode = \case
+    VehicleRegCertNotFound _ -> "VEHICLE_REG_CERT_NOT_FOUND"
+  toHttpCode = \case
+    VehicleRegCertNotFound _ -> E400
+
+instance IsAPIError VehicleRegCertError
 
 data SearchTryError
   = SearchTryNotFound Text
@@ -745,8 +756,9 @@ instance IsHTTPError SubscriptionError where
 
 instance IsAPIError SubscriptionError
 
-newtype FleetErrors
+data FleetErrors
   = FleetOwnerVehicleMismatchError Text
+  | VehicleBelongsToAnotherFleet
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FleetErrors
@@ -754,17 +766,21 @@ instanceExceptionWithParent 'HTTPException ''FleetErrors
 instance IsBaseError FleetErrors where
   toMessage = \case
     FleetOwnerVehicleMismatchError fleetOwnerId -> Just $ "Vehicle does not belong to fleet owner with id " <> show fleetOwnerId
+    VehicleBelongsToAnotherFleet -> Just "Vehicle is already part of another fleet"
 
 instance IsHTTPError FleetErrors where
   toErrorCode = \case
     FleetOwnerVehicleMismatchError _ -> "FLEET_OWNER_AND_VEHICLE_MISMATCH"
+    VehicleBelongsToAnotherFleet -> "FLEET_OWNER_AND_VEHICLE_MISMATCH"
   toHttpCode = \case
     FleetOwnerVehicleMismatchError _ -> E400
+    VehicleBelongsToAnotherFleet -> E400
 
 instance IsAPIError FleetErrors
 
 data OverlayError
   = OverlayKeyAndUdfNotFound Text
+  | OverlayKeyNotFound Text
   | OverlayKeyAndUdfAlreadyPresent Text
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -773,14 +789,136 @@ instanceExceptionWithParent 'HTTPException ''OverlayError
 instance IsBaseError OverlayError where
   toMessage = \case
     OverlayKeyAndUdfNotFound overlayKeyAndUdf -> Just $ "Overlay Key and Udf \"" <> show overlayKeyAndUdf <> "\" not found. "
+    OverlayKeyNotFound overlayKey -> Just $ "Overlay Key\"" <> overlayKey <> "\" not found. "
     OverlayKeyAndUdfAlreadyPresent overlayKeyAndUdf -> Just $ "Overlay Key and Udf \"" <> show overlayKeyAndUdf <> "\" already present."
 
 instance IsHTTPError OverlayError where
   toErrorCode = \case
     OverlayKeyAndUdfNotFound _ -> "OVERLAY_KEY_AND_UDF_NOT_FOUND"
+    OverlayKeyNotFound _ -> "OVERLAY_KEY_NOT_FOUND"
     OverlayKeyAndUdfAlreadyPresent _ -> "OVERLAY_KEY_AND_UDF_ALREADY_PRESENT"
   toHttpCode = \case
     OverlayKeyAndUdfNotFound _ -> E400
+    OverlayKeyNotFound _ -> E400
     OverlayKeyAndUdfAlreadyPresent _ -> E400
 
 instance IsAPIError OverlayError
+
+data DashboardSMSError
+  = VolunteerMessageSendingLimitExceeded Text
+  | DriverMessageReceivingLimitExceeded Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DashboardSMSError
+
+instance IsBaseError DashboardSMSError where
+  toMessage = \case
+    VolunteerMessageSendingLimitExceeded channel -> Just $ "Volunteer message Sending limit exceeded for channel : " <> channel
+    DriverMessageReceivingLimitExceeded channel -> Just $ "Drivers' message receiving limit exceeded for channel : " <> channel
+
+instance IsHTTPError DashboardSMSError where
+  toErrorCode = \case
+    VolunteerMessageSendingLimitExceeded _ -> "VOLUNTEER_MESSAGE_SENDING_LIMIT_EXCEEDED"
+    DriverMessageReceivingLimitExceeded _ -> "DRIVER_MESSAGE_RECEIVING_LIMIT_EXCEEDED"
+  toHttpCode = \case
+    VolunteerMessageSendingLimitExceeded _ -> E400
+    DriverMessageReceivingLimitExceeded _ -> E400
+
+instance IsAPIError DashboardSMSError
+
+data DriverCoinError
+  = CoinServiceUnavailable Text
+  | InsufficientCoins Text Int
+  | CoinConversionToCash Text Int
+  | CoinUsedForConverting Text Int
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverCoinError
+
+instance IsBaseError DriverCoinError where
+  toMessage = \case
+    CoinServiceUnavailable merchantId -> Just ("Coin Service is not available for merchantId " <> show merchantId <> ".")
+    InsufficientCoins driverId coins -> Just ("Insufficient coin balance for driverId : " <> show driverId <> ". coins value is : " <> show coins <> ".")
+    CoinConversionToCash driverId coins -> Just ("Atleast 250 coins is required for conversion driverId : " <> show driverId <> ". coins value is : " <> show coins <> ".")
+    CoinUsedForConverting driverId coins -> Just ("Coins used for converting to cash should be multiple of 250 for driverId : " <> show driverId <> ". coins value is : " <> show coins <> ".")
+
+instance IsHTTPError DriverCoinError where
+  toErrorCode = \case
+    CoinServiceUnavailable _ -> "COIN_SERVICE_UNAVAILABLE"
+    InsufficientCoins _ _ -> "INSUFFICIENT_COINS"
+    CoinConversionToCash _ _ -> "ATLEAST_250_COINS_REQUIRED_FOR_CONVERSION"
+    CoinUsedForConverting _ _ -> "COINS_USED_FOR_CONVERTING_TO_CASH_SHOULD_BE_MULTIPLE_OF_250"
+  toHttpCode = \case
+    CoinServiceUnavailable _ -> E400
+    InsufficientCoins _ _ -> E400
+    CoinConversionToCash _ _ -> E400
+    CoinUsedForConverting _ _ -> E400
+
+instance IsAPIError DriverCoinError
+
+data DriverReferralError
+  = AlreadyReffered Text
+  | InvalidReferralCode Text
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverReferralError
+
+instance IsBaseError DriverReferralError where
+  toMessage = \case
+    AlreadyReffered driverId -> Just ("You already has a referral code linked for driverId: " <> show driverId <> ".")
+    InvalidReferralCode referralCode -> Just ("Invalid referral code " <> show referralCode <> ".")
+
+instance IsHTTPError DriverReferralError where
+  toErrorCode = \case
+    AlreadyReffered _ -> "ALREADY_REFFERED"
+    InvalidReferralCode _ -> "INVALID_REFERRAL_CODE"
+  toHttpCode = \case
+    AlreadyReffered _ -> E400
+    InvalidReferralCode _ -> E400
+
+instance IsAPIError DriverReferralError
+
+data RiderDetailsError
+  = RiderDetailsNotFound Text
+  | RiderDetailsDoNotExist Text Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RiderDetailsError
+
+instance IsBaseError RiderDetailsError where
+  toMessage = \case
+    (RiderDetailsNotFound riderDetailId) -> Just $ "RideDetails with rideDetailsId \"" <> show riderDetailId <> "\" not found. "
+    (RiderDetailsDoNotExist entity entityData) -> Just $ "RiderDetails not found for " <> entity <> " " <> entityData
+
+instance IsHTTPError RiderDetailsError where
+  toErrorCode _ = "RIDER_DETAILS_NOT_FOUND"
+  toHttpCode _ = E500
+
+instance IsAPIError RiderDetailsError
+
+data CustomerCancellationDuesError
+  = DisputeChancesLimitNotMet Text Text Text
+  | CityRestrictionOnCustomerCancellationDuesAddition Text
+  | DisputeChancesOrCancellationDuesHasToBeNull
+  | CustomerCancellationDuesLimitNotMet Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CustomerCancellationDuesError
+
+instance IsBaseError CustomerCancellationDuesError where
+  toMessage = \case
+    (DisputeChancesLimitNotMet riderDetailsId disputeChancesUsed disputeChanceThreshold) -> Just $ "Limits not met for dispute chances for riderDetailsId " <> riderDetailsId <> ". Dispute Chances Used are :" <> disputeChancesUsed <> "and DisputeChanceThreshold is: " <> disputeChanceThreshold
+    (CityRestrictionOnCustomerCancellationDuesAddition city) -> Just $ city <> " is restricted from addition of customer cancellation dues on ride cancellation"
+    DisputeChancesOrCancellationDuesHasToBeNull -> Just "Either of the two , Due Amount or Dispute Chances has to be Null"
+    (CustomerCancellationDuesLimitNotMet riderDetailsId) -> Just $ "Limits not met for cancellation dues for riderDetailsId :" <> riderDetailsId
+
+instance IsHTTPError CustomerCancellationDuesError where
+  toErrorCode = \case
+    DisputeChancesLimitNotMet {} -> "DISPUTE_CHANCES_LIMIT_NOT_MET"
+    CityRestrictionOnCustomerCancellationDuesAddition _ -> "CITY_RESTRICTION_ON_CUSTOMER_CANCELLATION_DUES_ADDITION"
+    DisputeChancesOrCancellationDuesHasToBeNull -> "DISPUTE_CHANCES_OR_CANCELLATION_DUES_HAS_TO_BE_NULL"
+    CustomerCancellationDuesLimitNotMet _ -> "CUSTOMER_CANCELLATION_DUES_LIMIT_NOT_MET"
+
+  toHttpCode _ = E400
+
+instance IsAPIError CustomerCancellationDuesError

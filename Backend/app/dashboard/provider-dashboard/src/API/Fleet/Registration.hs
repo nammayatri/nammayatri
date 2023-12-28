@@ -28,10 +28,11 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified ProviderPlatformClient.DynamicOfferDriver as Client
+import qualified ProviderPlatformClient.DynamicOfferDriver.Fleet as Client
 import Servant hiding (throwError)
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.Person as QP
+import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
   "fleet"
@@ -53,14 +54,20 @@ handler =
     :<|> fleetOwnerVerfiy
 
 fleetOwnerLogin :: DP.FleetOwnerLoginReq -> FlowHandler APISuccess
-fleetOwnerLogin req = withFlowHandlerAPI $ do
-  Client.callDynamicOfferDriverAppFleetApi (.fleetOwnerLogin) req
+fleetOwnerLogin req = withFlowHandlerAPI' $ do
+  let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId req.city req.city
+  Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerLogin) req
 
 fleetOwnerVerfiy :: DP.FleetOwnerLoginReq -> FlowHandler DP.FleetOwnerVerifyRes
-fleetOwnerVerfiy req = withFlowHandlerAPI $ do
+fleetOwnerVerfiy req = withFlowHandlerAPI' $ do
   person <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
-  let merchantId = ShortId req.merchantId :: ShortId DM.Merchant
-  merchant <- QMerchant.findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  _ <- Client.callDynamicOfferDriverAppFleetApi (.fleetOwnerVerify) req
-  token <- DR.generateToken person.id merchant.id
+  let merchantShortId = ShortId req.merchantId :: ShortId DM.Merchant
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  unless (req.city `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId req.city req.city
+  void $ Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerVerify) req
+  token <- DR.generateToken person.id merchant.id req.city
   pure $ DP.FleetOwnerVerifyRes {authToken = token}

@@ -19,6 +19,11 @@ source-repository head
   type: git
   location: https://github.com/nammayatri/nammayatri
 
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
 library
   exposed-modules:
       Beckn.Types.Core.Metro.API.OnSearch
@@ -94,6 +99,7 @@ library
       Beckn.Types.Core.Taxi.Common.Price
       Beckn.Types.Core.Taxi.Common.Provider
       Beckn.Types.Core.Taxi.Common.Quote
+      Beckn.Types.Core.Taxi.Common.RideCompletedQuote
       Beckn.Types.Core.Taxi.Common.StartInfo
       Beckn.Types.Core.Taxi.Common.StopInfo
       Beckn.Types.Core.Taxi.Common.Tags
@@ -144,8 +150,14 @@ library
       Beckn.Types.Core.Taxi.OnSelect.StartInfo
       Beckn.Types.Core.Taxi.OnSelect.StopInfo
       Beckn.Types.Core.Taxi.OnStatus
-      Beckn.Types.Core.Taxi.OnStatus.Fulfillment
       Beckn.Types.Core.Taxi.OnStatus.Order
+      Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.BookingReallocationOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.OrderState
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder
+      Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder
       Beckn.Types.Core.Taxi.OnTrack
       Beckn.Types.Core.Taxi.OnTrack.Tracking
       Beckn.Types.Core.Taxi.OnUpdate
@@ -159,6 +171,7 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent
       Beckn.Types.Core.Taxi.Rating
       Beckn.Types.Core.Taxi.Rating.FeedbackForm
       Beckn.Types.Core.Taxi.Search
@@ -178,6 +191,7 @@ library
       Beckn.Types.Core.Taxi.Track.Order
       Beckn.Types.Core.Taxi.Update
       Beckn.Types.Core.Taxi.Update.UpdateEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent.Payment
       Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType
@@ -218,7 +232,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , aeson-casing
@@ -287,7 +301,7 @@ library
     , time
     , time-units
     , transformers
-    , universum <1.8
+    , universum
     , unix
     , unliftio
     , unordered-containers
@@ -298,5 +312,7 @@ library
     , wai-middleware-prometheus
     , warp
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4

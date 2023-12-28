@@ -11,10 +11,12 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Merchant.LeaderBoardConfig where
 
 import qualified Domain.Types.Merchant as DMerchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -35,6 +37,7 @@ data LeaderBoardConfigs = LeaderBoardConfigs
     zScoreBase :: Int,
     leaderBoardLengthLimit :: Integer,
     isEnabled :: Bool,
-    merchantId :: Id DMerchant.Merchant
+    merchantId :: Id DMerchant.Merchant,
+    merchantOperatingCityId :: Id MerchantOperatingCity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)

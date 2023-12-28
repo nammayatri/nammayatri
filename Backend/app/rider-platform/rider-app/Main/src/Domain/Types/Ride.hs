@@ -19,6 +19,7 @@ import Data.Aeson
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -47,6 +48,7 @@ data Ride = Ride
     merchantId :: Maybe (Id DM.Merchant),
     fromLocation :: DL.Location,
     toLocation :: Maybe DL.Location,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     status :: RideStatus,
     driverName :: Text,
     driverRating :: Maybe Centesimal,
@@ -68,8 +70,10 @@ data Ride = Ride
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
+    allowedEditLocationAttempts :: Maybe Int,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    safetyCheckStatus :: Maybe Bool
   }
   deriving (Generic, Show)
 

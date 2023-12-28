@@ -82,4 +82,5 @@ in  { esqDBCfg
     , kafkaProducerCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
+    , internalEndPointMap = common.internalEndPointMap
     }

@@ -25,9 +25,12 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Beckn.City as City
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Centesimal, HighPrecMoney, MandatoryQueryParam, Money)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.Version
 import Kernel.Utils.GenericPretty
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
@@ -55,6 +58,11 @@ data DriverEndpoint
   | UpdateDriverHomeLocationEndpoint
   | IncrementDriverGoToCountEndPoint
   | UpdateSubscriptionDriverFeeAndInvoiceEndpoint
+  | SetVehicleDriverRcStatusForFleetEndpoint
+  | FleetUnlinkVehicleEndpoint
+  | SendMessageToDriverViaDashboardEndPoint
+  | SendDummyNotificationToDriverViaDashboardEndPoint
+  | ChangeOperatingCityEndpoint
   deriving (Show, Read)
 
 derivePersistField "DriverEndpoint"
@@ -106,6 +114,22 @@ instance HideSecrets DriverHomeLocationAPIEntity where
 type GetHomeLocationsRes = [DriverHomeLocationAPIEntity]
 
 type UpdateDriverHomeLocationReq = DriverHomeLocationAPIEntity
+
+data CachedGoHomeRequestInfoRes = CachedGoHomeRequestInfoRes
+  { status :: Maybe String,
+    cnt :: Int,
+    validTill :: Maybe UTCTime,
+    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+    isOnRide :: Bool,
+    goHomeReferenceTime :: UTCTime
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CachedGoHomeRequestInfoRes where
+  hideSecrets = identity
+
+------------------------------------------------------------------------
 
 data DriverListItem = DriverListItem
   { driverId :: Id Driver,
@@ -253,7 +277,7 @@ data PlatformFee = PlatformFee
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
-data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE | CLEARED_BY_YATRI_COINS deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 type DriverOutstandingBalanceAPI =
   "paymentDue"
@@ -447,7 +471,14 @@ data DriverInfoRes = DriverInfoRes
     vehicleNumber :: Maybe Text,
     driverLicenseDetails :: Maybe DriverLicenseAPIEntity,
     vehicleRegistrationDetails :: [DriverRCAssociationAPIEntity],
-    onboardingDate :: Maybe UTCTime
+    onboardingDate :: Maybe UTCTime,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version,
+    alternateNumber :: Maybe Text,
+    rating :: Maybe Centesimal,
+    availableMerchants :: [Text],
+    merchantOperatingCity :: Maybe Context.City,
+    blockStateModifier :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -501,7 +532,8 @@ data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPI
     vehicleModel :: Maybe Text,
     vehicleColor :: Maybe Text,
     vehicleEnergyType :: Maybe Text,
-    verificationStatus :: VerificationStatus
+    verificationStatus :: VerificationStatus,
+    fleetOwnerId :: Maybe Text
     -- createdAt :: UTCTime, -- do we need it?
     -- updatedAt UTCTime,
   }
@@ -671,8 +703,8 @@ instance HideSecrets AddVehicleReq where
 type AddVehicleForFleetAPI =
   Capture "mobileNo" Text
     :> QueryParam "countryCode" Text
-    :> "addVehicle"
     :> "fleet"
+    :> "addVehicle"
     :> ReqBody '[JSON] AddVehicleReq
     :> Post '[JSON] APISuccess
 
@@ -681,8 +713,10 @@ type AddVehicleForFleetAPI =
 -- get vehicle for fleet  ------------------------------------------
 
 type GetAllVehicleForFleetAPI =
-  "getAllVehicle"
-    :> "fleet"
+  "fleet"
+    :> "getAllVehicle"
+    :> QueryParam "mblimit" Int
+    :> QueryParam "mboffset" Int
     :> Get '[JSON] ListVehicleRes
 
 newtype ListVehicleRes = ListVehicleRes
@@ -690,25 +724,45 @@ newtype ListVehicleRes = ListVehicleRes
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
 data VehicleAPIEntity = VehicleAPIEntity
-  { driverId :: Text,
-    variant :: Reexport.Variant,
-    model :: Text,
-    color :: Text,
-    vehicleName :: Maybe Text,
+  { variant :: Maybe Reexport.Variant,
+    model :: Maybe Text,
+    color :: Maybe Text,
     registrationNo :: Text
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
 
----------------------------------------------------------
+-- get All driver for fleet  ------------------------------------------
+
+type GetAllDriverForFleetAPI =
+  "fleet"
+    :> "getAllDriver"
+    :> QueryParam "mblimit" Int
+    :> QueryParam "mboffset" Int
+    :> Get '[JSON] FleetListDriverRes
+
+newtype FleetListDriverRes = FleetListDriverRes
+  {fleetDriversInfos :: [FleetDriversAPIEntity]}
+  deriving (Generic, ToJSON, ToSchema, FromJSON, Show)
+
+data FleetDriversAPIEntity = FleetDriversAPIEntity
+  { driverId :: Id Driver,
+    firstName :: Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON, Show)
+
+-------------------------------------------------------
 
 -- unlink vehicle ---------------------------------------
 
 type FleetUnlinkVehicleAPI =
-  Capture "vehicleNo" Text
-    :> QueryParam "countryCode" Text
-    :> Capture "driverMobileNo" Text
-    :> "unlink"
+  Capture "driverId" (Id Driver)
+    :> Capture "vehicleNo" Text
     :> "fleet"
+    :> "unlink"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
@@ -716,31 +770,21 @@ type FleetUnlinkVehicleAPI =
 
 type FleetRemoveVehicleAPI =
   Capture "vehicleNo" Text
-    :> "remove"
     :> "fleet"
+    :> "remove"
+    :> "vehicle"
+    :> Post '[JSON] APISuccess
+
+-- remove fleet vehicle ---------------------------------------
+
+type FleetRemoveDriverAPI =
+  Capture "driverId" (Id Driver)
+    :> "fleet"
+    :> "remove"
+    :> "driver"
     :> Post '[JSON] APISuccess
 
 ---------------------------------------------------------
--- fleet driver stats ---------------------------------------
-
-type FleetStatsAPI =
-  "stats"
-    :> "fleet"
-    :> Get '[JSON] FleetStatsRes
-
-data FleetStatsRes = FleetStatsRes
-  { vehiclesInFleet :: Int,
-    totalRidesCompleted :: Int,
-    totalEarnings :: HighPrecMoney,
-    totalConversionPer :: Double,
-    totalAcceptancePer :: Double,
-    totalCancellationPer :: Double,
-    vehicleStats :: [FleetVehicleStatsListItem]
-  }
-  deriving (Generic, ToJSON, ToSchema, FromJSON)
-
-data Vehicle
-
 data DriverMode
   = ONLINE
   | OFFLINE
@@ -760,6 +804,44 @@ data FleetVehicleStatsListItem = FleetVehicleStatsListItem
     ridesCancelled :: Maybe Int
   }
   deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+type FleetTotalEarningAPI =
+  "fleet"
+    :> "totalEarning"
+    :> Get '[JSON] FleetTotalEarningResponse
+
+type FleetVehicleEarningAPI =
+  "fleet"
+    :> "vehicleEarning"
+    :> Capture "vehicleNo" Text
+    :> QueryParam "driverId" (Id Driver)
+    :> Get '[JSON] FleetEarningRes
+
+data FleetEarningRes = FleetEarningRes
+  { totalRides :: Int,
+    totalEarning :: Int,
+    vehicleNo :: Maybe Text,
+    driverId :: Maybe (Id Driver),
+    driverName :: Maybe Text,
+    status :: Maybe DriverMode,
+    vehicleType :: Maybe Variant
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data FleetTotalEarningResponse = FleetTotalEarningResponse
+  { totalRides :: Int,
+    totalEarning :: Int,
+    totalVehicle :: Int,
+    conversionRate :: Double,
+    cancellationRate :: Double
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+type FleetDriverEarningAPI =
+  "fleet"
+    :> "driverEarning"
+    :> Capture "driverId" (Id Driver)
+    :> Get '[JSON] FleetEarningRes
 
 ---------------------------------------------------------
 -- update driver name -----------------------------------
@@ -803,6 +885,7 @@ newtype ClearOnRideStuckDriversRes = ClearOnRideStuckDriversRes
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+----------------- Go To Home ----------------------------------
 type GetDriverHomeLocationAPI =
   Capture "driverId" (Id Driver)
     :> "getHomeLocation"
@@ -818,6 +901,11 @@ type IncrementDriverGoToCountAPI =
   Capture "driverId" (Id Driver)
     :> "incrementGoToCount"
     :> Post '[JSON] APISuccess
+
+type GetDriverGoHomeInfoAPI =
+  Capture "driverId" (Id Driver)
+    :> "getGoHomeInfo"
+    :> Get '[JSON] CachedGoHomeRequestInfoRes
 
 ---------------------------------------------------------
 -- Get Route driver ids ---------------------------------------
@@ -861,4 +949,84 @@ data InvoiceInfoToUpdate = InvoiceInfoToUpdate
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets SubscriptionDriverFeesAndInvoicesToUpdate where
+  hideSecrets = identity
+
+type SetVehicleDriverRcStatusForFleetAPI =
+  Capture "driverId" (Id Driver)
+    :> "fleet"
+    :> "vehicleDriverRCstatus"
+    :> ReqBody '[JSON] RCStatusReq
+    :> Post '[JSON] APISuccess
+
+type GetFleetDriverVehicleAssociationAPI =
+  "fleet"
+    :> "driverVehicleAssociation"
+    :> QueryParam "Limit" Int
+    :> QueryParam "Offset" Int
+    :> Get '[JSON] DrivertoVehicleAssociationRes
+
+data DriveVehicleAssociationListItem = DriveVehicleAssociationListItem
+  { driverId :: Maybe Text,
+    vehicleNo :: Maybe Text,
+    driverName :: Maybe Text,
+    status :: Maybe DriverMode,
+    driverPhoneNo :: Maybe Text,
+    completedRides :: Int,
+    vehicleType :: Maybe Variant,
+    earning :: Int,
+    isDriverActive :: Bool,
+    isRcAssociated :: Bool
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+data DrivertoVehicleAssociationRes = DrivertoVehicleAssociationRes
+  { fleetOwnerId :: Text,
+    listItem :: [DriveVehicleAssociationListItem]
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON)
+
+type GetFleetDriverAssociationAPI =
+  "fleet"
+    :> "driverAssociation"
+    :> QueryParam "Limit" Int
+    :> QueryParam "Offset" Int
+    :> Get '[JSON] DrivertoVehicleAssociationRes
+
+type GetFleetVehicleAssociationAPI =
+  "fleet"
+    :> "vehicleAssociation"
+    :> QueryParam "Limit" Int
+    :> QueryParam "Offset" Int
+    :> Get '[JSON] DrivertoVehicleAssociationRes
+
+-- data DriverMode
+--   = ONLINE
+--   | OFFLINE
+--   | SILENT
+--   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+--   deriving (PrettyShow) via Showable DriverMode
+
+---------------------------------------------------------
+-- Send dummy notification to driver ---------------------
+
+type SendDummyNotificationToDriverAPI =
+  Capture "driverId" (Id Driver)
+    :> "sendDummyNotification"
+    :> Post '[JSON] APISuccess
+
+-- change operating city Api ------------------------
+-------------------------------------------
+
+type ChangeOperatingCityAPI =
+  Capture "driverId" (Id Driver)
+    :> "changeOperatingCity"
+    :> ReqBody '[JSON] ChangeOperatingCityReq
+    :> Post '[JSON] APISuccess
+
+newtype ChangeOperatingCityReq = ChangeOperatingCityReq
+  { operatingCity :: City.City
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets ChangeOperatingCityReq where
   hideSecrets = identity

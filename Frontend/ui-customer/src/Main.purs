@@ -14,7 +14,7 @@
 -}
 module Main where
 
-import Common.Types.App (GlobalPayload, FCMBundleUpdate)
+import Common.Types.App (GlobalPayload, FCMBundleUpdate, Event)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -28,34 +28,39 @@ import Effect.Exception (error)
 import Effect.Ref (new)
 import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
 import Flow as Flow
+import Helpers.Version
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
 import JBridge as JBridge
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (Unit, bind, pure, show, unit, ($), (<$>), (<<<), discard)
+import Prelude (Unit, bind, pure, show, unit, void, ($), (<$>), (<<<), discard)
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
 import Screens.Types(PermissionScreenStage(..))
+import AssetsProvider (fetchAssets)
+import Timers
+import Effect.Uncurried
+import Engineering.Helpers.BackTrack (liftFlowBT)
 
 main :: Event -> Effect Unit
 main event = do
-  epassRef ← new defaultGlobalState
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
-       mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
+      mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
           _ <- runExceptT $ runBackT $ updateEventData event
-          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' false
+          resp ← runExceptT $ runBackT $ Flow.baseAppFlow payload' true
           case resp of
                 Right x → pure unit
                 Left err → do
                   _ <- pure $ printLog "printLog error in main is : " err
                   _ <- liftFlow $ main event
                   pure unit
-       JBridge.storeMainFiberOb mainFiber
-       pure unit
+      _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow $ fetchAssets
+      JBridge.storeMainFiberOb mainFiber
+      pure unit
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
             throwErr $ show e
@@ -71,7 +76,6 @@ onEvent event = do
 
 onConnectivityEvent :: String -> Effect Unit
 onConnectivityEvent triggertype = do
-  epassRef ← new defaultGlobalState
   payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
   case payload of
     Right payload'  -> do
@@ -79,16 +83,16 @@ onConnectivityEvent triggertype = do
           _  <- case (runFn2 JBridge.getMainFiber Just Nothing) of
             Nothing -> pure unit
             Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
-          _ ← runExceptT $ runBackT do 
+          _ ← runExceptT $ runBackT do
               case triggertype of 
-                "LOCATION_DISABLED" -> do 
+                "LOCATION_DISABLED" -> do
                   modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = LOCATION_DISABLED})
                   Flow.permissionScreenFlow
-                "INTERNET_ACTION" -> do 
+                "INTERNET_ACTION" -> do
                   modifyScreenState $ PermissionScreenStateType (\permissionScreen -> permissionScreen {stage = INTERNET_ACTION})
                   Flow.permissionScreenFlow
-                "REFRESH" -> Flow.baseAppFlow payload' true
-                _ -> Flow.baseAppFlow payload' true
+                "REFRESH" -> Flow.baseAppFlow payload' false
+                _ -> Flow.baseAppFlow payload' false
           pure unit
         JBridge.storeMainFiberOb mainFiber
         pure unit
@@ -96,12 +100,6 @@ onConnectivityEvent triggertype = do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
           throwErr $ show e
         pure unit        
-
-type Event = {
-    type :: String
-  , data :: String
-}
-
 updateEventData :: Event -> FlowBT String Unit 
 updateEventData event = do
     case event.type of
@@ -113,6 +111,6 @@ onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
 onBundleUpdatedEvent description= do 
   _ <- launchAff $ flowRunner defaultGlobalState $ do
     _ ← runExceptT $ runBackT $ do
-      Flow.appUpdatedFlow description
+      appUpdatedFlow description
     pure unit
   pure unit

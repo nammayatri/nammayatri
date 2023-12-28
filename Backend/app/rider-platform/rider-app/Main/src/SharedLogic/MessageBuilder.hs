@@ -14,15 +14,21 @@
 
 module SharedLogic.MessageBuilder
   ( BuildSendOTPMessageReq (..),
+    BuildSOSAlertMessageReq (..),
     buildSendOTPMessage,
     BuildSendBookingOTPMessageReq (..),
     buildSendBookingOTPMessage,
+    BuildGenericMessageReq (..),
+    buildGenericMessage,
+    buildSOSAlertMessage,
+    BuildMarkRideAsSafeMessageReq (..),
+    buildMarkRideAsSafeMessage,
   )
 where
 
 import qualified Data.Text as T
-import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantMessage as DMM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -38,11 +44,11 @@ data BuildSendOTPMessageReq = BuildSendOTPMessageReq
   }
   deriving (Generic)
 
-buildSendOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> BuildSendOTPMessageReq -> m Text
-buildSendOTPMessage merchantId req = do
+buildSendOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendOTPMessageReq -> m Text
+buildSendOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
-    QMM.findByMerchantIdAndMessageKey merchantId DMM.SEND_OTP
-      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.SEND_OTP))
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_OTP
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_OTP))
   return $
     merchantMessage.message
       & T.replace (templateText "otp") req.otp
@@ -54,12 +60,57 @@ data BuildSendBookingOTPMessageReq = BuildSendBookingOTPMessageReq
   }
   deriving (Generic)
 
-buildSendBookingOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> BuildSendBookingOTPMessageReq -> m Text
-buildSendBookingOTPMessage merchantId req = do
+buildSendBookingOTPMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPMessageReq -> m Text
+buildSendBookingOTPMessage merchantOperatingCityId req = do
   merchantMessage <-
-    QMM.findByMerchantIdAndMessageKey merchantId DMM.SEND_BOOKING_OTP
-      >>= fromMaybeM (MerchantMessageNotFound merchantId.getId (show DMM.SEND_BOOKING_OTP))
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_BOOKING_OTP))
   return $
     merchantMessage.message
       & T.replace (templateText "otp") req.otp
       & T.replace (templateText "amount") req.amount
+
+data BuildGenericMessageReq = BuildGenericMessageReq {}
+  deriving (Generic)
+
+buildGenericMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> DMM.MessageKey -> BuildGenericMessageReq -> m Text
+buildGenericMessage merchantOpCityId messageKey _ = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey
+      >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
+  let jsonData = merchantMessage.jsonData
+  return $
+    merchantMessage.message
+      & T.replace (templateText "var1") (fromMaybe "" jsonData.var1)
+      & T.replace (templateText "var2") (fromMaybe "" jsonData.var2)
+      & T.replace (templateText "var3") (fromMaybe "" jsonData.var3)
+
+data BuildSOSAlertMessageReq = BuildSOSAlertMessageReq
+  { userName :: Text,
+    rideLink :: Text
+  }
+  deriving (Generic)
+
+buildSOSAlertMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildSOSAlertMessageReq -> m Text
+buildSOSAlertMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_SOS_ALERT
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_SOS_ALERT))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "userName") req.userName
+      & T.replace (templateText "rideLink") req.rideLink
+
+newtype BuildMarkRideAsSafeMessageReq = BuildMarkRideAsSafeMessageReq
+  { userName :: Text
+  }
+  deriving (Generic)
+
+buildMarkRideAsSafeMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildMarkRideAsSafeMessageReq -> m Text
+buildMarkRideAsSafeMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.MARK_RIDE_AS_SAFE
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.MARK_RIDE_AS_SAFE))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "userName") req.userName

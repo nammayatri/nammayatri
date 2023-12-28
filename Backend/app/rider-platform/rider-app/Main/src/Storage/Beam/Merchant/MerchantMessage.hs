@@ -16,15 +16,20 @@
 
 module Storage.Beam.Merchant.MerchantMessage where
 
+import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.MerchantMessage as Domain
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantMessageT f = MerchantMessageT
-  { merchantId :: B.C f Text,
+  { merchantId :: B.C f Text, -- TODO : Remove it
+    merchantOperatingCityId :: B.C f Text,
     messageKey :: B.C f Domain.MessageKey,
     message :: B.C f Text,
+    templateId :: B.C f (Maybe Text),
+    jsonData :: B.C f (Maybe A.Value),
+    containsUrlButton :: B.C f Bool,
     updatedAt :: B.C f UTCTime,
     createdAt :: B.C f UTCTime
   }
@@ -34,10 +39,10 @@ instance B.Table MerchantMessageT where
   data PrimaryKey MerchantMessageT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . merchantOperatingCityId
 
 type MerchantMessage = MerchantMessageT Identity
 
-$(enableKVPG ''MerchantMessageT ['merchantId, 'messageKey] [])
+$(enableKVPG ''MerchantMessageT ['merchantOperatingCityId, 'messageKey] [])
 
 $(mkTableInstances ''MerchantMessageT "merchant_message")

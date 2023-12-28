@@ -27,7 +27,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Styles.Colors as Color
 import Debug (spy)
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w .  (Action  -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view push =
@@ -64,7 +64,7 @@ closeBtnView push =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
             , margin (Margin 12 12 12 12)
             ]
           ]
@@ -136,17 +136,17 @@ cardData dummy =
     { heading : (getString GET_ESTIMATE_FARE),
       subHeading : (getString ASK_FOR_PRICE_INFO),
       note : Nothing,
-      image : "ny_ic_ask_price," <> (getCommonAssetStoreLink FunctionCall) <> "user/images/ny_ic_ask_price.png"
+      image : fetchImage FF_ASSET "ny_ic_ask_price"
     },
     { heading : (getString SELECT_AN_OFFER_FROM_OUR_DRIVERS),
       subHeading : (getString SELECT_AN_OFFER_FROM_OUR_DRIVERS_INFO),
       note : Nothing,
-      image : "ny_ic_select_offer," <> (getCommonAssetStoreLink FunctionCall) <> "user/images/ny_ic_select_offer.png"
+      image : fetchImage FF_ASSET "ny_ic_select_offer"
     },
     { heading : (getString PAY_THE_DRIVER),
       subHeading : (getString PAY_THE_DRIVER_INFO),
       note : Just (getString PAY_THE_DRIVER_NOTE),
-      image : "ny_ic_pay_driver," <> (getCommonAssetStoreLink FunctionCall) <> "user/images/ny_ic_pay_driver.png"
+      image : fetchImage FF_ASSET"ny_ic_pay_driver"
     }
   ]
 

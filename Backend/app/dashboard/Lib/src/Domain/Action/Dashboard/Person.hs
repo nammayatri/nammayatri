@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Person where
 
 import Dashboard.Common
+import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DMerchant
@@ -23,6 +24,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
+import qualified Domain.Types.ServerName as DTServer
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -30,6 +32,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -45,7 +48,7 @@ import qualified Storage.Queries.RegistrationToken as QReg
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
 import qualified Tools.Auth.Common as Auth
-import qualified Tools.Client as Client
+import Tools.Auth.Merchant
 import Tools.Error
 
 data ListPersonRes = ListPersonRes
@@ -55,10 +58,17 @@ data ListPersonRes = ListPersonRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype MerchantAccessReq = MerchantAccessReq
-  {merchantId :: ShortId DMerchant.Merchant}
+  { merchantId :: ShortId DMerchant.Merchant
+  }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-type MerchantAccessRes = MerchantAccessReq
+data MerchantCityAccessReq = MerchantCityAccessReq
+  { merchantId :: ShortId DMerchant.Merchant,
+    operatingCity :: City.City
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type MerchantAccessRes = MerchantCityAccessReq
 
 data ChangePasswordReq = ChangePasswordReq
   { oldPassword :: Text,
@@ -92,6 +102,65 @@ newtype ChangePasswordByAdminReq = ChangePasswordByAdminReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+newtype ReleaseRegisterReq = ReleaseRegisterReq
+  {token :: Text}
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data ReleaseRegisterRes = ReleaseRegisterRes
+  { username :: Text,
+    token :: Text,
+    otpEnabled :: Bool,
+    merchantId :: Maybe Text,
+    email :: Text,
+    context :: Text,
+    acl :: Maybe Text,
+    merchantTrack :: Maybe Text,
+    clientConfig :: Maybe Text,
+    resellerId :: Maybe Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data GetProductSpecInfoResp = GetProductSpecInfoResp
+  { merchant_id :: Text,
+    client_id :: Text,
+    platform :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+registerRelease ::
+  ( EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  TokenInfo ->
+  ReleaseRegisterReq ->
+  m ReleaseRegisterRes
+registerRelease _ ReleaseRegisterReq {..} = do
+  return
+    ReleaseRegisterRes
+      { username = "Sidharth",
+        token = token,
+        otpEnabled = False,
+        merchantId = Just "merchantId",
+        email = "sidharth.sethu@juspay.in",
+        context = "JUSPAY",
+        acl = Just "{\"mjos_manager\":\"RW\"}",
+        merchantTrack = Nothing,
+        clientConfig = Nothing,
+        resellerId = Nothing
+      }
+
+getProductSpecInfo ::
+  EsqDBReplicaFlow m r =>
+  Maybe Text ->
+  m GetProductSpecInfoResp
+getProductSpecInfo _ = do
+  return
+    GetProductSpecInfoResp
+      { merchant_id = "nammayatriconsumer",
+        client_id = "nammayatriconsumer",
+        platform = "android"
+      }
+
 validateCreatePerson :: Validate CreatePersonReq
 validateCreatePerson CreatePersonReq {..} =
   sequenceA_
@@ -124,7 +193,7 @@ createPerson _ personEntity = do
   decPerson <- decrypt person
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  let personAPIEntity = AP.makePersonAPIEntity decPerson role []
+  let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing
   Esq.runTransaction $ QP.create person
   return $ CreatePersonRes personAPIEntity
 
@@ -139,12 +208,23 @@ listPerson ::
 listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
   personAndRoleList <- runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
-  res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList) -> do
+  res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
-    pure $ DP.makePersonAPIEntity decPerson role merchantAccessList
+    let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList
+    pure $ DP.makePersonAPIEntity decPerson role (nub merchantAccessList) (Just availableCitiesForMerchant)
   let count = length res
   let summary = Summary {totalCount = 10000, count}
   pure $ ListPersonRes {list = res, summary = summary}
+
+makeAvailableCitiesForMerchant :: [ShortId DMerchant.Merchant] -> [City.City] -> [DP.AvailableCitiesForMerchant]
+makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
+  let merchantCityList = sortOn fst $ zip merchantAccessList merchantCityAccessList
+  let groupedByMerchant = groupBy ((==) `on` fst) merchantCityList
+  if null groupedByMerchant
+    then []
+    else do
+      let merchantAccesslistWithCity = map (\group -> DP.AvailableCitiesForMerchant (fst (head group)) (map snd group)) groupedByMerchant
+      merchantAccesslistWithCity
 
 assignRole ::
   EsqDBFlow m r =>
@@ -159,26 +239,27 @@ assignRole _ personId roleId = do
     QP.updatePersonRole personId roleId
   pure Success
 
-assignMerchantAccess ::
+assignMerchantCityAccess ::
   ( EsqDBFlow m r,
-    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]]
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
   TokenInfo ->
   Id DP.Person ->
-  MerchantAccessReq ->
+  MerchantCityAccessReq ->
   m APISuccess
-assignMerchantAccess _ personId req = do
+assignMerchantCityAccess _ personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
-  availableServers <- asks (.dataServers)
-  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
-    throwError $ InvalidRequest "Server for this merchant is not available"
+  merchantServerAccessCheck merchant
+  let isSupportedCity = req.operatingCity `elem` (merchant.supportedOperatingCities)
+  unless isSupportedCity $
+    throwError $ InvalidRequest "Server does not support this city"
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId personId merchant.id
+  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
   whenJust mbMerchantAccess $ \_ -> do
     throwError $ InvalidRequest "Merchant access already assigned."
-  merchantAccess <- buildMerchantAccess personId merchant.id
+  merchantAccess <- buildMerchantAccess personId merchant.id merchant.shortId req.operatingCity
   Esq.runTransaction $
     QAccess.create merchantAccess
   pure Success
@@ -186,7 +267,7 @@ assignMerchantAccess _ personId req = do
 resetMerchantAccess ::
   ( EsqDBFlow m r,
     Redis.HedisFlow m r,
-    HasFlowEnv m r '["dataServers" ::: [Client.DataServer]],
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
   TokenInfo ->
@@ -197,19 +278,44 @@ resetMerchantAccess _ personId req = do
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
-  availableServers <- asks (.dataServers)
-  unless (merchant.serverName `elem` (availableServers <&> (.name))) $
-    throwError $ InvalidRequest "Server for this merchant is not available"
+  merchantServerAccessCheck merchant
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantId personId merchant.id
+  merchantAccesses <- QAccess.findByPersonIdAndMerchantId personId merchant.id
+  case merchantAccesses of
+    [] -> throwError $ InvalidRequest "Server access already denied."
+    (x : _) -> do
+      -- this function uses tokens from db, so should be called before transaction
+      Auth.cleanCachedTokensByMerchantId personId merchant.id
+      Esq.runTransaction $ do
+        QAccess.deleteById x.id
+        QReg.deleteAllByPersonIdAndMerchantId personId merchant.id
+      pure Success
+
+resetMerchantCityAccess ::
+  ( EsqDBFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
+  ) =>
+  TokenInfo ->
+  Id DP.Person ->
+  MerchantCityAccessReq ->
+  m APISuccess
+resetMerchantCityAccess _ personId req = do
+  merchant <-
+    QMerchant.findByShortId req.merchantId
+      >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
+  merchantServerAccessCheck merchant
+  _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
   case mbMerchantAccess of
     Nothing -> throwError $ InvalidRequest "Server access already denied."
     Just merchantAccess -> do
       -- this function uses tokens from db, so should be called before transaction
-      Auth.cleanCachedTokensByMerchantId personId merchant.id
+      Auth.cleanCachedTokensByMerchantIdAndCity personId merchant.id req.operatingCity
       Esq.runTransaction $ do
         QAccess.deleteById merchantAccess.id
-        QReg.deleteAllByPersonIdAndMerchantId personId merchant.id
+        QReg.deleteAllByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
       pure Success
 
 changePassword ::
@@ -227,8 +333,8 @@ changePassword tokenInfo req = do
     QP.updatePersonPassword tokenInfo.personId newHash
   pure Success
 
-buildMerchantAccess :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> m DAccess.MerchantAccess
-buildMerchantAccess personId merchantId = do
+buildMerchantAccess :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> ShortId DMerchant.Merchant -> City.City -> m DAccess.MerchantAccess
+buildMerchantAccess personId merchantId merchantShortId city = do
   uid <- generateGUID
   now <- getCurrentTime
   return $
@@ -236,9 +342,11 @@ buildMerchantAccess personId merchantId = do
       { id = Id uid,
         personId = personId,
         merchantId = merchantId,
+        merchantShortId = merchantShortId,
         secretKey = Nothing,
         is2faEnabled = False,
-        createdAt = now
+        createdAt = now,
+        operatingCity = city
       }
 
 profile ::
@@ -248,9 +356,15 @@ profile ::
 profile tokenInfo = do
   encPerson <- runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
   role <- runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-  merchantAccessList <- runInReplica $ QAccess.findAllByPersonId tokenInfo.personId
+  merchantAccessList <- runInReplica $ QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
-  pure $ DP.makePersonAPIEntity decPerson role (merchantAccessList <&> (.shortId))
+  case merchantAccessList of
+    [] -> throwError (InvalidRequest "No access to any merchant")
+    merchantAccessList' -> do
+      let sortedMerchantAccessList = sortOn DAccess.merchantId merchantAccessList'
+      let groupedByMerchant = groupBy ((==) `on` DAccess.merchantId) sortedMerchantAccessList
+      let merchantAccesslistWithCity = map (\group -> DP.AvailableCitiesForMerchant ((.merchantShortId) (head group)) (map (.operatingCity) group)) groupedByMerchant
+      pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity)
 
 getCurrentMerchant ::
   EsqDBReplicaFlow m r =>
@@ -261,7 +375,7 @@ getCurrentMerchant tokenInfo = do
     runInReplica $
       QMerchant.findById tokenInfo.merchantId
         >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
-  pure $ MerchantAccessReq merchant.shortId
+  pure $ MerchantCityAccessReq merchant.shortId tokenInfo.city
 
 getAccessMatrix ::
   EsqDBReplicaFlow m r =>

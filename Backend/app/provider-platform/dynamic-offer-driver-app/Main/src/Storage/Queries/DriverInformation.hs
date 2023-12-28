@@ -14,7 +14,7 @@
 
 module Storage.Queries.DriverInformation where
 
-import Data.Time.Clock (addUTCTime)
+import qualified Data.Either as Either
 import qualified Database.Beam as B
 import qualified Database.Beam.Query ()
 import Domain.Types.DriverInformation as DriverInfo
@@ -27,28 +27,27 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Person as BeamP
-import qualified Storage.Queries.DriverLocation as QDL
 import Storage.Queries.Instances.DriverInformation ()
 import Storage.Queries.Person (findAllPersonWithDriverInfos)
-import qualified Prelude
 
-create :: MonadFlow m => DriverInfo.DriverInformation -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverInfo.DriverInformation -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Person.Driver -> m (Maybe DriverInformation)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
 
-getEnabledAt :: MonadFlow m => Id Person.Driver -> m (Maybe UTCTime)
+getEnabledAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe UTCTime)
 getEnabledAt driverId = do
   dInfo <- findById driverId
   return (dInfo >>= (.enabledAt))
 
-findAllByEnabledAtInWindow :: MonadFlow m => Id Merchant -> Maybe UTCTime -> Maybe UTCTime -> m [DriverInformation]
+findAllByEnabledAtInWindow :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Maybe UTCTime -> Maybe UTCTime -> m [DriverInformation]
 findAllByEnabledAtInWindow merchantId from to = do
   findAllWithKV
     [ Se.And
@@ -58,7 +57,7 @@ findAllByEnabledAtInWindow merchantId from to = do
         ]
     ]
 
-findAllByAutoPayStatusAndMerchantIdInDriverIds :: MonadFlow m => Id Merchant -> Maybe DriverAutoPayStatus -> [Id Person] -> m [DriverInformation]
+findAllByAutoPayStatusAndMerchantIdInDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Maybe DriverAutoPayStatus -> [Id Person] -> m [DriverInformation]
 findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverIds = do
   findAllWithKV
     [ Se.And
@@ -68,7 +67,7 @@ findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId autoPayStatus driverId
         ]
     ]
 
-fetchAllByIds :: MonadFlow m => Id Merchant -> [Id Driver] -> m [DriverInformation]
+fetchAllByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> [Id Driver] -> m [DriverInformation]
 fetchAllByIds merchantId driversIds = do
   dInfos <- findAllWithKV [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds)]
   persons <- findAllPersonWithDriverInfos dInfos merchantId
@@ -79,7 +78,7 @@ fetchAllByIds merchantId driversIds = do
         Just _person -> dInfo' : acc
         Nothing -> acc
 
-fetchAllDriversWithPaymentPending :: MonadFlow m => Id Merchant -> m [DriverInformation]
+fetchAllDriversWithPaymentPending :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [DriverInformation]
 fetchAllDriversWithPaymentPending merchantId = do
   findAllWithDb
     [ Se.And
@@ -88,10 +87,19 @@ fetchAllDriversWithPaymentPending merchantId = do
         ]
     ]
 
-fetchAllAvailableByIds :: MonadFlow m => [Id Person.Driver] -> m [DriverInformation]
+fetchAllBlockedDriversWithSubscribedFalse :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [DriverInformation]
+fetchAllBlockedDriversWithSubscribedFalse merchantId = do
+  findAllWithDb
+    [ Se.And
+        [ Se.Is BeamDI.subscribed $ Se.Eq False,
+          Se.Is BeamDI.merchantId $ Se.Eq (Just merchantId.getId)
+        ]
+    ]
+
+fetchAllAvailableByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds), Se.Is BeamDI.active $ Se.Eq True, Se.Is BeamDI.onRide $ Se.Eq False]]
 
--- findAllNotNotifiedWithDues :: MonadFlow m => Id Merchant -> UTCTime -> Int -> m [DriverInformation]
+-- findAllNotNotifiedWithDues :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> Int -> m [DriverInformation]
 -- findAllNotNotifiedWithDues merchantId lastNotifiedLimit limit =
 --   findAllWithOptionsDb
 --     [ Se.And
@@ -107,7 +115,7 @@ fetchAllAvailableByIds driversIds = findAllWithKV [Se.And [Se.Is BeamDI.driverId
 --     (Just limit)
 --     Nothing
 
--- findAllNotNotifiedWithDues :: MonadFlow m => Id Merchant -> UTCTime -> Int -> m [DriverInformation]
+-- findAllNotNotifiedWithDues :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> Int -> m [DriverInformation]
 -- findAllNotNotifiedWithDues merchantId lastNotifiedLimit limit =
 --   findAllWithOptionsDb
 --     [ Se.And
@@ -123,7 +131,7 @@ fetchAllAvailableByIds driversIds = findAllWithKV [Se.And [Se.Is BeamDI.driverId
 --     (Just limit)
 --     Nothing
 
-updateActivity :: MonadFlow m => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
+updateActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
 updateActivity (Id driverId) isActive mode = do
   now <- getCurrentTime
   updateOneWithKV
@@ -133,7 +141,7 @@ updateActivity (Id driverId) isActive mode = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateEnabledState :: MonadFlow m => Id Driver -> Bool -> m ()
+updateEnabledState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Bool -> m ()
 updateEnabledState (Id driverId) isEnabled = do
   now <- getCurrentTime
   enabledAt <- getEnabledAt (Id driverId)
@@ -146,7 +154,7 @@ updateEnabledState (Id driverId) isEnabled = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateEnabledVerifiedState :: MonadFlow m => Id Driver -> Bool -> Bool -> m ()
+updateEnabledVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Bool -> Bool -> m ()
 updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
   now <- getCurrentTime
   enabledAt <- getEnabledAt (Id driverId)
@@ -160,8 +168,8 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateDynamicBlockedState :: (MonadFlow m) => Id Person.Driver -> Maybe Text -> Maybe Int -> Bool -> m ()
-updateDynamicBlockedState driverId blockedReason blockedExpiryTime isBlocked = do
+updateDynamicBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Bool -> m ()
+updateDynamicBlockedState driverId blockedReason blockedExpiryTime dashboardUserName isBlocked = do
   now <- getCurrentTime
   driverInfo <- findById driverId
   let expiryTime = (\secs -> addUTCTime (fromIntegral secs * 3600) now) <$> blockedExpiryTime
@@ -172,14 +180,15 @@ updateDynamicBlockedState driverId blockedReason blockedExpiryTime isBlocked = d
     ( [ Se.Set BeamDI.blocked isBlocked,
         Se.Set BeamDI.blockedReason blockedReason,
         Se.Set BeamDI.blockExpiryTime expiryTime,
+        Se.Set BeamDI.blockStateModifier (Just dashboardUserName),
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
 
-updateBlockedState :: MonadFlow m => Id Person.Driver -> Bool -> m ()
-updateBlockedState driverId isBlocked = do
+updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> m ()
+updateBlockedState driverId isBlocked blockStateModifier = do
   now <- getCurrentTime
   driverInfo <- findById driverId
   let numOfLocks' = case driverInfo of
@@ -187,13 +196,14 @@ updateBlockedState driverId isBlocked = do
         Nothing -> 0
   updateOneWithKV
     ( [ Se.Set BeamDI.blocked isBlocked,
+        Se.Set BeamDI.blockStateModifier blockStateModifier,
         Se.Set BeamDI.updatedAt now
       ]
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
 
-verifyAndEnableDriver :: MonadFlow m => Id Person -> m ()
+verifyAndEnableDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 verifyAndEnableDriver (Id driverId) = do
   now <- getCurrentTime
   enabledAt <- getEnabledAt (Id driverId)
@@ -207,7 +217,7 @@ verifyAndEnableDriver (Id driverId) = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateOnRide :: MonadFlow m => Id Person.Driver -> Bool -> m ()
+updateOnRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
 updateOnRide (Id driverId) onRide = do
   now <- getCurrentTime
   updateOneWithKV
@@ -216,10 +226,10 @@ updateOnRide (Id driverId) onRide = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-findByDriverIdActiveRide :: (MonadFlow m) => Id Person.Driver -> m (Maybe DriverInformation)
+findByDriverIdActiveRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findByDriverIdActiveRide (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDI.driverId $ Se.Eq driverId, Se.Is BeamDI.onRide $ Se.Eq True]]
 
-updateNotOnRideMultiple :: MonadFlow m => [Id Person.Driver] -> m ()
+updateNotOnRideMultiple :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> m ()
 updateNotOnRideMultiple driverIds = do
   now <- getCurrentTime
   updateWithKV
@@ -228,11 +238,11 @@ updateNotOnRideMultiple driverIds = do
     ]
     [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
 
-deleteById :: MonadFlow m => Id Person.Driver -> m ()
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
 findAllWithLimitOffsetByMerchantId ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Maybe Text ->
   Maybe DbHash ->
   Maybe Integer ->
@@ -267,14 +277,8 @@ findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOf
       pure $ zip p di
     Left _ -> pure []
 
-getDriversWithOutdatedLocationsToMakeInactive :: (MonadFlow m, MonadReader r m, HasField "enableLocationTrackingService" r Bool) => UTCTime -> m [Person]
-getDriversWithOutdatedLocationsToMakeInactive before = do
-  driverLocations <- QDL.getDriverLocations before
-  driverInfos <- getDriverInfos driverLocations
-  getDrivers driverInfos
-
 getDrivers ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [DriverInformation] ->
   m [Person]
 getDrivers driverInfos = findAllWithKV [Se.Is BeamP.id $ Se.In personKeys]
@@ -282,7 +286,7 @@ getDrivers driverInfos = findAllWithKV [Se.Is BeamP.id $ Se.In personKeys]
     personKeys = getId <$> fetchDriverIDsFromInfo driverInfos
 
 getDriverInfos ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   [DriverLocation] ->
   m [DriverInformation]
 getDriverInfos driverLocations = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In personsKeys, Se.Is BeamDI.active $ Se.Eq True]]
@@ -295,14 +299,22 @@ fetchDriverIDsFromLocations = map DriverLocation.driverId
 fetchDriverIDsFromInfo :: [DriverInformation] -> [Id Person]
 fetchDriverIDsFromInfo = map DriverInfo.driverId
 
-addReferralCode :: MonadFlow m => Id Person -> EncryptedHashedField 'AsEncrypted Text -> m ()
-addReferralCode (Id personId) code = do
+addReferralCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Text -> Id Person -> m ()
+addReferralCode (Id personId) code referredByDriverId = do
   updateWithKV
-    [ Se.Set BeamDI.referralCode (Just (code & unEncrypted . (.encrypted)))
+    [ Se.Set BeamDI.referralCode (Just code),
+      Se.Set BeamDI.referredByDriverId (Just referredByDriverId.getId)
     ]
     [Se.Is BeamDI.driverId (Se.Eq personId)]
 
-countDrivers :: MonadFlow m => Id Merchant -> m (Int, Int)
+incrementReferralCountByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Int -> m ()
+incrementReferralCountByPersonId (Id driverId) value = do
+  updateOneWithKV
+    [ Se.Set BeamDI.totalReferred (Just value)
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+countDrivers :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m (Int, Int)
 countDrivers merchantID =
   getResults <$> do
     dbConf <- getMasterBeamConfig
@@ -315,7 +327,7 @@ countDrivers merchantID =
                 driverInformation <- B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
                 person <- B.join_' (BeamCommon.person BeamCommon.atlasDB) (\person -> BeamP.id person B.==?. BeamDI.driverId driverInformation)
                 pure (driverInformation, person)
-    pure (either (const []) Prelude.id res)
+    pure (Either.fromRight [] res)
   where
     getResults :: [(Bool, Int)] -> (Int, Int)
     getResults = foldl func (0, 0)
@@ -323,7 +335,7 @@ countDrivers merchantID =
     func (active, inactive) (activity, counter) =
       if activity then (active + counter, inactive) else (active, inactive + counter)
 
-updateDriverInformation :: MonadFlow m => Id Person -> Bool -> Bool -> Bool -> Maybe Text -> m ()
+updateDriverInformation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Bool -> Bool -> Bool -> Maybe Text -> m ()
 updateDriverInformation (Id driverId) canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi availableUpiApps = do
   now <- getCurrentTime
   updateOneWithKV
@@ -335,7 +347,7 @@ updateDriverInformation (Id driverId) canDowngradeToSedan canDowngradeToHatchbac
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateDriverDowngradeTaxiForSuv :: MonadFlow m => Id Person -> Bool -> m ()
+updateDriverDowngradeTaxiForSuv :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Bool -> m ()
 updateDriverDowngradeTaxiForSuv (Id driverId) canDowngradeToTaxi = do
   now <- getCurrentTime
   updateOneWithKV
@@ -344,7 +356,7 @@ updateDriverDowngradeTaxiForSuv (Id driverId) canDowngradeToTaxi = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateAutoPayStatusAndPayerVpa :: MonadFlow m => Maybe DriverAutoPayStatus -> Maybe Text -> Id Person.Driver -> m ()
+updateAutoPayStatusAndPayerVpa :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverAutoPayStatus -> Maybe Text -> Id Person.Driver -> m ()
 updateAutoPayStatusAndPayerVpa autoPayStatus payerVpa (Id driverId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -355,7 +367,7 @@ updateAutoPayStatusAndPayerVpa autoPayStatus payerVpa (Id driverId) = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateSubscription :: MonadFlow m => Bool -> Id Person.Driver -> m ()
+updateSubscription :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id Person.Driver -> m ()
 updateSubscription isSubscribed (Id driverId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -364,7 +376,7 @@ updateSubscription isSubscribed (Id driverId) = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateAadhaarVerifiedState :: MonadFlow m => Id Person.Driver -> Bool -> m ()
+updateAadhaarVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
 updateAadhaarVerifiedState (Id personId) isVerified = do
   now <- getCurrentTime
   updateOneWithKV
@@ -373,7 +385,7 @@ updateAadhaarVerifiedState (Id personId) isVerified = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq personId)]
 
-updatePendingPayment :: MonadFlow m => Bool -> Id Person.Driver -> m ()
+updatePendingPayment :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id Person.Driver -> m ()
 updatePendingPayment isPending (Id driverId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -382,9 +394,18 @@ updatePendingPayment isPending (Id driverId) = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateCompAadhaarImagePath :: MonadFlow m => Id Person.Driver -> Text -> m ()
+updateCompAadhaarImagePath :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Text -> m ()
 updateCompAadhaarImagePath (Id driverId) compAadhaarImagePath =
   updateOneWithKV
     [ Se.Set BeamDI.compAadhaarImagePath (Just compAadhaarImagePath)
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+updateDriverDob :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe UTCTime -> m ()
+updateDriverDob (Id driverId) driverDob = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.driverDob driverDob,
+      Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]

@@ -26,6 +26,7 @@ import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, ($), (&&), (/), (<$>), (<<<), (<>), (==), (>))
@@ -141,7 +142,7 @@ headerLayout state push =
      ][ imageView
         [ width $ V 30
         , height $ V 30
-        , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left"
         , onClick push $ const BackPressed
         , padding $ Padding 2 2 2 2
         , margin $ MarginLeft 5
@@ -292,11 +293,13 @@ shimmerData i =
   destination : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
   amountColor: toPropValue "",
   riderName : toPropValue "",
-  metroTagVisibility : toPropValue "",
-  accessibilityTagVisibility : toPropValue "",
+  spLocTagVisibility : toPropValue "",
+  gotoTagVisibility : toPropValue "",
   specialZoneText : toPropValue "",
   specialZoneImage : toPropValue "",
-  specialZoneLayoutBackground : toPropValue ""
+  specialZoneLayoutBackground : toPropValue "",
+  purpleTagVisibility : toPropValue "",
+  tipTagVisibility : toPropValue ""
   }
 
 getCategoryName :: String -> String

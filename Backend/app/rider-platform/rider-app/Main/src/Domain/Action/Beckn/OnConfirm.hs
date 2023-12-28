@@ -52,7 +52,8 @@ onConfirm ValidatedOnConfirmReq {..} = do
   whenJust specialZoneOtp $ \otp -> do
     void $ QRB.updateOtpCodeBookingId booking.id otp
     fork "sending Booking confirmed dasboard sms" $ do
-      merchantConfig <- QMSUC.findByMerchantId booking.merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound booking.merchantId.getId)
+      let merchantOperatingCityId = booking.merchantOperatingCityId
+      merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       if merchantConfig.enableDashboardSms
         then do
           customer <- B.runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
@@ -62,17 +63,17 @@ onConfirm ValidatedOnConfirmReq {..} = do
           let phoneNumber = countryCode <> mobileNumber
               sender = smsCfg.sender
           message <-
-            MessageBuilder.buildSendBookingOTPMessage booking.merchantId $
+            MessageBuilder.buildSendBookingOTPMessage merchantOperatingCityId $
               MessageBuilder.BuildSendBookingOTPMessageReq
                 { otp = show otp,
                   amount = show booking.estimatedTotalFare
                 }
-          Sms.sendSMS booking.merchantId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
+          Sms.sendSMS booking.merchantId merchantOperatingCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
         else do
           logInfo "Merchant not configured to send dashboard sms"
   void $ QRB.updateStatus booking.id DRB.CONFIRMED
 
-validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
+validateRequest :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => OnConfirmReq -> m ValidatedOnConfirmReq
 validateRequest OnConfirmReq {..} = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId" <> bppBookingId.getId)
   return $ ValidatedOnConfirmReq {..}

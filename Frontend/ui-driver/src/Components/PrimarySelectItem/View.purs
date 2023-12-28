@@ -25,7 +25,7 @@ import Font.Style as FontStyle
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 
@@ -67,7 +67,7 @@ view push state =
           , imageView
             [ width ( V 15 )
             , height ( V 15 )
-            , imageWithFallback $ "ny_ic_drop_down," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_drop_down.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_drop_down"
             ]
         ]
     ]

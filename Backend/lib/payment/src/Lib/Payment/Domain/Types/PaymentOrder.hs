@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=ambiguous-fields #-}
 
 module Lib.Payment.Domain.Types.PaymentOrder where
 
@@ -43,6 +44,9 @@ data PaymentOrderE e = PaymentOrder
     getUpiDeepLinksOption :: Maybe Bool,
     environment :: Maybe Text,
     createMandate :: Maybe Payment.MandateType,
+    isRetried :: Bool,
+    isRetargeted :: Bool,
+    retargetLink :: Maybe Text,
     mandateMaxAmount :: Maybe HighPrecMoney,
     mandateStartDate :: Maybe UTCTime,
     mandateEndDate :: Maybe UTCTime,

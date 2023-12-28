@@ -14,9 +14,14 @@
 -}
 
 module Screens.UploadDrivingLicenseScreen.ScreenData where
+
 import Data.Maybe
-import Screens.Types (UploadDrivingLicenseState)
+
+import Engineering.Helpers.Commons as EHC
 import Foreign.Object (empty)
+import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import Screens.Types (UploadDrivingLicenseState)
+import ConfigProvider
 
 initData :: UploadDrivingLicenseState
 initData = {
@@ -37,6 +42,9 @@ initData = {
       , dateOfIssueView : ""
       , imageFrontUrl : ""
       , logField : empty
+      , mobileNumber : ""
+      , cityConfig : dummyCityConfig
+      , config : getAppConfig appConfig
       },
       props: {
         openRegistrationModal : false
@@ -47,5 +55,13 @@ initData = {
       , errorVisibility : false
       , openDateOfIssueManual: false
       , isDateClickable : true
+      , openHowToUploadManual : false
+      , logoutPopupModal : false
+      , validateProfilePicturePopUp : false
+      , imageCaptureLayoutView : false
+      , fileCameraPopupModal : false
+      , fileCameraOption : false
+      , validating : false
+      , successfulValidation : false
       }
     }

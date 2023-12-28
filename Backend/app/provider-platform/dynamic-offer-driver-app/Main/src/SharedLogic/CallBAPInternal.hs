@@ -14,6 +14,7 @@
 
 module SharedLogic.CallBAPInternal where
 
+import qualified Data.HashMap as HM
 import Domain.Types.Ride as DRide
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
@@ -57,11 +58,13 @@ feedbackApi = Proxy
 
 feedback ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   Text ->
   BaseUrl ->
   FeedbackReq ->
   m APISuccess
 feedback apiKey internalUrl request = do
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") internalUrl (feedbackClient (Just apiKey) request) "FeedBack" feedbackApi
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (feedbackClient (Just apiKey) request) "FeedBack" feedbackApi

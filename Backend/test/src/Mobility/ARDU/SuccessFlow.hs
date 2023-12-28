@@ -21,7 +21,6 @@ import EulerHS.Prelude
 import HSpec
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Types.Common (HighPrecMeters, Meters)
-import Kernel.Utils.Common (addUTCTime)
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures
 import qualified Mobility.ARDU.Utils as Utils
@@ -56,17 +55,13 @@ waitBetweenUpdates = 1e5 + 1e6 * fromIntegral timeBetweenLocationUpdates
 defaultSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
 defaultSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do
   successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
-    forM_ (NE.toList updates) $ \upd -> do
-      updReq <- liftIO $ API.buildUpdateLocationRequest upd
-      void . callBPP $ API.ui.location.updateLocation arduDriver1.token updReq
+    forM_ (NE.toList updates) $ \_upd -> do
       liftIO $ threadDelay waitBetweenUpdates
 
 reversedPointsListSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
 reversedPointsListSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do
   successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
-    forM_ (NE.toList updates) $ \upd -> do
-      updReq <- liftIO $ API.buildUpdateLocationRequest upd
-      void . callBPP $ API.ui.location.updateLocation arduDriver1.token $ NE.reverse updReq
+    forM_ (NE.toList updates) $ \_upd -> do
       liftIO $ threadDelay waitBetweenUpdates
 
 -- There was a bug, when it was possible to update location multiple times if
@@ -74,23 +69,13 @@ reversedPointsListSuccessFlow eps distance chargeableDistance updates clients = 
 outdatedPointsSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
 outdatedPointsSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do
   successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
-    forM_ (NE.toList updates) $ \upd -> do
-      updReq <- liftIO $ makePointsOutdated <$> API.buildUpdateLocationRequest upd
-      void . callBPP $ API.ui.location.updateLocation arduDriver1.token updReq
+    forM_ (NE.toList updates) $ \_upd -> do
       liftIO $ threadDelay waitBetweenUpdates
-  where
-    makePointsOutdated = fmap (\point -> point{ts = addUTCTime (negate 600) point.ts})
 
 raceConditionSuccessFlow :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientEnvs -> IO ()
 raceConditionSuccessFlow eps distance chargeableDistance updates clients = withBecknClients clients $ do
   successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates $ do
-    forM_ (NE.toList updates) $ \upd -> do
-      void . forkMultipleThreads 5 $ do
-        updReq <- liftIO $ API.buildUpdateLocationRequest upd
-        void . callBPP $ API.ui.location.updateLocation arduDriver1.token updReq
-      liftIO $ threadDelay waitBetweenUpdates
-  where
-    forkMultipleThreads a f = replicateM a . liftIO $ forkIO $ withBecknClients clients f
+    liftIO $ threadDelay waitBetweenUpdates
 
 successFlowWithLocationUpdatesHandler :: Double -> HighPrecMeters -> Meters -> LocationUpdates -> ClientsM () -> ClientsM ()
 successFlowWithLocationUpdatesHandler eps distance chargeableDistance updates locationUpdatesFunc = do

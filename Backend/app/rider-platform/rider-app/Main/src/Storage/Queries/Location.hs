@@ -27,7 +27,7 @@ import qualified Storage.Beam.Location as BeamL
 create :: MonadFlow m => Location -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Location -> m (Maybe Location)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Location -> m (Maybe Location)
 findById (Id locationId) = findOneWithKV [Se.Is BeamL.id $ Se.Eq locationId]
 
 updateAddress :: MonadFlow m => Id Location -> LocationAddress -> m ()

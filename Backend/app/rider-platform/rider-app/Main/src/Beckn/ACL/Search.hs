@@ -17,6 +17,7 @@ module Beckn.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
 import Beckn.ACL.Common (mkLocation)
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import Control.Lens ((%~))
 import Data.Aeson (encode)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
@@ -26,7 +27,7 @@ import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
-import EulerHS.Prelude hiding (state)
+import EulerHS.Prelude hiding (state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
@@ -49,7 +50,10 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     customerLanguage
     disabilityTag
     merchant
+    city
     (getPoints shortestRouteInfo)
+    phoneNumber
+    isReallocationEnabled
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
@@ -68,6 +72,9 @@ buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
     Nothing
     Nothing
     merchant
+    city
+    Nothing
+    phoneNumber
     Nothing
 
 buildSearchReq ::
@@ -81,14 +88,18 @@ buildSearchReq ::
   Maybe Maps.Language ->
   Maybe Text ->
   DM.Merchant ->
+  Context.City ->
   Maybe [Maps.LatLong] ->
+  Maybe Text ->
+  Maybe Bool ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant mbPoints = do
+buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber mbIsReallocationEnabled = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.city merchant.country False
-  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
+  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled
   let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
@@ -101,8 +112,10 @@ mkIntent ::
   Maybe Meters ->
   Maybe Seconds ->
   Maybe [Maps.LatLong] ->
+  Maybe Text ->
+  Maybe Bool ->
   Search.Intent
-mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints = do
+mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin
@@ -121,11 +134,12 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
                 then
                   Just $
                     Search.TG
-                      [ mkRouteInfoTags
+                      [ mkRouteInfoTags,
+                        mkReallocationInfoTags
                       ]
                 else Nothing,
             customer =
-              if isJust customerLanguage || isJust disabilityTag
+              if isJust customerLanguage || isJust disabilityTag || isJust mbPhoneNumber
                 then
                   Just $
                     Search.Customer
@@ -184,6 +198,27 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
                   code = (\_ -> Just "customer_disability") =<< disabilityTag,
                   name = (\_ -> Just "Customer Disability") =<< disabilityTag,
                   value = (Just . show) =<< disabilityTag
+                },
+              Search.Tag
+                { display = (\_ -> Just False) =<< mbPhoneNumber,
+                  code = (\_ -> Just "customer_phone_number") =<< mbPhoneNumber,
+                  name = (\_ -> Just "Customer Phone Number") =<< mbPhoneNumber,
+                  value = (Just . show) =<< mbPhoneNumber
+                }
+            ]
+        }
+
+    mkReallocationInfoTags =
+      Search.TagGroup
+        { display = False,
+          code = "reallocation_info",
+          name = "Reallocation Information",
+          list =
+            [ Search.Tag
+                { display = (\_ -> Just False) =<< mbIsReallocationEnabled,
+                  code = (\_ -> Just "is_reallocation_enabled") =<< mbIsReallocationEnabled,
+                  name = (\_ -> Just "Is Reallocation Enabled") =<< mbIsReallocationEnabled,
+                  value = (Just . show) =<< mbIsReallocationEnabled
                 }
             ]
         }

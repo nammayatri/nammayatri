@@ -21,6 +21,7 @@ import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id (Id (Id, getId))
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
 import qualified Storage.Queries.EstimateBreakup as QEB
@@ -38,13 +39,13 @@ create estimate = do
 createMany :: MonadFlow m => [Estimate] -> m ()
 createMany = traverse_ create
 
-findById :: MonadFlow m => Id Estimate -> m (Maybe Estimate)
+findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m (Maybe Estimate)
 findById (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId]
 
-findAllBySRId :: MonadFlow m => Id SearchRequest -> m [Estimate]
+findAllBySRId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> m [Estimate]
 findAllBySRId (Id searchRequestId) = findAllWithKV [Se.Is BeamE.requestId $ Se.Eq searchRequestId]
 
-findByBPPEstimateId :: MonadFlow m => Id BPPEstimate -> m (Maybe Estimate)
+findByBPPEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BPPEstimate -> m (Maybe Estimate)
 findByBPPEstimateId (Id bppEstimateId_) = findOneWithKV [Se.Is BeamE.bppEstimateId $ Se.Eq bppEstimateId_]
 
 updateStatus :: MonadFlow m => Id Estimate -> EstimateStatus -> m ()
@@ -56,7 +57,7 @@ updateStatus (Id estimateId) status_ = do
     ]
     [Se.Is BeamE.id (Se.Eq estimateId)]
 
-getStatus :: MonadFlow m => Id Estimate -> m (Maybe EstimateStatus)
+getStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m (Maybe EstimateStatus)
 getStatus (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId] <&> (DE.status <$>)
 
 updateStatusByRequestId :: MonadFlow m => Id SearchRequest -> EstimateStatus -> m ()
@@ -84,6 +85,7 @@ instance FromTType' BeamE.Estimate Estimate where
           { id = Id id,
             requestId = Id requestId,
             merchantId = Id <$> merchantId,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
             bppEstimateId = Id bppEstimateId,
             itemId = itemId,
             discount = roundToIntegral <$> discount,
@@ -124,6 +126,7 @@ instance ToTType' BeamE.Estimate Estimate where
       { BeamE.id = getId id,
         BeamE.requestId = getId requestId,
         BeamE.merchantId = getId <$> merchantId,
+        BeamE.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamE.bppEstimateId = getId bppEstimateId,
         BeamE.itemId = itemId,
         BeamE.estimatedFare = realToFrac estimatedFare,

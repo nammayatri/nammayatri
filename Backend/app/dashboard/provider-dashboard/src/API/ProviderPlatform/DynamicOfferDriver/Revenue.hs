@@ -24,9 +24,10 @@ import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified ProviderPlatformClient.DynamicOfferDriver as Client
+import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant
 import Tools.Auth.Api
 import Tools.Auth.Merchant
@@ -38,24 +39,24 @@ type API =
        )
 
 type CollectionHistoryAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'VOLUNTEER 'VOLUNTEER_COLLECTION_HISTORY
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'VOLUNTEER 'VOLUNTEER_COLLECTION_HISTORY
     :> Common.GetCollectionHistory
 
 type AllDriverFeeHistoryAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'VOLUNTEER 'ALL_FEE_HISTORY -- change
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'VOLUNTEER 'ALL_FEE_HISTORY -- change
     :> Common.GetAllDriverFeeHistory
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  getCollectionHistory merchantId
-    :<|> getAllDriverFeeHistory merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  getCollectionHistory merchantId city
+    :<|> getAllDriverFeeHistory merchantId city
 
-getCollectionHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CollectionList
-getCollectionHistory merchantShortId apiTokenInfo volunteerId place mbFrom mbTo = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.revenue.getCollectionHistory) volunteerId place mbFrom mbTo
+getCollectionHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler Common.CollectionList
+getCollectionHistory merchantShortId opCity apiTokenInfo volunteerId place mbFrom mbTo = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.revenue.getCollectionHistory) volunteerId place mbFrom mbTo
 
-getAllDriverFeeHistory :: ShortId DM.Merchant -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler [Common.AllFees]
-getAllDriverFeeHistory merchantShortId apiTokenInfo mbFrom mbTo = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
-  Client.callDriverOfferBPP checkedMerchantId (.revenue.getAllDriverFeeHistory) mbFrom mbTo
+getAllDriverFeeHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe UTCTime -> Maybe UTCTime -> FlowHandler [Common.AllFees]
+getAllDriverFeeHistory merchantShortId opCity apiTokenInfo mbFrom mbTo = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callDriverOfferBPPOperations checkedMerchantId opCity (.revenue.getAllDriverFeeHistory) mbFrom mbTo

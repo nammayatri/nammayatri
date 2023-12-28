@@ -21,7 +21,7 @@ import Font.Size as FontSize
 import Font.Style (Style (..))
 import Common.Styles.Colors as Color
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 
 data Action = OnCloseClick
@@ -65,7 +65,7 @@ type StarterLayoutConfig =
 config :: Config 
 config = 
   { imageConfig : 
-    { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+    { imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_close"
     , height : V 25
     , width : V 25
     , margin : (MarginRight 15)

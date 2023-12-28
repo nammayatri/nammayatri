@@ -23,7 +23,7 @@ import Common.Types.App (LazyCheck(..))
 import Common.Types.App as Common
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -41,7 +41,7 @@ genericHeaderConfig state = let
       height = WRAP_CONTENT
     , prefixImageConfig {
        visibility = VISIBLE
-      , imageUrl = "ny_ic_chevron_left," <> (getAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_ASSET "ny_ic_chevron_left"
       , height = V 25
       , width = V 25
       , margin = Margin 16 16 16 16
@@ -98,7 +98,7 @@ getTransactionConfig transactionInfo = do
                   Common.Failed, _, _                             ->  PAYMENT_FAILED
                   _, _, _                                         ->  PAYMENT_SCHEDULED
   case status of
-    Common.Success -> {image : "ny_ic_green_tick", statusTimeDesc : getString TRANSACTION_DEBITED_ON, title : title'}
-    Common.Pending -> {image : "ny_ic_transaction_pending," <> (getAssetStoreLink FunctionCall) <> "ny_ic_transaction_pending.png", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
-    Common.Failed  -> {image : "ny_ic_payment_failed," <> (getAssetStoreLink FunctionCall) <> "ny_ic_payment_failed.png", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
-    Common.Scheduled  -> {image : "ny_ic_pending", statusTimeDesc : getString SCHEDULED_AT, title : title'}
+    Common.Success -> {image : fetchImage FF_ASSET "ny_ic_green_tick", statusTimeDesc : getString TRANSACTION_DEBITED_ON, title : title'}
+    Common.Pending -> {image : fetchImage FF_ASSET "ny_ic_transaction_pending", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
+    Common.Failed  -> {image : fetchImage FF_ASSET "ny_ic_payment_failed", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
+    Common.Scheduled  -> {image : fetchImage FF_ASSET "ny_ic_pending", statusTimeDesc : getString SCHEDULED_AT, title : title'}

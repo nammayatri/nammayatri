@@ -19,12 +19,18 @@ source-repository head
   type: git
   location: https://github.com/nammayatri/nammayatri
 
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
 library
   exposed-modules:
       API
       API.RiderPlatform
       API.RiderPlatform.Booking
       API.RiderPlatform.Customer
+      API.RiderPlatform.Issue
       API.RiderPlatform.IssueList
       API.RiderPlatform.Merchant
       API.RiderPlatform.Ride
@@ -39,8 +45,10 @@ library
       API.RiderPlatform.RideBooking.Registration
       API.RiderPlatform.RideBooking.Search
       API.RiderPlatform.RideBooking.Select
+      API.RiderPlatform.Tickets
       App
-      RiderPlatformClient.RiderApp
+      RiderPlatformClient.RiderApp.Operations
+      RiderPlatformClient.RiderApp.RideBooking
   other-modules:
       Paths_rider_dashboard
   hs-source-dirs:
@@ -100,13 +108,16 @@ library
     , servant-client
     , servant-openapi3
     , servant-server
+    , shared-services
     , template-haskell
     , text
     , time
     , unordered-containers
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4
 
 executable rider-dashboard-exe
   main-is: Main.hs
@@ -173,5 +184,7 @@ executable rider-dashboard-exe
     , time
     , unordered-containers
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4

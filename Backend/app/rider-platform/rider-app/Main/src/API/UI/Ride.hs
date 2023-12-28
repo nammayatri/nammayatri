@@ -17,6 +17,7 @@ module API.UI.Ride
     handler,
     DRide.GetDriverLocResp,
     DRide.GetRideStatusResp (..),
+    DRide.EditLocationReq (..),
   )
 where
 
@@ -27,9 +28,11 @@ import qualified Domain.Types.Person as SPerson
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
@@ -42,6 +45,11 @@ type API =
                   :<|> "status"
                   :> TokenAuth
                   :> Get '[JSON] DRide.GetRideStatusResp
+                  :<|> "edit"
+                  :> "location"
+                  :> TokenAuth
+                  :> ReqBody '[JSON] DRide.EditLocationReq
+                  :> Post '[JSON] APISuccess
               )
        )
 
@@ -49,9 +57,13 @@ handler :: FlowServer API
 handler rideId =
   getDriverLoc rideId
     :<|> getRideStatus rideId
+    :<|> editLocation rideId
 
 getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetDriverLocResp
 getDriverLoc rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId personId
 
 getRideStatus :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetRideStatusResp
 getRideStatus rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId
+
+editLocation :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.EditLocationReq -> FlowHandler APISuccess
+editLocation rideId (personId, merchantId) editLocationReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.editLocation rideId (personId, merchantId) editLocationReq

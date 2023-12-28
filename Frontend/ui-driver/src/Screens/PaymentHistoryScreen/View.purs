@@ -42,7 +42,7 @@ import Font.Style (Style(..), getFontStyle)
 import Font.Style as FontStyle
 import Foreign (Foreign, unsafeToForeign)
 import Foreign.Generic (decode)
-import Helpers.Utils (getAssetStoreLink, getFixedTwoDecimals)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getFixedTwoDecimals)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, ($), (&&), (-), (<<<), (<>), (==), (>), (/), (/=), (||))
@@ -175,7 +175,7 @@ paymentList push state =
                   , width MATCH_PARENT
                   , gravity CENTER_VERTICAL
                   , margin $ MarginBottom 6
-                  ][ commonTV push item.description Color.black700 (FontStyle.body2 TypoGraphy) 0 LEFT true
+                  ][ commonTV push item.description Color.black700 (FontStyle.body3 TypoGraphy) 0 LEFT true
                   , commonTV push item.ridesTakenDate Color.black700 (FontStyle.body6 TypoGraphy) 0 LEFT true
                   , linearLayout
                       [ height WRAP_CONTENT
@@ -211,7 +211,7 @@ paymentList push state =
                             [ width $ V 12
                             , height $ V 12
                             , margin (MarginRight 4)
-                            , imageWithFallback $ "ny_ic_upi_logo," <> (getAssetStoreLink FunctionCall) <> "ny_ic_upi_logo.png"
+                            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_upi_logo"
                             ]
                           , commonTV push (case item.feeType of 
                                             AUTOPAY_PAYMENT -> (getString UPI_AUTOPAY_S)
@@ -244,10 +244,10 @@ noPaymentsView state push =
     [ width $ V 200
     , height $ V 200
     , gravity CENTER
-    , imageWithFallback case state.props.autoPayHistory, state.props.autoPaySetup of
-                            true, true -> "ny_no_automatic_payments,"
-                            true, false -> "ny_ic_enable_autopay," <> (getAssetStoreLink FunctionCall) <> "ny_ic_enable_autopay.png"
-                            false, _ -> "ny_no_manual_payments,"
+    , imageWithFallback $ fetchImage FF_ASSET $ case state.props.autoPayHistory, state.props.autoPaySetup of
+                            true, true -> "ny_no_automatic_payments"
+                            true, false -> "ny_ic_enable_autopay"
+                            false, _ -> "ny_no_manual_payments"
     ]
   , textView
     [ text $ getString $ case state.props.autoPayHistory, state.props.autoPaySetup of
@@ -390,7 +390,7 @@ transactionDetails push state visibility' =
                 , padding $ PaddingVertical 8 8
                 ](DA.mapWithIndex (\ index item ->
                   transactionHistoryRow push item.title index (DA.length state.data.transactionDetails.details) (item.val /= "") $ case item.key of
-                    "OFFER" -> if item.val /= "" then promoCodeView push (fromMaybe dummyPromoConfig ((getPromoConfig [OfferEntity {title : Just item.val, description : Nothing, tnc : Nothing}]) DA.!! 0)) else rightItem push "N/A" false false
+                    "OFFER" -> if item.val /= "" then promoCodeView push (fromMaybe dummyPromoConfig ((getPromoConfig [OfferEntity {title : Just item.val, description : Nothing, tnc : Nothing, offerId : "", gradient : Nothing}] state.data.gradientConfig) DA.!! 0)) else rightItem push "N/A" false false
                     "TXN_ID" -> rightItem push item.val false true
                     "PAYMENT_MODE" -> rightItem push item.val true false
                     _ -> commonTV push item.val Color.black900 (FontStyle.body6 TypoGraphy) 0 RIGHT (item.val /= "")
@@ -507,7 +507,7 @@ rightItem push val prefixImage postfixImage =
      , height $ V 12
      , margin (MarginRight 4)
      , visibility if prefixImage then VISIBLE else GONE
-     , imageWithFallback "ny_ic_upi_logo,"
+     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_upi_logo"
      ] 
    , textView $
      [ text val
@@ -519,7 +519,7 @@ rightItem push val prefixImage postfixImage =
      , height $ V 16
      , margin (MarginLeft 3)
      , visibility if postfixImage then VISIBLE else GONE
-     , imageWithFallback $ "ny_ic_copy_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_copy_blue.png"
+     , imageWithFallback $ fetchImage FF_ASSET "ny_ic_copy_blue"
      ] 
   ]
 
@@ -549,7 +549,7 @@ manualPaymentRidesList push state =
           , width $ V (screenwidth/3)
           ] <> FontStyle.body3 TypoGraphy
         , textView $
-          [ text $ "₹" <> getString AMOUNT
+          [ text $ "₹" <> getString TOTAL_AMOUNT
           , width $ V (screenwidth/3)
           , color Color.black700
           , gravity RIGHT

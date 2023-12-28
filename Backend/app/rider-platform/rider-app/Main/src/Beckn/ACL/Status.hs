@@ -29,7 +29,8 @@ import Kernel.Utils.Common
 
 data DStatusReq = DStatusReq
   { booking :: Booking,
-    merchant :: Merchant
+    merchant :: Merchant,
+    city :: Context.City
   }
 
 buildStatusReq ::
@@ -40,6 +41,7 @@ buildStatusReq DStatusReq {..} = do
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
+  -- TODO :: Add request city, after multiple city support on gateway.
   context <-
     buildTaxiContext
       Context.STATUS
@@ -49,7 +51,7 @@ buildStatusReq DStatusReq {..} = do
       bapUrl
       (Just merchant.id.getId)
       (Just booking.providerUrl)
-      merchant.city
+      merchant.defaultCity
       merchant.country
       False
   pure $

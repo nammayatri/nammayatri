@@ -47,7 +47,7 @@ cancelSearch :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.CancelA
 selectQuote2 :<|> selectList :<|> selectResult :<|> cancelSearch = client (Proxy :: Proxy AppSelect.API)
 
 cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
-cancelRide = client (Proxy :: Proxy CancelAPI.API)
+cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
@@ -65,7 +65,9 @@ callAppFeedback ratingValue rideId =
         AppFeedback.FeedbackReq
           { rideId = rideId,
             rating = ratingValue,
-            feedbackDetails = Just "driver was well behaved!"
+            feedbackDetails = Just "driver was well behaved!",
+            nightSafety = Nothing,
+            wasOfferedAssistance = Nothing
           }
    in appFeedback appRegistrationToken request
 
@@ -110,7 +112,9 @@ mkAuthReq =
       email = Nothing,
       language = Nothing,
       gender = Nothing,
-      otpChannel = Nothing
+      otpChannel = Nothing,
+      registrationLat = Nothing,
+      registrationLon = Nothing
     }
 
 mkAuthVerifyReq :: Reg.AuthVerifyReq

@@ -114,13 +114,13 @@ view push state =
               , orientation HORIZONTAL
               , background Color.white900
               , alignParentBottom "true,-1"
-              , visibility if ((DA.length state.data.savedLocations )/= 0 && state.props.apiRespReceived == true) then VISIBLE else GONE
+              , visibility if (DA.length state.data.savedLocations )/= 0 && state.props.apiRespReceived then VISIBLE else GONE
               ][  PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state) ]
             ]
         , linearLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
-          , visibility if ((DA.length state.data.savedLocations )== 0 && state.props.apiRespReceived == true ) then VISIBLE else GONE
+          , visibility if (DA.length state.data.savedLocations )== 0 && state.props.apiRespReceived then VISIBLE else GONE
           ][  ErrorModal.view (push <<< ErrorModalAC) (errorModalConfig state )]
         ]
       ]
@@ -178,7 +178,10 @@ savedLocationsView push state =
               , locationItemType : Just ST.SAVED_LOCATION
               , distance : Nothing
               , showDistance : Just false
-              , actualDistance : 0
+              , actualDistance : Nothing
+              , frequencyCount : Nothing
+              , recencyDate : Nothing
+              , locationScore : Nothing
             }))state.data.savedLocations)
         , linearLayout
           [ height $ V 100

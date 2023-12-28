@@ -33,7 +33,7 @@ import Data.Array as DA
 import PrestoDOM.Types.Core (toPropValue)
 import Data.String.Regex (match)
 import Halogen.VDom.DOM.Prop (PropValue)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, setRefreshing)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), setRefreshing)
 
 screen :: EmergencyContactsScreenState -> PrestoList.ListItem -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState listItemm =
@@ -78,7 +78,7 @@ view listItemm push state =
             [ height MATCH_PARENT
             , width MATCH_PARENT
             , orientation VERTICAL
-            , accessibility if (state.props.showInfoPopUp == true) then DISABLE_DESCENDANT else DISABLE
+            , accessibility if state.props.showInfoPopUp then DISABLE_DESCENDANT else DISABLE
             ]
             [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
             , linearLayout
@@ -154,7 +154,7 @@ contactListView listItemm push state =
             , width $ V 17
             , accessibilityHint "Cancel Search : Button"
             , accessibility ENABLE
-            , imageWithFallback "ny_ic_cancel,https://assets.juspay.in/nammayatri/images/user/ny_ic_cancel.png"
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancel"
             , gravity CENTER
             , margin (Margin 10 10 10 10)
             , onClick push $ const ContactListClearText
@@ -271,7 +271,7 @@ emptyContactsView push state =
     [ imageView
         [ height $ V 150
         , width $ V 150
-        , imageWithFallback $ "ny_ic_emergency_contact_empty," <> (getAssetStoreLink FunctionCall) <> "ny_ic_emergency_contact_empty.png"
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_emergency_contact_empty"
         ]
     , textView $
         [ height $ WRAP_CONTENT

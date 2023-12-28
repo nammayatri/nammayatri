@@ -1,7 +1,7 @@
 module Common.Styles.Colors where
 
 import Styles.Types
-import MerchantConfig.Utils (getValueFromConfig)
+import ConfigProvider
 
 -- General Colors
 black :: Color
@@ -89,8 +89,14 @@ green900 = "#53BB6F"
 yellow100 :: Color
 yellow100 = "#FFFDF7"
 
-green100 :: Color
-green100 = "#F8FCF9"
+greenOpacity10 :: Color
+greenOpacity10 = "#1A53BB6F"
+
+green300 :: Color
+green300 = "#DDFFEB"
+
+green100 :: Color 
+green100 = "#1A53BB6F"
 
 dustyRed :: Color
 dustyRed = "#BF4A4E"
@@ -106,6 +112,9 @@ floralWhite = "#FFFAEE"
 
 orange900 :: Color
 orange900 = "#FF8533"
+
+orange200 :: Color
+orange200 = "#FFE7C2"
 
 pickledBlue :: Color
 pickledBlue = "#29334A"
@@ -130,13 +139,23 @@ transparent = "#00FFFFFF"
 
 
 black800 :: Color
-black800 = getValueFromConfig "black800"
+black800 = 
+  let config = getAppConfig appConfig
+  in config.colors.black800
 
 black900 :: Color
-black900 = getValueFromConfig "black900"
+black900 =   let config = getAppConfig appConfig
+  in config.colors.black900
+
+black6000 :: Color
+black6000 = "#565961"
+
+black400 :: Color
+black400 = "#40000000"
 
 red :: Color
-red = getValueFromConfig "red"
+red = let config = getAppConfig appConfig
+  in config.colors.red
 
 blueMagenta :: Color 
 blueMagenta = "#9747FF"
@@ -162,11 +181,53 @@ yellow800 = "#FEEBB9"
 yellowOpacity16 :: Color
 yellowOpacity16 = "#29FCC32C"
 
+yellowOpacity10 :: Color
+yellowOpacity10 = "#1AFCC32C"
+
 greenOpacity16 :: Color
 greenOpacity16 = "#2953BB6F"
 
 redOpacity16 :: Color
 redOpacity16 = "#29E55454"
 
+redOpacity10 :: Color
+redOpacity10 = "#1AE55454"
+
 fadedPurple :: Color 
 fadedPurple = "#339747FF"
+
+red900 :: Color
+red900 = "#E55454"
+
+yellow200 :: Color
+yellow200 = "#33FCC32C"
+
+black200 :: Color
+black200 = "#1A2C2F3A"
+
+purple100 :: Color 
+purple100 = "#1A9747FF"
+
+blue100 :: Color
+blue100 = "#1A2194FF"
+
+green600 :: Color
+green600 = "#269574"
+
+ghostWhite :: Color
+ghostWhite = "#F3F4F8"
+
+manatee200 :: Color
+manatee200 = "#206D7280"
+
+blue200 :: Color
+blue200 = "#202194FF"
+
+carnation100 :: Color
+carnation100 = "#10E55454"
+
+squidInkBlue :: Color
+squidInkBlue = "#303440"
+
+rippleShade :: Color
+rippleShade = "#D5D5D8"

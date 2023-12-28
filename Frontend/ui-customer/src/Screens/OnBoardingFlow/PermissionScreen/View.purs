@@ -23,7 +23,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -62,7 +62,6 @@ view push state =
   ][ linearLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT
-     , padding $ Padding 0 EHC.safeMarginTop 0 EHC.safeMarginBottom
      , gravity CENTER
      , afterRender push (const AfterRender)
      ]([] <> (case state.stage of
@@ -90,7 +89,7 @@ locationAccessPermissionView push state =
       , cornerRadius 8.0
       , background Color.white900
       ][  imageView
-          [ imageWithFallback $ "ic_location_permission_logo," <> (getAssetStoreLink FunctionCall) <> "ic_location_permission_logo.png"
+          [ imageWithFallback $ fetchImage FF_ASSET "ic_location_permission_logo"
           , height $ V 213
           , width $ V 240
           , gravity CENTER
@@ -105,7 +104,7 @@ locationAccessPermissionView push state =
           , fontStyle $ FontStyle.bold LanguageStyle
         ]
         , textView
-          [ text $ getString if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then LOCATION_PERMISSION_SUBTITLE_NEW_USER else LOCATION_PERMISSION_SUBTITLE
+          [ text $ getString if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then (LOCATION_PERMISSION_SUBTITLE_NEW_USER "LOCATION_PERMISSION_SUBTITLE_NEW_USER") else LOCATION_PERMISSION_SUBTITLE
           , textSize FontSize.a_16
           , color Color.black800
           , fontStyle $ FontStyle.regular LanguageStyle

@@ -32,7 +32,7 @@ import JBridge as JB
 import Effect.Class (liftEffect)
 import Common.Types.App
 import Screens.UploadAdhaarScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
 
 screen :: ST.UploadAdhaarScreenState -> Screen Action ST.UploadAdhaarScreenState ScreenOutput
@@ -149,7 +149,7 @@ frontUploadSection state push =
       imageView
       [ width ( V 20 )
       , height ( V 20 )
-      , imageWithFallback $ "ny_ic_upload," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_upload.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_upload"
       ]
     ]
   ]
@@ -185,7 +185,7 @@ backUploadSection state push =
       imageView
       [ width ( V 20 )
       , height ( V 20 )
-      , imageWithFallback $ "ny_ic_upload," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_upload.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_upload"
       ]
     ]
   ]
@@ -200,7 +200,7 @@ instructionSectionView state =
       imageView
       [ width ( V 100 )
       , height ( V 100 ) 
-      , imageWithFallback $ "ny_ic_aadhaar," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_aadhaar.png"
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_aadhaar"
       ]
     , textView
       ([ width WRAP_CONTENT
@@ -218,7 +218,7 @@ instructionSectionView state =
         [ width ( V 20 )
         , height ( V 20 ) 
         , margin (MarginRight 9)
-        , imageWithFallback $ "ny_ic_text_pointer_right," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_text_pointer_right.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_text_pointer_right"
         ]
       , textView
         ([ text (getString ADHAAR_INTRUCTION_PICTURE)
@@ -235,7 +235,7 @@ instructionSectionView state =
         [ width ( V 20 )
         , height ( V 20 ) 
         , margin (MarginRight 9)
-        , imageWithFallback $ "ny_ic_text_pointer_right," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_text_pointer_right.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_text_pointer_right"
         ]
       , textView
         ([ text (getString LICENSE_INSTRUCTION_CLARITY)
@@ -264,7 +264,7 @@ previewIcon state push previewType =
           [ height (V 20)
           , width (V 20)
           , margin (Margin 10 0 0 0)
-          , imageWithFallback $ "ny_ic_cancel," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_cancel.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_cancel"
           , onClick push (const(RemoveUploadedFile previewType))
           ]
     ]

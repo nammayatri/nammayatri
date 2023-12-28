@@ -27,7 +27,7 @@ import Prelude (Unit, const, bind, pure, unit, ($), (<>), (==), (||), (&&), (>) 
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), background, clickable, color, accessibilityHint, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, alpha, imageWithFallback, accessibility)
 import Screens.Types (LocationListItemState)
 import Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Array(any)
 import Common.Types.App (LazyCheck(..))
 
@@ -64,10 +64,10 @@ view push config flag =
                 [ height WRAP_CONTENT
                 , width WRAP_CONTENT
                 , text $ fromMaybe "" config.distance
-                , color if (flag && config.actualDistance >= 500) then Color.red else Color.black700
+                , color if (flag && (fromMaybe 0 config.actualDistance) >= 500) then Color.red else Color.black700
                 , textSize FontSize.a_11
                 , gravity CENTER
-                , visibility $ if config.actualDistance == 0 then GONE else VISIBLE
+                , visibility $ if (config.actualDistance == Just 0 || config.actualDistance == Nothing) then GONE else VISIBLE
                 ]
               ]
           , linearLayout
@@ -108,7 +108,7 @@ postfixImageView push config =
     , onClick push $ const $ FavClick config
     , accessibilityHint "Add Favourite Button : Select to add this location to favourite"
     , accessibility DISABLE_DESCENDANT
-    , clickable (if config.postfixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then false else true)
+    , clickable (if config.postfixImageUrl == fetchImage FF_ASSET "ny_ic_fav_red" then false else true)
     ][  imageView
         [ height $ V 20
         , width $ V 20
@@ -122,7 +122,7 @@ titleView config =
   textView (
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , text if config.prefixImageUrl == "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png" || config.prefixImageUrl == "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png" || config.prefixImageUrl == "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png" then config.tag else config.title
+    , text if config.prefixImageUrl == fetchImage FF_ASSET "ny_ic_home_blue" || config.prefixImageUrl == fetchImage FF_ASSET "ny_ic_work_blue" || config.prefixImageUrl == fetchImage FF_ASSET "ny_ic_fav_red" then config.tag else config.title
     , color Color.black800
     , lineHeight "18"
     , accessibilityHint $ config.title <> " : " <> config.subTitle

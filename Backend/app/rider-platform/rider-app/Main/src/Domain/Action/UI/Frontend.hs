@@ -22,6 +22,7 @@ module Domain.Action.UI.Frontend
   )
 where
 
+import qualified Data.HashMap as HM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -98,7 +99,8 @@ handleRideTracking ::
     EncFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    HasField "rideCfg" r RideConfig
+    HasField "rideCfg" r RideConfig,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   Id DP.Person ->
   Maybe Bool ->
@@ -161,7 +163,7 @@ updateStatus personId updatedStatus = do
   _ <- QPFS.updateStatus personId updatedStatus
   QPFS.clearCache personId
 
-getTrackUrl :: (Esq.EsqDBReplicaFlow m r, MonadFlow m) => Id SRide.Ride -> Maybe BaseUrl -> m (Maybe BaseUrl)
+getTrackUrl :: (Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SRide.Ride -> Maybe BaseUrl -> m (Maybe BaseUrl)
 getTrackUrl rideId mTrackUrl = do
   case mTrackUrl of
     Nothing -> do

@@ -32,12 +32,12 @@ import Data.Maybe (Maybe(..), fromMaybe, fromJust)
 import Data.Number (fromString) as Number
 import Data.String (trim, length, split, Pattern(..), drop, indexOf, toLower)
 import Effect (Effect)
-import Effect.Uncurried (runEffectFn5)
+import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (os, getNewIDWithTag)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Helpers.Utils (getCurrentLocationMarker, getDistanceBwCordinates, getLocationName)
-import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader, firebaseLogEvent)
+import JBridge (animateCamera, currentPosition, exitLocateOnMap, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, removeAllPolylines, requestKeyboardShow, requestLocation, toast, toggleBtnLoader, firebaseLogEvent, locateOnMapConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -52,7 +52,7 @@ import Screens.Types (AddNewAddressScreenState, CardType(..), Location, Location
 import Services.API (AddressComponents, Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import JBridge (fromMetersToKm)
-import Debug(spy)
+import Common.Resources.Constants (pickupZoomLevel)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -159,7 +159,7 @@ eval (ClearEditText) state = do
   continue state{props{isSearchedLocationServiceable = true}}
 
 eval SetLocationOnMap state = do 
-  let _ = unsafePerformEffect $ runEffectFn5 locateOnMap true 0.0 0.0 state.data.polygonCoordinates state.data.nearByPickUpPoints
+  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "AddAddressPin"}
   _ <- pure $ removeAllPolylines ""
   _ <- pure $ hideKeyboardOnNavigation true
   _ <- pure $ toggleBtnLoader "" false
@@ -252,7 +252,7 @@ eval (TagSelected index) state = do
                               , selectedTag = getTag index
                               , addressSavedAs = if index /= 2 then "" else state.data.addressSavedAs}
                       , props { placeNameExists = if index /= 2 then false else state.props.placeNameExists 
-                              , isBtnActive = (index == 2 && state.data.addressSavedAs /= "") || (index == 2 && state.props.editLocation == true && state.data.placeName /="" ) || index == 1 || index == 0
+                              , isBtnActive = (index == 2 && state.data.addressSavedAs /= "") || (index == 2 && state.props.editLocation && state.data.placeName /="" ) || index == 1 || index == 0
                                               }}
         else do
           void $ pure $ toast ((case (toLower activeTag) of
@@ -296,7 +296,7 @@ getLocationList prediction = map (\x -> getLocation x) prediction
 getLocation :: Prediction -> LocationListItemState
 getLocation prediction = {
     postfixImageUrl : " "
-  , prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
+  , prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
   , postfixImageVisibility : false
   , title : (fromMaybe "" ((split (Pattern ",") (prediction ^. _description)) DA.!! 0))
   , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (prediction ^. _description))) + 2) (prediction ^. _description))
@@ -318,7 +318,10 @@ getLocation prediction = {
   , locationItemType : Just PREDICTION
   , distance : Just (fromMetersToKm (fromMaybe 0 (prediction ^. _distance)))
   , showDistance : Just $ checkShowDistance (fromMaybe 0 (prediction ^. _distance))
-  , actualDistance : fromMaybe 0 (prediction ^. _distance)
+  , actualDistance : (prediction ^. _distance)
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
 }
 
 encodeAddressDescription :: AddNewAddressScreenState -> SavedReqLocationAPIEntity
@@ -352,10 +355,10 @@ encodeAddressDescription state = do
 getSavedLocations :: (Array SavedReqLocationAPIEntity) -> Array LocationListItemState
 getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
   {
-  prefixImageUrl : case (toLower (item.tag) ) of 
-                "home" -> "ny_ic_home_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_home_blue.png"
-                "work" -> "ny_ic_work_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_work_blue.png"
-                _      -> "ny_ic_fav_red," <> (getAssetStoreLink FunctionCall) <> "ny_ic_fav_red.png"
+  prefixImageUrl : fetchImage FF_ASSET $ case (toLower (item.tag) ) of 
+                "home" -> "ny_ic_home_blue"
+                "work" -> "ny_ic_work_blue"
+                _      -> "ny_ic_fav_red"
 , postfixImageUrl : ""
 , postfixImageVisibility : false
 , title : (fromMaybe "" ((split (Pattern ",") (decodeAddress(SavedLoc (SavedReqLocationAPIEntity item)))) DA.!! 0))
@@ -378,7 +381,11 @@ getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 , locationItemType : Just SAVED_LOCATION
 , distance : Nothing
 , showDistance : Just false
-, actualDistance : 0
+, actualDistance : Nothing
+, frequencyCount : Nothing
+, recencyDate : Nothing
+, locationScore : Nothing
+
 }) savedLocation )
 
 getSavedTags :: (Array SavedReqLocationAPIEntity) -> Array String
@@ -419,7 +426,7 @@ checkPermissionAndUpdatePersonMarker state = do
       else pure unit
 
 showPersonMarker :: AddNewAddressScreenState -> String -> Location -> Effect Unit
-showPersonMarker state marker location = animateCamera location.lat location.lng 19 ""
+showPersonMarker state marker location = animateCamera location.lat location.lng pickupZoomLevel "ZOOM"
 
 constructLatLong :: Number -> Number -> String -> Location
 constructLatLong lat lng _ =
@@ -427,6 +434,7 @@ constructLatLong lat lng _ =
   , lng : lng
   , place : ""
   , address : Nothing
+  , city : Nothing
   }
 
 calculateDistance ::Array LocationListItemState -> String -> Number -> Number -> Array DistInfo

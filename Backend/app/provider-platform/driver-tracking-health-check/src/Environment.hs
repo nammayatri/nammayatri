@@ -47,8 +47,6 @@ data AppCfg = AppCfg
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     esqDBCfg :: EsqDBConfig,
-    esqLocationDBCfg :: EsqDBConfig,
-    esqLocationDBRepCfg :: EsqDBConfig,
     encTools :: EncTools,
     notificationMinDelay :: Microseconds,
     driverInactiveDelay :: Seconds,
@@ -58,8 +56,7 @@ data AppCfg = AppCfg
     driverInactiveSmsTemplate :: Text,
     cacheConfig :: CacheConfig,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool,
-    enableLocationTrackingService :: Bool
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -78,8 +75,6 @@ data AppEnv = AppEnv
     smsCfg :: SmsConfig,
     driverInactiveSmsTemplate :: Text,
     esqDBEnv :: EsqDBEnv,
-    esqLocationDBEnv :: EsqDBEnv,
-    esqLocationDBRepEnv :: EsqDBEnv,
     hedisEnv :: Redis.HedisEnv,
     hedisNonCriticalEnv :: Redis.HedisEnv,
     hedisNonCriticalClusterEnv :: Redis.HedisEnv,
@@ -92,8 +87,7 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool,
-    enableLocationTrackingService :: Bool
+    enablePrometheusMetricLogging :: Bool
   }
   deriving (Generic)
 
@@ -105,8 +99,6 @@ buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  esqLocationDBEnv <- prepareEsqDBEnv esqLocationDBCfg loggerEnv
-  esqLocationDBRepEnv <- prepareEsqDBEnv esqLocationDBRepCfg loggerEnv
   let modifierFunc = (driverAppName <>)
   hedisEnv <- Redis.connectHedis hedisCfg modifierFunc
   hedisNonCriticalEnv <- Redis.connectHedis hedisNonCriticalCfg modifierFunc

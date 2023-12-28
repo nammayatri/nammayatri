@@ -49,6 +49,7 @@ data SMSStatus = SMSStatus
 sendStatus ::
   ( HasFlowEnv m r '["webengageCfg" ::: IT.WebengageConfig],
     EncFlow m r,
+    CacheFlow m r,
     EsqDBFlow m r,
     CoreMetrics m
   ) =>

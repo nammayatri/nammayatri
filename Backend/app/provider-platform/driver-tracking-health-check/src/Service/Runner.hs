@@ -45,12 +45,13 @@ driverTrackingHealthcheckService = withLogTag "driverTrackingHealthcheckService"
 
 driverLastLocationUpdateCheckService :: Flow ()
 driverLastLocationUpdateCheckService = startService "driverLastLocationUpdateCheckService" $ withRandomId do
-  locationDelay <- asks (.driverAllowedDelayForLocationUpdateInSec)
+  _locationDelay <- asks (.driverAllowedDelayForLocationUpdateInSec)
   serviceInterval <- asks (.driverLocationHealthCheckIntervalInSec)
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
-    now <- getCurrentTime
+    _now <- getCurrentTime
     HC.iAmAlive
-    drivers <- SQP.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral locationDelay) `addUTCTime` now)
+    let drivers = [] -- TODO :: Driver Locations to be consumed from Kafka Stream instead of calling LTS
+    -- drivers <- SQP.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral locationDelay) `addUTCTime` now)
     let driverDetails = map fetchPersonIdAndMobileNumber drivers
     flip map driverDetails \case
       (driverId, Nothing) -> Left driverId
@@ -78,7 +79,7 @@ driverDevicePingService = startService "driverDevicePingService" do
     withLogTag driverId.getId do
       log INFO "Ping driver"
       driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      notifyDevice driver.merchantId TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)
+      notifyDevice driver.merchantOperatingCityId TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)
   asks (.notificationMinDelay)
     >>= threadDelay . (.getMicroseconds)
 
@@ -86,9 +87,10 @@ driverMakingInactiveService :: Flow ()
 driverMakingInactiveService = startService "driverMakingInactiveService" $ withRandomId do
   delay <- asks (.driverInactiveDelay)
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverMakingInactiveService" do
-    now <- getCurrentTime
+    _now <- getCurrentTime
     HC.iAmAlive
-    drivers <- SQP.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
+    let drivers :: [SP.Person] = [] -- TODO :: Driver Locations to be consumed from Kafka Stream instead of calling LTS
+    -- drivers <- SQP.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
     logPretty INFO ("Drivers to make inactive: " <> show (length drivers)) ((.id) <$> drivers)
     mapM_ fetchPersonIdAndMobileNumber drivers
   threadDelay (secondsToMcs delay).getMicroseconds

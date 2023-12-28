@@ -12,6 +12,8 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Merchant.MerchantPaymentMethod where
 
@@ -23,6 +25,7 @@ import Tools.Beam.UtilsTH
 data MerchantPaymentMethodT f = MerchantPaymentMethodT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     paymentType :: B.C f Domain.PaymentType,
     paymentInstrument :: B.C f Domain.PaymentInstrument,
     collectedBy :: B.C f Domain.PaymentCollector,
@@ -40,6 +43,6 @@ instance B.Table MerchantPaymentMethodT where
 
 type MerchantPaymentMethod = MerchantPaymentMethodT Identity
 
-$(enableKVPG ''MerchantPaymentMethodT ['id] [['merchantId]])
+$(enableKVPG ''MerchantPaymentMethodT ['id] [['merchantOperatingCityId]])
 
 $(mkTableInstances ''MerchantPaymentMethodT "merchant_payment_method")

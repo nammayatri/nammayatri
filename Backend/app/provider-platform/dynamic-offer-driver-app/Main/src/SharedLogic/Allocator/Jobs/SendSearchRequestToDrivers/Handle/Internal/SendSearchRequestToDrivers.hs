@@ -19,7 +19,6 @@ where
 
 import Control.Monad.Extra (anyM)
 import qualified Data.Map as M
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
@@ -31,10 +30,9 @@ import qualified Domain.Types.SearchTry as DST
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (addUTCTime, logInfo)
+import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
@@ -42,8 +40,9 @@ import SharedLogic.DriverPool
 import SharedLogic.GoogleTranslate
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
 
@@ -72,6 +71,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
   batchNumber <- getPoolBatchNum searchTry.id
   languageDictionary <- foldM (addLanguageToDictionary searchReq) M.empty driverPool
   DS.driverScoreEventHandler
+    searchReq.merchantOperatingCityId
     DST.OnNewSearchRequestForDrivers
       { driverPool = driverPool,
         merchantId = searchReq.providerId,
@@ -83,17 +83,20 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
 
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver batchNumber validTill) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
-  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.providerId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
+  whenM (anyM (\driverId -> CQDGR.getDriverGoHomeRequestInfo driverId searchReq.merchantOperatingCityId (Just goHomeConfig) <&> isNothing . (.status)) prevBatchDrivers) $ QSRD.setInactiveBySTId searchTry.id -- inactive previous request by drivers so that they can make new offers.
   _ <- QSRD.createMany searchRequestsForDrivers
-  forM_ searchRequestsForDrivers $ \sReqFD -> do
-    QDFS.updateStatus sReqFD.driverId DDFS.GOT_SEARCH_REQUEST {requestId = searchTry.id, searchTryId = searchTry.id, validTill = sReqFD.searchRequestValidTill}
 
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) -> do
     let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-    let translatedSearchReq = fromMaybe searchReq $ M.lookup language languageDictionary
-    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant
+    transporterConfig <- SCT.findByMerchantOpCityId searchReq.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+    let needTranslation = language `elem` transporterConfig.languagesToBeTranslated
+    let translatedSearchReq =
+          if needTranslation
+            then fromMaybe searchReq $ M.lookup language languageDictionary
+            else searchReq
+    let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant needTranslation
 
-    Notify.notifyOnNewSearchRequestAvailable searchReq.providerId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
+    Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
   where
     getSearchRequestValidTill = do
       now <- getCurrentTime
@@ -101,7 +104,9 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
       return $ singleBatchProcessTime `addUTCTime` now
     buildSearchRequestForDriver ::
       ( MonadFlow m,
-        Redis.HedisFlow m r
+        Redis.HedisFlow m r,
+        EsqDBFlow m r,
+        CacheFlow m r
       ) =>
       Int ->
       UTCTime ->
@@ -119,6 +124,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 searchTryId = searchTry.id,
                 startTime = searchTry.startTime,
                 merchantId = Just searchReq.providerId,
+                merchantOperatingCityId = searchReq.merchantOperatingCityId,
                 searchRequestValidTill = validTill,
                 driverId = cast dpRes.driverId,
                 vehicleVariant = dpRes.variant,
@@ -141,6 +147,8 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
                 keepHiddenForSeconds = dpwRes.keepHiddenForSeconds,
                 mode = dpRes.mode,
                 goHomeRequestId = dpwRes.goHomeReqId,
+                rideFrequencyScore = dpwRes.intelligentScores.rideFrequency,
+                customerCancellationDues = searchReq.customerCancellationDues,
                 ..
               }
       pure searchRequestForDriver
@@ -199,8 +207,12 @@ addLanguageToDictionary ::
   m LanguageDictionary
 addLanguageToDictionary searchReq dict dPoolRes = do
   let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-  if isJust $ M.lookup language dict
-    then return dict
-    else do
-      translatedSearchReq <- translateSearchReq searchReq language
-      pure $ M.insert language translatedSearchReq dict
+  transporterConfig <- SCT.findByMerchantOpCityId searchReq.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  if language `elem` transporterConfig.languagesToBeTranslated
+    then
+      if isJust $ M.lookup language dict
+        then return dict
+        else do
+          translatedSearchReq <- translateSearchReq searchReq language
+          pure $ M.insert language translatedSearchReq dict
+    else return dict

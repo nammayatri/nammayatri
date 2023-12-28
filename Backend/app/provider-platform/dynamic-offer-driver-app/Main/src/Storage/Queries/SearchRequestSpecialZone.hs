@@ -29,41 +29,43 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.SearchRequest as QSL
 
-createSearchRequestSpecialZone' :: MonadFlow m => SearchRequestSpecialZone -> m ()
+createSearchRequestSpecialZone' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequestSpecialZone -> m ()
 createSearchRequestSpecialZone' = createWithKV
 
-create :: MonadFlow m => SearchRequestSpecialZone -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequestSpecialZone -> m ()
 create srsz = do
   _ <- whenNothingM_ (QL.findById srsz.fromLocation.id) $ do QL.create srsz.fromLocation
   _ <- whenNothingM_ (QL.findById srsz.toLocation.id) $ do QL.create srsz.toLocation
   createSearchRequestSpecialZone' srsz
 
-createSearchRequestSpecialZone :: MonadFlow m => SearchRequestSpecialZone -> m ()
+createSearchRequestSpecialZone :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequestSpecialZone -> m ()
 createSearchRequestSpecialZone searchRequest = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
-  toLocationMaps <- SLM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST
+  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
+  toLocationMaps <- SLM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
   QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
 
-findById :: MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 findById (Id searchRequestSpecialZoneId) = findOneWithKV [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
 
-getRequestIdfromTransactionId :: MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
+getRequestIdfromTransactionId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequestSpecialZone -> m (Maybe (Id SearchRequestSpecialZone))
 getRequestIdfromTransactionId (Id tId) = findOneWithKV [Se.Is BeamSRSZ.transactionId $ Se.Eq tId] <&> (Domain.id <$>)
 
-findByMsgIdAndBapIdAndBppId :: MonadFlow m => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
+findByMsgIdAndBapIdAndBppId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Id Merchant -> m (Maybe SearchRequestSpecialZone)
 findByMsgIdAndBapIdAndBppId txnId bapId (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamSRSZ.messageId $ Se.Eq txnId, Se.Is BeamSRSZ.providerId $ Se.Eq merchantId, Se.Is BeamSRSZ.bapId $ Se.Eq bapId]]
 
 findByTransactionId ::
-  MonadFlow m =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchRequestSpecialZone ->
   m (Maybe (Id SearchRequestSpecialZone))
 findByTransactionId (Id tId) = findOneWithKV [Se.Is BeamSRSZ.transactionId $ Se.Eq tId] <&> (Domain.id <$>)
 
-getValidTill :: MonadFlow m => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
+getValidTill :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequestSpecialZone -> m (Maybe UTCTime)
 getValidTill (Id searchRequestId) = do
   findOneWithKV [Se.Is BeamSRSZ.id $ Se.Eq searchRequestId] <&> (Domain.validTill <$>)
 
@@ -75,11 +77,11 @@ instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone w
         then do
           logInfo "Accessing Search Request Location Table"
           pickupLoc <- QSL.upsertLocationForOldData (Id <$> fromLocationId) id
-          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST
+          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST (Just $ Id providerId) (Id <$> merchantOperatingCityId)
           QLM.create pickupLocMapping
 
           dropLoc <- QSL.upsertLocationForOldData (Id <$> toLocationId) id
-          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST
+          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST (Just $ Id providerId) (Id <$> merchantOperatingCityId)
           QLM.create dropLocMapping
           return (pickupLoc, dropLoc)
         else do
@@ -94,6 +96,8 @@ instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone w
           tl <- QL.findById toLoc.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLoc.locationId.getId)
           return (fl, tl)
     pUrl <- parseBaseUrl bapUri
+    merchant <- CQM.findById (Id providerId) >>= fromMaybeM (MerchantNotFound providerId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
     pure $
       Just
         SearchRequestSpecialZone
@@ -103,6 +107,7 @@ instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone w
             startTime = startTime,
             validTill = validTill,
             providerId = Id providerId,
+            merchantOperatingCityId = merchantOpCityId,
             fromLocation = fl,
             toLocation = tl,
             area = area,
@@ -123,6 +128,7 @@ instance ToTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone whe
         BeamSRSZ.startTime = startTime,
         BeamSRSZ.validTill = validTill,
         BeamSRSZ.providerId = getId providerId,
+        BeamSRSZ.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
         BeamSRSZ.fromLocationId = Just $ getId fromLocation.id,
         BeamSRSZ.toLocationId = Just $ getId toLocation.id,
         BeamSRSZ.area = area,

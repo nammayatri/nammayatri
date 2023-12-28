@@ -11,6 +11,7 @@ import Components.StepsHeaderModel.Controller (Action(..))
 import Data.Array as Array
 import Data.Maybe as Maybe
 import Common.Types.App (LazyCheck(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w . (Action -> Effect Unit) -> StepsHeaderModelState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -29,7 +30,7 @@ view push state =
         ][  imageView
             [ height $ V 25
             , width $ V 25
-            , imageWithFallback "ny_ic_chevron_left_white,https://assets.juspay.in/nammayatri/images/user/ic_chevron_left_white.png"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left_white"
             , onClick push $ const OnArrowClick
             , accessibilityHint "Back"
             , accessibility ENABLE

@@ -14,28 +14,29 @@
 
 module Domain.Action.Beckn.Confirm where
 
+import qualified Data.HashMap as HM
 import Data.String.Conversions
 import qualified Data.Text as T
 import Domain.Action.Beckn.Search
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
+import qualified Domain.Types.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.QuoteSpecialZone as DQSZ
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideDetails as SRD
 import Domain.Types.RideRoute
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequestForDriver as SReqD
-import qualified Domain.Types.Vehicle.Variant as VehVar
+import qualified Domain.Types.Vehicle as DVeh
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqLocDBFlow, EsqLocRepDBFlow)
 import Kernel.Storage.Hedis
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -44,19 +45,17 @@ import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverLocation as DLoc
-import qualified SharedLogic.DriverMode as DMode
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
-import Storage.CachedQueries.GoHomeConfig as QGHC
+import qualified SharedLogic.RiderDetails as SRD
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.Merchant as QM
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
+import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
@@ -71,36 +70,40 @@ import qualified Tools.Notifications as Notify
 
 data DConfirmReq = DConfirmReq
   { bookingId :: Id DRB.Booking,
-    vehicleVariant :: VehVar.Variant,
+    vehicleVariant :: DVeh.Variant,
     driverId :: Maybe Text,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: DL.LocationAddress,
     toAddress :: DL.LocationAddress,
-    mbRiderName :: Maybe Text
+    mbRiderName :: Maybe Text,
+    nightSafetyCheck :: Bool
   }
 
 data DConfirmRes = DConfirmRes
   { booking :: DRB.Booking,
-    ride :: Maybe DRide.Ride,
+    normalBookingInfo :: Maybe NormalBookingInfo,
     fromLocation :: DL.Location,
     toLocation :: DL.Location,
     riderDetails :: DRD.RiderDetails,
     riderMobileCountryCode :: Text,
     riderPhoneNumber :: Text,
     riderName :: Maybe Text,
-    vehicleVariant :: VehVar.Variant,
+    vehicleVariant :: DVeh.Variant,
     transporter :: DM.Merchant,
     driverId :: Maybe Text,
     driverName :: Maybe Text
   }
 
+data NormalBookingInfo = NormalBookingInfo
+  { ride :: DRide.Ride,
+    vehicle :: DVeh.Vehicle
+  }
+
 handler ::
   ( CacheFlow m r,
     EsqDBFlow m r,
-    EsqLocDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocRepDBFlow m r,
     HedisFlow m r,
     HasPrettyLogger m r,
     HasHttpClientOptions r c,
@@ -118,16 +121,15 @@ handler ::
 handler transporter req quote = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   now <- getCurrentTime
-  (riderDetails, isNewRider) <- getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now
+  (riderDetails, isNewRider) <- SRD.getRiderDetails transporter.id req.customerMobileCountryCode req.customerPhoneNumber now req.nightSafetyCheck
+  unless isNewRider $ QRD.updateNightSafetyChecks riderDetails.id req.nightSafetyCheck
   unless (booking.status == DRB.NEW) $
     throwError (BookingInvalidStatus $ show booking.status)
   case booking.bookingType of
     DRB.NormalBooking -> do
       case quote of
         Left (driver, driverQuote) -> do
-          cfg <- QGHC.findByMerchantId transporter.id
-          ghrId <- if cfg.enableGoHome then CGHR.getDriverGoHomeRequestInfo driver.id transporter.id (Just cfg) <&> (.driverGoHomeRequestId) else return Nothing
-
+          ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
           otpCode <- case riderDetails.otpCode of
             Nothing -> do
               otpCode <- generateOTPCode
@@ -137,10 +139,11 @@ handler transporter req quote = do
 
           ride <- buildRide driver.id booking ghrId req.customerPhoneNumber otpCode
           triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = transporter.id}
-          enableLocationTrackingService <- asks (.enableLocationTrackingService)
-          when enableLocationTrackingService $ do
-            void $ LF.rideDetails ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
-          rideDetails <- buildRideDetails ride driver
+          vehicle <-
+            QVeh.findById ride.driverId
+              >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+          vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
+          let rideDetails = mkRideDetails ride driver vehicle vehicleRegCert
           driverSearchReqs <- QSRD.findAllActiveBySTId driverQuote.searchTryId
           routeInfo :: Maybe RouteInfo <- safeGet (searchRequestKey $ getId driverQuote.requestId)
           case routeInfo of
@@ -150,11 +153,11 @@ handler transporter req quote = do
           -- critical updates
           QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
           QRide.createRide ride
-          DLoc.updateOnRide driver.merchantId driver.id True
+          QDI.updateOnRide (cast driver.id) True
+          void $ LF.rideDetails ride.id DRide.NEW transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
           -- non-critical updates
           when isNewRider $ QRD.create riderDetails
-          QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
           QRB.updateRiderId booking.id riderDetails.id
           QRideD.create rideDetails
           QL.updateAddress booking.fromLocation.id req.fromAddress
@@ -169,19 +172,19 @@ handler transporter req quote = do
           for_ driverSearchReqs $ \driverReq -> do
             let driverId = driverReq.driverId
             unless (driverId == driver.id) $ do
-              DP.decrementTotalQuotesCount transporter.id (cast driverReq.driverId) driverReq.searchTryId
+              DP.decrementTotalQuotesCount transporter.id booking.merchantOperatingCityId (cast driverReq.driverId) driverReq.searchTryId
               DP.removeSearchReqIdFromMap transporter.id driverId driverReq.searchTryId
               _ <- QSRD.updateDriverResponse driverReq.id SReqD.Pulled
               driver_ <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-              Notify.notifyDriverClearedFare transporter.id driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
+              Notify.notifyDriverClearedFare booking.merchantOperatingCityId driverId driverReq.searchTryId driverQuote.estimatedFare driver_.deviceToken
 
           uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-          Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
+          Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
 
           pure
             DConfirmRes
               { booking = uBooking,
-                ride = Just ride,
+                normalBookingInfo = Just NormalBookingInfo {ride, vehicle},
                 riderDetails,
                 riderMobileCountryCode = req.customerMobileCountryCode,
                 riderPhoneNumber = req.customerPhoneNumber,
@@ -212,7 +215,7 @@ handler transporter req quote = do
           pure
             DConfirmRes
               { booking = uBooking,
-                ride = Nothing,
+                normalBookingInfo = Nothing,
                 riderDetails,
                 riderMobileCountryCode = req.customerMobileCountryCode,
                 riderPhoneNumber = req.customerPhoneNumber,
@@ -247,6 +250,7 @@ handler transporter req quote = do
             bookingId = booking.id,
             shortId = shortId,
             merchantId = Just booking.providerId,
+            merchantOperatingCityId = booking.merchantOperatingCityId,
             status = DRide.NEW,
             driverId = cast driverId,
             otp = otp,
@@ -267,10 +271,12 @@ handler transporter req quote = do
             updatedAt = now,
             driverDeviatedFromRoute = Just False,
             numberOfSnapToRoadCalls = Nothing,
+            numberOfOsrmSnapToRoadCalls = Nothing,
             numberOfDeviation = Nothing,
             uiDistanceCalculationWithAccuracy = Nothing,
             uiDistanceCalculationWithoutAccuracy = Nothing,
-            driverGoHomeRequestId = ghrId
+            driverGoHomeRequestId = ghrId,
+            safetyAlertTriggered = False
           }
 
     buildTrackingUrl rideId = do
@@ -282,70 +288,36 @@ handler transporter req quote = do
             baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
 
-getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
-getRiderDetails merchantId customerMobileCountryCode customerPhoneNumber now =
-  QRD.findByMobileNumberAndMerchant customerPhoneNumber merchantId >>= \case
-    Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
-    Just a -> return (a, False)
-  where
-    buildRiderDetails = do
-      id <- generateGUID
-      otp <- generateOTPCode
-      return $
-        DRD.RiderDetails
-          { id = id,
-            mobileCountryCode = customerMobileCountryCode,
-            merchantId,
-            mobileNumber = customerPhoneNumber,
-            createdAt = now,
-            updatedAt = now,
-            referralCode = Nothing,
-            referredByDriver = Nothing,
-            referredAt = Nothing,
-            hasTakenValidRide = False,
-            hasTakenValidRideAt = Nothing,
-            otpCode = Just otp
-          }
-
-buildRideDetails ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    HasPrettyLogger m r,
-    EncFlow m r,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
-  ) =>
+mkRideDetails ::
   DRide.Ride ->
   DPerson.Person ->
-  m SRD.RideDetails
-buildRideDetails ride driver = do
-  vehicle <-
-    QVeh.findById ride.driverId
-      >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-  return
-    SRD.RideDetails
-      { id = ride.id,
-        driverName = driver.firstName,
-        driverNumber = driver.mobileNumber,
-        driverCountryCode = driver.mobileCountryCode,
-        vehicleNumber = vehicle.registrationNo,
-        vehicleColor = Just vehicle.color,
-        vehicleVariant = Just vehicle.variant,
-        vehicleModel = Just vehicle.model,
-        vehicleClass = Nothing
-      }
+  DVeh.Vehicle ->
+  Maybe DVRC.VehicleRegistrationCertificate ->
+  SRD.RideDetails
+mkRideDetails ride driver vehicle vehicleRegCert = do
+  SRD.RideDetails
+    { id = ride.id,
+      driverName = driver.firstName,
+      driverNumber = driver.mobileNumber,
+      driverCountryCode = driver.mobileCountryCode,
+      vehicleNumber = vehicle.registrationNo,
+      vehicleColor = Just vehicle.color,
+      vehicleVariant = Just vehicle.variant,
+      vehicleModel = Just vehicle.model,
+      vehicleClass = Nothing,
+      fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
+    }
 
 cancelBooking ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasField "enableLocationTrackingService" r Bool
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -358,15 +330,17 @@ cancelBooking booking mbDriver transporter = do
   mbRide <- QRide.findActiveByRBId booking.id
   bookingCancellationReason <- case mbDriver of
     Nothing -> buildBookingCancellationReason booking.id Nothing mbRide transporterId'
-    Just driver -> buildBookingCancellationReason booking.id (Just driver.id) mbRide transporterId'
+    Just driver -> do
+      QDI.updateOnRide driver.id False
+      buildBookingCancellationReason booking.id (Just driver.id) mbRide transporterId'
 
   QRB.updateStatus booking.id DRB.CANCELLED
   QBCR.upsert bookingCancellationReason
   whenJust mbRide $ \ride -> do
+    void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
     QRide.updateStatus ride.id DRide.CANCELLED
-    DLoc.updateOnRide booking.providerId ride.driverId False
-    driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    QDFS.updateStatus ride.driverId $ DMode.getDriverStatus driverInfo.mode driverInfo.active
+    QDI.updateOnRide (cast ride.driverId) False
+    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
   fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source
@@ -375,7 +349,7 @@ cancelBooking booking mbDriver transporter = do
       Nothing -> throwError (PersonNotFound ride.driverId.getId)
       Just driver -> do
         fork "cancelRide - Notify driver" $ do
-          Notify.notifyOnCancel transporter.id booking driver.id driver.deviceToken bookingCancellationReason.source
+          Notify.notifyOnCancel booking.merchantOperatingCityId booking driver.id driver.deviceToken bookingCancellationReason.source
   where
     buildBookingCancellationReason bookingId driverId ride merchantId = do
       return $
@@ -395,15 +369,14 @@ validateRequest ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    EsqLocDBFlow m r,
-    EsqLocRepDBFlow m r,
     HasPrettyLogger m r,
     HasHttpClientOptions r c,
     EncFlow m r,
     HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasLongDurationRetryCfg r c,
-    HasField "enableLocationTrackingService" r Bool
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

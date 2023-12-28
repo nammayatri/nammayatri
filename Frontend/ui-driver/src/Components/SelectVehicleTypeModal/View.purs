@@ -27,7 +27,7 @@ import Styles.Colors as Color
 import Font.Size as FontSize
 import Screens.Types (VehicalTypes(..))
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 
 view :: forall w .  (Action  -> Effect Unit) -> SelectVehicleTypeModalState -> PrestoDOM (Effect Unit) w
@@ -65,7 +65,7 @@ view push state =
               , imageView
                 [ width (V 15)
                 , height MATCH_PARENT
-                , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_close.png"
+                , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
                 , onClick push (const OnCloseClick)
                 ]
             ]
@@ -105,7 +105,7 @@ imageSection item =
   ][ imageView
       [ width (V 20)
       , height (V 20)
-      , imageWithFallback $ case item of
+      , imageWithFallback $ fetchImage FF_ASSET $ case item of
           Sedan     -> "ic_sedan_vehicle"
           SUV       -> "ic_suv"
           Hatchback -> "ic_hatchback"

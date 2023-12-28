@@ -19,7 +19,7 @@ import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..), 
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
-import MerchantConfig.DefaultConfig as DC
+import ConfigProvider
 import Common.Types.App (CalendarDate, CalendarWeek)
 
 initData :: ReferralScreenState
@@ -42,7 +42,7 @@ initData =  {
     }
 }
   , logField : empty
-  , config : DC.config
+  , config : getAppConfig appConfig
   }
 ,  props: {
       primarybtnActive :false
@@ -69,10 +69,10 @@ initData =  {
 }
 
 dummyRankData :: RankCardData
-dummyRankData = { goodName : "-", profileUrl : Nothing, rank : 0, rides : 0 }
+dummyRankData = { goodName : "-", profileUrl : Nothing, rank : 0, rides : 0 , gender : "UNKNOWN"}
 
 dummyCurrentDriverData :: RankCardData
-dummyCurrentDriverData = {goodName : "Driver", profileUrl : Nothing, rank : 8, rides : 155}
+dummyCurrentDriverData = {goodName : "Driver", profileUrl : Nothing, rank : 8, rides : 155, gender : "UNKNOWN"}
 
 dummyDay :: CalendarDate
 dummyDay = {

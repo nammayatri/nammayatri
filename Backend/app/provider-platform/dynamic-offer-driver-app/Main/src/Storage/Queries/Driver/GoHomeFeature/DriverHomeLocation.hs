@@ -22,28 +22,27 @@ import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as Domain
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Types.App (MonadFlow)
-import Kernel.Types.Common (getCurrentTime)
 import Kernel.Types.Id as ID
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Driver.GoHomeFeature.DriverHomeLocation as BeamDHL
 
-create :: MonadFlow m => Domain.DriverHomeLocation -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.DriverHomeLocation -> m ()
 create = createWithKV
 
-findById :: MonadFlow m => Id Domain.DriverHomeLocation -> m (Maybe Domain.DriverHomeLocation)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.DriverHomeLocation -> m (Maybe Domain.DriverHomeLocation)
 findById (ID.Id driverHomeLocId) = findOneWithKV [Se.Is BeamDHL.id $ Se.Eq driverHomeLocId]
 
-findAllByDriverId :: MonadFlow m => Id Driver -> m [Domain.DriverHomeLocation]
+findAllByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m [Domain.DriverHomeLocation]
 findAllByDriverId (ID.Id driverId) = findAllWithKV [Se.Is BeamDHL.driverId $ Se.Eq driverId]
 
-deleteById :: MonadFlow m => Id Domain.DriverHomeLocation -> m ()
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.DriverHomeLocation -> m ()
 deleteById (ID.Id driverHomeLocId) = deleteWithKV [Se.Is BeamDHL.id $ Se.Eq driverHomeLocId]
 
-deleteByDriverId :: MonadFlow m => Id Driver -> m ()
+deleteByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
 deleteByDriverId (ID.Id driverId) = deleteWithKV [Se.Is BeamDHL.driverId $ Se.Eq driverId]
 
-updateHomeLocationById :: MonadFlow m => Id Domain.DriverHomeLocation -> Domain.UpdateDriverHomeLocation -> m ()
+updateHomeLocationById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.DriverHomeLocation -> Domain.UpdateDriverHomeLocation -> m ()
 updateHomeLocationById homeLocationId driverHomeLocation = do
   now <- getCurrentTime
   updateOneWithKV

@@ -27,13 +27,16 @@ import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
 import Kernel.External.AadhaarVerification.Gridline.Config
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.External.Verification.InternalScripts.FaceVerification (prepareInternalScriptsHttpManager)
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
+import Kernel.Storage.Queries.SystemConfigs
 import qualified Kernel.Tools.Metrics.Init as Metrics
 import qualified Kernel.Types.App as App
+import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.App
 import Kernel.Utils.Common
@@ -41,6 +44,8 @@ import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Network.HTTP.Client as Http
+import Network.HTTP.Types (status408)
+import Network.Wai
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -48,8 +53,10 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
+import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 import System.Environment (lookupEnv)
+import "utils" Utils.Common.Events as UE
 
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
@@ -76,11 +83,9 @@ runDynamicOfferDriverApp' appCfg = do
             ConnectionConfigDriver
               { esqDBCfg = appCfg.esqDBCfg,
                 esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-                hedisClusterCfg = appCfg.hedisClusterCfg,
-                locationDbCfg = appCfg.esqLocationDBCfg,
-                locationDbReplicaCfg = appCfg.esqLocationDBRepCfg
+                hedisClusterCfg = appCfg.hedisClusterCfg
               }
-            appCfg.tables
+            appCfg.kvConfigUpdateFrequency
         )
           >> L.setOption KafkaConn appEnv.kafkaProducerTools
       )
@@ -90,6 +95,10 @@ runDynamicOfferDriverApp' appCfg = do
         migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo "Setting up for signature auth..."
+        kvConfigs <-
+          findById "kv_configs" >>= pure . decodeFromText' @Tables
+            >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
+        L.setOption KBT.Tables kvConfigs
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
@@ -107,7 +116,8 @@ runDynamicOfferDriverApp' appCfg = do
 
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
-    runSettings settings $ App.run (App.EnvR flowRt' appEnv)
+    let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
+    runSettings settings $ timeoutMiddleware (App.run (App.EnvR flowRt' appEnv))
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList

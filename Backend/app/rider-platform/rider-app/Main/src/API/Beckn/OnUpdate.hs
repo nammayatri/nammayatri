@@ -22,6 +22,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Storage.Beam.SystemConfigs ()
 
 type API = OnUpdate.OnUpdateAPI
 

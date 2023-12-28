@@ -165,7 +165,7 @@ mkQuote driverQuote now = do
   let currency = "INR"
       breakup_ =
         mkBreakupList (OS.Price currency . fromIntegral) OS.PriceBreakup driverQuote.fareParams
-          & filter filterRequiredBreakups
+          & filter filterRequiredBreakups'
   let nominalDifferenceTime = diffUTCTime driverQuote.validTill now
   OS.Quote
     { price = mkPrice driverQuote,
@@ -173,7 +173,7 @@ mkQuote driverQuote now = do
       breakup = breakup_
     }
   where
-    filterRequiredBreakups breakup =
+    filterRequiredBreakups' breakup =
       breakup.title == "BASE_FARE"
         || breakup.title == "SERVICE_CHARGE"
         || breakup.title == "DEAD_KILOMETER_FARE"
@@ -182,6 +182,7 @@ mkQuote driverQuote now = do
         || breakup.title == "CUSTOMER_SELECTED_FARE"
         || breakup.title == "TOTAL_FARE"
         || breakup.title == "WAITING_OR_PICKUP_CHARGES"
+        || breakup.title == "EXTRA_TIME_FARE"
     formatTimeDifference duration =
       let secondsDiff = div (fromEnum . nominalDiffTimeToSeconds $ duration) 1000000000000
           (hours, remainingSeconds) = divMod secondsDiff (3600 :: Int)

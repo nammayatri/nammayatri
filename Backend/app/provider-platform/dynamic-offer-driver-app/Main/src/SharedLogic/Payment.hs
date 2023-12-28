@@ -14,10 +14,11 @@
 
 module SharedLogic.Payment where
 
-import Data.Time (utctDay)
+import Data.Time (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -34,6 +35,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import SharedLogic.DriverFee (roundToHalf)
+import Storage.Beam.Payment ()
 import Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Person as QP
@@ -121,9 +123,9 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       createdAt = now
     }
 
-offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Payment.OfferListReq -> m Payment.OfferListResp
-offerListCache merchantId req = do
-  transporterConfig <- SCT.findByMerchantId merchantId >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Payment.OfferListReq -> m Payment.OfferListResp
+offerListCache merchantId merchantOpCityId req = do
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if transporterConfig.useOfferListCache
     then do
       key <- makeOfferListCacheKey transporterConfig.cacheOfferListByDriverId req
@@ -148,9 +150,18 @@ makeOfferListCacheKey includeDriverId req = do
           <> show (utctDay req.dutyDate)
           <> ":ft-"
           <> show (utctDay req.registrationDate)
+          <> ":Listing-"
+          <> maybe "N/A" parseValidityForCaching req.offerListingMetric
     _ ->
       return $
         "OfferList:PId-" <> req.planId <> ":PM-" <> req.paymentMode <> ":n-" <> show req.numOfRides <> ":dt-"
           <> show (utctDay req.dutyDate)
           <> ":ft-"
           <> show (utctDay req.registrationDate)
+          <> ":Listing-"
+          <> maybe "N/A" parseValidityForCaching req.offerListingMetric
+  where
+    parseValidityForCaching offerListingMetric' =
+      case offerListingMetric' of
+        LIST_BASED_ON_DATE listingDates -> show $ UTCTime (utctDay listingDates) (secondsToDiffTime 0)
+        _ -> show offerListingMetric'

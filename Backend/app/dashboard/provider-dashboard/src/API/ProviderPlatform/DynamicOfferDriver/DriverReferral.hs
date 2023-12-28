@@ -24,13 +24,14 @@ import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
-import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI)
-import qualified ProviderPlatformClient.DynamicOfferDriver as Client
+import Kernel.Utils.Common (MonadFlow, withFlowHandlerAPI')
+import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
 import "lib-dashboard" Tools.Auth
-import Tools.Auth.Merchant (merchantAccessCheck)
+import Tools.Auth.Merchant (merchantCityAccessCheck)
 
 type API =
   "referralProgram"
@@ -39,17 +40,17 @@ type API =
        )
 
 type ReferralProgramPasswordUpdateAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'REFERRAL 'REFERRAL_PROGRAM_PASSWORD_UPDATE
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'REFERRAL 'REFERRAL_PROGRAM_PASSWORD_UPDATE
     :> Common.ReferralProgramPasswordUpdateAPI
 
 type ReferralProgramLinkCodeAPI =
-  ApiAuth 'DRIVER_OFFER_BPP 'REFERRAL 'REFERRAL_PROGRAM_LINK_CODE
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'REFERRAL 'REFERRAL_PROGRAM_LINK_CODE
     :> Common.ReferralProgramLinkCodeAPI
 
-handler :: ShortId DM.Merchant -> FlowServer API
-handler merchantId =
-  updateReferralLinkPassword merchantId
-    :<|> linkDriverReferralCode merchantId
+handler :: ShortId DM.Merchant -> City.City -> FlowServer API
+handler merchantId city =
+  updateReferralLinkPassword merchantId city
+    :<|> linkDriverReferralCode merchantId city
 
 buildTransaction ::
   ( MonadFlow m,
@@ -60,28 +61,30 @@ buildTransaction ::
   Maybe request ->
   m DT.Transaction
 buildTransaction endpoint apiTokenInfo =
-  T.buildTransaction (DT.DriverReferralAPI endpoint) (Just DRIVER_OFFER_BPP) (Just apiTokenInfo) Nothing Nothing
+  T.buildTransaction (DT.DriverReferralAPI endpoint) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing
 
 updateReferralLinkPassword ::
   ShortId DM.Merchant ->
+  City.City ->
   ApiTokenInfo ->
   Common.ReferralLinkPasswordUpdateAPIReq ->
   FlowHandler APISuccess
-updateReferralLinkPassword merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+updateReferralLinkPassword merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.ReferralProgramUpdateOpsPasswordEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (.driverReferral.updateReferralLinkPassword) req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (.drivers.driverReferral.updateReferralLinkPassword) req
 
 linkDriverReferralCode ::
   ShortId DM.Merchant ->
+  City.City ->
   ApiTokenInfo ->
   Common.ReferralLinkReq ->
   FlowHandler Common.LinkReport
-linkDriverReferralCode merchantShortId apiTokenInfo req = withFlowHandlerAPI $ do
-  checkedMerchantId <- merchantAccessCheck merchantShortId apiTokenInfo.merchant.shortId
+linkDriverReferralCode merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.ReferralProgramUpdateOpsPasswordEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
-    Client.callDriverOfferBPP checkedMerchantId (addMultipartBoundary . (.driverReferral.linkDriverReferralCode)) req
+    Client.callDriverOfferBPPOperations checkedMerchantId opCity (addMultipartBoundary . (.drivers.driverReferral.linkDriverReferralCode)) req
   where
     addMultipartBoundary clientFn reqBody = clientFn ("xxxxxxx", reqBody)

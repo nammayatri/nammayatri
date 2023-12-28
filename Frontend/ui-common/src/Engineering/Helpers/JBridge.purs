@@ -23,11 +23,10 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..),ChatComponent(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData, PolylineAnimationConfig)
+import Common.Types.App (EventPayload(..),ChatComponent(..), LazyCheck(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData, CarouselModal, PolylineAnimationConfig)
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
-import Effect.Uncurried (EffectFn3)
 -- import Data.Maybe (Maybe(..))
 import Data.Generic.Rep (class Generic)
 import Data.Newtype (class Newtype)
@@ -36,22 +35,21 @@ import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
 import Engineering.Helpers.Commons (screenHeight, screenWidth, parseFloat)
-import Effect.Uncurried (EffectFn3, EffectFn2, EffectFn1, runEffectFn1, EffectFn5)
+import Effect.Uncurried (EffectFn3, EffectFn2, EffectFn1, runEffectFn1, EffectFn4, runEffectFn4)
 import Data.Maybe (Maybe(..))
 -- import LoaderOverlay.Handler as UI
 -- import Effect.Aff (launchAff)
 -- import Effect.Class (liftEffect)
 -- import PrestoDOM.Core(terminateUI)
 import Presto.Core.Types.Language.Flow
-import Engineering.Helpers.Commons (screenHeight, screenWidth)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, os)
 import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
 import Presto.Core.Flow (doAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
-import Effect.Uncurried (EffectFn3, EffectFn2)
-import Data.Function.Uncurried (Fn3, runFn3, Fn1)
+import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2)
 import Foreign.Class (encode)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
@@ -77,7 +75,7 @@ import Foreign.Class (encode)
 foreign import showLoaderImpl      :: String -> Effect Unit
 -- foreign import readFile'      :: String -> Effect String
 -- foreign import showLoader'      :: String -> Effect Unit
-foreign import locateOnMap :: EffectFn5 Boolean Number Number String (Array Location) Unit
+foreign import locateOnMap :: EffectFn1 LocateOnMapConfig Unit
 
 foreign import exitLocateOnMap :: String -> Unit
 foreign import shareTextMessage :: String -> String -> Unit
@@ -85,6 +83,7 @@ foreign import shareImageMessage :: String -> ShareImageConfig -> Unit
 foreign import showInAppNotification :: String -> String -> String -> String -> String -> String -> String -> String -> Int -> Effect Unit
 foreign import enableMyLocation :: Boolean -> Unit
 foreign import isLocationPermissionEnabled :: Unit -> Effect Boolean
+foreign import checkAndAskNotificationPermission :: Boolean -> Effect Unit
 foreign import isMicrophonePermissionEnabled :: Unit -> Effect Boolean
 -- foreign import getPackageName   :: Effect String
 foreign import getVersionCode   :: Effect Int
@@ -96,17 +95,18 @@ foreign import getAndroidVersion :: Effect Int
 -- foreign import timePicker       :: forall action. (action -> Effect Unit) -> (Int -> Int -> action) -> Effect Unit
 foreign import datePicker       :: forall action. String -> (action -> Effect Unit)  -> (String -> Int -> Int -> Int -> action) -> Effect Unit
 foreign import setFCMToken :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
-foreign import setFCMTokenWithTimeOut :: forall action. Int -> (action -> Effect Unit) -> (String  -> action) -> Effect Unit
+foreign import setFCMTokenWithTimeOut :: EffectFn2 Int (String -> Effect Unit) Unit
 -- foreign import dateTimePicker :: forall action. (action -> Effect Unit) -> (Int -> action) -> Effect Unit
 -- foreign import getNearbyPlaces :: forall action. (action -> Effect Unit) -> (Place -> action) -> Effect Unit
 -- foreign import isNetworkAvailable :: Unit -> Boolean
 foreign import openUrlInApp  :: String -> Effect Unit
+foreign import renderCameraProfilePicture :: String -> Effect Unit
 foreign import openUrlInMailApp  :: String -> Effect Unit
 foreign import addMarkerImpl :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
 foreign import removeMarker :: String -> Unit
 -- foreign import parseAddress      :: String -> Address
 foreign import disableActionEditText :: String -> Unit
-foreign import uploadFile :: Unit -> Effect Unit
+foreign import uploadFile :: Boolean -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> String -> Effect Unit
@@ -115,7 +115,7 @@ foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
 foreign import updateRouteMarker :: UpdateRouteMarker -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
-foreign import updateRoute :: Locations -> String -> String -> String -> MapRouteConfig -> Effect Unit
+foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
 -- -- foreign import drawActualRoute :: String -> String -> Locations -> Effect Int
 -- -- foreign import showAndDrawRoute :: String -> String -> String -> Locations -> Effect Int
 -- foreign import addMarkers :: Markers -> Effect Unit
@@ -124,7 +124,6 @@ foreign import isOverlayPermissionEnabled :: Unit -> Effect Boolean
 foreign import requestLocation  :: Unit -> Effect Unit
 
 foreign import initiateLocationServiceClient :: Effect Unit
-foreign import waitingCountdownTimer :: forall action. Int -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 foreign import checkOverlayPermission  :: Unit -> Effect Unit
 foreign import requestAutoStartPermission  :: Unit -> Effect Unit
 foreign import requestBatteryPermission :: Unit -> Effect Unit
@@ -135,17 +134,19 @@ foreign import mapSnapShot :: forall action. String -> Locations -> String -> Bo
 foreign import getCurrentLatLong  :: Effect Paths
 foreign import isLocationEnabled :: Unit -> Effect Boolean
 foreign import getCurrentPosition  :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Effect Unit
-foreign import getCurrentPositionWithTimeout  :: forall action. (action -> Effect Unit) -> (String -> String -> action) -> Int -> Effect Unit
+foreign import getCurrentPositionWithTimeoutImpl  :: forall action. EffectFn4 (action -> Effect Unit) (String -> String -> String -> action) Int Boolean Unit
 
 foreign import translateStringWithTimeout :: forall action. (action -> Effect Unit) -> (String -> action) -> Int -> String -> Effect Unit
 
 foreign import isMockLocation :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
-foreign import animateCamera :: Number -> Number -> Int -> String -> Effect Unit
+foreign import animateCamera :: Number -> Number -> Number -> String -> Effect Unit
 -- foreign import moveCamera :: Number -> Number -> Number -> Number -> Effect Unit
 foreign import minimizeApp    :: String -> Unit
 foreign import toast          :: String -> Unit
+foreign import restartApp :: Unit -> Effect Unit
+-- Deprecated
 foreign import factoryResetApp :: String -> Unit
-foreign import startTimerWithTime :: forall action. String -> String -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
+foreign import listDownloadedTranslationModels :: forall action. (action -> Effect Unit) -> Int -> Effect Unit
 foreign import hideKeyboardOnNavigation :: Boolean -> Unit
 foreign import askNotificationPermission :: Unit -> Effect Unit
 -- foreign import onEvent        :: Foreign -> Effect Unit
@@ -165,7 +166,8 @@ foreign import showKeyboard :: String -> Effect Unit
 foreign import showDialer :: String -> Boolean -> Unit
 foreign import getAAID :: String -> String
 -- -- foreign import removePolyLineById :: Int -> Effect Unit
-foreign import removeAllPolylines :: String -> Unit
+foreign import removeAllPolylinesAndMarkers :: Fn2 (Array String) Unit Unit
+-- foreign import removeAllPolylines :: String -> Unit
 foreign import currentPosition  :: String -> Unit
 foreign import openNavigation  :: Number -> Number -> Number -> Number -> String -> Effect Unit
 foreign import stopLocationPollingAPI :: Effect Unit
@@ -180,6 +182,8 @@ foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect U
 foreign import sendMessage :: String -> Unit
 foreign import getSuggestionsfromLocal :: String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String
+foreign import setYoutubePlayer :: Fn3 YoutubeData String String Unit
+foreign import addCarousel :: Fn2 CarouselModal String (Effect Unit)
 foreign import scrollToEnd :: String -> Boolean -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
 foreign import metaLogEventWithParams :: String -> String -> String -> Effect Unit
@@ -196,6 +200,7 @@ foreign import deletePopUpCallBack :: String -> Unit
 -- foreign import requestLocationPermissionDriver :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import storeCallBackOverlayPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import storeCallBackBatteryUsagePermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
+foreign import storeCallBackNotificationPermission :: forall action. (action -> Effect Unit) -> (Boolean -> action) -> Effect Unit
 foreign import isInternetAvailable :: Unit -> Effect Boolean
 foreign import storeCallBackInternetAction :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 
@@ -214,7 +219,7 @@ foreign import goBackPrevWebPage ::  String -> Effect Unit
 foreign import storeMainFiberOb :: forall a. Fiber a -> Effect Unit
 foreign import getMainFiber :: forall f a. Fn2 (f -> Maybe f) (Maybe f) (Maybe (Fiber a))
 foreign import detectPhoneNumbers :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
-foreign import setCleverTapUserData :: String -> String -> Unit
+foreign import setCleverTapUserData :: String -> String -> Effect Unit
 foreign import setCleverTapUserProp :: Array ClevertapEventParams -> Unit
 foreign import cleverTapCustomEvent :: String -> Effect Unit
 foreign import cleverTapCustomEventWithParams :: String -> String -> String -> Effect Unit
@@ -222,6 +227,7 @@ foreign import cleverTapSetLocation :: Unit -> Effect Unit
 foreign import cleverTapEvent :: String -> Array ClevertapEventParams -> Unit
 foreign import saveSuggestions :: String -> Suggestions -> Unit
 foreign import saveSuggestionDefs :: String -> SuggestionDefinitions -> Unit
+foreign import extractReferrerUrl :: Unit -> Effect Unit
 foreign import launchDateSettings :: String -> Unit
 foreign import startLottieProcess :: LottieAnimationConfig -> Unit
 foreign import methodArgumentCount :: String -> Int
@@ -230,14 +236,31 @@ foreign import emitJOSEvent :: Fn3 String String Foreign Unit
 foreign import getLayoutBounds :: Fn1 String LayoutBound
 foreign import horizontalScrollToPos :: EffectFn3 String String Int Unit
 foreign import withinTimeRange :: String -> String -> String -> Boolean
-foreign import getChatMessages :: String -> Array ChatComponent
+foreign import getChatMessages :: LazyCheck -> Array ChatComponent
 foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) Unit
 foreign import scrollViewFocus :: String -> Int -> Boolean
 foreign import clearChatMessages :: Effect Unit
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
-foreign import getVideoID :: String -> String
-foreign import setYoutubePlayer :: YoutubeData -> String -> String -> Unit
+foreign import pauseYoutubeVideo :: Unit -> Unit 
+foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
+foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
+foreign import updateInputString :: String -> Unit
+foreign import downloadMLTranslationModel :: EffectFn1 String Unit
+foreign import supportsInbuildYoutubePlayer :: Unit -> Boolean 
+foreign import addCarouselWithVideoExists :: Unit -> Boolean
+foreign import isNetworkTimeEnabled :: EffectFn1 Unit Boolean
+foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Unit) action Unit
+foreign import getLocationNameV2 :: Fn2 Number Number String
+foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitude :: Number }
+foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
 
+foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
+
+setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
+setMapPadding = runEffectFn4 setMapPaddingImpl
+
+getCurrentPositionWithTimeout :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Int -> Boolean -> Effect Unit
+getCurrentPositionWithTimeout = runEffectFn4 getCurrentPositionWithTimeoutImpl
 
 type LottieAnimationConfig = {
     rawJson :: String
@@ -247,6 +270,7 @@ type LottieAnimationConfig = {
   , scaleType :: String
   , minProgress :: Number
   , maxProgress :: Number
+  , forceToUseRemote :: Boolean
 }
 
 lottieAnimationConfig :: LottieAnimationConfig
@@ -258,6 +282,7 @@ lottieAnimationConfig = {
   , scaleType : "DEFAULT"
   , minProgress : 0.0
   , maxProgress : 1.0
+  , forceToUseRemote : false
 }
 
 -- -- keyStoreEntryPresent :: String -> Flow Boolean
@@ -355,6 +380,15 @@ showMap = showMapImpl --liftFlow (showMapImpl id mapType)
 showMarker :: String -> Number -> Number -> Int -> Number -> Number -> Effect Boolean
 showMarker title lat lng markerSize anchorV anchorV1 = addMarker title lat lng markerSize anchorV anchorV1
 
+removeAllPolylines :: String -> Unit 
+removeAllPolylines str = removeAllPolylinesImpl markersToRemove
+  where 
+    removeAllPolylinesImpl :: Array String -> Unit
+    removeAllPolylinesImpl mrkrToRemove = runFn2 removeAllPolylinesAndMarkers mrkrToRemove unit
+    
+    markersToRemove :: Array String   
+    markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_src_marker", "ny_ic_dest_marker"]
+
 
 setKeyInSharedPrefKeys :: forall st. String -> String -> Flow st Unit
 setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeysImpl key val)
@@ -371,6 +405,28 @@ setEnvInNativeSharedPrefKeys key val = liftFlow (setEnvInNativeSharedPrefKeysImp
 type Locations = {
     points :: Coordinates
 }
+
+type LocateOnMapConfig = {
+    goToCurrentLocation :: Boolean
+  , lat :: Number
+  , lon :: Number
+  , geoJson :: String
+  , points :: (Array Location)
+  , zoomLevel :: Number
+  , labelId :: String
+}
+
+locateOnMapConfig :: LocateOnMapConfig
+locateOnMapConfig = {
+    goToCurrentLocation : false
+  , lat : 0.0
+  , lon : 0.0
+  , geoJson : ""
+  , points : []
+  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+  , labelId : ""
+}
+
 
 type MapRouteConfig = {
     sourceSpecialTagIcon :: String
@@ -398,7 +454,8 @@ type Location = {
   lat :: Number,
   lng :: Number,
   place :: String,
-  address :: Maybe String
+  address :: Maybe String,
+  city :: Maybe String
 }
 
 type UpdateRouteMarker = {
@@ -421,6 +478,36 @@ type SuggestionDefinitions = Array
     key :: String,
     value :: {en_us :: String, ta_in :: String, kn_in :: String, hi_in :: String, ml_in :: String, bn_in :: String}
   }
+
+type UpdateRouteConfig = {
+    json :: Locations
+  , destMarker :: String
+  , eta :: String
+  , srcMarker :: String
+  , specialLocation :: MapRouteConfig
+  , zoomLevel :: Number
+}
+
+updateRouteConfig :: UpdateRouteConfig
+updateRouteConfig = {
+    json : {points: []}
+  , destMarker : ""
+  , eta : ""
+  , srcMarker : ""
+  , specialLocation : {
+      sourceSpecialTagIcon: "", 
+      destSpecialTagIcon: "", 
+      vehicleSizeTagIcon: 0, 
+      isAnimation: false, 
+      polylineAnimationConfig: {
+        color: "", 
+        draw: 0, 
+        fade: 0, 
+        delay: 0
+      } 
+  }
+  , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+}
 
 -- type Point = Array Number
 

@@ -14,9 +14,13 @@
 -}
 
 module Screens.AddVehicleDetailsScreen.ScreenData where
+
 import Data.Maybe
 import Screens.Types
+
 import Foreign.Object (empty)
+import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
+import ConfigProvider
 
 initData :: AddVehicleDetailsScreenState
 initData = {
@@ -33,7 +37,10 @@ initData = {
       errorMessage : "",
       dateOfRegistration : Nothing,
       dateOfRegistrationView : "",
-      logField : empty
+      logField : empty,
+      driverMobileNumber : "",
+      cityConfig : dummyCityConfig,
+      config : getAppConfig appConfig
     },
     props: {
       rcAvailable : false,
@@ -54,6 +61,15 @@ initData = {
       errorVisibility : false,
       openRegistrationDateManual : false,
       addRcFromProfile : false,
-      isDateClickable : true
+      isDateClickable : true,
+      openHowToUploadManual : false,
+      logoutModalView : false,
+      validateProfilePicturePopUp : false,
+      imageCaptureLayoutView : false,
+      fileCameraOption : false,
+      fileCameraPopupModal : false,
+      validating : false,
+      successfulValidation : false,
+      multipleRCstatus : NOT_STARTED
     }
 }

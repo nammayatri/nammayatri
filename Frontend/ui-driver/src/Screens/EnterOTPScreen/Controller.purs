@@ -14,18 +14,19 @@
 -}
 
 module Screens.EnterOTPScreen.Controller where
-import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), ($), discard, bind, (>=))
-import PrestoDOM (Eval, continue, exit, updateAndExit)
-import Screens.Types (EnterOTPScreenState)
-import Components.PrimaryEditText.Controllers as PrimaryEditText
+
 import Components.PrimaryButton as PrimaryButton
-import PrestoDOM.Types.Core (class Loggable)
+import Components.PrimaryEditText.Controllers as PrimaryEditText
 import Data.String (length)
-import JBridge (hideKeyboardOnNavigation, firebaseLogEvent)
-import Storage (setValueToLocalNativeStore, setValueToLocalStore, KeyStore(..))
+import JBridge (hideKeyboardOnNavigation, firebaseLogEvent, toggleBtnLoader)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Storage (setValueToLocalNativeStore, KeyStore(..))
+import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), ($), discard, bind, (>=))
+import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
+import Screens.Types (EnterOTPScreenState)
+import Storage (setValueToLocalNativeStore, KeyStore(..))
+import Storage (setValueToLocalNativeStore, setValueToLocalStore, KeyStore(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -50,6 +51,7 @@ instance loggableAction :: Loggable Action where
     AutoFill otp-> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "otp_autofill"
     SetToken id -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "set_token"
     NoAction -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
+    _ -> trackAppScreenEvent appId (getScreen ENTER_OTP_NUMBER_SCREEN) "in_screen" "no_action"
     
 data ScreenOutput = GoBack  EnterOTPScreenState | GoToHome EnterOTPScreenState | Retry EnterOTPScreenState
 data Action = BackPressed 
@@ -65,6 +67,7 @@ data Action = BackPressed
 eval :: Action -> EnterOTPScreenState -> Eval Action ScreenOutput EnterOTPScreenState
 eval AfterRender state = continue state
 eval BackPressed state = do 
+  _ <- pure $ toggleBtnLoader "" false
   exit $ GoBack state{props{isValid = false}} 
 eval (PrimaryEditTextAction PrimaryEditText.OnClick) state = continue state
 eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = do
@@ -93,4 +96,5 @@ eval (SetToken id )state = do
   _ <-  pure $ setValueToLocalNativeStore FCM_TOKEN  id
   _ <-  pure $ setValueToLocalStore FCM_TOKEN  id
   continue state
+
 eval _ state = continue state

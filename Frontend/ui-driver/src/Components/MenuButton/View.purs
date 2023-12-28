@@ -22,11 +22,12 @@ import Components.SelectMenuButton.Controller (Action(..), State)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>), (||), not)
 import Prelude (Unit, const, ($), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, visibility, weight, width)
 import Styles.Colors as Color
+import Data.String.Common as DSC
 
 view 
   :: forall w.(Action -> Effect Unit)
@@ -42,15 +43,19 @@ view push state =
       , width MATCH_PARENT
       , background Color.greySmoke
       , margin (Margin 20 5 20 5)
-      , visibility if state.index == 0 || (not state.lineVisiblity) then GONE else VISIBLE
+      , visibility if state.index == 0 || (not state.lineVisibility) then GONE else VISIBLE
       ][]
       , linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation HORIZONTAL
-          , padding (Padding 16 24 0 0)
-          , onClick push (const (OnSelection state))
+          , padding state.padding
+          , margin state.margin
+          , onClick push $ const $ OnSelection state
           , gravity CENTER_VERTICAL
+          , cornerRadius 6.0
+          , background if state.isSelected then state.activeBgColor else Color.white900
+          , stroke if state.isSelected then "1,"<>state.activeStrokeColor else "1,"<>state.inactiveStrokeColor
           ][ linearLayout
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
@@ -65,6 +70,7 @@ view push state =
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , text state.text.subtitle
+                , visibility if DSC.null state.text.subtitle then GONE else VISIBLE
                 ] <> if state.isSelected then FontStyle.subHeading2 TypoGraphy else FontStyle.body5 TypoGraphy
               ]
             ,linearLayout
@@ -79,13 +85,13 @@ view push state =
                   ][ imageView
                       [ height (V 24)
                       , width (V 24)
-                      , imageWithFallback $ "ny_ic_radio_selected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_selected.png"
+                      , imageWithFallback $ fetchImage FF_COMMON_ASSET $ "ny_ic_radio_selected"
                       , visibility if state.isSelected then VISIBLE else GONE
                       ]
                     , imageView
                       [ width (V 24)
                       , height (V 24)
-                      , imageWithFallback $ "ny_ic_radio_unselected," <> (getCommonAssetStoreLink FunctionCall) <> "/ny_ic_radio_unselected.png"
+                      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_unselected"
                       , visibility if state.isSelected then GONE else VISIBLE
                       ]
                   ]

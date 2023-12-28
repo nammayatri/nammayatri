@@ -14,14 +14,14 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.Overlay
-  ( findByMerchantIdPNKeyLangaugeUdf,
+  ( findByMerchantOpCityIdPNKeyLangaugeUdf,
     clearMerchantIdPNKeyLangaugeUdf,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.Overlay
 import Kernel.External.Types (Language)
 import Kernel.Prelude
@@ -30,22 +30,22 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.Overlay as Queries
 
-findByMerchantIdPNKeyLangaugeUdf :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
-findByMerchantIdPNKeyLangaugeUdf id pnKey language udf1 =
-  Hedis.get (makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1) >>= \case
+findByMerchantOpCityIdPNKeyLangaugeUdf :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
+findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1 =
+  Hedis.safeGet (makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1) >>= \case
     Just a -> return . Just $ coerce @(OverlayD 'Unsafe) @Overlay a
-    Nothing -> flip whenJust cacheOverlay /=<< Queries.findByMerchantIdPNKeyLangaugeUdf id pnKey language udf1
+    Nothing -> flip whenJust cacheOverlay /=<< Queries.findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1
 
 cacheOverlay :: CacheFlow m r => Overlay -> m ()
 cacheOverlay pn = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeMerchantIdPNKeyLangaugeUdf pn.merchantId pn.overlayKey pn.language pn.udf1
+  let idKey = makeMerchantIdPNKeyLangaugeUdf pn.merchantOperatingCityId pn.overlayKey pn.language pn.udf1
   Hedis.setExp idKey (coerce @Overlay @(OverlayD 'Unsafe) pn) expTime
 
-makeMerchantIdPNKeyLangaugeUdf :: Id Merchant -> Text -> Language -> Maybe Text -> Text
-makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 = "CachedQueries:Overlay:MerchantId-" <> id.getId <> ":PNKey-" <> show pnKey <> ":ln-" <> show language <> ":udf1-" <> show udf1
+makeMerchantIdPNKeyLangaugeUdf :: Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> Text
+makeMerchantIdPNKeyLangaugeUdf id pnKey language udf1 = "CachedQueries:Overlay:MerchantOpCityId-" <> id.getId <> ":PNKey-" <> show pnKey <> ":ln-" <> show language <> ":udf1-" <> show udf1
 
 ------------------------------------------------------
 
-clearMerchantIdPNKeyLangaugeUdf :: Hedis.HedisFlow m r => Id Merchant -> Text -> Language -> Maybe Text -> m ()
-clearMerchantIdPNKeyLangaugeUdf merchantId overlayKey language udf1 = Hedis.del $ makeMerchantIdPNKeyLangaugeUdf merchantId overlayKey language udf1
+clearMerchantIdPNKeyLangaugeUdf :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m ()
+clearMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1 = Hedis.del $ makeMerchantIdPNKeyLangaugeUdf merchantOpCityId overlayKey language udf1

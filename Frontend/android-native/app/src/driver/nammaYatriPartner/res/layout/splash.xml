@@ -2,7 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/ny_ic_splash_bg"
+    android:background="@color/black"
     android:id="@+id/splash">
 
     <FrameLayout
@@ -10,36 +10,40 @@
         android:layout_height="match_parent"
         android:layout_gravity="center_vertical"
         android:orientation="vertical">
-
         <ImageView
-            android:id="@+id/logo_only"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:src="@drawable/ny_ic_splash_bg_trans" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center">
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="100dp"
+                android:layout_margin="40dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ny_ic_namma_yatri_driver_logo" />
+        </LinearLayout>
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:src="@drawable/ny_ic_namma_yatri_kn" />
-
+            android:gravity="center"
+            android:layout_gravity="bottom">
         <ImageView
-            android:layout_width="316dp"
-            android:layout_height="39dp"
+            android:layout_width="180dp"
+            android:layout_height="58dp"
+            android:layout_margin="40dp"
             android:layout_gravity="center"
-            android:layout_marginTop="70dp"
-            android:paddingHorizontal="50dp"
-            android:src="@drawable/ny_ic_namma_yatri_partner_en" />
-
-        <ProgressBar
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="150dp"
-            android:layout_gravity="center"
-            android:progress="0"
-            android:indeterminate="true"
-            android:indeterminateDrawable="@drawable/progressbar_clip"
-            style="?android:attr/progressBarStyleLarge" />
-
+            android:src="@drawable/ic_powered_by" />
+        </LinearLayout>
         <com.airbnb.lottie.LottieAnimationView
             android:id="@+id/splash_lottie"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:scaleType="fitXY"
             android:visibility="gone" />
     </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

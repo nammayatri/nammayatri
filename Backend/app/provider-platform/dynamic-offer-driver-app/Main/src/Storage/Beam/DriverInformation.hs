@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.DriverInformation where
 
@@ -35,6 +36,8 @@ data DriverInformationT f = DriverInformationT
     aadhaarVerified :: B.C f Bool,
     lastEnabledOn :: B.C f (Maybe UTCTime),
     referralCode :: B.C f (Maybe Text),
+    referredByDriverId :: B.C f (Maybe Text),
+    totalReferred :: B.C f (Maybe Int),
     canDowngradeToSedan :: B.C f Bool,
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
@@ -43,9 +46,11 @@ data DriverInformationT f = DriverInformationT
     mode :: B.C f (Maybe Domain.DriverMode),
     autoPayStatus :: B.C f (Maybe Domain.DriverAutoPayStatus),
     payerVpa :: B.C f (Maybe Text),
+    blockStateModifier :: B.C f (Maybe Text),
     enabledAt :: B.C f (Maybe UTCTime),
     compAadhaarImagePath :: B.C f (Maybe Text),
     availableUpiApps :: B.C f (Maybe Text),
+    driverDob :: B.C f (Maybe UTCTime),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

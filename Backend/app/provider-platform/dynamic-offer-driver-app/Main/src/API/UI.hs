@@ -19,17 +19,18 @@ module API.UI
 where
 
 import qualified API.UI.Call as Call
+import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.CancellationReason as CancellationReason
+import qualified API.UI.City as City
 import qualified API.UI.Driver as Driver
+import qualified API.UI.DriverCoins as DriverCoins
 import qualified API.UI.DriverOnboarding as DriverOnboarding
 import qualified API.UI.DriverProfileSummary as DriverProfileSummary
 import qualified API.UI.DriverReferral as DriverReferral
 import qualified API.UI.ExotelEndRide as ExotelEndRide
-import qualified API.UI.Frontend as Frontend
 import qualified API.UI.Issue as Issue
 import qualified API.UI.KioskLocation as KioskLocation
 import qualified API.UI.LeaderBoard as LeaderBoard
-import qualified API.UI.Location as Location
 import qualified API.UI.Maps as Maps
 import qualified API.UI.Message as Message
 import qualified API.UI.OnMessage as OnMessage
@@ -41,6 +42,7 @@ import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
+import qualified API.UI.RideSummary as RideSummary
 import qualified API.UI.Route as Route
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Vehicle as Vehicle
@@ -61,9 +63,7 @@ type API =
            :<|> Driver.API
            :<|> DriverProfileSummary.API
            :<|> Vehicle.API
-           :<|> Frontend.API
            :<|> Transporter.API
-           :<|> Location.API
            :<|> Route.API
            :<|> Maps.API
            :<|> Ride.API
@@ -79,8 +79,12 @@ type API =
            :<|> LeaderBoard.API
            :<|> OnMessage.API
            :<|> RideRoute.API
+           :<|> CallEvent.API
            :<|> Plan.API
            :<|> KioskLocation.API
+           :<|> DriverCoins.API
+           :<|> RideSummary.API
+           :<|> City.API
        )
 
 handler :: FlowServer API
@@ -93,9 +97,7 @@ handler =
     :<|> Driver.handler
     :<|> DriverProfileSummary.handler
     :<|> Vehicle.handler
-    :<|> Frontend.handler
     :<|> Transporter.handler
-    :<|> Location.handler
     :<|> Route.handler
     :<|> Maps.handler
     :<|> Ride.handler
@@ -111,5 +113,9 @@ handler =
     :<|> LeaderBoard.handler
     :<|> OnMessage.handler
     :<|> RideRoute.handler
+    :<|> CallEvent.handler
     :<|> Plan.handler
     :<|> KioskLocation.handler
+    :<|> DriverCoins.handler
+    :<|> RideSummary.handler
+    :<|> City.handler

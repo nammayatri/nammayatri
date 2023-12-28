@@ -26,10 +26,10 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.DriverStats as BeamDS
 
-create :: MonadFlow m => DriverStats -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverStats -> m ()
 create = createWithKV
 
-createInitialDriverStats :: MonadFlow m => Id Driver -> m ()
+createInitialDriverStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
 createInitialDriverStats driverId = do
   now <- getCurrentTime
   let dStats =
@@ -48,13 +48,13 @@ createInitialDriverStats driverId = do
           }
   createWithKV dStats
 
-getTopDriversByIdleTime :: MonadFlow m => Int -> [Id Driver] -> m [Id Driver]
+getTopDriversByIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Int -> [Id Driver] -> m [Id Driver]
 getTopDriversByIdleTime count_ ids = findAllWithOptionsDb [Se.Is BeamDS.driverId $ Se.In (getId <$> ids)] (Se.Asc BeamDS.idleSince) (Just count_) Nothing <&> (Domain.driverId <$>)
 
-updateIdleTime :: MonadFlow m => Id Driver -> m ()
+updateIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
 updateIdleTime driverId = updateIdleTimes [driverId]
 
-updateIdleTimes :: MonadFlow m => [Id Driver] -> m ()
+updateIdleTimes :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Driver] -> m ()
 updateIdleTimes driverIds = do
   now <- getCurrentTime
   updateWithKV
@@ -62,19 +62,19 @@ updateIdleTimes driverIds = do
     ]
     [Se.Is BeamDS.driverId (Se.In (getId <$> driverIds))]
 
-fetchAll :: MonadFlow m => m [DriverStats]
+fetchAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [DriverStats]
 fetchAll = findAllWithKV [Se.Is BeamDS.driverId $ Se.Not $ Se.Eq $ getId ""]
 
-findById :: MonadFlow m => Id Driver -> m (Maybe DriverStats)
+findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe DriverStats)
 findById (Id driverId) = findOneWithKV [Se.Is BeamDS.driverId $ Se.Eq driverId]
 
-deleteById :: MonadFlow m => Id Driver -> m ()
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m ()
 deleteById (Id driverId) = deleteWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
-findTotalRides :: MonadFlow m => Id Driver -> m (Int, Meters)
+findTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Int, Meters)
 findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&& Domain.totalDistance)) =<< findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
-incrementTotalRidesAndTotalDist :: (MonadFlow m) => Id Driver -> Meters -> m ()
+incrementTotalRidesAndTotalDist :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Meters -> m ()
 incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
   now <- getCurrentTime
   findTotalRides (Id driverId') >>= \(rides, distance) ->
@@ -85,20 +85,20 @@ incrementTotalRidesAndTotalDist (Id driverId') rideDist = do
       ]
       [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
-findTotalRidesAssigned :: MonadFlow m => Id Driver -> m (Maybe Int)
+findTotalRidesAssigned :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe Int)
 findTotalRidesAssigned (Id driverId) = (Domain.totalRidesAssigned =<<) <$> findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
 
-incrementTotalRidesAssigned :: MonadFlow m => Id Driver -> Int -> m ()
+incrementTotalRidesAssigned :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> m ()
 incrementTotalRidesAssigned (Id driverId') number = do
   findTotalRidesAssigned (Id driverId') >>= \case
     Nothing -> updateOneWithKV [Se.Set BeamDS.totalRidesAssigned (Just number)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
     Just newRides -> do
       updateOneWithKV [Se.Set BeamDS.totalRidesAssigned (Just (newRides + number))] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
-setCancelledRidesCount :: MonadFlow m => Id Driver -> Int -> m ()
+setCancelledRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> m ()
 setCancelledRidesCount (Id driverId') cancelledCount = updateOneWithKV [Se.Set BeamDS.ridesCancelled (Just cancelledCount)] [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
-setDriverStats :: (MonadFlow m) => Id Driver -> Int -> Int -> Money -> m ()
+setDriverStats :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> Int -> Money -> m ()
 setDriverStats (Id driverId') totalRides cancelledCount missedEarning = do
   now <- getCurrentTime
   res <- findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId')]
@@ -107,16 +107,16 @@ setDriverStats (Id driverId') totalRides cancelledCount missedEarning = do
     Just ds ->
       updateOneWithKV
         [ Se.Set BeamDS.updatedAt now,
-          Se.Set BeamDS.totalRidesAssigned $ (liftA2 (+) (Just totalRides) ds.totalRidesAssigned),
+          Se.Set BeamDS.totalRidesAssigned (liftA2 (+) (Just totalRides) ds.totalRidesAssigned),
           Se.Set BeamDS.ridesCancelled (Just cancelledCount),
           Se.Set BeamDS.earningsMissed missedEarning
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
-getDriversSortedOrder :: MonadFlow m => Maybe Integer -> m [DriverStats]
+getDriversSortedOrder :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> m [DriverStats]
 getDriversSortedOrder mbLimitVal = findAllWithOptionsDb [] (Se.Desc BeamDS.totalRides) (Just $ maybe 10 fromInteger mbLimitVal) Nothing
 
-setCancelledRidesCountAndIncrementEarningsMissed :: (MonadFlow m) => Id Driver -> Int -> Money -> m ()
+setCancelledRidesCountAndIncrementEarningsMissed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> Money -> m ()
 setCancelledRidesCountAndIncrementEarningsMissed (Id driverId') cancelledCount missedEarning = do
   now <- getCurrentTime
   res <- findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId')]
@@ -164,7 +164,7 @@ instance ToTType' BeamDS.DriverStats DriverStats where
         BeamDS.updatedAt = updatedAt
       }
 
-incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: (MonadFlow m) => Id Driver -> Money -> Money -> Int -> m ()
+incrementTotalEarningsAndBonusEarnedAndLateNightTrip :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Money -> Money -> Int -> m ()
 incrementTotalEarningsAndBonusEarnedAndLateNightTrip (Id driverId') increasedEarning increasedBonus tripCount = do
   now <- getCurrentTime
   res <- findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId')]
@@ -179,7 +179,7 @@ incrementTotalEarningsAndBonusEarnedAndLateNightTrip (Id driverId') increasedEar
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId')]
 
-setMissedEarnings :: (MonadFlow m) => Id Driver -> Money -> m ()
+setMissedEarnings :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Money -> m ()
 setMissedEarnings (Id driverId') missedEarnings = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamDS.updatedAt now, Se.Set BeamDS.earningsMissed missedEarnings] [Se.Is BeamDS.driverId (Se.Eq driverId')]

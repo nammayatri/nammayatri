@@ -16,10 +16,8 @@ module Mobility.ARDU.APICalls where
 
 import qualified "dynamic-offer-driver-app" API.Dashboard as DashboardAPI
 import qualified "dynamic-offer-driver-app" API.UI.Driver as DriverAPI
-import "dynamic-offer-driver-app" API.UI.Location as LocationAPI
 import qualified "dynamic-offer-driver-app" API.UI.Ride as RideAPI
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Dashboard
-import Data.Time
 import qualified Domain.Action.UI.Ride.CancelRide as DCR
 import qualified Domain.Action.UI.Ride.EndRide as DER
 import qualified "dynamic-offer-driver-app" Domain.Types.DriverInformation as TDI
@@ -29,6 +27,7 @@ import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Types.APISuccess
 import Kernel.Types.App
+import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Servant hiding (Context)
 import Servant.Client
@@ -36,8 +35,7 @@ import Servant.Client
 data UIAPIs = UIAPIs
   { healthCheck :: ClientM Text,
     ride :: RideAPIs,
-    driver :: DriverAPIs,
-    location :: LocationAPIs
+    driver :: DriverAPIs
   }
 
 data RideAPIs = RideAPIs
@@ -59,10 +57,6 @@ data DriverAPIs = DriverAPIs
     remove :: Text -> ClientM APISuccess
   }
 
-newtype LocationAPIs = LocationAPIs
-  { updateLocation :: RegToken -> NonEmpty LocationAPI.Waypoint -> ClientM APISuccess
-  }
-
 -- most of apis do not used in tests, so let's simplify API type
 type HealthCheckAPI = Get '[JSON] Text
 
@@ -70,7 +64,6 @@ type UIAPI =
   "ui"
     :> ( HealthCheckAPI
            :<|> DriverAPI.API
-           :<|> LocationAPI.API
            :<|> RideAPI.API
        )
 
@@ -78,12 +71,10 @@ ui :: UIAPIs
 ui = do
   let ride = RideAPIs {..}
   let driver = DriverAPIs {..}
-  let location = LocationAPIs {..}
   UIAPIs {..}
   where
     healthCheck
       :<|> driverClient
-      :<|> locationClient
       :<|> rideClient = client (Proxy :: Proxy UIAPI)
 
     _ :<|> (_ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel) = rideClient
@@ -109,11 +100,14 @@ ui = do
                         :<|> remove
                       )
                :<|> _
+               :<|> _
              ) = driverClient
 
-    (_ :<|> updateLocation) = locationClient
-
 newtype DashboardAPIs = DashboardAPIs
+  { management :: DashboardManagementAPIs
+  }
+
+newtype DashboardManagementAPIs = DashboardManagementAPIs
   { ride :: DashboardRideAPIs
   }
 
@@ -121,20 +115,18 @@ newtype DashboardRideAPIs = DashboardRideAPIs
   { rideSync :: Id Dashboard.Ride -> ClientM Dashboard.RideSyncRes
   }
 
-newtype DashboardMultipleRideAPIs = DashboardMultipleRideAPIs
-  { multipleRideSync :: Dashboard.MultipleRideSyncReq -> ClientM Dashboard.MultipleRideSyncRes
-  }
-
-dashboard :: ShortId TDM.Merchant -> Text -> DashboardAPIs
-dashboard merchantId token = do
+dashboard :: ShortId TDM.Merchant -> Context.City -> Text -> DashboardAPIs
+dashboard merchantId _ token = do
   let ride = DashboardRideAPIs {..}
+  let management = DashboardManagementAPIs {..}
   DashboardAPIs {..}
   where
     helperAPIClient :<|> _exotelAPIClient = client (Proxy :: Proxy DashboardAPI.API)
 
-    _ :<|> rideClient :<|> _ :<|> _ = helperAPIClient merchantId token
+    managementAPIClient :<|> _ :<|> _ = helperAPIClient merchantId
+    _ :<|> rideClient :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ = managementAPIClient token
 
-    _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> _ :<|> rideSync :<|> _ = rideClient
+    _ :<|> _ :<|> _ :<|> _ :<|> rideSync :<|> _ :<|> _ :<|> _ = rideClient
 
 buildStartRideReq :: Text -> LatLong -> RideAPI.StartRideReq
 buildStartRideReq otp initialPoint =
@@ -142,17 +134,6 @@ buildStartRideReq otp initialPoint =
     { RideAPI.rideOtp = otp,
       point = initialPoint
     }
-
-buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty LocationAPI.Waypoint)
-buildUpdateLocationRequest pts =
-  forM pts $ \ll -> do
-    now <- getCurrentTime
-    return $
-      LocationAPI.Waypoint
-        { pt = ll,
-          ts = now,
-          acc = Nothing
-        }
 
 getDriverOfferBppBaseUrl :: BaseUrl
 getDriverOfferBppBaseUrl =

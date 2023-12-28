@@ -33,8 +33,8 @@ import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
 import Data.String.CodeUnits (charAt)
 import Debug (spy)
 import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner)
-import Helpers.Utils (getImageUrl, getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, parseNumber)
+import Helpers.Utils (getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey)
+import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner, getImageUrl)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -46,6 +46,7 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
 import Types.App (defaultGlobalState)
 import Effect.Unsafe (unsafePerformEffect)
+import Data.Function.Uncurried (runFn3)
 import Common.Types.App(YoutubeData)
 
 instance showAction :: Show Action where
@@ -87,7 +88,7 @@ eval BackPressed state = do
   if state.notifsDetailModelVisibility == VISIBLE && state.notificationDetailModelState.addCommentModelVisibility == GONE then
     continueWithCmd state { notifsDetailModelVisibility = GONE }
       [ do
-          _ <- pure $ setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") $ show PAUSE
+          _ <- pure $ runFn3 setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") $ show PAUSE
           _ <- removeMediaPlayer ""
           _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
           pure NoAction
@@ -196,7 +197,7 @@ eval (Scroll value) state = do
   continue state { loaderButtonVisibility = loadMoreButton }
 
 eval (OnFadeComplete _) state = do
-  if (state.recievedResponse == false) then
+  if not state.recievedResponse then
     continue state
   else
     continue
@@ -247,6 +248,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
       exit $ GoToReferralScreen
     "Join" -> do 
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
       _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
@@ -374,6 +376,7 @@ youtubeData =
   , showSeekBar: true
   , videoId: ""
   , videoType: ""
+  , videoHeight : 0
   }
 
 splitUrlsAndText :: String -> Array String

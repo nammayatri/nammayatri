@@ -14,7 +14,7 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.TransporterConfig
-  ( findByMerchantId,
+  ( findByMerchantOpCityId,
     clearCache,
     update,
     updateFCMConfig,
@@ -24,7 +24,7 @@ where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -32,30 +32,30 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.TransporterConfig as Queries
 
-findByMerchantId :: (MonadFlow m, CacheFlow m r) => Id Merchant -> m (Maybe TransporterConfig)
-findByMerchantId id =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdKey id) >>= \case
+findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
+findByMerchantOpCityId id =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
-    Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantId id
+    Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
 
 cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantIdKey cfg.merchantId
+  let merchantIdKey = makeMerchantOpCityIdKey cfg.merchantOperatingCityId
   Hedis.withCrossAppRedis $ Hedis.setExp merchantIdKey (coerce @TransporterConfig @(TransporterConfigD 'Unsafe) cfg) expTime
 
-makeMerchantIdKey :: Id Merchant -> Text
-makeMerchantIdKey id = "driver-offer:CachedQueries:TransporterConfig:MerchantId-" <> id.getId
+makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
+makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:TransporterConfig:MerchantOperatingCityId-" <> id.getId
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id Merchant -> m ()
-clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantIdKey
+clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache = Hedis.withCrossAppRedis . Hedis.del . makeMerchantOpCityIdKey
 
-updateFCMConfig :: MonadFlow m => Id Merchant -> BaseUrl -> Text -> m ()
+updateFCMConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
 updateFCMConfig = Queries.updateFCMConfig
 
-updateReferralLinkPassword :: MonadFlow m => Id Merchant -> Text -> m ()
+updateReferralLinkPassword :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> m ()
 updateReferralLinkPassword = Queries.updateReferralLinkPassword
 
-update :: MonadFlow m => TransporterConfig -> m ()
+update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
 update = Queries.update

@@ -48,6 +48,11 @@
     <string name="tip">டிப்</string>
     <string name="qr_for_your_vpa_is_downloaded">உங்கள் vpa க்கான QR பதிவிறக்கப்பட்டது!!!</string>
     <string name="invoice_downloaded">விலைப்பட்டியல் பதிவிறக்கப்பட்டது!!!</string>
+    <string name="driver_receipt_downloaded">ஓட்டுனர் ரசீது பதிவிறக்கம் செய்யப்பட்டது!!!</string>
+    <string name="driver_receipt_for_your_ride_is_downloaded">உங்கள் சவாரிக்கான ஓட்டுனர் ரசீது பதிவிறக்கப்பட்டது!!!</string>
     <string name="invoice_for_your_ride_is_downloaded">உங்கள் சவாரிக்கான விலைப்பட்டியல் பதிவிறக்கப்பட்டது!!!</string>
     <string name="qr_downloaded">QR பதிவிறக்கம் !!!</string>
+    <string name="accept_goto">ஏற்றுக்கொள்ளுங்கள் “கோ-டூ”</string>
+    <string name="take_a_clear_selfie">குறிக்கப்பட்ட பகுதிக்குள் உங்கள் ஓட்டுநர் \n உரிமத்துடன் தெளிவான புகைப்படம் எடுக்கவும்</string>
+    <string name="need_help">உதவி தேவையா?</string>
 </resources>

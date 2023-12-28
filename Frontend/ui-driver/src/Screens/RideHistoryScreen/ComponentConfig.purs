@@ -17,21 +17,19 @@ module Screens.RideHistoryScreen.ComponentConfig where
 
 
 import Common.Types.App (LazyCheck(..))
-import Language.Strings (getString)
-import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
+import Components.DatePickerModel as DatePickerModel
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getPastDays)
+import Language.Strings (getString)
 import Language.Types (STR(..))
+import Prelude ((<>), (/=), ($))
+import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
+import Resource.Constants (tripDatesCount)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink, getPastDays)
-import Common.Types.App (LazyCheck(..))
-import Prelude ((<>), (/=))
-import Components.DatePickerModel as DatePickerModel
-import Resource.Constants (tripDatesCount)
-import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Storage (getValueToLocalStore, KeyStore(..))
 
 errorModalConfig :: ST.RideHistoryScreenState -> ErrorModal.Config 
@@ -39,7 +37,7 @@ errorModalConfig state = let
   config = ErrorModal.config 
   errorModalConfig' = config 
     { imageConfig {
-        imageUrl = if (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW") then "ny_ic_no_past_rides," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_no_past_rides.png" else "ny_ic_no_past_rides_auto," <> (getAssetStoreLink FunctionCall) <> "ny_ic_no_past_rides_auto.png"
+        imageUrl = if (getValueToLocalStore VEHICLE_VARIANT /= "AUTO_RICKSHAW") then fetchImage FF_COMMON_ASSET "ny_ic_no_past_rides" else fetchImage FF_ASSET "ny_ic_no_past_rides_auto"
       , height = V 110
       , width = V 124
       , margin = (MarginBottom 61)
@@ -60,6 +58,7 @@ errorModalConfig state = let
       , color = Color.yellow900
       , visibility  = GONE
       }
+    , background = Color.transparent
     }
   in errorModalConfig' 
 

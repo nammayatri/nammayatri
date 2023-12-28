@@ -18,7 +18,8 @@ import qualified Beckn.Spec.API.Confirm as Confirm
 import qualified Beckn.Spec.API.Status as Status
 import Beckn.Spec.Confirm
 import qualified Beckn.Spec.Status as Status
-import EulerHS.Types as ET
+import qualified Data.HashMap as HM
+import qualified EulerHS.Types as ET
 import GHC.Records.Extra
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
@@ -33,7 +34,8 @@ confirm ::
   ( MonadFlow m,
     MonadReader r m,
     CoreMetrics m,
-    HasField "selfId" r Text
+    HasField "selfId" r Text,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   BecknReq ConfirmMessage ->
@@ -45,7 +47,8 @@ status ::
   ( MonadFlow m,
     MonadReader r m,
     CoreMetrics m,
-    HasField "selfId" r Text
+    HasField "selfId" r Text,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   BecknReq Status.StatusMessage ->
@@ -58,7 +61,8 @@ callBecknAPIWithSignature ::
     CoreMetrics m,
     SanitizedUrl api,
     IsBecknAPI api req res,
-    HasField "selfId" r Text
+    HasField "selfId" r Text,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   Text ->
   Proxy api ->
@@ -67,4 +71,5 @@ callBecknAPIWithSignature ::
   m ()
 callBecknAPIWithSignature a b c d = do
   bapId <- asks (.selfId)
-  void $ callBecknAPI (Just $ ET.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c d
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  void $ callBecknAPI (Just $ ET.ManagerSelector $ getHttpManagerKey bapId) Nothing a b c internalEndPointHashMap d

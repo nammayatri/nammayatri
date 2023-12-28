@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.RideDetails where
 
@@ -31,7 +32,8 @@ data RideDetailsT f = RideDetailsT
     vehicleColor :: B.C f (Maybe Text),
     vehicleVariant :: B.C f (Maybe SV.Variant),
     vehicleModel :: B.C f (Maybe Text),
-    vehicleClass :: B.C f (Maybe Text)
+    vehicleClass :: B.C f (Maybe Text),
+    fleetOwnerId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

@@ -26,11 +26,11 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Data.String (Pattern(..), split)
 import Engineering.Helpers.Commons (strToBool)
-import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, toString, isHaveFare, withinTimeRange, getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (parseFloat, rotateArray, setEnabled, setRefreshing, isHaveFare, withinTimeRange, fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp)
 import Engineering.Helpers.Commons (convertUTCtoISC)
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), (*), negate, (<<<), not)
+import Prelude (class Show, pure, unit, bind, map, discard, show, ($), (==), (&&), (+), (/=), (<>), (||), (-), (<), (/), (*), negate, (<<<), not, void)
 import PrestoDOM (Eval, ScrollState(..), continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Screens (ScreenName(..), getScreen)
@@ -38,14 +38,15 @@ import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getSpecialTag)
 import Screens.Types (AnimationState(..), FareComponent, Fares, IndividualRideCardState, ItemState, MyRidesScreenState, Stage(..), ZoneType(..), VehicleVariant(..))
 import Services.API (FareBreakupAPIEntity(..), RideAPIEntity(..), RideBookingListRes, RideBookingRes(..))
 import Storage (isLocalStageOn)
-import Language.Strings (getString, getEN)
+import Language.Strings (getString)
+import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getFaresList, getFareFromArray, getFilteredFares, getKmMeter, fetchVehicleVariant)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
-import MerchantConfig.Utils (getValueFromConfig, getMerchant, Merchant(..))
+import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
+import ConfigProvider
 
 instance showAction :: Show Action where
   show _ = ""
@@ -108,7 +109,12 @@ data Action = NoAction
 
 eval :: Action -> MyRidesScreenState -> Eval Action ScreenOutput MyRidesScreenState
 
-eval BackPressed state = exit $ GoBack state
+eval BackPressed state = 
+  if isParentView FunctionCall 
+    then do 
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else exit $ GoBack state
 
 eval (ScrollStateChanged scrollState) state = do
   _ <- case scrollState of
@@ -118,7 +124,7 @@ eval (ScrollStateChanged scrollState) state = do
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure BackPressed]
 
 eval (OnFadeComplete _ ) state = do
-                      if (state.props.receivedResponse == false) then continue state
+                      if not state.props.receivedResponse then continue state
                       else continue state {
                                 shimmerLoader = case state.shimmerLoader of
                                                   AnimatedIn ->AnimatedOut
@@ -181,10 +187,10 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
     time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source : toPropValue (decodeAddress (Booking ride.fromLocation)),
     destination : toPropValue (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
-    totalAmount : toPropValue ((getValueFromConfig "currency") <> " " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
+    totalAmount : toPropValue ((getCurrency appConfig) <> " " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
     cardVisibility : toPropValue "visible",
     shimmerVisibility : toPropValue "gone",
-    driverImage : toPropValue $ "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png",
+    driverImage : toPropValue $ fetchImage FF_ASSET "ny_ic_user",
     isCancelled : toPropValue (if ride.status == "CANCELLED" then "visible" else "gone"),
     isSuccessfull : toPropValue (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : toPropValue (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
@@ -215,10 +221,10 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source :  decodeAddress (Booking ride.fromLocation),
     destination : decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation)),
-    totalAmount :  ((getValueFromConfig "currency") <> " " <> show (fromMaybe (0) rideDetails.computedPrice)),
+    totalAmount :  ((getCurrency appConfig) <> " " <> show (fromMaybe (0) rideDetails.computedPrice)),
     cardVisibility :  "visible",
     shimmerVisibility :  "gone",
-    driverImage :  "ny_ic_user," <> (getAssetStoreLink FunctionCall) <> "ny_ic_user.png",
+    driverImage : fetchImage FF_ASSET  "ny_ic_user",
     isCancelled :  (if ride.status == "CANCELLED" then "visible" else "gone"),
     isSuccessfull :  (if ride.status == "COMPLETED" then "visible" else "gone"),
     rating : (fromMaybe 0 rideDetails.rideRating),
@@ -238,13 +244,13 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
   , faresList : updatedFareList
   , baseFare : fares.baseFare
   , pickupCharges : fares.pickupCharges
-  , extraFare : (getValueFromConfig "currency") <> " " <> show (getFareFromArray ride.fareBreakup "EXTRA_DISTANCE_FARE")
+  , extraFare : (getCurrency appConfig) <> " " <> show (getFareFromArray ride.fareBreakup "EXTRA_DISTANCE_FARE")
   , waitingCharges : fares.waitingCharges
   , baseDistance : baseDistanceVal
   , extraDistance : getKmMeter $  (\a -> if a < 0 then - a else a) ((fromMaybe 0 (rideDetails.chargeableRideDistance)) - (fromMaybe 0 (((ride.bookingDetails)^._contents)^._estimatedDistance)))
   , referenceString : (if (nightChargesVal && (getMerchant FunctionCall) /= YATRI) then "1.5" <> (getEN DAYTIME_CHARGES_APPLICABLE_AT_NIGHT) else "")
                         <> (if (isHaveFare "DRIVER_SELECTED_FARE" (updatedFareList)) then "\n\n" <> (getEN DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO) else "")
-                        <> (if (isHaveFare "WAITING_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
+                        <> (if (isHaveFare "WAITING_OR_PICKUP_CHARGES" updatedFareList) then "\n\n" <> (getEN WAITING_CHARGE_DESCRIPTION) else "")
                         <> (if (isHaveFare "EARLY_END_RIDE_PENALTY" (updatedFareList)) then "\n\n" <> (getEN EARLY_END_RIDE_CHARGES_DESCRIPTION) else "")
                         <> (if (isHaveFare "CUSTOMER_SELECTED_FARE" ((updatedFareList))) then "\n\n" <> (getEN CUSTOMER_TIP_DESCRIPTION) else "")
   , nightCharges : nightChargesVal
@@ -262,10 +268,9 @@ matchRidebyId rideOne rideTwo = rideOne.bookingId == rideTwo.bookingId
 
 getFares ∷ Array FareBreakupAPIEntity → Fares
 getFares fares = {
-  baseFare :(getValueFromConfig "currency") <>  " " <> show (((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10)
-, pickupCharges : (getValueFromConfig "currency") <> " 10.0"
-, waitingCharges : (getValueFromConfig "currency") <> " " <> show (getFareFromArray fares "WAITING_CHARGES")
-, nominalFare : (getValueFromConfig "currency") <> " " <> show (getFareFromArray fares "DRIVER_SELECTED_FARE")
+  baseFare :(getCurrency appConfig) <>  " " <> show (((getFareFromArray fares "BASE_FARE") + (getFareFromArray fares "EXTRA_DISTANCE_FARE")) - 10)
+, pickupCharges : (getCurrency appConfig) <> " 10.0"
+, waitingCharges : (getCurrency appConfig) <> " " <> show (getFareFromArray fares "WAITING_CHARGES")
+, nominalFare : (getCurrency appConfig) <> " " <> show (getFareFromArray fares "DRIVER_SELECTED_FARE")
 }
-
 

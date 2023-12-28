@@ -18,12 +18,16 @@ module App (startProducer) where
 import Data.Function hiding (id)
 import Environment
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as L
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
+import Kernel.Beam.Types (KafkaConn (..), Tables (..))
 import Kernel.Prelude
-import Kernel.Types.Common (fork)
+import Kernel.Tools.LoopGracefully (loopGracefully)
+import qualified Kernel.Tools.Metrics.Init as Metrics
 import Kernel.Types.Flow (runFlowR)
+import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Time ()
@@ -32,23 +36,26 @@ import qualified Producer.Flow as PF
 startProducer :: IO ()
 startProducer = do
   appCfg :: AppCfg <- readDhallConfigDefault "producer"
+  Metrics.serve (appCfg.metricsPort)
   appEnv <- buildAppEnv appCfg
   flowRt <- L.createFlowRuntime' (Just $ L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig)
   startProducerWithEnv flowRt appCfg appEnv
 
 startProducerWithEnv :: L.FlowRuntime -> AppCfg -> AppEnv -> IO ()
-startProducerWithEnv flowRt appCfg appEnv@AppEnv {} = do
+startProducerWithEnv flowRt appCfg appEnv = do
   runFlow
     flowRt
-    ( prepareConnectionRider
-        ( ConnectionConfigRider
-            { esqDBCfg = appCfg.esqDBCfg,
-              esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
-              hedisClusterCfg = appCfg.hedisClusterCfg
-            }
-        )
-        appCfg.tables
+    ( ( prepareConnectionRider
+          ( ConnectionConfigRider
+              { esqDBCfg = appCfg.esqDBCfg,
+                esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+                hedisClusterCfg = appCfg.hedisClusterCfg
+              }
+          )
+          appCfg.kvConfigUpdateFrequency
+      )
+        >> L.setOption KafkaConn appEnv.kafkaProducerTools
+        >> L.setOption Tables (KUC.Tables [] [])
     )
   runFlowR flowRt appEnv $ do
-    fork "Running Reviver" PF.runReviver
-    PF.runProducer
+    loopGracefully $ bool [PF.runProducer] [PF.runReviver, PF.runProducer] appEnv.runReviver

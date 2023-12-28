@@ -4,12 +4,14 @@ import Prelude (class Eq, class Show )
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
+import Foreign.Generic (decode, encode, class Decode, class Encode)
+import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 
 data Action
   = NoAction
   | OnSelect Config
   | OnImageClick
-  | ShowRateCard String
+  | ShowRateCard Config
 
 type Config
   = { vehicleImage :: String
@@ -28,6 +30,7 @@ type Config
     , showInfo :: Boolean
     , searchResultType :: SearchType
     , isBookingOption :: Boolean
+    , pickUpCharges :: Int 
     }
 
 data SearchType = QUOTES | ESTIMATES
@@ -35,6 +38,8 @@ data SearchType = QUOTES | ESTIMATES
 derive instance genericSearchType :: Generic SearchType _
 instance eqSearchType :: Eq SearchType where eq = genericEq
 instance showSearchType :: Show SearchType where show = genericShow
+instance encodeSearchType :: Encode SearchType where encode = defaultEnumEncode
+instance decodeSearchType :: Decode SearchType where decode = defaultEnumDecode
 
 
 config :: Config
@@ -55,4 +60,5 @@ config =
   , showInfo : false
   , searchResultType : QUOTES
   , isBookingOption : false
+  , pickUpCharges : 0
   }

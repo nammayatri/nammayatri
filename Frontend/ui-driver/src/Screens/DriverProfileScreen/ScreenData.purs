@@ -21,14 +21,17 @@ import Common.Types.App (CheckBoxOptions, LazyCheck(..))
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Foreign.Object (empty)
-import MerchantConfig.Utils (getValueFromConfig)
-import MerchantConfig.DefaultConfig as DC
+import Language.Types (STR(..)) as STR
+import ConfigProvider
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
-import Services.API (GetDriverInfoResp(..), OrganizationInfo(..))
+import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
 
 initData :: DriverProfileScreenState
-initData = {
+initData = 
+  let config = getAppConfig appConfig
+  in 
+  {
   data:  {
     driverName : "",
     driverVehicleType : "",
@@ -57,6 +60,7 @@ initData = {
     isRCActive : false,
     rcDataArray : [],
     inactiveRCArray : [],
+    goHomeActive : false,
     activeRCData : { rcStatus  : true
                   , rcDetails : { certificateNumber   : ""
                                 , vehicleColor : Nothing
@@ -85,7 +89,7 @@ initData = {
       , totalRidesAssigned : 0
       , totalDistanceTravelled : ""
       },
-    config : DC.config
+    config
     },
 
   props: {
@@ -116,27 +120,24 @@ initData = {
     openRcView : false,
     detailsUpdationType : Nothing,
     btnActive : false,
-    showBookingOptionForTaxi : false,
+    showBookingOptionForTaxi : config.profile.bookingOptionMenuForTaxi,
     upiQrView : false,
-    paymentInfoView : false
+    paymentInfoView : false,
+    enableGoto : false,
+    isRideActive : false
    }
 }
 
 
-data MenuOptions = DRIVER_PRESONAL_DETAILS |DRIVER_BANK_DETAILS | DRIVER_VEHICLE_DETAILS | ABOUT_APP | MULTI_LANGUAGE | HELP_AND_FAQS | DRIVER_LOGOUT | DRIVER_BOOKING_OPTIONS | REFER | APP_INFO_SETTINGS | LIVE_STATS_DASHBOARD
-derive instance genericMenuoptions :: Generic MenuOptions _
-instance eqMenuoptions :: Eq MenuOptions where eq = genericEq
 
-type Listtype =
-    { icon :: String,
-      menuOptions :: MenuOptions
-    }
 
 languagesChoices :: Array CheckBoxOptions
 languagesChoices =
+  let config = getAppConfig appConfig
+  in
   [ { value : "EN_US"
     , text : "English"
-    , subText : getValueFromConfig "engilshInNative"
+    , subText : config.engilshInNative
     , isSelected : false
     }
   , { value: "KN_IN"
@@ -201,6 +202,10 @@ dummyDriverInfo = GetDriverInfoResp {
     , payerVpa              : Nothing
     , currentDues           : Nothing
     , manualDues           : Nothing
+    , driverGoHomeInfo      : dummyDriverGoHomeInfo
+    , isGoHomeEnabled       : false
+    , maskedDeviceToken     : Nothing
+    , operatingCity         : Nothing
 }
 
 organizationInfo :: OrganizationInfo
@@ -211,4 +216,15 @@ organizationInfo = OrganizationInfo {
   status        : "",
   enabled       : false,
   id            : ""
+}
+
+
+dummyDriverGoHomeInfo :: DriverGoHomeInfo
+dummyDriverGoHomeInfo = DriverGoHomeInfo {
+  cnt : 0,
+  driverGoHomeRequestId : Nothing,
+  validTill : Nothing,
+  status : Nothing,
+  isOnRide : false,
+  goHomeReferenceTime : ""
 }

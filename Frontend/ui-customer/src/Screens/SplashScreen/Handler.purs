@@ -15,17 +15,17 @@
 
 module Screens.SplashScreen.Handler where
 
-import Prelude (Unit, pure, unit, discard, ($), bind, void)
-import Control.Monad.Except.Trans (lift)
-import PrestoDOM.Core.Types.Language.Flow (initUIWithScreen)
-import Screens.Types (SplashScreenState)
+import Control.Monad.Trans.Class (lift)
+import Data.Maybe (Maybe(..))
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+import Prelude (Unit, bind, discard, void, ($))
+import PrestoDOM.Core.Types.Language.Flow (initUIWithNameSpace, showScreenWithNameSpace)
 import Screens.SplashScreen.View as SplashScreen
-import Types.App (FlowBT)
-import Engineering.Helpers.Commons (liftFlow)
-import JBridge (requestLocation, initiateLocationServiceClient)
+import Types.App (GlobalState(..), FlowBT)
 
-splashScreen :: SplashScreenState → FlowBT String Unit
-splashScreen screenState = do
-  _ <- lift $ lift $ liftFlow $ initiateLocationServiceClient
-  lift $ lift $ initUIWithScreen $ SplashScreen.screen screenState
-  pure unit
+
+splashScreen :: FlowBT String Unit
+splashScreen = do
+  (GlobalState globalState) <- getState
+  void $ liftFlowBT $ initUIWithNameSpace "SplashScreen" Nothing
+  void $ lift $ lift $ showScreenWithNameSpace $ SplashScreen.screen globalState.splashScreen

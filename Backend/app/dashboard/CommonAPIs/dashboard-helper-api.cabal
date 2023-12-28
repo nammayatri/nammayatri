@@ -19,13 +19,17 @@ source-repository head
   type: git
   location: https://github.com/nammayatri/nammayatri
 
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
 library
   exposed-modules:
       Dashboard.Common
       Dashboard.Common.Booking
       Dashboard.Common.DriverReferral
       Dashboard.Common.Exotel
-      Dashboard.Common.Issue
       Dashboard.Common.Merchant
       Dashboard.Common.Message
       Dashboard.Common.Ride
@@ -33,7 +37,6 @@ library
       Dashboard.ProviderPlatform.Driver
       Dashboard.ProviderPlatform.Driver.Registration
       Dashboard.ProviderPlatform.DriverReferral
-      Dashboard.ProviderPlatform.Issue
       Dashboard.ProviderPlatform.Merchant
       Dashboard.ProviderPlatform.Message
       Dashboard.ProviderPlatform.Revenue
@@ -81,7 +84,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -107,5 +110,7 @@ library
     , time
     , wai
   default-language: Haskell2010
-  if os(darwin)
-    ghc-options: -fwhole-archive-hs-libs
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4

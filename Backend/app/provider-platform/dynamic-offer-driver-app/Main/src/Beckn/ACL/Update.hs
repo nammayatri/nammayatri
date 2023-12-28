@@ -50,6 +50,13 @@ parseEvent (Update.PaymentCompleted pcEvent) = do
       paymentStatus = castPaymentStatus pcEvent.payment.status,
       paymentMethodInfo = mkPaymentMethodInfo pcEvent.payment
     }
+parseEvent (Update.EditLocation elEvent) = do
+  DUpdate.EditLocationReq
+    { bookingId = Id elEvent.id,
+      rideId = Id elEvent.fulfillment.id,
+      origin = elEvent.fulfillment.origin.location,
+      destination = elEvent.fulfillment.destination.location
+    }
 
 mkPaymentMethodInfo :: Update.Payment -> DMPM.PaymentMethodInfo
 mkPaymentMethodInfo Update.Payment {..} =

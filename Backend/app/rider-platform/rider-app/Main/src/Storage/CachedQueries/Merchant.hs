@@ -20,20 +20,25 @@ module Storage.CachedQueries.Merchant
     findBySubscriberId,
     update,
     clearCache,
+    getDefaultMerchantOperatingCity,
+    getDefaultMerchantOperatingCity_,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Merchant as Queries
+import Tools.Error
 
-loadAllBaps :: MonadFlow m => m [Merchant]
+loadAllBaps :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
 loadAllBaps = Queries.findAll
 
 findById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Merchant -> m (Maybe Merchant)
@@ -55,10 +60,10 @@ findByShortId shortId_ =
 
 findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
-  Hedis.get (makeSubscriberIdKey subscriberId) >>= \case
+  Hedis.safeGet (makeSubscriberIdKey subscriberId) >>= \case
     Nothing -> findAndCache
     Just id ->
-      Hedis.get (makeIdKey id) >>= \case
+      Hedis.safeGet (makeIdKey id) >>= \case
         Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
         Nothing -> findAndCache
   where
@@ -89,3 +94,22 @@ makeSubscriberIdKey subscriberId = "CachedQueries:Merchant:SubscriberId-" <> sub
 
 update :: MonadFlow m => Merchant -> m ()
 update = Queries.update
+
+-- Use only for backward compatibility
+getDefaultMerchantOperatingCity :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m DMOC.MerchantOperatingCity
+getDefaultMerchantOperatingCity merchantId = do
+  merchant <- findById merchantId >>= fromMaybeM (MerchantDoesNotExist $ "merchantId:- " <> merchantId.getId)
+  CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
+    >>= fromMaybeM
+      ( MerchantOperatingCityDoesNotExist $
+          "merchantId:- " <> merchant.id.getId <> " city:- " <> show merchant.defaultCity
+      )
+
+getDefaultMerchantOperatingCity_ :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m DMOC.MerchantOperatingCity
+getDefaultMerchantOperatingCity_ merchantShortId = do
+  merchant <- findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist $ "merchantShortId:- " <> merchantShortId.getShortId)
+  CQMOC.findByMerchantIdAndCity merchant.id merchant.defaultCity
+    >>= fromMaybeM
+      ( MerchantOperatingCityNotFound $
+          "merchantId:- " <> merchant.id.getId <> " city:- " <> show merchant.defaultCity
+      )

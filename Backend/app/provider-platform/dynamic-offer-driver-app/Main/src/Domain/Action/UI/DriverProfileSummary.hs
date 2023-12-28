@@ -16,6 +16,7 @@ module Domain.Action.UI.DriverProfileSummary where
 import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.Feedback.Feedback (FeedbackBadge)
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DR
@@ -62,8 +63,8 @@ data DriverProfleSummaryRes = DriverProfleSummaryRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-getDriverProfileSummary :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant) -> m DriverProfleSummaryRes
-getDriverProfileSummary (driverId, _) = do
+getDriverProfileSummary :: (CacheFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m DriverProfleSummaryRes
+getDriverProfileSummary (driverId, _, _) = do
   person <- B.runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   vehicleMB <- B.runInReplica $ QVehicle.findById person.id
   decMobNum <- mapM decrypt person.mobileNumber

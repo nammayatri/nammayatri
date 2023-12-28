@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Ride where
 
@@ -21,6 +22,7 @@ import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeReques
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types
@@ -46,6 +48,7 @@ data Ride = Ride
     bookingId :: Id DRB.Booking,
     shortId :: ShortId Ride,
     merchantId :: Maybe (Id DM.Merchant),
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     status :: RideStatus,
     driverId :: Id DPers.Person,
     otp :: Text,
@@ -67,9 +70,11 @@ data Ride = Ride
     updatedAt :: UTCTime,
     driverDeviatedFromRoute :: Maybe Bool,
     numberOfSnapToRoadCalls :: Maybe Int,
+    numberOfOsrmSnapToRoadCalls :: Maybe Int,
     numberOfDeviation :: Maybe Bool,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
-    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest)
+    driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
+    safetyAlertTriggered :: Bool
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON)

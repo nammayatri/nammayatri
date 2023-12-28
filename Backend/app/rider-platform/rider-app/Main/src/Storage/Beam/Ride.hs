@@ -29,6 +29,7 @@ data RideT f = RideT
     bookingId :: B.C f Text,
     shortId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     status :: B.C f Domain.RideStatus,
     driverName :: B.C f Text,
     driverRating :: B.C f (Maybe Centesimal),
@@ -49,9 +50,11 @@ data RideT f = RideT
     rideStartTime :: B.C f (Maybe UTCTime),
     rideEndTime :: B.C f (Maybe UTCTime),
     rideRating :: B.C f (Maybe Int),
+    allowedEditLocationAttempts :: B.C f (Maybe Int),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    driverImage :: B.C f (Maybe Text)
+    driverImage :: B.C f (Maybe Text),
+    safetyCheckStatus :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

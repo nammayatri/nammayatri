@@ -22,7 +22,7 @@ import Font.Style (Style(..))
 import Common.Types.App as Common
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 import Data.Maybe as Mb
 
@@ -30,7 +30,7 @@ data Action = OnButton1Click
             | OnButton2Click
             | NoAction
             | ETextController PrimaryEditTextController.Action
-            | CountDown Int String String String
+            | CountDown Int String String
             | OnImageClick
             | Tipbtnclick Int Int
             | DismissPopup
@@ -73,7 +73,8 @@ type Config = {
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
     listViewArray :: Array String,
-    coverVideoConfig :: CoverVideoConfig
+    coverVideoConfig :: CoverVideoConfig,
+    timerId :: String
 }
 
 type CoverVideoConfig = {
@@ -83,7 +84,8 @@ type CoverVideoConfig = {
   margin :: Margin ,
   padding :: Padding ,
   mediaUrl :: String ,
-  mediaType :: String 
+  mediaType :: String ,
+  id :: String
 }
 
 type ContactViewConfig = {
@@ -120,7 +122,8 @@ type ButtonConfig = {
   textStyle :: Style,
   height :: Length,
   image :: ImageConfig,
-  showShimmer :: Boolean
+  showShimmer :: Boolean,
+  gravity :: Gravity
 }
 
 type DismissPopupConfig =
@@ -240,6 +243,7 @@ config = {
     , isClickable : true
     , width : (V 100)
     , padding : (Padding 15 7 15 7)
+    , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
     , timerID : ""
@@ -265,6 +269,7 @@ config = {
     , isClickable : true
     , width : (V 156)
     , padding : (Padding 0 0 0 0)
+    , gravity : CENTER
     , timerValue : 5
     , enableTimer : false
     , timerID : ""
@@ -287,6 +292,7 @@ config = {
     , color : Color.yellow900
     , visibility : true
     , margin : (Margin 12 0 0 16)
+    , gravity : CENTER
     , isClickable : true
     , width : (V 156)
     , padding : (Padding 0 0 0 0)
@@ -362,7 +368,7 @@ config = {
       }
     }
     , dismissPopupConfig : 
-    { imageUrl : "ny_ic_close," <> (getCommonAssetStoreLink Common.FunctionCall) <> "ny_ic_close.png"
+    { imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_close"
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
     , margin : (MarginTop 20)
@@ -373,7 +379,7 @@ config = {
     , eTextConfig : PrimaryEditTextController.config
     , coverImageConfig :
     {
-      imageUrl : "ny_ic_ride_completed," <> (getCommonAssetStoreLink Common.FunctionCall) <> "ny_ic_ride_completed.png"
+      imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_ride_completed"
     , visibility : GONE
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
@@ -404,8 +410,10 @@ config = {
         margin : (Margin 0 0 0 0) ,
         padding : (Padding 0 0 0 0) ,
         mediaType : "",
-        mediaUrl : ""
-    }
+        mediaUrl : "",
+        id : ""
+    },
+    timerId : ""
 }
 
 

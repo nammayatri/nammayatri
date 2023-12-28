@@ -24,7 +24,7 @@ import Components.PrimaryEditText as PrimaryEditText
 import Data.Maybe (Maybe(..))
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((<>))
@@ -96,7 +96,7 @@ genericHeaderConfig state =
     , prefixImageConfig
       { height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = (Margin 12 12 12 12)
       }
     , textConfig

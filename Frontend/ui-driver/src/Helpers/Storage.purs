@@ -55,6 +55,7 @@ data KeyStore = USER_NAME
                 | RIDE_REQUEST_TIME
                 | LAST_KNOWN_LAT
                 | LAST_KNOWN_LON
+                | LAST_KNOWN_LOCATION_TS
                 | GPS_METHOD
                 | MAKE_NULL_API_CALL
                 | ALERT_RECEIVED
@@ -85,12 +86,11 @@ data KeyStore = USER_NAME
                 | WAYPOINT_DEVIATION_COUNT
                 | TOLERANCE_EARTH
                 | RIDE_ID
-                | IS_VALID_TIME
                 | LAUNCH_DATE_SETTING
                 | MESSAGES_DELAY
                 | NEGOTIATION_UNIT
-                | SET_WAITING_TIME
-                | IS_WAIT_TIMER_STOP
+                | WAITING_TIME_STATUS
+                | WAITING_TIME_VAL
                 | VEHICLE_VARIANT
                 | MAX_LIMIT_TO_STORE_LOCATION_PT_NOT
                 | SHOW_PAYMENT_MODAL
@@ -110,6 +110,13 @@ data KeyStore = USER_NAME
                 | TRIP_DISTANCE
                 | TRIP_STATUS
                 | TRIP_STARTED
+                | TIMES_OPENED_NEW_SUBSCRIPTION
+                | CONFIG_VERSION
+                | DRIVER_LOCATION
+                | SHOW_SUBSCRIPTIONS
+                | TOTAL_WAITED
+                | REFERRAL_CODE_ADDED
+                | SAVED_GOTO_COUNT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
@@ -126,6 +133,9 @@ deleteValueFromLocalStore = void <<< lift <<< lift <<< pure <<< JBridge.removeKe
 
 setValueToLocalNativeStore :: KeyStore -> String -> FlowBT String Unit
 setValueToLocalNativeStore keyStore val = void $ lift $ lift $ pure $ JBridge.setEnvInNativeSharedPrefKeys (show keyStore) val
+
+setValueToLocalStoreEffect :: KeyStore -> String -> Effect Unit
+setValueToLocalStoreEffect keyStore val = JBridge.setEnvInNativeSharedPrefKeysImpl (show keyStore) val
 
 getValueToLocalNativeStore :: KeyStore -> String
 getValueToLocalNativeStore = JBridge.getKeyInNativeSharedPrefKeys <<< show

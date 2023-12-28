@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 
@@ -23,13 +24,14 @@ import Tools.Beam.UtilsTH
 
 data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     actualPickupDistanceWeightage :: B.C f Int,
     availabilityTimeWeightage :: B.C f Int,
     availabilityTimeWindowOption :: B.C f SWC.SlidingWindowOptions,
     acceptanceRatioWeightage :: B.C f Int,
     acceptanceRatioWindowOption :: B.C f SWC.SlidingWindowOptions,
     cancellationRatioWeightage :: B.C f Int,
-    cancellationRatioWindowOption :: B.C f SWC.SlidingWindowOptions,
+    cancellationAndRideFrequencyRatioWindowOption :: B.C f SWC.SlidingWindowOptions,
     minQuotesToQualifyForIntelligentPool :: B.C f Int,
     minQuotesToQualifyForIntelligentPoolWindowOption :: B.C f SWC.SlidingWindowOptions,
     intelligentPoolPercentage :: B.C f (Maybe Int),
@@ -38,6 +40,8 @@ data DriverIntelligentPoolConfigT f = DriverIntelligentPoolConfigT
     locationUpdateSampleTime :: B.C f Minutes,
     minLocationUpdates :: B.C f Int,
     defaultDriverSpeed :: B.C f Double,
+    maxNumRides :: B.C f Int,
+    numRidesWeightage :: B.C f Int,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -47,10 +51,10 @@ instance B.Table DriverIntelligentPoolConfigT where
   data PrimaryKey DriverIntelligentPoolConfigT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
-  primaryKey = Id . merchantId
+  primaryKey = Id . merchantOperatingCityId
 
 type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigT Identity
 
-$(enableKVPG ''DriverIntelligentPoolConfigT ['merchantId] [])
+$(enableKVPG ''DriverIntelligentPoolConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''DriverIntelligentPoolConfigT "driver_intelligent_pool_config")

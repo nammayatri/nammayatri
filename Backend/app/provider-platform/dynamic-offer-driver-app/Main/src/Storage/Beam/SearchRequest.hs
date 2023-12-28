@@ -12,6 +12,8 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wwarn=orphans #-}
 
 module Storage.Beam.SearchRequest where
 
@@ -27,6 +29,7 @@ data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     providerId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
     area :: B.C f (Maybe FareProductD.Area),
@@ -41,7 +44,9 @@ data SearchRequestT f = SearchRequestT
     device :: B.C f (Maybe Text),
     autoAssignEnabled :: B.C f (Maybe Bool),
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime
+    customerCancellationDues :: B.C f (Maybe HighPrecMoney),
+    createdAt :: B.C f UTCTime,
+    isReallocationEnabled :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

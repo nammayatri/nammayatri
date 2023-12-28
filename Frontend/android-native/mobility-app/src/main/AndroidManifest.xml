@@ -61,27 +61,6 @@
             android:exported="false"
             android:enabled="true">
         </receiver>
-        <receiver
-            android:name=".XiaomiMessageReceiver"
-            android:exported="true"
-            tools:ignore="Instantiatable">
-            <intent-filter>
-                <action android:name="com.xiaomi.mipush.RECEIVE_MESSAGE" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.xiaomi.mipush.MESSAGE_ARRIVED" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.xiaomi.mipush.ERROR" />
-            </intent-filter>
-        </receiver>
-        <service
-            android:name=".HmsMessageService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.huawei.push.action.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
         <service
             android:name=".MyFirebaseMessagingService"
             android:exported="false">
@@ -166,6 +145,9 @@
             android:enabled="true"
             android:exported="true"
             android:largeHeap="true" />
-
+        <activity android:name=".YoutubeVideoView"
+            android:exported="false"
+            android:resizeableActivity="true"
+            />
     </application>
 </manifest>

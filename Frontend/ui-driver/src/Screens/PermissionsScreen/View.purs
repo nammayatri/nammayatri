@@ -15,23 +15,34 @@
 
 module Screens.PermissionsScreen.View where
 
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), color, fontStyle, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, width, cornerRadius, weight, afterRender, imageWithFallback, background)
-import Effect (Effect)
-import Language.Strings(getString)
-import Language.Types (STR(..))
-import Styles.Colors as Color
-import Font.Size as FontSize
-import Font.Style as FontStyle
-import Components.PrimaryButton as PrimaryButton
-import Screens.PermissionsScreen.Controller (Action(..), eval, ScreenOutput, getTitle, getDescription)
-import Screens.Types as ST
-import Screens.PermissionsScreen.ScreenData (Permissions(..), permissionsList, Listtype)
-import JBridge as JB
 import Common.Types.App
 import Screens.PermissionsScreen.ComponentConfig
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+
+import Animation as Anim
 import Common.Types.App (LazyCheck(..))
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.GenericHeader as GenericHeader
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
+import Debug (spy)
+import Effect (Effect)
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import JBridge as JB
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>), (==), (>), not, void, discard)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM.Animation as PrestoAnim
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.PermissionsScreen.Controller (Action(..), eval, ScreenOutput, getTitle, getDescription)
+import Screens.PermissionsScreen.ScreenData (Listtype, Permissions(..), permissionsList)
+import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
+import Screens.Types as ST
+import Styles.Colors as Color
+import Web.HTML.History (back)
 
 screen :: ST.PermissionsScreenState -> Screen Action ST.PermissionsScreenState ScreenOutput
 screen initialState =
@@ -39,11 +50,17 @@ screen initialState =
   , view
   , name : "PermissionsScreen"
   , globalEvents : [ (\ push -> do
-    _ <- JB.storeCallBackBatteryUsagePermission push BatteryUsagePermissionCallBack
-    _ <- JB.storeCallBackDriverLocationPermission push LocationPermissionCallBack
-    _ <- JB.storeCallBackOverlayPermission push OverlayPermissionSwitchCallBack
+    void $ JB.storeCallBackBatteryUsagePermission push BatteryUsagePermissionCallBack
+    void $ JB.storeCallBackNotificationPermission push NotificationPermissionCallBack
+    void $ JB.storeCallBackOverlayPermission push OverlayPermissionSwitchCallBack
+    void $ if initialState.data.config.permissions.locationPermission then JB.storeCallBackDriverLocationPermission push LocationPermissionCallBack else pure unit
     pure $ pure unit)]
-  , eval
+  , eval:
+      ( \state action -> do
+          let _ = spy "PermissionsScreen ----- state" state
+          let _ = spy "PermissionsScreen --------action" action
+          eval state action
+      ) 
   }
 
 view :: forall w. (Action -> Effect Unit) -> ST.PermissionsScreenState -> PrestoDOM (Effect Unit) w
@@ -52,14 +69,18 @@ view push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , afterRender push (const AfterRender)
+    , afterRender push $ const AfterRender
+    , onBackPressed push $ const BackPressed
     , background Color.white900
-    ][  linearLayout
+    ] $
+      [  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
         , weight 1.0
-        ][ scrollView
+        ][ PrestoAnim.animationSet[ Anim.fadeIn true] 
+          $ headerView state push 
+          , scrollView
             [ width MATCH_PARENT
             , weight 1.0
             , height MATCH_PARENT
@@ -67,34 +88,18 @@ view push state =
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                ][ headerLayout state,
-                   permissionsListView state push
-                ]
-               ]
-            ]
-        ,  linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
-    ]
+                ][ permissionsListView state push]
+              ]
+          ]
+      ,  linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , visibility if state.props.logoutModalView then GONE else VISIBLE
+          ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
+    ]<> if state.props.logoutModalView then [logoutPopupModal push state] else []
 
-
-headerLayout :: forall w. ST.PermissionsScreenState -> PrestoDOM (Effect Unit) w
-headerLayout state = 
- linearLayout
- [ width MATCH_PARENT
- , height WRAP_CONTENT
- , margin (MarginTop 50)
- ][ textView (
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , gravity CENTER_HORIZONTAL
-    , margin (MarginTop 20)
-    , text (getString WE_NEED_SOME_ACCESS)
-    , color Color.black800
-    ] <> FontStyle.h1 TypoGraphy
-    )
- ]
+headerView :: forall w. ST.PermissionsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
 
 
 permissionsListView :: forall w. ST.PermissionsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -102,22 +107,53 @@ permissionsListView state push =
     linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
-    , padding (PaddingVertical 10 5)
+    , padding $ PaddingVertical 24 24
     ][linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , orientation VERTICAL
         ] (map(\item ->
+            let isPermissionEnabled = case item.permission of
+                                            Notifications -> state.props.isNotificationPermissionChecked
+                                            Overlay -> state.props.isOverlayPermissionChecked
+                                            AutoStart -> state.props.isAutoStartPermissionChecked
+                                            Battery -> state.props.isBatteryOptimizationChecked
+                                            LocationPermission -> state.props.isLocationPermissionChecked
+            in
             linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
-            , orientation HORIZONTAL
-            , margin (MarginTop 50)
-            , onClick push (const (ItemClick item.permission))
-            ][  titleImage item,
-                titleAndDescriptionList item,
-                checkBox item state
-            ]) permissionsList)
+            , gravity RIGHT
+            , orientation VERTICAL
+            , margin $ Margin 15 16 15 0
+            , onClick push $ const $ ItemClick item.permission
+            ][  linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , cornerRadii $ Corners 8.0 true true isPermissionEnabled true
+                , padding $ Padding 12 12 12 12
+                , stroke $ "1," <> (if isPermissionEnabled  then  Color.green900 else Color.grey900)
+                , background $ if isPermissionEnabled then  Color.green200 else Color.white900          
+                , gravity CENTER_VERTICAL
+                ][  titleImage item isPermissionEnabled,
+                    titleAndDescriptionList item,
+                    checkBox item state
+                ]
+            , textView $
+              [ padding $ Padding 16 8 16 8
+              , text $ getString WATCH_VIDEO
+              , cornerRadii $ Corners 16.0 false false true true
+              , color Color.blue900
+              , background Color.blue600
+              , visibility GONE--if isPermissionEnabled then GONE else VISIBLE
+              ] <> FontStyle.tags TypoGraphy
+            ])(
+                permissionsList state 
+                <> 
+                    if (state.props.androidVersion > 12 && state.data.config.permissions.notification)
+                        then [{permission: Notifications , icon : ""}] 
+                        else []
+                ) )
     ]
 
 titleAndDescriptionList :: forall w. Listtype -> PrestoDOM (Effect Unit) w
@@ -126,64 +162,64 @@ titleAndDescriptionList item =
     [ height WRAP_CONTENT
     , orientation VERTICAL
     , weight 1.0
-    ][  textView (
+    ][  textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text (getTitle item.permission)
+        , text $ getTitle item.permission
         , color Color.black800
-        , margin (MarginBottom 8)
-        ] <> FontStyle.subHeading1 TypoGraphy
-        ),
-        textView (
+        , margin $ MarginBottom 6
+        ] <> FontStyle.body1 TypoGraphy,
+        textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , text (getDescription item.permission)
+        , text $ getDescription item.permission
         , color Color.black700
-        , margin (MarginRight 40)
-        ] <> FontStyle.paragraphText TypoGraphy
-        )
+        , margin $ MarginRight 40
+        ] <> FontStyle.body3 TypoGraphy
     ]
 
 checkBox :: forall w. Listtype -> ST.PermissionsScreenState -> PrestoDOM (Effect Unit) w
 checkBox item state = 
- linearLayout
-    [ width WRAP_CONTENT
-    , height WRAP_CONTENT
-    , gravity RIGHT
-    , padding (Padding 0 5 20 0)
-    , layoutGravity "right"
-    ][ frameLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT      
-    ][ linearLayout
-        [ height (V 18)
-        , width (V 18)
-        , stroke ("1," <> Color.black)
-        , cornerRadius 2.0
-        ][]
-        , imageView
-        [ width (V 18)
-        , height (V 18)
-        , imageWithFallback $ "ny_ic_check_box," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_check_box.png"
-        , visibility case item.permission of
-            Location -> if state.props.isLocationPermissionChecked then VISIBLE else GONE
-            Overlay -> if state.props.isOverlayPermissionChecked then VISIBLE else GONE
-            AutoStart -> if state.props.isAutoStartPermissionChecked then VISIBLE else GONE
-            Battery -> if state.props.isBatteryOptimizationChecked then VISIBLE else GONE
-        ]
-      ]
+ let isPermissionEnabled = case item.permission of
+            Notifications -> state.props.isNotificationPermissionChecked
+            Overlay -> state.props.isOverlayPermissionChecked
+            AutoStart -> state.props.isAutoStartPermissionChecked
+            Battery -> state.props.isBatteryOptimizationChecked
+            LocationPermission -> state.props.isLocationPermissionChecked
+ in
+    imageView
+    [ width $ V 18
+    , height $ V 18
+    , imageWithFallback if isPermissionEnabled then fetchImage FF_ASSET "ny_ic_green_tick" else fetchImage FF_COMMON_ASSET "ny_ic_radio_unselected" 
     ]
+      
 
-titleImage :: forall w. Listtype -> PrestoDOM (Effect Unit) w
-titleImage item = 
- imageView
-    [ imageWithFallback case item.permission of
-     Location -> "ny_ic_permission_location," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_location.png"
-     Overlay -> "ny_ic_permission_overlay," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_overlay.png"
-     AutoStart -> "ny_ic_permission_autostart," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_autostart.png"
-     Battery -> "ny_ic_permission_battery," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_permission_battery.png"
-    , width (V 44)
-    , height (V 44)
-    , margin (Margin 15 2 15 0)
-    ]
+titleImage :: forall w. Listtype -> Boolean -> PrestoDOM (Effect Unit) w
+titleImage item isPermissionEnabled = 
+    linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , background if isPermissionEnabled then Color.white900 else Color.blue600
+        , margin $ MarginRight 15
+        , padding $ Padding 8 8 8 8
+        , cornerRadius 25.0
+        ][ imageView
+            [ imageWithFallback $ fetchImage FF_ASSET $ case item.permission of
+                Notifications -> "ny_ic_permission_notification"
+                Overlay -> "ny_ic_permission_overlay"
+                AutoStart -> "ny_ic_permission_autostart"
+                Battery -> "ny_ic_permission_battery"
+                LocationPermission -> "ny_ic_permission_location"
+            , width $ V 24
+            , height $ V 24
+            ]
+        ]
   
+logoutPopupModal :: forall w . (Action -> Effect Unit) -> ST.PermissionsScreenState -> PrestoDOM (Effect Unit) w
+logoutPopupModal push state =
+    linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , background Color.blackLessTrans
+    ][ PopUpModal.view (push <<< PopUpModalLogoutAction) (logoutPopUp Language) ] 

@@ -28,13 +28,11 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (getNewIDWithTag, isPreviousVersion, os, safeMarginBottom, safeMarginTop, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getAssetStoreLink, getAssetsBaseUrl, getCommonAssetStoreLink, getPaymentMethod)
-import Helpers.Utils (getPreviousVersion)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility)
 import PrestoDOM.Animation as PrestoAnim
@@ -134,8 +132,8 @@ imageData :: { height :: Length
 , imageUrl :: String
 }
 imageData = 
-  if os == "IOS" then {imageUrl : "ny_ic_wallet_rect," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet_rect.png", height : (V 15), width : (V 15)}
-    else {imageUrl : "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png", height : (V 24) , width : (V 24)}
+  if os == "IOS" then {imageUrl : fetchImage FF_ASSET "ny_ic_wallet_rect", height : (V 15), width : (V 15)}
+    else {imageUrl : fetchImage FF_ASSET "ny_ic_wallet", height : (V 24) , width : (V 24)}
     
 ---------------------------- sourceDestinationImageView ---------------------------------
 sourceDestinationImageView :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
@@ -151,14 +149,14 @@ sourceDestinationImageView state =
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
-        , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
         ]
       , SeparatorView.view separatorConfig
       , imageView
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
-        , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
         ]
       ]
 
@@ -179,7 +177,7 @@ sourceDestinationView state push =
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
-        , imageWithFallback $ "ny_ic_pickup," <> (getAssetStoreLink FunctionCall) <> "ny_ic_pickup.png"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
         ] 
       , textView $
         [ height WRAP_CONTENT
@@ -203,7 +201,7 @@ sourceDestinationView state push =
         [ height $ V 15
         , width $ V 15
         , accessibility DISABLE
-        , imageWithFallback $ "ny_ic_drop," <> (getAssetStoreLink FunctionCall) <> "ny_ic_drop.png"  
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
         ]
         , textView $
         [ height WRAP_CONTENT
@@ -405,7 +403,7 @@ selectRideAndConfirmView state push =
     ][ imageView
       [ height $ V 24
       , width $ V 24
-      , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
       , visibility if getValueToLocalStore AUTO_SELECTING == "false" || getValueToLocalStore AUTO_SELECTING == "CANCELLED_AUTO_ASSIGN" then GONE else VISIBLE 
      
       ]
@@ -436,7 +434,7 @@ paymentMethodView push state =
       , height WRAP_CONTENT
       , margin (MarginTop 7)
       ][  imageView
-          [ imageWithFallback $ "ny_ic_wallet," <> (getAssetStoreLink FunctionCall) <> "ny_ic_wallet.png"
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_wallet"
           , height $ V 20
           , width $ V 20
           , accessibility DISABLE
@@ -470,6 +468,7 @@ quoteListTopSheetView state push =
       , background state.appConfig.quoteListModel.backgroundColor
       , accessibility DISABLE
       , padding $ PaddingTop safeMarginTop
+      , orientation VERTICAL
       ][  linearLayout
           [ height WRAP_CONTENT
           , width MATCH_PARENT
@@ -497,6 +496,13 @@ quoteListTopSheetView state push =
                 , sourceDestinationView state push
                 ]
             ]
+        , linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background state.appConfig.quoteListModel.separatorColor
+          , visibility if state.appConfig.quoteListModel.showSeparator then VISIBLE else GONE
+          ]
+          []
         ]
 
 noQuotesErrorModel :: forall w . QuoteListModelState -> PrestoDOM (Effect Unit) w
@@ -519,9 +525,7 @@ noQuotesErrorModel state =
         [ height $ V 115
         , width $ V 161
         , accessibility DISABLE
-        , imageWithFallback $ if state.vehicleVariant == "AUTO_RICKSHAW" 
-                                then "ny_ic_no_quotes_auto," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes_auto.png"
-                                else "ny_ic_no_quotes_color," <> getAssetStoreLink FunctionCall  <> "ny_ic_no_quotes_color.png"
+        , imageWithFallback $ fetchImage FF_ASSET $ if state.vehicleVariant == "AUTO_RICKSHAW" then "ny_ic_no_quotes_auto" else "ny_ic_no_quotes_color"
         ]
       , textView $
         [ height WRAP_CONTENT
@@ -610,10 +614,12 @@ continueWithTipButtonConfig state = let
     continueWithTipButtonConfig' = config
       { textConfig
         { text = state.tipViewProps.primaryButtonText
+        ,  color = state.appConfig.primaryTextColor 
         , accessibilityHint = state.tipViewProps.primaryButtonText <> " : Button" 
         }
       , id = "ContinueWithTipButtonQuoteList"
       , margin = MarginTop 10
+      , background = state.appConfig.primaryBackground
       }
   in continueWithTipButtonConfig'
 
@@ -686,7 +692,7 @@ checkVisibility state =
 setText :: QuoteListModelState -> String
 setText state =
   case state.selectedQuote ,(null state.quoteListModel) of
-    Just _ ,_                           -> (getString CONFIRM_FOR) <> (getValueFromConfig "currency") <> " " <> getPrice state
+    Just _ ,_                           -> (getString CONFIRM_FOR) <> state.appConfig.currency <> " " <> getPrice state
     Nothing , true                      -> (getString GO_HOME_)
     _,_                                 -> ""
 
@@ -703,6 +709,6 @@ separatorConfig =
   , count : 3
   , height : V 4
   , width : V 2
-  , layoutWidth : V 12
+  , layoutWidth : V 15
   , layoutHeight : V 15
   }

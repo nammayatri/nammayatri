@@ -1,3 +1,9 @@
+window.version = window.version || {};
+let version = "1.0.0";
+if (typeof __VERSION__ !== "undefined") {
+  version = __VERSION__
+}
+window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
     "StringKeys": ["REQUEST_AUTO_RIDE" ,
@@ -17,7 +23,7 @@ window.getMerchantConfig = function () {
     "shareAppTitle": "Share Pass Culture!",
     "shareAppContent": "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen",
     "DOCUMENT_LINK": "https://docs.google.com/document/d/1-oRR_oI8ncZRPZvFZEJZeCVQjTmXTmHA",
-    "APP_LINK": "",
+    "appLink" : "",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/128VU80K5E1iz-x6QnP1R127m_lwmDO3F",
     "showChargeDesc" : false,
     "isShareAppEnabled": "false",
@@ -59,18 +65,18 @@ window.getMerchantConfig = function () {
       "lottieHeight": 40,
       "lottieWidth": 40,
       "primaryButtonHeight": 48
-     , "backArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_chevron_left_white.png"
-     },
-     "ratingConfig": {
+      , "backArrow" : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_chevron_left_white.png"
+    },
+    "ratingConfig": {
       "secondaryButtonTextColor": "#EB0055",
       "secondaryButtonStroke": "1,#EB0055",
       "buttonCornerRadius": 24.0
-     },
-     "cancelReasonConfig": {
+    },
+    "cancelReasonConfig": {
       "secondaryButtonTextColor": "#EB0055",
       "secondaryButtonStroke": "1,#EB0055",
       "buttonCornerRadius": 24.0
-     },
+    },
     "quoteListModel": {
       "backgroundColor": "#EB0055",
       "textColor": "#FFFFFF",
@@ -150,18 +156,18 @@ window.getMerchantConfig = function () {
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
-    , "title" : "Complete your profile for a personalised ride experience"
-    , "titleColor" : "#21C179"
-    , "actionText" : "Update now"
-    , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
+      , "title" : "Complete your profile for a personalised ride experience"
+      , "titleColor" : "#21C179"
+      , "actionText" : "Update now"
+      , "actionTextColor" : "#27AE5F"
+      , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
     },
     "terminateBtnConfig" : {
       "visibility" : true,
       "title" : "",
       "imageUrl" : "ny_ic_go_home,https://assets.juspay.in/beckn/passculture/user/images/ny_ic_go_home.png"
-  }
-  , "showDeleteAccount" : false
+  },
+  "showDeleteAccount" : false
   , "fontName" : "Montserrat"
   , "fontKannada" : "Montserrat"
   , "showGenderBanner" : false
@@ -171,13 +177,41 @@ window.getMerchantConfig = function () {
   , "navigationAppConfig" : {
       android : {
         "query" : "https://waze.com/ul?ll=%f,%f"
-      , "packageName" : "com.waze"
+        , "packageName" : "com.waze"
       }
-    , ios : {
+      , "ios" : {
         "query" : "https://www.waze.com/ul?ll=%@,%@&navigate=yes&zoom=17"
-      , "walkQuery" : "https://www.waze.com/ul?ll=%@,%@&navigate=yes&zoom=17" // Waze not supports walk mode
+        , "walkQuery" : "https://www.waze.com/ul?ll=%@,%@&navigate=yes&zoom=17" // Waze not supports walk mode
       }
     }
   , "dashboardUrl" : "https://www.getyatri.com/open/?source=in-app"
+    , "feature" : {
+      "enableAutoReadOtp" : false,
+      "enableShareRide" : false,
+      "enableChat": false,
+      "enableEmergencyContacts": false,
+      "enableReferral": false,
+      "enableSupport": false,
+      "enableShareApp": false
+    }, 
+    "loaderConfig" : {
+      "color": "#EB0055"
+    },
+    "primaryButtonConfig" : {
+      "isGradient" : true
+      , "gradient": ["#EB0055", "#320096"]
+      , "loaderUrl" : "primary_button_loader.json"
+    },
+    "dashboard" : {
+      "enable" : false
+    }
+    , "fontConfig" : {
+      "default" : "Montserrat"
+      , "kannada" : "Montserrat"
+    },
+    "shareAppConfig" : {
+      "title" : "Share Pass Culture!!"
+      , "description" : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"
+    },
   })
 }

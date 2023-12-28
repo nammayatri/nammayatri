@@ -16,7 +16,7 @@
 module Screens.SavedLocationScreen.Controller where
 
 
-import Prelude( class Show, pure, unit, bind, map, discard, show, not, ($),(==), (&&), (+), (/=), (<>), (||), (>=))
+import Prelude( class Show, pure, unit, bind, map, discard, show, not, void, ($),(==), (&&), (+), (/=), (<>), (||), (>=))
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import PrestoDOM (Eval, Visibility(..), continue, exit, continueWithCmd, updateAndExit)
 import Screens.Types(SavedLocationScreenState, SavedLocationData, LocationListItemState, LocationItemType(..))
@@ -37,7 +37,7 @@ import Accessor (_list)
 import Data.Lens ((^.))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppBackPress, trackAppScreenRender, trackAppScreenEvent, trackAppTextInput)
 import Screens (ScreenName(..), getScreen)
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, emitTerminateApp)
 import Engineering.Helpers.Utils as EHU
 import Common.Types.App (LazyCheck(..))
 import Engineering.Helpers.LogEvent (logEvent)
@@ -79,7 +79,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.NoAction -> trackAppActionClick appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "no_action"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "image"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "primary_edit_text"
-      PopUpModal.CountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "countdown_updated"
+      PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "countdown_updated"
       PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "tip_clicked"
       PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "secondary_text_clicked"
       PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen SAVED_LOCATION_SCREEN) "popup_modal_action" "popup_dismissed"
@@ -110,7 +110,12 @@ eval (SavedLocationCardAction (SavedLocationCardController.EditLocation cardStat
 
 eval (BackPressed flag) state = do 
   if state.props.showDeleteLocationModel then continue state{props{showDeleteLocationModel = false}, data{deleteTag = Nothing}}
-    else exit $ GoBack
+    else
+      if isParentView FunctionCall 
+        then do 
+          void $ pure $ emitTerminateApp Nothing true
+          continue state
+        else exit $ GoBack
 
 eval (SavedLocationCardAction (SavedLocationCardController.DeleteLocation tagName)) state = do 
   continue state{props{showDeleteLocationModel = true}, data{deleteTag = (Just tagName)}}
@@ -168,13 +173,16 @@ getSavedLocation (savedLocation) = (map (\(SavedReqLocationAPIEntity item) ->
   , locationItemType : Just SAVED_LOCATION
   , distance : Nothing
   , showDistance : Just false
-  , actualDistance : 0
+  , actualDistance : Nothing
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
   }
   )savedLocation)
 
 getSavedLocationForAddNewAddressScreen :: (Array LocationListItemState) -> Array LocationListItemState 
 getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) -> 
-  { prefixImageUrl : "ny_ic_loc_grey," <> (getAssetStoreLink FunctionCall) <> "ny_ic_loc_grey.png"
+  { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
   , postfixImageUrl : ""
   , postfixImageVisibility : false
   , title : (fromMaybe "" ((split (Pattern ",") (item.address)) !! 0))
@@ -197,7 +205,10 @@ getSavedLocationForAddNewAddressScreen (savedLocation) = (map (\ (item) ->
   , locationItemType :Just SAVED_LOCATION
   , distance : Nothing
   , showDistance : Just false
-  , actualDistance : 0
+  , actualDistance : Nothing
+  , frequencyCount : Nothing
+  , recencyDate : Nothing
+  , locationScore : Nothing
   }
   ) (savedLocation) ) 
 

@@ -31,9 +31,8 @@ import PrestoDOM.Animation as PrestoAnim
 import JBridge (requestKeyboardShow)
 import Screens.Types (SaveFavouriteCardState)
 import Styles.Colors as Color
-import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
 import Common.Types.App (LazyCheck(..))
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 
 view :: forall w. (Action -> Effect Unit) -> SaveFavouriteCardState -> PrestoDOM ( Effect Unit ) w
 view push state = 
@@ -117,7 +116,7 @@ titleView push state =
       ][imageView
       [ height $ V 24
       , width $ V 24
-      , imageWithFallback $ "ny_ic_close," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_close.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
       , onClick push (const $ OnClose)
       ]]
     ]

@@ -29,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import Storage.Beam.SystemConfigs ()
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -49,10 +50,12 @@ status transporterId (SignatureAuthResult _ subscriber) req =
 
     dStatusReq <- ACL.buildStatusReq subscriber req
     dStatusRes <- DStatus.handler transporterId dStatusReq
+    internalEndPointHashMap <- asks (.internalEndPointHashMap)
 
     let context = req.context
+    onStatusMessage <- ACL.buildOnStatusMessage dStatusRes.info
     void $
-      CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPI context context.bap_uri $
-        pure $ ACL.mkOnStatusMessage dStatusRes
+      CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPI context context.bap_uri internalEndPointHashMap $
+        pure onStatusMessage
 
     pure Ack

@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.RegistrationToken where
 
@@ -51,6 +52,7 @@ data RegistrationToken = RegistrationToken
     tokenExpiry :: Int,
     entityId :: Text,
     merchantId :: Text,
+    merchantOperatingCityId :: Text,
     entityType :: RTEntityType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,

@@ -14,14 +14,14 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantPaymentMethod
-  ( findAllByMerchantId,
-    findByIdAndMerchantId,
+  ( findAllByMerchantOperatingCityId,
+    findByIdAndMerchantOperatingCityId,
   )
 where
 
 import Data.Coerce (coerce)
 import Domain.Types.Common
-import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Merchant.MerchantPaymentMethod
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -29,20 +29,20 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.MerchantPaymentMethod as Queries
 
-findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [MerchantPaymentMethod]
-findAllByMerchantId id =
-  Hedis.safeGet (makeMerchantIdKey id) >>= \case
+findAllByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [MerchantPaymentMethod]
+findAllByMerchantOperatingCityId id =
+  Hedis.safeGet (makeMerchantOperatingCityIdKey id) >>= \case
     Just a -> return $ fmap (coerce @(MerchantPaymentMethodD 'Unsafe) @MerchantPaymentMethod) a
-    Nothing -> cacheMerchantPaymentMethods id /=<< Queries.findAllByMerchantId id
+    Nothing -> cacheMerchantPaymentMethods id /=<< Queries.findAllByMerchantOperatingCityId id
 
-findByIdAndMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> Id Merchant -> m (Maybe MerchantPaymentMethod)
-findByIdAndMerchantId id merchantId = find (\mpm -> mpm.id == id) <$> findAllByMerchantId merchantId
+findByIdAndMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPaymentMethod -> Id MerchantOperatingCity -> m (Maybe MerchantPaymentMethod)
+findByIdAndMerchantOperatingCityId id merchantOperatingCityId = find (\mpm -> mpm.id == id) <$> findAllByMerchantOperatingCityId merchantOperatingCityId
 
-cacheMerchantPaymentMethods :: (CacheFlow m r) => Id Merchant -> [MerchantPaymentMethod] -> m ()
+cacheMerchantPaymentMethods :: (CacheFlow m r) => Id MerchantOperatingCity -> [MerchantPaymentMethod] -> m ()
 cacheMerchantPaymentMethods merchantId cfg = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let merchantIdKey = makeMerchantIdKey merchantId
+  let merchantIdKey = makeMerchantOperatingCityIdKey merchantId
   Hedis.setExp merchantIdKey (coerce @[MerchantPaymentMethod] @[MerchantPaymentMethodD 'Unsafe] cfg) expTime
 
-makeMerchantIdKey :: Id Merchant -> Text
-makeMerchantIdKey id = "driver-offer:CachedQueries:MerchantPaymentMethod:MerchantId-" <> id.getId
+makeMerchantOperatingCityIdKey :: Id MerchantOperatingCity -> Text
+makeMerchantOperatingCityIdKey id = "driver-offer:CachedQueries:MerchantPaymentMethod:MerchantOperatingCityId-" <> id.getId

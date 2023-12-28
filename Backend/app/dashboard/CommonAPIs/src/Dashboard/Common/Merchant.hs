@@ -58,6 +58,7 @@ data MerchantEndpoint
   | VerificationServiceConfigUpdateEndpoint
   | CreateFPDriverExtraFeeEndpoint
   | UpdateFPDriverExtraFeeEndpoint
+  | SchedulerTriggerAPIEndpoint
   deriving (Show, Read)
 
 derivePersistField "MerchantEndpoint"
@@ -539,6 +540,7 @@ data ServiceUsageConfigRes = ServiceUsageConfigRes
     getPlaceDetails :: Maps.MapsService,
     autoComplete :: Maps.MapsService,
     smsProvidersPriorityList :: [SMS.SmsService],
+    snapToRoadProvidersList :: [Maps.MapsService],
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }

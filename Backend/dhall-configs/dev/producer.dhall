@@ -44,11 +44,11 @@ let hedisClusterCfg =
 
 let cacheConfig = { configsExpTime = +86400 }
 
-let tables =
-      { enableKVForWriteAlso =
-          [] : List { nameOfTable : Text, percentEnable : Natural }
-      , enableKVForRead = [] : List Text
-      , kafkaNonKVTables = [] : List Text
+let kvConfigUpdateFrequency = +10
+
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
       }
 
 in  { hedisCfg
@@ -66,14 +66,17 @@ in  { hedisCfg
     , enablePrometheusMetricLogging = True
     , waitTimeMilliSec = +1000.0
     , producerTimestampKey = "producerTimestampKey"
-    , batchSize = +10
+    , batchSize = +1
     , streamName = "Available_Jobs"
     , cacheConfig
     , schedulerSetName = "Scheduled_Jobs"
     , entryId = "*"
-    , reviverInterval = +1000
-    , reviveThreshold = +3600
-    , schedulerType = common.schedulerType.DbBased
+    , reviverInterval = +2
+    , reviveThreshold = +2
+    , schedulerType = common.schedulerType.RedisBased
     , maxShards = +5
-    , tables
+    , metricsPort = +9990
+    , kvConfigUpdateFrequency
+    , runReviver = True
+    , kafkaProducerCfg
     }

@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Vehicle where
 
@@ -36,7 +37,6 @@ data VehicleT f = VehicleT
     energyType :: B.C f (Maybe Text),
     registrationCategory :: B.C f (Maybe Domain.RegistrationCategory),
     vehicleClass :: B.C f Text,
-    fleetOwnerId :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -50,6 +50,6 @@ instance B.Table VehicleT where
 
 type Vehicle = VehicleT Identity
 
-$(enableKVPG ''VehicleT ['driverId] [['registrationNo], ['fleetOwnerId]])
+$(enableKVPG ''VehicleT ['driverId] [['registrationNo]])
 
 $(mkTableInstances ''VehicleT "vehicle")

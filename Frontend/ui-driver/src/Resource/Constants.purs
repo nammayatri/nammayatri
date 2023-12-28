@@ -15,12 +15,16 @@
 
 module Resource.Constants where
 
-import Prelude ((==), (&&), (<>))
-import Data.String (trim)
-import Services.API (LocationInfo(..))
-import Data.Maybe (fromMaybe, Maybe(..))
+import Common.Types.App as Common
 import Data.Array as DA
+import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String (Pattern(..), split, toLower)
+import Data.String (trim)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Prelude ((==), (&&), (<>))
+import Screens.Types as ST
+import Services.API (LocationInfo(..))
 
 type Language =
     {
@@ -34,7 +38,8 @@ getLanguages =
         {name:"English",value:"EN_US"},
         {name:"ಕನ್ನಡ",value:"KN_IN"},
         {name:"हिन्दी",value :"HI_IN"},
-        {name:"தமிழ்",value :"TA_IN"}
+        {name:"தமிழ்",value :"TA_IN"},
+        {name:"తెలుగు", value : "TE_IN"}
     ]
 
 decodeAddress :: LocationInfo -> Boolean -> String
@@ -69,18 +74,25 @@ getPspIcon :: String -> String
 getPspIcon vpa = do
     let handleName = ((split (Pattern "@") (vpa)) DA.!! 1)
     case handleName of 
-        Nothing -> "ny_ic_defaultpg,"
+        Nothing -> "ny_ic_defaultpg"
         Just handle -> case handle of
-            "ybl" -> "ny_ic_phonepe,"
-            "ibl" -> "ny_ic_phonepe,"
-            "axl" -> "ny_ic_phonepe,"
-            "okhdfcbank" -> "ny_ic_gpay,"
-            "okicici" -> "ny_ic_gpay,"
-            "oksbi" -> "ny_ic_gpay,"
-            "okaxis" -> "ny_ic_gpay,"
-            "paytm" -> "ny_ic_paytm,"
-            "apl" -> "ny_ic_amazonpay,"
-            "yapl" -> "ny_ic_amazonpay,"
-            "indus" -> "ny_ic_induspay,"
-            "upi" -> "ny_ic_bhim,"
-            _ -> "ny_ic_defaultpg,"
+            "ybl" -> "ny_ic_phonepe"
+            "ibl" -> "ny_ic_phonepe"
+            "axl" -> "ny_ic_phonepe"
+            "okhdfcbank" -> "ny_ic_gpay"
+            "okicici" -> "ny_ic_gpay"
+            "oksbi" -> "ny_ic_gpay"
+            "okaxis" -> "ny_ic_gpay"
+            "paytm" -> "ny_ic_paytm"
+            "apl" -> "ny_ic_amazonpay"
+            "yapl" -> "ny_ic_amazonpay"
+            "indus" -> "ny_ic_induspay"
+            "upi" -> "ny_ic_bhim"
+            _ -> "ny_ic_defaultpg"
+
+waitTimeConstructor :: String -> ST.TimerStatus
+waitTimeConstructor key = case key of
+  "NoStatus" -> ST.NoStatus
+  "Triggered" -> ST.Triggered
+  "PostTriggered" -> ST.PostTriggered
+  _ -> ST.NoStatus

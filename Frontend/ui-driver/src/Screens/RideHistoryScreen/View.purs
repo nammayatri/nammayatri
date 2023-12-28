@@ -43,27 +43,28 @@ import Engineering.Helpers.Commons (flowRunner, getDateFromObj, getFormattedDate
 import Engineering.Helpers.Commons (safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getcurrentdate, getPastDays, convertUTCtoISC)
+import Helpers.Utils (getcurrentdate, getPastDays, convertUTCtoISC, fetchImage, FetchImageFrom(..))
 import JBridge (horizontalScrollToPos)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, ($), (<$>), const, (==), (<<<), bind, pure, unit, discard, show, not, map, (&&), ($), (<$>), (<>), (<<<), (==), (/), (>), (-))
 import Presto.Core.Types.Language.Flow (doAff)
-import Services.API (GetRidesHistoryResp(..), Status(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alignParentBottom, background, calendar, clickable, color, cornerRadius, fontSize, fontStyle, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarX, scrollBarY, stroke, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.List as PrestoList
-import PrestoDOM.Types.Core (toPropValue)
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.Core (Corners(..), toPropValue)
 import Resource.Constants (tripDatesCount)
 import Screens as ScreenNames
 import Screens.RideHistoryScreen.Controller (Action(..), ScreenOutput, eval, prestoListFilter)
 import Screens.Types as ST
+import Services.API (GetRidesHistoryResp(..), Status(..))
 import Services.Backend as Remote
 import Storage (getValueToLocalStore)
 import Styles.Colors as Color
-import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Types.App (defaultGlobalState)
 
 
@@ -117,6 +118,7 @@ rideListView rideListItem push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
+  , gradient (Linear 0.0 ["#F5F8FF", "#E2EAFF"])
   ]
   [ linearLayout
       [ height WRAP_CONTENT
@@ -131,31 +133,24 @@ rideListView rideListItem push state =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , background Color.white900
       , onClick push (const Loader)
       , gravity CENTER
       , alignParentBottom "true,-1"
       , padding (PaddingBottom 5)
-      , visibility if (state.loaderButtonVisibility && (not state.loadMoreDisabled)) then VISIBLE else GONE --(state.data.totalItemCount == (state.data.firstVisibleItem + state.data.visibleItemCount) && state.data.totalItemCount /= 0 && state.data.totalItemCount /= state.data.visibleItemCount) then VISIBLE else GONE
+      , background Color.white900
+      , visibility if (state.loaderButtonVisibility && (not state.loadMoreDisabled)) then VISIBLE else GONE
+      ][  textView $
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text $ getString LOAD_MORE
+          , padding (Padding 10 5 10 5)
+          , color Color.blueTextColor
+          ] <> FontStyle.subHeading1 TypoGraphy
       ]
-      [ linearLayout
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , orientation VERTICAL
-          , margin $ Margin 0 5 0 5
-          ]
-          [ textView
-              ( [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , text (getString LOAD_MORE)
-                , padding (Padding 10 5 10 5)
-                , color Color.blueTextColor
-                ]
-                  <> FontStyle.subHeading1 TypoGraphy
-              )
-          ]
-      ]
-  , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN)
+  , linearLayout
+    [ width MATCH_PARENT
+    , background Color.white900
+    ][BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN state.data.config.bottomNavConfig)]
   ]
 
 paymentHistoryModel :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
@@ -171,7 +166,7 @@ paymentHistoryModel push state =
   , clickable true
   , visibility $ if state.props.showPaymentHistory then VISIBLE else GONE
   ]$[ PaymentHistoryModel.view (push <<< PaymentHistoryModelAC) state.data.paymentHistory
-    ] <> if (length state.data.paymentHistory.paymentHistoryList) == 0 then [] else [BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN)]
+    ] <> if (length state.data.paymentHistory.paymentHistoryList) == 0 then [] else [BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN state.data.config.bottomNavConfig)]
 
 headerView :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
 headerView push state =
@@ -180,71 +175,64 @@ headerView push state =
     , width MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
-    , margin $ MarginTop 16
-    ][ textView $
-        [ text $ getString TRIPS
+    ][ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , padding $ PaddingVertical 17 16
+        , background Color.white900
         , gravity CENTER_VERTICAL
-        , color Color.black900
-        , margin (MarginBottom 10)
-        ] <> FontStyle.body12 TypoGraphy
-      , linearLayout
-         [ background Color.bg_color
-         , orientation HORIZONTAL
-         , width MATCH_PARENT
-         , height WRAP_CONTENT
-         ][ linearLayout
-              [ orientation VERTICAL
-              , width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , weight 0.5
-              , onClick push (const $ SelectTab "COMPLETED")
-              ][
-                linearLayout
-                  [ width $ (V (screenWidth unit / 2) )
-                  , height WRAP_CONTENT
-                  , gravity CENTER
-                  ][ textView $
-                      [ text (getString COMPLETED_)
-                      , color if state.currentTab == "COMPLETED" then Color.black900 else Color.black500
-                      , margin (MarginVertical 15 15)
-                      ] <> FontStyle.body14 TypoGraphy
-                  ]
-              , linearLayout
-                  [ height (V 2)
-                  , width MATCH_PARENT
-                  , background Color.black900
-                  , margin $ MarginHorizontal 5 5
-                  , visibility if state.currentTab == "COMPLETED" then VISIBLE else GONE
-                  ][]
-              ]
-          , linearLayout
-              [ orientation VERTICAL
-              , width WRAP_CONTENT
-              , height WRAP_CONTENT
-              , weight 0.5
-              , onClick push (const $ SelectTab "CANCELLED")
-              ][
-                linearLayout
-                  [ width $ V (screenWidth unit / 2)
-                  , height WRAP_CONTENT
-                  , gravity CENTER
-                  ][ textView $
-                      [ text (getString CANCELLED_)
-                      , color if state.currentTab == "CANCELLED" then Color.black900 else Color.black500
-                      , margin (MarginVertical 15 15)
-                      ] <> FontStyle.body14 TypoGraphy
-                  ]
-              , linearLayout
-                  [ height (V 2)
-                  , width MATCH_PARENT
-                  , background Color.black900
-                  , margin $ MarginHorizontal 5 5
-                  , visibility if state.currentTab == "CANCELLED" then VISIBLE else GONE
-                  ][]
-              ]
-         ]
+        ][ imageView
+            [ width $ V 24
+            , height $ V 24
+            , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
+            , margin $ MarginLeft 16
+            , onClick push $ const BackPressed
+            ]
+          , textView $
+            [ text $ getString MY_RIDES
+            , gravity CENTER_VERTICAL
+            , color Color.black900
+            , margin $ MarginLeft 5
+            , padding $ PaddingBottom 2
+            ] <> FontStyle.h3 TypoGraphy
+        ]
+      , tabsView push state
       , calendarView push state
     ]
+
+tabsView :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
+tabsView push state = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , cornerRadius 24.0
+  , margin $ Margin 16 16 16 0
+  , padding $ Padding 6 6 6 6
+  , background Color.white900
+  , gravity CENTER
+  ][  textView $
+      [ height WRAP_CONTENT
+      , weight 1.0
+      , background if state.currentTab == "COMPLETED" then Color.black900 else Color.white900
+      , text $ getString COMPLETED_
+      , cornerRadius 24.0
+      , padding $ PaddingVertical 6 6
+      , onClick push $ const $ SelectTab "COMPLETED"
+      , gravity CENTER
+      , color if state.currentTab == "COMPLETED" then Color.white900 else Color.black900
+      ] <> FontStyle.tags LanguageStyle
+    , textView $
+      [ height WRAP_CONTENT
+      , weight 1.0
+      , gravity CENTER
+      , cornerRadius 24.0
+      , onClick push $ const $ SelectTab "CANCELLED"
+      , padding $ PaddingVertical 6 6
+      , text $ getString CANCELLED_
+      , background if state.currentTab == "CANCELLED" then Color.black900 else Color.white900
+      , color if state.currentTab == "CANCELLED" then Color.white900 else Color.black900
+      ]  <> FontStyle.tags LanguageStyle
+  ]
 
 calendarView :: forall w. (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
 calendarView push state =
@@ -256,10 +244,9 @@ calendarView push state =
     [ linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
-        , background Color.white900
         , orientation HORIZONTAL
         , gravity CENTER
-        , margin $ Margin 24 16 24 16
+        , margin $ Margin 24 18 24 8
         ]
         [ linearLayout
           [ height WRAP_CONTENT
@@ -273,11 +260,12 @@ calendarView push state =
               , text $ if state.datePickerState.activeIndex == (tripDatesCount - 1) then getString TODAY else runFn1 getFormattedDate state.datePickerState.selectedItem.utcDate
               , color Color.black800
               , margin $ MarginRight 12
+              , padding $ PaddingBottom 2
               ]
             <> FontStyle.body1 LanguageStyle
         , linearLayout
-            [ height $ V 34
-            , width $ V 34
+            [ height $ V 24
+            , width $ V 24
             , background Color.grey700
             , cornerRadius 17.0
             , gravity CENTER
@@ -285,7 +273,7 @@ calendarView push state =
             [ imageView
                 [ height $ V 24
                 , width $ V 24
-                , imageWithFallback if state.props.showDatePicker then "ny_ic_chevron_down_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_down_blue.png" else "ny_ic_calendar_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_calendar_blue.png"
+                , imageWithFallback $ fetchImage FF_ASSET $ if state.props.showDatePicker then "ny_ic_chevron_down_blue" else "ny_ic_calendar_blue"
                 ]
             ]
           ]
@@ -294,33 +282,13 @@ calendarView push state =
             , weight 1.0
             ]
             []
-        , linearLayout 
-          [ height MATCH_PARENT
-          , width WRAP_CONTENT
-          , orientation HORIZONTAL
-          , gravity CENTER
-          , padding $ Padding 5 5 5 5
-          , onClick push $ const OpenPaymentHistory
-          , visibility $ if getMerchant FunctionCall == YATRISATHI then VISIBLE else GONE
-          ][  textView
-              $ [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , text $ getString VIEW_PAYMENT_HISTORY
-                , color Color.blue900
-                , margin $ MarginRight 5
-                ]
-              <> FontStyle.tags LanguageStyle
-            , imageView
-              [ height $ V 8
-              , width $ V 10
-              , imageWithFallback "ny_ic_right_arrow_blue,https://assets.juspay.in/nammayatri/images/driver/ny_ic_right_arrow_blue.png"
-              ]
-          ]
         ]
     ]
 
 ridesView :: forall w . PrestoList.ListItem -> (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
 ridesView rideListItem push state =
+  let showNoRides = (DA.length (prestoListFilter state.currentTab state.prestoListArrayItems) > 0)
+  in
   relativeLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
@@ -348,7 +316,6 @@ ridesView rideListItem push state =
                             ST.AnimatedOut -> VISIBLE
                             _ -> if state.props.showPaymentHistory then VISIBLE else GONE
                 , PrestoList.listItem rideListItem
-                , background Color.bg_grey
                 , PrestoList.listDataV2 (prestoListFilter state.currentTab state.prestoListArrayItems)
                 ]
               , DT.Tuple "LOADER"
@@ -372,7 +339,6 @@ ridesView rideListItem push state =
                   ] $ PrestoList.list
                     [ height MATCH_PARENT
                     , scrollBarY false
-                    , background Color.bg_grey
                     , width MATCH_PARENT
                     , onAnimationEnd push OnFadeComplete
                     , PrestoList.listItem rideListItem
@@ -386,10 +352,9 @@ ridesView rideListItem push state =
                     [ height MATCH_PARENT
                     , width MATCH_PARENT
                     , padding (PaddingBottom safeMarginBottom)
-                    , background Color.white900
                     , visibility $ case state.shimmerLoader of
-                              ST.AnimatedOut ->  if (DA.length (prestoListFilter state.currentTab state.prestoListArrayItems) > 0) then GONE else VISIBLE
-                              _ -> if state.props.showPaymentHistory then VISIBLE else GONE
+                              ST.AnimatedOut ->  if showNoRides then GONE else VISIBLE
+                              _ -> if (state.props.showPaymentHistory && not showNoRides) then VISIBLE else GONE
                     ][  ErrorModal.view (push <<< ErrorModalActionController) (errorModalConfig state)]
               ])
             ]
@@ -400,12 +365,13 @@ ridesView rideListItem push state =
     , background Color.blackLessTrans
     , visibility if state.props.showDatePicker then VISIBLE else GONE
     , onClick push $ const ShowDatePicker
-    ][   linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , background Color.white900
-      ][DatePickerModel.view (push <<< DatePickerAC) (datePickerConfig state)]
+    ][ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , background "#e5ecff"
+        , cornerRadii $ Corners 16.0 false false true true
+        ][DatePickerModel.view (push <<< DatePickerAC) (datePickerConfig state)]
     ]] else []
 
 separatorView :: forall w. PrestoDOM (Effect Unit) w
@@ -437,9 +403,11 @@ shimmerData i = {
   destination : toPropValue "Nagarjuna Apartments,15/2, 19th Main, 27th Cross Rd, Sector 2, HSR Layout, Bengaluru, Karnataka 560102",
   amountColor: toPropValue "",
   riderName : toPropValue "",
-  metroTagVisibility : toPropValue "",
-  accessibilityTagVisibility : toPropValue "",
+  spLocTagVisibility : toPropValue "",
   specialZoneText : toPropValue "",
   specialZoneImage : toPropValue "",
-  specialZoneLayoutBackground : toPropValue ""
+  specialZoneLayoutBackground : toPropValue "",
+  gotoTagVisibility : toPropValue "",
+  purpleTagVisibility : toPropValue "",
+  tipTagVisibility : toPropValue ""
 }

@@ -12,9 +12,11 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Merchant.MerchantMessage where
 
+import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant.MerchantMessage as Domain
 import Kernel.Prelude
@@ -22,8 +24,12 @@ import Tools.Beam.UtilsTH
 
 data MerchantMessageT f = MerchantMessageT
   { merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f Text,
     messageKey :: B.C f Domain.MessageKey,
     message :: B.C f Text,
+    templateId :: B.C f (Maybe Text),
+    jsonData :: B.C f (Maybe A.Value),
+    containsUrlButton :: B.C f Bool,
     updatedAt :: B.C f UTCTime,
     createdAt :: B.C f UTCTime
   }
@@ -37,6 +43,6 @@ instance B.Table MerchantMessageT where
 
 type MerchantMessage = MerchantMessageT Identity
 
-$(enableKVPG ''MerchantMessageT ['merchantId, 'messageKey] [])
+$(enableKVPG ''MerchantMessageT ['merchantOperatingCityId, 'messageKey] [])
 
 $(mkTableInstances ''MerchantMessageT "merchant_message")

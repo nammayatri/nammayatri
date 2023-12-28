@@ -26,24 +26,27 @@ import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
 import Data.Tuple.Extra (secondM)
 import qualified Data.Vector as V
-import qualified Domain.Types.MediaFile as Domain
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Message.MessageReport as Domain
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Types (base64Encode)
+import qualified IssueManagement.Domain.Types.MediaFile as Domain
+import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Types.APISuccess (APISuccess (Success))
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Forkable (fork), GuidLike (generateGUID), MonadTime (getCurrentTime))
 import Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, logDebug, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.IssueManagement ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
-import qualified Storage.Queries.MediaFile as MFQuery
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
 import qualified Storage.Queries.Message.MessageTranslation as MTQuery
@@ -68,8 +71,8 @@ createFilePath merchantId fileType validatedFileExtention = do
         <> validatedFileExtention
     )
 
-addLinkAsMedia :: ShortId DM.Merchant -> Common.AddLinkAsMedia -> Flow Common.UploadFileResponse
-addLinkAsMedia merchantShortId req = do
+addLinkAsMedia :: ShortId DM.Merchant -> Context.City -> Common.AddLinkAsMedia -> Flow Common.UploadFileResponse
+addLinkAsMedia merchantShortId _ req = do
   _ <- findMerchantByShortId merchantShortId
   createMediaEntry req
 
@@ -99,13 +102,14 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
             createdAt = now
           }
 
-uploadFile :: ShortId DM.Merchant -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
-uploadFile merchantShortId Common.UploadFileRequest {..} = do
+uploadFile :: ShortId DM.Merchant -> Context.City -> Common.UploadFileRequest -> Flow Common.UploadFileResponse
+uploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
   -- _ <- validateContentType
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
   filePath <- createFilePath merchant.id.getId fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
-  transporterConfig <- CQTC.findByMerchantId merchant.id >>= fromMaybeM (TransporterConfigNotFound merchant.id.getId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let fileUrl =
         transporterConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "message"
@@ -158,20 +162,22 @@ toCommonMediaFileType = \case
 translationToDomainType :: UTCTime -> Common.MessageTranslation -> Domain.MessageTranslation
 translationToDomainType createdAt Common.MessageTranslation {..} = Domain.MessageTranslation {..}
 
-addMessage :: ShortId DM.Merchant -> Common.AddMessageRequest -> Flow Common.AddMessageResponse
-addMessage merchantShortId Common.AddMessageRequest {..} = do
+addMessage :: ShortId DM.Merchant -> Context.City -> Common.AddMessageRequest -> Flow Common.AddMessageResponse
+addMessage merchantShortId opCity Common.AddMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
-  message <- mkMessage merchant
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  message <- mkMessage merchant merchantOpCityId
   _ <- MQuery.create message
   return $ Common.AddMessageResponse {messageId = cast $ message.id}
   where
-    mkMessage merchant = do
+    mkMessage merchant merchantOpCityId = do
       id <- generateGUID
       now <- getCurrentTime
       return $
         Domain.Message
           { id,
             merchantId = merchant.id,
+            merchantOperatingCityId = merchantOpCityId,
             _type = toDomainType _type,
             title,
             label,
@@ -189,24 +195,23 @@ newtype CSVRow = CSVRow {driverId :: String}
 instance FromNamedRecord CSVRow where
   parseNamedRecord r = CSVRow <$> r .: "driverId"
 
-sendMessage :: ShortId DM.Merchant -> Common.SendMessageRequest -> Flow APISuccess
-sendMessage merchantShortId Common.SendMessageRequest {..} = do
+sendMessage :: ShortId DM.Merchant -> Context.City -> Common.SendMessageRequest -> Flow APISuccess
+sendMessage merchantShortId opCity Common.SendMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   message <- B.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
   allDriverIds <- case _type of
-    AllEnabled -> B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) []
+    AllEnabled -> B.runInReplica $ QP.findAllDriverIdExceptProvided merchant merchantOpCity []
     Include -> readCsv
     Exclude -> do
       driverIds <- readCsv
-      B.runInReplica $ QP.findAllDriverIdExceptProvided (merchant.id) driverIds
+      B.runInReplica $ QP.findAllDriverIdExceptProvided merchant merchantOpCity driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
   fork "Adding messages to kafka queue" $ mapM_ (addToKafka message) allDriverIds
   return Success
   where
     addToKafka message driverId = do
       topicName <- asks (.broadcastMessageTopic)
-      now <- getCurrentTime
-      void $ try @_ @SomeException (MRQuery.create (mkMessageReport now driverId)) -- avoid extra DB call to check if driverId exists
       msg <- createMessageLanguageDict message
       produceMessage
         (topicName, Just (encodeUtf8 $ getId driverId))
@@ -228,23 +233,11 @@ sendMessage merchantShortId Common.SendMessageRequest {..} = do
     addTranslation Domain.RawMessage {..} trans =
       (show trans.language, Domain.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})
 
-    mkMessageReport now driverId =
-      Domain.MessageReport
-        { driverId,
-          messageId = Id messageId,
-          deliveryStatus = Domain.Queued,
-          readStatus = False,
-          likeStatus = False,
-          messageDynamicFields = M.empty,
-          reply = Nothing,
-          createdAt = now,
-          updatedAt = now
-        }
-
-messageList :: ShortId DM.Merchant -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
-messageList merchantShortId mbLimit mbOffset = do
+messageList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.MessageListResponse
+messageList merchantShortId opCity mbLimit mbOffset = do
   merchant <- findMerchantByShortId merchantShortId
-  messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset merchant.id
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  messages <- MQuery.findAllWithLimitOffset mbLimit mbOffset merchant merchantOpCity
   let count = length messages
   let summary = Common.Summary {totalCount = count, count}
   return $ Common.MessageListResponse {messages = buildMessage <$> messages, summary}
@@ -257,8 +250,8 @@ messageList merchantShortId mbLimit mbOffset = do
           _type = toCommonType message._type
         }
 
-messageInfo :: ShortId DM.Merchant -> Id Domain.Message -> Flow Common.MessageInfoResponse
-messageInfo merchantShortId messageId = do
+messageInfo :: ShortId DM.Merchant -> Context.City -> Id Domain.Message -> Flow Common.MessageInfoResponse
+messageInfo merchantShortId _ messageId = do
   _ <- findMerchantByShortId merchantShortId
   message <- MQuery.findById messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
   mediaFiles <- mapMaybeM MFQuery.findById message.mediaFiles
@@ -274,8 +267,8 @@ messageInfo merchantShortId messageId = do
           mediaFiles = (\mediaFile -> Common.MediaFile (toCommonMediaFileType mediaFile._type) mediaFile.url) <$> mf
         }
 
-messageDeliveryInfo :: ShortId DM.Merchant -> Id Domain.Message -> Flow Common.MessageDeliveryInfoResponse
-messageDeliveryInfo merchantShortId messageId = do
+messageDeliveryInfo :: ShortId DM.Merchant -> Context.City -> Id Domain.Message -> Flow Common.MessageDeliveryInfoResponse
+messageDeliveryInfo merchantShortId _ messageId = do
   _ <- findMerchantByShortId merchantShortId
   success <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Success
   failed <- B.runInReplica $ MRQuery.getMessageCountByStatus messageId Domain.Failed
@@ -285,8 +278,8 @@ messageDeliveryInfo merchantShortId messageId = do
   message <- MQuery.findById messageId >>= fromMaybeM (InvalidRequest "Message Not Found")
   return $ Common.MessageDeliveryInfoResponse {messageId = cast messageId, success, failed, queued, sending, seen, liked = message.likeCount, viewed = message.viewCount}
 
-messageReceiverList :: ShortId DM.Merchant -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
-messageReceiverList merchantShortId msgId _ mbStatus mbLimit mbOffset = do
+messageReceiverList :: ShortId DM.Merchant -> Context.City -> Id Domain.Message -> Maybe Text -> Maybe Common.MessageDeliveryStatus -> Maybe Int -> Maybe Int -> Flow Common.MessageReceiverListResponse
+messageReceiverList merchantShortId _ msgId _ mbStatus mbLimit mbOffset = do
   _ <- findMerchantByShortId merchantShortId
   encMesageReports <- B.runInReplica $ MRQuery.findByMessageIdAndStatusWithLimitAndOffset mbLimit mbOffset msgId $ toDomainDeliveryStatusType <$> mbStatus
   messageReports <- mapM (secondM decrypt) encMesageReports

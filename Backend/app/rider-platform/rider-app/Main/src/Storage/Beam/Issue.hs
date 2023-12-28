@@ -17,7 +17,7 @@
 module Storage.Beam.Issue where
 
 import qualified Database.Beam as B
-import qualified Domain.Types.Issue as Domain
+import qualified IssueManagement.Common as Domain
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
@@ -30,6 +30,7 @@ data IssueT f = IssueT
     description :: B.C f Text,
     ticketId :: B.C f (Maybe Text),
     status :: B.C f Domain.IssueStatus,
+    nightSafety :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

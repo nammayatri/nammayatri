@@ -1,8 +1,12 @@
+{-# OPTIONS_GHC -Wwarn=incomplete-uni-patterns #-}
+
 module Utils.Parse where
 
 import Data.Aeson as A
+import qualified Data.Aeson.Key as AesonKey
+import qualified Data.Aeson.KeyMap as AKM
 import Data.Aeson.Types (Parser, emptyArray)
-import qualified Data.HashMap.Strict as HM
+import qualified Data.Bifunctor as Bifunctor
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Text.Encoding.Error as TE
@@ -25,7 +29,7 @@ parseStreamEntryId bs =
           $ bs
    in EL.KVDBStreamEntryID ms sq
   where
-    splitOn dilim = (\tup -> (fst tup, T.drop 1 $ snd tup)) . T.breakOn dilim
+    splitOn dilim = Bifunctor.second (T.drop 1) . T.breakOn dilim
 
 parseUpdateValue :: A.Value -> Parser (Text, A.Value)
 parseUpdateValue = A.withObject "update key value pair" $ \o ->
@@ -77,22 +81,22 @@ decodeClause = foldWhere'
   where
     foldWhere' :: forall b tbl. (Model b tbl, MeshMeta b tbl) => A.Value -> Parser (Clause b tbl)
     foldWhere' obj = case obj of
-      (A.Object hm) ->
-        if HM.member @Text "$and" hm
+      (A.Object km) ->
+        if AKM.member (AesonKey.fromText "$and") km
           then
             ( A.withArray "DBUpdateCommand And" $ \v -> do
                 clauses <- mapM foldWhere' (V.toList v)
                 return $ And clauses
             )
-              (HM.lookupDefault emptyArray "$and" hm)
+              (fromMaybe emptyArray $ AKM.lookup (AesonKey.fromText "$and") km)
           else
-            if HM.member "$or" hm
+            if AKM.member (AesonKey.fromText "$or") km
               then
                 ( A.withArray "DBUpdateCommand Or" $ \v -> do
                     clauses <- mapM foldWhere' (V.toList v)
                     return $ Or clauses
                 )
-                  (HM.lookupDefault emptyArray "$or" hm)
+                  (fromMaybe emptyArray $ AKM.lookup (AesonKey.fromText "$or") km)
               else decodeTerm obj
       _ -> fail "unable to decode"
 
@@ -100,7 +104,7 @@ decodeTerm :: forall be table. (Model be table, MeshMeta be table) => A.Value ->
 decodeTerm = \case
   A.Object hm -> do
     (key, val) <- getSingleKeyValue hm
-    let keyCamel = (T.pack . camel . T.unpack) key
+    let keyCamel = (T.pack . camel . T.unpack . AesonKey.toText) key
     case val of
       Just (A.Object obj) -> do
         (operation, mValue) <- getSingleKeyValue obj
@@ -136,7 +140,7 @@ decodeTerm = \case
           ("$ne", Just value) -> do
             (EKT.TermWrap column fieldValue) <- (parseFieldAndGetClause @be @table) value keyCamel
             return $ Is column (Not $ Eq fieldValue)
-          ("$not", Just value) -> (\(Is col term) -> Is col (Not term)) <$> decodeTerm (A.object [keyCamel A..= value])
+          ("$not", Just value) -> (\(Is col term) -> Is col (Not term)) <$> decodeTerm (A.object [AesonKey.fromText keyCamel A..= value])
           _ -> fail "Expecting term constructor - Error decoding term"
       Just value -> do
         -- Eq case {"id","1234"}
@@ -145,6 +149,6 @@ decodeTerm = \case
       _ -> fail "Expecting term object - Error decoding term"
   _ -> fail "Expecting Clause object - Error decoding Clause"
   where
-    getSingleKeyValue hm = case HM.keys hm of
-      [k] -> return (k, HM.lookup k hm)
+    getSingleKeyValue km = case AKM.keys km of
+      [k] -> return (k, AKM.lookup k km)
       _ -> fail "Unable to decode term - Expecting object with single key"

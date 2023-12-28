@@ -137,7 +137,7 @@ userSosStatus :: String -> String
 userSosStatus sosId = (getBaseUrl "37") <> "/sos/" <> sosId <>"/status"
 
 onCall :: String -> String
-onCall _ = (getBaseUrl "38") <> "/onCall"
+onCall _ = (getBaseUrl "38") <> "/callEvent"
 
 callbackRequest :: String -> String
 callbackRequest dummy = (getBaseUrl "38") <> "/support/callbackRequest"
@@ -146,7 +146,26 @@ bookingFeedback :: String -> String
 bookingFeedback dummy = (getBaseUrl "39") <> "/feedback/submit"
 
 disabilityList :: String -> String
-disabilityList dummy = (getBaseUrl "39") <> "/disability/list"
+disabilityList dummy = (getBaseUrl "40") <> "/disability/list"
 
 personStats :: String -> String
-personStats dummy = (getBaseUrl "40") <> "/personStats"
+personStats dummy = (getBaseUrl "41") <> "/personStats"
+
+ticketPlaces :: String -> String
+ticketPlaces dummy = (getBaseUrl "42") <> "/ticket/places"
+
+ticketPlaceServices :: String -> String
+ticketPlaceServices placeId = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/services"
+
+ticketPlaceBook :: String -> String
+ticketPlaceBook placeId = (getBaseUrl "43") <> "/ticket/places/" <> placeId <> "/book"
+
+getAllBookings :: String -> String
+getAllBookings status = (getBaseUrl "41") <> "/ticket/bookings?status=" <> status -- <> "&limit=10&offset=1"
+
+
+ticketStatus :: String -> String
+ticketStatus shortId = (getBaseUrl "41") <> "/ticket/bookings/" <> shortId <> "/status"
+
+ticketBookingDetails :: String -> String
+ticketBookingDetails shortid = (getBaseUrl "41") <> "/ticket/bookings/" <> shortid <> "/details"

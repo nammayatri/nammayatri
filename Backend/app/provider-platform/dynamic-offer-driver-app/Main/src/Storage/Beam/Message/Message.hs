@@ -12,6 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.Message.Message where
 
@@ -31,6 +32,7 @@ data MessageT f = MessageT
     viewCount :: B.C f Int,
     mediaFiles :: B.C f [Text],
     merchantId :: B.C f Text,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)

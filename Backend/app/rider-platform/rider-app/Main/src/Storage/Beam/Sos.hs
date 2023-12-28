@@ -28,7 +28,8 @@ data SosT f = SosT
     flow :: B.C f Domain.SosType,
     status :: B.C f Domain.SosStatus,
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f UTCTime,
+    ticketId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

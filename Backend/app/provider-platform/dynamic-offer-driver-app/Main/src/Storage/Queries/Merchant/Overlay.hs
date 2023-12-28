@@ -20,56 +20,58 @@ module Storage.Queries.Merchant.Overlay
     #-}
 where
 
-import Domain.Types.Merchant
+import qualified Data.Aeson as A
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.Overlay
 import Kernel.Beam.Functions
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Merchant.Overlay as BeamMPN
 
-create :: MonadFlow m => Overlay -> m ()
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Overlay -> m ()
 create = createWithKV
 
-createMany :: MonadFlow m => [Overlay] -> m ()
+createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Overlay] -> m ()
 createMany = traverse_ create
 
-deleteByOverlayKeyMerchantIdUdf :: MonadFlow m => Id Merchant -> Text -> Maybe Text -> m ()
-deleteByOverlayKeyMerchantIdUdf merchantId overlayKey udf1 =
+deleteByOverlayKeyMerchantOpCityIdUdf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> Maybe Text -> m ()
+deleteByOverlayKeyMerchantOpCityIdUdf merchantOperatingCityId overlayKey udf1 =
   deleteWithKV
     [ Se.And
         [ Se.Is BeamMPN.overlayKey (Se.Eq overlayKey),
-          Se.Is BeamMPN.merchantId $ Se.Eq (getId merchantId),
+          Se.Is BeamMPN.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId),
           Se.Is BeamMPN.udf1 $ Se.Eq udf1
         ]
     ]
 
-findAllByLanguage :: MonadFlow m => Id Merchant -> Language -> m [Overlay]
-findAllByLanguage merchantId language =
+findAllByLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Language -> m [Overlay]
+findAllByLanguage merchantOperatingCityId language =
   findAllWithKV
     [ Se.And
-        [ Se.Is BeamMPN.merchantId $ Se.Eq (getId merchantId),
+        [ Se.Is BeamMPN.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId),
           Se.Is BeamMPN.language $ Se.Eq language
         ]
     ]
 
-findAllByOverlayKeyUdf :: MonadFlow m => Id Merchant -> Text -> Maybe Text -> m [Overlay]
-findAllByOverlayKeyUdf merchantId overlayKey udf1 =
+findAllByOverlayKeyUdf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> Maybe Text -> m [Overlay]
+findAllByOverlayKeyUdf merchantOperatingCityId overlayKey udf1 =
   findAllWithKV
     [ Se.And
-        [ Se.Is BeamMPN.merchantId $ Se.Eq (getId merchantId),
+        [ Se.Is BeamMPN.merchantOperatingCityId $ Se.Eq (getId merchantOperatingCityId),
           Se.Is BeamMPN.overlayKey $ Se.Eq overlayKey,
           Se.Is BeamMPN.udf1 $ Se.Eq udf1
         ]
     ]
 
-findByMerchantIdPNKeyLangaugeUdf :: MonadFlow m => Id Merchant -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
-findByMerchantIdPNKeyLangaugeUdf id pnKey language udf1 =
+findByMerchantOpCityIdPNKeyLangaugeUdf :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Text -> Language -> Maybe Text -> m (Maybe Overlay)
+findByMerchantOpCityIdPNKeyLangaugeUdf id pnKey language udf1 =
   findOneWithKV
     [ Se.And
-        [ Se.Is BeamMPN.merchantId $ Se.Eq (getId id),
+        [ Se.Is BeamMPN.merchantOperatingCityId $ Se.Eq (getId id),
           Se.Is BeamMPN.overlayKey $ Se.Eq pnKey,
           Se.Is BeamMPN.language $ Se.Eq language,
           Se.Is BeamMPN.udf1 $ Se.Eq udf1
@@ -83,14 +85,22 @@ instance FromTType' BeamMPN.Overlay Overlay where
         Overlay
           { id = Id id,
             merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
+            socialMediaLinks = valueToMaybe =<< socialMediaLinks,
             ..
           }
+    where
+      valueToMaybe :: FromJSON a => A.Value -> Maybe a
+      valueToMaybe value = case A.fromJSON value of
+        A.Success a -> Just a
+        A.Error _ -> Nothing
 
 instance ToTType' BeamMPN.Overlay Overlay where
   toTType' Overlay {..} = do
     BeamMPN.OverlayT
       { BeamMPN.id = getId id,
         BeamMPN.merchantId = getId merchantId,
+        BeamMPN.merchantOperatingCityId = getId merchantOperatingCityId,
         BeamMPN.overlayKey = overlayKey,
         BeamMPN.language = language,
         BeamMPN.udf1 = udf1,
@@ -103,5 +113,10 @@ instance ToTType' BeamMPN.Overlay Overlay where
         BeamMPN.link = link,
         BeamMPN.method = method,
         BeamMPN.reqBody = reqBody,
-        BeamMPN.endPoint = endPoint
+        BeamMPN.endPoint = endPoint,
+        BeamMPN.delay = delay,
+        BeamMPN.contactSupportNumber = contactSupportNumber,
+        BeamMPN.toastMessage = toastMessage,
+        BeamMPN.secondaryActions = secondaryActions,
+        BeamMPN.socialMediaLinks = toJSON <$> socialMediaLinks
       }

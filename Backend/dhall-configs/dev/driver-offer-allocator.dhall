@@ -31,10 +31,13 @@ let schedulerConfig =
       , enableRedisLatencyLogging = False
       , enablePrometheusMetricLogging = True
       , groupName = "myGroup"
-      , schedulerType = common.schedulerType.DbBased
+      , schedulerType = common.schedulerType.RedisBased
       , schedulerSetName = "Scheduled_Jobs"
       , streamName = "Available_Jobs"
       , maxThreads = +10
+      , block = +10000
+      , readCount = +1
+      , kafkaProducerCfg = appCfg.kafkaProducerCfg
       }
 
 in  { appCfg =

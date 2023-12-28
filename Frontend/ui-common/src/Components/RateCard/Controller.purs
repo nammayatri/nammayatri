@@ -29,6 +29,7 @@ data Action = Close
               | GoToDefaultStart 
               | GoToDriverAddition 
               | GoToFareUpdate 
+              | GoToWaitingCharges
               | PrimaryButtonAC PrimaryButton.Action
 
 
@@ -51,7 +52,8 @@ type Config = {
     fareList :: Array FareList,
     otherOptions :: Array FareList,
     additionalStrings :: Array FareList,
-    driverAdditionsImage :: String
+    driverAdditionsImage :: String,
+    fareInfoText :: String
 }
 
 config :: Config 
@@ -74,5 +76,6 @@ config = {
     driverAdditionsImage : "",
     fareList : [],
     otherOptions : [],
-    additionalStrings : []
+    additionalStrings : [],
+    fareInfoText : ""
 }

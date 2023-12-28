@@ -1,4 +1,5 @@
 packages:
+  app/alchemist
   app/provider-platform/dynamic-offer-driver-drainer
   app/beckn-cli
   app/provider-platform/driver-tracking-health-check
@@ -35,4 +36,40 @@ packages:
   lib/sessionizer-metrics
   test
   lib/producer
+  lib/utils
 
+-- ## 6 parallel jobs by default.
+--
+-- # since we now use "-j4" in "ghc-options" for all packages,
+-- # allowing them to use up-to 4 cores each to build.
+-- # A number like 6 here means we can have 6 packages building parallel, with each allowed to use up-to 4 cores.
+-- # which means a maximum of 6 * 4 = 24 cores, which should be manageable in most cases.
+-- # A higher number of parallel jobs here could saturate the system easily.
+-- # This Upper-limits the max resources required while still giving us the maximum benefits of parallel builds,
+-- # without saturating the system completely.
+-- # This number should work for both laptops and desktops.
+--
+-- # you can increase this number if on a more powerful machine.
+jobs: 6
+
+-- ### DEVELOPMENT FLAGS ###
+-- Note: you may comment/un-comment these while doing local development for faster compile & build times
+
+-- Flag defaults configured as recommended here https://github.com/nammayatri/nammayatri/pull/4093
+
+-- ## The optimization level flag, range is between 0 to 2.
+-- # Level 0 disables optimization.
+-- # Level 1 is the default.
+-- # Level 2 is higher optimization if the compiler supports it.
+--
+-- # Note: Level 2 is likely to lead to longer compile times and bigger generated code.
+-- #       If you are not planning to run code,
+-- #       turning off optimization will lead to better build times
+-- #       and less code to be rebuilt when a module changes.
+
+-- optimization: 0
+
+-- ## Enables flags in the project.
+-- #  +flagname enables the flag.
+-- #  -flagname disables it.
+flags: +Local

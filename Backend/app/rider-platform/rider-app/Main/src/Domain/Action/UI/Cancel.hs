@@ -11,16 +11,21 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+
 module Domain.Action.UI.Cancel
   ( cancel,
+    disputeCancellationDues,
     CancelReq (..),
     CancelRes (..),
     CancelSearch (..),
+    CancellationDuesDetailsRes (..),
     mkDomainCancelSearch,
     cancelSearch,
+    getCancellationDuesDetails,
   )
 where
 
+import qualified Data.HashMap as HM
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
@@ -28,18 +33,25 @@ import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
+import Environment
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -63,7 +75,8 @@ data CancelRes = CancelRes
     bppUrl :: BaseUrl,
     cancellationSource :: SBCR.CancellationSource,
     transactionId :: Text,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: Context.City
   }
 
 data CancelSearch = CancelSearch
@@ -73,10 +86,18 @@ data CancelSearch = CancelSearch
     estimateStatus :: DEstimate.EstimateStatus,
     searchReqId :: Id SearchRequest,
     sendToBpp :: Bool,
-    merchant :: DM.Merchant
+    merchant :: DM.Merchant,
+    city :: Context.City
   }
 
-cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
+data CancellationDuesDetailsRes = CancellationDuesDetailsRes
+  { cancellationDues :: HighPrecMoney,
+    disputeChancesUsed :: Int,
+    canBlockCustomer :: Maybe Bool
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+cancel :: (EncFlow m r, Esq.EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
@@ -84,6 +105,9 @@ cancel bookingId _ req = do
   canCancelBooking <- isBookingCancellable booking
   unless canCancelBooking $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
+  city <-
+    CQMOC.findById booking.merchantOperatingCityId
+      >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
   when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
   bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
   mRide <- B.runInReplica $ QR.findActiveByRBId booking.id
@@ -93,7 +117,8 @@ cancel bookingId _ req = do
         res <- try @_ @SomeException (CallBPP.callGetDriverLocation ride.trackingUrl)
         case res of
           Right res' -> do
-            disToPickup <- driverDistanceToPickup booking.merchantId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
+            let merchantOperatingCityId = booking.merchantOperatingCityId
+            disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
             buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
           Left err -> do
             logTagInfo "DriverLocationFetchFailed" $ show err
@@ -107,7 +132,8 @@ cancel bookingId _ req = do
         bppUrl = booking.providerUrl,
         cancellationSource = SBCR.ByUser,
         transactionId = booking.transactionId,
-        merchant = merchant
+        merchant = merchant,
+        ..
       }
   where
     buildBookingCancelationReason currentDriverLocation disToPickup merchantId = do
@@ -126,7 +152,7 @@ cancel bookingId _ req = do
             ..
           }
 
-isBookingCancellable :: EsqDBFlow m r => SRB.Booking -> m Bool
+isBookingCancellable :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> m Bool
 isBookingCancellable booking
   | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT] = pure True
   | booking.status == SRB.TRIP_ASSIGNED = do
@@ -149,6 +175,11 @@ mkDomainCancelSearch personId estimateId = do
       person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
       let searchRequestId = estimate.requestId
+      city <- case estimate.merchantOperatingCityId of
+        Nothing -> pure merchant.defaultCity
+        Just mOCId ->
+          CQMOC.findById mOCId
+            >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound mOCId.getId)
       pure
         CancelSearch
           { estimateId = estId,
@@ -188,15 +219,35 @@ driverDistanceToPickup ::
     Maps.HasCoordinates tripEndPos
   ) =>
   Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
   m Meters
-driverDistanceToPickup merchantId tripStartPos tripEndPos = do
+driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide merchantId $
+    Maps.getDistanceForCancelRide merchantId merchantOperatingCityId $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,
           travelMode = Just Maps.CAR
         }
   return $ distRes.distance
+
+disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> Flow APISuccess
+disputeCancellationDues (personId, merchantId) = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  case (person.mobileNumber, person.mobileCountryCode) of
+    (Just mobileNumber, Just countryCode) -> do
+      CallBPPInternal.disputeCancellationDues merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
+    _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
+
+getCancellationDuesDetails :: (Id Person.Person, Id Merchant.Merchant) -> Flow CancellationDuesDetailsRes
+getCancellationDuesDetails (personId, merchantId) = do
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  case (person.mobileNumber, person.mobileCountryCode) of
+    (Just mobileNumber, Just countryCode) -> do
+      res <- CallBPPInternal.getCancellationDuesDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobileNumber countryCode person.currentCity
+      return $ CancellationDuesDetailsRes {cancellationDues = res.customerCancellationDues, disputeChancesUsed = res.disputeChancesUsed, canBlockCustomer = res.canBlockCustomer}
+    _ -> throwError (PersonMobileNumberIsNULL person.id.getId)

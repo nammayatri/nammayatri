@@ -12,6 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Vehicle (module Domain.Types.Vehicle, module Reexport) where
 
@@ -61,7 +62,6 @@ data Vehicle = Vehicle
     energyType :: Maybe Text,
     registrationCategory :: Maybe RegistrationCategory,
     vehicleClass :: Text,
-    fleetOwnerId :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

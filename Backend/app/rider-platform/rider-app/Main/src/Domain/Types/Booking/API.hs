@@ -22,6 +22,7 @@ import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as SLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
@@ -34,6 +35,8 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified Storage.Queries.Issues as QIssue
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.JSON as J
@@ -49,6 +52,7 @@ data BookingAPIEntity = BookingAPIEntity
     estimatedTotalFare :: Money,
     fromLocation :: LocationAPIEntity,
     rideList :: [RideAPIEntity],
+    hasNightIssue :: Bool,
     tripTerms :: [Text],
     fareBreakup :: [FareBreakupAPIEntity],
     bookingDetails :: BookingAPIDetails,
@@ -60,7 +64,8 @@ data BookingAPIEntity = BookingAPIEntity
     paymentMethod :: Maybe DMPM.PaymentMethodAPIEntity,
     paymentUrl :: Maybe Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    hasDisability :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -101,8 +106,10 @@ makeBookingAPIEntity ::
   [FareBreakup] ->
   Maybe DExophone.Exophone ->
   Maybe DMPM.MerchantPaymentMethod ->
+  Maybe Bool ->
+  Bool ->
   BookingAPIEntity
-makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod = do
+makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
   BookingAPIEntity
     { id = booking.id,
@@ -114,6 +121,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       estimatedTotalFare = booking.estimatedTotalFare,
       fromLocation = SLoc.makeLocationAPIEntity booking.fromLocation,
       rideList = allRides <&> makeRideAPIEntity,
+      hasNightIssue = hasNightIssue,
       tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
       fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
       bookingDetails,
@@ -125,7 +133,8 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       paymentMethod = DMPM.mkPaymentMethodAPIEntity <$> mbPaymentMethod,
       paymentUrl = booking.paymentUrl,
       createdAt = booking.createdAt,
-      updatedAt = booking.updatedAt
+      updatedAt = booking.updatedAt,
+      hasDisability = hasDisability
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -154,13 +163,16 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
               ..
             }
 
-buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> m BookingAPIEntity
-buildBookingAPIEntity booking = do
-  mbRide <- runInReplica $ QRide.findActiveByRBId booking.id
-  rideList <- runInReplica $ QRide.findAllByRBId booking.id
+buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
+buildBookingAPIEntity booking personId = do
+  mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
+  mbRide <- runInReplica $ QRide.findByRBId booking.id
+  nightIssue <- runInReplica $ QIssue.findNightIssueByBookingId booking.id
   fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
+  let merchantOperatingCityId = booking.merchantOperatingCityId
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-    CQMPM.findByIdAndMerchantId paymentMethodId booking.merchantId
+    CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-  return $ makeBookingAPIEntity booking mbRide rideList fareBreakups mbExoPhone mbPaymentMethod
+  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability $ isJust nightIssue

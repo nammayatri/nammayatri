@@ -18,11 +18,13 @@ module Storage.Beam.Geometry where
 
 import qualified Database.Beam as B
 import Kernel.Prelude
+import Kernel.Types.Beckn.Context (City)
 import Tools.Beam.UtilsTH
 
 data GeometryT f = GeometryT
   { id :: B.C f Text,
-    region :: B.C f Text
+    region :: B.C f Text,
+    city :: B.C f City
   }
   deriving (Generic, B.Beamable)
 

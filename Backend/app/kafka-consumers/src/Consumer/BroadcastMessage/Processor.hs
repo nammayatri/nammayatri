@@ -24,25 +24,34 @@ import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Types.Id
+import Kernel.Types.Time
 import "dynamic-offer-driver-app" Storage.Queries.Message.MessageReport as MRQuery
 import "dynamic-offer-driver-app" Storage.Queries.Person as Person
 import "dynamic-offer-driver-app" Tools.Notifications (sendMessageToDriver)
 
 broadcastMessage :: Types.MessageDict -> Text -> Flow ()
 broadcastMessage messageDict driverId = do
-  -- mDriver <- Esq.runInReplica $ Person.findById (Id driverId)
   mDriver <- Person.findById (Id driverId)
-  status <-
-    case mDriver of
-      Just driver -> do
-        let message = maybe messageDict.defaultMessage (flip (HM.findWithDefault messageDict.defaultMessage) messageDict.translations . show) driver.language
-        -- Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (Id driverId) Types.Sending
-        _ <- MRQuery.updateDeliveryStatusByMessageIdAndDriverId message.id (Id driverId) Types.Sending
-        exep <- try @_ @SomeException (sendMessageToDriver driver.merchantId FCM.SHOW (Just FCM.HIGH) FCM.NEW_MESSAGE message.title message.shortDescription driver.id message.id driver.deviceToken)
-        return $
-          case exep of
-            Left _ -> Types.Failed
-            Right _ -> Types.Success
-      Nothing -> return Types.Failed
-  -- void $ Esq.runTransaction $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId messageDict.defaultMessage.id (Id driverId) status
-  void $ MRQuery.updateDeliveryStatusByMessageIdAndDriverId messageDict.defaultMessage.id (Id driverId) status
+  whenJust mDriver $ \driver -> do
+    let message = maybe messageDict.defaultMessage (flip (HM.findWithDefault messageDict.defaultMessage) messageDict.translations . show) driver.language
+    exep <- try @_ @SomeException (sendMessageToDriver driver.merchantOperatingCityId FCM.SHOW (Just FCM.HIGH) FCM.NEW_MESSAGE message.title message.shortDescription driver.id message.id driver.deviceToken)
+    let dStatus = case exep of
+          Left _ -> Types.Failed
+          Right _ -> Types.Success
+    mkMessageReport dStatus driverId messageDict.defaultMessage.id
+  where
+    mkMessageReport status drvrId messageId = do
+      now <- getCurrentTime
+      let messageReport =
+            Types.MessageReport
+              { driverId = Id drvrId,
+                messageId,
+                deliveryStatus = status,
+                readStatus = False,
+                likeStatus = False,
+                messageDynamicFields = HM.empty,
+                reply = Nothing,
+                createdAt = now,
+                updatedAt = now
+              }
+      void $ try @_ @SomeException $ MRQuery.create messageReport

@@ -11,23 +11,26 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Action.Beckn.Status
   ( handler,
     DStatusReq (..),
     DStatusRes (..),
+    OnStatusBuildReq (..),
   )
 where
 
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
+import Environment
 import EulerHS.Prelude
 import Kernel.Beam.Functions as B
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
@@ -36,18 +39,39 @@ newtype DStatusReq = StatusReq
   { bookingId :: Id DBooking.Booking
   }
 
-data DStatusRes = StatusRes
+data DStatusRes = DStatusRes
   { transporter :: DM.Merchant,
-    bookingId :: Id DBooking.Booking,
-    bookingStatus :: DBooking.BookingStatus,
-    mbRide :: Maybe DRide.Ride
+    info :: OnStatusBuildReq
   }
 
+data OnStatusBuildReq
+  = NewBookingBuildReq
+      { bookingId :: Id DBooking.Booking
+      }
+  | RideAssignedBuildReq
+      { bookingId :: Id DBooking.Booking,
+        newRideInfo :: SyncRide.NewRideInfo
+      }
+  | RideStartedBuildReq
+      { newRideInfo :: SyncRide.NewRideInfo
+      }
+  | RideCompletedBuildReq
+      { newRideInfo :: SyncRide.NewRideInfo,
+        rideCompletedInfo :: SyncRide.RideCompletedInfo
+      }
+  | BookingCancelledBuildReq
+      { bookingCancelledInfo :: SyncRide.BookingCancelledInfo,
+        mbNewRideInfo :: Maybe SyncRide.NewRideInfo
+      }
+  | BookingReallocationBuildReq
+      { bookingReallocationInfo :: SyncRide.BookingReallocationInfo,
+        newRideInfo :: SyncRide.NewRideInfo
+      }
+
 handler ::
-  (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
   Id DM.Merchant ->
   DStatusReq ->
-  m DStatusRes
+  Flow DStatusRes
 handler transporterId req = do
   transporter <-
     CQM.findById transporterId
@@ -56,11 +80,40 @@ handler transporterId req = do
   mbRide <- B.runInReplica $ QRide.findOneByBookingId booking.id
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
-
-  return $
-    StatusRes
-      { bookingId = booking.id,
-        bookingStatus = booking.status,
-        mbRide,
-        transporter
-      }
+  info <- case mbRide of
+    Just ride -> do
+      case ride.status of
+        DRide.NEW -> do
+          newRideInfo <- SyncRide.fetchNewRideInfo ride booking
+          pure $ RideAssignedBuildReq {bookingId = booking.id, newRideInfo = newRideInfo}
+        DRide.INPROGRESS -> do
+          newRideInfo <- SyncRide.fetchNewRideInfo ride booking
+          pure $ RideStartedBuildReq {newRideInfo}
+        DRide.COMPLETED -> do
+          newRideInfo <- SyncRide.fetchNewRideInfo ride booking
+          rideCompletedInfo <- SyncRide.fetchRideCompletedInfo ride booking
+          pure $ RideCompletedBuildReq {newRideInfo, rideCompletedInfo}
+        DRide.CANCELLED -> do
+          case booking.status of
+            DBooking.REALLOCATED -> do
+              newRideInfo <- SyncRide.fetchNewRideInfo ride booking
+              bookingReallocationInfo <- SyncRide.fetchBookingReallocationInfo (Just ride) booking
+              pure $ BookingReallocationBuildReq {newRideInfo, bookingReallocationInfo}
+            _ -> do
+              newRideInfo <- SyncRide.fetchNewRideInfo ride booking
+              bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo (Just ride) booking
+              pure $ BookingCancelledBuildReq {mbNewRideInfo = Just newRideInfo, bookingCancelledInfo}
+    Nothing -> do
+      case booking.status of
+        DBooking.NEW -> do
+          pure $ NewBookingBuildReq {bookingId = booking.id}
+        DBooking.TRIP_ASSIGNED -> do
+          throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
+        DBooking.COMPLETED -> do
+          throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
+        DBooking.CANCELLED -> do
+          bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo Nothing booking
+          pure $ BookingCancelledBuildReq {mbNewRideInfo = Nothing, bookingCancelledInfo}
+        DBooking.REALLOCATED -> do
+          throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
+  pure DStatusRes {transporter, info}

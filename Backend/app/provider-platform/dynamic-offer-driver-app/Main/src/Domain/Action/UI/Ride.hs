@@ -23,6 +23,7 @@ module Domain.Action.UI.Ride
   )
 where
 
+import qualified Data.HashMap as HM
 import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Time (Day)
@@ -30,7 +31,6 @@ import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Driver.DriverFlowStatus as DDFS
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
@@ -60,17 +60,16 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.DriverLocation as DLoc
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FareCalculator (fareSum)
 import qualified Storage.CachedQueries.BapMetadata as CQSM
-import qualified Storage.CachedQueries.Driver.GoHomeRequest as CGHR
+import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.Driver.DriverFlowStatus as QDFS
 import qualified Storage.Queries.DriverInformation as QDI
+import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -114,7 +113,8 @@ data DriverRideRes = DriverRideRes
     requestedVehicleVariant :: DVeh.Variant,
     driverGoHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
     payerVpa :: Maybe Text,
-    autoPayStatus :: Maybe DI.DriverAutoPayStatus
+    autoPayStatus :: Maybe DI.DriverAutoPayStatus,
+    customerCancellationDues :: HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -205,10 +205,11 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       requestedVehicleVariant = booking.vehicleVariant,
       driverGoHomeRequestId = goHomeReqId,
       payerVpa = driverInfo >>= (.payerVpa),
-      autoPayStatus = driverInfo >>= (.autoPayStatus)
+      autoPayStatus = driverInfo >>= (.autoPayStatus),
+      customerCancellationDues = fareParams.customerCancellationDues
     }
 
-arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "The ride has already started."
@@ -218,8 +219,7 @@ arrivedAtPickup rideId req = do
   driverReachedDistance <- asks (.driverReachedDistance)
   unless (distance < driverReachedDistance) $ throwError $ DriverNotAtPickupLocation ride.driverId.getId
   unless (isJust ride.driverArrivalTime) $ do
-    _ <- QRide.updateArrival rideId
-    _ <- QDFS.updateStatus ride.driverId DDFS.WAITING_FOR_CUSTOMER {rideId}
+    QRide.updateArrival rideId
     BP.sendDriverArrivalUpdateToBAP booking ride ride.driverArrivalTime
   pure Success
   where
@@ -233,13 +233,12 @@ otpRideCreate driver otpCode booking = do
   vehicle <- QVeh.findById driver.id >>= fromMaybeM (VehicleNotFound driver.id.getId)
   when (isNotAllowedVehicleVariant vehicle.variant booking.vehicleVariant) $ throwError $ InvalidRequest "Wrong Vehicle Variant"
   when (booking.status `elem` [DRB.COMPLETED, DRB.CANCELLED]) $ throwError (BookingInvalidStatus $ show booking.status)
-
   driverInfo <- QDI.findById (cast driver.id) >>= fromMaybeM DriverInfoNotFound
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
-  ghrId <- (CGHR.getDriverGoHomeRequestInfo driver.id booking.providerId) Nothing <&> (.driverGoHomeRequestId)
-  ride <- buildRide otpCode driver.id (Just transporter.id) ghrId
+  ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
+  ride <- buildRide otpCode driver.id (Just transporter.id) booking.merchantOperatingCityId ghrId
   rideDetails <- buildRideDetails ride
 
   -- moving route from booking id to ride id
@@ -248,25 +247,22 @@ otpRideCreate driver otpCode booking = do
     Just route -> Redis.setExp (BS.searchRequestKey $ getId ride.id) route 14400
     Nothing -> logDebug "Unable to get the key"
 
-  enableLocationTrackingService <- asks (.enableLocationTrackingService)
-  when enableLocationTrackingService $
-    void $ LF.rideDetails ride.id ride.status transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
   QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
   QRide.createRide ride
-  DLoc.updateOnRide driver.merchantId driver.id True
+  QDI.updateOnRide (cast driver.id) True
+  void $ LF.rideDetails ride.id DRide.NEW transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
 
-  QDFS.updateStatus driver.id DDFS.RIDE_ASSIGNED {rideId = ride.id}
   QRideD.create rideDetails
 
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
   triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}
 
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
-  Notify.notifyDriver transporter.id notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
+  Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
 
-  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride
+  handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
 
-  DS.driverScoreEventHandler DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
+  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
 
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
@@ -287,7 +283,7 @@ otpRideCreate driver otpCode booking = do
             cs (showTimeIst uBooking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide otp driverId merchantId ghrId = do
+    buildRide otp driverId merchantId merchantOpCityId ghrId = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
@@ -299,6 +295,7 @@ otpRideCreate driver otpCode booking = do
             bookingId = booking.id,
             shortId = shortId,
             merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
             status = DRide.NEW,
             driverId = cast driverId,
             otp = otp,
@@ -319,10 +316,12 @@ otpRideCreate driver otpCode booking = do
             updatedAt = now,
             driverDeviatedFromRoute = Just False,
             numberOfSnapToRoadCalls = Nothing,
+            numberOfOsrmSnapToRoadCalls = Nothing,
             numberOfDeviation = Nothing,
             uiDistanceCalculationWithAccuracy = Nothing,
             uiDistanceCalculationWithoutAccuracy = Nothing,
-            driverGoHomeRequestId = ghrId
+            driverGoHomeRequestId = ghrId,
+            safetyAlertTriggered = False
           }
 
     buildTrackingUrl rideId = do
@@ -337,6 +336,7 @@ otpRideCreate driver otpCode booking = do
       vehicle <-
         QVeh.findById ride.driverId
           >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+      vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
       return
         DRD.RideDetails
           { id = ride.id,
@@ -347,7 +347,8 @@ otpRideCreate driver otpCode booking = do
             vehicleColor = Just vehicle.color,
             vehicleVariant = Just vehicle.variant,
             vehicleModel = Just vehicle.model,
-            vehicleClass = Nothing
+            vehicleClass = Nothing,
+            fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
           }
     isNotAllowedVehicleVariant driverVehicle bookingVehicle =
       (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)

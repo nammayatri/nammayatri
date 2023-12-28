@@ -28,7 +28,7 @@ import Components.GenericHeader as GenericHeader
 import Components.SourceToDestination as SourceToDestination
 import Styles.Colors as Color
 import Common.Types.App
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Prelude ((<>))
 import Data.Maybe (Maybe(..))
 
@@ -41,7 +41,7 @@ genericHeaderConfig state= let
      , prefixImageConfig {
         height = V 25
       , width = V 25
-      , imageUrl = "ny_ic_chevron_left," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_chevron_left.png"
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , margin = (Margin 12 12 12 12)
       , visibility = if state.props.issueReported then GONE else VISIBLE
       }
@@ -82,29 +82,28 @@ confirmLostAndFoundConfig state = let
 
 sourceToDestinationConfig :: ST.TripDetailsScreenState -> SourceToDestination.Config
 sourceToDestinationConfig state = let 
-  config = SourceToDestination.config
-  sourceToDestinationConfig' = config
+  sourceToDestinationConfig' = SourceToDestination.config
     { id = Just $ "TripDetailsSTDC_" <> state.data.tripId
     , sourceImageConfig {
-        imageUrl = "ny_ic_green_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_green_circle.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
       , margin = (MarginTop 3)
       }
     , sourceTextConfig {
         text = state.data.source
       , padding = (Padding 2 0 2 2)
-      , margin = (Margin 12 0 15 0)
+      , margin = (MarginHorizontal 12 15)
       , color = Color.greyDavy
       , ellipsize = false
       }
     , destinationImageConfig {
-        imageUrl = "ny_ic_red_circle," <> (getCommonAssetStoreLink FunctionCall) <> "ny_ic_red_circle.png"
+        imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_red_circle"
       , margin = (MarginTop 3)
       }
     , destinationBackground = Color.blue600
     , destinationTextConfig {
         text = state.data.destination
       , padding = (Padding 2 0 2 2)
-      , margin = (Margin 12 0 15 0)
+      , margin = MarginHorizontal 12 15
       , color = Color.greyDavy
       , ellipsize = false
       }

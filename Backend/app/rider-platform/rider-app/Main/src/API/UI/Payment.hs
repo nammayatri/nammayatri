@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.API as Payment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =

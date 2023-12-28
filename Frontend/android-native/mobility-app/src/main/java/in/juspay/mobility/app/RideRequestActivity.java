@@ -9,9 +9,12 @@
 
 package in.juspay.mobility.app;
 
+import static in.juspay.mobility.app.NotificationUtils.NO_VARIANT;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -56,7 +59,8 @@ public class RideRequestActivity extends AppCompatActivity {
     private ArrayList<LinearProgressIndicator> progressIndicatorsList;
     private ArrayList<LinearLayout> indicatorList;
     private SharedPreferences sharedPref;
-    private String key = "";
+
+    private String service = "";
 
     public static RideRequestActivity getInstance() {
         return instance;
@@ -65,8 +69,8 @@ public class RideRequestActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        service = getApplicationContext().getResources().getString(R.string.service);
         instance = this;
-        key = getApplicationContext().getResources().getString(R.string.service);
         setContentView(R.layout.activity_ride_request);
         viewPager2 = findViewById(R.id.viewPager);
         sheetAdapter.setViewPager(viewPager2);
@@ -115,12 +119,14 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getInt("driverMaxExtraFee"),
                     rideRequestBundle.getInt("rideRequestPopupDelayDuration"),
                     negotiationUnit,
-                    rideRequestBundle.getInt("customerTip"),
+                    rideRequestBundle.getInt("customerExtraFee"),
                     rideRequestBundle.getString("specialLocationTag"),
                     rideRequestBundle.getString("sourcePinCode"),
                     rideRequestBundle.getString("destinationPinCode"),
                     rideRequestBundle.getString("requestedVehicleVariant"),
-                    rideRequestBundle.getBoolean("disabilityTag")
+                    rideRequestBundle.getBoolean("disabilityTag"),
+                    rideRequestBundle.getBoolean("isTranslated"),
+                    rideRequestBundle.getBoolean("gotoTag")
             );
 
             sheetArrayList.add(sheetModel);
@@ -128,6 +134,70 @@ public class RideRequestActivity extends AppCompatActivity {
             sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
             updateIndicators();
             updateProgressBars(false);
+        });
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
+        mainLooper.post(() -> {
+            String variant = model.getRequestedVehicleVariant();
+            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag()) {
+                holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.accessibilityTag.setVisibility(model.getDisabilityTag() ? View.VISIBLE: View.GONE);
+                holder.textIncludesCharges.setText(model.getCustomerTip() > 0 ?
+                        (getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip)) :
+                        getString(R.string.includes_pickup_charges_10));
+                holder.customerTipTag.setVisibility(model.getCustomerTip() > 0 ? View.VISIBLE : View.GONE);
+                holder.customerTipText.setText(sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip());
+                holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
+                holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
+                holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
+                        ColorStateList.valueOf(getColor(R.color.Black900)) :
+                        ColorStateList.valueOf(getColor(R.color.green900)));
+
+                if (!variant.equals(NO_VARIANT) && service.equals("yatrisathiprovider")) {
+                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                    } else {
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_non_ac_variant_tag);
+                        holder.rideTypeImage.setVisibility(View.GONE);
+                    }
+                    holder.rideTypeText.setText(variant);
+                }
+
+            } else {
+                holder.tagsBlock.setVisibility(View.GONE);
+            }
+        });
+    }
+
+    @SuppressLint("SetTextI18n")
+    private void updateAcceptButtonText(SheetAdapter.SheetViewHolder holder, int rideRequestPopupDelayDuration, int startTime, String text) {
+        if (rideRequestPopupDelayDuration > 0 && (time - startTime) < rideRequestPopupDelayDuration) {
+            holder.reqButton.setText(text + " (" + (rideRequestPopupDelayDuration - (time - startTime)) + " )");
+            holder.reqButton.setAlpha(0.5f);
+            holder.reqButton.setClickable(false);
+            holder.rejectButton.setAlpha(0.5f);
+            holder.rejectButton.setClickable(false);
+        } else {
+            holder.reqButton.setText(text);
+            holder.reqButton.setAlpha(1.0f);
+            holder.reqButton.setClickable(true);
+            holder.rejectButton.setAlpha(1.0f);
+            holder.rejectButton.setClickable(true);
+        }
+    }
+
+    private void updateIncreaseDecreaseButtons(SheetAdapter.SheetViewHolder holder, SheetModel model) {
+        mainLooper.post(() -> {
+            holder.buttonIncreasePrice.setVisibility(model.getDriverMaxExtraFee() == 0 ? View.GONE : View.VISIBLE);
+            holder.buttonDecreasePrice.setVisibility(model.getDriverMaxExtraFee() == 0 ? View.GONE : View.VISIBLE);
+            holder.buttonDecreasePrice.setAlpha(model.getButtonDecreasePriceAlpha());
+            holder.buttonDecreasePrice.setClickable(model.isButtonDecreasePriceClickable());
+            holder.buttonIncreasePrice.setAlpha(model.getButtonIncreasePriceAlpha());
+            holder.buttonIncreasePrice.setClickable(model.isButtonIncreasePriceClickable());
         });
     }
 
@@ -141,8 +211,11 @@ public class RideRequestActivity extends AppCompatActivity {
                 case "inc":
                     updateIndicators();
                     holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
+                    holder.currency.setText(String.valueOf(model.getCurrency()));
+                    updateIncreaseDecreaseButtons(holder, model);
                     return;
                 case "time":
+                    updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), (model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer)));
                     updateProgressBars(true);
                     return;
             }
@@ -150,7 +223,8 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
-            if( key.equals("yatrisathiprovider") ){
+
+            if( service.equals("yatrisathiprovider") ){
                 holder.durationToPickup.setVisibility(View.VISIBLE);
                 holder.durationToPickupImage.setVisibility(View.VISIBLE);
                 holder.durationToPickup.setText(model.getDurationToPickup() + " min");
@@ -162,6 +236,9 @@ public class RideRequestActivity extends AppCompatActivity {
             holder.sourceAddress.setText(model.getSourceAddress());
             holder.destinationArea.setText(model.getDestinationArea());
             holder.destinationAddress.setText(model.getDestinationAddress());
+
+            if (!model.isTranslated()) RideRequestUtils.updateViewFromMlTranslation(holder, model, sharedPref, RideRequestActivity.this);
+
             holder.textIncPrice.setText(String.valueOf(model.getNegotiationUnit()));
             holder.textDecPrice.setText(String.valueOf(model.getNegotiationUnit()));
             if(model.getSourcePinCode() != null &&  model.getSourcePinCode().trim().length()>0){
@@ -181,19 +258,20 @@ public class RideRequestActivity extends AppCompatActivity {
             if (model.getspecialLocationTag() != null){
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), RideRequestActivity.this);
             }
-            if (model.getDriverMaxExtraFee() == 0) {
-                holder.buttonIncreasePrice.setVisibility(View.GONE);
-                holder.buttonDecreasePrice.setVisibility(View.GONE);
-            } else {
-                holder.buttonIncreasePrice.setVisibility(View.VISIBLE);
-                holder.buttonDecreasePrice.setVisibility(View.VISIBLE);
+
+            if (service.equals("yatrisathiprovider") || service.equals("yatriprovider")) {
+                holder.textIncludesCharges.setVisibility(View.GONE);
             }
-            String key = getApplicationContext().getResources().getString(R.string.service);
-            String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
+
+            updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
+            updateIncreaseDecreaseButtons(holder, model);
+            updateTagsView(holder, model);
+
+            String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", "");
             View progressDialog = findViewById(R.id.progress_loader);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
-                if (key != null && key.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
+                if (service.equals("yatriprovider") && vehicleVariant.equals("AUTO_RICKSHAW")){
                     LottieAnimationView lottieAnimationView = progressDialog.findViewById(R.id.lottie_view_waiting);
                     lottieAnimationView.setAnimation(R.raw.yatri_circular_loading_bar_auto);
                 }
@@ -225,15 +303,15 @@ public class RideRequestActivity extends AppCompatActivity {
                     sheetAdapter.notifyItemChanged(position, "inc");
                     if (model.getOfferedPrice() == model.getDriverMaxExtraFee()) {
                         mainLooper.post(() -> {
-                            holder.buttonIncreasePrice.setAlpha(0.5f);
-                            holder.buttonIncreasePrice.setClickable(false);
-                            holder.buttonDecreasePrice.setAlpha(1.0f);
-                            holder.buttonDecreasePrice.setClickable(true);
+                            model.setButtonIncreasePriceAlpha(0.5f);
+                            model.setButtonIncreasePriceClickable(false);
+                            model.setButtonDecreasePriceAlpha(1.0f);
+                            model.setButtonDecreasePriceClickable(true);
                         });
                     } else {
                         mainLooper.post(() -> {
-                            holder.buttonDecreasePrice.setAlpha(1.0f);
-                            holder.buttonDecreasePrice.setClickable(true);
+                            model.setButtonDecreasePriceAlpha(1.0f);
+                            model.setButtonDecreasePriceClickable(true);
                         });
                     }
                 }
@@ -245,15 +323,15 @@ public class RideRequestActivity extends AppCompatActivity {
                     sheetAdapter.notifyItemChanged(position, "inc");
                     if (model.getOfferedPrice() == 0) {
                         mainLooper.post(() -> {
-                            holder.buttonDecreasePrice.setAlpha(0.5f);
-                            holder.buttonDecreasePrice.setClickable(false);
-                            holder.buttonIncreasePrice.setAlpha(1.0f);
-                            holder.buttonIncreasePrice.setClickable(true);
+                            model.setButtonDecreasePriceAlpha(0.5f);
+                            model.setButtonDecreasePriceClickable(false);
+                            model.setButtonIncreasePriceAlpha(1.0f);
+                            model.setButtonIncreasePriceClickable(true);
                         });
                     } else {
                         mainLooper.post(() -> {
-                            holder.buttonIncreasePrice.setAlpha(1.0f);
-                            holder.buttonIncreasePrice.setClickable(true);
+                            model.setButtonIncreasePriceAlpha(1.0f);
+                            model.setButtonIncreasePriceClickable(true);
                         });
                     }
                 }
@@ -477,10 +555,23 @@ public class RideRequestActivity extends AppCompatActivity {
                 }
             }
         }
-                } catch (Exception e) {
+        } catch (Exception e) {
             FirebaseAnalytics.getInstance(this).logEvent("Exception_in_findCardById", null);
             Log.e("RideRequestActivity", "Error in findCardById : " + e);
             return false;
+        }
+        return false;
+    }
+
+
+    public boolean removeCardById(String id){
+        if (sheetArrayList.size()>0){
+            for (int i = 0; i<sheetArrayList.size(); i++){
+                if (id.equals(sheetArrayList.get(i).getSearchRequestId())){
+                    removeCard(i);
+                    return true;
+                }
+            }
         }
         return false;
     }
@@ -506,6 +597,7 @@ public class RideRequestActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        RideRequestUtils.cancelRideReqNotification(this);
     }
 
     private void cancelSound() {

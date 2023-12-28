@@ -13,12 +13,15 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.Overlay
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchTry as DST
@@ -38,6 +41,7 @@ data AllocatorJobType
   | CalculateDriverFees
   | OrderAndNotificationStatusUpdate
   | SendOverlay
+  | BadDebtCalculation
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -54,6 +58,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
   restoreAnyJobInfo SOrderAndNotificationStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SOrderAndNotificationStatusUpdate jobData
   restoreAnyJobInfo SSendOverlay jobData = AnyJobInfo <$> restoreJobInfo SSendOverlay jobData
+  restoreAnyJobInfo SBadDebtCalculation jobData = AnyJobInfo <$> restoreJobInfo SBadDebtCalculation jobData
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
@@ -103,7 +108,9 @@ type instance JobContent 'SendSearchRequestToDriver = SendSearchRequestToDriverJ
 data SendPDNNotificationToDriverJobData = SendPDNNotificationToDriverJobData
   { startTime :: UTCTime,
     endTime :: UTCTime,
-    merchantId :: Id DM.Merchant
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    retryCount :: Maybe Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -114,7 +121,8 @@ type instance JobContent 'SendPDNNotificationToDriver = SendPDNNotificationToDri
 data MandateExecutionInfo = MandateExecutionInfo
   { startTime :: UTCTime,
     endTime :: UTCTime,
-    merchantId :: Id DM.Merchant
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -124,6 +132,7 @@ type instance JobContent 'MandateExecution = MandateExecutionInfo
 
 data CalculateDriverFeesJobData = CalculateDriverFeesJobData
   { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     startTime :: UTCTime,
     endTime :: UTCTime
   }
@@ -133,8 +142,9 @@ instance JobInfoProcessor 'CalculateDriverFees
 
 type instance JobContent 'CalculateDriverFees = CalculateDriverFeesJobData
 
-newtype OrderAndNotificationStatusUpdateJobData = OrderAndNotificationStatusUpdateJobData
-  { merchantId :: Id DM.Merchant
+data OrderAndNotificationStatusUpdateJobData = OrderAndNotificationStatusUpdateJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -152,10 +162,22 @@ data SendOverlayJobData = SendOverlayJobData
     freeTrialDays :: Int,
     timeDiffFromUtc :: Seconds,
     driverPaymentCycleDuration :: NominalDiffTime,
-    driverPaymentCycleStartTime :: NominalDiffTime
+    driverPaymentCycleStartTime :: NominalDiffTime,
+    driverFeeOverlaySendingTimeLimitInDays :: Int,
+    overlayBatchSize :: Int
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 instance JobInfoProcessor 'SendOverlay
 
 type instance JobContent 'SendOverlay = SendOverlayJobData
+
+data BadDebtCalculationJobData = BadDebtCalculationJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'BadDebtCalculation
+
+type instance JobContent 'BadDebtCalculation = BadDebtCalculationJobData

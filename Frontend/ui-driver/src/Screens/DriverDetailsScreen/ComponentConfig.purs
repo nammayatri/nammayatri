@@ -37,7 +37,7 @@ import Components.SelectListModal.Controller as GenderSelection
 import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import MerchantConfig.Utils (getValueFromConfig)
+import ConfigProvider
 
 removeAlternateNumberConfig :: ST.DriverDetailsScreenState -> PopUpModalConfig.Config
 removeAlternateNumberConfig state = let
@@ -153,7 +153,7 @@ enterOtpState state = let
         text = if((getValueToLocalStore LANGUAGE_KEY) == "EN_US") then (getString (OTP_SENT_TO) <> (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile))) else ( (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile)) <> (getString OTP_SENT_TO)),
         color = Color.black800,
         margin = (Margin 0 0 0 8),
-        visibility = (if (state.props.otpIncorrect) == false then VISIBLE else GONE)
+        visibility = (if not state.props.otpIncorrect then VISIBLE else GONE)
       },
       imageConfig {
           alpha = if (length state.props.alternateMobileOtp < 4 || state.props.otpIncorrect) then 0.3 else 1.0
@@ -171,7 +171,7 @@ enterMobileNumberState state = let
         , gravity = LEFT
         },
         headingConfig {
-          text = if ( (state.props.isEditAlternateMobile == false)) then (getString ENTER_ALTERNATE_MOBILE_NUMBER) else (getString EDIT_ALTERNATE_MOBILE_NUMBER)
+          text = if not state.props.isEditAlternateMobile then (getString ENTER_ALTERNATE_MOBILE_NUMBER) else (getString EDIT_ALTERNATE_MOBILE_NUMBER)
         },
         subHeadingConfig {
           visibility = GONE
@@ -185,11 +185,11 @@ enterMobileNumberState state = let
         imageConfig {
           alpha = case state.data.driverAlternateMobile of
                 Nothing -> 0.3
-                Just _ -> if (length (fromMaybe "" state.data.driverAlternateMobile) < 10 || state.props.checkAlternateNumber==false || (state.props.isEditAlternateMobile == true &&  length (fromMaybe "" state.data.driverEditAlternateMobile) < 10)|| state.props.numberExistError)
+                Just _ -> if (length (fromMaybe "" state.data.driverAlternateMobile) < 10 || not state.props.checkAlternateNumber || (state.props.isEditAlternateMobile &&  length (fromMaybe "" state.data.driverEditAlternateMobile) < 10)|| state.props.numberExistError)
                 then 0.3 else 1.0
         },
        modalType = (if state.props.otpAttemptsExceeded then ST.NONE else ST.MOBILE__NUMBER),
-      isValidAlternateNumber = if state.props.numberExistError == true then false else state.props.checkAlternateNumber
+      isValidAlternateNumber = if state.props.numberExistError then false else state.props.checkAlternateNumber
         }
       in inAppModalConfig'
 
@@ -206,9 +206,11 @@ type Listtype =
 
 optionList :: ST.DriverDetailsScreenState -> Array Listtype
 optionList state =
+  let feature = (getAppConfig appConfig).feature
+  in
     [
       {title:DRIVER_NAME_INFO, value:"" , editButtonReq : false},
       {title:DRIVER_MOBILE_INFO, value:"" ,editButtonReq : false},
       {title:DRIVER_LICENCE_INFO, value:"",editButtonReq : false},
       {title:DRIVER_ALTERNATE_MOBILE_INFO, value:"" ,editButtonReq : isJust state.data.driverAlternateMobile}
-    ] <> if getValueFromConfig "showGenderBanner" then [{title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}] else []
+    ] <> if feature.enableGender then [{title:GENDER_INFO,value:"", editButtonReq : isJust state.data.driverGender}] else []

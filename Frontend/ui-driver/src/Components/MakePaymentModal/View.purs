@@ -8,11 +8,11 @@ import Common.Types.App (LazyCheck(..))
 import Components.MakePaymentModal.Controller (Action(..), MakePaymentModalState, FeeItem, FeeOptions(..))
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), isJust)
 import Effect (Effect)
 import Font.Style as FontStyle
 import Halogen.VDom.DOM.Prop (Prop)
-import Helpers.Utils (getAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (imageView, textView, linearLayout)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
@@ -38,16 +38,17 @@ view push state =
       , cornerRadii $ Corners 20.0 true true false false
       , orientation VERTICAL
       , background Color.white900
-      , padding $ Padding 16 10 16 20
+      , padding $ Padding 16 10 16 (if isJust state.cancelButtonText then 0 else 16)
       , gravity CENTER
       , stroke $ "1," <> Color.grey900
-      ][ commonTV push state.title Color.black800 FontStyle.h2 CENTER 8 NoAction false
-        , commonTV push state.description Color.black800 FontStyle.subHeading2 CENTER 8 NoAction true
+      , clickable true
+      ][ commonTV push state.title Color.black800 FontStyle.h2 CENTER 8 NoAction false (PaddingTop 0)
+        , commonTV push state.description Color.black800 FontStyle.subHeading2 CENTER 8 NoAction true (PaddingTop 0)
         , paymentReview push state
-        , commonTV push state.description2 Color.black800 FontStyle.body3 CENTER 8 NoAction false
+        , commonTV push state.description2 Color.black800 FontStyle.body3 CENTER 8 NoAction false (PaddingTop 0)
         , primaryButton push state
         , case state.cancelButtonText of
-            Just text -> commonTV push text Color.black650 FontStyle.subHeading2 CENTER 8 Cancel false
+            Just text -> commonTV push text Color.black650 FontStyle.subHeading2 CENTER 0 Cancel false (PaddingVertical 8 16)
             Nothing -> linearLayout[][]
       ]
   ]
@@ -81,7 +82,7 @@ paymentReview push state =
           [ width MATCH_PARENT
           , height $ V 2 
           , padding $ PaddingHorizontal 10 10
-          , imageWithFallback $ "ny_ic_horizontal_dash,"<> (getAssetStoreLink FunctionCall) <>"ny_ic_horizontal_dash.png"
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_horizontal_dash"
           , visibility if index == 0 then VISIBLE else GONE
           ]
       ]
@@ -107,7 +108,7 @@ feeItem push state item =
       [ height $ V 18
       , width $ V 18
       , margin $ MarginLeft 5
-      , imageWithFallback $ "ny_ic_info_blue," <> (getAssetStoreLink FunctionCall) <> "ny_ic_information_grey.png"
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
       , visibility if item.feeType == GST_PAYABLE then VISIBLE else GONE
       , onClick push $ const Info
       ]
@@ -121,8 +122,8 @@ feeItem push state item =
       ] <> FontStyle.body6 TypoGraphy
   ]
 
-commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean-> PrestoDOM (Effect Unit) w
-commonTV push text' color' theme gravity' marginTop action txtFromHtml = 
+commonTV :: forall w .  (Action -> Effect Unit) -> String -> String -> (LazyCheck -> forall properties. (Array (Prop properties))) -> Gravity -> Int -> Action -> Boolean -> Padding -> PrestoDOM (Effect Unit) w
+commonTV push text' color' theme gravity' marginTop action txtFromHtml padding' = 
   textView $
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -130,6 +131,7 @@ commonTV push text' color' theme gravity' marginTop action txtFromHtml =
   , gravity gravity'
   , margin $ MarginTop marginTop
   , onClick push $ const action
+  , padding padding'
   , (if txtFromHtml then textFromHtml else text) text'
   ] <> theme TypoGraphy
 

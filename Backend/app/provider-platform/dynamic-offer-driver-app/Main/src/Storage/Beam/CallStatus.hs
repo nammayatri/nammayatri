@@ -12,22 +12,27 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Storage.Beam.CallStatus where
 
 import qualified Database.Beam as B
 import qualified Kernel.External.Call.Interface.Types as Call
+import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CallStatusT f = CallStatusT
   { id :: B.C f Text,
     callId :: B.C f Text,
-    entityId :: B.C f Text,
+    entityId :: B.C f (Maybe Text),
     dtmfNumberUsed :: B.C f (Maybe Text),
     status :: B.C f Call.CallStatus,
     recordingUrl :: B.C f (Maybe Text),
     conversationDuration :: B.C f Int,
+    merchantId :: B.C f (Maybe Text),
+    callService :: B.C f (Maybe CallService),
+    callError :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)

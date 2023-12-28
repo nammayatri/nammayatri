@@ -13,7 +13,7 @@ import Screens (ScreenName(..), getScreen)
 import JBridge (toast)
 import Screens.Types (EmergencyContactsScreenState , ContactDetail, NewContacts, NewContactsProp)
 import Data.Array (length, sortBy, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take, last, slice, union)
-import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText, toString, setEnabled, setRefreshing)
+import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText, toStringJSON, setEnabled, setRefreshing)
 import Log (printLog)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
 import Language.Strings (getString)
@@ -29,13 +29,13 @@ import Data.Int (fromString)
 import Presto.Core.Types.Language.Flow (Flow)
 import Types.App (GlobalState, defaultGlobalState)
 import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons (clearTimer, flowRunner, getNewIDWithTag, os, strToBool)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, strToBool)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.String (split, Pattern(..), Replacement(..), replaceAll)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Data.Ord (min)
-import Engineering.Helpers.Utils (loaderText, toggleLoader)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, fromProp)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 
@@ -121,9 +121,10 @@ eval (ContactListScrollStateChanged scrollState) state = continue state
 
 eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
   let newContacts = filter (\x -> x.number <> x.name /= state.data.removedContactDetail.number <> state.data.removedContactDetail.name) state.data.contactsList
-  contactsInString <- pure $ toString newContacts
+  let newPrestoList = map (\x -> if ((fromProp x.number) <> (fromProp x.name) == state.data.removedContactDetail.number <> state.data.removedContactDetail.name) then contactTransformerProp state.data.removedContactDetail{isSelected = false} else x) state.data.prestoListArrayItems
+  contactsInString <- pure $ toStringJSON newContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
-  exit $ PostContacts state{data{contactsList = newContacts}}
+  exit $ PostContacts state{data{contactsList = newContacts, prestoListArrayItems = newPrestoList}}
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showInfoPopUp = false}}
 
@@ -206,7 +207,7 @@ eval BackPressed state =
               pure unit
           pure LoadMoreContacts
         ]
-  else if (state.props.showInfoPopUp == true) then
+  else if state.props.showInfoPopUp then
     continue state{props{showInfoPopUp = false, showContactList = false}}
   else
     exit $ GoToHomeScreen
@@ -269,14 +270,14 @@ eval (NewContactActionController (NewContactController.ContactSelected index)) s
   let item = if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
     contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
   else contact
-  if (((length state.data.contactsList) >= 3) && (item.isSelected == false)) then do
+  if (((length state.data.contactsList) >= 3) && not item.isSelected ) then do
     _ <- pure $ toast $ getString LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED
     continue state
   else if((DS.length item.number) /= 10 || (fromMaybe 0 (fromString (DS.take 1 item.number)) < 6)) then do
     _ <- pure $ toast (getString INVALID_CONTACT_FORMAT)
     continue state
   else do
-    let contactListState = if(contact.isSelected == false) then state{ data {contactsList = (snoc state.data.contactsList item{isSelected = true}) } } else state { data {contactsList = filter (\x -> ((if DS.length contact.number == 10 then "" else "91") <> x.number <> x.name  /= contact.number <> contact.name)) state.data.contactsList}}
+    let contactListState = if not contact.isSelected then state{ data {contactsList = (snoc state.data.contactsList item{isSelected = true}) } } else state { data {contactsList = filter (\x -> ((if DS.length contact.number == 10 then "" else "91") <> x.number <> x.name  /= contact.number <> contact.name)) state.data.contactsList}}
     let newState = contactListState { data = contactListState.data { contactsNewList = map (\x ->
       if ((x.number <> x.name  == contact.number <> contact.name)) then x { isSelected = not (x.isSelected) }
       else x
@@ -297,13 +298,13 @@ eval (NewContactActionController (NewContactController.ContactSelected index)) s
 
 eval (ContactListPrimaryButtonActionController PrimaryButton.OnClick) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contact_added"
-  let selectedContacts = filter (\x -> x.isSelected) state.data.contactsNewList
+  let selectedContacts = filter (_.isSelected) state.data.contactsNewList
   let validSelectedContacts = (map (\contact ->
     if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
       contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
     else contact
   ) selectedContacts)
-  contactsInString <- pure $ toString validSelectedContacts
+  contactsInString <- pure $ toStringJSON validSelectedContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
   updateAndExit state $ PostContacts state{data{editedText = "", contactsList = validSelectedContacts, prestoListArrayItems = [], offsetForEmergencyContacts = 0}, props{showContactList = false}}
 

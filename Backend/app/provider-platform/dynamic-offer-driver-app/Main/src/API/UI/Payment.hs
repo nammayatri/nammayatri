@@ -21,6 +21,7 @@ where
 import qualified Domain.Action.UI.Payment as DPayment
 import Domain.Types.Invoice (Invoice)
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Notification (Notification)
 import qualified Domain.Types.Person as DP
 import Environment
@@ -31,6 +32,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.API as Payment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Servant
+import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
@@ -44,15 +46,15 @@ handler authInfo =
     :<|> getOrder authInfo
     :<|> getNotificationStatus authInfo
 
-createOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id Invoice -> FlowHandler Payment.CreateOrderResp
+createOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Invoice -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails invoiceId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails invoiceId
 
 -- This APIs are decoupled from Driver Fee Table.
-getStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
+getStatus :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> FlowHandler DPayment.PaymentStatusResp
 getStatus tokenDetails orderId = withFlowHandlerAPI $ DPayment.getStatus tokenDetails orderId
 
-getOrder :: (Id DP.Person, Id Merchant.Merchant) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
+getOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id DOrder.PaymentOrder -> FlowHandler DOrder.PaymentOrderAPIEntity
 getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDetails orderId
 
-getNotificationStatus :: (Id DP.Person, Id Merchant.Merchant) -> Id Notification -> FlowHandler Payment.NotificationStatusResp
+getNotificationStatus :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Notification -> FlowHandler Payment.NotificationStatusResp
 getNotificationStatus notificationId = withFlowHandlerAPI . DPayment.pdnNotificationStatus notificationId

@@ -24,6 +24,7 @@ module SharedLogic.CallBAP
     sendDriverOffer,
     callOnConfirm,
     buildBppUrl,
+    sendSafetyAlertToBAP,
   )
 where
 
@@ -37,21 +38,31 @@ import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Control.Lens ((%~))
+import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
+import qualified Data.HashMap as HM
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TLE
+import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
+import qualified Domain.Types.DriverOnboarding.Image as DIT
 import qualified Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as Fare
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.Vehicle as DVeh
 import qualified EulerHS.Types as ET
+import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
+import Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
@@ -59,8 +70,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Servant.SignatureAuth
+import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverOnboarding.IdfyVerification as QIV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
@@ -68,6 +82,7 @@ import Tools.Metrics (CoreMetrics)
 
 callOnSelect ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c
@@ -83,13 +98,15 @@ callOnSelect transporter searchRequest searchTry content = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
   let msgId = searchTry.estimateId.getId
   context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False
   logDebug $ "on_select request bpp: " <> show content
-  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri internalEndPointHashMap (BecknCallbackReq context $ Right content)
 
 callOnUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     CoreMetrics m,
     HasHttpClientOptions r c
   ) =>
@@ -106,12 +123,14 @@ callOnUpdate transporter bapId bapUri bapCity bapCountry transactionId content r
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
   msgId <- generateGUID
   context <- buildTaxiContext Context.ON_UPDATE msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city bapCity) (fromMaybe Context.India bapCountry) False
-  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
+  void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri internalEndPointHashMap (BecknCallbackReq context $ Right content)
 
 callOnConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m
@@ -129,8 +148,9 @@ callOnConfirm transporter contextFromConfirm content = do
       bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
   context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
-  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri internalEndPointHashMap (BecknCallbackReq context_ $ Right content)
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
@@ -147,31 +167,81 @@ sendRideAssignedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CacheFlow m r,
+    HasField "modelNamesHashMap" r (HM.Map Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasField "s3Env" r (S3.S3Env m),
-    MonadReader r m,
-    MonadFlow m,
-    MonadTime m,
-    CacheFlow m r
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
+  DP.Person ->
+  DVeh.Vehicle ->
   m ()
-sendRideAssignedUpdateToBAP booking ride = do
+sendRideAssignedUpdateToBAP booking ride driver veh = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM DriverInfoNotFound
+  mbTransporterConfig <- CQTC.findByMerchantOpCityId booking.merchantOperatingCityId -- these two lines just for backfilling driver vehicleModel from idfy TODO: remove later
+  vehicle <-
+    case mbTransporterConfig of
+      Just transporterConfig ->
+        if transporterConfig.refillVehicleModel
+          then do
+            reffiledVeh <- refillVehicleModel
+            pure $
+              case reffiledVeh of
+                Right reffiledVeh' -> reffiledVeh'
+                Left _ -> veh
+          else pure veh
+      Nothing -> pure veh
   resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   let image = join (eitherToMaybe resp)
+  isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
 
   retryConfig <- asks (.shortDurationRetryCfg)
 
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideAssignedMsg retryConfig
+  where
+    refillKey = "REFILLED_" <> ride.driverId.getId
+    updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
+    refillVehicleModel = try @_ @SomeException do
+      -- TODO: remove later
+      mbIsRefilledToday :: Maybe Bool <- Redis.get refillKey
+      case mbIsRefilledToday of
+        Just True -> Redis.expire refillKey 86400 $> veh
+        _ -> do
+          driverVehicleIdfyResponse <-
+            find
+              ( \a ->
+                  maybe False ((==) veh.registrationNo) $
+                    (.registration_number)
+                      =<< (.extraction_output)
+                      =<< (.result)
+                      =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (a.idfyResponse)) :: Maybe Idfy.VerificationResponse)
+              )
+              <$> QIV.findAllByDriverIdAndDocType ride.driverId DIT.VehicleRegistrationCertificate
+          newVehicle <-
+            (flip $ maybe (pure veh)) ((.manufacturer_model) =<< (.extraction_output) =<< (.result) =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (.idfyResponse) =<< driverVehicleIdfyResponse) :: Maybe Idfy.VerificationResponse)) $ \newModel -> do
+              modelNamesHashMap <- asks (.modelNamesHashMap)
+              let modelValueToUpdate = fromMaybe "" $ HM.lookup newModel modelNamesHashMap
+              if modelValueToUpdate == veh.model
+                then pure veh
+                else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate
+          Redis.setExp refillKey True 86400
+          pure newVehicle
+
+    checkIsDriverBirthDay mbTransporterConfig driverBirthDate = do
+      case mbTransporterConfig of
+        Just tc -> do
+          let (_, birthMonth, birthDay) = toGregorian $ utctDay driverBirthDate
+          currentLocalTime <- getLocalCurrentTime tc.timeDiffFromUtc
+          let (_, curMonth, curDay) = toGregorian $ utctDay currentLocalTime
+          return (birthMonth == curMonth && birthDay == curDay)
+        Nothing -> return False
 
 sendRideStartedUpdateToBAP ::
   ( CacheFlow m r,
@@ -179,7 +249,8 @@ sendRideStartedUpdateToBAP ::
     EncFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -203,7 +274,8 @@ sendRideCompletedUpdateToBAP ::
     EncFlow m r,
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -228,6 +300,7 @@ sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     CoreMetrics m
@@ -246,6 +319,7 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
@@ -293,7 +367,8 @@ sendDriverArrivalUpdateToBAP ::
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -318,7 +393,8 @@ sendNewMessageToBAP ::
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -335,13 +411,37 @@ sendNewMessageToBAP booking ride message = do
   retryConfig <- asks (.shortDurationRetryCfg)
   void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId newMessageMsg retryConfig
 
+sendSafetyAlertToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  T.Text ->
+  T.Text ->
+  m ()
+sendSafetyAlertToBAP booking ride code reason = do
+  transporter <-
+    CQM.findById booking.providerId
+      >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  let safetyAlertBuildReq = ACL.SafetyAlertBuildReq {..}
+  safetyAlertMsg <- ACL.buildOnUpdateMessage safetyAlertBuildReq
+  retryConfig <- asks (.shortDurationRetryCfg)
+  void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId safetyAlertMsg retryConfig
+
 sendEstimateRepetitionUpdateToBAP ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->

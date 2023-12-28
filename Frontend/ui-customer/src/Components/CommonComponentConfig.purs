@@ -6,7 +6,7 @@ import Screens.Types as ST
 import Components.PopUpModal as PopUpModal
 import Components.SelectListModal as SelectListModal
 import PrestoDOM.Types.DomAttributes (Corners(..)) as PTD
-import Helpers.Utils (getAssetStoreLink, getCommonAssetStoreLink)
+import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import PrestoDOM (Gravity(..), Margin(..), Visibility(..), Padding(..), Length(..))
 import Data.Maybe as Mb
 import Data.Array as DA
@@ -16,20 +16,24 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Common.Styles.Colors as Color
 import MerchantConfig.Types 
+import JBridge as JB
 
 type ContentConfig = 
    { primaryText :: String,
      secondaryText :: String,
      imageUrl :: String,
-     listViewArray :: Array String
+     videoUrl :: String, 
+     mediaType :: String,
+     listViewArray :: Array String,
+     videoId :: String
    }
 
 
-accessibilityPopUpConfig :: Mb.Maybe ST.DisabilityT -> PopUpModal.Config
-accessibilityPopUpConfig selectedDisability = 
+accessibilityPopUpConfig :: Mb.Maybe ST.DisabilityT -> PurpleRideConfig -> PopUpModal.Config
+accessibilityPopUpConfig selectedDisability purpleRideConfig = 
    let 
      config = PopUpModal.config
-     popupData = getAccessibilityPopupData selectedDisability
+     popupData = getAccessibilityPopupData selectedDisability purpleRideConfig
      config' = config
        {
          gravity = CENTER,
@@ -37,7 +41,7 @@ accessibilityPopUpConfig selectedDisability =
          buttonLayoutMargin = Margin 16 0 16 20 ,
          primaryText {
            text = popupData.primaryText
-         , margin = Margin 16 24 16 4 
+         , margin = Margin 16 16 16 4 
          , padding = Padding 0 0 0 0},
          secondaryText {
            text = popupData.secondaryText
@@ -56,39 +60,57 @@ accessibilityPopUpConfig selectedDisability =
          cornerRadius = (PTD.Corners 15.0 true true true true),
          coverImageConfig {
            imageUrl = popupData.imageUrl
-         , visibility = VISIBLE
+         , visibility = if popupData.videoUrl == "" || (not (JB.supportsInbuildYoutubePlayer unit)) then VISIBLE else GONE
          , height = V 160
          , width = MATCH_PARENT
          , margin = Margin 16 20 16 0
          }
          , listViewArray = popupData.listViewArray
+          , coverVideoConfig {
+            visibility = if popupData.videoUrl /= "" && (JB.supportsInbuildYoutubePlayer unit) then VISIBLE else GONE 
+          , height = V 200
+          , width = MATCH_PARENT
+          , padding = Padding 16 16 16 0
+          , mediaType = popupData.mediaType
+          , mediaUrl = popupData.videoUrl
+          , id = popupData.videoId
+          }
        }
    in config'
   
 
-getAccessibilityPopupData :: Mb.Maybe ST.DisabilityT -> ContentConfig
-getAccessibilityPopupData pwdtype  = 
+getAccessibilityPopupData :: Mb.Maybe ST.DisabilityT -> PurpleRideConfig -> ContentConfig
+getAccessibilityPopupData pwdtype purpleRideConfig = 
    let accessibilityConfig' = accessibilityConfig Common.Config
    in case pwdtype of 
         Mb.Just disability -> case (disability.tag) of 
           "BLIND_LOW_VISION" -> accessibilityConfig'
-                                                  { imageUrl = "ny_ic_blind_pickup," <> (getAssetStoreLink Common.FunctionCall) <> "ny_ic_blind_pickup.png",
-                                                    listViewArray = [(getString VI_POINTER_1) , (getString VI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)]
+                                                  { imageUrl = fetchImage FF_ASSET "ny_ic_blind_pickup",
+                                                    videoUrl = purpleRideConfig.visualImpairmentVideo,
+                                                    mediaType = "VideoLink",
+                                                    listViewArray = [(getString VI_POINTER_1) , (getString VI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
+                                                    videoId = "VisualImpairmentCoverVideo"
                                                   } 
           "HEAR_IMPAIRMENT" ->     accessibilityConfig'
-                                                  { imageUrl = "ny_ic_deaf_pickup," <> (getAssetStoreLink Common.FunctionCall) <> "ny_ic_deaf_pickup.png",
-                                                    listViewArray = [(getString HI_POINTER_1) , (getString HI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)]
+                                                  { imageUrl = fetchImage FF_ASSET "ny_ic_deaf_pickup",
+                                                    videoUrl = purpleRideConfig.hearingImpairmentVideo,
+                                                    mediaType = "PortraitVideoLink",
+                                                    listViewArray = [(getString HI_POINTER_1) , (getString HI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
+                                                    videoId = "HearingImpairmentCoverVideo"
                                                   }
           "LOCOMOTOR_DISABILITY" -> accessibilityConfig'
-                                                  { imageUrl = "ny_ic_locomotor_arrival," <> (getAssetStoreLink Common.FunctionCall) <> "ny_ic_locomotor_arrival.png",
-                                                    listViewArray = [(getString PI_POINTER_1) , (getString PI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)]
+                                                  { imageUrl = fetchImage FF_ASSET "ny_ic_locomotor_arrival",
+                                                    videoUrl = purpleRideConfig.physicalImpairmentVideo,
+                                                    mediaType = "PortraitVideoLink",
+                                                    listViewArray = [(getString PI_POINTER_1) , (getString PI_POINTER_2) , (getString GENERAL_DISABILITY_DESCRIPTION)],
+                                                    videoId = "PhysicalImpairmentCoverVideo"
                                                   }     
           _ ->     accessibilityConfig' 
 
         Mb.Nothing -> accessibilityConfig' 
 
 accessibilityConfig :: Common.LazyCheck -> ContentConfig
-accessibilityConfig _ = { primaryText : (getString ACCESSIBILITY_TEXT), secondaryText : (getString TO_CATER_YOUR_SPECIFIC_NEEDS), imageUrl : "ny_ic_disability_illustration," <> (getAssetStoreLink Common.FunctionCall) <> "ny_ic_disability_illustration.png", listViewArray : [(getString GENERAL_DISABILITY_DESCRIPTION)]}
+accessibilityConfig _ = { primaryText : (getString $ ACCESSIBILITY_TEXT "ACCESSIBILITY_TEXT"), secondaryText : (getString $ TO_CATER_YOUR_SPECIFIC_NEEDS "TO_CATER_YOUR_SPECIFIC_NEEDS"), imageUrl : fetchImage FF_ASSET "ny_ic_disability_illustration", videoUrl : "", mediaType : "" ,listViewArray : [(getString GENERAL_DISABILITY_DESCRIPTION)], videoId : "GeneralDisabilityCoverVideo"}
 
 accessibilityListConfig :: ST.DisabilityData -> String -> AppConfig -> SelectListModal.Config
 accessibilityListConfig disabilityData otherDisability config = 

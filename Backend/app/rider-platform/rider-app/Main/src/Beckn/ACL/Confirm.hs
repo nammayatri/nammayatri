@@ -15,14 +15,16 @@
 
 module Beckn.ACL.Confirm (buildConfirmReq) where
 
+import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
+import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.VehicleVariant as VehVar
-import EulerHS.Prelude hiding (id, state)
+import EulerHS.Prelude hiding (id, state, (%~))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common hiding (id)
@@ -36,13 +38,15 @@ buildConfirmReq ::
 buildConfirmReq res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
-  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.city res.merchant.country False
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildTaxiContext Context.CONFIRM messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.defaultCity res.merchant.country False
   message <- mkConfirmMessage res
   pure $ BecknReq context message
 
 mkConfirmMessage :: (MonadFlow m) => DOnInit.OnInitRes -> m Confirm.ConfirmMessage
 mkConfirmMessage res = do
   let vehicleVariant = castVehicleVariant res.vehicleVariant
+      nightSafetyCheck = res.nightSafetyCheck
   pure
     Confirm.ConfirmMessage
       { order =
@@ -54,7 +58,7 @@ mkConfirmMessage res = do
                       price = Nothing
                     }
                 ],
-              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant,
+              fulfillment = mkFulfillment res.fulfillmentId fulfillmentType res.fromLocation res.mbToLocation res.riderPhoneCountryCode res.riderPhoneNumber res.mbRiderName vehicleVariant nightSafetyCheck,
               payment = mkPayment res.estimatedTotalFare res.paymentUrl,
               quote =
                 Confirm.Quote
@@ -86,8 +90,8 @@ mkConfirmMessage res = do
       DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
       _ -> Confirm.RIDE
 
-mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Confirm.FulfillmentInfo
-mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant =
+mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Bool -> Confirm.FulfillmentInfo
+mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant nightSafetyCheck =
   Confirm.FulfillmentInfo
     { id = fulfillmentId,
       _type = fulfillmentType,
@@ -130,7 +134,8 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
             person =
               mbRiderName <&> \riderName ->
                 Confirm.OrderPerson
-                  { name = riderName
+                  { name = riderName,
+                    tags = Just $ Confirm.TG [mkCustomerInfoTags]
                   }
           },
       vehicle =
@@ -138,6 +143,21 @@ mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountry
           { category = vehicleVariant
           }
     }
+  where
+    mkCustomerInfoTags =
+      Tags.TagGroup
+        { display = False,
+          code = "customer_info",
+          name = "Customer Information",
+          list =
+            [ Tags.Tag
+                { display = (\_ -> Just False) =<< Just nightSafetyCheck,
+                  code = (\_ -> Just "night_safety_check") =<< Just nightSafetyCheck,
+                  name = (\_ -> Just "Night Safety Check") =<< Just nightSafetyCheck,
+                  value = (Just . show) =<< Just nightSafetyCheck
+                }
+            ]
+        }
 
 mkAddress :: DLA.LocationAddress -> Confirm.Address
 mkAddress DLA.LocationAddress {..} =

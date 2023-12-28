@@ -22,6 +22,7 @@ module Tools.Maps
     getPlaceName,
     getRoutes,
     snapToRoad,
+    snapToRoadWithFallback,
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
@@ -29,6 +30,7 @@ module Tools.Maps
 where
 
 import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DOSC
 import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Kernel.External.Maps as Reexport hiding
@@ -39,6 +41,7 @@ import Kernel.External.Maps as Reexport hiding
     getPlaceName,
     getRoutes,
     snapToRoad,
+    snapToRoadWithFallback,
   )
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Types (ServiceFlow)
@@ -56,6 +59,7 @@ getDistance ::
     HasCoordinates b
   ) =>
   Id Merchant ->
+  Id MerchantOperatingCity ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistance = runWithServiceConfig Maps.getDistance (.getDistances)
@@ -66,6 +70,7 @@ getDistanceForCancelRide ::
     HasCoordinates b
   ) =>
   Id Merchant ->
+  Id MerchantOperatingCity ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistanceForCancelRide = runWithServiceConfig Maps.getDistance (.getDistancesForCancelRide)
@@ -76,6 +81,7 @@ getDistances ::
     HasCoordinates b
   ) =>
   Id Merchant ->
+  Id MerchantOperatingCity ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getDistances = runWithServiceConfig Maps.getDistances (.getDistances)
@@ -86,55 +92,90 @@ getEstimatedPickupDistances ::
     HasCoordinates b
   ) =>
   Id Merchant ->
+  Id MerchantOperatingCity ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstimatedPickupDistances)
 
-getRoutes :: ServiceFlow m r => Id Merchant -> GetRoutesReq -> m GetRoutesResp
-getRoutes merchantId req = do
-  transporterConfig <- TConfig.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getRoutes) merchantId req
+getRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
+getRoutes merchantId merchantOpCityId req = do
+  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getRoutes) merchantId merchantOpCityId req
 
-getPickupRoutes :: ServiceFlow m r => Id Merchant -> GetRoutesReq -> m GetRoutesResp
-getPickupRoutes merchantId req = do
-  transporterConfig <- TConfig.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getPickupRoutes) merchantId req
+getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutes merchantId merchantOpCityId req = do
+  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getPickupRoutes) merchantId merchantOpCityId req
 
-getTripRoutes :: ServiceFlow m r => Id Merchant -> GetRoutesReq -> m GetRoutesResp
-getTripRoutes merchantId req = do
-  transporterConfig <- TConfig.findByMerchantId merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getTripRoutes) merchantId req
+getTripRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
+getTripRoutes merchantId merchantOpCityId req = do
+  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getTripRoutes) merchantId merchantOpCityId req
 
 snapToRoad ::
   ( ServiceFlow m r,
-    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters]
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters]
   ) =>
   Id Merchant ->
+  Id MerchantOperatingCity ->
   SnapToRoadReq ->
   m SnapToRoadResp
 snapToRoad = runWithServiceConfig Maps.snapToRoad (.snapToRoad)
 
-autoComplete :: ServiceFlow m r => Id Merchant -> AutoCompleteReq -> m AutoCompleteResp
+autoComplete :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig Maps.autoComplete (.autoComplete)
 
-getPlaceName :: ServiceFlow m r => Id Merchant -> GetPlaceNameReq -> m GetPlaceNameResp
+getPlaceName :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceNameReq -> m GetPlaceNameResp
 getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
 
-getPlaceDetails :: ServiceFlow m r => Id Merchant -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
+getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
+
+snapToRoadWithFallback ::
+  ( ServiceFlow m r,
+    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters]
+  ) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  SnapToRoadReq ->
+  m ([Maps.MapsService], Either String SnapToRoadResp)
+snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithFallback handler
+  where
+    handler = Maps.SnapToRoadHandler {..}
+
+    getConfidenceThreshold = do
+      transporterConfig <- TConfig.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantNotFound merchantOperatingCityId.getId)
+      pure $ transporterConfig.snapToRoadConfidenceThreshold
+
+    getProvidersList = do
+      merchantConfig <- QOMC.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      let snapToRoadProvidersList = merchantConfig.snapToRoadProvidersList
+      when (null snapToRoadProvidersList) $ throwError $ InternalError ("No snap to road service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
+      pure snapToRoadProvidersList
+
+    getProviderConfig provider = do
+      merchantMapsServiceConfig <-
+        QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService provider)
+          >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCityId.getId "Maps" (show provider))
+      case merchantMapsServiceConfig.serviceConfig of
+        DOSC.MapsServiceConfig msc -> pure msc
+        _ -> throwError $ InternalError "Unknown Service Config"
 
 runWithServiceConfig ::
   ServiceFlow m r =>
   (MapsServiceConfig -> req -> m resp) ->
   (MerchantServiceUsageConfig -> MapsService) ->
   Id Merchant ->
+  Id MerchantOperatingCity ->
   req ->
   m resp
-runWithServiceConfig func getCfg orgId req = do
-  orgMapsConfig <- QOMC.findByMerchantId orgId >>= fromMaybeM (MerchantServiceUsageConfigNotFound orgId.getId)
+runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
+  orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgMapsServiceConfig <-
-    QOMSC.findByMerchantIdAndService orgId (DOSC.MapsService $ getCfg orgMapsConfig)
-      >>= fromMaybeM (MerchantServiceConfigNotFound orgId.getId "Maps" (show $ getCfg orgMapsConfig))
+    QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService $ getCfg orgMapsConfig)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show $ getCfg orgMapsConfig))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"

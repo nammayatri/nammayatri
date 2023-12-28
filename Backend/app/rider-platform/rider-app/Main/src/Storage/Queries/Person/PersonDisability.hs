@@ -16,16 +16,17 @@ import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), crea
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Person.PersonDisability as BeamPD hiding (Id)
 
 create :: MonadFlow m => Domain.PersonDisability -> m ()
 create = createWithKV
 
-findByPersonId :: MonadFlow m => Id Person -> m (Maybe Domain.PersonDisability)
+findByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Domain.PersonDisability)
 findByPersonId (Id personId) = findOneWithKV [Se.Is BeamPD.personId $ Se.Eq personId]
 
-updateDisabilityByPersonId :: MonadFlow m => Id Person -> Text -> Text -> Maybe Text -> m ()
+updateDisabilityByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Text -> Text -> Maybe Text -> m ()
 updateDisabilityByPersonId (Id personId) disabilityId tag description = do
   now <- getCurrentTime
   updateWithKV

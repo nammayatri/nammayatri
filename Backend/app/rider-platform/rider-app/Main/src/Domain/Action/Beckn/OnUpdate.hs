@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Domain.Action.Beckn.OnUpdate
   ( onUpdate,
@@ -26,6 +27,8 @@ module Domain.Action.Beckn.OnUpdate
   )
 where
 
+import qualified Data.HashMap as HM
+import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -49,6 +52,7 @@ import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.MerchantConfig as CMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.Queries.Booking as QRB
@@ -74,6 +78,7 @@ data OnUpdateReq
         driverMobileCountryCode :: Maybe Text,
         driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
+        isDriverBirthDay :: Bool,
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
@@ -119,6 +124,12 @@ data OnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         message :: Text
       }
+  | SafetyAlertReq
+      { bppBookingId :: Id SRB.BPPBooking,
+        bppRideId :: Id SRide.BPPRide,
+        reason :: Text,
+        code :: Text
+      }
 
 data ValidatedOnUpdateReq
   = ValidatedRideAssignedReq
@@ -130,6 +141,7 @@ data ValidatedOnUpdateReq
         driverMobileCountryCode :: Maybe Text,
         driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
+        isDriverBirthDay :: Bool,
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
@@ -192,6 +204,14 @@ data ValidatedOnUpdateReq
         booking :: SRB.Booking,
         ride :: SRide.Ride
       }
+  | ValidatedSafetyAlertReq
+      { bppBookingId :: Id SRB.BPPBooking,
+        bppRideId :: Id SRide.BPPRide,
+        booking :: SRB.Booking,
+        ride :: SRide.Ride,
+        code :: Text,
+        reason :: Text
+      }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
   { amount :: HighPrecMoney,
@@ -243,25 +263,32 @@ onUpdate ::
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>
   ValidatedOnUpdateReq ->
   m ()
 onUpdate ValidatedRideAssignedReq {..} = do
-  ride <- buildRide
+  mbMerchant <- CQM.findById booking.merchantId
+  ride <- buildRide mbMerchant
   triggerRideCreatedEvent RideEventData {ride = ride, personId = booking.riderId, merchantId = booking.merchantId}
-  incrementRideCreatedRequestCount booking.merchantId.getId
+  let category = case booking.specialLocationTag of
+        Just _ -> "specialLocation"
+        Nothing -> "normal"
+  incrementRideCreatedRequestCount booking.merchantId.getId booking.merchantOperatingCityId.getId category
   _ <- QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
   _ <- QRide.createRide ride
 
   _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_PICKUP {rideId = ride.id, bookingId = booking.id, trackingUrl = Nothing, otp, vehicleNumber, fromLocation = Maps.getCoordinates booking.fromLocation, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideAssigned booking ride
+  when isDriverBirthDay $ do
+    Notify.notifyDriverBirthDay booking.riderId driverName
   withLongRetry $ CallBPP.callTrack booking ride
   where
-    buildRide :: MonadFlow m => m SRide.Ride
-    buildRide = do
+    buildRide :: MonadFlow m => Maybe DMerchant.Merchant -> m SRide.Ride
+    buildRide mbMerchant = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
@@ -271,11 +298,13 @@ onUpdate ValidatedRideAssignedReq {..} = do
             SRB.RentalDetails _ -> Nothing
             SRB.DriverOfferDetails details -> Just details.toLocation
             SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+      let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       return
         SRide.Ride
           { id = guid,
             bookingId = booking.id,
             merchantId = Just booking.merchantId,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
             status = SRide.NEW,
             trackingUrl = Nothing,
             fare = Nothing,
@@ -289,6 +318,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             rideStartTime = Nothing,
             rideEndTime = Nothing,
             rideRating = Nothing,
+            safetyCheckStatus = Nothing,
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
@@ -307,7 +337,7 @@ onUpdate ValidatedRideStartedReq {..} = do
 onUpdate ValidatedRideCompletedReq {..} = do
   frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) TripEnd
   SMC.updateTotalRidesCounters booking.riderId
-  merchantConfigs <- CMC.findAllByMerchantId person.merchantId
+  merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs
 
   rideEndTime <- getCurrentTime
@@ -364,13 +394,14 @@ onUpdate ValidatedRideCompletedReq {..} = do
 onUpdate ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
   let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
-  merchantConfigs <- CMC.findAllByMerchantId booking.merchantId
+  merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   case cancellationSource of
     SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
     SBCR.ByDriver -> SMC.updateCancelledByDriverFraudCounters booking.riderId merchantConfigs
     _ -> pure ()
   fork "incrementing fraud counters" $ do
-    mFraudDetected <- SMC.anyFraudDetected booking.riderId booking.merchantId merchantConfigs
+    let merchantOperatingCityId = booking.merchantOperatingCityId
+    mFraudDetected <- SMC.anyFraudDetected booking.riderId merchantOperatingCityId merchantConfigs
     whenJust mFraudDetected $ \mc -> SMC.blockCustomer booking.riderId (Just mc.id)
   case mbRide of
     Just ride -> do
@@ -413,6 +444,8 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   QPFS.clearCache searchReq.riderId
   -- notify customer
   Notify.notifyOnEstimatedReallocated booking estimate.id
+onUpdate ValidatedSafetyAlertReq {..} = do
+  Notify.notifySafetyAlert booking code
 
 validateRequest ::
   ( CacheFlow m r,
@@ -484,6 +517,12 @@ validateRequest EstimateRepetitionReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
   return $ ValidatedEstimateRepetitionReq {..}
+validateRequest SafetyAlertReq {..} = do
+  booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  unless (ride.status == SRide.INPROGRESS) $ throwError (BookingInvalidStatus "$ show booking.status")
+  return ValidatedSafetyAlertReq {..}
 
 mkBookingCancellationReason ::
   Id SRB.Booking ->

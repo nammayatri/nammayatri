@@ -8,7 +8,6 @@ import Data.Maybe (fromMaybe, Maybe(..))
 import Helpers.Utils (getPeriod, parseFloat)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import MerchantConfig.Utils (getValueFromConfig)
 import Screens.Types (AnalyticsData, ChipRailData, VehicleP)
 import Services.API (DriverMissedOpp(..), DriverProfileSummaryRes(..), DriverSummary(..))
 import Components.ChooseVehicle (Config) as ChooseVehicle

@@ -29,6 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Servant
+import Storage.Beam.SystemConfigs ()
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -49,6 +50,7 @@ track transporterId (SignatureAuthResult _ subscriber) req =
     dTrackReq <- ACL.buildTrackReq subscriber req
     let context = req.context
     dTrackRes <- DTrack.track transporterId dTrackReq
-    withCallback' withShortRetry dTrackRes.transporter Context.TRACK OnTrack.onTrackAPI context context.bap_uri $
+    internalEndPointHashMap <- asks (.internalEndPointHashMap)
+    withCallback' withShortRetry dTrackRes.transporter Context.TRACK OnTrack.onTrackAPI context context.bap_uri internalEndPointHashMap $
       -- there should be DOnTrack.onTrack, but it is empty anyway
       pure $ ACL.mkOnTrackMessage dTrackRes

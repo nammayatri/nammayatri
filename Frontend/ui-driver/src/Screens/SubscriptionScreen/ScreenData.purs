@@ -18,11 +18,14 @@ module Screens.SubscriptionScreen.ScreenData where
 
 import Common.Types.App (PaymentStatus(..))
 import Data.Maybe as Mb
+import ConfigProvider
 import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)
-import Services.API (AutopayPaymentStage(..), DriverDuesEntity(..), FeeType(..), InvoiceStatus(..), PaymentBreakUp(..))
+import Services.API (AutopayPaymentStage(..), DriverDuesEntity(..), FeeType(..), InvoiceStatus(..), OfferEntity(..), PaymentBreakUp(..))
 
 initData :: SubscriptionScreenState
-initData = {
+initData = 
+  let config = getAppConfig appConfig 
+  in {
     data: {
         driverId : "",
         paymentMode : "",
@@ -45,7 +48,8 @@ initData = {
             autoPayDueAmount : 0.0,
             manualDueAmount : 0.0,
             mandateStatus : "",
-            selectedDue : ""
+            selectedDue : "",
+            dueBoothCharges : Mb.Nothing
         },
         managePlanData : {
             currentPlan : dummyPlanConfig,
@@ -56,7 +60,8 @@ initData = {
             detailsList : [],
             payerUpiId : Mb.Nothing,
             pspLogo : ""
-        }
+        },
+        config
     },
     props : {
         isSelectedLangTamil : false,
@@ -69,7 +74,8 @@ initData = {
         confirmCancel : false,
         joinPlanProps : {
             paymentMode : "",
-            selectedPlanItem : Mb.Nothing
+            selectedPlanItem : Mb.Nothing,
+            isIntroductory : false
         },
         myPlanProps : {
             isDuesExpanded : false,
@@ -92,9 +98,9 @@ initData = {
         redirectToNav : "",
         lastPaymentType : Mb.Nothing,
         offerBannerProps : {
-            showOfferBanner : false,
-            offerBannerValidTill : "",
-            offerBannerDeadline : ""
+          showOfferBanner : config.subscriptionConfig.offerBannerConfig.showDUOfferBanner,
+          offerBannerValidTill : config.subscriptionConfig.offerBannerConfig.offerBannerValidTill,
+          offerBannerDeadline : config.subscriptionConfig.offerBannerConfig.offerBannerDeadline
         },
         isEndRideModal : false
     }
