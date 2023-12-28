@@ -154,6 +154,7 @@ screen initialState =
               FindingQuotes -> do
                 when ((getValueToLocalStore FINDING_QUOTES_POLLING) == "false") $ do
                   void $ pure $ setValueToLocalStore FINDING_QUOTES_POLLING "true"
+                  void $ pure $ setValueToLocalStore AUTO_SELECTING "false"
                   void $ startTimer initialState.props.searchExpire "findingQuotes" "1" push SearchExpireCountDown 
                   void $ pure $ setValueToLocalStore GOT_ONE_QUOTE "FALSE"
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
@@ -228,6 +229,8 @@ screen initialState =
               FindEstimateAndSearch -> do
                 push $ SearchForSelectedLocation
                 pure unit
+              ReAllocated ->
+                void $ launchAff $ flowRunner defaultGlobalState $ reAllocateConfirmation push initialState ReAllocate 3000.0
               _ -> pure unit
             if ((initialState.props.sourceLat /= (-0.1)) && (initialState.props.sourceLong /= (-0.1))) then do
               case initialState.props.sourceLat, initialState.props.sourceLong of
@@ -238,18 +241,6 @@ screen initialState =
                   else do
                     getCurrentCustomerLocation push initialState
                 _, _ -> pure (pure unit)
-                  -- TODO : Handle the case when location in stored in PREVIOUS_CURRENT_LOCATION
-                  -- if (initialState.props.currentStage == HomeScreen) then do
-                  --   pure (pure unit)
-                  -- else do
-                    -- let src = initialState.data.source
-                    -- if src == "" || src == "Current Location" then do
-                    --     if (checkCurrentLocation initialState.props.sourceLat initialState.props.sourceLong initialState.data.previousCurrentLocations.pastCurrentLocations  && initialState.props.storeCurrentLocs )|| checkSavedLocations initialState.props.sourceLat initialState.props.sourceLong initialState.data.savedLocations
-                    --       then push $ UpdateSourceFromPastLocations
-                    --       else
-                    --         pure unit
-                    --     pure (pure unit)
-                    -- else  pure (pure unit)
             else
               pure (pure unit)
         )
@@ -1274,7 +1265,7 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideRating ]) then VISIBLE else GONE
+    , visibility if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated]) then VISIBLE else GONE
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -1298,7 +1289,7 @@ rideRequestFlowView push state =
                 confirmPickUpLocationView push state
               else
                 emptyTextView state
-        , if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes]) then
+        , if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes, ReAllocated]) then
             (loaderView push state)
           else
             emptyTextView state
@@ -1348,7 +1339,7 @@ topLeftIconView state push =
           , background Color.white900
           , gravity CENTER
           , cornerRadius 24.0
-          , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain , RideCompleted, RideRating]) then GONE else VISIBLE
+          , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain , RideCompleted, RideRating, ReAllocated]) then GONE else VISIBLE
           , clickable true
           , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
           , accessibilityHint if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "Back : Button" else "Menu : Button"
@@ -1934,78 +1925,83 @@ confirmPickUpLocationView push state =
 ----------- loaderView -------------
 loaderView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 loaderView push state =
-  linearLayout
-    [ orientation VERTICAL
-    , height WRAP_CONTENT
-    , width MATCH_PARENT
-    , padding (Padding 0 40 0 24)
-    , background Color.white900
-    , cornerRadii $ Corners 24.0 true true false false
-    , stroke ("1," <> Color.grey900)
-    , clickable true
-    , gravity CENTER_HORIZONTAL
-    , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain ]) then VISIBLE else GONE
-    ]
-    [ PrestoAnim.animationSet [ scaleAnim $ autoAnimConfig ]
-        $ lottieLoaderView state push
-    , PrestoAnim.animationSet [ fadeIn true ]
-        $ textView $
-            [ accessibilityHint $ DS.replaceAll (DS.Pattern ".") (DS.Replacement "") ( case state.props.currentStage of
-                    ConfirmingRide -> (getString CONFIRMING_THE_RIDE_FOR_YOU)
-                    FindingEstimate -> (getString GETTING_ESTIMATES_FOR_YOU)
-                    TryAgain -> (getString LET_TRY_THAT_AGAIN)
-                    _ -> (getString GETTING_ESTIMATES_FOR_YOU)
-                )
-            , text
-                ( case state.props.currentStage of
-                    ConfirmingRide -> (getString CONFIRMING_THE_RIDE_FOR_YOU)
-                    FindingEstimate -> (getString GETTING_ESTIMATES_FOR_YOU)
-                    TryAgain -> (getString LET_TRY_THAT_AGAIN)
-                    _ -> (getString GETTING_ESTIMATES_FOR_YOU)
-                )
-            , accessibility ENABLE
-            , color Color.black800
-            , height WRAP_CONTENT
-            , width MATCH_PARENT
-            , lineHeight "20"
-            , gravity CENTER
-            , margin (Margin 0 24 0 36)
-            ] <> FontStyle.subHeading1 TypoGraphy
-    , PrestoAnim.animationSet [ translateYAnimFromTopWithAlpha $ translateFullYAnimWithDurationConfig 300 ]
-        $ separator (V 1) Color.grey900 state.props.currentStage
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, TryAgain ]) then VISIBLE else GONE
-        , orientation VERTICAL
-        , gravity CENTER
-        ]
-        [ PrestoAnim.animationSet [ translateYAnimFromTopWithAlpha $ translateFullYAnimWithDurationConfig 300 ]
-            $ linearLayout 
-                [ width WRAP_CONTENT
-                , height WRAP_CONTENT
-                , orientation HORIZONTAL
-                , gravity CENTER_VERTICAL
-                ][ imageView
-                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_wallet_filled"
-                    , height $ V 20
-                    , width $ V 20
-                    , margin $ MarginTop 3
-                    ]
-                  , textView $
-                    [ text (getString PAY_DRIVER_USING_CASH_OR_UPI)
-                    , accessibilityHint "Pay Driver using Cash/UPI : Text"
-                    , accessibility ENABLE
-                    , lineHeight "18"
-                    , width MATCH_PARENT
-                    , height WRAP_CONTENT
-                    , padding (Padding 5 20 0 16)
-                    , color Color.black800
-                    , gravity CENTER
-                    ] <> FontStyle.body1 TypoGraphy
-                ]
-        ]
-    ]
+  let loaderViewTitle = case state.props.currentStage of
+                          ConfirmingRide -> getString CONFIRMING_THE_RIDE_FOR_YOU
+                          FindingEstimate -> getString GETTING_ESTIMATES_FOR_YOU
+                          TryAgain -> getString LET_TRY_THAT_AGAIN
+                          ReAllocated -> getString LOOKING_FOR_ANOTHER_RIDE
+                          _ -> getString GETTING_ESTIMATES_FOR_YOU
+  in  linearLayout
+      [ orientation VERTICAL
+      , height WRAP_CONTENT
+      , width MATCH_PARENT
+      , padding (Padding 0 40 0 24)
+      , background Color.white900
+      , cornerRadii $ Corners 24.0 true true false false
+      , stroke ("1," <> Color.grey900)
+      , clickable true
+      , gravity CENTER_HORIZONTAL
+      , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, ReAllocated ]) then VISIBLE else GONE
+      ]
+      [ PrestoAnim.animationSet [ scaleAnim $ autoAnimConfig ]
+          $ lottieLoaderView state push
+      , PrestoAnim.animationSet [ fadeIn true ]
+          $ textView $
+              [ accessibilityHint $ DS.replaceAll (DS.Pattern ".") (DS.Replacement "") loaderViewTitle
+              , text loaderViewTitle
+              , accessibility ENABLE
+              , color Color.black800
+              , height WRAP_CONTENT
+              , width MATCH_PARENT
+              , lineHeight "20"
+              , gravity CENTER
+              , margin if state.props.currentStage == ReAllocated then (MarginVertical 24 0) else (MarginVertical 24 36)
+              ] <> FontStyle.subHeading1 TypoGraphy
+          , textView $
+              [ text (getString THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER)
+              , color Color.black650
+              , height WRAP_CONTENT
+              , width MATCH_PARENT
+              , lineHeight "20"
+              , gravity CENTER
+              , margin $ Margin 16 4 16 36
+              , visibility if state.props.currentStage == ReAllocated then VISIBLE else GONE
+              ] <> FontStyle.body2 TypoGraphy
+      , PrestoAnim.animationSet [ translateYAnimFromTopWithAlpha $ translateFullYAnimWithDurationConfig 300 ]
+          $ separator (V 1) Color.grey900 state.props.currentStage
+      , linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , visibility if (any (_ == state.props.currentStage) [ FindingEstimate, TryAgain]) then VISIBLE else GONE
+          , orientation VERTICAL
+          , gravity CENTER
+          ]
+          [ PrestoAnim.animationSet [ translateYAnimFromTopWithAlpha $ translateFullYAnimWithDurationConfig 300 ]
+              $ linearLayout 
+                  [ width WRAP_CONTENT
+                  , height WRAP_CONTENT
+                  , orientation HORIZONTAL
+                  , gravity CENTER_VERTICAL
+                  ][ imageView
+                      [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_wallet_filled"
+                      , height $ V 20
+                      , width $ V 20
+                      , margin $ MarginTop 3
+                      ]
+                    , textView $
+                      [ text (getString PAY_DRIVER_USING_CASH_OR_UPI)
+                      , accessibilityHint "Pay Driver using Cash/UPI : Text"
+                      , accessibility ENABLE
+                      , lineHeight "18"
+                      , width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , padding (Padding 5 20 0 16)
+                      , color Color.black800
+                      , gravity CENTER
+                      ] <> FontStyle.body1 TypoGraphy
+                  ]
+          ]
+      ]
 ------------------------------- pricingTutorialView --------------------------
 pricingTutorialView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 pricingTutorialView push state =
@@ -2703,7 +2699,7 @@ separator lineHeight lineColor currentStage =
     [ height $ lineHeight
     , width MATCH_PARENT
     , background lineColor
-    , visibility if currentStage == FindingQuotes then GONE else VISIBLE
+    , visibility if any (_ == currentStage) [FindingQuotes, ReAllocated] then GONE else VISIBLE
     ]
     []
 
@@ -2785,10 +2781,8 @@ getQuotesPolling pollingId action retryAction count duration push state = do
           Right response -> do
             _ <- pure $ printLog "Quote api Results " response
             let (SelectListRes resp) = response
-            if (resp.bookingId /= Nothing && resp.bookingId /= Just "") then do
+            if (resp.bookingId /= Nothing && resp.bookingId /= Just "") || (not (null ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes))) then do
                doAff do liftEffect $ push $ action response
-            else if not (null ((fromMaybe dummySelectedQuotes resp.selectedQuotes)^._selectedQuotes)) then do
-              doAff do liftEffect $ push $ action response
             else
               pure unit
             void $ delay $ Milliseconds duration
@@ -2812,16 +2806,19 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
       respBooking <- rideBooking (state.props.bookingId)
       case respBooking of
         Right (RideBookingRes respBooking) -> do
-          if (length respBooking.rideList) > 0 then do
-            case (respBooking.rideList !! 0) of
-              Just (RideAPIEntity res) -> do
-                let rideStatus = res.status
-                doAff do liftEffect $ push $ action rideStatus
-                if (res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime)
-                  else pure unit
-              Nothing -> pure unit
-          else
-            pure unit
+          let bookingStatus = respBooking.status
+          case bookingStatus of
+            "REALLOCATED" -> do
+                doAff do liftEffect $ push $ action bookingStatus
+            _             -> do
+                case (respBooking.rideList !! 0) of
+                  Just (RideAPIEntity res) -> do
+                    let rideStatus = res.status
+                    doAff do liftEffect $ push $ action rideStatus
+                    if (res.driverArrivalTime /= Nothing  && (getValueToLocalStore DRIVER_ARRIVAL_ACTION) == "TRIGGER_DRIVER_ARRIVAL" ) then 
+                      doAff do liftEffect $ push $ driverArrivedAction (fromMaybe "" res.driverArrivalTime)
+                    else pure unit
+                  Nothing -> pure unit
         Left err -> pure unit
     if (state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES) && (isLocalStageOn RideAccepted) then do
       _ <- pure $ enableMyLocation true
@@ -3877,3 +3874,9 @@ suggestionViewVisibility state =  ((length state.data.tripSuggestions  > 0 || le
 
 isBannerVisible :: HomeScreenState -> Boolean
 isBannerVisible state = getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner && isHomeScreenView state
+
+reAllocateConfirmation :: forall action. (action -> Effect Unit) -> HomeScreenState -> action -> Number -> Flow GlobalState Unit
+reAllocateConfirmation push state action duration = do
+  when state.props.reAllocation.showPopUp $
+    void $ delay $ Milliseconds duration
+  doAff do liftEffect $ push $ action

@@ -690,3 +690,5 @@ getHI stringKey =
         TRIP_WAS_SAFE_AND_WORRY_FREE -> "हम यह सुनिश्चित करना चाहेंगे कि आपकी यात्रा सुरक्षित और चिंता मुक्त हो।"
         DRIVER_BEHAVED_INAPPROPRIATELY -> "ड्राइवर ने अनुचित व्यवहार किया"
         I_DID_NOT_FEEL_SAFE -> "मैं सुरक्षित महसूस नहीं कर रहा था"
+        LOOKING_FOR_ANOTHER_RIDE -> "एक और सफर ढूंढ़ रहे हैं..."
+        THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "यात्रा को रद्द कर दिया गया था, हम आपके लिए एक और ढूंढ़ रहे हैं"

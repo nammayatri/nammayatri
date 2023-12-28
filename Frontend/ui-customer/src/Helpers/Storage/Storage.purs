@@ -89,6 +89,7 @@ data KeyStore
   | LAST_KNOWN_LAT
   | LAST_KNOWN_LON
   | SOURCE_GEOHASHES
+  | REALLOCATE_PRODUCT_ENABLED
 
 derive instance genericKeyStore :: Generic KeyStore _
 

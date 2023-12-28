@@ -490,6 +490,7 @@ getScreenFromStage stage = case stage of
   FindingEstimate -> "finding_driver_loader"
   ConfirmingRide -> "confirm_ride_loader"
   RideAccepted -> "trip_accepted_screen"
+  ReAllocated -> "trip_accepted_screen"
   RideStarted -> "trip_started_screen"
   RideCompleted -> "trip_completed_screen"
   PricingTutorial -> "estimate_screen"

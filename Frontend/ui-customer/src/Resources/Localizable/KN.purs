@@ -691,3 +691,5 @@ getKN stringKey =
         TRIP_WAS_SAFE_AND_WORRY_FREE -> "ನಿಮ್ಮ ಪ್ರವಾಸವು ಸುರಕ್ಷಿತವಾಗಿದೆ ಮತ್ತು ಚಿಂತೆಯಿಲ್ಲ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಲು ನಾವು ಬಯಸುತ್ತೇವೆ."
         DRIVER_BEHAVED_INAPPROPRIATELY -> "ಚಾಲಕ ಅನುಚಿತವಾಗಿ ವರ್ತಿಸಿದ್ದಾನೆ"
         I_DID_NOT_FEEL_SAFE -> "ನನಗೆ ಸುರಕ್ಷಿತ ಅನಿಸಲಿಲ್ಲ"
+        LOOKING_FOR_ANOTHER_RIDE -> "ಇನ್ನೊಂದು ಸವಾರಿಗಾಗಿ ಹುಡುಕುತ್ತಿದ್ದೇವೆ..."
+        THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "ಸವಾರಿ ರದ್ದಾಗಿದೆ, ನಾವು ನಿಮಗೆ ಇನ್ನೊಂದನ್ನು ಹುಡುಕುತ್ತಿದ್ದೇವೆ"

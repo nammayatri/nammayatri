@@ -478,7 +478,8 @@ newtype SearchReq = SearchReq {
 
 newtype OneWaySearchReq = OneWaySearchReq {
   origin :: SearchReqLocation,
-  destination :: SearchReqLocation
+  destination :: SearchReqLocation,
+  isReallocationEnabled :: Maybe Boolean
 }
 
 newtype SearchReqLocation = SearchReqLocation {

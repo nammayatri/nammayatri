@@ -90,7 +90,6 @@ import Screens.AddNewAddressScreen.Controller (validTag, getSavedTagsFromHome)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZoneType)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
-import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip)
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..))
@@ -678,6 +677,7 @@ instance loggableAction :: Loggable Action where
     StopRepeatRideTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_repeat_ride_timer"
     OpenLiveDashboard -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_live_dashboard"
     UpdatePeekHeight -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_peek_height"
+    ReAllocate -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "reallocate_ride"
 
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
@@ -863,7 +863,8 @@ data Action = NoAction
             | RepeatRideCountDown Int String String
             | StopRepeatRideTimer 
             | OpenLiveDashboard
-            | UpdatePeekHeight
+            | UpdatePeekHeight 
+            | ReAllocate
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -876,6 +877,12 @@ eval (Scroll item) state = do
                    else item > state.props.currSlideIndex
       updatedState = state { props { isHomescreenExpanded = sheetState, currSlideIndex = item } }
   continue updatedState
+
+eval ReAllocate state =
+  if isLocalStageOn ReAllocated then do
+    void $ pure $ setValueToLocalStore LOCAL_STAGE ( show FindingQuotes)
+    exit $ Retry state{ props{ currentStage = FindingQuotes } }
+  else continue state
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -927,7 +934,9 @@ eval (IsMockLocation isMock) state = do
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
-  if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
+  if stage == "REALLOCATED" then
+    exit $ NotificationHandler "REALLOCATE_PRODUCT" state
+  else if (stage == "INPROGRESS") && (not $ isLocalStageOn RideStarted) then
     exit $ NotificationHandler "TRIP_STARTED" state
   else if (stage == "COMPLETED") && (not $ isLocalStageOn HomeScreen) then
     exit $ NotificationHandler "TRIP_FINISHED" state
@@ -2098,9 +2107,9 @@ eval (GetQuotesList (SelectListRes resp)) state = do
                 _ <- pure $ setValueToLocalStore AUTO_SELECTING id
                 continue nextState
               else do
-                let value = null newState.data.quoteListModelState
-                _ <- pure $ setValueToLocalStore AUTO_SELECTING (if value then "false" else getValueToLocalStore AUTO_SELECTING)
-                continue newState{props{selectedQuote = if value then Nothing else newState.props.selectedQuote}}
+                let quoteListEmpty = null newState.data.quoteListModelState
+                _ <- pure $ setValueToLocalStore AUTO_SELECTING (if quoteListEmpty then "false" else getValueToLocalStore AUTO_SELECTING)
+                continue newState{props{selectedQuote = if quoteListEmpty then Nothing else newState.props.selectedQuote}}
 
 eval (ContinueWithoutOffers (SelectListRes resp)) state = do
   case resp.bookingId of

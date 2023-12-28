@@ -52,7 +52,6 @@ import Types.EndPoint as EP
 import Foreign.Object (empty)
 import Data.String as DS
 import ConfigProvider as CP
-import Debug(spy)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -331,24 +330,26 @@ rideSearchBT payload = do
 
 
 makeRideSearchReq :: Number -> Number -> Number -> Number -> Address -> Address -> SearchReq
-makeRideSearchReq slat slong dlat dlong srcAdd desAdd=
-     SearchReq { "contents" : OneWaySearchReq{
-                                               "destination" : SearchReqLocation {
-                                                        "gps" : LatLong {
-                                                            "lat" : dlat ,
-                                                            "lon" : dlong
-                                                            },
-                                                        "address" : (LocationAddress desAdd)
-                                               },
-                                               "origin" : SearchReqLocation {
-                                                "gps" : LatLong {
-                                                            "lat" : slat ,
-                                                            "lon" : slong
-                                                },"address" : (LocationAddress srcAdd)
-                                               }
-                                              },
-                 "fareProductType" : "ONE_WAY"
-                }
+makeRideSearchReq slat slong dlat dlong srcAdd desAdd =
+    let appConfig = CP.getAppConfig CP.appConfig
+    in  SearchReq { "contents" : OneWaySearchReq{
+                                                  "destination" : SearchReqLocation {
+                                                           "gps" : LatLong {
+                                                               "lat" : dlat ,
+                                                               "lon" : dlong
+                                                               },
+                                                           "address" : (LocationAddress desAdd)
+                                                  },
+                                                  "origin" : SearchReqLocation {
+                                                   "gps" : LatLong {
+                                                               "lat" : slat ,
+                                                               "lon" : slong
+                                                   },"address" : (LocationAddress srcAdd)
+                                                  },
+                                                  "isReallocationEnabled" : Just appConfig.feature.enableReAllocation
+                                                 },
+                    "fareProductType" : "ONE_WAY"
+                   }
 
 
 ------------------------------------------------------------------------ GetQuotes Function -------------------------------------------------------------------------------------------

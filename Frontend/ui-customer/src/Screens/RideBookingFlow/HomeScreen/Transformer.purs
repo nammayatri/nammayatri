@@ -102,21 +102,22 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
   case (quoteEntity.quoteDetails)^._contents of
     (ONE_WAY contents) -> QLI.config
     (SPECIAL_ZONE contents) -> QLI.config
-    (DRIVER_OFFER contents) -> let (DriverOfferAPIEntity quoteDetails) = contents
-        in {
-      seconds : (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
-    , id : quoteEntity.id
-    , timer : show $ (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
-    , timeLeft : if (quoteDetails.durationToPickup<60) then (quoteDetails.durationToPickup/60) else (quoteDetails.durationToPickup/60)
-    , driverRating : fromMaybe 0.0 quoteDetails.rating
-    , profile : ""
-    , price :  show quoteEntity.estimatedTotalFare
-    , vehicleType : "auto"
-    , driverName : quoteDetails.driverName
-    , selectedQuote : Nothing
-    , appConfig : getAppConfig appConfig
-    , city : city
-    }
+    (DRIVER_OFFER contents) -> 
+      let (DriverOfferAPIEntity quoteDetails) = contents
+          expiryTime = (getExpiryTime quoteDetails.validTill isForLostAndFound) -4
+      in {  seconds : expiryTime
+          , id : quoteEntity.id
+          , timer : show expiryTime
+          , timeLeft : quoteDetails.durationToPickup/60
+          , driverRating : fromMaybe 0.0 quoteDetails.rating
+          , profile : ""
+          , price :  show quoteEntity.estimatedTotalFare
+          , vehicleType : "auto"
+          , driverName : quoteDetails.driverName
+          , selectedQuote : Nothing
+          , appConfig : getAppConfig appConfig
+          , city : city
+        }
 
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =

@@ -690,3 +690,5 @@ getEN stringKey =
         TRIP_WAS_SAFE_AND_WORRY_FREE -> "We would like to ensure that your trip was safe and worry free."
         DRIVER_BEHAVED_INAPPROPRIATELY -> "The driver behaved inappropriately"
         I_DID_NOT_FEEL_SAFE -> "I did not feel safe"
+        LOOKING_FOR_ANOTHER_RIDE -> "Looking for another ride..."
+        THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "The ride had to be cancelled, we’re finding you another"
