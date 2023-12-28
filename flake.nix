@@ -25,10 +25,7 @@
     passetto.inputs.nixpkgs.follows = "common/nixpkgs";
     passetto.inputs.flake-parts.follows = "common/flake-parts";
     passetto.inputs.haskell-flake.follows = "common/haskell-flake";
-    # TODO: update the commit in upstream and follow it
-    # passetto.inputs.process-compose-flake.follows = "common/process-compose-flake";
-    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
-    common.inputs.process-compose-flake.follows = "process-compose-flake";
+    passetto.inputs.process-compose-flake.follows = "common/process-compose-flake";
     passetto.inputs.services-flake.follows = "services-flake";
     # Question: move this to common?
     services-flake.url = "github:juspay/services-flake";
