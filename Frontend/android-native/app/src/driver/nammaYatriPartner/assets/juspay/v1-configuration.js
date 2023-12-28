@@ -117,8 +117,8 @@ window.getMerchantConfig = function () {
           "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
           "offerBannerConfig" : {
             "showDUOfferBanner" : true,
-            "offerBannerValidTill" : "2024-01-01T00:00:00",
-            "offerBannerDeadline" : "December 31-*$*-ಡಿಸೆಂಬರ್ 31-*$*-31 दिसंबर-*$*-டிசம்பர் 31",
+            "offerBannerValidTill" : "2024-01-16T00:00:00",
+            "offerBannerDeadline" : "January 15-*$*-ಜನವರಿ 15-*$*-15 जनवरी-*$*-ஜனவரி 15",
             "offerBannerPlans" : ["a35ffc7c-de0d-4dcc-83a8-e36a5a29cc1d"],
           },
           "lowDuesLimit" : 25.0,
