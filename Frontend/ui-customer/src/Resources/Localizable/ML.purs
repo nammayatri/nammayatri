@@ -690,3 +690,5 @@ getML stringKey =
         TRIP_WAS_SAFE_AND_WORRY_FREE -> "നിങ്ങളുടെ യാത്ര സുരക്ഷിതവും വിഷമരഹിതവുമാണെന്ന് ഉറപ്പാക്കാൻ ഞങ്ങൾ ആഗ്രഹിക്കുന്നു."
         DRIVER_BEHAVED_INAPPROPRIATELY -> "ഡ്രൈവർ അപമര്യാദയായി പെരുമാറി"
         I_DID_NOT_FEEL_SAFE -> "എനിക്ക് സുരക്ഷിതത്വം തോന്നിയില്ല"
+        LOOKING_FOR_ANOTHER_RIDE -> "മറ്റൊരു യാത്രയില്‍ തിരഞ്ഞെടുക്കുന്നു..."
+        THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "യാത്ര റൈഡ് റദ്ദാക്കപ്പെട്ടു, നാം നിനക്ക് മറ്റൊരു യാത്ര തിരിച്ചെത്തുന്നു"

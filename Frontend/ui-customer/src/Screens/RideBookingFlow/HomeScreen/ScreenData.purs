@@ -271,6 +271,9 @@ initData = {
     , repeatRideTimer : ""
     , repeatRideTimerId : ""
     , showShimmer : false
+    , reAllocation : {
+        showPopUp : false
+      }
     }
 }
 

@@ -222,7 +222,8 @@ type Features = {
   enableEmergencyContacts :: Boolean,
   enableReferral :: Boolean,
   enableSupport :: Boolean,
-  enableShareApp:: Boolean
+  enableShareApp:: Boolean,
+  enableReAllocation :: Boolean
   }
 
 type RideCompletedCardConfig = {

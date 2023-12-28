@@ -690,3 +690,5 @@ getBN stringKey =
         TRIP_WAS_SAFE_AND_WORRY_FREE -> "আমরা নিশ্চিত করতে চাই যে আপনার ভ্রমণ নিরাপদ এবং দুশ্চিন্তামুক্ত।"
         DRIVER_BEHAVED_INAPPROPRIATELY -> "চালক অশালীন আচরণ করেন"
         I_DID_NOT_FEEL_SAFE -> "আমি নিরাপদ বোধ করিনি"
+        LOOKING_FOR_ANOTHER_RIDE -> "আরেকটি চলার জন্য খোঁজ করছি..."
+        THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "চলন্ত ছিল, তা বাতিল করতে হয়েছে, আমরা তার জন্য আরও খোঁজছি"

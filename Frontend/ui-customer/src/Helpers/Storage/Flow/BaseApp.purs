@@ -28,6 +28,8 @@ import Common.Types.App (LazyCheck(..))
 import Services.Config (getBaseUrl)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Types.App (FlowBT)
+import ConfigProvider (getAppConfig)
+import Constants as Constants
 
 baseAppStorage :: FlowBT String Unit
 baseAppStorage = do
@@ -35,6 +37,7 @@ baseAppStorage = do
         config = getVersionByKey "configuration"
         sessionId = getValueToLocalStore SESSION_ID
         countryCode = getValueToLocalStore COUNTRY_CODE
+        appConfig = getAppConfig Constants.appConfig
     void $ pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     void $ pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
     versionCode <- lift $ lift $ liftFlow $ getVersionCode
@@ -55,6 +58,7 @@ baseAppStorage = do
     setValueToLocalStore ACCURACY_THRESHOLD "23.0"
     setValueToLocalStore BUNDLE_TIME_OUT "1000"
     setValueToLocalStore MESSAGES_DELAY "0"
+    setValueToLocalStore REALLOCATE_PRODUCT_ENABLED (show appConfig.feature.enableReAllocation)
     when (sessionId `elem` ["__failed", "(null)"]) do
         setValueToLocalStore SESSION_ID $ generateSessionId unit
     when (countryCode `elem` ["__failed", "(null)"]) do

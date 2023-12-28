@@ -520,6 +520,7 @@ data Stage = HomeScreen
            | FindingEstimate
            | ConfirmingRide
            | RideAccepted
+           | ReAllocated
            | RideStarted
            | RideCompleted
            | PricingTutorial
@@ -747,6 +748,7 @@ type HomeScreenStateProps =
   , repeatRideTimerId :: String
   , showShimmer :: Boolean
   , nightSafetyFlow :: Boolean 
+  , reAllocation :: ReAllocationProp
   }
 
 type SearchLocationModelProps = {
@@ -822,6 +824,7 @@ data TipViewStage = DEFAULT | TIP_AMOUNT_SELECTED | TIP_ADDED_TO_SEARCH | RETRY_
 
 derive instance genericTipViewStage :: Generic TipViewStage _
 instance showTipViewStage :: Show TipViewStage where show = genericShow
+instance eqTipViewStage :: Eq TipViewStage where eq = genericEq
 instance encodeTipViewStage :: Encode TipViewStage where encode = defaultEncode
 instance decodeTipViewStage :: Decode TipViewStage where decode = defaultDecode
 
@@ -1662,3 +1665,6 @@ type TicketingScreenData = {
 type TicketingScreenProps = {
   hideMyTickets :: Boolean
 } 
+type ReAllocationProp =
+  { showPopUp :: Boolean
+  }
