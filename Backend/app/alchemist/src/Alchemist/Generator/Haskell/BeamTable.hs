@@ -99,7 +99,7 @@ dataFields = do
             newLine
             replicateM 4 space
         )
-        $ map fieldDefToBeam (fields def)
+        $ map fieldDefToBeam $ filter (isNothing . (.relation)) (fields def)
 
 derivingInstances :: StorageM ()
 derivingInstances = onNewLine $

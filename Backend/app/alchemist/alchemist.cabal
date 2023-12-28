@@ -100,6 +100,7 @@ library
     , parsec
     , persistent
     , persistent-postgresql
+    , pretty-show
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
@@ -179,6 +180,7 @@ executable alchemist-generator-exe
     , parsec
     , persistent
     , persistent-postgresql
+    , pretty-show
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
@@ -278,6 +280,7 @@ test-suite alchemist-tests
     , parsec
     , persistent
     , persistent-postgresql
+    , pretty-show
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield

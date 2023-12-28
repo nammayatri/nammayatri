@@ -109,7 +109,7 @@ removeDefaultImports defaultImports moduleName = filter ((/=) moduleName) . filt
 fieldDefToHaskell :: FieldDef -> StorageM ()
 fieldDefToHaskell fieldDef =
   tellM $
-    fieldName fieldDef ++ " :: " ++ haskellType fieldDef
+    fieldDef.fieldName ++ " :: " ++ fieldDef.haskellType
 
 createDefaultImports :: TableDef -> [String]
 createDefaultImports tableDef =

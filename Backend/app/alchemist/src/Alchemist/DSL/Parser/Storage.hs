@@ -3,7 +3,7 @@
 module Alchemist.DSL.Parser.Storage (storageParser) where
 
 import Alchemist.DSL.Syntax.Storage
-import Alchemist.Utils (figureOutImports, isMaybeType, makeTypeQualified, _String)
+import Alchemist.Utils (figureOutImports, isMaybeType, lowercaseFirstLetter, makeTypeQualified, regexExec, _String)
 import Control.Lens.Combinators
 import Control.Lens.Operators
 import Data.Aeson
@@ -30,7 +30,66 @@ storageParser filepath = do
     Right yml -> do
       let modelList = toModelList yml
           dList = fst <$> modelList
-      pure $ map (parseTableDef dList yml) $ filter ((/= "imports") . fst) modelList
+          tableDef = map (parseTableDef dList yml) $ filter ((/= "imports") . fst) modelList
+      pure $ map (modifyRelationalTableDef tableDef) tableDef
+
+modifyRelationalTableDef :: [TableDef] -> TableDef -> TableDef
+modifyRelationalTableDef allTableDefs tableDef@TableDef {..} = do
+  let mbForeignTable = find (\tDef -> tableDef.tableNameHaskell `elem` tDef.relationalTableNamesHaskell) allTableDefs
+  case mbForeignTable <&> (.tableNameHaskell) of
+    Just foreignTableNameHaskell -> do
+      let fieldName = lowercaseFirstLetter foreignTableNameHaskell ++ "Id"
+          haskellType = "Kernel.Types.Id.Id ()"
+          foreignField =
+            FieldDef
+              { fieldName = fieldName,
+                haskellType = haskellType,
+                beamFields =
+                  [ BeamField
+                      { bFieldName = lowercaseFirstLetter foreignTableNameHaskell ++ "Id",
+                        hFieldType = haskellType,
+                        bFieldType = "Kernel.Prelude.Text",
+                        bConstraints = [NotNull],
+                        bSqlType = "character varying(36)",
+                        bDefaultVal = Nothing,
+                        bfieldExtractor = [],
+                        bToTType = Nothing,
+                        bIsEncrypted = False
+                      }
+                  ],
+                fromTType = Nothing,
+                isEncrypted = False,
+                relation = Nothing,
+                relationalTableNameHaskell = Nothing
+              }
+          query =
+            [ QueryDef
+                { queryName = "findAllBy" ++ foreignTableNameHaskell ++ "Id",
+                  kvFunction = "findAllWithKV",
+                  params = [],
+                  whereClause =
+                    Leaf
+                      ( fieldName,
+                        haskellType,
+                        Just Eq
+                      ),
+                  takeFullObjectAsInput = False
+                },
+              QueryDef
+                { queryName = "findBy" ++ foreignTableNameHaskell ++ "Id",
+                  kvFunction = "findOneWithKV",
+                  params = [],
+                  whereClause =
+                    Leaf
+                      ( fieldName,
+                        haskellType,
+                        Just Eq
+                      ),
+                  takeFullObjectAsInput = False
+                }
+            ]
+      TableDef {fields = fields <> [foreignField], queries = queries <> query, ..}
+    Nothing -> TableDef {..}
 
 parseTableDef :: [String] -> Object -> (String, Object) -> TableDef
 parseTableDef dList importObj (parseDomainName, obj) =
@@ -43,7 +102,8 @@ parseTableDef dList importObj (parseDomainName, obj) =
       parsedImports = parseImports parsedFields (fromMaybe [] parsedTypes)
       parsedQueries = parseQueries (Just parseDomainName) excludedList dList parsedFields importObj obj
       (primaryKey, secondaryKey) = extractKeys parsedFields
-   in TableDef parseDomainName (quietSnake parseDomainName) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes containsEncryptedField
+      relationalTableNamesHaskell = catMaybes $ map (.relationalTableNameHaskell) parsedFields
+   in TableDef parseDomainName (quietSnake parseDomainName) parsedFields parsedImports parsedQueries primaryKey secondaryKey parsedTypes containsEncryptedField relationalTableNamesHaskell
 
 parseImports :: [FieldDef] -> [TypeObject] -> [String]
 parseImports fields typObj =
@@ -210,9 +270,11 @@ parseFields moduleName excludedList dataList enumList definedTypes impObj obj =
             parseFromTType = obj ^? (ix "fromTType" . _Object) >>= preview (ix fieldKey . _String)
             defaultImportModule = "Domain.Types."
             getbeamFields = makeBeamFields (fromMaybe (error "Module name not found") moduleName) excludedList dataList enumList fieldName haskellType definedTypes impObj obj
+            typeQualifiedHaskellType = makeTypeQualified moduleName excludedList (Just dataList) defaultImportModule impObj haskellType
+            fieldRelationAndModule = getFieldRelationAndHaskellType typeQualifiedHaskellType
          in FieldDef
               { fieldName = fieldName,
-                haskellType = makeTypeQualified moduleName excludedList (Just dataList) defaultImportModule impObj haskellType,
+                haskellType = typeQualifiedHaskellType,
                 --beamType = makeTypeQualified moduleName excludedList (Just dataList) defaultImportModule impObj beamType,
                 beamFields = getbeamFields,
                 --sqlType = sqlType,
@@ -220,7 +282,9 @@ parseFields moduleName excludedList dataList enumList definedTypes impObj obj =
                 --defaultVal = defaultValue,
                 --toTType = parseToTType,
                 fromTType = maybe (if length getbeamFields > 1 then error ("Complex type (" <> T.pack fieldName <> ") should have fromTType function") else Nothing) pure parseFromTType,
-                isEncrypted = "EncryptedHashedField" `T.isInfixOf` (T.pack haskellType)
+                isEncrypted = "EncryptedHashedField" `T.isInfixOf` (T.pack haskellType),
+                relation = fst <$> fieldRelationAndModule,
+                relationalTableNameHaskell = snd <$> fieldRelationAndModule
               }
    in case map getFieldDef <$> fields of
         Just f -> f
@@ -299,6 +363,17 @@ getProperConstraint txt = case L.trim txt of
   "NotNull" -> NotNull
   "AUTOINCREMENT" -> AUTOINCREMENT
   _ -> error "No a proper contraint type"
+
+getFieldRelationAndHaskellType :: String -> Maybe (FieldRelation, String)
+getFieldRelationAndHaskellType str = do
+  let patternOneToOne' :: String = "^Domain\\.Types\\..*\\.(.*)$"
+      patternMaybeOneToOne' :: String = "^Kernel.Prelude.Maybe Domain\\.Types\\..*\\.(.*)$"
+      patternOneToMany' :: String = "^\\[Domain\\.Types\\..*\\.(.*)\\]$"
+  case (regexExec str patternOneToOne', regexExec str patternMaybeOneToOne', regexExec str patternOneToMany') of
+    (Just haskellType, Nothing, Nothing) -> Just (OneToOne, haskellType)
+    (Nothing, Just haskellType, Nothing) -> Just (MaybeOneToOne, haskellType)
+    (Nothing, Nothing, Just haskellType) -> Just (OneToMany, haskellType)
+    (_, _, _) -> Nothing
 
 mkList :: Value -> [(String, String)]
 mkList (Object obj) =
