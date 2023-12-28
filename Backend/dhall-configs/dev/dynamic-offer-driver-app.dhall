@@ -38,11 +38,11 @@ let esqLocationDBRepCfg =
 
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
-      , host = "xxxxx"
-      , port = 1234
+      , host = "localhost"
+      , port = 8123
       , password = sec.clickHousePassword
-      , database = "xxxx"
-      , tls = True
+      , database = "test_db"
+      , tls = False
       }
 
 let driverClickhouseCfg =

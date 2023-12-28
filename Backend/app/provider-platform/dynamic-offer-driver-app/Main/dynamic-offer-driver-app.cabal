@@ -450,6 +450,7 @@ library
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.RegistryMapFallback
+      Storage.Clickhouse.DriverEdaKafka
       Storage.Queries.BapMetadata
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation

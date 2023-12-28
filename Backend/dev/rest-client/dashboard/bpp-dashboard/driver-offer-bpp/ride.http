@@ -134,3 +134,12 @@ token: {{customer_service}}
     }
   ]
 }
+
+###
+
+# @name rideRoute
+
+@rideId = 81c75913-b5a6-4ec3-acae-1172db10e068
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/ride/{{rideId}}/route
+token: {{customer_service}}
