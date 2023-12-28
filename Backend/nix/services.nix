@@ -10,7 +10,7 @@
             text = ''
               masterDbPath=$(readlink -f data/${masterDb})
               replicaDbPath=$(readlink -f data/${replicaDb})
-              pg_basebackup -h "$masterDbPath" -U repl_user --checkpoint=fast -D "$replicaDbPath"  -R --slot=some_name  -C --port=${port} 
+              pg_basebackup -h "$masterDbPath" -U repl_user --checkpoint=fast -D "$replicaDbPath"  -R --slot=some_name  -C --port=${builtins.toString port} 
             '';
           };
         in
