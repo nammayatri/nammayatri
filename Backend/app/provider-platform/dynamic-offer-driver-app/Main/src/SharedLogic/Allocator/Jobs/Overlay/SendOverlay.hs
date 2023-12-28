@@ -157,8 +157,7 @@ getBatchedDriverIds merchantId jobId condition freeTrialDays timeDiffFromUtc dri
           startTime = addUTCTime (-1 * driverPaymentCycleDuration) potentialStartToday
           endTime = addUTCTime 120 potentialStartToday
       driverFees <- QDF.findWindowsWithFeeTypeAndLimit merchantId startTime endTime (getFeeType paymentMode) overlayBatchSize
-      let filteredDriverFees = filter (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst) > 0) driverFees
-      let driverIds = filteredDriverFees <&> (.driverId)
+      let driverIds = driverFees <&> (.driverId)
       void $ QDF.updateDriverFeeOverlayScheduled driverIds True startTime endTime
       return driverIds
     _ -> do
