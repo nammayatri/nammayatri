@@ -63,7 +63,7 @@ getAllFeeFromDriverFee Common.DriverFee {..} = do
       status' <- readMaybe status_ & fromMaybeM (InvalidRequest "Couldn't find fee's status")
       numRides' <- readMaybe numRides_ & fromMaybeM (InvalidRequest "Couldn't find fee's ride count")
       numDrivers' <- readMaybe numDrivers_ & fromMaybeM (InvalidRequest "Couldn't find fee's driver count")
-      pure $ Common.AllFees status' numRides' numDrivers' totalAmount_
+      pure $ Common.AllFees status' numRides' numDrivers' (round totalAmount_)
     _ -> throwError $ InvalidRequest "Couldn't find driver fee"
 
 getCollectionHistory :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Flow Common.CollectionList
@@ -102,7 +102,7 @@ getCollectionListElem Common.DriverFee {..} = do
       numRides' <- readMaybe numRides_ & fromMaybeM (InvalidRequest "Couldn't find fee's ride count")
       numDrivers' <- readMaybe numDrivers_ & fromMaybeM (InvalidRequest "Couldn't find fee's driver count")
       date' <- readMaybe date_ & fromMaybeM (InvalidRequest "Couldn't find fee's date")
-      pure $ Common.CollectionListElem totalAmount_ numRides' numDrivers' date' hour_
+      pure $ Common.CollectionListElem (round totalAmount_) numRides' numDrivers' date' hour_
     _ -> throwError $ InvalidRequest "Couldn't find driver fee"
 
 fetchDatetime :: Text -> String
