@@ -1076,7 +1076,7 @@ getBN stringKey =
         GO_ONLINE_PROMPT_SUBSCRIBE -> ""
         GO_ONLINE_PROMPT_PAYMENT_PENDING -> ""
         SCHEDULED -> ""
-        ONE_TIME_SETTLEMENT -> ""
+        ONE_TIME_SETTLEMENT -> "এককালীন পেমেন্ট করুন"
         RETRY_AUTOPAY -> ""
         RETRY_STR -> ""
         ONGOING_PAYMENT_EXECUTION -> ""
