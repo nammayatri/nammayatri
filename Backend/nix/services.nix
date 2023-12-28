@@ -4,13 +4,15 @@
     perSystem = { inputs', self', pkgs, lib, ... }: {
       process-compose."services" = { config, ... }:
         let
-          startScript = masterDb: replicaDb: port: pkgs.writeShellApplication {
-            name = "start-pgbasebackup";
-            runtimeInputs = with pkgs; [ config.services.postgres."${masterDb}".package coreutils ];
+          # Run `pg_basebackup` to create a replica of the database with the name `master-db-name`
+          # See here about `pg_basebackup`: https://www.postgresql.org/docs/current/app-pgbasebackup.html
+          pg-backup-script = master-db-name: replica-db-name: port: pkgs.writeShellApplication {
+            name = "start-pg-basebackup";
+            runtimeInputs = with pkgs; [ config.services.postgres."${master-db-name}".package coreutils ];
             text = ''
-              masterDbPath=$(readlink -f data/${masterDb})
-              replicaDbPath=$(readlink -f data/${replicaDb})
-              pg_basebackup -h "$masterDbPath" -U repl_user --checkpoint=fast -D "$replicaDbPath"  -R --slot=some_name  -C --port=${builtins.toString port} 
+              MASTER_DB_PATH=$(readlink -f data/${master-db-name})
+              REPLICA_DB_PATH=$(readlink -f data/${replica-db-name})
+              pg_basebackup -h "$MASTER_DB_PATH" -U repl_user --checkpoint=fast -D "$REPLICA_DB_PATH"  -R --slot=some_name  -C --port=${builtins.toString port}
             '';
           };
         in
@@ -55,13 +57,13 @@
             '';
           };
 
-          settings.processes.pgBaseBackupForPrimaryDb = {
-            command = startScript "db-primary" "db-replica" 5432;
+          settings.processes.pg-basebackup-primary-db = {
+            command = pg-backup-script "db-primary" "db-replica" 5432;
             depends_on."db-primary".condition = "process_healthy";
           };
 
           services.postgres.db-replica = {
-            depends_on."pgBaseBackupForPrimaryDb".condition = "process_completed_successfully";
+            depends_on."pg-base-backup-primary-db".condition = "process_completed_successfully";
             enable = true;
             port = 5435;
           };
@@ -86,13 +88,13 @@
             '';
           };
 
-          settings.processes.pgBaseBackupForLocationDb = {
-            command = "${startScript "location-db" "location-db-replica" "5454"}/bin/start-pgbasebackup";
+          settings.processes.pg-basebackup-location-db = {
+            command = pg-backup-script "location-db" "location-db-replica" 5454;
             depends_on."location-db".condition = "process_healthy";
           };
 
           services.postgres.location-db-replica = {
-            depends_on."pgBaseBackupForLocationDb".condition = "process_completed_successfully";
+            depends_on."pg-basebackup-location-db".condition = "process_completed_successfully";
             enable = true;
             port = 5456;
           };
