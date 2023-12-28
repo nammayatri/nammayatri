@@ -42,7 +42,7 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
         boothCharges specialZoneRideCount totalSpecialZoneCharges = case specialZoneRideCount,totalSpecialZoneCharges of
                       Just count, Just charges | count /= 0 && charges /= 0.0 -> Just $ show count <> " " <> getString (if count > 1 then RIDES else RIDE) <> " x ₹" <> getFixedTwoDecimals (charges / INT.toNumber count) <> " " <> getString GST_INCLUDE
                       _, _ -> Nothing
-        fareBreakup fee = getFeeBreakup fee.maxRidesEligibleForCharge (fee.planAmount - (fromMaybe 0.0 fee.totalSpecialZoneCharges)) fee.totalRides
+        fareBreakup fee = getFeeBreakup fee.maxRidesEligibleForCharge (max 0.0 (fee.planAmount - (fromMaybe 0.0 fee.totalSpecialZoneCharges))) fee.totalRides
         autoPaySpecificKeys = do
           let offerAndPlanDetails = fromMaybe "" driverFee'.offerAndPlanDetails
               planOfferData = decodeOfferPlan $ offerAndPlanDetails
@@ -119,11 +119,12 @@ buildTransactionDetails (API.HistoryEntryDetailsEntityV2Resp resp) gradientConfi
                             let offerAndPlanDetails = fromMaybe "" driverFee.offerAndPlanDetails
                                 planOfferData = decodeOfferPlan offerAndPlanDetails
                                 autoPayStageData = getAutoPayStageData driverFee.autoPayStage
+                                noOfRides = driverFee.totalRides + fromMaybe 0 driverFee.specialZoneRideCount
                             {
                                 date : convertUTCtoISC driverFee.rideTakenOn "Do MMM YYYY",
                                 planType : planOfferData.plan,
                                 offerApplied : (getPromoConfig [OfferEntity{title : Just planOfferData.offer, description : Nothing, tnc : Nothing, offerId : "", gradient : Nothing}] gradientConfig) !! 0,
-                                noOfRides : driverFee.totalRides + fromMaybe 0 driverFee.specialZoneRideCount,
+                                noOfRides : noOfRides,
                                 totalEarningsOfDay : driverFee.totalEarnings,
                                 dueAmount : driverFee.driverFeeAmount,
                                 fareBreakup : fareBreakup driverFee,
