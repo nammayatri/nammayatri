@@ -20,27 +20,42 @@ import React.Basic.Hooks (Component, component, JSX)
 import Effect (Effect)
 import React.Render.CustomBase (linearLayout, textView)
 import Styles.Colors as Color
-import ReactComponents.IncrementDecrement.Controller (Config, ComponentOutput(..), config, ComponentAction(..), componentAction)
+import ReactComponents.IncrementDecrement.Controller (Config, ComponentOutput(..), config, ComponentAction(..), componentAction, eval2)
 import React.Basic.Hooks as React
-import React.Basic.Hooks (Component, component, useEffect, useState)
+import React.Basic.Hooks (Component, component, useEffect, useState, useReducer, mkReducer, reactComponent)
 import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Console (log)
 import Halogen.VDom.Types (VDom(..))
 import Data.Maybe (Maybe(..), maybe)
+import Effect.Unsafe (unsafePerformEffect)
 -- import Helpers.Utils ((:<>))
 -- import Prim.Boolean (False)
 
 app :: (ComponentOutput -> Effect Unit) -> Component Config
-app push = do 
+app push = do
+  -- reducer <- mkReducer eval2
   component "app" \initialState -> React.do
-    -- count /\ setCount <- useState initialState.initialCount
-    -- let onIncrement = setCount (\prevCount -> prevCount + 1)
-    -- let onDecrement = setCount (\prevCount -> if(prevCount > 1) then prevCount - 1 else prevCount)
-    state /\ updatedState <- useState initialState
-    pure $ view push state updatedState
+      -- reducer' <- useMemo (UnsafeReference affReducer) \_ -> unsafePerformEffect do 
+      --                                                                             mkReducer (\{ state } -> runAffReducer affReducer state)
+      -- count /\ setCount <- useState initialState.initialCount
+      -- let onIncrement = setCount (\prevCount -> prevCount + 1)
+      -- let onDecrement = setCount (\prevCount -> if(prevCount > 1) then prevCount - 1 else prevCount)
+      let reducer = unsafePerformEffect $ mkReducer eval2
+      -- _ <- pure $ spy "debug reducer" (reducer)
+      -- newtype Reducer state action = Reducer (Fn2 state action state)
+      -- (state -> action -> state) -> Effect (Reducer state action)
+      state /\ updatedState <- useState initialState
+      -- state
+      -- -> Hook (UseState state) (state /\ ((state -> state) -> Effect Unit))
+      state2 /\ dispatch <- useReducer initialState reducer
+      -- state
+      -- -> Reducer state action
+      -- -> Hook (UseReducer state action) (state /\ (action -> Effect Unit))
+      pure $ view push dispatch state2 updatedState
+
   
-view :: (ComponentOutput -> Effect Unit) -> Config -> ((Config -> Config) -> Effect Unit) -> JSX
-view push config updateState =
+view :: (ComponentOutput -> Effect Unit) -> (ComponentAction -> Effect Unit) -> Config -> ((Config -> Config) -> Effect Unit) -> JSX
+view push componentPush config updateState =
   linearLayout 
   { height: "wrap_content"
   , width: "match_parent"
@@ -63,7 +78,7 @@ view push config updateState =
         , cornerRadius: config.cornerRadius
         , width: config.minus.width
         , padding: config.padding
-        , onClick: componentAction Decrement updateState
+        , onClick: componentPush Decrement--componentAction Decrement updateState
         , height: config.minus.height
         , rippleColor: config.minus.rippleColor
         }
@@ -86,7 +101,7 @@ view push config updateState =
         , color: config.plus.textColor
         , padding: config.padding
         , cornerRadius: config.cornerRadius
-        , onClick: componentAction Increment updateState
+        , onClick: componentPush Increment--componentAction Increment updateState
         , rippleColor: config.plus.rippleColor 
         }
       ]

@@ -37,6 +37,14 @@ eval Decrement state =
   let _ = spy "debug action eval" Decrement
   in state { initialCount = state.initialCount - 1}
 
+eval2 :: Config -> ComponentAction -> Config
+eval2 state Increment = 
+  let _ = spy "debug action eval2" Increment
+  in state { initialCount = state.initialCount + 1}
+eval2 state Decrement = 
+  let _ = spy "debug action eval2" Decrement
+  in state { initialCount = state.initialCount - 1}
+
 type Config = {
     initialCount :: Int
   , plus :: PlusMinusObj
