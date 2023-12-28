@@ -13,6 +13,29 @@
               pg_basebackup -h "$masterDbPath" -U repl_user --checkpoint=fast -D "$replicaDbPath"  -R --slot=some_name  -C --port=${port} 
             '';
           };
+          openStreetDataFile = inputs.osrm-pbf;
+          # NOTE: This *should* match the flake input.
+          openStreetDataFileName = "southern-zone-231218";
+          osrm-data =
+            pkgs.runCommandNoCC "osrm-data"
+              { buildInputs = [ pkgs.osrm-backend ]; }
+              ''
+                mkdir $out && cd $out
+                cp ${openStreetDataFile} ${openStreetDataFileName}.osm.pbf
+                osrm-extract -p ${pkgs.osrm-backend}/share/osrm/profiles/car.lua ${openStreetDataFileName}.osm.pbf
+                osrm-partition ${openStreetDataFileName}.osrm
+                osrm-customize ${openStreetDataFileName}.osrm
+              '';
+
+          osrm-server = pkgs.writeShellApplication {
+            name = "osrm-server";
+            runtimeInputs = [ pkgs.osrm-backend ];
+            text = ''
+              set -x
+              osrm-routed --algorithm mld \
+                ${osrm-data}/${openStreetDataFileName}.osrm
+            '';
+          };
         in
         {
           imports = [
@@ -111,6 +134,10 @@
             enable = true;
             initialDumps = [ ../dev/sql-seed/passetto-seed.sql ];
             package = lib.getBin inputs'.passetto.packages.passetto-service;
+          };
+
+          settings.processes.osrm-server = {
+            command = "${lib.getExe osrm-server}";
           };
         };
     };
