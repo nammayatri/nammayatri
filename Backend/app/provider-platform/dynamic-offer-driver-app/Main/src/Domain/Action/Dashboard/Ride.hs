@@ -28,7 +28,6 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Ride as Commo
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
-import qualified Data.Time as Time
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
@@ -48,10 +47,6 @@ import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Maps.HasCoordinates
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
-import Kernel.Storage.Clickhouse.Config
-import Kernel.Storage.Clickhouse.Operators
-import qualified Kernel.Storage.Clickhouse.Queries as CH
-import qualified Kernel.Storage.Clickhouse.Types as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -61,6 +56,7 @@ import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SyncRide as SyncRide
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -188,17 +184,18 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
         }
 
 ---------------------------------------------------------------------------------------------------
-getActualRoute :: MonadFlow m => Common.DriverEdaKafka -> m Common.ActualRoute
-getActualRoute Common.DriverEdaKafka {..} =
-  case (lat, lon, ts, acc, rideStatus) of
-    (Just lat_, Just lon_, ts_, acc_, rideStatus_) -> do
-      lat' <- readMaybe lat_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
-      lon' <- readMaybe lon_ & fromMaybeM (InvalidRequest "Couldn't find driver's location.")
-      let acc' = readMaybe $ fromMaybe "" acc_
-      let rideStatus' = readMaybe $ fromMaybe "" rideStatus_
-      ts' <- Time.parseTimeM True Time.defaultTimeLocale "%Y-%m-%d %H:%M:%S%Q" ts_ & fromMaybeM (InvalidRequest "Couldn't find driver's timestamp.")
-      pure $ Common.ActualRoute lat' lon' ts' acc' rideStatus'
+getActualRoute :: MonadFlow m => CHDriverEda.DriverEdaKafka -> m Common.ActualRoute
+getActualRoute CHDriverEda.DriverEdaKafkaT {..} =
+  case (lat, lon) of
+    (Just lat', Just lon') -> do
+      let rideStatus' = castRideStatus <$> rideStatus
+      pure Common.ActualRoute {lat = lat', lon = lon', rideStatus = rideStatus', ..}
     _ -> throwError $ InvalidRequest "Couldn't find driver's location."
+  where
+    castRideStatus :: CHDriverEda.Status -> Common.Status
+    castRideStatus CHDriverEda.ON_RIDE = Common.ON_RIDE
+    castRideStatus CHDriverEda.ON_PICKUP = Common.ON_PICKUP
+    castRideStatus CHDriverEda.IDLE = Common.IDLE
 
 rideRoute :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideRouteRes
 rideRoute merchantShortId opCity reqRideId = do
@@ -208,23 +205,19 @@ rideRoute merchantShortId opCity reqRideId = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (merchant.id == booking.providerId && merchantOpCity.id == booking.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
-  let rideQId = T.unpack rideId.getId
-      driverQId = T.unpack ride.driverId.getId
-  let rQFst = fetchDate $ show ride.createdAt
-  let rQLst = fetchDate $ show (addUTCTime (intToNominalDiffTime 86400) ride.createdAt)
-  ckhTbl <- CH.findAll ATLAS_KAFKA (Proxy @Common.DriverEdaKafka) [] Nothing ((("partition_date" =.= rQFst) |.| ("partition_date" =.= rQLst)) &.& ("driver_id" =.= driverQId) &.& ("rid" =.= rideQId)) Nothing Nothing (Just $ CH.Asc "ts")
-  actualRoute <- case ckhTbl of
-    Left err -> do
-      logError $ "Clickhouse error: " <> show err
-      pure []
-    Right y -> mapM getActualRoute y
+  -- version 2
+  let firstDate = ride.createdAt
+      lastDate = addUTCTime (intToNominalDiffTime 86400) ride.createdAt
+  driverEdaKafkaList <- CHDriverEda.findAll firstDate lastDate ride.driverId (Just rideId)
+  logDebug $ "clickhouse driverEdaKafka res v2: " <> show driverEdaKafkaList
+  actualRoute <- mapM getActualRoute driverEdaKafkaList
+
   when (null actualRoute) $ throwError $ InvalidRequest "No route found for this ride."
+
   pure
     Common.RideRouteRes
       { actualRoute
       }
-  where
-    fetchDate dateTime = T.unpack $ T.take 10 dateTime
 
 ---------------------------------------------------------------------
 rideInfo ::
