@@ -1078,9 +1078,11 @@ eval RemoveChat state = do
     pure $ NoAction
   ]
 
-eval WaitingInfo state = continue state{data{waitTimeInfo  = true }}
-
-eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data  {waitTimeInfo =false}}
+eval WaitingInfo state =
+  if state.props.currentStage == RideAccepted then
+    continue state { data { waitTimeInfo = true } }
+  else
+    continue state
 
 eval (SendQuickMessage chatSuggestion) state = do
   if state.props.canSendSuggestion then do
@@ -1091,7 +1093,7 @@ eval (SendQuickMessage chatSuggestion) state = do
 
 eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
   if state.data.config.feature.enableChat then do
-    if not state.props.chatcallbackInitiated || state.props.emergencyHelpModal then continue state else do
+    if not state.props.chatcallbackInitiated || state.props.emergencyHelpModal || state.data.waitTimeInfo then continue state else do
       _ <- pure $ performHapticFeedback unit
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
@@ -2164,9 +2166,9 @@ eval (RateCardAction RateCard.GoToFareUpdate) state = continue state { data{rate
 
 eval (RateCardAction RateCard.GoToWaitingCharges) state = continue state { data{rateCard{currentRateCardType = WaitingCharges,onFirstPage = true}}}
 
-eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showMultipleRideInfo = false } }
+eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false }}
 
-eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showMultipleRideInfo = false } }
+eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false }}
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
@@ -2401,6 +2403,8 @@ getCurrentCustomerLocation :: forall t44 t51. Applicative t51 => (Action -> Effe
 getCurrentCustomerLocation push state = do
   location <- getCurrentLatLong
   push $ UpdateSource location.lat location.lng (getString CURRENT_LOCATION)
+  void $ pure $ setValueToLocalStore LAST_KNOWN_LAT (show location.lat)
+  void $ pure $ setValueToLocalStore LAST_KNOWN_LON (show location.lng)
   pure (pure unit)
 
 cancelReasons :: String -> Array OptionButtonList

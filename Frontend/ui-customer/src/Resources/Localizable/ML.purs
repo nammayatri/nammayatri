@@ -250,6 +250,7 @@ getML stringKey =
         RATE_ABOVE_MIN_FARE -> "മിനിമം നിരക്കിന് മുകളിലുള്ള നിരക്ക്"
         DRIVER_PICKUP_CHARGES _ -> "ഡ്രൈവർ പിക്കപ്പ് നിരക്കുകൾ"
         NOMINAL_FARE -> "നാമമാത്ര നിരക്ക്*"
+        CUSTOMER_CANCELLATION_DUES -> "കുടിശ്ശിക റദ്ദാക്കൽ"
         DAYTIME_CHARGES_APPLICABLE_AT_NIGHT -> "പകൽ സമയ നിരക്കുകൾ, രാത്രിയിൽ ബാധകമാണ് - 10 PM മുതൽ 5 AM വരെ"
         DRIVERS_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC -> "* ഗതാഗത കുരുക്ക്, റിട്ടേൺ ട്രിപ്പ് കിട്ടാനുള്ള സാധ്യത എന്നിങ്ങനെ ഉള്ള കാര്യങ്ങളെ ആസ്പദമാക്കി ഡ്രൈവർ ഒരു നാമമാത്ര തുക അധികമായി ക്വോട്ട് ചെയ്തേക്കാം."
         GOT_IT -> "മനസ്സിലായി!"

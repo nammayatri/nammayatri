@@ -410,7 +410,7 @@ view push state =
             -- , if state.props.zoneTimerExpired then zoneTimerExpiredView state push else emptyTextView state
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
-            , if state.data.waitTimeInfo then waitTimeInfoPopUp push state else emptyTextView state
+            , if state.data.waitTimeInfo && state.props.currentStage == RideAccepted then waitTimeInfoPopUp push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
