@@ -253,6 +253,7 @@ getBN stringKey =
         RATE_ABOVE_MIN_FARE -> "ন্যূনতম ভাড়ার উপরে রেট"
         DRIVER_PICKUP_CHARGES _ -> "সেবা মূল্য"
         NOMINAL_FARE -> "নামমাত্র ভাড়া*"
+        CUSTOMER_CANCELLATION_DUES -> "বাতিল পাওনা"
         DAY_TIMES_OF -> "রাতে প্রযোজ্য দিনের "
         DAYTIME_CHARGES_APPLICABLE_AT_NIGHT -> "x চার্জ থেকে - রাত ১০টা থেকে ভোর ৫টা"
         NIGHT_TIMES_OF -> "রাত 10 PM থেকে সকাল 5 AM পর্যন্ত ভাড়ার জন্য "

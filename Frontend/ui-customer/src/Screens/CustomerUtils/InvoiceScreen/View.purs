@@ -230,4 +230,5 @@ getFareText fareType baseDistance = case fareType of
                       "WAITING_OR_PICKUP_CHARGES"  -> getString WAITING_CHARGE
                       "PLATFORM_FEE" -> getString PLATFORM_FEE
                       "SGST" -> getString PLATFORM_GST
+                      "CUSTOMER_CANCELLATION_DUES" -> getString CUSTOMER_CANCELLATION_DUES
                       _ -> "BASE_FARE"

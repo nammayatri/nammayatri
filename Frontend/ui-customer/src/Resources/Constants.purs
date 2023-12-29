@@ -224,6 +224,7 @@ getFaresList fares baseDistance =
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
                       "SGST" -> getEN PLATFORM_GST
+                      "CUSTOMER_CANCELLATION_DUES" -> getEN CUSTOMER_CANCELLATION_DUES
                       _ -> getEN BASE_FARES
           }
     )

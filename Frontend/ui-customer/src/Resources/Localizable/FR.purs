@@ -331,6 +331,7 @@ getFR stringKey =
         TOTAL_PAID -> "Total payé"
         WAITING_CHARGE -> "Frais d'attente"
         NOMINAL_FARE -> "Demande de pilote facultative *"
+        CUSTOMER_CANCELLATION_DUES -> "Frais d'annulation"
         DRIVERS_CAN_CHARGE_AN_ADDITIONAL_FARE_UPTO -> "* Les conducteurs peuvent éventuellement demander 10% des tarifs de base (arrondi à Rs.10 le plus proche) pour couvrir d'autres facteurs tels que le trafic, les chances de retour de retour, etc."
         WAITING_CHARGE_DESCRIPTION -> "** Frais d'attente: 1 / min - après 3 minutes d'arrivée des conducteurs"
         WAITING_CHARGE_RATECARD_DESCRIPTION -> ""
