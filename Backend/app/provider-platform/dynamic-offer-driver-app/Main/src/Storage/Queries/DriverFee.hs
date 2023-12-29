@@ -172,7 +172,10 @@ findWindowsWithFeeTypeAndLimit merchantId from to feeType limit =
           Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
           Se.Is BeamDF.feeType $ Se.Eq feeType,
           Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId,
-          Se.Is BeamDF.overlaySent $ Se.Eq False
+          Se.Is BeamDF.overlaySent $ Se.Eq False,
+          Se.Is BeamDF.platformFee $ Se.Not (Se.Eq 0.0),
+          Se.Is BeamDF.cgst $ Se.Not (Se.Eq 0.0),
+          Se.Is BeamDF.sgst $ Se.Not (Se.Eq 0.0)
         ]
     ]
     (Se.Asc BeamDF.createdAt)
