@@ -22,35 +22,33 @@ import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style (Style(..))
-import Prelude (Unit, pure, unit, (<>), (==))
+import Prelude (Unit, pure, unit, (<>), (==), (>), (-))
 import PrestoDOM (Gravity(..), Length(..), Padding(..), Visibility(..))
 import Screens.Types (KeyboardModalType(..))
 import Styles.Colors as Color
-import Data.String (length)
+import Data.String (length, take)
 
-data ComponentAction = OnClickDone String | BackPressed
+data ComponentOutput = OnClickDone String | BackPressed | OnClickResendOtp
 
-data Action = OnSelection String Int
+data ComponentAction = OnSelection String Int
             | AfterRender
             | OnClickBack String
             | OnclickTextBox Int
-            | OnClickResendOtp
             | OnClickTextCross
 
-eval :: Action -> ((InAppKeyboardModalState -> InAppKeyboardModalState) -> Effect Unit) -> Effect Unit
-eval action setState =
+reducerFn :: InAppKeyboardModalState -> ComponentAction -> InAppKeyboardModalState
+reducerFn state action =
   let _ = spy "InAppKeyboardModal Component Action" action
   in case action of
-    OnSelection key index ->
-      -- if(length state.inputTextConfig.text == 4) 
-      --   then push $ OnClickDone state.inputTextConfig.text
-      --   else 
-        setState (\state -> state { inputTextConfig { text = (state.inputTextConfig.text <> key), focusIndex = index } })
+    OnSelection key index -> state { inputTextConfig { text = (state.inputTextConfig.text <> key), focusIndex = index } }
     -- AfterRender -> setState (\state -> state { inputTextConfig = (state.inputTextConfig state) { focusIndex = 1 } })
-    -- OnClickBack value -> setState (\state -> state { inputTextConfig = { text = value, focusIndex = 1 } })
-    -- OnclickTextBox index -> setState (\state -> state { inputTextConfig = (inputTextConfig state) { focusIndex = index } })
-    -- OnClickResendOtp -> setState (\state -> state { showResendOtpButton = False })
-    _ ->  pure unit
+    OnClickBack value -> do
+      let 
+        text = (if length( value ) > 0 then (take (length ( value ) - 1 ) value) else "" )
+        focusIndex = length text
+      state { inputTextConfig { text = text, focusIndex = focusIndex } }
+    OnclickTextBox index -> state{inputTextConfig{ focusIndex = index}}
+    _ -> state
 
 ----------------------------------------------- InAppKeyboardModalState ---------------------------------------------
 type InAppKeyboardModalState = {

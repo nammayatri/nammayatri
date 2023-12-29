@@ -16,8 +16,8 @@
 module ReactComponents.InAppKeyboardModal.View where
 
 import Common.Types.App
-import Prelude (Unit, map, not, pure, show, ($), (&&), (<>), (==), (||), (/), unit)
-import React.Basic.Hooks (Component, JSX, component, useState, (/\), useEffect)
+import Prelude (Unit, map, not, pure, show, ($), (&&), (<>), (==), (||), (/), unit, (>=))
+import React.Basic.Hooks (Component, JSX, component, useState, (/\), useEffect, mkReducer, useReducer)
 import React.Render.CustomBase (imageView, linearLayout, textView)
 
 import Animation (translateYAnim)
@@ -37,27 +37,30 @@ import PrestoDOM.Animation as PrestoAnim
 -- import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility, imageWithFallback)
 import PrestoDOM.Types.DomAttributes (Corners(..), Visibility(..))
 import React.Basic.Hooks as React
-import ReactComponents.InAppKeyboardModal.Controller (Action(..), InAppKeyboardModalState, ComponentAction(..), eval)
+import ReactComponents.InAppKeyboardModal.Controller (ComponentAction(..), InAppKeyboardModalState, ComponentOutput(..), reducerFn)
 import Screens.Types (KeyboardModalType(..)) as KeyboardModalType
 import Styles.Colors as Color
 import Debug (spy)
 import Data.String (length)
+import Effect.Unsafe (unsafePerformEffect)
+-- import Effect.Console (log)
 
-app :: (ComponentAction -> Effect Unit) -> Component InAppKeyboardModalState
+app :: (ComponentOutput -> Effect Unit) -> Component InAppKeyboardModalState
 app push = do
   component "InAppKeyboardModal" \initialState -> React.do
-    state /\ setState <- useState initialState
+    let reducer = unsafePerformEffect $ mkReducer reducerFn
+    state /\ dispatch <- useReducer initialState reducer
     useEffect state.inputTextConfig.text
       ( \_ -> do
           let _ = spy "InAppKeyboardModal useEffect" state
-          if(length state.inputTextConfig.text == 4) 
+          if(length state.inputTextConfig.text >= 4) 
             then pure $ push $ OnClickDone state.inputTextConfig.text
             else pure $ pure unit
       )
-    pure $ view push setState state
+    pure $ view push dispatch state
 
-view :: (ComponentAction -> Effect Unit) -> ((InAppKeyboardModalState -> InAppKeyboardModalState) -> Effect Unit) -> InAppKeyboardModalState -> JSX
-view push setState state =
+view :: (ComponentOutput -> Effect Unit) -> (ComponentAction -> Effect Unit) -> InAppKeyboardModalState -> JSX
+view push componentPush state =
   linearLayout
     { width: "match_parent"
     , height: "match_parent"
@@ -115,14 +118,14 @@ view push setState state =
                     -- , fontStyle: FontStyle.getFontStyle state.inputTextConfig.textStyle LanguageStyle
                     }
                 ]
-            , otpView push setState state
+            , otpView push componentPush state
             ]
-        , keyboard push setState state
+        , keyboard push componentPush state
         ]
     ]
 
-textBoxes :: (ComponentAction -> Effect Unit) -> ((InAppKeyboardModalState -> InAppKeyboardModalState) -> Effect Unit) -> InAppKeyboardModalState -> JSX
-textBoxes push setState state =
+textBoxes :: (ComponentOutput -> Effect Unit) -> (ComponentAction -> Effect Unit) -> InAppKeyboardModalState -> JSX
+textBoxes push componentPush state =
   linearLayout
     { width: "match_parent"
     , height: "wrap_content"
@@ -150,8 +153,8 @@ textBoxes push setState state =
         state.textBoxConfig.textBoxesArray
     )
 
-singleTextBox :: (ComponentAction -> Effect Unit) -> ((InAppKeyboardModalState -> InAppKeyboardModalState) -> Effect Unit) -> InAppKeyboardModalState -> JSX
-singleTextBox push setState state =
+singleTextBox :: (ComponentOutput -> Effect Unit) -> (ComponentAction -> Effect Unit) -> InAppKeyboardModalState -> JSX
+singleTextBox push componentPush state =
   linearLayout
     { width: "match_parent"
     , height: "wrap_content"
@@ -183,11 +186,12 @@ singleTextBox push setState state =
         , imageWithFallback: fetchImage FF_COMMON_ASSET "ny_ic_close"
         , visibility: if (state.inputTextConfig.text == (getString ENTER_MOBILE_NUMBER)) then "gone" else "visible"
         -- , onClick: push (const (OnClickTextCross))
+        , onClick: componentPush OnClickTextCross
         }
     ]
 
-otpView :: (ComponentAction -> Effect Unit) -> ((InAppKeyboardModalState -> InAppKeyboardModalState) -> Effect Unit) -> InAppKeyboardModalState -> JSX
-otpView push setState state =
+otpView :: (ComponentOutput -> Effect Unit) -> (ComponentAction -> Effect Unit) -> InAppKeyboardModalState -> JSX
+otpView push componentPush state =
   linearLayout
     { width: "match_parent"
     , height: "wrap_content"
@@ -195,8 +199,8 @@ otpView push setState state =
     , orientation: "vertical"
     , gravity: if (state.modalType == KeyboardModalType.OTP) then "center" else "left"
     }
-    [ textBoxes push setState state
-    , singleTextBox push setState state
+    [ textBoxes push componentPush state
+    , singleTextBox push componentPush state
     , textView
         { width: show state.subHeadingConfig.width
         , height: show state.subHeadingConfig.height
@@ -235,8 +239,8 @@ otpView push setState state =
         }
     ]
 
-keyboard :: (ComponentAction -> Effect Unit) -> ((InAppKeyboardModalState -> InAppKeyboardModalState) -> Effect Unit) -> InAppKeyboardModalState -> JSX
-keyboard push setState state =
+keyboard :: (ComponentOutput -> Effect Unit) -> (ComponentAction -> Effect Unit) -> InAppKeyboardModalState -> JSX
+keyboard push componentPush state =
   linearLayout
     { width: "match_parent"
     , height: "wrap_content"
@@ -275,6 +279,7 @@ keyboard push setState state =
                               , cornerRadius: "4.0"
                               -- , cornerRadii: if key == "back" then Corners 30.0 false false false true else Corners 30.0 false false true false
                               -- , onClick: push if key == "back" then (const (OnClickBack state.inputTextConfig.text)) else (const (OnClickDone state.inputTextConfig.text))
+                              , onClick: componentPush $ OnClickBack state.inputTextConfig.text
                               -- , clickable: if key == "back" then "true" else if (length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && state.modalType == KeyboardModalType.OTP && not state.otpIncorrect) || (length state.inputTextConfig.text == 10 && state.modalType == KeyboardModalType.MOBILE__NUMBER && state.isValidAlternateNumber) then "true" else "false"
                               }
                               [ if key == "back" then
@@ -300,7 +305,9 @@ keyboard push setState state =
                               , margin: "3, 3, 3, 3"
                               , background: Color.white900
                               , cornerRadius: "4.0"
-                              , onClick: eval (OnSelection key state.inputTextConfig.focusIndex) setState
+                              , onClick: if(length state.inputTextConfig.text == 3) 
+                                            then push (OnClickDone (state.inputTextConfig.text <> key)) 
+                                            else componentPush $ OnSelection key state.inputTextConfig.focusIndex
                               -- , onClick: push (const (OnSelection key state.inputTextConfig.focusIndex))
                               }
                               [ textView
