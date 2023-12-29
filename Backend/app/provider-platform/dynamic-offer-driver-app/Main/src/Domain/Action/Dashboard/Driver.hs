@@ -223,13 +223,25 @@ getLicenseStatus :: Int -> Int -> Maybe DriverLicense -> Maybe IV.IdfyVerificati
 getLicenseStatus onboardingTryLimit currentTries mbLicense mbLicReq =
   case mbLicense of
     Just driverLicense -> St.mapStatus driverLicense.verificationStatus
-    Nothing -> St.verificationStatus onboardingTryLimit currentTries mbLicReq
+    Nothing -> verificationState onboardingTryLimit currentTries mbLicReq
 
 getRegCertStatus :: Int -> Int -> Maybe (DriverRCAssociation, VehicleRegistrationCertificate) -> Maybe IV.IdfyVerification -> St.ResponseStatus
 getRegCertStatus onboardingTryLimit currentTries mbRegCert mbVehRegReq =
   case mbRegCert of
     Just (_assoc, vehicleRC) -> St.mapStatus vehicleRC.verificationStatus
-    Nothing -> St.verificationStatus onboardingTryLimit currentTries mbVehRegReq
+    Nothing -> verificationState onboardingTryLimit currentTries mbVehRegReq
+
+verificationState :: Int -> Int -> Maybe IV.IdfyVerification -> ResponseStatus
+verificationState onboardingTryLimit imagesNum verificationReq =
+  case verificationReq of
+    Just req -> do
+      if req.status == "pending"
+        then PENDING
+        else FAILED
+    Nothing -> do
+      if imagesNum > onboardingTryLimit
+        then LIMIT_EXCEED
+        else NO_DOC_AVAILABLE
 
 ---------
 
