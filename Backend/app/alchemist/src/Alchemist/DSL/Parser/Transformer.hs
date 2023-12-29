@@ -26,6 +26,24 @@ import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
 import Kernel.Prelude hiding (toText)
 
+defaultImportMap :: HM.HashMap Text Text
+defaultImportMap =
+  HM.fromList
+    [ ("Id", "Kernel.Types.Id"),
+      ("getId", "Kernel.Types.Id"),
+      ("ShortId", "Kernel.Types.Id"),
+      ("getShortId", "Kernel.Types.Id"),
+      ("Maybe", ""), -- Already included in EulerHS.Prelude
+      ("Just", ""), -- Already included in EulerHS.Prelude
+      ("Nothing", "") -- Already included in EulerHS.Prelude
+    ]
+
+pureIdentifier :: Text
+pureIdentifier = "~"
+
+impureIdentifier :: Text
+impureIdentifier = "/~"
+
 transformerParser :: FilePath -> IO ST.Transformers
 transformerParser filepath = do
   contents <- BS.readFile filepath
@@ -37,7 +55,8 @@ parseTransformers :: Object -> ST.Transformers
 parseTransformers obj =
   let moduleName = preview (ix "module" . _String) obj & fromMaybe (error "Module name is required")
       importObj = preview (ix "imports" . _Object) obj & fromMaybe (error "Imports are required")
-      imports = HM.fromList . map (\(k, v) -> (toText k, preview _String v & fromMaybe (error "Failed to parse imports"))) $ KM.toList importObj
+      _imports = HM.fromList . map (\(k, v) -> (toText k, preview _String v & fromMaybe (error "Failed to parse imports"))) $ KM.toList importObj
+      imports = HM.unionWith const defaultImportMap _imports
       transformerObj = preview (ix "transformer" . _Object) obj & fromMaybe (error "Failed to parse transformer")
       monads = preview (ix "monads" . _Array . to V.toList) transformerObj & convertToListOfText
       unParsedFunctions = preview (ix "transformers" . _Object) transformerObj & fromMaybe (error "Failed to parse transformers Key Object") & KM.toList
@@ -52,13 +71,14 @@ parseSingleTransformer :: (Key, Value) -> Maybe ST.TransformerTT
 parseSingleTransformer (key, value) = do
   obj <- preview _Object value
   let name = toText key
-      fromTypes = preview (ix "fromTypes" . _Array . to V.toList) obj & convertToListOfText
-      paramNames = preview (ix "paramNames" . _Array . to V.toList) obj & convertToListOfText
+      params = preview (ix "params" . _Object) obj & fromMaybe (error "Transformer params is required") & KM.toList & map toTextPair
+      fromTypes = map snd params
+      paramNames = map fst params
       toType = preview (ix "toType" . _String) obj & fromMaybe (error "Transformer toType is required")
       mapping = preview (ix "mapping" . _Object) obj & fromMaybe (error "Transformer mapping is required") & KM.toList & map toTextPair
       outputTypeBindings = map (setFieldBindings toType) mapping
-      impureMapping = map (setImpureBindings toType) $ filter (\(_, val) -> "$$" `T.isPrefixOf` val) mapping
-      pureMapping = map (setPureBindings toType) $ filter (\(_, val) -> not $ "$$" `T.isPrefixOf` val) mapping
+      impureMapping = map (setImpureBindings toType) $ filter (\(_, val) -> impureIdentifier `T.isPrefixOf` val) mapping
+      pureMapping = map (setPureBindings toType) $ filter (\(_, val) -> not $ impureIdentifier `T.isPrefixOf` val) mapping
   pure $ ST.TransformerTT name fromTypes paramNames toType outputTypeBindings pureMapping impureMapping
   where
     toTextPair :: (Key, Value) -> (Text, Text)
@@ -70,13 +90,13 @@ parseSingleTransformer (key, value) = do
     setImpureBindings :: Text -> (Text, Text) -> (Text, Text)
     setImpureBindings toType' (key', val') =
       let outputTypePrefix = updateFirstChar toLower toType'
-          val = fromMaybe val' (T.stripPrefix "$$" val')
+          val = fromMaybe val' (T.stripPrefix impureIdentifier val')
        in (outputTypePrefix <> updateFirstChar toUpper key', val)
 
     setPureBindings :: Text -> (Text, Text) -> (Text, Text)
     setPureBindings toType' (key', val') =
       let outputTypePrefix = updateFirstChar toLower toType'
-          val = fromMaybe val' (T.stripPrefix "$" val')
+          val = fromMaybe val' (T.stripPrefix pureIdentifier val')
        in (outputTypePrefix <> updateFirstChar toUpper key', val)
 
     setFieldBindings :: Text -> (Text, Text) -> (Text, Text)

@@ -1,0 +1,195 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  BaseUrl: Kernel.Prelude
+  MonadThrow: EulerHS.Prelude
+  MonadTime: Kernel.Types.Time
+  Log: Kernel.Types.Logging
+  SearchReqLocation: Domain.Action.UI.Search.Common
+  SearchRequest: Domain.Types.SearchRequest
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  Language: Tools.Maps
+  Merchant: Domain.Types.Merchant
+  LatLong: Tools.Maps
+  SearchReqMessage: BecknV2.OnDemand.Types
+  Intent: BecknV2.OnDemand.Types
+  Fulfillment: BecknV2.OnDemand.Types
+  Customer: BecknV2.OnDemand.Types
+  Person: BecknV2.OnDemand.Types
+  mkStops: Beckn.OnDemand.Utils.Search
+  mkRouteInfoTags: Beckn.OnDemand.Utils.Search
+  mkCustomerInfoTags: Beckn.OnDemand.Utils.Search
+
+
+module: Search
+transformer:
+  monads:
+  - MonadThrow m
+  - MonadTime m
+  - Log m
+  transformers:
+    buildSearchReqV2:
+      params:
+        origin: SearchReqLocation
+        destination: SearchReqLocation
+
+        distance: Maybe Meters
+        duration: Maybe Seconds
+        customerLanguage: Maybe Language
+        disabilityTag: Maybe Text
+        mbPoints: Maybe [LatLong]
+        mbPhoneNumber: Maybe Text
+      toType: SearchReqMessage
+      mapping:
+        searchReqMessageIntent: /~Just <$> tfIntent customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin
+
+    tfIntent:
+      params:
+        origin: SearchReqLocation
+        destination: SearchReqLocation
+        customerLanguage: Maybe Language
+        disabilityTag: Maybe Text
+        distance: Maybe Meters
+        duration: Maybe Seconds
+        mbPoints: Maybe [LatLong]
+        mbPhoneNumber: Maybe Text
+      toType: Intent
+      mapping:
+        intentFulfillment: /~Just <$> tfFulfillment customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin
+        intentPayment: Nothing
+        intentTags: Nothing
+
+    tfFulfillment:
+      params:
+        origin: SearchReqLocation
+        destination: SearchReqLocation
+        customerLanguage: Maybe Language
+        disabilityTag: Maybe Text
+        distance: Maybe Meters
+        duration: Maybe Seconds
+        mbPoints: Maybe [LatLong]
+        mbPhoneNumber: Maybe Text
+      toType: Fulfillment
+      mapping:
+        fulfillmentStops: ~_mkStops origin destination
+        fulfillmentCustomer: /~Just <$> tfCustomer customerLanguage disabilityTag mbPhoneNumber
+        fulfillmentTags: ~_mkRouteInfoTags distance duration mbPoints
+        fulfillmentAgent: Nothing
+        fulfillmentText: Nothing
+        fulfillmentState: Nothing
+        fulfillmentType: Nothing
+        fulfillmentVehicle: Nothing
+
+    tfCustomer:
+      params:
+        customerLanguage: Maybe Language
+        disabilityTag: Maybe Text
+        mbPhoneNumber: Maybe Text
+      toType: Customer
+      mapping:
+        customerPerson: /~Just <$> tfPerson customerLanguage disabilityTag mbPhoneNumber
+        customerContact: Nothing
+
+    tfPerson:
+      params:
+        customerLanguage: Maybe Language
+        disabilityTag: Maybe Text
+        mbPhoneNumber: Maybe Text
+      toType: Person
+      mapping:
+        personTags: ~_mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber
+        personName: Nothing
+        personText: Nothing
+
+types:
+  SearchReq:
+    context: Context
+    message: SearchMessage
+
+  Context:
+    action: ContextAction
+    messageId: Text
+    transactionId: Text
+    bapId: Text
+    bapUri: BaseUrl
+    loction: ContextLocation
+    bapCity: Text
+    bapCountry: Text
+
+  ContextAction:
+    enum: "search,on_search"
+
+  ContextLocation:
+    city: Descriptor
+    country: Descriptor
+
+  Descriptor:
+    code: Text
+
+  SearchMessage:
+    intent: SearchIntent
+
+  SearchIntent:
+    fulfillment: SearchFulfillment
+
+  SearchFulfillment:
+    stops: [FulfillmentStop]
+
+  FulfillmentStop:
+    location: Location
+
+  Location:
+    gps: Text
+
+  DSearchReq:
+    messageId: Text
+    transactionId: Text
+    bapId: Text
+    bapUri: BaseUrl
+    bapCity: Text
+    bapCountry: Text
+    customerPhoneNum: Maybe Text
+    pickupLocation: LatLong
+    pickupTime: UTCTime
+    dropLocation: LatLong
+    pickupAddress: Maybe Address
+    dropAddrress: Maybe Address
+    routeDistance: Maybe Meters
+    routeDuration: Maybe Seconds
+    device: Maybe Text
+    disabilityTag: Maybe Text
+    routePoints: Maybe [LatLong]
+
+  Address:
+    city: Text
+    area: Text
+
+  LatLong:
+    lat: Double
+    lon: Double
+
+  Meters:
+    getMeters: Int
+
+  Seconds:
+    getSeconds: Int
+
+# transformer:
+#   monads:
+#     - MonadThrow m
+#     - MonadTime m
+#     - Log m
+#   transformers:
+#     buildBecknSearchReq:
+#       # extraMonads: should we allow this
+#       params:
+#         domainSearchReq: Maybe (Id DomainSearchReq)
+#         context: Context
+#       toType: BecknSearchReq
+#       mapping:
+#         searchReqContext: ~_context context
+#         searchReqMessage: Just 10
+
+  # ~  -> pure    Haskell functions
+  # /~ -> impure  Haskell functions

@@ -13,10 +13,17 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
+module Beckn.ACL.Search
+  ( buildRentalSearchReq,
+    buildOneWaySearchReq,
+    buildOneWaySearchReqV2,
+  )
+where
 
 import Beckn.ACL.Common (mkLocation)
+import qualified Beckn.OnDemand.Transformer.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
 import Data.Aeson (encode)
 import qualified Data.Text as T
@@ -54,6 +61,27 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
     (getPoints shortestRouteInfo)
     phoneNumber
     isReallocationEnabled
+  where
+    getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
+
+buildOneWaySearchReqV2 ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DOneWaySearch.OneWaySearchRes ->
+  m (BecknReq Spec.SearchReqMessage)
+buildOneWaySearchReqV2 DOneWaySearch.OneWaySearchRes {..} = do
+  buildSearchReqV2
+    origin
+    destination
+    searchId
+    device
+    (shortestRouteInfo >>= (.distance))
+    (shortestRouteInfo >>= (.duration))
+    customerLanguage
+    disabilityTag
+    merchant
+    city
+    (getPoints shortestRouteInfo)
+    phoneNumber
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
@@ -101,6 +129,31 @@ buildSearchReq origin destination searchId _ distance duration customerLanguage 
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
   let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled
   let searchMessage = Search.SearchMessage intent
+
+  pure $ BecknReq context searchMessage
+
+buildSearchReqV2 ::
+  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DSearchCommon.SearchReqLocation ->
+  DSearchCommon.SearchReqLocation ->
+  Id DSearchReq.SearchRequest ->
+  Maybe Text ->
+  Maybe Meters ->
+  Maybe Seconds ->
+  Maybe Maps.Language ->
+  Maybe Text ->
+  DM.Merchant ->
+  Context.City ->
+  Maybe [Maps.LatLong] ->
+  Maybe Text ->
+  m (BecknReq Spec.SearchReqMessage)
+buildSearchReqV2 origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber = do
+  let transactionId = getId searchId
+      messageId = transactionId
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
+  searchMessage <- Search.buildSearchReqV2 customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin
 
   pure $ BecknReq context searchMessage
 

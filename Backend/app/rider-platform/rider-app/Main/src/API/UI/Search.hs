@@ -151,6 +151,9 @@ oneWaySearch personId bundleVersion clientVersion device req = do
   dSearchRes <- DOneWaySearch.oneWaySearch personId req bundleVersion clientVersion device
   fork "search cabs" . withShortRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
+    becknTaxiReqV2 <- TaxiACL.buildOneWaySearchReqV2 dSearchRes
+    let generatedJson = encode becknTaxiReqV2
+    logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
     void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
   -- fork "search metro" . withShortRetry $ do
   --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes

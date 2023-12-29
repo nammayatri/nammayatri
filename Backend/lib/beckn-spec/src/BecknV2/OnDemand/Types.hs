@@ -259,8 +259,10 @@ optionsCatalog =
       ]
 
 -- | Describes a city
-newtype City = City
-  { -- | Name of the city
+data City = City
+  { -- | City code
+    cityText :: Maybe Text,
+    -- | Name of the city
     cityName :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
@@ -279,7 +281,8 @@ optionsCity =
     }
   where
     table =
-      [ ("cityName", "name")
+      [ ("cityText", "code"),
+        ("cityName", "name")
       ]
 
 -- |
@@ -419,8 +422,10 @@ optionsContext =
       ]
 
 -- | Describes a country
-newtype Country = Country
-  { -- | Name of the country
+data Country = Country
+  { -- | Country code as per ISO 3166-1 and ISO 3166-2 format
+    countryText :: Maybe Text,
+    -- | Name of the country
     countryName :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
@@ -439,7 +444,8 @@ optionsCountry =
     }
   where
     table =
-      [ ("countryName", "name")
+      [ ("countryText", "code"),
+        ("countryName", "name")
       ]
 
 -- | Describes a customer buying/availing a product or a service

@@ -70,12 +70,8 @@ mkTransformerFunctions :: FilePath -> FilePath -> IO ()
 mkTransformerFunctions filePath yaml = do
   functionDef <- transformerParser yaml
   traverse_ (checkIfImpureMappingsExist (ST._monads functionDef)) (ST._functions functionDef)
-  -- let output = generateTransformerFunctions functionDef
-  -- putStrLn output
   writeToFile filePath (T.unpack (ST._moduleName functionDef) ++ ".hs") (generateTransformerFunctions functionDef)
   where
-    -- error "TODO: JAYPAL"
-
     checkIfImpureMappingsExist :: [Text] -> ST.TransformerTT -> IO ()
     checkIfImpureMappingsExist allMonads fn = do
       let impureMappings = ST._impureMapping fn
