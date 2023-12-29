@@ -79,13 +79,13 @@ getReadyTasks ::
 getReadyTasks _ = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
-  let lastEntryId :: Text = "$"
+  -- let lastEntryId :: Text = "$"
   version <- asks (.version)
   let consumerName = version.getDeploymentVersion
   let nextId :: Text = ">"
-  isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key
-  unless isGroupExist $ do
-    Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
+  -- isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key
+  -- unless isGroupExist $ do
+  --   Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
   result' <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xReadGroup groupName consumerName [(key, nextId)]
   let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
   let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
@@ -110,16 +110,16 @@ getReadyTask = do
   key <- asks (.streamName)
   groupName <- asks (.groupName)
   consumerId <- asks (.consumerId)
-  let lastEntryId :: Text = "$"
+  -- let lastEntryId :: Text = "$"
   version <- asks (.version)
   threadId <- L.runIO myThreadId
   let consumerName = version.getDeploymentVersion <> consumerId <> show threadId
   let nextId :: Text = ">"
   block <- asks (.block)
   readCount <- asks (.readCount)
-  isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key
-  unless isGroupExist $ do
-    Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
+  -- isGroupExist <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xInfoGroups key -- TODO: Enable after fixing these hedis stream operations for cluster redis.
+  -- unless isGroupExist $ do
+  --   Hedis.withNonCriticalCrossAppRedis $ Hedis.xGroupCreate key groupName lastEntryId
   result' <- Hedis.withNonCriticalCrossAppRedis $ Hedis.xReadGroupOpts groupName consumerName [(key, nextId)] (Just block) (Just readCount)
   let result = maybe [] (concatMap (Hedis.extractKeyValuePairs . records)) result'
   let recordIds = maybe [] (concatMap (Hedis.extractRecordIds . records)) result'
