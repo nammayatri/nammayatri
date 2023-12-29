@@ -63,7 +63,7 @@
           };
 
           services.postgres.db-replica = {
-            depends_on."pg-base-backup-primary-db".condition = "process_completed_successfully";
+            depends_on."pg-basebackup-primary-db".condition = "process_completed_successfully";
             enable = true;
             port = 5435;
           };
