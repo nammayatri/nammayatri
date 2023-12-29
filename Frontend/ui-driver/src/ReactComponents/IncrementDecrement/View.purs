@@ -20,7 +20,7 @@ import React.Basic.Hooks (Component, component, JSX)
 import Effect (Effect)
 import React.Render.CustomBase (linearLayout, textView)
 import Styles.Colors as Color
-import ReactComponents.IncrementDecrement.Controller (Config, ComponentOutput(..), config, ComponentAction(..), componentAction)
+import ReactComponents.IncrementDecrement.Controller (Config, ComponentOutput(..), config, ComponentAction(..), eval)
 import React.Basic.Hooks as React
 import React.Basic.Hooks (Component, component, useEffect, useState)
 import Data.Tuple.Nested (type (/\), (/\))
@@ -63,7 +63,7 @@ view push config updateState =
         , cornerRadius: config.cornerRadius
         , width: config.minus.width
         , padding: config.padding
-        , onClick: componentAction Decrement updateState
+        , onClick: eval Decrement updateState
         , height: config.minus.height
         , rippleColor: config.minus.rippleColor
         }
@@ -86,7 +86,7 @@ view push config updateState =
         , color: config.plus.textColor
         , padding: config.padding
         , cornerRadius: config.cornerRadius
-        , onClick: componentAction Increment updateState
+        , onClick: eval Increment updateState
         , rippleColor: config.plus.rippleColor 
         }
       ]

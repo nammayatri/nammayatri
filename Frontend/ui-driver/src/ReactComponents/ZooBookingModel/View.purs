@@ -3,7 +3,7 @@
 module ReactComponents.ZooBookingModel.View where
 
 import Prelude
-import Debug 
+import Debug
 import Common.Types.App
 
 import Data.Tuple.Nested (type (/\), (/\))
@@ -41,6 +41,10 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 -- import React.Render.CustomBase (lottieAnimationView)
 import ReactComponents.Calendar.View as CalendarView
 import ReactComponents.Calendar.Controller as CalendarController
+import ReactComponents.BottomNavBar.View as BottomNavBarView
+import ReactComponents.BottomNavBar.Controller as BottomNavBarController
+import MerchantConfig.DefaultConfig (config)
+import Screens as ScreenNames
 
 -- view :: forall action. (action -> Effect Unit) -> ST.RideHistoryScreenState -> Effect Unit
 -- view push state = PrestoDOM.linearLayout[
@@ -48,10 +52,9 @@ import ReactComponents.Calendar.Controller as CalendarController
 --     , width MATCH_PARENT
 --   ] [ ]
 
-app :: (Action -> Effect Unit) -> Component{state :: ST.RideHistoryScreenState}
+app :: (Action -> Effect Unit) -> Component { state :: ST.RideHistoryScreenState }
 app push = do
-  component "App" \{state} -> React.do    
-    
+  component "App" \{ state } -> React.do
     -- useEffectAlways (\_ -> do
     --   log "useEffectAlways"
     --   _ <- pure $ startLottieProcess lottieAnimationConfig { rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/accepted_by_another_driver_lottie.json", lottieId = (getNewIDWithTag "splashLottieAnimation"), speed = 1.8 }
@@ -64,47 +67,50 @@ app push = do
     -- _ <- log (unsafePerformEffect r)
 
     pure $
-      linearLayout {
-        height: "match_parent"
-      , width: "match_parent"
-      , orientation: "vertical"
-      , background: Color.grey900
-      } [ linearLayout {
-            height: "wrap_content"
-          , width: "match_parent"
-          , cornerRadius: "8.0"
-          , background: Color.white900
-          , orientation: "vertical"
-          , padding: "20, 20, 20, 20"
-          , margin: "20, 20, 20, 20"
-        } [ textView {
-              text: "Heritage Cruise"
-            , color: Color.black800
-            , textSize: "18"
-            , fontWeight: "700" 
-            , margin: "0, 0, 0, 24"
+      linearLayout
+        { height: "match_parent"
+        , width: "match_parent"
+        , orientation: "vertical"
+        , background: Color.grey900
+        }
+        [ linearLayout
+            { height: "wrap_content"
+            , width: "match_parent"
+            , cornerRadius: "8.0"
+            , background: Color.white900
+            , orientation: "vertical"
+            , padding: "20, 20, 20, 20"
+            , margin: "20, 20, 20, 20"
             }
-          , textView {
-                text: "Cruise Ticket (₹169 per person)"
-              , color: Color.black800
-              , textSize: "14"
-              , margin: "0, 0, 0, 0"
-            }
-          , linearLayout {weight: "1.0"} []
-          , IncrementDecrementView.app (push <<< CounterChange) (incrementDecrementConfig push state)
-          , CalendarView.app (push <<< CalendarAction) (CalendarController.config)
-          -- , PrimaryButtonView.primaryButton BackPressed push {text: "Pay Money"}
-        --   , imageView {
-        --       height: "24"
-        --     , width: "24"
-        --     , imageWithFallback: fetchImage FF_COMMON_ASSET $ "ny_ic_radio_selected"
-        --     , visibility: "visible"
-        --     , onClick: halfPush $ action 0 
+            [ textView
+                { text: "Heritage Cruise"
+                , color: Color.black800
+                , textSize: "18"
+                , fontWeight: "700"
+                , margin: "0, 0, 0, 24"
+                }
+            , textView
+                { text: "Cruise Ticket (₹169 per person)"
+                , color: Color.black800
+                , textSize: "14"
+                , margin: "0, 0, 0, 0"
+                }
+            , linearLayout { weight: "1.0" } []
+            , IncrementDecrementView.app (push <<< CounterChange) (incrementDecrementConfig push state)
+            -- , CalendarView.app (push <<< CalendarAction) (CalendarController.config)
+            -- , BottomNavBarView.app (push <<< BottomNavBarAction) (BottomNavBarController.navData ScreenNames.REFERRAL_SCREEN config.bottomNavConfig)
+            -- , PrimaryButtonView.primaryButton BackPressed push { text: "Pay Money" }
+            -- , imageView
+            --     { height: "24"
+            --     , width: "24"
+            --     , imageWithFallback: fetchImage FF_COMMON_ASSET $ "ny_ic_radio_selected"
+            --     , visibility: "visible"
+            --     , onClick: halfPush $ action 0
+            --     }
+            ]
+        -- , lottieAnimationView
+        --     { height: "match_parent"
+        --     , width: "match_parent"
+        --     , id: (getNewIDWithTag "splashLottieAnimation")
         --     }
-          ]
-          -- , lottieAnimationView {  
-          --     height: "match_parent"
-          --   , width: "match_parent"
-          --   , id: (getNewIDWithTag "splashLottieAnimation")
-          -- }
-        ] 
+        ]

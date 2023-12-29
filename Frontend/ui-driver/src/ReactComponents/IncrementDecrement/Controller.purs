@@ -15,30 +15,44 @@
 
 module ReactComponents.IncrementDecrement.Controller where
 
-import Prelude 
-import Common.Types.App
+import Prelude (Unit, (+), (-), (<>))
+-- import Common.Types.App
 import Effect (Effect)
 import Styles.Colors as Color
-import Data.Maybe (Maybe(..))
-import Debug 
+
+-- import Data.Maybe (Maybe(..))
+import Debug (spy)
 
 data ComponentOutput = Counter Int
 
 data ComponentAction = Increment | Decrement
 
-componentAction :: ComponentAction -> ((Config -> Config) -> Effect Unit) -> Effect Unit
-componentAction componentAction updatedState = updatedState (\state_ -> eval componentAction state_)
+-- componentAction :: ComponentAction -> ((Config -> Config) -> Effect Unit) -> Effect Unit
+-- componentAction componentAction updatedState = updatedState (\state_ -> eval componentAction state_)
 
-eval :: ComponentAction -> Config -> Config
-eval Increment state = 
-  let _ = spy "debug action eval" Increment
-  in state { initialCount = state.initialCount + 1}
-eval Decrement state = 
-  let _ = spy "debug action eval" Decrement
-  in state { initialCount = state.initialCount - 1}
+-- eval :: ComponentAction -> Config -> Config
+-- eval Increment state =
+--   let
+--     _ = spy "debug action eval" Increment
+--   in
+--     state { initialCount = state.initialCount + 1 }
+-- eval Decrement state =
+--   let
+--     _ = spy "debug action eval" Decrement
+--   in
+--     state { initialCount = state.initialCount - 1 }
 
-type Config = {
-    initialCount :: Int
+eval :: ComponentAction -> ((Config -> Config) -> Effect Unit) -> Effect Unit
+eval action updateState =
+  let
+    _ = spy "debug action eval" action
+  in
+    case action of
+      Increment -> updateState (\state_ -> state_ { initialCount = state_.initialCount + 1 })
+      Decrement -> updateState (\state_ -> state_ { initialCount = state_.initialCount - 1 })
+
+type Config =
+  { initialCount :: Int
   , plus :: PlusMinusObj
   , minus :: PlusMinusObj
   , stroke :: String
@@ -48,39 +62,39 @@ type Config = {
   , padding :: String
   , margin :: String
   -- , onChange :: Maybe (Int -> Effect Unit)
-}
+  }
 
-type PlusMinusObj = {
-    backgroundColor :: String
+type PlusMinusObj =
+  { backgroundColor :: String
   , textColor :: String
   , height :: String
   , width :: String
   , fontSize :: String
   , fontWeight :: String
   , rippleColor :: String
-}
+  }
 
 config :: Config
-config = 
+config =
   { initialCount: 0
-  , plus: {
-      backgroundColor: Color.black900
-    , textColor: Color.yellow900
-    , height: "wrap_content"
-    , width: "wrap_content"
-    , fontSize: "16"
-    , fontWeight: "bold"
-    , rippleColor: Color.black500
-    }
-  , minus: {
-      backgroundColor: Color.grey700
-    , textColor: Color.black900
-    , height: "wrap_content"
-    , width: "wrap_content"
-    , fontSize: "16"
-    , fontWeight: "bold"
-    , rippleColor: Color.black200
-    }
+  , plus:
+      { backgroundColor: Color.black900
+      , textColor: Color.yellow900
+      , height: "wrap_content"
+      , width: "wrap_content"
+      , fontSize: "16"
+      , fontWeight: "bold"
+      , rippleColor: Color.black500
+      }
+  , minus:
+      { backgroundColor: Color.grey700
+      , textColor: Color.black900
+      , height: "wrap_content"
+      , width: "wrap_content"
+      , fontSize: "16"
+      , fontWeight: "bold"
+      , rippleColor: Color.black200
+      }
   , stroke: "1," <> Color.grey700
   , backgroundColor: Color.white900
   , fontSize: "16"

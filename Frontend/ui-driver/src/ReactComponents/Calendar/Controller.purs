@@ -14,67 +14,80 @@
 -}
 module ReactComponents.Calendar.Controller where
 
+import Common.Types.App (CalendarModalDateObject, CalendarModalWeekObject, ModifiedCalendarObject)
+import Prelude (Unit, pure, unit)
+import Common.Styles.Colors as Color
 import Components.PrimaryButton as PrimaryButton
 import Data.Maybe (Maybe(..))
-import Common.Styles.Colors as Color
-import Common.Types.App
+import Effect (Effect)
+import Debug (spy)
 
-data ComponentOutput = PrimaryButtonAction
-                      | SelectDateAction ModifiedCalendarObject
+data ComponentOutput = PrimaryButtonAction | HideCalendarPopup
 
-data Action =  HideCalendarPopup
-            | SelectDate ModifiedCalendarObject
-            | DecrementMonth ModifiedCalendarObject
-            | IncrementMonth ModifiedCalendarObject
-            | PrimaryButtonActionController PrimaryButton.Action
-            | PrimaryButtonCancelActionController PrimaryButton.Action
-            | NoAction
+data ComponentAction
+  = NoAction
+  | SelectDate ModifiedCalendarObject
+  | DecrementMonth ModifiedCalendarObject
+  | IncrementMonth ModifiedCalendarObject
 
--- eval :: Action -> Config -> 
+eval :: ComponentAction -> ((Config -> Config) -> Effect Unit) -> Config -> Effect Unit
+eval action updateState state =
+  let
+    _ = spy "CalendarModal" action
+    _ = spy "CalendarModal" state
+  in
+    case action of
+      -- SelectDate date ->
+      --   updateState (\state -> state { selectedTimeSpan = date })
+      -- DecrementMonth date ->
+      --   updateState (\state -> state { selectedTimeSpan = date })
+      -- IncrementMonth date ->
+      --   updateState (\state -> state { selectedTimeSpan = date })
+      _ -> pure unit
 
 type Config =
- { weeks :: Array CalendarModalWeekObject
- , startDate :: Maybe CalendarModalDateObject
- , endDate :: Maybe CalendarModalDateObject
- , selectedTimeSpan :: CalendarModalDateObject
- , showError :: Boolean
- , errorMessage :: String
- , primaryButtonConfig :: PrimaryButton.Config
- , cancelButtonConfig :: PrimaryButton.Config
- , defaultMessage :: String
- , pastLimit :: CalendarModalDateObject
- , futureLimit :: CalendarModalDateObject
- , selectedDateColor :: String
- , dateInRangeColor :: String
- , selectRange :: Boolean
- }
-
+  { weeks :: Array CalendarModalWeekObject
+  , startDate :: Maybe CalendarModalDateObject
+  , endDate :: Maybe CalendarModalDateObject
+  , selectedTimeSpan :: CalendarModalDateObject
+  , showError :: Boolean
+  , errorMessage :: String
+  , primaryButtonConfig :: PrimaryButton.Config
+  , cancelButtonConfig :: PrimaryButton.Config
+  , defaultMessage :: String
+  , pastLimit :: CalendarModalDateObject
+  , futureLimit :: CalendarModalDateObject
+  , selectedDateColor :: String
+  , dateInRangeColor :: String
+  , selectRange :: Boolean
+  }
 
 config :: Config
 config =
-  { weeks : []
-  , startDate : Just dummyDateItem
-  , endDate : Just dummyDateItem
-  , selectedTimeSpan : dummyDateItem
-  , showError : false
-  , errorMessage : ""
-  , primaryButtonConfig : PrimaryButton.config
-  , cancelButtonConfig : PrimaryButton.config
-  , defaultMessage : ""
-  , pastLimit : dummyDateItem
-  , futureLimit : dummyDateItem
-  , selectedDateColor : Color.blue800
-  , dateInRangeColor : Color.blue9000
-  , selectRange : false
+  { weeks: []
+  , startDate: Just dummyDateItem
+  , endDate: Just dummyDateItem
+  , selectedTimeSpan: dummyDateItem
+  , showError: false
+  , errorMessage: ""
+  , primaryButtonConfig: PrimaryButton.config
+  , cancelButtonConfig: PrimaryButton.config
+  , defaultMessage: ""
+  , pastLimit: dummyDateItem
+  , futureLimit: dummyDateItem
+  , selectedDateColor: Color.blue800
+  , dateInRangeColor: Color.blue9000
+  , selectRange: false
   }
 
-dummyDateItem = {
-  date : 0, 
-  isInRange : false,
-  isStart : false, 
-  isEnd : false, 
-  utcDate : "", 
-  shortMonth : "", 
-  year : 0, 
-  intMonth : 0
-}
+dummyDateItem :: CalendarModalDateObject
+dummyDateItem =
+  { date: 0
+  , isInRange: false
+  , isStart: false
+  , isEnd: false
+  , utcDate: ""
+  , shortMonth: ""
+  , year: 0
+  , intMonth: 0
+  }
