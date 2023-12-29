@@ -118,7 +118,8 @@ BusinessHour:
 
   fields:
     id: Id BusinessHour
-    btype: BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
+    btype: Maybe BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
+    btype2: Maybe BusinessHourType # Slot TimeOfDay | Duration TimeOfDay TimeOfDay
     categoryId: "[Id ServiceCategory]"
   types:
     BusinessHourType:

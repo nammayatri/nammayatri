@@ -89,10 +89,12 @@ library
     , beckn-spec
     , bytestring
     , casing
+    , containers
     , directory
     , esqueleto
     , extra
     , filepath
+    , flatparse
     , lens
     , lens-aeson
     , mobility-core
@@ -112,6 +114,7 @@ library
     , text
     , time
     , unordered-containers
+    , utf8-string
     , vector
     , yaml
   default-language: Haskell2010
@@ -168,10 +171,12 @@ executable alchemist-generator-exe
     , beckn-spec
     , bytestring
     , casing
+    , containers
     , directory
     , esqueleto
     , extra
     , filepath
+    , flatparse
     , lens
     , lens-aeson
     , mobility-core
@@ -191,6 +196,7 @@ executable alchemist-generator-exe
     , text
     , time
     , unordered-containers
+    , utf8-string
     , vector
     , yaml
   default-language: Haskell2010
@@ -267,10 +273,12 @@ test-suite alchemist-tests
     , beckn-spec
     , bytestring
     , casing
+    , containers
     , directory
     , esqueleto
     , extra
     , filepath
+    , flatparse
     , lens
     , lens-aeson
     , mobility-core
@@ -290,6 +298,7 @@ test-suite alchemist-tests
     , text
     , time
     , unordered-containers
+    , utf8-string
     , vector
     , yaml
   default-language: Haskell2010

@@ -128,14 +128,7 @@ shouldImportUtilsTH typeObj =
 
 isHttpInstanceDerived :: [TypeObject] -> Bool
 isHttpInstanceDerived typeObj =
-  any
-    ( \case
-        TypeObject (_, (_, derive)) ->
-          case derive of
-            Just "HttpInstance" -> True
-            _ -> False
-    )
-    typeObj
+  any (\case TypeObject (_, (_, derive)) -> "HttpInstance" `elem` derive) typeObj
 
 isEnum :: [(String, String)] -> Bool
 isEnum [("enum", _)] = True
@@ -153,11 +146,19 @@ generateHaskellTypes typeObj = (both concat . unzip . map (both L.unlines . proc
     generateEnum typeName [("enum", values)] =
       let enumValues = L.splitOn "," values
        in ( ("data " <> typeName <> " = " <> L.intercalate " | " enumValues) :
-            ["  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema" <> (if isHttpInstanceDerived typeObj then ", ToParamSchema)\n\n" else ")\n\n")],
+            ["  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema" <> addRestDerivations (concatMap (\case TypeObject (_, (_, d)) -> d) typeObj)],
             ("$(mkBeamInstancesForEnum ''" <> typeName <> ")\n\n") :
               ["$(mkHttpInstancesForEnum ''" <> typeName <> ")\n" | isHttpInstanceDerived typeObj]
           )
     generateEnum _ _ = error "Invalid enum definition"
+
+    addRestDerivations :: [String] -> String
+    addRestDerivations [] = ")\n\n"
+    addRestDerivations derivations = ", " <> L.intercalate ", " (map toInstanceName derivations) <> ")\n\n"
+
+    toInstanceName = \case
+      "HttpInstance" -> "ToParamSchema"
+      val -> error "Invalid instance derivation specified: " <> val
 
     generateDataStructure :: String -> [(String, String)] -> ([String], [String])
     generateDataStructure typeName fields =

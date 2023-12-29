@@ -3,6 +3,20 @@ module Alchemist.DSL.Syntax.Storage where
 import Alchemist.GeneratorCore
 import Kernel.Prelude
 
+data SqlUpdates = SqlUpdates
+  { fieldUpdates :: Maybe (String, SqlFieldUpdates),
+    keysInPrimaryKey :: [String]
+  }
+  deriving (Show)
+
+data MigrationFile = MigrationFile
+  { sqlTableName :: String,
+    fields_ :: [FieldDef],
+    primaryKeys :: [String],
+    rawLastSqlFile :: String
+  }
+  deriving (Show)
+
 data TableDef = TableDef
   { tableNameHaskell :: String,
     tableNameSql :: String,
@@ -16,7 +30,7 @@ data TableDef = TableDef
   }
   deriving (Show)
 
-newtype TypeObject = TypeObject (String, ([(String, String)], Maybe String))
+newtype TypeObject = TypeObject (String, ([(String, String)], [String])) --  (TypeName, ([(Field, HaskellType)], [InstanceToDerive]))
   deriving (Show)
 
 data QueryDef = QueryDef
@@ -44,13 +58,26 @@ data FieldDef = FieldDef
   }
   deriving (Show)
 
-data FieldConstraint = PrimaryKey | SecondaryKey | NotNull | AUTOINCREMENT deriving (Show, Eq)
+data FieldConstraint = PrimaryKey | SecondaryKey | NotNull | AUTOINCREMENT deriving (Show, Eq, Ord)
+
+data SqlFieldUpdates = DropNotNull | DropDefault | AddNotNull | AddDefault String | TypeChange | DropPrimaryKey | AddPrimaryKey deriving (Show)
+
+instance Eq SqlFieldUpdates where
+  (==) DropNotNull DropNotNull = True
+  (==) DropDefault DropDefault = True
+  (==) AddNotNull AddNotNull = True
+  (==) DropPrimaryKey DropPrimaryKey = True
+  (==) AddPrimaryKey AddPrimaryKey = True
+  (==) (AddDefault _) (AddDefault _) = True
+  (==) TypeChange TypeChange = True
+  (==) _ _ = False
 
 data BeamField = BeamField
   { bFieldName :: String,
     hFieldType :: String,
     bFieldType :: String,
     bConstraints :: [FieldConstraint],
+    bFieldUpdates :: [SqlFieldUpdates],
     bSqlType :: String,
     bDefaultVal :: Maybe String,
     bfieldExtractor :: [String],

@@ -34,7 +34,13 @@ mkDomainType filePath yaml = do
 mkSQLFile :: FilePath -> FilePath -> IO ()
 mkSQLFile filePath yaml = do
   tableDef <- storageParser yaml
-  mapM_ (\t -> writeToFile filePath (tableNameSql t ++ ".sql") (generateSQL t)) tableDef
+  mapM_
+    ( \t -> do
+        let filename = (tableNameSql t ++ ".sql")
+        mbOldMigrationFile <- getOldSqlFile $ filePath </> filename
+        writeToFile filePath filename (generateSQL mbOldMigrationFile t)
+    )
+    tableDef
 
 mkServantAPI :: FilePath -> FilePath -> IO ()
 mkServantAPI filePath yaml = do

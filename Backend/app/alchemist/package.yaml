@@ -87,6 +87,9 @@ dependencies:
   - filepath
   - mtl
   - stringbuilder
+  - flatparse
+  - utf8-string
+  - containers
 
 ghc-options:
   - -Wall

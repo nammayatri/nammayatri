@@ -1,8 +1,11 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-module Alchemist.DSL.Parser.Storage (storageParser) where
+module Alchemist.DSL.Parser.Storage (storageParser, getOldSqlFile) where
 
 import Alchemist.DSL.Syntax.Storage
+-- import qualified Debug.Trace as DT
 import Alchemist.Utils (figureOutImports, isMaybeType, makeTypeQualified, _String)
 import Control.Lens.Combinators
 import Control.Lens.Operators
@@ -11,16 +14,220 @@ import Data.Aeson.Key (fromString, toString)
 import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Lens (_Array, _Object, _Value)
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.UTF8 as BSU
 import Data.Char (toUpper)
 import qualified Data.List as L
 import qualified Data.List.Extra as L
 import Data.List.Split (split, splitOn, splitWhen, whenElt)
+import qualified Data.Map as M
 import qualified Data.Text as T
+import Data.Tuple (swap)
 import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
+import FlatParse.Basic
 import Kernel.Prelude hiding (fromString, toString, toText, traceShowId, try)
 import Text.Casing (quietSnake)
 import Text.Regex.TDFA ((=~))
+
+-- debugParser :: Parser e ()
+-- debugParser = do
+--   !_ <- DT.traceShowId <$> lookahead (many anyChar)
+--   pure ()
+
+snakeCaseToCamelCase :: String -> String
+snakeCaseToCamelCase = concat . makeMeCamel . map (T.unpack . T.strip) . T.split (== '_') . T.pack
+  where
+    makeMeCamel (x : xs) = x : map captialise xs
+    makeMeCamel [] = error "empty field name"
+
+    captialise (x : xs) = toUpper x : xs
+    captialise [] = error "got two underscores together in field name, feeling sad...."
+
+sqlAlterAddPrimaryKeyParser :: Parser e [String]
+sqlAlterAddPrimaryKeyParser = do
+  $(string "ALTER TABLE atlas_app.") -- TODO: need to make schema dynamic, will do when fixing in generator code
+  _tableName <- many $ notFollowedBy anyChar $(string "ADD PRIMARY KEY (")
+  $(string " ADD PRIMARY KEY ( ")
+  keys <- many $ notFollowedBy anyChar $(string ";")
+  $(string ");\n")
+  return $ map (snakeCaseToCamelCase . T.unpack) (T.split (== ',') . T.pack $ keys)
+
+parseWithDefault :: Parser e (Maybe String)
+parseWithDefault = do
+  $(string " default ")
+  defaultValStart <- many $ notFollowedBy anyChar $(string ";")
+  defaultValEnd <- anyChar
+  return . Just $ defaultValStart <> [defaultValEnd]
+
+parseConstraint :: Parser e (Maybe FieldConstraint)
+parseConstraint = do
+  constarint <-
+    $( switch
+         [|
+           case _ of
+             " NOT NULL" -> pure (Just NotNull)
+             _ -> pure Nothing
+           |]
+     )
+  return constarint
+
+sqlAlterTableAddColumn :: Parser e FieldDef
+sqlAlterTableAddColumn = do
+  $(string "ALTER TABLE atlas_app.") -- TODO: need to make schema dynamic, will do when fixing in generator code
+  _tableName <- many $ notFollowedBy anyChar $(string "ADD COLUMN")
+  $(string " ADD COLUMN ")
+  fieldNameStart <- many $ notFollowedBy anyChar $(string " ")
+  fieldNameEnd <- anyChar
+  let fieldName = fieldNameStart <> [fieldNameEnd]
+  $(string " ")
+  sqlType <- many $ notFollowedBy anyChar ($(string "NOT NULL") <|> $(string ";")) -- TODO: update it when we add more constraints in generator.
+  constraint <- parseConstraint <|> return Nothing
+  $(string " ;") <|> pure ()
+  defaultVal <- parseWithDefault <|> return Nothing
+  $(string ";\n") <|> $(string "\n")
+  let isEncrypted = False
+      fromTType = Nothing
+      beamFields = [bf]
+      bf =
+        BeamField
+          { bFieldName = snakeCaseToCamelCase fieldName,
+            hFieldType = findMatchingHaskellType sqlType, -- not required, but anyways did.
+            bFieldType = sqlType, -- not required for this case
+            bConstraints = [PrimaryKey | fieldName == "id"] <> maybeToList constraint, -- as hardcoded in the generator part
+            bSqlType = sqlType, -- not required for this case
+            bFieldUpdates = [],
+            bDefaultVal = defaultVal,
+            bfieldExtractor = [],
+            bToTType = Nothing,
+            bIsEncrypted = False
+          }
+  pure $
+    FieldDef
+      (snakeCaseToCamelCase fieldName)
+      (findMatchingHaskellType sqlType)
+      beamFields
+      fromTType
+      isEncrypted
+
+sqlCreateParser :: Parser e String
+sqlCreateParser = do
+  $(string "CREATE TABLE atlas_app.") -- need to fix the generator as well to take tablename as a argument.
+  tableName <- many $ notFollowedBy anyChar $(char '(')
+  $(string " ();\n\n")
+  pure tableName
+
+sqlUpdateStampParser :: Parser e ()
+sqlUpdateStampParser = $(string "\n\n------ SQL updates ------\n\n")
+
+columnUpdateActionParser :: Parser e SqlFieldUpdates
+columnUpdateActionParser = do
+  updateAction <-
+    ($(string " DROP DEFAULT") *> pure DropDefault)
+      <|> ($(string " SET DEFAULT ") *> pure (AddDefault ""))
+      <|> ($(string " DROP NOT NULL") *> pure DropNotNull)
+      <|> ($(string " SET NOT NULL") *> pure AddNotNull)
+  finalAction <-
+    case updateAction of
+      AddDefault _ -> AddDefault <$> many (notFollowedBy anyChar $(string "\n"))
+      val -> do
+        _ <- many $ notFollowedBy anyChar $(string "\n")
+        pure val
+  $(string ";\n")
+  return finalAction
+
+sqlUpdatesParser :: Parser e SqlUpdates
+sqlUpdatesParser = do
+  $(string "ALTER TABLE atlas_app.")
+  _tableNameStart <- many (notFollowedBy anyChar $(string " "))
+  _tableNameEndChar <- anyChar
+  isColumnAlter <-
+    $( switch
+         [|
+           case _ of
+             " ALTER COLUMN " -> pure True
+             " DROP CONSTRAINT " -> pure False
+             _ -> pure False
+           |]
+     )
+  if isColumnAlter
+    then do
+      fieldName <- many (notFollowedBy anyChar ($(string "DROP") <|> $(string "SET") <|> $(string "TYPE")))
+      update <- columnUpdateActionParser
+      pure $
+        SqlUpdates
+          (Just (snakeCaseToCamelCase fieldName, update))
+          []
+    else do
+      _ <- many $ notFollowedBy anyChar $(string "pkey;\n")
+      $(string "_pkey;\n")
+      pk <- sqlAlterAddPrimaryKeyParser <|> return []
+      pure $
+        SqlUpdates
+          Nothing
+          pk
+
+migrationFileParser :: String -> Parser e MigrationFile
+migrationFileParser lastSqlFile = do
+  !tableName <- sqlCreateParser
+  fields <- many sqlAlterTableAddColumn
+  !pk <- sqlAlterAddPrimaryKeyParser <|> return []
+  !columnUpdates <-
+    concat <$> many do
+      sqlUpdateStampParser
+      many sqlUpdatesParser
+  let !finalFieldUpdates =
+        foldr
+          ( \sqlUpdate accMap -> do
+              case fieldUpdates sqlUpdate of
+                Nothing -> accMap
+                Just (fieldName, updateAction) -> do
+                  case M.lookup fieldName accMap of
+                    Just val -> M.insert fieldName (groupRelevant updateAction val) accMap
+                    Nothing -> M.insert fieldName (groupRelevant updateAction ([], [])) accMap
+          )
+          M.empty
+          columnUpdates
+  let !finalFields =
+        map
+          ( \field ->
+              field
+                { beamFields =
+                    map
+                      ( \beamField -> do
+                          let ubf =
+                                if beamField.bFieldName `elem` pk && beamField.bFieldName /= "id"
+                                  then beamField {bConstraints = beamField.bConstraints <> [SecondaryKey]}
+                                  else beamField
+                          let (notNullRelatedAcc, defaultRelatedAcc) = fromMaybe ([], []) $ M.lookup ubf.bFieldName finalFieldUpdates
+                          let ubf' =
+                                -- using head and last below because we are never going to get empty array below, could have used NonEmpty array, will be in next PR along with other refactor.
+                                case lastMay notNullRelatedAcc of
+                                  Just AddNotNull | NotNull `notElem` ubf.bConstraints -> ubf {bConstraints = NotNull : ubf.bConstraints}
+                                  Just DropNotNull -> ubf {bConstraints = filter (/= NotNull) ubf.bConstraints}
+                                  _ -> ubf
+                          case lastMay defaultRelatedAcc of
+                            Just DropDefault -> ubf' {bDefaultVal = Nothing}
+                            Just (AddDefault val) -> ubf' {bDefaultVal = Just val}
+                            _ -> ubf'
+                      )
+                      (beamFields field)
+                }
+          )
+          fields
+  pure $ MigrationFile tableName finalFields pk lastSqlFile
+  where
+    groupRelevant sqlUpdate (notNullRelatedAcc, defaultRelatedAcc)
+      | sqlUpdate `elem` [DropNotNull, AddNotNull] = (sqlUpdate : notNullRelatedAcc, defaultRelatedAcc)
+      | sqlUpdate `elem` [AddDefault "", DropDefault] = (notNullRelatedAcc, sqlUpdate : defaultRelatedAcc)
+      | otherwise = (notNullRelatedAcc, defaultRelatedAcc)
+
+getOldSqlFile :: FilePath -> IO (Maybe MigrationFile)
+getOldSqlFile filepath = do
+  lastSqlFile <- BS.readFile filepath
+  pure $ go (runParser (migrationFileParser (BSU.toString lastSqlFile)) lastSqlFile)
+  where
+    go (OK r _) = Just r
+    go _ = Nothing
 
 storageParser :: FilePath -> IO [TableDef]
 storageParser filepath = do
@@ -143,13 +350,13 @@ parseTypeObjects obj =
     extractString (String t) = T.unpack t
     extractString _ = error "Non-string type found in field definition"
 
-    splitTypeAndDerivation :: [(String, String)] -> ([(String, String)], Maybe String)
+    splitTypeAndDerivation :: [(String, String)] -> ([(String, String)], [String])
     splitTypeAndDerivation fields = (filter (\(k, _) -> k /= "derive") fields, extractDerive fields)
       where
-        extractDerive :: [(String, String)] -> Maybe String
-        extractDerive [] = Nothing
+        extractDerive :: [(String, String)] -> [String]
+        extractDerive [] = []
         extractDerive ((k, value) : xs)
-          | k == "derive" = Just value
+          | k == "derive" = map T.unpack (T.split (== ',') (T.pack value))
           | otherwise = extractDerive xs
 
     processType1 :: (Key, Value) -> TypeObject
@@ -264,6 +471,7 @@ makeBeamFields moduleName excludedList dataList enumList fieldName haskellType d
                 hFieldType = makeTypeQualified (Just moduleName) excludedList (Just dataList) defaultImportModule impObj tpp,
                 bFieldType = makeTypeQualified (Just moduleName) excludedList (Just dataList) defaultImportModule impObj beamType,
                 bConstraints = constraints,
+                bFieldUpdates = [], -- not required while creating
                 bSqlType = sqlType,
                 bDefaultVal = defaultValue,
                 bToTType = parseToTType,
@@ -373,3 +581,13 @@ extractKeysFromBeamFields fieldDefs = (primaryKeyFields, secondaryKeyFields)
   where
     primaryKeyFields = [bFieldName fd | fd <- fieldDefs, PrimaryKey `elem` bConstraints fd]
     secondaryKeyFields = [bFieldName fd | fd <- fieldDefs, SecondaryKey `elem` bConstraints fd]
+
+-- SQL reverse parse
+findMatchingHaskellType :: String -> String
+findMatchingHaskellType sqlType =
+  case filter ((sqlType =~) . fst) haskellTypeWrtSqlType of
+    [] -> error $ "Type not found " <> T.pack sqlType
+    ((_, haskellType) : _) -> haskellType
+
+haskellTypeWrtSqlType :: [(String, String)]
+haskellTypeWrtSqlType = map (first (T.unpack . T.replace "(" "\\(" . T.replace ")" "\\)" . T.replace "[" "\\[" . T.replace "]" "\\]" . T.pack) . second (T.unpack . T.replace "\\[" "[" . T.replace "\\]" "]" . T.pack) . swap) sqlTypeWrtType
