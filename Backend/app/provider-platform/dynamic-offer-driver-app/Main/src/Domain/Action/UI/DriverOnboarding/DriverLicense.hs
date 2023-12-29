@@ -124,6 +124,8 @@ verifyDL isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverDLReq 
     Just driverLicense -> do
       unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
       unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
+      when (driverLicense.verificationStatus == Domain.INVALID) $ throwError DLInvalid
+      when (driverLicense.verificationStatus == Domain.VALID) $ throwError DLAlreadyUpdated
       verifyDLFlow person merchantOpCityId onboardingDocumentConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue
     Nothing -> do
       mDriverDL <- Query.findByDriverId personId
