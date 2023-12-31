@@ -172,6 +172,7 @@ verifyDLFlow person merchantOpCityId onboardingDocumentConfig dlNumber driverDat
             idfyResponse = Nothing,
             multipleRC = Nothing, -- added for backward compatibility
             dashboardPassedVehicleVariant = Nothing,
+            retryCount = 0,
             createdAt = now,
             updatedAt = now
           }

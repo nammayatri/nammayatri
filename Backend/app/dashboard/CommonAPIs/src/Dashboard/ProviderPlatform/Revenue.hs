@@ -49,12 +49,12 @@ data AllFees = AllFees
   { status :: DriverFeeStatus,
     numRides :: Int,
     numDrivers :: Int,
-    totalAmount :: Centesimal
+    totalAmount :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data CollectionListElem = CollectionListElem
-  { totalAmount :: Centesimal,
+  { totalAmount :: Int,
     totalRides :: Int,
     numDrivers :: Int,
     date :: Day,

@@ -243,6 +243,7 @@ verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegi
             idfyResponse = Nothing,
             multipleRC,
             dashboardPassedVehicleVariant = mbVariant,
+            retryCount = 0,
             createdAt = now,
             updatedAt = now
           }

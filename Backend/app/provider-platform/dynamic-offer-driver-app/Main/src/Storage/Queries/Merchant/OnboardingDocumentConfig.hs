@@ -51,6 +51,7 @@ update config = do
       Se.Set BeamODC.vehicleClassCheckType (config.vehicleClassCheckType),
       Se.Set BeamODC.rcNumberPrefix (config.rcNumberPrefix),
       Se.Set BeamODC.rcNumberPrefixList (config.rcNumberPrefixList),
+      Se.Set BeamODC.maxRetryCount (config.maxRetryCount),
       Se.Set BeamODC.updatedAt now
     ]
     [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId config.merchantOperatingCityId, Se.Is BeamODC.documentType $ Se.Eq config.documentType]
@@ -73,6 +74,7 @@ instance FromTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wh
             vehicleClassCheckType = vehicleClassCheckType,
             rcNumberPrefix = rcNumberPrefix,
             rcNumberPrefixList = rcNumberPrefixList,
+            maxRetryCount = maxRetryCount,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -100,6 +102,7 @@ instance ToTType' BeamODC.OnboardingDocumentConfig OnboardingDocumentConfig wher
         BeamODC.vehicleClassCheckType = vehicleClassCheckType,
         BeamODC.rcNumberPrefix = rcNumberPrefix,
         BeamODC.rcNumberPrefixList = rcNumberPrefixList,
+        BeamODC.maxRetryCount = maxRetryCount,
         BeamODC.createdAt = createdAt,
         BeamODC.updatedAt = updatedAt
       }
