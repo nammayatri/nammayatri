@@ -187,6 +187,7 @@ let AllocatorJobType =
       | OrderAndNotificationStatusUpdate
       | SendOverlay
       | BadDebtCalculation
+      | RetryDocumentVerification
       >
 
 let jobInfoMapx =
@@ -208,6 +209,9 @@ let jobInfoMapx =
         }
       , { mapKey = AllocatorJobType.SendOverlay, mapValue = True }
       , { mapKey = AllocatorJobType.BadDebtCalculation, mapValue = True }
+      , { mapKey = AllocatorJobType.RetryDocumentVerification
+        , mapValue = False
+        }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
