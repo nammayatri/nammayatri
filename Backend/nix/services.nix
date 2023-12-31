@@ -31,7 +31,7 @@
           master.extraInitialScript = ''
             CREATE USER atlas WITH PASSWORD 'atlas';
           '';
-          master.port = 5432;
+          master.port = 5434;
           replica.port = 5435;
         };
 
