@@ -21,9 +21,11 @@ module Domain.Action.UI.DriverOnboarding.IdfyWebhook
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
+import qualified Domain.Types.DriverOnboarding.IdfyVerification as IV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Environment
@@ -36,6 +38,8 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -111,18 +115,37 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
 onVerify resp respDump = do
   verificationReq <- IVQuery.findByRequestId resp.request_id >>= fromMaybeM (InternalError "Verification request not found")
-  _ <- IVQuery.updateResponse resp.request_id resp.status respDump
-
-  ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
-  person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
-  -- running statusHandler to enable Driver
-  _ <- Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) verificationReq.multipleRC
-
-  return ack_
+  IVQuery.updateResponse resp.request_id resp.status respDump
+  let resultStatus = getResultStatus resp.result
+  if resultStatus == (Just "source_down")
+    then do
+      scheduleRetryVerificationJob verificationReq
+      return Ack
+    else do
+      ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
+      person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+      -- running statusHandler to enable Driver
+      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) verificationReq.multipleRC
+      return ack_
   where
+    getResultStatus mbResult = mbResult >>= (\rslt -> (rslt.extraction_output >>= (.status)) <|> (rslt.source_output >>= (.status)))
     verifyDocument verificationReq rslt
       | isJust rslt.extraction_output =
         maybe (pure Ack) (RC.onVerifyRC verificationReq) rslt.extraction_output
       | isJust rslt.source_output =
         maybe (pure Ack) (DL.onVerifyDL verificationReq) rslt.source_output
       | otherwise = pure Ack
+
+scheduleRetryVerificationJob :: IV.IdfyVerification -> Flow ()
+scheduleRetryVerificationJob verificationReq = do
+  maxShards <- asks (.maxShards)
+  let scheduleTime = calculateScheduleTime verificationReq.retryCount
+  createJobIn @_ @'RetryDocumentVerification scheduleTime maxShards $
+    RetryDocumentVerificationJobData
+      { requestId = verificationReq.requestId
+      }
+  where
+    calculateScheduleTime retryCount = do
+      let retryInterval = 60 * 60 * 1000 -- 1 hour
+      let retryTime = retryInterval * (3 ^ retryCount)
+      retryTime
