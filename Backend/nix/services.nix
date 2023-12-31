@@ -2,32 +2,16 @@
 {
   config = {
     perSystem = { inputs', self', pkgs, lib, ... }: {
-      process-compose."services" = { config, ... }:
-        let
-          # Run `pg_basebackup` to create a replica of the database with the name `master-db-name`
-          # See here about `pg_basebackup`: https://www.postgresql.org/docs/current/app-pgbasebackup.html
-          pg-backup-script = master-db-name: replica-db-name: port: pkgs.writeShellApplication {
-            name = "start-pg-basebackup";
-            runtimeInputs = with pkgs; [ config.services.postgres."${master-db-name}".package coreutils ];
-            text = ''
-              MASTER_DB_ABS_PATH=$(readlink -f ${config.services.postgres."${master-db-name}".dataDir})
-              REPLICA_DB_ABS_PATH=$(readlink -f ${config.services.postgres."${replica-db-name}".dataDir})
-              pg_basebackup -h "$MASTER_DB_ABS_PATH" -U repl_user --checkpoint=fast -D "$REPLICA_DB_ABS_PATH"  -R --slot=some_name  -C --port=${builtins.toString port}
-            '';
-          };
-        in
-        {
+      process-compose."services" = { config, ... }: {
           imports = [
             inputs.services-flake.processComposeModules.default
             inputs.passetto.processComposeModules.default
+            ./postgres-with-replica.nix
           ];
 
-          services.postgres.db-primary = {
-            extensions = extensions: [
-              extensions.postgis
-            ];
-            initialDumps = [
-              ../dev/sql-seed/pre-init.sql
+          services.postgres-with-replica.db-primary = {
+            enable = true;
+            master.extraInitialDumps = [
               ../dev/sql-seed/rider-app-seed.sql
               ../dev/local-testing-data/rider-app.sql
               ../dev/sql-seed/public-transport-rider-platform-seed.sql
@@ -44,59 +28,21 @@
               ../dev/sql-seed/special-zone-seed.sql
               ../dev/local-testing-data/special-zone.sql
             ];
-            port = 5432;
-            enable = true;
-            listen_addresses = "*";
-            hbaConf = [
-              { type = "host"; database = "all"; user = "repl_user"; address = "127.0.0.1/32"; method = "trust"; }
-            ];
-            initialScript.before = ''
+            master.extraInitialScript = ''
               CREATE USER atlas WITH PASSWORD 'atlas';
-              
-              CREATE USER repl_user replication;
             '';
+            master.port = 5432;
+            replica.port = 5435;
           };
 
-          settings.processes.pg-basebackup-primary-db = {
-            command = pg-backup-script "db-primary" "db-replica" 5432;
-            depends_on."db-primary".condition = "process_healthy";
-          };
-
-          services.postgres.db-replica = {
-            depends_on."pg-basebackup-primary-db".condition = "process_completed_successfully";
+          services.postgres-with-replica.location-db = {
             enable = true;
-            port = 5435;
-          };
-
-          services.postgres.location-db = {
-            initialDumps = [
-              ../dev/sql-seed/pre-init.sql
+            master.extraInitialDumps = [
               ../dev/sql-seed/driver-location-seed.sql
               ../dev/local-testing-data/person-location.sql
             ];
-            extensions = extensions: [
-              extensions.postgis
-            ];
-            port = 5454;
-            enable = true;
-            listen_addresses = "*";
-            hbaConf = [
-              { type = "host"; database = "all"; user = "repl_user"; address = "127.0.0.1/32"; method = "trust"; }
-            ];
-            initialScript.before = '' 
-              CREATE USER repl_user replication;
-            '';
-          };
-
-          settings.processes.pg-basebackup-location-db = {
-            command = pg-backup-script "location-db" "location-db-replica" 5454;
-            depends_on."location-db".condition = "process_healthy";
-          };
-
-          services.postgres.location-db-replica = {
-            depends_on."pg-basebackup-location-db".condition = "process_completed_successfully";
-            enable = true;
-            port = 5456;
+            master.port = 5454;
+            replica.port = 5456;
           };
 
           services.redis."redis".enable = true;
