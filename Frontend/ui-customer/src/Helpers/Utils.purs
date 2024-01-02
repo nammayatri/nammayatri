@@ -26,7 +26,7 @@ import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Pay
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
@@ -86,6 +86,7 @@ import Unsafe.Coerce (unsafeCoerce)
 import Data.Function.Uncurried (Fn1)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
+import Data.Tuple (Tuple(..), fst, snd)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -596,3 +597,33 @@ getTitleConfig vehicleVariant =
             text : text',
             color : color'
           }
+
+cityCodeMap :: Array (Tuple String String)
+cityCodeMap = 
+  [ Tuple "std:080" "bangalore"
+  , Tuple "std:033" "kolkata"
+  , Tuple "std:001" "paris"
+  , Tuple "std:484" "kochi"
+  , Tuple "std:011" "delhi"
+  , Tuple "std:040" "hyderabad"
+  , Tuple "std:022" "mumbai"
+  , Tuple "std:044" "chennai"
+  , Tuple "std:0422" "coimbatore"
+  , Tuple "std:0413" "pondicherry"
+  , Tuple "std:08342" "goa"
+  , Tuple "std:020" "pune"
+  , Tuple "std:0821" "mysore"
+  , Tuple "std:0816" "tumakuru"
+  ]
+
+getCityFromCode :: String -> String
+getCityFromCode code = 
+  let 
+    cityCodeTuple = find (\ tuple -> (fst tuple) == code) cityCodeMap
+  in maybe "" (\tuple -> snd tuple) cityCodeTuple
+
+getCodeFromCity :: String -> String
+getCodeFromCity city = 
+  let 
+    cityCodeTuple = find (\tuple -> (snd tuple) == (DS.toLower city)) cityCodeMap
+  in maybe "" (\tuple -> fst tuple) cityCodeTuple
