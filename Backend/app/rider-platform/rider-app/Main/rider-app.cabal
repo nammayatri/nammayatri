@@ -451,7 +451,6 @@ library
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
-    , alchemist
     , amazonka
     , amazonka-core
     , amazonka-ses
@@ -564,7 +563,6 @@ executable rider-app-exe
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
-    , alchemist
     , amazonka
     , amazonka-core
     , amazonka-ses

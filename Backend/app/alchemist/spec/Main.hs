@@ -1,7 +1,7 @@
 module Main where
 
-import qualified Alchemist.App as Alchemist
 import Kernel.Prelude
+import qualified NammaDSL.App as NammaDSL
 import System.Directory
 import System.FilePath
 
@@ -62,16 +62,16 @@ main = do
       let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
       let readOnlyMigration = rootDir </> sqlOutputPathPrefix </> appName
 
-      Alchemist.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
-      Alchemist.mkBeamQueries (readOnlySrc </> "Storage/Queries") inputFile
-      Alchemist.mkDomainType (readOnlySrc </> "Domain/Types") inputFile
-      Alchemist.mkSQLFile readOnlyMigration inputFile
+      NammaDSL.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
+      NammaDSL.mkBeamQueries (readOnlySrc </> "Storage/Queries") inputFile
+      NammaDSL.mkDomainType (readOnlySrc </> "Domain/Types") inputFile
+      NammaDSL.mkSQLFile readOnlyMigration inputFile
 
     processAPIDSL rootDir appPath inputFile = do
       let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
       let src = rootDir </> haskellOutputPathPrefix </> appPath </> "src"
 
-      -- Alchemist.mkFrontendAPIIntegration (readOnlySrc </> "Domain/Action") inputFile
-      Alchemist.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
-      Alchemist.mkApiTypes (readOnlySrc </> "API/Types/UI") inputFile
-      Alchemist.mkDomainHandler (src </> "Domain/Action/UI") inputFile
+      -- NammaDSL.mkFrontendAPIIntegration (readOnlySrc </> "Domain/Action") inputFile
+      NammaDSL.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
+      NammaDSL.mkApiTypes (readOnlySrc </> "API/Types/UI") inputFile
+      NammaDSL.mkDomainHandler (src </> "Domain/Action/UI") inputFile

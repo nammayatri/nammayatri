@@ -60,34 +60,17 @@ dependencies:
   - aeson
   - base >= 4.7 && < 5
   - mobility-core
-  - beckn-spec
   - bytestring
   - record-dot-preprocessor
   - record-hasfield
   - text
   - time
-  - servant-server
-  - persistent
-  - persistent-postgresql
-  - esqueleto
   - template-haskell
-  - parsec
-  - raw-strings-qq
-  - regex-tdfa
-  - split
-  - unordered-containers
-  - lens
   - casing
   - directory
-  - extra
   - yaml
-  - lens-aeson
-  - scientific
-  - vector
   - filepath
-  - mtl
-  - stringbuilder
-  - pretty-show
+  - namma-dsl
 
 ghc-options:
   - -Wall
@@ -98,35 +81,6 @@ ghc-options:
   - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
-
-library:
-  source-dirs: src
-  ghc-options:
-    - -Wincomplete-uni-patterns
-    - -Wwarn=ambiguous-fields
-  when:
-    - condition: flag(Local)
-      then:
-        ghc-options:
-          - -O0
-          - -funfolding-use-threshold20
-          - -fno-cse
-          - -fmax-simplifier-iterations1
-          - -fno-specialise-aggressively
-          - -j4
-      else:
-        ghc-options:
-          - -O2
-          - -j4
-
-tests:
-  alchemist-tests:
-    main: Main.hs
-    source-dirs:
-      - tests
-      - src
-    dependencies:
-      - alchemist
 
 executables:
   alchemist-generator-exe:
@@ -152,7 +106,5 @@ executables:
           - -O2
           - -j4
     dependencies:
-      - beckn-spec
       - mobility-core
-      - alchemist
-
+      - namma-dsl

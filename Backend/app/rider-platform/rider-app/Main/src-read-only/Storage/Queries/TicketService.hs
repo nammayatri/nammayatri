@@ -25,20 +25,20 @@ createMany = traverse_ createWithKV
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> m (Maybe (Domain.Types.TicketService.TicketService))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 getTicketServicesByPlaceId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Text -> m ([Domain.Types.TicketService.TicketService])
 getTicketServicesByPlaceId placesId = do
   findAllWithKV
-    [ Se.Is Beam.placesId $ Se.Eq $ placesId
+    [ Se.Is Beam.placesId $ Se.Eq placesId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> m (Maybe (Domain.Types.TicketService.TicketService))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
@@ -60,7 +60,7 @@ updateByPrimaryKey Domain.Types.TicketService.TicketService {..} = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

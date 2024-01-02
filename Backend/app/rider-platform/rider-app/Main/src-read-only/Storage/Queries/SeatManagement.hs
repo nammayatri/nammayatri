@@ -27,8 +27,8 @@ findByTicketServiceCategoryIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m
 findByTicketServiceCategoryIdAndDate (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq $ ticketServiceCategoryId,
-          Se.Is Beam.date $ Se.Eq $ date
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
+          Se.Is Beam.date $ Se.Eq date
         ]
     ]
 
@@ -40,8 +40,8 @@ updateBlockedSeats blocked (Kernel.Types.Id.Id ticketServiceCategoryId) date = d
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq $ ticketServiceCategoryId,
-          Se.Is Beam.date $ Se.Eq $ date
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
+          Se.Is Beam.date $ Se.Eq date
         ]
     ]
 
@@ -53,8 +53,8 @@ updateBookedSeats booked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq $ ticketServiceCategoryId,
-          Se.Is Beam.date $ Se.Eq $ date
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
+          Se.Is Beam.date $ Se.Eq date
         ]
     ]
 
@@ -62,7 +62,7 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
@@ -80,7 +80,7 @@ updateByPrimaryKey Domain.Types.SeatManagement.SeatManagement {..} = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 
