@@ -37,10 +37,9 @@ generateBeamQueries tableDef = do
       ]
         <> imports tableDef
     getStorageRelationImports :: FieldDef -> [String]
-    getStorageRelationImports fieldDef = do
-      let mbQuery = regexExec fieldDef.haskellType "^\\Kernel\\.Prelude\\.Maybe Domain\\.Types\\..*\\.(.*)$|^\\[Domain\\.Types\\..*\\.(.*)\\]$|^Domain\\.Types\\..*\\.(.*)$"
-      case mbQuery of
-        Just query -> ["Storage.Queries." ++ query]
+    getStorageRelationImports fieldDef =
+      case getFieldRelationAndHaskellType fieldDef.haskellType of
+        Just (_, query) -> ["Storage.Queries." ++ query]
         Nothing -> []
 
 mkCodeBody :: StorageM ()
@@ -168,9 +167,9 @@ fromTTypeMConversionFunction :: String -> String -> String -> Maybe FieldRelatio
 fromTTypeMConversionFunction tableNameHaskell haskellType fieldName relation
   | isJust relation =
     case fromJust relation of
-      OneToOne -> fieldName ++ "' <- Storage.Queries." ++ fromJust (extractIdType haskellType) ++ ".findBy" ++ tableNameHaskell ++ "Id (Kernel.Types.Id.Id id) >>= fromMaybeM (InternalError \"Failed to get " ++ fieldName ++ ".\")"
-      MaybeOneToOne -> fieldName ++ "' <- Storage.Queries." ++ fromJust (extractIdType haskellType) ++ ".findBy" ++ tableNameHaskell ++ "Id (Kernel.Types.Id.Id id)"
-      OneToMany -> fieldName ++ "' <- Storage.Queries." ++ fromJust (extractIdType haskellType) ++ ".findAllBy" ++ tableNameHaskell ++ "Id (Kernel.Types.Id.Id id)"
+      OneToOne -> fieldName ++ "' <- Storage.Queries." ++ fromJust (snd <$> getFieldRelationAndHaskellType haskellType) ++ ".findBy" ++ tableNameHaskell ++ "Id (Kernel.Types.Id.Id id) >>= fromMaybeM (InternalError \"Failed to get " ++ fieldName ++ ".\")"
+      MaybeOneToOne -> fieldName ++ "' <- Storage.Queries." ++ fromJust (snd <$> getFieldRelationAndHaskellType haskellType) ++ ".findBy" ++ tableNameHaskell ++ "Id (Kernel.Types.Id.Id id)"
+      OneToMany -> fieldName ++ "' <- Storage.Queries." ++ fromJust (snd <$> getFieldRelationAndHaskellType haskellType) ++ ".findAllBy" ++ tableNameHaskell ++ "Id (Kernel.Types.Id.Id id)"
   | otherwise = ""
 
 toTTypeExtractor :: Maybe String -> String -> String
