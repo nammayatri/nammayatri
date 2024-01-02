@@ -284,6 +284,7 @@
       "ny_ic_driver_gender_banner" : true,
       "ny_ic_driver_license_card" : true,
       "ny_ic_driver_location_undetectable" : true,
+      "ny_ic_driver_offer" : true,
       "ny_ic_driver_profile" : true,
       "ny_ic_drop_down" : true,
       "ny_ic_due_limit_warning" : true,
