@@ -160,6 +160,8 @@ let kvConfigUpdateFrequency = +10
 
 let dontEnableForDb = [] : List Text
 
+let dontEnableForKafka = [] : List Text
+
 let maxMessages
     : Text
     = "5000"
@@ -222,6 +224,7 @@ in  { esqDBCfg
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
     , dontEnableForDb
+    , dontEnableForKafka
     , maxMessages
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap

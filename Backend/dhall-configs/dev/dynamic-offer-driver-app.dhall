@@ -159,6 +159,8 @@ let kvConfigUpdateFrequency = +10
 
 let dontEnableForDb = [] : List Text
 
+let dontEnableForKafka = [] : List Text
+
 let appBackendBapInternal =
       { name = "APP_BACKEND"
       , url = "http://localhost:8013/"
@@ -300,6 +302,7 @@ in  { esqDBCfg
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
     , dontEnableForDb
+    , dontEnableForKafka
     , maxMessages
     , modelNamesMap
     , incomingAPIResponseTimeout = +15
