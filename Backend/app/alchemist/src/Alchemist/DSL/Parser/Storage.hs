@@ -3,7 +3,7 @@
 module Alchemist.DSL.Parser.Storage (storageParser) where
 
 import Alchemist.DSL.Syntax.Storage
-import Alchemist.Utils (figureOutImports, isMaybeType, lowercaseFirstLetter, makeTypeQualified, regexExec, _String)
+import Alchemist.Utils (figureOutImports, getFieldRelationAndHaskellType, isMaybeType, lowercaseFirstLetter, makeTypeQualified, _String)
 import Control.Lens.Combinators
 import Control.Lens.Operators
 import Data.Aeson
@@ -363,17 +363,6 @@ getProperConstraint txt = case L.trim txt of
   "NotNull" -> NotNull
   "AUTOINCREMENT" -> AUTOINCREMENT
   _ -> error "No a proper contraint type"
-
-getFieldRelationAndHaskellType :: String -> Maybe (FieldRelation, String)
-getFieldRelationAndHaskellType str = do
-  let patternOneToOne' :: String = "^Domain\\.Types\\..*\\.(.*)$"
-      patternMaybeOneToOne' :: String = "^Kernel.Prelude.Maybe Domain\\.Types\\..*\\.(.*)$"
-      patternOneToMany' :: String = "^\\[Domain\\.Types\\..*\\.(.*)\\]$"
-  case (regexExec str patternOneToOne', regexExec str patternMaybeOneToOne', regexExec str patternOneToMany') of
-    (Just haskellType, Nothing, Nothing) -> Just (OneToOne, haskellType)
-    (Nothing, Just haskellType, Nothing) -> Just (MaybeOneToOne, haskellType)
-    (Nothing, Nothing, Just haskellType) -> Just (OneToMany, haskellType)
-    (_, _, _) -> Nothing
 
 mkList :: Value -> [(String, String)]
 mkList (Object obj) =

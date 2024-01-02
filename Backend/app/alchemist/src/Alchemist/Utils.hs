@@ -1,6 +1,7 @@
 module Alchemist.Utils where
 
 import Alchemist.DSL.Syntax.API (ApiType (..))
+import Alchemist.DSL.Syntax.Storage (FieldRelation (..))
 import Control.Lens.Combinators
 import Data.Aeson
 import Data.Aeson.Key (fromString)
@@ -64,13 +65,25 @@ regexExec str pattern' = do
   where
     snd4 (_, _, _, x) = x
 
-extractIdType :: String -> Maybe String
-extractIdType str = do
-  let pattern' :: String = ".*Domain\\.Types\\.(.*)\\."
-      match = str =~ pattern' :: (String, String, String, [String])
-  listToMaybe $ snd4 match
+getFieldRelationAndHaskellType :: String -> Maybe (FieldRelation, String)
+getFieldRelationAndHaskellType str = do
+  let patternOneToOne' :: String = "^Domain\\.Types\\..*\\.(.*)$"
+      patternMaybeOneToOne' :: String = "^Kernel.Prelude.Maybe Domain\\.Types\\..*\\.(.*)$"
+      patternOneToMany' :: String = "^\\[Domain\\.Types\\..*\\.(.*)\\]$"
+      fieldRelationAndHaskellType =
+        case (regexExec str patternOneToOne', regexExec str patternMaybeOneToOne', regexExec str patternOneToMany') of
+          (Just haskellType, Nothing, Nothing) -> Just (OneToOne, haskellType)
+          (Nothing, Just haskellType, Nothing) -> Just (MaybeOneToOne, haskellType)
+          (Nothing, Nothing, Just haskellType) -> Just (OneToMany, haskellType)
+          (_, _, _) -> Nothing
+  if isJust fieldRelationAndHaskellType && validatePattern
+    then fieldRelationAndHaskellType
+    else Nothing
   where
-    snd4 (_, _, _, x) = x
+    validatePattern =
+      case splitOn "." str of
+        [_, _, third, fourth] -> third == fourth
+        _ -> False
 
 -- makeTypeQualified (Maybe Module name)
 makeTypeQualified :: Maybe String -> Maybe [String] -> Maybe [String] -> String -> Object -> String -> String
