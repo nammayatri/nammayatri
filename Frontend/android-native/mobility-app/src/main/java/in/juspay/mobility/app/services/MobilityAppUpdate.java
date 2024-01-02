@@ -9,18 +9,24 @@
 
 package in.juspay.mobility.app.services;
 
+import static androidx.appcompat.graphics.drawable.DrawableContainerCompat.Api21Impl.getResources;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.IntentSender;
 import android.util.Log;
 
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.play.core.appupdate.AppUpdateInfo;
 import com.google.android.play.core.appupdate.AppUpdateManager;
 import com.google.android.play.core.appupdate.AppUpdateManagerFactory;
+import com.google.android.play.core.install.InstallStateUpdatedListener;
 import com.google.android.play.core.install.model.AppUpdateType;
+import com.google.android.play.core.install.model.InstallStatus;
 import com.google.android.play.core.install.model.UpdateAvailability;
 
+import in.juspay.mobility.app.R;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 
 public class MobilityAppUpdate {
@@ -49,7 +55,19 @@ public class MobilityAppUpdate {
             updateType = AppUpdateType.FLEXIBLE;
         }
 
+        InstallStateUpdatedListener listener = state -> {
+            if (state.installStatus() == InstallStatus.DOWNLOADED) {
+                popupSnackbarForCompleteUpdate();
+            }
+        };
+        appUpdateManager.registerListener(listener);
+
         appUpdateInfoTask.addOnSuccessListener(appUpdateInfo -> {
+            if (appUpdateInfo.installStatus() == InstallStatus.DOWNLOADED) {
+                appUpdateManager.unregisterListener(listener);
+                appUpdateManager.completeUpdate();
+                return;
+            }
             if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
                     && appUpdateInfo.isUpdateTypeAllowed(updateType)) {
                 Log.d(LOG_TAG, "Inside update");
@@ -69,8 +87,23 @@ public class MobilityAppUpdate {
                 }
                 Log.d(LOG_TAG, "Update available");
             } else {
+                appUpdateManager.unregisterListener(listener);
                 Log.d(LOG_TAG, "No Update available");
             }
         });
+    }
+
+    private void popupSnackbarForCompleteUpdate() {
+        try{
+            Snackbar snackbar =
+                    Snackbar.make(
+                            ((Activity) this.context).findViewById(android.R.id.content),
+                            "An update has just been downloaded.",
+                            Snackbar.LENGTH_INDEFINITE);
+            snackbar.setAction("RESTART", view -> appUpdateManager.completeUpdate());
+            snackbar.show();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 }
