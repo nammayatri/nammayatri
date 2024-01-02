@@ -29,7 +29,8 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
   { id :: B.C f Text,
     merchantId :: B.C f Text,
     merchantShortId :: B.C f Text,
-    city :: B.C f Context.City
+    city :: B.C f Context.City,
+    contextCity :: B.C f Context.City
   }
   deriving (Generic, B.Beamable)
 
