@@ -16,6 +16,7 @@
       projectRoot = ./.;
       imports = [
         inputs.beckn-gateway.haskellFlakeProjectModules.output
+        # inputs.namma-dsl.haskellFlakeProjectModules.output
       ];
       autoWire = [ "packages" "checks" "apps" ];
       devShell.tools = _: {
@@ -31,8 +32,10 @@
         amazonka-ses.source = inputs.amazonka-git + /lib/services/amazonka-ses;
         streamly.source = "0.8.3";
         unicode-data.source = "0.3.1";
+        namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
       };
       settings = {
+        namma-dsl.libraryProfiling = false;
         location-updates.check = false;
         beckn-test.check = false;
         singletons-th.jailbreak = true;
