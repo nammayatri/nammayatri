@@ -186,4 +186,4 @@ getSosDetails :: String -> String
 getSosDetails rideId = (getBaseUrl "44") <> "/sos/getDetails/" <> rideId
 
 safetySupport :: String -> String
-safetySupport dummy = (getBaseUrl "40") <> "/support/safetyCheck"
+safetySupport dummy = (getBaseUrl "40") <> "/support/safetyCheckSupport"

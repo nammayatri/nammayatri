@@ -155,11 +155,10 @@ eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = contin
 
 eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ pure BackPressed ]
 
-eval (GenericHeaderAC (GenericHeaderController.SuffixImgOnClick)) state = do
+eval (GenericHeaderAC (GenericHeaderController.SuffixImgOnClick)) state = 
   continueWithCmd state { props { timerValue = 15, recordingState = NOT_RECORDING } } [ do pure $ SwitchToStage TriggeredNammaSafety ]
 
-
-eval (ToggleSwitch stage) state = do
+eval (ToggleSwitch stage) state = 
   if state.props.currentStage == NammaSafetyDashboard then do
     case stage of
       SetTriggerCustomerSupport -> exit $ PostEmergencySettings state { data { triggerSupport = not state.data.triggerSupport } } false

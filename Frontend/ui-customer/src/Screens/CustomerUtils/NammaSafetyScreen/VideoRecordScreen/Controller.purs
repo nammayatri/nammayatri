@@ -184,9 +184,10 @@ eval BackPressed state = do
 
 eval (ChangeRecordingState recordingState) state = continue state { props { recordingState = recordingState } }
 
-eval (UploadMultiPartCallback fileType response) state =
+eval (UploadMultiPartCallback fileType response) state = 
   continueWithCmd state
     [ do
+        when (not state.props.enableLocalPoliceSupport) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ toggleLoader false
         pure
           if state.props.enableLocalPoliceSupport then
             ShareSilentSos $ Just response
@@ -196,9 +197,27 @@ eval (UploadMultiPartCallback fileType response) state =
 eval _ state = continue state
 
 getRecordViewWidth :: String -> Number
-getRecordViewWidth dummy = requiredWidth
+getRecordViewWidth dummy = if EHC.os == "IOS" then DI.toNumber layoutBounds.width else getRecordViewWidthForAndroid layoutBounds.width
   where
   layoutBounds = runFn1 JB.getLayoutBounds $ EHC.getNewIDWithTag "recordProgress"
-  pixels = runFn1 HU.getPixels ""
-  density = (runFn1 HU.getDeviceDefaultDensity "") / defaultDensity
-  requiredWidth = ((DI.toNumber layoutBounds.width) / pixels) * density
+
+getRecordViewWidthForAndroid :: Int -> Number
+getRecordViewWidthForAndroid screenWidth =
+  let pixels = runFn1 HU.getPixels ""
+      density = (runFn1 HU.getDeviceDefaultDensity "") / defaultDensity
+  in ((DI.toNumber screenWidth) / pixels) * density
+
+getRecordViewWidthForIos :: Int -> Int -> Number
+getRecordViewWidthForIos scrWidth progressBarWidth =
+  DI.toNumber progressBarWidth
+  -- let iosScale = runFn1 HU.getPixels ""
+  --     iosNativeScale = runFn1 HU.getDefaultPixels ""
+  --     displayZoomFactor = iosNativeScale / iosScale
+  -- in (( (DI.toNumber scrWidth) / displayZoomFactor)/ iosScale) - (DI.toNumber progressBarWidth)
+
+-- getPeekHeightForIos :: Int -> Int -> Int
+-- getPeekHeightForIos homescreenHeader screenHeight =
+--   let iosScale = runFn1 getPixels ""
+--       iosNativeScale = runFn1 getDefaultPixels ""
+--       displayZoomFactor = iosNativeScale / iosScale
+--   in ceil((( (toNumber screenHeight) / displayZoomFactor)/ iosScale) - (toNumber homescreenHeader) )

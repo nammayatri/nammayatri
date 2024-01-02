@@ -45,10 +45,10 @@ screen initialState =
   { initialState
   , view: view
   , name: "NammaSafetyVideoRecordScreen"
-  , globalEvents:
+  , globalEvents: --[]
       [ ( \push -> do
-            if initialState.props.timerId == "" then pure unit else pure $ EHC.clearCountDownTimer "RecordingTimer"
-            if initialState.props.shareTimerId == "" then pure unit else pure $ EHC.clearCountDownTimer "ShareTimer"
+            -- if initialState.props.timerId == "" then pure unit else pure $ EHC.clearCountDownTimer "RecordingTimer"
+            -- if initialState.props.shareTimerId == "" then pure unit else pure $ EHC.clearCountDownTimer "ShareTimer"
             pure $ pure unit
         )
       ]
@@ -64,48 +64,29 @@ screen initialState =
 view ::
   forall w. (Action -> Effect Unit) -> ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+  relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
+    , padding $ getSafePadding
     , background Color.black900
     , orientation VERTICAL
     , onBackPressed push $ const BackPressed
     ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , visibility $ boolToVisibility $ state.props.recordingState /= ST.SHARED
-        ]
-        [ GenericHeader.view (push <<< GenericHeaderAC)
-            ( genericHeaderConfig
-                ( getHeaderTitle state.props.currentStage $ isSafetyPlus state
-                )
-                state
-            )
-        ]
-    , relativeLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        ]
-        [ videoRecordSOSView state push $ state.props.currentStage == ST.NammaSafetyVideoRecord && state.props.recordingState /= ST.SHARED
-        , videoSharedView push state $ state.props.recordingState == ST.SHARED
-        ]
+    [ videoRecordSOSView state push $ state.props.currentStage == ST.NammaSafetyVideoRecord && state.props.recordingState /= ST.SHARED
+    , videoSharedView push state $ state.props.recordingState == ST.SHARED
     ]
 
 videoRecordSOSView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
 videoRecordSOSView state push visibility' =
   let
     value = 15 - state.props.timerValue
-
     timerval = if (value < 10) then "0" <> show value else show value
   in
     PrestoAnim.animationSet [ fadeIn $ true ]
       $ relativeLayout
           [ height MATCH_PARENT
           , width MATCH_PARENT
-          , color $ Color.white900
           , orientation VERTICAL
-          , padding $ getSafePadding
           , visibility $ boolToVisibility visibility'
           , onAnimationEnd
               ( \_ -> do
@@ -114,22 +95,30 @@ videoRecordSOSView state push visibility' =
               )
               (const NoAction)
           ]
-          [ linearLayout
-              [ height WRAP_CONTENT
+          [ 
+            linearLayout
+              [ height MATCH_PARENT
               , width MATCH_PARENT
               , orientation VERTICAL
               ]
-              [ linearLayout
-                  [ height MATCH_PARENT
+              [ GenericHeader.view (push <<< GenericHeaderAC)
+                      ( genericHeaderConfig
+                          ( getHeaderTitle state.props.currentStage $ isSafetyPlus state
+                          )
+                          state
+                      )
+              , linearLayout
+                  [ height WRAP_CONTENT
                   , width MATCH_PARENT
                   , orientation VERTICAL
                   ]
-                  [ frameLayout
-                      [ height MATCH_PARENT
+                  [ 
+                    frameLayout
+                      [ height WRAP_CONTENT
                       , width MATCH_PARENT
                       ]
                       [ linearLayout
-                          [ height MATCH_PARENT
+                          [ height WRAP_CONTENT
                           , width MATCH_PARENT
                           , padding $ Padding 16 20 16 5
                           ]
@@ -159,7 +148,8 @@ videoRecordSOSView state push visibility' =
                   , orientation VERTICAL
                   , visibility $ boolToVisibility $ state.props.recordingState /= ST.UPLOADING
                   ]
-                  [ frameLayout
+                  [ 
+                    relativeLayout
                       [ height $ V 4
                       , width MATCH_PARENT
                       , margin $ MarginHorizontal 16 16
@@ -180,7 +170,8 @@ videoRecordSOSView state push visibility' =
                           ]
                           []
                       ]
-                  , linearLayout
+                  , 
+                  linearLayout
                       [ height WRAP_CONTENT
                       , width MATCH_PARENT
                       , padding $ PaddingHorizontal 16 16
@@ -205,7 +196,7 @@ videoRecordSOSView state push visibility' =
                       <> FontStyle.body3 TypoGraphy
                   ]
               ]
-          , linearLayout
+        ,  linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation VERTICAL
@@ -214,7 +205,7 @@ videoRecordSOSView state push visibility' =
               , margin $ MarginBottom 16
               , onClick
                   ( \action -> do
-                      when (state.props.recordingState /= ST.RECORDING) $ 
+                      when (state.props.recordingState == ST.NOT_RECORDING) $ 
                         do
                           void $ JB.startRecord push VideoStatusCallBack
                           _ <- pure $ spy "startRecord" state.props.timerValue
@@ -253,11 +244,11 @@ shareTimerView :: ST.NammaSafetyScreenState -> (Action -> Effect Unit) -> forall
 shareTimerView state push =
   PrestoAnim.animationSet [ fadeIn $ true ]
     $ linearLayout
-        [ height MATCH_PARENT
+        [ height if EHC.os == "IOS" then V 400 else MATCH_PARENT
         , width MATCH_PARENT
         , gravity CENTER_VERTICAL
         , orientation VERTICAL
-        , padding $ Padding 16 20 16 5
+        , margin $ Margin 16 20 16 5
         , visibility $ boolToVisibility $ state.props.recordingState == ST.SHARING
         , background Color.blackLessTrans
         , onAnimationEnd

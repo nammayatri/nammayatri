@@ -117,7 +117,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
-            _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
+            -- _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             if(initialState.props.currentStage /= HomeScreen) then do
               setMapPadding 0 0 0 0
@@ -3250,9 +3250,9 @@ safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Pre
 safetyAlertPopup push state =
   linearLayout
   [ height MATCH_PARENT
-      , width MATCH_PARENT
-      , visibility  if not $ any (_ == (getValueToLocalNativeStore SAFETY_ALERT_TYPE))["__failed", "false"]
-                    then VISIBLE else GONE
+  , width MATCH_PARENT
+  , visibility  if not $ any (_ == (getValueToLocalNativeStore SAFETY_ALERT_TYPE))["__failed", "false", "(null)"]
+                then VISIBLE else GONE
   ][PopUpModal.view (push <<< SafetyAlertAction) (safetyAlertConfig state)]
 
 issueReportedPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

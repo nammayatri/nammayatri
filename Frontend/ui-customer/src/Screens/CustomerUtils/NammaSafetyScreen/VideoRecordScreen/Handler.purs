@@ -24,10 +24,12 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.NammaSafetyScreen.VideoRecordScreen.Controller (ScreenOutput(..))
 import Screens.NammaSafetyScreen.VideoRecordScreen.View as NammaSafetyScreen
 import Types.App (FlowBT, GlobalState(..), NAMMA_SAFETY_SCREEN_OUTPUT(..), ScreenType(..))
+import Debug
 
 videoScreen :: FlowBT String NAMMA_SAFETY_SCREEN_OUTPUT
 videoScreen = do
   (GlobalState state') <- getState
+  _ <- pure $ spy "videoScreen" "videoScreen"
   act <- lift $ lift $ runScreen $ NammaSafetyScreen.screen state'.nammaSafetyScreen
   case act of
     GoBack updatedState -> do

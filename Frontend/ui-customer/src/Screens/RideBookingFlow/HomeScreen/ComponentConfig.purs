@@ -1498,7 +1498,7 @@ safetyAlertConfig state = let
 
 getSafetyText :: String -> String
 getSafetyText reason
-            | reason == "Deviation" = getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE
+            | reason == "deviation" = getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE
             | otherwise             = getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED
 
 

@@ -17,8 +17,7 @@ module Screens.NammaSafetyScreen.View where
 import PrestoDOM
 import Screens.NammaSafetyScreen.ComponentConfig
 
-import Animation (fadeIn)
-import Animation as Anim
+import Animation
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.PopUpModal as PopUpModal
@@ -100,7 +99,7 @@ screen initialState =
 view ::
   forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+ screenAnimation $ linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -253,7 +252,7 @@ aboutNammaSafetyView state push visibility' =
 nammaSafetyFeaturesView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
 nammaSafetyFeaturesView state push visibility' =
   PrestoAnim.animationSet
-    [ Anim.fadeIn true
+    [ fadeIn true
     ]
     $ relativeLayout
         [ width MATCH_PARENT
@@ -295,9 +294,10 @@ featuresView state push =
             , height $ V 114
             ]
         , textView
-            $ [ text $ getStringBasedOnMode NAMMA_SAFETY_WILL_ENABLE_ACCESS isSafetyPlus'
+            $ [ text $ getStringBasedOnMode safetyModeFeatures isSafetyPlus'
               , margin $ Margin 16 20 16 4
               , color viewConfig.textColor
+              , width MATCH_PARENT
               ]
             <> FontStyle.subHeading1 TypoGraphy
         , linearLayout
@@ -305,22 +305,23 @@ featuresView state push =
             , height WRAP_CONTENT
             , orientation VERTICAL
             ]
-            [ imageWithTextView (getString $ SHARE_LOCATION_AND_RIDE_DETAILS_WITH_NAMMA_YATRI_SUPPORT_TEAM "SHARE_LOCATION_AND_RIDE_DETAILS_WITH_NAMMA_YATRI_SUPPORT_TEAM") true state.props.currentStage state.data.safetyConfig.enableSupport
-            , imageWithTextView (getString GET_OPTIONS_TO_DIRECTLY_CALL_SUPPORT) true state.props.currentStage state.data.safetyConfig.enableSupport
+            [ imageWithTextView (getString SHARE_LOCATION_AND_RIDE_DETAILS_EMERGENCY_CONTACT) (state.data.shareToEmergencyContacts || state.props.currentStage /= ActivateNammaSafety) state.props.currentStage true
+            , linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , visibility $ boolToVisibility $ state.props.currentStage == ActivateNammaSafety && state.data.shareToEmergencyContacts
+                , gravity LEFT
+                , margin $ MarginVertical 5 0
+                , padding $ PaddingLeft 44
+                ]
+                (mapWithIndex (\index item -> contactCircleView item index) state.data.contactsList)
+            , imageWithTextView (getString $ SHARE_LOCATION_AND_RIDE_DETAILS_WITH_NAMMA_YATRI_SUPPORT_TEAM "SHARE_LOCATION_AND_RIDE_DETAILS_WITH_NAMMA_YATRI_SUPPORT_TEAM") true state.props.currentStage state.data.safetyConfig.enableSupport
             , imageWithTextView (getString GET_OPTIONS_TO_DIRECTLY_CALL_POLICE) true state.props.currentStage (not state.data.safetyConfig.enableSupport)
             , imageWithTextView (getString SHARE_SOS_SILENTLY_WITH_POLICE) true state.props.currentStage state.props.enableLocalPoliceSupport
             , imageWithTextView (getString ACTIVATE_LIVE_VIDEO_RECORDING_FEATURES) true state.props.currentStage isSafetyPlus'
-            , imageWithTextView (getString SHARE_LOCATION_AND_RIDE_DETAILS_EMERGENCY_CONTACT) (state.data.shareToEmergencyContacts || state.props.currentStage /= ActivateNammaSafety) state.props.currentStage true
+            , imageWithTextView (getString GET_OPTIONS_TO_DIRECTLY_CALL_SUPPORT) true state.props.currentStage state.data.safetyConfig.enableSupport
             ]
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , visibility $ boolToVisibility $ state.props.currentStage == ActivateNammaSafety && state.data.shareToEmergencyContacts
-            , gravity LEFT
-            , margin $ MarginVertical 5 0
-            , padding $ PaddingLeft 44
-            ]
-            (mapWithIndex (\index item -> contactCircleView item index) state.data.contactsList)
+        
         , linearLayout
             [ height $ V 1
             , width MATCH_PARENT
@@ -380,7 +381,7 @@ featuresView state push =
     ]
   where
   isSafetyPlus' = isSafetyPlus state
-
+  safetyModeFeatures = if state.props.currentStage == ActivateNammaSafety then ACTIVATE_NAMMA_SAFETY_WILL_ENABLE_ACCESS else NAMMA_SAFETY_WILL_ENABLE_ACCESS
   viewConfig =
     if state.props.currentStage == ActivateNammaSafety then
       { strokeColor: Color.black700
@@ -401,7 +402,7 @@ imageWithTextView :: String -> Boolean -> NammaSafetyStage -> Boolean -> forall 
 imageWithTextView text' isActive stage visibility' =
   linearLayout
     [ height WRAP_CONTENT
-    , width WRAP_CONTENT
+    , width MATCH_PARENT
     , padding $ PaddingHorizontal 16 16
     , margin $ MarginTop 12
     , visibility $ boolToVisibility visibility'
@@ -415,7 +416,7 @@ imageWithTextView text' isActive stage visibility' =
     , textView
         $ [ text text'
           , color color'
-          , width $ WRAP_CONTENT
+          , weight 1.0
           , height WRAP_CONTENT
           , singleLine false
           ]
@@ -438,8 +439,13 @@ activateNammaSafetyView state push visibility' =
     , orientation VERTICAL
     , visibility $ boolToVisibility visibility'
     ]
-    [ featuresView state push
-    , linearLayout
+    [ scrollView
+        [ height $ V (EHC.screenHeight unit - 220)
+        , width MATCH_PARENT
+        ]
+        [ featuresView state push
+        ]
+      , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
@@ -521,7 +527,7 @@ getCardViewData index isSafetyPlus = case index of
 userSettingsView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
 userSettingsView state push visibility' =
   PrestoAnim.animationSet
-    [ Anim.fadeIn true
+    [ fadeIn true
     ]
     $ relativeLayout
         [ width MATCH_PARENT
@@ -637,23 +643,23 @@ settingUpView state push visibility' =
     , visibility $ boolToVisibility visibility'
     ]
     [ PrestoAnim.animationSet
-        [ Anim.fadeIn true
+        [ fadeIn true
         ]
         $ settingUpContentView (settingUpContentViewData state) state push
     ]
 
 settingUpContentView :: ContentViewDataType -> NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 settingUpContentView config state push =
-  relativeLayout
+  linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
     ]
     [ linearLayout
-        [ height MATCH_PARENT
+        [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , margin $ MarginBottom 74
+        -- , margin $ MarginBottom 74
         ]
         [ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderData config.step state.data.safetyConfig.enableSupport)
         , linearLayout
@@ -722,18 +728,13 @@ settingUpContentView config state push =
                       ]
                     <> FontStyle.tags TypoGraphy
                 ]
-            , scrollView
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
+            , linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , orientation VERTICAL
+                , visibility $ boolToVisibility $ state.props.currentStage == SetDefaultEmergencyContacts
                 ]
-                [ linearLayout
-                    [ width MATCH_PARENT
-                    , height WRAP_CONTENT
-                    , orientation VERTICAL
-                    , visibility $ boolToVisibility $ state.props.currentStage == SetDefaultEmergencyContacts
-                    ]
-                    (mapWithIndex (\index item -> contactCardView push state item index) state.data.contactsList)
-                ]
+                (mapWithIndex (\index item -> contactCardView push state item index) state.data.contactsList)
             , linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
@@ -743,6 +744,7 @@ settingUpContentView config state push =
                 , cornerRadius 8.0
                 , margin $ MarginTop 12
                 , onClick push $ const $ AddContacts
+                , gravity CENTER_VERTICAL
                 ]
                 [ imageView
                     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_add_filled"
@@ -758,6 +760,10 @@ settingUpContentView config state push =
                 ]
             ]
         ]
+    , linearLayout
+        [ width MATCH_PARENT
+        , weight 1.0
+        ][]
     , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -821,8 +827,7 @@ separatorView visibility' =
 educationView :: NammaSafetyScreenState -> Boolean -> forall w. PrestoDOM (Effect Unit) w
 educationView state visibility' =
   PrestoAnim.animationSet
-    [ Anim.fadeIn true
-    ]
+    [ fadeIn true]
     $ relativeLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -836,7 +841,7 @@ educationView state visibility' =
             , width MATCH_PARENT
             , orientation VERTICAL
             ]
-            [ linearLayout
+            [ relativeLayout
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
                 ]
@@ -872,7 +877,7 @@ nammaSafetyMeasuresView state visibility' =
             ( \item ->
                 measureView (getStringBasedOnMode item $ isSafetyPlus state) false true Color.black800 16 FontStyle.Body1
             )
-            safetyMeasuresData
+            (safetyMeasuresData $ isSafetyPlus state)
         )
     ]
 
@@ -880,7 +885,7 @@ measureView :: String -> Boolean -> Boolean -> String -> Int -> FontStyle.Style 
 measureView text' showBullet isCorrect color' marginBottom style =
   linearLayout
     [ height WRAP_CONTENT
-    , width $ WRAP_CONTENT
+    , width MATCH_PARENT
     , margin $ MarginBottom marginBottom
     , gravity LEFT
     ]
@@ -893,29 +898,30 @@ measureView text' showBullet isCorrect color' marginBottom style =
           , color color'
           ]
         <> (FontStyle.getFontStyle style LanguageStyle)
-    , imageView
+    , if not showBullet then imageView
         [ imageWithFallback $ fetchImage FF_ASSET if isCorrect then "ny_ic_tick_green" else "ny_ic_cross"
         , height $ V 20
         , width $ V 20
         , margin $ MarginRight 16
         , visibility $ boolToVisibility $ not showBullet
-        ]
+        ] else emptyTextView
     , textView
         $ [ text text'
           , color color'
-          , width WRAP_CONTENT
+          , weight 1.0
+          , gravity LEFT
           ]
         <> (FontStyle.getFontStyle style LanguageStyle)
     ]
 
-safetyMeasuresData :: Array STR
-safetyMeasuresData =
+safetyMeasuresData :: Boolean -> Array STR
+safetyMeasuresData isSafetyPlus =
   [ SAFETY_MEASURE_1
   , SAFETY_MEASURE_2
   , SAFETY_MEASURE_3
   , SAFETY_MEASURE_4
   , SAFETY_MEASURE_5 "SAFETY_MEASURE_5"
-  ]
+  ] <> if isSafetyPlus then [ SAFETY_MEASURE_6 ] else []
 
 safetyGuidelinesView :: NammaSafetyScreenState -> Boolean -> forall w. PrestoDOM (Effect Unit) w
 safetyGuidelinesView state visibility' =
@@ -1028,8 +1034,8 @@ aboutSOSDataPoints =
   , { text: ABOUT_SOS_2, isCorrect: true }
   , { text: ABOUT_SOS_3, isCorrect: true }
   , { text: ABOUT_SOS_4, isCorrect: true }
+  , { text: ABOUT_SOS_6, isCorrect: true }
   , { text: ABOUT_SOS_5, isCorrect: false }
-  , { text: ABOUT_SOS_6, isCorrect: false }
   , { text: ABOUT_SOS_7, isCorrect: false }
   , { text: ABOUT_SOS_8, isCorrect: false }
   ]
@@ -1045,7 +1051,7 @@ aboutSoSData =
 
 sosActiveView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
 sosActiveView state push visibility' =
-  relativeLayout
+  linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , background Color.black900
@@ -1053,7 +1059,7 @@ sosActiveView state push visibility' =
     , orientation VERTICAL
     , visibility $ boolToVisibility visibility'
     ]
-    [ relativeLayout
+    [ linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
         , orientation VERTICAL
@@ -1061,7 +1067,7 @@ sosActiveView state push visibility' =
         [ linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
-            , margin $ Margin 16 16 16 16
+            , margin $ Margin 16 16 16 0
             , orientation VERTICAL
             ]
             [ textView
@@ -1082,35 +1088,43 @@ sosActiveView state push visibility' =
                             SAFETY_PLUS_ACTIVE_DESC
                           else
                             SOS_TRIGGERED_DESC
-                  , margin $ MarginBottom 12
+                  -- , margin $ MarginBottom 12
                   , color $ Color.white900
+                  , width MATCH_PARENT    
                   ]
                 <> FontStyle.body1 TypoGraphy
             , linearLayout
                 [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                , margin $ MarginBottom 12
+                -- , margin $ MarginBottom 12
                 , gravity LEFT
                 , visibility $ boolToVisibility state.props.enableLocalPoliceSupport
                 ]
                 [ measureView (getString CALL_AND_ALERT_THE_NEAREST_POLICE_CENTRE) true false Color.white900 2 FontStyle.Body1
                 , measureView (getString SEND_A_SILENT_SOS_TO_THE_POLICE) true false Color.white900 2 FontStyle.Body1
-                , measureView (getString SEND_A_VIDEO_RECORDING_TO_POLICE) true false Color.white900 2 FontStyle.Body1
+                , measureView (getString SEND_A_VIDEO_RECORDING_TO_POLICE) true false Color.white900 0 FontStyle.Body1
                 ]
-            , imageView
+            ]
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , weight 1.0
+            ][
+              imageView
                 [ height $ V 250
                 , width MATCH_PARENT
                 , imageWithFallback $ fetchImage FF_ASSET "ny_ic_emergency_sent"
                 , margin $ MarginHorizontal 16 16
                 ]
             ]
+        
         , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , orientation VERTICAL
             , alignParentBottom "true,-1"
-            , margin $ Margin 16 16 16 16
+            , margin $ Margin 16 0 16 16
             ]
             [ textView
                 $ [ text $ getString SOS_ACTIONS
@@ -1221,7 +1235,7 @@ sosActiveView state push visibility' =
                               void $ pure $ JB.askRequestedPermissionsWithCallback [ "android.permission.CAMERA", "android.permission.RECORD_AUDIO" ] push PermissionsCallback
                             void $ push action
                         )
-                        (const NoAction)
+                        (const if EHC.os == "IOS" then GoToVideoRecord else NoAction)
                     ]
                     [ imageView
                         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_video"
@@ -1263,9 +1277,10 @@ contactCardView push state contact index =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , padding $ Padding 18 18 18 18
-    , margin $ Margin 0 5 0 5
+    , margin $ MarginVertical 5 5
     , cornerRadius 8.0
     , stroke $ "1," <> Color.grey900
+    , gravity CENTER_VERTICAL
     ]
     [ contactCircleView contact index
     , textView
@@ -1336,7 +1351,6 @@ sfl height' marginTop numberOfBoxes visibility' =
             (\item ->
                 linearLayout
                 [ height height'
-                , width MATCH_PARENT
                 , background Color.greyDark
                 , cornerRadius 12.0
                 , weight 1.0

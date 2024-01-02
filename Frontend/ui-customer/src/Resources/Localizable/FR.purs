@@ -712,6 +712,7 @@ getFR stringKey =
         SAFETY_MEASURE_3 -> "Politique de tolérance zéro pour les chauffeurs/clients"
         SAFETY_MEASURE_4 -> "Confidentialité des clients - les conducteurs ne peuvent pas voir l'adresse exacte du trajet une fois terminé"
         SAFETY_MEASURE_5 _ -> "Formation et certification à la sécurité pour tous les conducteurs Namma Yatri"
+        SAFETY_MEASURE_6 -> "Vérification des antécédents des conducteurs"
         SAFETY_GUIDELINES_1 -> "Vérifier l'identification du conducteur avec le numéro du véhicule"
         SAFETY_GUIDELINES_2 -> "Gardez un œil sur l'itinéraire"
         SAFETY_GUIDELINES_3 -> "Restez vigilant surtout pendant les trajets nocturnes"
@@ -797,3 +798,5 @@ getFR stringKey =
         PERSONAL_SAFETY_ACTION_3 -> "Enregistrer une vidéo"
         NIGHT_SAFETY_DESC_PLUS -> "Cela se produira que Safety+ soit activé ou non"
         NIGHT_SAFETY_DESC -> "Cela se produira que Safety mode soit activé ou non"
+        ACTIVATE_NAMMA_SAFETY_WILL_ENABLE_ACCESS -> "Activer le mode sécurité permettra d'accéder aux fonctionnalités suivantes pendant un trajet !"
+        ACTIVATE_NAMMA_SAFETY_WILL_ENABLE_ACCESS_PLUS -> "Activer Safety+ permettra d'accéder aux fonctionnalités suivantes pendant un trajet !"
