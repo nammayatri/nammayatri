@@ -75,7 +75,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||), (<$>))
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
@@ -86,7 +86,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..))
-import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..))
+import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
@@ -162,8 +162,19 @@ screen initialState =
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
               ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
               HomeScreen -> do
+                let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
+                if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
+                  void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
+                  void $ launchAff $ flowRunner defaultGlobalState $ updateRecentTrips UpdateRepeatTrips push 
+                else do 
+                  push RemoveShimmer 
+                  pure unit
                 when (isJust initialState.data.rideHistoryTrip) $ do 
                   push $ RepeatRide 0 (fromMaybe HomeScreenData.dummyTrip initialState.data.rideHistoryTrip)
+                -- when (initialState.props.autoScroll) $ do
+                --   if (os == "IOS") 
+                --     then startTimerWithTime (show 5) "autScroll" "1" push AutoScrollCountDown
+                --     else countDown 5 "autScroll" push AutoScrollCountDown
                 _ <- pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
                 _ <- pure $ removeAllPolylines ""
                 _ <- pure $ enableMyLocation true
@@ -966,13 +977,19 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
   , padding $ Padding 16 0 16 (16+safeMarginBottom)
   , cornerRadii $ Corners (4.0) true true false false
   ]([ if (not hideSavedLocsView) then savedLocationsView state push else linearLayout[visibility GONE][]
-    , if (suggestionViewVisibility state)
-        then  suggestionsView push state
+      , if state.props.showShimmer && null state.data.tripSuggestions then shimmerView state
+        else if suggestionViewVisibility state  then  suggestionsView push state
         else emptySuggestionsBanner state push
+    -- , if (suggestionViewVisibility state)
+    --     then  suggestionsView push state
+    --     else emptySuggestionsBanner state push
     -- , if (not hideRecentSearches) then recentSearchesView state push else linearLayout[visibility GONE][]
-    , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
-        then updateDisabilityBanner state push
-        else linearLayout[visibility GONE][]])
+    -- , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
+    --     then updateDisabilityBanner state push
+    --     else 
+      , if (state.data.config.feature.enableZooTicketBookingFlow) 
+            then zooTicketBookingBanner state push 
+            else linearLayout[visibility GONE][]])
 
 updateDisabilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 updateDisabilityBanner state push = 
@@ -2798,6 +2815,15 @@ getQuotesPolling pollingId action retryAction count duration push state = do
         _ <- pure $ updateLocalStage QuoteList
         doAff do liftEffect $ push $ action response
 
+updateRecentTrips :: forall action. (RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> Flow GlobalState Unit
+updateRecentTrips action push = do
+  (rideBookingListResponse) <- Remote.rideBookingListWithStatus "30" "0" "COMPLETED"
+  case rideBookingListResponse of
+      Right (RideBookingListRes  listResp) -> do
+          liftFlow $ push $ action (RideBookingListRes listResp) "success"
+      Left (err) -> do
+            liftFlow $ push $ action (RideBookingListRes {list : []} ) "failure"
+
 driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
@@ -3228,6 +3254,7 @@ homeScreenViewV2 push state =
                   , width MATCH_PARENT
                   , peakHeight $ if state.data.peekHeight == 0 || state.data.peekHeight == 700 then getPeekHeight state else state.data.peekHeight
                   , halfExpandedRatio 0.99
+                  , sheetState state.props.homeScreenSheetState
                   , enableShift false
                   , onSlide 
                     ( \action -> do
@@ -3262,7 +3289,8 @@ homeScreenViewV2 push state =
                                   ][savedLocationsView state push
                                   , if isHomeScreenView state then mapView push state else emptyTextView state
                                   , if isBannerVisible state then updateDisabilityBanner state push else emptyTextView state
-                                  , if (suggestionViewVisibility state) then  suggestionsView push state
+                                  , if state.props.showShimmer && null state.data.tripSuggestions then shimmerView state
+                                    else if (suggestionViewVisibility state)  then  suggestionsView push state
                                     else emptySuggestionsBanner state push
                                   , footerView push state
                                   ]
@@ -3701,6 +3729,47 @@ suggestionsView push state =
 
         ]
       ]
+
+shimmerView :: forall w. HomeScreenState -> PrestoDOM (Effect Unit) w
+shimmerView state =
+  shimmerFrameLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , background Color.transparent
+    , visibility $ boolToVisibility state.props.showShimmer
+    ] 
+    [ linearLayout
+        [ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation VERTICAL
+        ]
+        [ linearLayout
+            [ width $ V 200
+            , height $ V 20
+            , margin $ Margin 16 10 16 0
+            , background Color.greyDark
+            ]
+            []
+        , linearLayout
+            [ width $ V 300
+            , height $ V 20
+            , margin $ Margin 16 7 16 0
+            , background Color.greyDark
+            ]
+            []
+        , linearLayout
+            [ width MATCH_PARENT
+            , height $ V 100
+            , margin $ Margin 16 16 16 0
+            , cornerRadius 8.0
+            , background Color.greyDark
+            ]
+            []
+        ]
+    ]
+
+  
 
 movingRightArrowView :: forall w. String -> PrestoDOM (Effect Unit) w
 movingRightArrowView viewId =

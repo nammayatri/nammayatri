@@ -16,7 +16,7 @@
 module Types.EndPoint where
 
 import Prelude ((<>),show, (==))
-
+import Data.Maybe (maybe, Maybe(..))
 import Services.Config (getBaseUrl)
 
 
@@ -68,8 +68,12 @@ selectEstimate estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/
 selectList :: String -> String
 selectList estimateId = (getBaseUrl "15") <> "/estimate/"<> estimateId <> "/results"
 
-rideBookingList :: String -> String -> String -> String
-rideBookingList limit offset isActive = (getBaseUrl "16") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive
+rideBookingList :: String -> String -> String -> Maybe String -> String
+rideBookingList limit offset isActive status = 
+  maybe 
+    ((getBaseUrl "16") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=" <> isActive)
+    (\rideStatus -> ((getBaseUrl "41") <> "/rideBooking/list?limit="<> limit <>"&offset="<> offset <>"&onlyActive=false" <>"&status=" <> show rideStatus))
+    status
 
 ridebooking :: String ->  String
 ridebooking bookingId  = (getBaseUrl "17") <> "/rideBooking/"<> bookingId

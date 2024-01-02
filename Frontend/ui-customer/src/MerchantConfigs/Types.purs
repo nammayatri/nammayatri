@@ -276,7 +276,8 @@ type HomeScreen = {
   header :: HomeScreenHeader,
   bannerViewVisibility :: Boolean,
   whereToButton :: WhereToButton,
-  pickupLocationTextColor :: String
+  pickupLocationTextColor :: String,
+  isServiceablePopupFullScreen :: Boolean
 }
 
 type HomeScreenHeader = {

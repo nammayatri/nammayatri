@@ -9,8 +9,6 @@
 
 package in.juspay.mobility.app.services;
 
-import static androidx.appcompat.graphics.drawable.DrawableContainerCompat.Api21Impl.getResources;
-
 import android.app.Activity;
 import android.content.Context;
 import android.content.IntentSender;
@@ -26,7 +24,6 @@ import com.google.android.play.core.install.model.AppUpdateType;
 import com.google.android.play.core.install.model.InstallStatus;
 import com.google.android.play.core.install.model.UpdateAvailability;
 
-import in.juspay.mobility.app.R;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 
 public class MobilityAppUpdate {

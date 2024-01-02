@@ -460,11 +460,16 @@ rideBookingBT bookingId = do
 
 rideBookingList limit offset onlyActive = do
         headers <- getHeaders "" true
-        withAPIResult (EP.rideBookingList limit offset onlyActive)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive)
+        withAPIResult (EP.rideBookingList limit offset onlyActive Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing)
     where
         unwrapResponse (x) = x
 
 
+rideBookingListWithStatus limit offset status = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.rideBookingList limit offset "false" (Just status))  unwrapResponse $ callAPI headers (RideBookingListReq limit offset "false" (Just status))
+    where
+        unwrapResponse (x) = x
 
 getProfileBT :: String -> FlowBT String GetProfileRes
 getProfileBT _  = do

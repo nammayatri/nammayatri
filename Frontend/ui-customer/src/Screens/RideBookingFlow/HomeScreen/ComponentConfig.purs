@@ -647,9 +647,10 @@ sourceUnserviceableConfig :: ST.HomeScreenState -> ErrorModal.Config
 sourceUnserviceableConfig state =
   let
     config = ErrorModal.config
+    appConfig = state.data.config
     errorModalConfig' =
       config
-        { height = MATCH_PARENT
+        { height = if appConfig.homeScreen.isServiceablePopupFullScreen && state.props.isMockLocation then MATCH_PARENT else WRAP_CONTENT
         , background = Color.white900
         , stroke = ("1," <> Color.borderGreyColor)
         , imageConfig

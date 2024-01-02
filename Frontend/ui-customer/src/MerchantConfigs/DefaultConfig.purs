@@ -223,6 +223,7 @@ config =
     }
   , homeScreen: {
       primaryBackground : "#2C2F3A",
+      isServiceablePopupFullScreen : false,
       pickUpViewColor : "#303440",
       header : {
         menuButtonBackground : "#00FFFFFF",

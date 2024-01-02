@@ -749,6 +749,10 @@ type HomeScreenStateProps =
   , showShimmer :: Boolean
   , nightSafetyFlow :: Boolean 
   , reAllocation :: ReAllocationProp
+  , homeScreenSheetState :: BottomSheetState
+  , autoScrollTimer :: String
+  , autoScrollTimerId :: String
+  , autoScroll :: Boolean
   }
 
 type SearchLocationModelProps = {
