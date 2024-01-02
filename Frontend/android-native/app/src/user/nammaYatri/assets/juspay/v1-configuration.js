@@ -141,6 +141,9 @@ window.getMerchantConfig = function () {
     , "fontName" : "PlusJakartaSans"
     , "fontKannada" : "NotoSansKannada"
     , "showGenderBanner" : true
+    , "homeScreen" : {
+      "isServiceablePopupFullScreen" : true,
+    }
     , "autoSelectBackground" : "#53BB6F"
     , "enableMockLocation" : true
     , "defaultLanguage" : "EN_US"

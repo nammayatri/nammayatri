@@ -20,12 +20,12 @@ import Data.Tuple.Nested ((/\))
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC)
 import Data.Maybe
 import Prelude
-import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc)
+import Data.Array(singleton,catMaybes, any, sortWith, reverse, take, filter, (:), length, (!!), fromFoldable, toUnfoldable, snoc, cons, concat, null)
 import Data.Ord (comparing)
-import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..))
+import Screens.Types (LocationListItemState(..),SourceGeoHash, DestinationGeoHash,SuggestionsMap(..), Suggestions(..), Trip(..), LocationItemType(..), HomeScreenState(..))
 import Helpers.Utils(getDistanceBwCordinates, getDifferenceBetweenDates, parseSourceHashArray, toStringJSON, fetchImage, FetchImageFrom(..))
 import Data.Int(toNumber)
-import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
+import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..), getValueToLocalNativeStore)
 import MerchantConfig.Types (SuggestedDestinationAndTripsConfig)
 import Data.Function.Uncurried (runFn2, Fn3)
 import Data.Argonaut.Core
@@ -35,6 +35,14 @@ import Data.Argonaut.Decode.Error
 import Data.Either (Either(..))
 import Common.Types.App(LazyCheck(..))
 import Data.Either(either)
+import Data.Function.Uncurried (runFn3)
+import Data.Number(fromString)
+import ConfigProvider
+import Services.API (RideBookingRes(..))
+import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
+import Data.Foldable (foldl)
+import Data.Lens((^.))
+import Accessor (_contents, _lat, _lon, _toLocation, _otpCode)
 
 foreign import encodeGeohash :: Fn3 Number Number Int String
 foreign import geohashNeighbours :: String -> Array String
@@ -106,10 +114,11 @@ addOrUpdateSuggestedDestination sourceGeohash destination suggestionsMap config 
 addOrUpdateSuggestedTrips ::
   SourceGeoHash ->
   Trip ->
+  Boolean ->
   SuggestionsMap ->
   SuggestedDestinationAndTripsConfig ->
   SuggestionsMap
-addOrUpdateSuggestedTrips sourceGeohash trip suggestionsMap config =
+addOrUpdateSuggestedTrips sourceGeohash trip isPastTrip suggestionsMap config =
     if member sourceGeohash suggestionsMap
     then update updateSuggestions sourceGeohash suggestionsMap
     else insertSuggestionInMap 
@@ -141,7 +150,7 @@ addOrUpdateSuggestedTrips sourceGeohash trip suggestionsMap config =
             && (getDistanceBwCordinates trip.destLat trip.destLong existingTrip.destLat existingTrip.destLong) < config.tripDistanceThreshold
             then existingTrip
                   { frequencyCount = Just $ (fromMaybe 0 existingTrip.frequencyCount) +  1
-                  , recencyDate = Just $ getCurrentUTC ""
+                  , recencyDate = if isPastTrip then existingTrip.recencyDate else Just $ getCurrentUTC ""
                   , locationScore = Just $ calculateScore (toNumber ((fromMaybe 0 existingTrip.frequencyCount) +  1)) (getCurrentUTC "") config.frequencyWeight
                   }
             else existingTrip
@@ -154,10 +163,13 @@ addOrUpdateSuggestedTrips sourceGeohash trip suggestionsMap config =
         in
           if tripExists
           then sortedTrips
-          else (take (config.tripsToBeStored - 1) sortedTrips) <> ( singleton trip{recencyDate = Just $ getCurrentUTC "",
-                                                      frequencyCount = Just 1,
-                                                      locationScore = Just $ calculateScore (toNumber 1) (getCurrentUTC "") config.frequencyWeight
-                                                      })
+          else (take (config.tripsToBeStored - 1) sortedTrips) 
+              <> (singleton 
+                    trip
+                      { recencyDate = if isPastTrip then trip.recencyDate else Just $ getCurrentUTC "" 
+                      , frequencyCount = Just 1
+                      , locationScore = Just $ calculateScore (toNumber 1) (getCurrentUTC "") config.frequencyWeight
+                      })
 
 getSuggestedRidesAndLocations :: SourceGeoHash -> SuggestionsMap -> Int -> Maybe Suggestions
 getSuggestedRidesAndLocations sourceGeohash suggestionsMap geoHashLimit = do
@@ -199,6 +211,24 @@ insertSuggestionInMap sourceGeohash suggestionItem suggestionsMap geohashLimit =
 
     in insert sourceGeohash suggestionItem updatedMap
 
+getTripsFromCurrLatLng :: Number -> Number -> SuggestedDestinationAndTripsConfig -> SuggestionsMap -> Array Trip
+getTripsFromCurrLatLng srcLat srcLng suggestionsConfig suggestionsMap = 
+  let encodedSourceHash = runFn3 encodeGeohash srcLat srcLng suggestionsConfig.geohashPrecision
+      geohashNeighbors = cons encodedSourceHash $ geohashNeighbours encodedSourceHash
+      tripArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).tripSuggestions) geohashNeighbors)
+      sortedTripList = take 30 (reverse (sortWith (\trip -> fromMaybe 0.0 trip.locationScore) tripArrWithNeighbors))
+  in sortedTripList
+
+getDestinationsFromCurrLatLng :: Number -> Number -> Array LocationListItemState -> Array LocationListItemState -> Array LocationListItemState
+getDestinationsFromCurrLatLng srcLat srcLng savedLocations recentSearches = 
+  let globalConfig = getAppConfig appConfig
+      suggestionsConfig = globalConfig.suggestedTripsAndLocationConfig
+      encodedSourceHash = getGeoHash srcLat srcLng suggestionsConfig.geohashPrecision
+      geohashNeighbors = cons encodedSourceHash $ geohashNeighbours encodedSourceHash
+      suggestionsMap = getSuggestionsMapFromLocal FunctionCall
+      destinationArrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).destinationSuggestions) geohashNeighbors)
+      sortedDestinationList = take 30 (reverse (sortWith (\destination -> fromMaybe 0.0 destination.locationScore) destinationArrWithNeighbors))
+  in sortedDestinationList
 
 sortDestinationsByScore :: Array LocationListItemState -> Array LocationListItemState
 sortDestinationsByScore destinations = reverse (sortWith (\destination -> fromMaybe 0.0 destination.locationScore) destinations)
@@ -210,3 +240,57 @@ getSuggestionsMapFromLocal :: LazyCheck -> SuggestionsMap
 getSuggestionsMapFromLocal lazycheck =
   either (\err -> empty) (\val -> val) (fetchSuggestionsFromLocal (show SUGGESTIONS_MAP))
 
+dummySuggestionsObject :: Suggestions
+dummySuggestionsObject = {
+  destinationSuggestions : [],
+  tripSuggestions : []
+}
+
+getGeoHash :: Number -> Number -> Int -> String
+getGeoHash latitude longitude precision = 
+  let lat = if latitude /= 0.0 then latitude else lastKnowLat
+      long = if longitude /= 0.0 then longitude else lastKnowLong
+  in runFn3 encodeGeohash lat long precision
+    where
+      lastKnowLat = (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT)
+      lastKnowLong = (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON)
+
+rideListToTripsTransformer :: Array RideBookingRes -> Array Trip
+rideListToTripsTransformer listRes =
+    map transformBooking (sortByCreatedAtDesc listRes)
+  where
+    sortByCreatedAtDesc = reverse <<< sortWith (\(RideBookingRes ride) -> ride.createdAt)
+
+    transformBooking :: RideBookingRes -> Trip
+    transformBooking (RideBookingRes ride) =
+      let
+       sourceAddressTransformed = getAddressFromBooking ride.fromLocation
+       toLocationTransformed = ((ride.bookingDetails)^._contents)^._toLocation
+       destinationAddressTransformed = getAddressFromBooking $ toLocationTransformed
+       in {  sourceLat : (ride.fromLocation)^._lat,
+             sourceLong : (ride.fromLocation)^._lon,
+             destLat : toLocationTransformed^._lat,
+             destLong : toLocationTransformed^._lon,
+             recencyDate : Just  (fromMaybe ride.createdAt ride.rideStartTime),
+             source :  decodeAddress (Booking ride.fromLocation),
+             destination : decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation)),
+             sourceAddress : sourceAddressTransformed,
+             destinationAddress : destinationAddressTransformed,
+             isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode)),
+             locationScore : Nothing,
+             frequencyCount : Nothing
+         }
+
+updateMapWithPastTrips :: Array Trip -> HomeScreenState -> SuggestionsMap
+updateMapWithPastTrips trips state = foldl updateMap (getSuggestionsMapFromLocal FunctionCall) trips
+  where
+    config = state.data.config.suggestedTripsAndLocationConfig
+    geohashPrecision = config.geohashPrecision
+
+    encodeTripGeohash :: Trip -> Int -> String
+    encodeTripGeohash trip precision = runFn3 encodeGeohash trip.sourceLat trip.sourceLong precision
+
+    updateMap :: SuggestionsMap -> Trip -> SuggestionsMap
+    updateMap suggestionsMap trip =
+      let geohash = encodeTripGeohash trip geohashPrecision
+      in addOrUpdateSuggestedTrips geohash trip true suggestionsMap config

@@ -1138,14 +1138,14 @@ instance decodeCancelRequest :: Decode CancelRequest where decode = defaultDecod
 instance encodeCancelRequest  :: Encode CancelRequest where encode = defaultEncode
 -------------------------------------------------------------------------------RideBookingList API Types ------------------------------------------------------------
 
-data RideBookingListReq = RideBookingListReq String String String
+data RideBookingListReq = RideBookingListReq String String String (Maybe String)
 
 newtype RideBookingListRes = RideBookingListRes {
   list :: Array RideBookingRes
 }
 
 derive instance genericRideBookingListReq:: Generic RideBookingListReq _
-instance standardRideBookingListReq :: StandardEncode RideBookingListReq where standardEncode (RideBookingListReq offset limit onlyActive) = standardEncode offset
+instance standardRideBookingListReq :: StandardEncode RideBookingListReq where standardEncode (RideBookingListReq offset limit onlyActive _) = standardEncode {}
 instance showRideBookingListReq :: Show RideBookingListReq where show = genericShow
 instance decodeRideBookingListReq :: Decode RideBookingListReq where decode = defaultDecode
 instance encodeRideBookingListReq :: Encode RideBookingListReq where encode = defaultEncode
@@ -1159,7 +1159,7 @@ instance encodeRideBookingListRes :: Encode RideBookingListRes where encode = de
 
 
 instance makeRideBookingListReq :: RestEndpoint RideBookingListReq RideBookingListRes where
- makeRequest reqBody@(RideBookingListReq limit offset onlyActive ) headers = defaultMakeRequest GET (EP.rideBookingList limit offset onlyActive) headers reqBody Nothing
+ makeRequest reqBody@(RideBookingListReq limit offset onlyActive status) headers = defaultMakeRequest GET (EP.rideBookingList limit offset onlyActive status) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 

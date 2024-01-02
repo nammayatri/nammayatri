@@ -765,7 +765,7 @@ homeScreenFlow = do
                                                         }
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
                                             currentMap = getSuggestionsMapFromLocal FunctionCall
-                                            updatedMap = (addOrUpdateSuggestedTrips currentSourceGeohash currTrip currentMap state.data.config.suggestedTripsAndLocationConfig)
+                                            updatedMap = addOrUpdateSuggestedTrips currentSourceGeohash currTrip false currentMap state.data.config.suggestedTripsAndLocationConfig
                                         void $ pure $ setSuggestionsMap updatedMap
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}})
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
@@ -1996,10 +1996,7 @@ fetchAndModifyLocationLists savedLocationResp = do
             recents = differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag
             savedLocationsWithOtherTag = filter (\listItem -> not( any (_ == listItem.prefixImageUrl) [fetchImage FF_ASSET "ny_ic_home_blue", fetchImage FF_ASSET "ny_ic_work_blue"])) savedLocationResp
             suggestionsMap = getSuggestionsMapFromLocal FunctionCall
-            currentGeoHash = 
-              if state.props.sourceLat /= 0.0 && state.props.sourceLong /= 0.0
-                then runFn3 encodeGeohash state.props.sourceLat state.props.sourceLong suggestionsConfig.geohashPrecision
-                else runFn3 encodeGeohash (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT) (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) suggestionsConfig.geohashPrecision
+            currentGeoHash = getGeoHash state.props.sourceLat state.props.sourceLong suggestionsConfig.geohashPrecision
             geohashNeighbors = Arr.cons currentGeoHash $ geohashNeighbours currentGeoHash
             currentGeoHashDestinations = fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations currentGeoHash suggestionsMap suggestionsConfig.geohashLimitForMap)
             arrWithNeighbors = concat (map (\hash -> (fromMaybe dummySuggestionsObject (getSuggestedRidesAndLocations hash suggestionsMap suggestionsConfig.geohashLimitForMap)).destinationSuggestions) geohashNeighbors)
@@ -2067,11 +2064,6 @@ updateDistanceInfo state lat lon = do
 dummyLocationListItemState :: LocationListItemState
 dummyLocationListItemState = locationListStateObj{locationItemType = Just PREDICTION}
 
-dummySuggestionsObject :: Suggestions
-dummySuggestionsObject = {
-  destinationSuggestions : [],
-  tripSuggestions : []
-}
 
 removeChatService :: String -> FlowBT String Unit -- TODO:: Create a chat service and remove this
 removeChatService _ = do
@@ -2113,7 +2105,7 @@ cancelEstimate bookingId = do
   res <- lift $ lift $ Remote.cancelEstimate bookingId
   if bookingId == ""
     then do
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen, autoScroll = false}})
     else do
       case res of
         Right res -> do
@@ -2152,7 +2144,7 @@ cancelEstimate bookingId = do
           else do
             void $ pure $ toast $ getString CANCELLATION_UNSUCCESSFULL_PLEASE_TRY_AGAIN
             _ <- liftFlowBT $ logEvent logField_ "ny_fs_cancel_estimate_failed_left"
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = HomeScreen}}) 
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{autoScroll = false, currentStage = HomeScreen}}) 
             homeScreenFlow
 
 getGenderValue :: Maybe Gender.Gender -> Maybe String

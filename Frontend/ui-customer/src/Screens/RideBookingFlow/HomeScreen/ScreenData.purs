@@ -270,10 +270,14 @@ initData = {
     , suggestionsListExpanded : false
     , repeatRideTimer : ""
     , repeatRideTimerId : ""
-    , showShimmer : false
     , reAllocation : {
         showPopUp : false
       }
+    , showShimmer : true
+    , homeScreenSheetState : COLLAPSED
+    , autoScrollTimer : ""
+    , autoScrollTimerId : ""
+    , autoScroll : true
     }
 }
 

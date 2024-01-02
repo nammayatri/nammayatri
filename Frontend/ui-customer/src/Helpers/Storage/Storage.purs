@@ -90,6 +90,7 @@ data KeyStore
   | LAST_KNOWN_LON
   | SOURCE_GEOHASHES
   | REALLOCATE_PRODUCT_ENABLED
+  | UPDATE_REPEAT_TRIPS
 
 derive instance genericKeyStore :: Generic KeyStore _
 
