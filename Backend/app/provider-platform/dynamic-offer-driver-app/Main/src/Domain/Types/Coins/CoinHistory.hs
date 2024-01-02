@@ -14,6 +14,7 @@
 
 module Domain.Types.Coins.CoinHistory where
 
+import "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin
 import Data.OpenApi (ToSchema)
 import Data.Time
 import EulerHS.Prelude hiding (id, state)
@@ -31,7 +32,8 @@ data CoinHistory = CoinHistory
     createdAt :: UTCTime,
     expirationAt :: Maybe UTCTime,
     coinsUsed :: Int,
-    status :: CoinStatus
+    status :: CoinStatus,
+    bulkUploadTitle :: Maybe Translations
   }
   deriving (Generic, Read, Show, Eq, FromJSON, ToJSON)
 

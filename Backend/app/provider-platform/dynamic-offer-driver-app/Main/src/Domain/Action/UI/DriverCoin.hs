@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.DriverCoin where
 
+import "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin
 import Data.OpenApi hiding (title)
 import Data.Time (UTCTime (utctDay))
 import Domain.Types.Coins.CoinHistory
@@ -42,6 +43,7 @@ import Tools.Error
 data CoinTransactionHistoryItem = CoinTransactionHistoryItem
   { coins :: Int,
     eventFunction :: DCT.DriverCoinsFunctionType,
+    bulkUploadTitle :: Maybe Translations,
     createdAt :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -122,7 +124,8 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
       CoinTransactionHistoryItem
         { coins = historyItem.coins,
           eventFunction = historyItem.eventFunction,
-          createdAt = historyItem.createdAt
+          createdAt = historyItem.createdAt,
+          bulkUploadTitle = historyItem.bulkUploadTitle
         }
 
 getCoinUsageSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow CoinsUsageRes

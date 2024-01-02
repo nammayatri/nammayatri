@@ -45,6 +45,7 @@ library
       API.Dashboard.Management
       API.Dashboard.Management.Booking
       API.Dashboard.Management.Driver
+      API.Dashboard.Management.Driver.Coin
       API.Dashboard.Management.Driver.Common
       API.Dashboard.Management.Driver.GoHome
       API.Dashboard.Management.Driver.Referral
@@ -129,6 +130,7 @@ library
       Domain.Action.Beckn.Update
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Driver
+      Domain.Action.Dashboard.Driver.Coin
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Driver.Registration
       Domain.Action.Dashboard.DriverReferral

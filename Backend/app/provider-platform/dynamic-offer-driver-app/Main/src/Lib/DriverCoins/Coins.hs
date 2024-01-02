@@ -19,6 +19,7 @@ module Lib.DriverCoins.Coins
     setCoinAccumulationByDriverIdKey,
     getCoinsByDriverId,
     getExpirationSeconds,
+    updateDriverCoins,
   )
 where
 
@@ -190,7 +191,8 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
             status = status_,
             createdAt = now,
             expirationAt = expiryTime,
-            coinsUsed = 0
+            coinsUsed = 0,
+            bulkUploadTitle = Nothing
           }
   CHistory.updateCoinEvent driverCoinEvent
   pure numCoins

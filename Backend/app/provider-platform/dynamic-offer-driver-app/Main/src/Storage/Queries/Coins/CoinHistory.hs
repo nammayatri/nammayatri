@@ -122,7 +122,8 @@ instance FromTType' BeamDC.CoinHistory CoinHistory where
             createdAt = createdAt,
             expirationAt = expirationAt,
             status = status,
-            coinsUsed = coinsUsed
+            coinsUsed = coinsUsed,
+            bulkUploadTitle = bulkUploadTitle
           }
 
 instance ToTType' BeamDC.CoinHistory CoinHistory where
@@ -137,5 +138,6 @@ instance ToTType' BeamDC.CoinHistory CoinHistory where
         BeamDC.coins = coins,
         BeamDC.expirationAt = expirationAt,
         BeamDC.status = status,
-        BeamDC.coinsUsed = coinsUsed
+        BeamDC.coinsUsed = coinsUsed,
+        BeamDC.bulkUploadTitle = bulkUploadTitle
       }
