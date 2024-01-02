@@ -48,7 +48,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Int (toNumber)
 import Data.Int as INT
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
@@ -726,6 +726,8 @@ rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
   let
     config' = RateCard.config
+    bangaloreCode = HU.getCodeFromCity "Bangalore"
+    fareInfoText = maybe (mkFareInfoText bangaloreCode) (\city -> mkFareInfoText city) state.props.city
     rateCardConfig' =
       config'
         { nightCharges = state.data.rateCard.nightCharges
@@ -752,7 +754,7 @@ rateCardConfig state =
           {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
           {key : "FARE_UPDATE_POLICY", val : (getString FARE_UPDATE_POLICY)},
           {key : "WAITING_CHARGES", val : getString WAITING_CHARGE }]
-        , fareInfoText = (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT")
+        , fareInfoText = fareInfoText
         , additionalStrings = [
           {key : "DRIVER_ADDITIONS_OPTIONAL", val : (getString DRIVER_ADDITIONS_OPTIONAL)},
           {key : "THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC", val : (getString THE_DRIVER_MAY_QUOTE_EXTRA_TO_COVER_FOR_TRAFFIC)},
@@ -770,6 +772,14 @@ rateCardConfig state =
         }
   in
     rateCardConfig'
+  where 
+
+    mkFareInfoText :: String -> String
+    mkFareInfoText city = 
+      let city_array = map (\item -> HU.getCodeFromCity item) [ "Bangalore", "Tumakuru" , "Mysore"]
+      in (if DA.any ( _ == city) city_array 
+            then (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT") 
+            else "")
 
 
 
