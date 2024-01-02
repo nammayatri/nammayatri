@@ -189,7 +189,10 @@ window.getMerchantConfig = function () {
       , "supportMail" :"nammayatri.support@juspay.in"
       , "name" : "Namma Yatri"
       , "website" : "https://nammayatri.in/"
-    }
-    , 
+    }, 
+    "suggestedTripsAndLocationConfig" : {
+      "minLocationsToBeShown" : 1,
+      "minTripsToBeShown" : 1,
+    } 
   })
 }
