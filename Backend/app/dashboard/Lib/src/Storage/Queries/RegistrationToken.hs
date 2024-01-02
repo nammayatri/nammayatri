@@ -49,6 +49,15 @@ findAllByPersonIdAndMerchantId personId merchantId =
         ]
     ]
 
+findAllByMerchantIdAndCity :: BeamFlow m r => Id Merchant -> City.City -> m [RegistrationToken]
+findAllByMerchantIdAndCity merchantId city =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
+          Se.Is BeamRT.operatingCity $ Se.Eq city
+        ]
+    ]
+
 findAllByPersonIdAndMerchantIdAndCity :: BeamFlow m r => Id Person -> Id Merchant -> City.City -> m [RegistrationToken]
 findAllByPersonIdAndMerchantIdAndCity personId merchantId city =
   findAllWithKV
@@ -98,6 +107,15 @@ deleteAllByPersonIdAndMerchantId personId merchantId =
     [ Se.And
         [ Se.Is BeamRT.personId $ Se.Eq $ getId personId,
           Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId
+        ]
+    ]
+
+deleteAllByMerchantIdAndCity :: BeamFlow m r => Id Merchant -> City.City -> m ()
+deleteAllByMerchantIdAndCity merchantId city =
+  deleteWithKV
+    [ Se.And
+        [ Se.Is BeamRT.merchantId $ Se.Eq $ getId merchantId,
+          Se.Is BeamRT.operatingCity $ Se.Eq city
         ]
     ]
 

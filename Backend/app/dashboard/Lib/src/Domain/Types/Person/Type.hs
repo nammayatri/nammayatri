@@ -29,6 +29,7 @@ data PersonE e = Person
     mobileNumber :: EncryptedHashedField e Text,
     mobileCountryCode :: Text,
     passwordHash :: Maybe DbHash,
+    dashboardAccessType :: Maybe DRole.DashboardAccessType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

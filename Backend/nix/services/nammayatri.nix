@@ -66,6 +66,7 @@ in
         "rider-dashboard-exe"
         "search-result-aggregator-exe"
         "special-zone-exe"
+        "safety-dashboard-exe"
       ];
 
       haskellProcessFor = name:
@@ -237,6 +238,8 @@ in
                   ../../dev/local-testing-data/rider-dashboard.sql
                   ../../dev/sql-seed/provider-dashboard-seed.sql
                   ../../dev/local-testing-data/provider-dashboard.sql
+                  ../../dev/sql-seed/safety-dashboard-seed.sql
+                  ../../dev/local-testing-data/safety-dashboard.sql
                   ../../dev/sql-seed/special-zone-seed.sql
                   ../../dev/local-testing-data/special-zone.sql
                 ];

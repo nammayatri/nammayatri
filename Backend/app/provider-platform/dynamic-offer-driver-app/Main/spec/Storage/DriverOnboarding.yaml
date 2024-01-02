@@ -346,6 +346,7 @@ DocumentVerificationConfig:
     vehicleClassCheckType: VehicleClassCheckType
     rcNumberPrefixList: '[Text]'
     maxRetryCount: Int
+    dlNumberVerification: Maybe Bool
   constraints:
     merchantOperatingCityId: PrimaryKey
     vehicleCategory: PrimaryKey

@@ -514,7 +514,8 @@ documentVerificationConfigUpdate merchantShortId opCity reqDocumentType reqCateg
                supportedVehicleClasses = maybe config.supportedVehicleClasses castSupportedVehicleClasses req.supportedVehicleClasses,
                vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
                rcNumberPrefixList = maybe config.rcNumberPrefixList (.value) req.rcNumberPrefixList,
-               maxRetryCount = maybe config.maxRetryCount (.value) req.maxRetryCount
+               maxRetryCount = maybe config.maxRetryCount (.value) req.maxRetryCount,
+               dlNumberVerification = maybe config.dlNumberVerification (.value) req.dlNumberVerification
               }
   _ <- CQDVC.update updConfig
   CQDVC.clearCache merchantOpCityId

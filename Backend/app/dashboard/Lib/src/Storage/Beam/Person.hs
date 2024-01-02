@@ -18,6 +18,7 @@ module Storage.Beam.Person where
 
 import qualified Data.Time as Time
 import qualified Database.Beam as B
+import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
@@ -33,6 +34,7 @@ data PersonT f = PersonT
     mobileNumberHash :: B.C f DbHash,
     mobileCountryCode :: B.C f Text,
     passwordHash :: B.C f (Maybe DbHash),
+    dashboardAccessType :: B.C f (Maybe DRole.DashboardAccessType),
     createdAt :: B.C f Time.UTCTime,
     updatedAt :: B.C f Time.UTCTime
   }

@@ -22,6 +22,7 @@ import qualified Data.ByteString as BS
 import Data.OpenApi
 import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
 import qualified Domain.Action.UI.Payment as Payment
+import qualified Domain.Action.UI.SafetyWebhook as SafetyWebhook
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Plan as Plan
 import Environment
@@ -64,6 +65,10 @@ type MainAPI =
              :> "v2"
              :> Juspay.JuspayWebhookAPI
          )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> Capture "city" Context.City
+             :> SafetyWebhook.SafetyWebhookAPI
+         )
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> Internal.API
@@ -80,6 +85,7 @@ mainServer =
     :<|> idfyWebhookV2Handler
     :<|> juspayWebhookHandler
     :<|> juspayWebhookHandlerV2
+    :<|> safetyWebhookHandler
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
@@ -154,3 +160,12 @@ juspayWebhookHandlerV2 ::
   FlowHandler AckResponse
 juspayWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret value' =
   withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret value'
+
+safetyWebhookHandler ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Value ->
+  FlowHandler AckResponse
+safetyWebhookHandler merchantShortId mbOpCity secret =
+  withFlowHandlerAPI . SafetyWebhook.safetyWebhookHandler merchantShortId mbOpCity secret
