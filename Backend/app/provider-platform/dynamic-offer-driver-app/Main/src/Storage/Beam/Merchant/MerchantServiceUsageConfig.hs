@@ -48,6 +48,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     faceVerificationService :: B.C f VerificationService,
     sendSearchRequestToDriver :: B.C f [NotificationService],
     aadhaarVerificationService :: B.C f AadhaarVerificationService,
+    driverBackgroundVerificationService :: B.C f DriverBackgroundVerificationService,
     issueTicketService :: B.C f IssueTicketService,
     getExophone :: B.C f CallService,
     updatedAt :: B.C f UTCTime,

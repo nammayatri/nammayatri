@@ -82,6 +82,7 @@ instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig
         BeamMSUC.snapToRoadProvidersList = snapToRoadProvidersList,
         BeamMSUC.whatsappProvidersPriorityList = whatsappProvidersPriorityList,
         BeamMSUC.verificationService = verificationService,
+        BeamMSUC.driverBackgroundVerificationService = driverBackgroundVerificationService,
         BeamMSUC.faceVerificationService = faceVerificationService,
         BeamMSUC.aadhaarVerificationService = aadhaarVerificationService,
         BeamMSUC.issueTicketService = issueTicketService,

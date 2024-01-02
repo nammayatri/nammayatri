@@ -193,10 +193,10 @@ createPerson _ personEntity = do
   runRequestValidation validateCreatePerson personEntity
   unlessM (isNothing <$> QP.findByEmail personEntity.email) $ throwError (InvalidRequest "Email already registered")
   unlessM (isNothing <$> QP.findByMobileNumber personEntity.mobileNumber personEntity.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
-  person <- buildPerson personEntity
-  decPerson <- decrypt person
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
+  person <- buildPerson personEntity (role.dashboardAccessType)
+  decPerson <- decrypt person
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing
   QP.create person
   return $ CreatePersonRes personAPIEntity
@@ -451,8 +451,8 @@ deletePerson _ personId = do
   QP.deletePerson personId
   pure Success
 
-buildPerson :: (EncFlow m r) => CreatePersonReq -> m SP.Person
-buildPerson req = do
+buildPerson :: (EncFlow m r) => CreatePersonReq -> DRole.DashboardAccessType -> m SP.Person
+buildPerson req dashboardAccessType = do
   pid <- generateGUID
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
@@ -469,6 +469,7 @@ buildPerson req = do
         mobileNumber = mobileNumber,
         mobileCountryCode = req.mobileCountryCode,
         passwordHash = Just passwordHash,
+        dashboardAccessType = Just dashboardAccessType,
         createdAt = now,
         updatedAt = now
       }

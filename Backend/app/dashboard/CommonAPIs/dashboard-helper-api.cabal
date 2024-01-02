@@ -48,6 +48,7 @@ library
       Dashboard.RiderPlatform.Merchant
       Dashboard.RiderPlatform.Message
       Dashboard.RiderPlatform.Ride
+      Dashboard.SafetyPlatform
   other-modules:
       Paths_dashboard_helper_api
   hs-source-dirs:

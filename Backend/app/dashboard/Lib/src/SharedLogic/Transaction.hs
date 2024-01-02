@@ -18,6 +18,7 @@ module SharedLogic.Transaction
     buildTransaction,
     withTransactionStoring,
     withResponseTransactionStoring,
+    buildTransactionForSafetyDashboard,
   )
 where
 
@@ -121,3 +122,28 @@ withResponseTransactionStoring' responseModifier transaction clientCall = handle
     errorHandler (err :: E.Error) = do
       QT.create transaction{responseError = Just $ show err}
       throwError err
+
+buildTransactionForSafetyDashboard ::
+  ( MonadFlow m
+  ) =>
+  DT.Endpoint ->
+  Maybe TokenInfo ->
+  Text ->
+  m DT.Transaction
+buildTransactionForSafetyDashboard endpoint apiTokenInfo request = do
+  uid <- generateGUID
+  now <- getCurrentTime
+  pure
+    DT.Transaction
+      { id = uid,
+        requestorId = apiTokenInfo <&> (.personId),
+        merchantId = apiTokenInfo <&> (.merchantId),
+        request = Just request, -- here i will send encoded request
+        response = Nothing,
+        responseError = Nothing,
+        createdAt = now,
+        commonDriverId = Nothing,
+        commonRideId = Nothing,
+        serverName = Nothing,
+        endpoint = endpoint
+      }

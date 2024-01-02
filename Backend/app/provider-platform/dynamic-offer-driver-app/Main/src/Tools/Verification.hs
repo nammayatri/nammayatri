@@ -31,6 +31,7 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.External.Verification as Reexport hiding
   ( extractDLImage,
     extractRCImage,
+    searchAgent,
     validateFaceImage,
     validateImage,
     verifyDLAsync,

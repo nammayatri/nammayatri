@@ -507,7 +507,8 @@ onboardingDocumentConfigUpdate merchantShortId opCity reqDocumentType req = do
                vehicleClassCheckType = maybe config.vehicleClassCheckType (castVehicleClassCheckType . (.value)) req.vehicleClassCheckType,
                rcNumberPrefix = maybe config.rcNumberPrefix (.value) req.rcNumberPrefix,
                rcNumberPrefixList = maybe config.rcNumberPrefixList (.value) req.rcNumberPrefixList,
-               maxRetryCount = maybe config.maxRetryCount (.value) req.maxRetryCount
+               maxRetryCount = maybe config.maxRetryCount (.value) req.maxRetryCount,
+               dlNumberVerification = maybe config.dlNumberVerification (.value) req.dlNumberVerification
               }
   _ <- CQODC.update updConfig
   CQODC.clearCache merchantOpCityId

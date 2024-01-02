@@ -481,6 +481,7 @@ data OnboardingDocumentConfigItem = OnboardingDocumentConfigItem
     rcNumberPrefix :: Text,
     rcNumberPrefixList :: Maybe [Text],
     maxRetryCount :: Int,
+    dlNumberVerification :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -566,6 +567,7 @@ data OnboardingDocumentConfigUpdateReq = OnboardingDocumentConfigUpdateReq
     rcNumberPrefix :: Maybe (MandatoryValue Text),
     rcNumberPrefixList :: Maybe (MandatoryValue [Text]),
     maxRetryCount :: Maybe (MandatoryValue Int),
+    dlNumberVerification :: Maybe (OptionalValue Bool),
     vehicleClassCheckType :: Maybe (MandatoryValue VehicleClassCheckType)
   }
   deriving stock (Show, Generic)
@@ -592,6 +594,7 @@ data OnboardingDocumentConfigCreateReq = OnboardingDocumentConfigCreateReq
     rcNumberPrefix :: Text,
     rcNumberPrefixList :: Maybe [Text],
     maxRetryCount :: Int,
+    dlNumberVerification :: Maybe Bool,
     vehicleClassCheckType :: VehicleClassCheckType
   }
   deriving stock (Show, Generic)

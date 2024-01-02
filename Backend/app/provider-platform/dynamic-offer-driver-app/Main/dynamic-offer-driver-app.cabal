@@ -202,6 +202,7 @@ library
       Domain.Action.UI.RideRoute
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
+      Domain.Action.UI.SafetyWebhook
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.Transporter
       Domain.Action.UI.Vehicle
@@ -580,6 +581,7 @@ library
       Tools.Auth
       Tools.Beam.UtilsTH
       Tools.Call
+      Tools.DriverBackgroundVerification
       Tools.Error
       Tools.Event
       Tools.Maps

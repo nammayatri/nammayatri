@@ -52,6 +52,7 @@ data OnboardingDocumentConfig = OnboardingDocumentConfig
     vehicleClassCheckType :: VehicleClassCheckType,
     rcNumberPrefix :: Text,
     rcNumberPrefixList :: [Text],
+    dlNumberVerification :: Maybe Bool,
     maxRetryCount :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

@@ -74,6 +74,7 @@ library
       Tools.Error
       Tools.Metrics
       Tools.Servant.HeaderAuth
+      Tools.Streaming.Kafka.Environment
       Tools.Utils
   other-modules:
       Paths_lib_dashboard

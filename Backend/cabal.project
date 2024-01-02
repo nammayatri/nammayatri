@@ -9,6 +9,7 @@ packages:
   app/rider-platform/rider-app/Main
   app/rider-platform/rider-app/Scheduler
   app/rider-platform/rider-app/search-result-aggregator
+  app/safety-dashboard
   app/mocks/sms
   app/mocks/fcm
   app/dashboard/rider-dashboard

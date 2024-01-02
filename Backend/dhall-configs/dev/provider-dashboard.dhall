@@ -114,7 +114,7 @@ in  { esqDBCfg
     , exotelToken = sec.exotelToken
     , dataServers =
       [ driverOfferBpp, driverOfferBppManagement, appBackend, specialZone ]
-    , merchantUserAccountNumber = +5
+    , merchantUserAccountNumber = +100
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , slackToken = sec.slackToken

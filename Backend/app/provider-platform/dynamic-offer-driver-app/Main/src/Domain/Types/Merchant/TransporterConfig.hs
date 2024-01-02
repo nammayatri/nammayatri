@@ -172,7 +172,8 @@ data TransporterConfigD u = TransporterConfig
     dummyToLocation :: DummyLocationInfo,
     scheduleRideBufferTime :: NominalDiffTime,
     fakeOtpMobileNumbers :: [Text],
-    considerDriversForSearch :: Bool
+    considerDriversForSearch :: Bool,
+    safetyWebhookAuthToken :: Maybe Text
   }
   deriving (Generic, Show)
 

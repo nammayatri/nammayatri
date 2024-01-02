@@ -25,7 +25,7 @@ import Kernel.Types.Id
 
 -- DASHBOARD_ADMIN is superuser, who can can create and assign other roles
 
-data DashboardAccessType = DASHBOARD_USER | DASHBOARD_ADMIN | FLEET_OWNER | DASHBOARD_RELEASE_ADMIN | MERCHANT_ADMIN | RENTAL_FLEET_OWNER
+data DashboardAccessType = DASHBOARD_USER | DASHBOARD_ADMIN | FLEET_OWNER | DASHBOARD_RELEASE_ADMIN | MERCHANT_ADMIN | RENTAL_FLEET_OWNER | MERCHANT_MAKER | MERCHANT_SERVER
   deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, Ord)
 
 $(mkBeamInstancesForEnum ''DashboardAccessType)
@@ -42,6 +42,7 @@ data Role = Role
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data RoleAPIEntity = RoleAPIEntity
   { id :: Id Role,
