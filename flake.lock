@@ -2492,13 +2492,13 @@
     "osrm-pbf": {
       "flake": false,
       "locked": {
-        "narHash": "sha256-KEpT7YUG3UsaEM4V8vtWVmxU4Mz8gl0gyC6X07GVbao=",
+        "narHash": "sha256-cyhgTR+py8e5RBTHM94ZAIxTe5V3fy8peba+4bp/IVQ=",
         "type": "file",
-        "url": "https://download.geofabrik.de/asia/india/southern-zone-230101.osm.pbf"
+        "url": "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf"
       },
       "original": {
         "type": "file",
-        "url": "https://download.geofabrik.de/asia/india/southern-zone-230101.osm.pbf"
+        "url": "https://download.geofabrik.de/asia/india/southern-zone-240101.osm.pbf"
       }
     },
     "passetto-hs": {

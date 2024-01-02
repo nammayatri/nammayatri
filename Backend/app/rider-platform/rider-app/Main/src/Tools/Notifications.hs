@@ -379,12 +379,12 @@ notifyOnBookingReallocated booking = do
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
         }
-    title = T.pack "Ride cancelled! We are allocating another driver"
+    title = T.pack "Ride cancelled and being reallocated!"
     body =
       unwords
-        [ "The driver had to cancel the ride for",
+        [ "The driver had cancelled the ride for",
           showTimeIst (booking.startTime) <> ".",
-          "Please wait until we allocate other driver."
+          "Please wait while we allocate you another driver."
         ]
 
 notifyOnEstimatedReallocated ::
@@ -409,12 +409,12 @@ notifyOnEstimatedReallocated booking estimateId = do
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
         }
-    title = T.pack "Ride cancelled!"
+    title = T.pack "Ride cancelled and being reallocated!"
     body =
       unwords
-        [ "The driver had to cancel the ride for",
+        [ "The driver had cancelled the ride for",
           showTimeIst (booking.startTime) <> ".",
-          "Please wait until we allocate another driver."
+          "Please wait while we allocate you another driver."
         ]
 
 notifyOnQuoteReceived ::
