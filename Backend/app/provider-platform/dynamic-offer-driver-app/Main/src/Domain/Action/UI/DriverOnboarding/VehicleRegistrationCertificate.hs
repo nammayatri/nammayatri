@@ -35,6 +35,7 @@ where
 
 import AWS.S3 as S3
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
 import qualified Data.HashMap as HML
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
@@ -425,7 +426,7 @@ createRC ::
 createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwnerId modelNamesHashMap edl expiry = do
   let insuranceValidity = convertTextToUTC output.insurance_validity
   let vehicleClass = output.vehicle_class
-  let vehicleCapacity = (readMaybe . T.unpack) =<< output.seating_capacity
+  let vehicleCapacity = (readMaybe . T.unpack) =<< readFromJson =<< output.seating_capacity
   let manufacturer = (readMaybe . T.unpack) =<< output.manufacturer
   let (verificationStatus, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass now vehicleCapacity manufacturer
   Domain.VehicleRegistrationCertificate
@@ -451,6 +452,9 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwn
     }
   where
     updateModel modelFromIdfy = Just . fromMaybe "" $ HML.lookup modelFromIdfy modelNamesHashMap
+    readFromJson (A.String val) = Just val
+    readFromJson (A.Number val) = Just $ show val
+    readFromJson _ = Nothing
 
 validateRCStatus :: Maybe Vehicle.Variant -> ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> UTCTime -> Maybe Int -> Maybe Text -> (Domain.VerificationStatus, Maybe Vehicle.Variant)
 validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity cov now capacity manufacturer = do
