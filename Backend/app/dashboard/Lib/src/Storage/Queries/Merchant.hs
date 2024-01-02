@@ -17,7 +17,6 @@ module Storage.Queries.Merchant where
 
 import Domain.Types.Merchant as Domain
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
 import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Id
@@ -53,6 +52,38 @@ updateSupportedOperatingCities mShortId cities = do
     [Se.Set BeamM.supportedOperatingCities cities]
     [Se.Is BeamM.shortId $ Se.Eq $ getShortId mShortId]
 
+findAllMerchants' :: BeamFlow m r => Int -> Int -> m [Merchant]
+findAllMerchants' limit offset = do
+  findAllWithOptionsKV
+    [Se.Is BeamM.id $ Se.Not $ Se.Eq ""]
+    (Se.Desc BeamM.createdAt)
+    (Just limit)
+    (Just offset)
+
+findByAuthToken ::
+  BeamFlow m r =>
+  Text ->
+  m (Maybe Merchant)
+findByAuthToken authToken = do
+  findOneWithKV [Se.Is BeamM.authToken $ Se.Eq $ Just authToken]
+
+findAllByShortIds ::
+  BeamFlow m r =>
+  [ShortId Merchant] ->
+  m [Merchant]
+findAllByShortIds shortIds = do
+  findAllWithKV [Se.Is BeamM.shortId $ Se.In $ getShortId <$> shortIds]
+
+updateEnableStatus ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Bool ->
+  m ()
+updateEnableStatus mShortId status = do
+  updateWithKV
+    [Se.Set BeamM.enabled (Just status)]
+    [Se.Is BeamM.shortId $ Se.Eq $ getShortId mShortId]
+
 instance FromTType' BeamM.Merchant Domain.Merchant where
   fromTType' BeamM.MerchantT {..} = do
     pure $
@@ -60,9 +91,6 @@ instance FromTType' BeamM.Merchant Domain.Merchant where
         Domain.Merchant
           { id = Id id,
             shortId = ShortId shortId,
-            email = case (emailEncrypted, emailHash) of
-              (Just email, Just hash) -> Just $ EncryptedHashed (Encrypted email) hash
-              _ -> Nothing,
             ..
           }
 
@@ -71,7 +99,5 @@ instance ToTType' BeamM.Merchant Domain.Merchant where
     BeamM.MerchantT
       { id = getId id,
         shortId = getShortId shortId,
-        emailEncrypted = email <&> (unEncrypted . (.encrypted)),
-        emailHash = email <&> (.hash),
         ..
       }

@@ -37,7 +37,9 @@ import qualified Domain.Types.Person as Person
 import Domain.Types.Vehicle
 import Environment
 import Kernel.External.Encryption
+import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
+import Kernel.External.Verification.SafetyPortal.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -55,7 +57,9 @@ import qualified Storage.Queries.DriverLicense as Query
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
+import qualified Tools.DriverBackgroundVerification as DriverBackgroundVerification
 import Tools.Error
+import qualified Tools.Ticket as TT
 import qualified Tools.Verification as Verification
 
 data DriverDLReq = DriverDLReq
@@ -89,7 +93,7 @@ verifyDL ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverDLReq ->
   Flow DriverDLRes
-verifyDL isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverDLReq {..} = do
+verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@DriverDLReq {..} = do
   now <- getCurrentTime
   runRequestValidation (validateDriverDLReq now) req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -120,6 +124,21 @@ verifyDL isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverDLReq 
           Nothing -> throwImageError imageId1 ImageExtractionFailed
       else return Nothing
   mdriverLicense <- Query.findByDLNumber driverLicenseNumber
+  whenJust documentVerificationConfig.dlNumberVerification $ \dlNumberVerification -> do
+    when dlNumberVerification $ do
+      fork "driver license verification in safety portal" $ do
+        dlVerificationRes <-
+          DriverBackgroundVerification.searchAgent person.merchantId merchantOpCityId $
+            Agent {dl = Just driverLicenseNumber, voterId = Nothing}
+
+        case dlVerificationRes.suspect of
+          [] -> return ()
+          res -> do
+            let description = encodeToText res
+            logInfo $ "Success: " <> show description
+            ticket <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig.kaptureDisposition)
+            logInfo $ "Ticket: " <> show ticket
+            return ()
 
   case mdriverLicense of
     Just driverLicense -> do
@@ -142,6 +161,21 @@ verifyDL isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverDLReq 
       unless (imageMetadata.imageType == DTO.DriverLicense) $
         throwError (ImageInvalidType (show DTO.DriverLicense) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
+
+    mkTicket description disposition =
+      Ticket.CreateTicketReq
+        { category = "BlackListPortal",
+          subCategory = Just "Onboarding Dl Verification",
+          disposition = disposition,
+          issueId = Nothing,
+          issueDescription = description,
+          mediaFiles = Nothing,
+          name = Nothing,
+          phoneNo = Nothing,
+          personId = personId.getId,
+          classification = Ticket.DRIVER,
+          rideDescription = Nothing
+        }
 
 verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe Category -> Flow ()
 verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard mbVehicleCategory = do

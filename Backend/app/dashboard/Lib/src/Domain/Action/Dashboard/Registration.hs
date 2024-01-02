@@ -129,12 +129,18 @@ login LoginReq {..} = do
     [] -> throwError (InvalidRequest "No access to any merchant")
     merchantAccessList' -> do
       let sortedMerchantAccessList = sortOn DAccess.merchantShortId merchantAccessList'
-      let groupedByMerchant = head $ groupBy ((==) `on` DAccess.merchantShortId) sortedMerchantAccessList
-      let merchantWithCityList = DP.AvailableCitiesForMerchant ((.merchantShortId) (head groupedByMerchant)) (map (.operatingCity) groupedByMerchant)
-      merchant <- QMerchant.findByShortId merchantWithCityList.merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantWithCityList.merchantShortId.getShortId)
-      let defaultCityPresent = elem merchant.defaultOperatingCity merchantWithCityList.operatingCity
-      let city' = if defaultCityPresent then merchant.defaultOperatingCity else head merchantWithCityList.operatingCity
-      pure (merchant, city')
+      let groupedByMerchant = groupBy ((==) `on` DAccess.merchantShortId) sortedMerchantAccessList
+      let merchantIds = map DAccess.merchantShortId $ map head groupedByMerchant
+      merchants <- QMerchant.findAllByShortIds merchantIds
+      let enabledMerchants = filter (\merchant -> merchant.enabled == Just True) merchants
+      case enabledMerchants of
+        [] -> throwError (InvalidRequest "Account deactivated. Please check with Admin")
+        _ -> do
+          let merchant = head enabledMerchants
+              merchantWithCityList = map (.operatingCity) $ filter (\ma -> ma.merchantId == merchant.id) merchantAccessList'
+              defaultCityPresent = elem merchant.defaultOperatingCity merchantWithCityList
+              city' = if defaultCityPresent then merchant.defaultOperatingCity else head merchantWithCityList
+          pure (merchant, city')
   generateLoginRes person merchant' otp city'
 
 switchMerchant ::
@@ -181,7 +187,7 @@ generateLoginRes ::
   City.City ->
   m LoginRes
 generateLoginRes person merchant otp city = do
-  _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied --FIXME cleanup tokens for this merchantId
+  _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
   (isToken, msg) <- check2FA _merchantAccess merchant otp
   token <-
     if isToken
@@ -307,7 +313,7 @@ registerFleetOwner req = do
   runRequestValidation validateFleetOwner req
   unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
   fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
-  fleetOwner <- buildFleetOwner req fleetOwnerRole.id
+  fleetOwner <- buildFleetOwner req fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
@@ -323,8 +329,8 @@ registerFleetOwner req = do
       Just NORMAL_FLEET -> FLEET_OWNER
       Nothing -> FLEET_OWNER
 
-buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DRole.Role -> m PT.Person
-buildFleetOwner req roleId = do
+buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DRole.Role -> DRole.DashboardAccessType -> m PT.Person
+buildFleetOwner req roleId dashboardAccessType = do
   pid <- generateGUID
   now <- getCurrentTime
   mobileNumber <- encrypt req.mobileNumber
@@ -338,6 +344,7 @@ buildFleetOwner req roleId = do
         mobileNumber = mobileNumber,
         mobileCountryCode = req.mobileCountryCode,
         passwordHash = Nothing,
+        dashboardAccessType = Just dashboardAccessType,
         createdAt = now,
         updatedAt = now
       }

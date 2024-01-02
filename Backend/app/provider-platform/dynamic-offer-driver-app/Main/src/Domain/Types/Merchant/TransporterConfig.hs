@@ -177,6 +177,7 @@ data TransporterConfigD u = TransporterConfig
     fakeOtpMobileNumbers :: [Text],
     variantsToEnableForSubscription :: [Vehicle.Variant],
     considerDriversForSearch :: Bool,
+    safetyWebhookAuthToken :: Maybe Text,
     pastDaysRideCounter :: Int
   }
   deriving (Generic, Show)

@@ -150,6 +150,7 @@ data TransporterConfigT f = TransporterConfigT
     fakeOtpMobileNumbers :: B.C f [Text],
     variantsToEnableForSubscription :: B.C f [Vehicle.Variant],
     considerDriversForSearch :: B.C f Bool,
+    safetyWebhookAuthToken :: B.C f (Maybe Text),
     pastDaysRideCounter :: B.C f Int
   }
   deriving (Generic, B.Beamable)

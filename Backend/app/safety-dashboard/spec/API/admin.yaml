@@ -1,0 +1,94 @@
+imports:
+  Text: Data.Text
+  FlaggedStatus: Domain.Types.Suspect
+  Merchant: Domain.Types.Merchant
+  APISuccess: Kernel.Types.APISuccess
+  SuspectBulkUploadReq : API.Types.UI.Suspect
+  SuspectBulkUploadResp : API.Types.UI.Suspect
+  WebhookRequest : API.Types.UI.Admin.WebhookRequest
+
+importPackageOverrides:
+    Domain.Types.Merchant: lib-dashboard
+    Tools.Auth: lib-dashboard
+    Environment: lib-dashboard
+    Domain.Types.Person : lib-dashboard
+
+
+module : Admin
+types:
+  SuspectFlagChangeRequestList:
+    ids : [Text]
+    reasonToChange : Maybe Text
+    flaggedStatus : FlaggedStatus
+  WebhookCheck :
+    suspectList : [WebhookRequest]
+
+  WebhookRequest:
+    dl : Text
+    voterId : Text
+    flaggedCategory : Text
+    flaggedReason : Text
+    flaggedBy : Text
+
+  DeleteMerchantUserReq:
+    email : Text
+
+  AssignRoleMerchantUserReq:
+    email : Text
+    roleName : Text
+
+
+
+
+apis:
+    - POST:
+        endpoint: /change/suspectFlag
+        auth: DashboardAuth DASHBOARD_ADMIN
+        request:
+          type: API.Types.UI.Admin.SuspectFlagChangeRequestList
+        response:
+          type: APISuccess
+
+      # POST /Upload/suspect/bulk
+    - POST:
+        endpoint: /admin/upload/suspect/bulk
+        auth: DashboardAuth DASHBOARD_ADMIN
+        query:
+          flaggedStatus: FlaggedStatus
+        request:
+          type: SuspectBulkUploadReq
+        response:
+          type: SuspectBulkUploadResp
+
+    - POST:
+        endpoint: /merchant/admin/upload/suspect/bulk
+        auth: DashboardAuth MERCHANT_ADMIN
+        request:
+          type: SuspectBulkUploadReq
+        response:
+          type: SuspectBulkUploadResp
+ # this is created to test webhook part will remove it later
+    - POST:
+        endpoint: /check/webhook
+        auth: DashboardAuth MERCHANT_ADMIN
+        request:
+          type: API.Types.UI.Admin.WebhookCheck
+        response:
+          type: APISuccess
+
+    - POST:
+        endpoint: /merchant/user/assignRole
+        auth: DashboardAuth MERCHANT_ADMIN
+        request:
+          type: API.Types.UI.Admin.AssignRoleMerchantUserReq
+        response:
+          type: APISuccess
+
+
+    - DELETE:
+        endpoint: /merchant/user/delete
+        auth: DashboardAuth MERCHANT_ADMIN
+        request:
+          type: API.Types.UI.Admin.DeleteMerchantUserReq
+        response:
+          type: APISuccess
