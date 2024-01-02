@@ -61,6 +61,8 @@ _:
           set -x
           cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
           rm -f ./*.log # Clean up the log files
+          redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+          redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
           nix run .#run-mobility-stack-nix -- "$@"
         '';
       };
@@ -84,6 +86,8 @@ _:
             cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
             rm -f ./*.log # Clean up the log files
             cabal build ${lib.concatStringsSep " " cabalTargets}
+            redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+            redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
             nix run .#run-mobility-stack-dev -- "$@"
           '';
       };
