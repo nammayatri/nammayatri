@@ -51,6 +51,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeS
 import Styles.Colors as Color
 import ReactComponents.IncrementDecrement.Controller as IDA
 import ReactComponents.Calendar.Controller as CA
+import Types.App (BOTTOM_NAVBAR_OUTPUT(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -103,6 +104,7 @@ data ScreenOutput = GoBack
                     | SelectedTab RideHistoryScreenState
                     | OpenPaymentHistoryScreen RideHistoryScreenState
                     | SubscriptionScreen RideHistoryScreenState
+                    | BottomNavBar BOTTOM_NAVBAR_OUTPUT
 
 data Action = Dummy
             | OnFadeComplete String
@@ -149,24 +151,25 @@ eval (ScrollStateChanged scrollState) state = do
 eval (SelectTab tab) state = updateAndExit state $ SelectedTab state{currentTab = tab, datePickerState { activeIndex = tripDatesCount - 1 , selectedItem {date = 0, month = "", year = 0}}} 
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
-  case screen of
-    "Home" -> exit $ HomeScreen
-    "Profile" -> exit $ ProfileScreen
-    "Alert" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.logField "ny_driver_alert_click"
-      exit $ GoToNotification
-    "Rankings" -> do
-      _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-      exit $ GoToReferralScreen
-    "Join" -> do
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
-      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
-    _ -> continue state
+  exit $ BottomNavBar TO_JOIN
+  -- case screen of
+  --   "Home" -> exit $ HomeScreen
+  --   "Profile" -> exit $ ProfileScreen
+  --   "Alert" -> do
+  --     _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+  --     let _ = unsafePerformEffect $ logEvent state.logField "ny_driver_alert_click"
+  --     exit $ GoToNotification
+  --   "Rankings" -> do
+  --     _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+  --     exit $ GoToReferralScreen
+  --   "Join" -> do
+  --     let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+  --     void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
+  --     _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+  --     _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+  --     let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+  --     exit $ SubscriptionScreen state
+  --   _ -> continue state
 
 eval (IndividualRideCardAction (IndividualRideCardController.Select index)) state = do
   let filteredRideList = rideListFilter state.currentTab state.rideList

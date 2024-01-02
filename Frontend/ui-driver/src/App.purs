@@ -228,6 +228,7 @@ data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN
                             | SELECTED_TAB RideHistoryScreenState
                             | OPEN_PAYMENT_HISTORY RideHistoryScreenState
                             | RIDE_HISTORY_NAV NAVIGATION_ACTIONS
+                            | BOTTOM_NAVBAR_FLOW BOTTOM_NAVBAR_OUTPUT
 
 data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN
@@ -236,6 +237,7 @@ data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_FLOW_AND_COME_BACK ReferralScreenState
                             | REFRESH_LEADERBOARD
                             | REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
+                            | REFERRAL_TO_NAV BOTTOM_NAVBAR_OUTPUT
 
 data RIDES_SELECTION_SCREEN_OUTPUT = REFRESH_RIDES RideSelectionScreenState
                                    | LOADER_RIDES_OUTPUT RideSelectionScreenState
@@ -267,6 +269,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | SUBCRIPTION 
                                     | SAVED_LOCATIONS_SCREEN
                                     | GO_HOME DriverProfileScreenState
+                                    | PROFILE_TO_NAV BOTTOM_NAVBAR_OUTPUT
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
@@ -344,6 +347,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | DISABLE_GOTO HomeScreenState
                           | GOTO_LOCATION_FLOW HomeScreenState Boolean
                           | REFRESH_GOTO HomeScreenState
+                          | HOME_TO_NAV BOTTOM_NAVBAR_OUTPUT
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -429,3 +433,5 @@ data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen | REFRESH_SCREEN_CHOOSE_CITY 
 data CHOOSE_LANG_SCREEN_OUTPUT = LOGIN_FLOW
 data DRIVER_REFERRAL_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
                                    | DRIVER_CONTEST_SCREEN
+
+data BOTTOM_NAVBAR_OUTPUT = TO_HOME | TO_RIDES | TO_JOIN | TO_RANKINGS | TO_ALERTS

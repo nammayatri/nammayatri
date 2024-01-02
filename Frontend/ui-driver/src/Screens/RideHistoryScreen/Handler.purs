@@ -69,3 +69,4 @@ rideHistory = do
     SubscriptionScreen updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ (RIDE_HISTORY_NAV GoToSubscription))
+    BottomNavBar screenName -> App.BackT $ App.NoBack <$> (pure $ BOTTOM_NAVBAR_FLOW screenName)

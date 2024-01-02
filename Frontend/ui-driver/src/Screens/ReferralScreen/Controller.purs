@@ -47,6 +47,7 @@ import Common.Types.App
 import Effect.Uncurried(runEffectFn4)
 import Storage(KeyStore(..), getValueToLocalStore)
 import ConfigProvider
+import Types.App (BOTTOM_NAVBAR_OUTPUT(..)) 
 
 instance showAction :: Show Action where
   show _ = ""
@@ -167,6 +168,7 @@ data ScreenOutput = GoToHomeScreen ReferralScreenState
                   | LinkReferralApi ReferralScreenState
                   | Refresh ReferralScreenState
                   | SubscriptionScreen ReferralScreenState
+                  | BottomNavBarFlow BOTTOM_NAVBAR_OUTPUT
 
 eval :: Action -> ReferralScreenState -> Eval Action ScreenOutput ReferralScreenState
 
@@ -289,23 +291,7 @@ eval (SuccessScreenExpireCountDwon seconds id status timerId) state = if status 
   continue state{props {stage = QRScreen}} else continue state
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
-  pure $ hideKeyboardOnNavigation true
-  case item of
-    "Home" -> exit $ GoToHomeScreen state
-    "Rides" -> exit $ GoToRidesScreen state
-    "Profile" -> exit $ GoToProfileScreen state
-    "Alert" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
-      exit $ GoToNotifications state
-    "Join" -> do
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
-      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
-    _ -> continue state
+  exit $ BottomNavBarFlow TO_ALERTS
 
 eval (ReferralQrRendered id) state = 
   continueWithCmd state [ do

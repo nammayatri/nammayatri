@@ -60,3 +60,4 @@ referralScreen = do
     SubscriptionScreen updatedState -> do
       modifyScreenState $ ReferralScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ REFERRAL_SCREEN_NAV GoToSubscription)
+    BottomNavBarFlow screenName -> App.BackT $ App.NoBack <$> (pure $ REFERRAL_TO_NAV screenName)

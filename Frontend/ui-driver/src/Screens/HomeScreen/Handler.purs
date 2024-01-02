@@ -138,3 +138,4 @@ homeScreen = do
     RefreshGoTo updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_GOTO updatedState)
+    BottomNavBarFlow screenName -> App.BackT $ App.BackPoint <$> (pure $ HOME_TO_NAV screenName)

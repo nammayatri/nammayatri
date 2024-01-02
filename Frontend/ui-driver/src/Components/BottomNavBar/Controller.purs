@@ -25,6 +25,7 @@ import Prelude (bottom, ($), (<>), (||), unit, (<>), (==), negate, (/=), (<), (&
 import Screens as ScreenNames
 import Screens.Types (BottomNavBarState, NavIcons)
 import Storage (KeyStore(..), getValueToLocalNativeStore)
+import Types.App (BOTTOM_NAVBAR_OUTPUT(..))
 
 data Action = OnNavigate String
 

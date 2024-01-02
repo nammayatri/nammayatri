@@ -55,7 +55,7 @@ instance loggableAction :: Loggable Action where
                           trackAppEndScreen   appId (getScreen RIDE_SELECTION_SCREEN)
     DontKnowRide (PrimaryButton.OnClick) ->
                           trackAppActionClick appId (getScreen RIDE_SELECTION_SCREEN) "in_screen" "dont_know_ride"
-    BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
+    BottomNavBarAction (BottomNavBar.OnNavigate _) -> do
                           trackAppActionClick appId (getScreen RIDE_SELECTION_SCREEN) "bottom_nav_bar" "on_navigate"
                           trackAppEndScreen   appId (getScreen RIDE_SELECTION_SCREEN)
     IndividualRideCardAction (IndividualRideCardController.Select index) -> do

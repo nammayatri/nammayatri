@@ -101,3 +101,4 @@ driverProfileScreen = do
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
                                                 , profileImg = driverDetailsScreen.data.profileImg}})
       App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)
+    BottomNavBarFlow screenName -> App.BackT $ App.BackPoint <$> pure (PROFILE_TO_NAV screenName) 

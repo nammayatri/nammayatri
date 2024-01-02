@@ -22,6 +22,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
+import Types.App (BOTTOM_NAVBAR_OUTPUT(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -64,6 +65,7 @@ data ScreenOutput = GoToHomeScreen DriverReferralScreenState
                   | SubscriptionScreen DriverReferralScreenState
                   | GoToDriverContestScreen DriverReferralScreenState
                   | GoBack
+                  | BottomNavBarFlow BOTTOM_NAVBAR_OUTPUT
 
 
 eval :: Action -> DriverReferralScreenState -> Eval Action ScreenOutput DriverReferralScreenState
@@ -85,21 +87,22 @@ eval (PrimaryButtonActionController primaryButtonState (PrimaryButton.OnClick) )
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   pure $ hideKeyboardOnNavigation true
-  case item of
-    "Home" -> exit $ GoToHomeScreen state
-    "Rides" -> exit $ GoToRidesScreen state
-    "Alert" -> do
-      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
-      exit $ GoToNotifications state
-    "Join" -> do
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
-      void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
-    _ -> continue state
+  exit $ BottomNavBarFlow TO_JOIN
+  -- case item of
+  --   "Home" -> exit $ GoToHomeScreen state
+  --   "Rides" -> exit $ GoToRidesScreen state
+  --   "Alert" -> do
+  --     void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+  --     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
+  --     exit $ GoToNotifications state
+  --   "Join" -> do
+  --     let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+  --     void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
+  --     void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+  --     void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+  --     let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+  --     exit $ SubscriptionScreen state
+  --   _ -> continue state
 
 eval (ReferredDriversAPIResponseAction val) state = continue state {data {referredDrivers = show val}, props {showNewDriverReferralText = val < 1}}
 

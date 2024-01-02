@@ -60,6 +60,7 @@ import Effect.Aff (launchAff_)
 import Effect.Uncurried(runEffectFn4)
 import Storage (isLocalStageOn)
 import Helpers.Utils(fetchImage, FetchImageFrom(..))
+import Types.App (BOTTOM_NAVBAR_OUTPUT(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -192,6 +193,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | UpdateLanguages DriverProfileScreenState (Array String)
                     | SubscriptionScreen
                     | GoToDriverSavedLocationScreen DriverProfileScreenState
+                    | BottomNavBarFlow BOTTOM_NAVBAR_OUTPUT
 
 data Action = BackPressed
             | NoAction
@@ -278,17 +280,18 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
 
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
-  case screen of
-    "Home" -> exit $ GoToHomeScreen state
-    "Rides" -> exit $ GoToDriverHistoryScreen state
-    "Alert" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
-      exit $ GoToNotifications
-    "Rankings" -> do
-      _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-      exit $ GoToReferralScreen
-    _ -> continue state
+  exit $ BottomNavBarFlow TO_RIDES
+  -- case screen of
+  --   "Home" -> exit $ GoToHomeScreen state
+  --   "Rides" -> exit $ GoToDriverHistoryScreen state
+  --   "Alert" -> do
+  --     _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+  --     let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
+  --     exit $ GoToNotifications
+  --   "Rankings" -> do
+  --     _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+  --     exit $ GoToReferralScreen
+  --   _ -> continue state
 
 eval (UpdateValue value) state = do
   case value of

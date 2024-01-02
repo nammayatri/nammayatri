@@ -34,3 +34,4 @@ driverReferralScreen = do
     GoToDriverContestScreen updatedState -> do
       modifyScreenState $ DriverReferralScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ DRIVER_CONTEST_SCREEN)
+    BottomNavBarFlow screenName -> App.BackT $ App.NoBack <$> (pure $ DRIVER_REFERRAL_TO_NAV screenName)
