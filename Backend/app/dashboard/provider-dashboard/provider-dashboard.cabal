@@ -33,6 +33,7 @@ library
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.Booking
       API.ProviderPlatform.DynamicOfferDriver.Driver
+      API.ProviderPlatform.DynamicOfferDriver.Driver.Coin
       API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
       API.ProviderPlatform.DynamicOfferDriver.DriverReferral
       API.ProviderPlatform.DynamicOfferDriver.Issue

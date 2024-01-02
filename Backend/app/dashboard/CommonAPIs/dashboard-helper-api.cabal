@@ -35,6 +35,7 @@ library
       Dashboard.Common.Ride
       Dashboard.Common.SpecialZone
       Dashboard.ProviderPlatform.Driver
+      Dashboard.ProviderPlatform.Driver.Coin
       Dashboard.ProviderPlatform.Driver.Registration
       Dashboard.ProviderPlatform.DriverReferral
       Dashboard.ProviderPlatform.Merchant

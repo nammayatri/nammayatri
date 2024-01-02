@@ -46,6 +46,7 @@ fetchFunctionsOnEventbasis eventType (Id merchantId) (Id merchantOptCityId) = do
           DCT.CustomerToDriverReferral {} -> "CustomerToDriverReferral"
           DCT.LeaderBoard -> "LeaderBoard"
           DCT.Training -> "Training"
+          DCT.BulkUploadEvent -> "BulkUploadEvent"
   findAllWithKV
     [ Se.And
         [ Se.Is BeamDC.eventName $ Se.Eq dbEventName,

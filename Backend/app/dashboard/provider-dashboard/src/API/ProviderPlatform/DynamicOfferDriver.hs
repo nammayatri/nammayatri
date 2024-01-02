@@ -22,6 +22,7 @@ where
 
 import qualified API.ProviderPlatform.DynamicOfferDriver.Booking as Booking
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
+import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Coin as DriverCoin
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as DriverRegistration
 import qualified API.ProviderPlatform.DynamicOfferDriver.DriverReferral as DriverReferral
 import qualified API.ProviderPlatform.DynamicOfferDriver.Issue as Issue
@@ -60,6 +61,7 @@ type API' =
     :<|> Message.API
     :<|> DriverReferral.API
     :<|> DriverRegistration.API
+    :<|> DriverCoin.API
     :<|> Issue.API
     :<|> Volunteer.API
     :<|> Revenue.API
@@ -78,6 +80,7 @@ handler merchantId = do
     :<|> Message.handler merchantId city
     :<|> DriverReferral.handler merchantId city
     :<|> DriverRegistration.handler merchantId city
+    :<|> DriverCoin.handler merchantId city
     :<|> Issue.handler merchantId city
     :<|> Volunteer.handler merchantId city
     :<|> Revenue.handler merchantId city
@@ -100,6 +103,7 @@ handlerV2 merchantId city =
     :<|> Message.handler merchantId city
     :<|> DriverReferral.handler merchantId city
     :<|> DriverRegistration.handler merchantId city
+    :<|> DriverCoin.handler merchantId city
     :<|> Issue.handler merchantId city
     :<|> Volunteer.handler merchantId city
     :<|> Revenue.handler merchantId city

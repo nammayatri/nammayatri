@@ -21,6 +21,7 @@ where
 import "dynamic-offer-driver-app" API.Dashboard.Management as BPP
 import qualified Dashboard.Common.Booking as Booking
 import qualified Dashboard.ProviderPlatform.Driver as Driver
+import qualified Dashboard.ProviderPlatform.Driver.Coin as Coins
 import qualified Dashboard.ProviderPlatform.Driver.Registration as Registration
 import qualified Dashboard.ProviderPlatform.DriverReferral as DriverReferral
 import qualified Dashboard.ProviderPlatform.Merchant as Merchant
@@ -115,7 +116,8 @@ data DriversAPIs = DriversAPIs
   { goHome :: GoHomeAPIs,
     driverReferral :: DriverReferralAPIs,
     driverRegistration :: DriverRegistrationAPIs,
-    driverCommon :: DriverCommonAPIs
+    driverCommon :: DriverCommonAPIs,
+    driverCoins :: CoinAPIs
   }
 
 data RidesAPIs = RidesAPIs
@@ -204,12 +206,17 @@ data SubscriptionAPIs = SubscriptionAPIs
     sendMessageToDriverViaDashboard :: Id Driver.Driver -> Text -> DDriver.SendSmsReq -> Euler.EulerClient APISuccess
   }
 
+data CoinAPIs = CoinAPIs
+  { driverCoinBulkUpload :: Coins.BulkUploadCoinsReq -> Euler.EulerClient APISuccess
+  }
+
 mkDriverOperationAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> DriverOperationAPIs
 mkDriverOperationAPIs merchantId city token = do
   let driverReferral = DriverReferralAPIs {..}
   let driverRegistration = DriverRegistrationAPIs {..}
   let driverCommon = DriverCommonAPIs {..}
   let goHome = GoHomeAPIs {..}
+  let driverCoins = CoinAPIs {..}
   let drivers = DriversAPIs {..}
   let rides = RidesAPIs {..}
   let subscription = SubscriptionAPIs {..}
@@ -245,7 +252,8 @@ mkDriverOperationAPIs merchantId city token = do
     goHomeClient
       :<|> referralClient
       :<|> driverRegistrationClient
-      :<|> driverCommonClient = driversClient
+      :<|> driverCommonClient
+      :<|> driverCoinsClient = driversClient
 
     driverDocumentsInfo
       :<|> driverAadhaarInfo
@@ -343,6 +351,8 @@ mkDriverOperationAPIs merchantId city token = do
 
     getCollectionHistory
       :<|> getAllDriverFeeHistory = revenueClient
+
+    driverCoinBulkUpload = driverCoinsClient
 
 callDriverOfferBPPOperations ::
   forall m r b c.

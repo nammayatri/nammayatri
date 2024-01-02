@@ -12,30 +12,25 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Dashboard.Management.Driver where
+module API.Dashboard.Management.Driver.Coin where
 
-import qualified API.Dashboard.Management.Driver.Coin as Coin
-import qualified API.Dashboard.Management.Driver.Common as Common
-import qualified API.Dashboard.Management.Driver.GoHome as GoHome
-import qualified API.Dashboard.Management.Driver.Referral as Referral
-import qualified API.Dashboard.Management.Driver.Registration as Registration
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as Common
+import qualified Domain.Action.Dashboard.Driver.Coin as DDriverCoins
 import qualified Domain.Types.Merchant as DM
 import Environment
-import Kernel.Types.Beckn.Context as Context
+import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Utils.Common (withFlowHandlerAPI)
 import Servant hiding (throwError)
 
 type API =
-  GoHome.API
-    :<|> Referral.API
-    :<|> Registration.API
-    :<|> Common.API
-    :<|> Coin.API
+  "coins"
+    :> Common.BulkUploadCoinsAPI
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
-handler merchantId city =
-  GoHome.handler merchantId city
-    :<|> Referral.handler merchantId city
-    :<|> Registration.handler merchantId city
-    :<|> Common.handler merchantId city
-    :<|> Coin.handler merchantId city
+handler = bulkUploadCoins
+
+bulkUploadCoins :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReq -> FlowHandler APISuccess
+bulkUploadCoins merchantShortId opCity = withFlowHandlerAPI . DDriverCoins.bulkUploadCoinsHandler merchantShortId opCity
