@@ -23,6 +23,7 @@ import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
+import Kernel.External.Verification.Interface.Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration
 import Kernel.Storage.Queries.SystemConfigs as QSC
@@ -111,7 +112,13 @@ runDriverOfferAllocator configModifier = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
-        flowRt' <- modFlowRtWithAuthManagers flowRt handlerEnv allSubscriberIds
+        flowRt' <-
+          addAuthManagersToFlowRt
+            flowRt
+            $ catMaybes
+              [ Just (Nothing, prepareAuthManagers flowRt handlerEnv allSubscriberIds),
+                Just (Just 20000, prepareIdfyHttpManager 20000)
+              ]
 
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
         pure flowRt'
