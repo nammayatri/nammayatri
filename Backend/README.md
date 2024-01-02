@@ -17,7 +17,7 @@ To build or develop the project, you need to install the following.
     ```sh
     nix run nixpkgs#cachix use nammayatri
     ```
-    - For this command to succeed, you must have added yourself to the `trusted-users` list of `nix.conf`
+    - For this command to succeed, you should add yourself to the `trusted-users` list of `nix.conf` and then restart the Nix daemon using `sudo pkill nix-daemon`.
 1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
 
 [^hm]: Unless you are using NixOS in which case home-manager is not strictly needed.
