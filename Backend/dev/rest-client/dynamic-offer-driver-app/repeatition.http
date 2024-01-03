@@ -57,31 +57,6 @@ content-type: application/json
 token: {{token2}}
 ###
 
-# @name createDriver
-POST {{driver-offer-bpp-host}}/ui/org/driver
-content-type: application/json
-token: ea37f941-427a-4085-a7d0-96240f166672
-
-{
-  "person" : {
-    "firstName": "Jonh",
-    "middleName": " Maybeext",
-    "lastName": "Maybext",
-    "mobileNumber": "9602580675",
-    "mobileCountryCode": "+7"
-  },
-  "vehicle" : {
-    "category": "CAR",
-    "model": "Ford",
-    "variant": "SEDAN",
-    "color": "White",
-    "registrationNo": "6001",
-    "capacity": 120
-  }
-}
-
-###
-
 # @name search
 POST {{app-host}}/rideSearch
 content-type: application/json
