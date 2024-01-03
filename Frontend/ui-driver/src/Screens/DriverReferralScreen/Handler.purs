@@ -10,11 +10,13 @@ import Screens.DriverReferralScreen.View as DriverReferralScreen
 import Types.App (FlowBT, GlobalState(..), DRIVER_REFERRAL_SCREEN_OUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Screens.DriverReferralScreen.ScreenData as DriverReferralScreenData
+import React.Navigation.Navigate (navigateToScreen)
+import PrestoDOM.Core.Types.Language.Flow (mapToScopedScreen)
 
 driverReferralScreen :: FlowBT String DRIVER_REFERRAL_SCREEN_OUTPUT
 driverReferralScreen = do
   (GlobalState state) <- getState
-  act <- lift $ lift $ runScreen $ DriverReferralScreen.screen state.driverReferralScreen
+  act <- lift $ lift $ navigateToScreen $ mapToScopedScreen $ DriverReferralScreen.screen state.driverReferralScreen
   case act of
     GoBack -> do
       modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> DriverReferralScreenData.initData)

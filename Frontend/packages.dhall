@@ -301,7 +301,7 @@ in  upstream
           , "react-basic-hooks"
           ]
         , repo = "ssh://git@ssh.bitbucket.juspay.net/picaf/purs-react.git"
-        , version = "namma-react"
+        , version = "main"
       }
   with react-basic-hooks =
     { dependencies =

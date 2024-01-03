@@ -28,6 +28,8 @@ import Data.Tuple.Nested (type (/\), (/\))
 import Effect.Console (log)
 import Halogen.VDom.Types (VDom(..))
 import Data.Maybe (fromJust, fromMaybe, Maybe(..), maybe)
+import PrestoDOM.Properties (background, color, cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, orientation, padding, text, textSize, visibility, weight, width)
+import PrestoDOM.Types.DomAttributes (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
 
 app :: forall action . (Int -> action) -> (action -> Effect Unit) -> Component Config
 app action push = do 
@@ -42,13 +44,13 @@ app action push = do
                       pure $ pure unit)
 
     pure $
-      linearLayout {
-          height: "wrap_content"
-        , width: "match_parent"
-        , orientation: "vertical"
-        , weight: "0.0"
-        , margin: margin
-      } (jempty += textView {text: "Hello World"})
+      linearLayout [
+          height MATCH_PARENT
+        , width MATCH_PARENT
+        -- , orientation "vertical"
+        -- , weight "0.0"
+        -- , margin margin
+      ] (jempty)
       -- linearLayout {
       --       height: "wrap_content"
       --     , width: "match_parent"
