@@ -22,6 +22,7 @@ import Data.Maybe
 import Foreign.Object (empty)
 import Common.Types.App as Common
 import ConfigProvider
+import RemoteConfigs as RC
 
 initData :: HomeScreenState
 initData = {
@@ -33,6 +34,7 @@ initData = {
         profileImg : Nothing,
         driverAlternateMobile : Nothing,
         gender : "UNKNOWN",
+        subsRemoteConfig : RC.subscriptionConfig "subscription_configs",
         activeRide : {
           id : "",
           source : "",

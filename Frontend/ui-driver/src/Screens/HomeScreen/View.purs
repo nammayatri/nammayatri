@@ -548,7 +548,7 @@ sourceUnserviceableView push state =
 
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 offlineView push state =
-  let showGoInYellow = state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.config.subscriptionConfig.highDueWarningLimit)
+  let showGoInYellow = state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit)
   in
   linearLayout
   [ width MATCH_PARENT

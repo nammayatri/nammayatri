@@ -876,8 +876,8 @@ eval (SwitchDriverStatus status) state =
           ]
   else if state.props.driverStatusSet == status then continue state
     else do
-      let maxDue = state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.maxDuesLimit
-          lowDue = state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.lowDuesLimit
+      let maxDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
+          lowDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
           showPopup = state.data.config.subscriptionConfig.enableSubscriptionPopups && (maxDue || lowDue)
           popup = if maxDue then ST.GO_ONLINE_BLOCKER else ST.SOFT_NUDGE_POPUP
           checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
