@@ -108,6 +108,7 @@ import MerchantConfig.Types (MarginConfig, ShadowConfig)
 import ConfigProvider
 import Mobility.Prelude
 import Timers
+import PrestoDOM.Core
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -164,8 +165,7 @@ screen initialState =
               HomeScreen -> do
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
-                  void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
-                  void $ launchAff $ flowRunner defaultGlobalState $ updateRecentTrips UpdateRepeatTrips push 
+                  void $ launchAff $ flowRunner defaultGlobalState $ updateRecentTrips UpdateRepeatTrips push Nothing
                 else do 
                   push RemoveShimmer 
                   pure unit
@@ -739,14 +739,13 @@ shareAppPopUp push state =
 
 buttonLayoutParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 buttonLayoutParentView push state =
-  PrestoAnim.animationSet (buttonLayoutAnimation state) $
-      linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , id $ getNewIDWithTag "buttonLayout"
-      , alignParentBottom "true,-1"
-      , orientation VERTICAL
-      ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push else emptyTextView state]
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , id $ getNewIDWithTag "buttonLayout"
+  , alignParentBottom "true,-1"
+  , orientation VERTICAL
+  ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push else emptyTextView state]
 
 recenterButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 recenterButtonView push state =
@@ -934,39 +933,38 @@ requestInfoCardView push state =
 buttonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 buttonLayout state push =
   PrestoAnim.animationSet (buttonLayoutAnimation state)
-    $ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , alignParentBottom "true,-1"
-        , orientation VERTICAL
-        , accessibility if state.props.currentStage == HomeScreen && (not (state.data.settingSideBar.opened /= SettingSideBar.CLOSED )) then DISABLE else DISABLE_DESCENDANT
-        ]
-        [
-          linearLayout
-          [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , orientation HORIZONTAL
-          ][
-            referralView push state
-          , recenterButtonView push state
-          ]
-        , linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            , background if (((state.data.savedLocations == []) && state.data.recentSearchs.predictionArray == []) || state.props.isSearchLocation == LocateOnMap) then Color.transparent else Color.white900
-            , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
-            , orientation VERTICAL
-            , padding $ if state.data.config.feature.enableZooTicketBookingFlow then PaddingTop 0 else PaddingTop 16
-            ]
-            [ if state.data.config.feature.enableZooTicketBookingFlow
-                then zooTicketBookingBanner state push 
-                else linearLayout[visibility GONE][]
-            , PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
-            , if state.props.isSearchLocation == LocateOnMap
-                then emptyLayout state 
-                else recentSearchesAndFavourites state push (null state.data.savedLocations) (null state.data.recentSearchs.predictionArray)
-            ]
-        ]
+  $ linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , alignParentBottom "true,-1"
+    , orientation VERTICAL
+    , accessibility if state.props.currentStage == HomeScreen && (not (state.data.settingSideBar.opened /= SettingSideBar.CLOSED )) then DISABLE else DISABLE_DESCENDANT
+    ]
+    [ linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      ]
+      [ referralView push state
+      , recenterButtonView push state
+      ]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , background if ((null state.data.savedLocations  && null state.data.recentSearchs.predictionArray ) || state.props.isSearchLocation == LocateOnMap) then Color.transparent else Color.white900
+      , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
+      , orientation VERTICAL
+      , padding $ if state.data.config.feature.enableZooTicketBookingFlow then PaddingTop 0 else PaddingTop 16
+      ]
+      [ if state.data.config.feature.enableZooTicketBookingFlow
+        then zooTicketBookingBanner state push 
+        else linearLayout[visibility GONE][]
+      , PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
+      , if state.props.isSearchLocation == LocateOnMap
+        then emptyLayout state 
+        else recentSearchesAndFavourites state push (null state.data.savedLocations) (null state.data.recentSearchs.predictionArray)
+      ]
+    ]
 
 recentSearchesAndFavourites :: forall w. HomeScreenState -> (Action -> Effect Unit) -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
 recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
@@ -978,7 +976,7 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
   , cornerRadii $ Corners (4.0) true true false false
   ]([ if (not hideSavedLocsView) then savedLocationsView state push else linearLayout[visibility GONE][]
       , if state.props.showShimmer && null state.data.tripSuggestions then shimmerView state
-        else if suggestionViewVisibility state  then  suggestionsView push state
+        else if suggestionViewVisibility state  then suggestionsView push state
         else emptySuggestionsBanner state push
     -- , if (suggestionViewVisibility state)
     --     then  suggestionsView push state
@@ -2815,14 +2813,29 @@ getQuotesPolling pollingId action retryAction count duration push state = do
         _ <- pure $ updateLocalStage QuoteList
         doAff do liftEffect $ push $ action response
 
-updateRecentTrips :: forall action. (RideBookingListRes -> String -> action) -> (action -> Effect Unit) -> Flow GlobalState Unit
-updateRecentTrips action push = do
-  (rideBookingListResponse) <- Remote.rideBookingListWithStatus "30" "0" "COMPLETED"
-  case rideBookingListResponse of
-      Right (RideBookingListRes  listResp) -> do
-          liftFlow $ push $ action (RideBookingListRes listResp) "success"
-      Left (err) -> do
-            liftFlow $ push $ action (RideBookingListRes {list : []} ) "failure"
+updateRecentTrips :: forall action. (RideBookingListRes -> action) -> (action -> Effect Unit) -> Maybe RideBookingListRes -> Flow GlobalState Unit
+updateRecentTrips action push response = do
+  case response of 
+    Just resp -> handleResponse resp
+    Nothing -> fetchAndHandleResponse
+  where
+    handleResponse resp = do
+      screenActive <- liftFlow $ isScreenActive "default" "HomeScreen"
+      if screenActive 
+        then liftFlow $ push $ action resp
+        else retryAfterDelay resp
+
+    retryAfterDelay resp = do
+      void $ delay $ Milliseconds 1000.0
+      updateRecentTrips action push (Just resp)
+
+    fetchAndHandleResponse = do
+      rideBookingListResponse <- Remote.rideBookingListWithStatus "30" "0" "COMPLETED"
+      void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
+      case rideBookingListResponse of
+        Right listResp -> do
+          handleResponse listResp
+        Left _ -> liftFlow $ push $ action (RideBookingListRes {list : []} )
 
 driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do

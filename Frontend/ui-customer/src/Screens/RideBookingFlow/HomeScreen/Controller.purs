@@ -681,7 +681,7 @@ instance loggableAction :: Loggable Action where
     ReAllocate -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "reallocate_ride"
     AutoScrollCountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "auto_scroll_count_down"
     StopAutoScrollTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_auto_scroll_timer" 
-    UpdateRepeatTrips arg1 arg2 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_repeat_trips"
+    UpdateRepeatTrips arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_repeat_trips"
     RemoveShimmer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_shimmer"
 
 data ScreenOutput = LogoutUser
@@ -872,7 +872,7 @@ data Action = NoAction
             | ReAllocate
             | AutoScrollCountDown Int String String String
             | StopAutoScrollTimer 
-            | UpdateRepeatTrips RideBookingListRes String
+            | UpdateRepeatTrips RideBookingListRes 
             | RemoveShimmer 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -881,18 +881,17 @@ eval ShowMoreSuggestions state = continue state { props {suggestionsListExpanded
 
 eval RemoveShimmer state = continue state{props{showShimmer = false}}
 
-eval (UpdateRepeatTrips rideList status) state = do
-    let shimmerState = state{props{showShimmer = false}}
-    case status of
-        "success" -> do
-            let list = rideListToTripsTransformer (rideList ^._list)
-            if not (null list) then do
-              let updatedMap = updateMapWithPastTrips list shimmerState
-              void $ pure $ setSuggestionsMap updatedMap
-              updateCurrentLocation shimmerState (show state.props.sourceLat) (show state.props.sourceLong)
-            else do
-              continue shimmerState
-        _ -> continue shimmerState
+eval (UpdateRepeatTrips rideList) state = do
+  void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
+  let shimmerState = state{props{showShimmer = false}}
+      list = rideListToTripsTransformer (rideList ^._list)
+  if not (null list) then do
+    let updatedMap = updateMapWithPastTrips list shimmerState
+    void $ pure $ setSuggestionsMap updatedMap
+    updateCurrentLocation shimmerState (show state.props.sourceLat) (show state.props.sourceLong)
+  else do
+    continue shimmerState
+
         
 eval UpdatePeekHeight state = continue state{data{peekHeight = getPeekHeight state}}
 
@@ -1210,7 +1209,8 @@ eval BackPressed state = do
                                     if (getSearchType unit) == "direct_search" then
                                       pure $ terminateApp state.props.currentStage false
                                       else pure unit
-                                    updateAndExit state{props{autoScroll = false, currentStage = HomeScreen, homeScreenSheetState = COLLAPSED}} $ GoToHome
+                                    -- updateAndExit state{props{autoScroll = false, currentStage = HomeScreen, homeScreenSheetState = COLLAPSED, showShimmer = false}} $ GoToHome
+                                    updateAndExit state{props{isSearchLocation= NoView}} $ GoToHome
     SettingPrice    -> do
                       _ <- pure $ performHapticFeedback unit
                       void $ pure $ clearTimerWithId state.props.repeatRideTimerId
@@ -2186,7 +2186,8 @@ eval (SearchLocationModelActionController (SearchLocationModelController.UpdateC
 
 eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
 
-eval (CurrentLocation lat lng) state = exit $ UpdatedState state { props { sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } false
+eval (CurrentLocation lat lng) state = 
+  exit $ UpdatedState state { props { sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } false
 
 eval (RateCardAction RateCard.Close) state = continue state { props { showRateCard = false } , data{rateCard{onFirstPage = false,currentRateCardType = DefaultRateCard}}}
 
