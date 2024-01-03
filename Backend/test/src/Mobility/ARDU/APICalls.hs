@@ -79,29 +79,24 @@ ui = do
 
     _ :<|> (_ :<|> _ :<|> rideStart :<|> rideEnd :<|> rideCancel) = rideClient
 
-    ( _
+    ( setDriverOnline
+        :<|> _
+        :<|> getNearbySearchRequests
+        :<|> offerQuote
+        :<|> respondQuote
+        :<|> ( getDriverInfo
+                 :<|> _
+                 :<|> _
+               )
+        :<|> updateMetaData
+        :<|> ( validate
+                 :<|> verifyAuth
+                 :<|> resendOtp
+                 :<|> remove
+               )
         :<|> _
         :<|> _
-        :<|> _
-      )
-      :<|> ( setDriverOnline
-               :<|> _
-               :<|> getNearbySearchRequests
-               :<|> offerQuote
-               :<|> respondQuote
-               :<|> ( getDriverInfo
-                        :<|> _
-                        :<|> _
-                      )
-               :<|> updateMetaData
-               :<|> ( validate
-                        :<|> verifyAuth
-                        :<|> resendOtp
-                        :<|> remove
-                      )
-               :<|> _
-               :<|> _
-             ) = driverClient
+      ) = driverClient
 
 newtype DashboardAPIs = DashboardAPIs
   { management :: DashboardManagementAPIs

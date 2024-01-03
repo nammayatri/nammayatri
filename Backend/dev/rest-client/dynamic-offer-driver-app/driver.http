@@ -11,37 +11,6 @@ token: {{token}}
 
 ###
 
-# @name createDriver
-POST {{driver-offer-bpp-host}}/ui/org/driver
-content-type: application/json
-token: {{token}}
-
-{
-  "person" : {
-    "firstName": "Jonh",
-    "middleName": " Maybeext",
-    "lastName": "Maybext",
-    "mobileNumber": "9602580676",
-    "mobileCountryCode": "+7"
-  },
-  "vehicle" : {
-    "category": "CAR",
-    "model": "Ford",
-    "variant": "SEDAN",
-    "color": "White",
-    "registrationNo": "6002",
-    "capacity": 120
-  }
-}
-###
-
-# @name deleteDriver
-DELETE  {{driver-offer-bpp-host}}/ui/org/driver/984e3bb5-d200-4dcc-8f6c-abb09ce68d6a
-content-type: application/json
-token: {{token}}
-
-###
-
 # @name authDriver
 POST {{driver-offer-bpp-host}}/ui/auth
 content-type: application/json
