@@ -2,9 +2,7 @@ imports:
   Text: Data.Text
   UTCTime: Kernel.Prelude
   BaseUrl: Kernel.Prelude
-  MonadThrow: EulerHS.Prelude
-  MonadTime: Kernel.Types.Time
-  Log: Kernel.Types.Logging
+  MonadFlow: Kernel.Types.App
   SearchReqLocation: Domain.Action.UI.Search.Common
   SearchRequest: Domain.Types.SearchRequest
   Meters: Kernel.Types.Common
@@ -25,67 +23,64 @@ imports:
 module: Search
 transformer:
   monads:
-  - MonadThrow m
-  - MonadTime m
-  - Log m
+  - MonadFlow m
   transformers:
     buildSearchReqV2:
       params:
-        origin: SearchReqLocation
-        destination: SearchReqLocation
-
-        distance: Maybe Meters
-        duration: Maybe Seconds
-        customerLanguage: Maybe Language
-        disabilityTag: Maybe Text
-        mbPoints: Maybe [LatLong]
-        mbPhoneNumber: Maybe Text
+        - origin: SearchReqLocation
+        - destination: SearchReqLocation
+        - distance: Maybe Meters
+        - duration: Maybe Seconds
+        - customerLanguage: Maybe Language
+        - disabilityTag: Maybe Text
+        - mbPoints: Maybe [LatLong]
+        - mbPhoneNumber: Maybe Text
       toType: SearchReqMessage
       mapping:
-        searchReqMessageIntent: /~Just <$> tfIntent customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin
+        searchReqMessageIntent: /~Just <$> tfIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber
 
     tfIntent:
       params:
-        origin: SearchReqLocation
-        destination: SearchReqLocation
-        customerLanguage: Maybe Language
-        disabilityTag: Maybe Text
-        distance: Maybe Meters
-        duration: Maybe Seconds
-        mbPoints: Maybe [LatLong]
-        mbPhoneNumber: Maybe Text
+        - origin: SearchReqLocation
+        - destination: SearchReqLocation
+        - customerLanguage: Maybe Language
+        - disabilityTag: Maybe Text
+        - distance: Maybe Meters
+        - duration: Maybe Seconds
+        - mbPoints: Maybe [LatLong]
+        - mbPhoneNumber: Maybe Text
       toType: Intent
       mapping:
-        intentFulfillment: /~Just <$> tfFulfillment customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin
+        intentFulfillment: /~Just <$> tfFulfillment origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber
         intentPayment: Nothing
         intentTags: Nothing
 
     tfFulfillment:
       params:
-        origin: SearchReqLocation
-        destination: SearchReqLocation
-        customerLanguage: Maybe Language
-        disabilityTag: Maybe Text
-        distance: Maybe Meters
-        duration: Maybe Seconds
-        mbPoints: Maybe [LatLong]
-        mbPhoneNumber: Maybe Text
+        - origin: SearchReqLocation
+        - destination: SearchReqLocation
+        - customerLanguage: Maybe Language
+        - disabilityTag: Maybe Text
+        - distance: Maybe Meters
+        - duration: Maybe Seconds
+        - mbPoints: Maybe [LatLong]
+        - mbPhoneNumber: Maybe Text
       toType: Fulfillment
       mapping:
         fulfillmentStops: ~_mkStops origin destination
         fulfillmentCustomer: /~Just <$> tfCustomer customerLanguage disabilityTag mbPhoneNumber
         fulfillmentTags: ~_mkRouteInfoTags distance duration mbPoints
         fulfillmentAgent: Nothing
-        fulfillmentText: Nothing
+        fulfillmentId: Nothing
         fulfillmentState: Nothing
         fulfillmentType: Nothing
         fulfillmentVehicle: Nothing
 
     tfCustomer:
       params:
-        customerLanguage: Maybe Language
-        disabilityTag: Maybe Text
-        mbPhoneNumber: Maybe Text
+        - customerLanguage: Maybe Language
+        - disabilityTag: Maybe Text
+        - mbPhoneNumber: Maybe Text
       toType: Customer
       mapping:
         customerPerson: /~Just <$> tfPerson customerLanguage disabilityTag mbPhoneNumber
@@ -93,14 +88,14 @@ transformer:
 
     tfPerson:
       params:
-        customerLanguage: Maybe Language
-        disabilityTag: Maybe Text
-        mbPhoneNumber: Maybe Text
+        - customerLanguage: Maybe Language
+        - disabilityTag: Maybe Text
+        - mbPhoneNumber: Maybe Text
       toType: Person
       mapping:
         personTags: ~_mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber
         personName: Nothing
-        personText: Nothing
+        personId: Nothing
 
 types:
   SearchReq:

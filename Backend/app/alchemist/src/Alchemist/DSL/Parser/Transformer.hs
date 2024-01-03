@@ -71,7 +71,7 @@ parseSingleTransformer :: (Key, Value) -> Maybe ST.TransformerTT
 parseSingleTransformer (key, value) = do
   obj <- preview _Object value
   let name = toText key
-      params = preview (ix "params" . _Object) obj & fromMaybe (error "Transformer params is required") & KM.toList & map toTextPair
+      params = preview (ix "params" . _Array . to V.toList) obj & fromMaybe (error "Transformer params is required") & map (toTextPair . toKeyValue)
       fromTypes = map snd params
       paramNames = map fst params
       toType = preview (ix "toType" . _String) obj & fromMaybe (error "Transformer toType is required")
@@ -81,6 +81,13 @@ parseSingleTransformer (key, value) = do
       pureMapping = map (setPureBindings toType) $ filter (\(_, val) -> not $ impureIdentifier `T.isPrefixOf` val) mapping
   pure $ ST.TransformerTT name fromTypes paramNames toType outputTypeBindings pureMapping impureMapping
   where
+    toKeyValue :: Value -> (Key, Value)
+    toKeyValue (Object obj) = do
+      let objList = KM.toList obj
+      when (length objList /= 1) $ error "Failed to parse, params single element is expected to have only key Text pair"
+      head objList
+    toKeyValue _ = error "Failed to parse params element to key value pair"
+
     toTextPair :: (Key, Value) -> (Text, Text)
     toTextPair (k, v) =
       let key' = toText k

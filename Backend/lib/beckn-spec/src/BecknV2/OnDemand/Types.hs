@@ -261,7 +261,7 @@ optionsCatalog =
 -- | Describes a city
 data City = City
   { -- | City code
-    cityText :: Maybe Text,
+    cityCode :: Maybe Text,
     -- | Name of the city
     cityName :: Maybe Text
   }
@@ -281,7 +281,7 @@ optionsCity =
     }
   where
     table =
-      [ ("cityText", "code"),
+      [ ("cityCode", "code"),
         ("cityName", "name")
       ]
 
@@ -366,11 +366,11 @@ data Context = Context
   { -- | The Beckn protocol method being called by the sender and executed at the receiver.
     contextAction :: Maybe Text,
     -- | A globally unique identifier of the platform, Typically it is the fully qualified domain name (FQDN) of the platform.
-    contextBapText :: Maybe Text,
+    contextBapId :: Maybe Text,
     -- | The callback URL of the Subscriber. This should necessarily contain the same domain name as set in `subscriber_id``.
     contextBapUri :: Maybe Text,
     -- |
-    contextBppText :: Maybe Text,
+    contextBppId :: Maybe Text,
     -- |
     contextBppUri :: Maybe Text,
     -- |
@@ -380,11 +380,11 @@ data Context = Context
     -- |
     contextLocation :: Maybe Location,
     -- | This is a unique value which persists during a request / callback cycle. Since beckn protocol APIs are asynchronous, BAPs need a common value to match an incoming callback from a BPP to an earlier call. This value can also be used to ignore duplicate messages coming from the BPP. It is recommended to generate a fresh message_id for every new interaction. When sending unsolicited callbacks, BPPs must generate a new message_id.
-    contextMessageText :: Maybe UUID,
+    contextMessageId :: Maybe UUID,
     -- | Time of request generation in RFC3339 format
     contextTimestamp :: Maybe UTCTime,
     -- | This is a unique value which persists across all API calls from `search` through `confirm`. This is done to indicate an active user session across multiple requests. The BPPs can use this value to push personalized recommendations, and dynamic offerings related to an ongoing transaction despite being unaware of the user active on the BAP.
-    contextTransactionText :: Maybe UUID,
+    contextTransactionId :: Maybe UUID,
     -- | The duration in ISO8601 format after timestamp for which this message holds valid
     contextTtl :: Maybe Text,
     -- | Version of transaction protocol being used by the sender.
@@ -407,16 +407,16 @@ optionsContext =
   where
     table =
       [ ("contextAction", "action"),
-        ("contextBapText", "bap_id"),
+        ("contextBapId", "bap_id"),
         ("contextBapUri", "bap_uri"),
-        ("contextBppText", "bpp_id"),
+        ("contextBppId", "bpp_id"),
         ("contextBppUri", "bpp_uri"),
         ("contextDomain", "domain"),
         ("contextKey", "key"),
         ("contextLocation", "location"),
-        ("contextMessageText", "message_id"),
+        ("contextMessageId", "message_id"),
         ("contextTimestamp", "timestamp"),
-        ("contextTransactionText", "transaction_id"),
+        ("contextTransactionId", "transaction_id"),
         ("contextTtl", "ttl"),
         ("contextVersion", "version")
       ]
@@ -424,7 +424,7 @@ optionsContext =
 -- | Describes a country
 data Country = Country
   { -- | Country code as per ISO 3166-1 and ISO 3166-2 format
-    countryText :: Maybe Text,
+    countryCode :: Maybe Text,
     -- | Name of the country
     countryName :: Maybe Text
   }
@@ -444,7 +444,7 @@ optionsCountry =
     }
   where
     table =
-      [ ("countryText", "code"),
+      [ ("countryCode", "code"),
         ("countryName", "name")
       ]
 
@@ -478,7 +478,7 @@ optionsCustomer =
 -- | Physical description of something.
 data Descriptor = Descriptor
   { -- |
-    descriptorText :: Maybe Text,
+    descriptorCode :: Maybe Text,
     -- |
     descriptorName :: Maybe Text,
     -- |
@@ -500,7 +500,7 @@ optionsDescriptor =
     }
   where
     table =
-      [ ("descriptorText", "code"),
+      [ ("descriptorCode", "code"),
         ("descriptorName", "name"),
         ("descriptorShortDesc", "short_desc")
       ]
@@ -508,7 +508,7 @@ optionsDescriptor =
 -- | Described the industry sector or sub-sector. The network policy should contain codes for all the industry sectors supported by the network. Domains can be created in varying levels of granularity. The granularity of a domain can be decided by the participants of the network. Too broad domains will result in irrelevant search broadcast calls to BPPs that don&#39;t have services supporting the domain. Too narrow domains will result in a large number of registry entries for each BPP. It is recommended that network facilitators actively collaborate with various working groups and network participants to carefully choose domain codes keeping in mind relevance, performance, and opportunity cost. It is recommended that networks choose broad domains like mobility, logistics, healthcare etc, and progressively granularize them as and when the number of network participants for each domain grows large.
 newtype Domain = Domain
   { -- | Standard code representing the domain. The standard is usually published as part of the network policy. Furthermore, the network facilitator should also provide a mechanism to provide the supported domains of a network.
-    domainText :: Maybe Value
+    domainCode :: Maybe Value
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -526,13 +526,13 @@ optionsDomain =
     }
   where
     table =
-      [ ("domainText", "code")
+      [ ("domainCode", "code")
       ]
 
 -- | Describes an error object that is returned by a BAP, BPP or BG as a response or callback to an action by another network participant. This object is sent when any request received by a network participant is unacceptable. This object can be sent either during Ack or with the callback.
 data Error = Error
   { -- | Standard error code. For full list of error codes, refer to docs/protocol-drafts/BECKN-005-ERROR-CODES-DRAFT-01.md of this repo\"
-    errorText :: Maybe Text,
+    errorCode :: Maybe Text,
     -- | Human readable message describing the error. Used mainly for logging. Not recommended to be shown to the user.
     errorMessage :: Maybe Text,
     -- | Path to json schema generating the error. Used only during json schema validation errors
@@ -554,7 +554,7 @@ optionsError =
     }
   where
     table =
-      [ ("errorText", "code"),
+      [ ("errorCode", "code"),
         ("errorMessage", "message"),
         ("errorPaths", "paths")
       ]
@@ -590,7 +590,7 @@ data Fulfillment = Fulfillment
     -- |
     fulfillmentCustomer :: Maybe Customer,
     -- | Unique reference ID to the fulfillment of an order
-    fulfillmentText :: Maybe Text,
+    fulfillmentId :: Maybe Text,
     -- |
     fulfillmentState :: Maybe FulfillmentState,
     -- | The list of logical stops encountered during the fulfillment of an order.
@@ -620,7 +620,7 @@ optionsFulfillment =
     table =
       [ ("fulfillmentAgent", "agent"),
         ("fulfillmentCustomer", "customer"),
-        ("fulfillmentText", "id"),
+        ("fulfillmentId", "id"),
         ("fulfillmentState", "state"),
         ("fulfillmentStops", "stops"),
         ("fulfillmentTags", "tags"),
@@ -715,13 +715,13 @@ data Item = Item
   { -- |
     itemDescriptor :: Maybe Descriptor,
     -- | Modes through which this item can be fulfilled
-    itemFulfillmentTexts :: Maybe [Text],
+    itemFulfillmentIds :: Maybe [Text],
     -- | ID of the item.
-    itemText :: Maybe Text,
+    itemId :: Maybe Text,
     -- | Provider Locations this item is available in
-    itemLocationTexts :: Maybe [Text],
+    itemLocationIds :: Maybe [Text],
     -- | Payment modalities through which this item can be ordered
-    itemPaymentTexts :: Maybe [Text],
+    itemPaymentIds :: Maybe [Text],
     -- |
     itemPrice :: Maybe Price,
     -- |
@@ -744,10 +744,10 @@ optionsItem =
   where
     table =
       [ ("itemDescriptor", "descriptor"),
-        ("itemFulfillmentTexts", "fulfillment_ids"),
-        ("itemText", "id"),
-        ("itemLocationTexts", "location_ids"),
-        ("itemPaymentTexts", "payment_ids"),
+        ("itemFulfillmentIds", "fulfillment_ids"),
+        ("itemId", "id"),
+        ("itemLocationIds", "location_ids"),
+        ("itemPaymentIds", "payment_ids"),
         ("itemPrice", "price"),
         ("itemTags", "tags")
       ]
@@ -757,7 +757,7 @@ data Location = Location
   { -- | Describes a postal address.
     locationAddress :: Maybe Text,
     -- |
-    locationAreaText :: Maybe Text,
+    locationAreaCode :: Maybe Text,
     -- |
     locationCity :: Maybe City,
     -- |
@@ -765,7 +765,7 @@ data Location = Location
     -- | Describes a GPS coordinate
     locationGps :: Maybe Text,
     -- |
-    locationText :: Maybe Text,
+    locationId :: Maybe Text,
     -- |
     locationState :: Maybe State
   }
@@ -786,11 +786,11 @@ optionsLocation =
   where
     table =
       [ ("locationAddress", "address"),
-        ("locationAreaText", "area_code"),
+        ("locationAreaCode", "area_code"),
         ("locationCity", "city"),
         ("locationCountry", "country"),
         ("locationGps", "gps"),
-        ("locationText", "id"),
+        ("locationId", "id"),
         ("locationState", "state")
       ]
 
@@ -1037,7 +1037,7 @@ data Order = Order
     -- | The fulfillments involved in completing this order
     orderFulfillments :: Maybe [Fulfillment],
     -- | Human-readable ID of the order. This is generated at the BPP layer. The BPP can either generate order id within its system or forward the order ID created at the provider level.
-    orderText :: Maybe Text,
+    orderId :: Maybe Text,
     -- | The items purchased / availed in this order
     orderItems :: Maybe [Item],
     -- | The terms of settlement for this order
@@ -1068,7 +1068,7 @@ optionsOrder =
       [ ("orderBilling", "billing"),
         ("orderCancellationTerms", "cancellation_terms"),
         ("orderFulfillments", "fulfillments"),
-        ("orderText", "id"),
+        ("orderId", "id"),
         ("orderItems", "items"),
         ("orderPayments", "payments"),
         ("orderProvider", "provider"),
@@ -1081,7 +1081,7 @@ data Payment = Payment
   { -- | This field indicates who is the collector of payment. The BAP can set this value to 'bap' if it wants to collect the payment first and  settle it to the BPP. If the BPP agrees to those terms, the BPP should not send the payment url. Alternatively, the BPP can set this field with the value 'bpp' if it wants the payment to be made directly.
     paymentCollectedBy :: Maybe Text,
     -- | ID of the payment term that can be referred at an item or an order level in a catalog
-    paymentText :: Maybe Text,
+    paymentId :: Maybe Text,
     -- |
     paymentParams :: Maybe PaymentParams,
     -- |
@@ -1108,7 +1108,7 @@ optionsPayment =
   where
     table =
       [ ("paymentCollectedBy", "collected_by"),
-        ("paymentText", "id"),
+        ("paymentId", "id"),
         ("paymentParams", "params"),
         ("paymentStatus", "status"),
         ("paymentTags", "tags"),
@@ -1122,7 +1122,7 @@ data PaymentParams = PaymentParams
     -- |
     paymentParamsBankAccountNumber :: Maybe Text,
     -- |
-    paymentParamsBankText :: Maybe Text,
+    paymentParamsBankCode :: Maybe Text,
     -- |
     paymentParamsCurrency :: Maybe Text,
     -- |
@@ -1146,7 +1146,7 @@ optionsPaymentParams =
     table =
       [ ("paymentParamsAmount", "amount"),
         ("paymentParamsBankAccountNumber", "bank_account_number"),
-        ("paymentParamsBankText", "bank_code"),
+        ("paymentParamsBankCode", "bank_code"),
         ("paymentParamsCurrency", "currency"),
         ("paymentParamsVirtualPaymentAddress", "virtual_payment_address")
       ]
@@ -1154,7 +1154,7 @@ optionsPaymentParams =
 -- | Describes a person as any individual
 data Person = Person
   { -- | Describes the identity of the person
-    personText :: Maybe Text,
+    personId :: Maybe Text,
     -- | the name of the person
     personName :: Maybe Text,
     -- |
@@ -1176,7 +1176,7 @@ optionsPerson =
     }
   where
     table =
-      [ ("personText", "id"),
+      [ ("personId", "id"),
         ("personName", "name"),
         ("personTags", "tags")
       ]
@@ -1224,7 +1224,7 @@ data Provider = Provider
     -- |
     providerFulfillments :: Maybe [Fulfillment],
     -- | Text of the provider
-    providerText :: Maybe Text,
+    providerId :: Maybe Text,
     -- |
     providerItems :: Maybe [Item],
     -- |
@@ -1250,7 +1250,7 @@ optionsProvider =
     table =
       [ ("providerDescriptor", "descriptor"),
         ("providerFulfillments", "fulfillments"),
-        ("providerText", "id"),
+        ("providerId", "id"),
         ("providerItems", "items"),
         ("providerLocations", "locations"),
         ("providerPayments", "payments")
@@ -1448,7 +1448,7 @@ optionsStatusReq =
 -- |
 newtype StatusReqMessage = StatusReqMessage
   { -- |
-    statusReqMessageRefText :: Maybe Text
+    statusReqMessageRefId :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -1466,7 +1466,7 @@ optionsStatusReqMessage =
     }
   where
     table =
-      [ ("statusReqMessageRefText", "ref_id")
+      [ ("statusReqMessageRefId", "ref_id")
       ]
 
 -- | A logical point in space and time during the fulfillment of an order.

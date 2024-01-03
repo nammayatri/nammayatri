@@ -10,23 +10,21 @@ import qualified Domain.Action.UI.Search.Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.SearchRequest
 import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.App
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import qualified Kernel.Types.Logging
-import qualified Kernel.Types.Time
 import qualified Tools.Maps
 
-buildSearchReqV2 :: (Monad m, EulerHS.Prelude.MonadThrow m, Kernel.Types.Time.MonadTime m, Kernel.Types.Logging.Log m) => Maybe Tools.Maps.Language -> Domain.Action.UI.Search.Common.SearchReqLocation -> Maybe Data.Text.Text -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe Data.Text.Text -> Maybe [Tools.Maps.LatLong] -> Domain.Action.UI.Search.Common.SearchReqLocation -> m BecknV2.OnDemand.Types.SearchReqMessage
-buildSearchReqV2 customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin = do
-  searchReqMessageSearchReqMessageIntent <- Just <$> tfIntent customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin
+buildSearchReqV2 :: (Monad m, Kernel.Types.App.MonadFlow m) => Domain.Action.UI.Search.Common.SearchReqLocation -> Domain.Action.UI.Search.Common.SearchReqLocation -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> m BecknV2.OnDemand.Types.SearchReqMessage
+buildSearchReqV2 origin destination distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber = do
+  searchReqMessageSearchReqMessageIntent <- Just <$> tfIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber
   pure $
     BecknV2.OnDemand.Types.SearchReqMessage
       { searchReqMessageIntent = searchReqMessageSearchReqMessageIntent
       }
 
-tfCustomer :: (Monad m, EulerHS.Prelude.MonadThrow m, Kernel.Types.Time.MonadTime m, Kernel.Types.Logging.Log m) => Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Data.Text.Text -> m BecknV2.OnDemand.Types.Customer
+tfCustomer :: (Monad m, Kernel.Types.App.MonadFlow m) => Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Data.Text.Text -> m BecknV2.OnDemand.Types.Customer
 tfCustomer customerLanguage disabilityTag mbPhoneNumber = do
   let customerCustomerContact = Nothing
   customerCustomerPerson <- Just <$> tfPerson customerLanguage disabilityTag mbPhoneNumber
@@ -36,13 +34,13 @@ tfCustomer customerLanguage disabilityTag mbPhoneNumber = do
         customerPerson = customerCustomerPerson
       }
 
-tfFulfillment :: (Monad m, EulerHS.Prelude.MonadThrow m, Kernel.Types.Time.MonadTime m, Kernel.Types.Logging.Log m) => Maybe Tools.Maps.Language -> Domain.Action.UI.Search.Common.SearchReqLocation -> Maybe Data.Text.Text -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe Data.Text.Text -> Maybe [Tools.Maps.LatLong] -> Domain.Action.UI.Search.Common.SearchReqLocation -> m BecknV2.OnDemand.Types.Fulfillment
-tfFulfillment customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin = do
+tfFulfillment :: (Monad m, Kernel.Types.App.MonadFlow m) => Domain.Action.UI.Search.Common.SearchReqLocation -> Domain.Action.UI.Search.Common.SearchReqLocation -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> m BecknV2.OnDemand.Types.Fulfillment
+tfFulfillment origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber = do
   let fulfillmentFulfillmentAgent = Nothing
+  let fulfillmentFulfillmentId = Nothing
   let fulfillmentFulfillmentState = Nothing
   let fulfillmentFulfillmentStops = Beckn.OnDemand.Utils.Search.mkStops origin destination
   let fulfillmentFulfillmentTags = Beckn.OnDemand.Utils.Search.mkRouteInfoTags distance duration mbPoints
-  let fulfillmentFulfillmentText = Nothing
   let fulfillmentFulfillmentType = Nothing
   let fulfillmentFulfillmentVehicle = Nothing
   fulfillmentFulfillmentCustomer <- Just <$> tfCustomer customerLanguage disabilityTag mbPhoneNumber
@@ -50,19 +48,19 @@ tfFulfillment customerLanguage destination disabilityTag distance duration mbPho
     BecknV2.OnDemand.Types.Fulfillment
       { fulfillmentAgent = fulfillmentFulfillmentAgent,
         fulfillmentCustomer = fulfillmentFulfillmentCustomer,
+        fulfillmentId = fulfillmentFulfillmentId,
         fulfillmentState = fulfillmentFulfillmentState,
         fulfillmentStops = fulfillmentFulfillmentStops,
         fulfillmentTags = fulfillmentFulfillmentTags,
-        fulfillmentText = fulfillmentFulfillmentText,
         fulfillmentType = fulfillmentFulfillmentType,
         fulfillmentVehicle = fulfillmentFulfillmentVehicle
       }
 
-tfIntent :: (Monad m, EulerHS.Prelude.MonadThrow m, Kernel.Types.Time.MonadTime m, Kernel.Types.Logging.Log m) => Maybe Tools.Maps.Language -> Domain.Action.UI.Search.Common.SearchReqLocation -> Maybe Data.Text.Text -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe Data.Text.Text -> Maybe [Tools.Maps.LatLong] -> Domain.Action.UI.Search.Common.SearchReqLocation -> m BecknV2.OnDemand.Types.Intent
-tfIntent customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin = do
+tfIntent :: (Monad m, Kernel.Types.App.MonadFlow m) => Domain.Action.UI.Search.Common.SearchReqLocation -> Domain.Action.UI.Search.Common.SearchReqLocation -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> m BecknV2.OnDemand.Types.Intent
+tfIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber = do
   let intentIntentPayment = Nothing
   let intentIntentTags = Nothing
-  intentIntentFulfillment <- Just <$> tfFulfillment customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin
+  intentIntentFulfillment <- Just <$> tfFulfillment origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber
   pure $
     BecknV2.OnDemand.Types.Intent
       { intentFulfillment = intentIntentFulfillment,
@@ -70,14 +68,14 @@ tfIntent customerLanguage destination disabilityTag distance duration mbPhoneNum
         intentTags = intentIntentTags
       }
 
-tfPerson :: (Monad m, EulerHS.Prelude.MonadThrow m, Kernel.Types.Time.MonadTime m, Kernel.Types.Logging.Log m) => Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Data.Text.Text -> m BecknV2.OnDemand.Types.Person
+tfPerson :: (Monad m, Kernel.Types.App.MonadFlow m) => Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Data.Text.Text -> m BecknV2.OnDemand.Types.Person
 tfPerson customerLanguage disabilityTag mbPhoneNumber = do
+  let personPersonId = Nothing
   let personPersonName = Nothing
   let personPersonTags = Beckn.OnDemand.Utils.Search.mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber
-  let personPersonText = Nothing
   pure $
     BecknV2.OnDemand.Types.Person
-      { personName = personPersonName,
-        personTags = personPersonTags,
-        personText = personPersonText
+      { personId = personPersonId,
+        personName = personPersonName,
+        personTags = personPersonTags
       }

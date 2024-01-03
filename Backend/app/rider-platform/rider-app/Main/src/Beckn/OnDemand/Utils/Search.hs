@@ -17,6 +17,7 @@ module Beckn.OnDemand.Utils.Search where
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Aeson (encode)
 import Data.Aeson.Text (encodeToTextBuilder)
+import qualified Data.List as List
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Builder as TB
 import qualified Data.Text.Lazy.Encoding as TE
@@ -33,49 +34,64 @@ mkRouteInfoTags distance duration mbPoints =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorText = Just "route_info",
+                { descriptorCode = Just "route_info",
                   descriptorName = Just "Route Information",
                   descriptorShortDesc = Nothing
                 },
           tagGroupDisplay = Just False,
           tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorText = (\_ -> Just "distance_info_in_m") =<< distance,
-                            descriptorName = (\_ -> Just "Distance Information In Meters") =<< distance,
-                            descriptorShortDesc = Nothing
-                          },
-                    tagDisplay = (\_ -> Just False) =<< distance,
-                    tagValue = (\distanceInM -> Just $ show distanceInM.getMeters) =<< distance
-                  },
-                Spec.Tag
-                  { tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorText = (\_ -> Just "duration_info_in_s") =<< duration,
-                            descriptorName = (\_ -> Just "Duration Information In Seconds") =<< duration,
-                            descriptorShortDesc = Nothing
-                          },
-                    tagDisplay = (\_ -> Just False) =<< duration,
-                    tagValue = (\durationInS -> Just $ show durationInS.getSeconds) =<< duration
-                  },
-                Spec.Tag
-                  { tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorText = (\_ -> Just "route_points") =<< mbPoints,
-                            descriptorName = (\_ -> Just "Route Points") =<< mbPoints,
-                            descriptorShortDesc = Nothing
-                          },
-                    tagDisplay = (\_ -> Just False) =<< mbPoints,
-                    tagValue = (Just . LT.toStrict . TE.decodeUtf8 . encode) =<< mbPoints
-                  }
-              ]
+            Just $
+              distanceSingleton
+                ++ durationSingleton
+                ++ mbPointsSingleton
         }
     ]
+  where
+    distanceSingleton
+      | isNothing distance = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "distance_info_in_m",
+                      descriptorName = Just "Distance Information In Meters",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = (\distanceInM -> Just $ show distanceInM.getMeters) =<< distance
+            }
+    durationSingleton
+      | isNothing duration = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "duration_info_in_s",
+                      descriptorName = Just "Duration Information In Seconds",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = (\durationInS -> Just $ show durationInS.getSeconds) =<< duration
+            }
+    mbPointsSingleton
+      | isNothing mbPoints = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "route_points",
+                      descriptorName = Just "Route Points",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = (Just . LT.toStrict . TE.decodeUtf8 . encode) =<< mbPoints
+            }
 
 mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Maybe Text -> Maybe [Spec.TagGroup]
 mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
@@ -84,49 +100,64 @@ mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
         { tagGroupDescriptor =
             Just $
               Spec.Descriptor
-                { descriptorText = Just "customer_info",
+                { descriptorCode = Just "customer_info",
                   descriptorName = Just "Customer Information",
                   descriptorShortDesc = Nothing
                 },
           tagGroupDisplay = Just False,
           tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorText = (\_ -> Just "customer_language") =<< customerLanguage,
-                            descriptorName = (\_ -> Just "Customer Language") =<< customerLanguage,
-                            descriptorShortDesc = Nothing
-                          },
-                    tagDisplay = (\_ -> Just False) =<< customerLanguage,
-                    tagValue = (Just . show) =<< customerLanguage
-                  },
-                Spec.Tag
-                  { tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorText = (\_ -> Just "customer_disability") =<< disabilityTag,
-                            descriptorName = (\_ -> Just "Customer Disability") =<< disabilityTag,
-                            descriptorShortDesc = Nothing
-                          },
-                    tagDisplay = (\_ -> Just False) =<< disabilityTag,
-                    tagValue = (Just . show) =<< disabilityTag
-                  },
-                Spec.Tag
-                  { tagDescriptor =
-                      Just $
-                        Spec.Descriptor
-                          { descriptorText = (\_ -> Just "customer_phone_number") =<< mbPhoneNumber,
-                            descriptorName = (\_ -> Just "Customer Phone Number") =<< mbPhoneNumber,
-                            descriptorShortDesc = Nothing
-                          },
-                    tagDisplay = (\_ -> Just False) =<< mbPhoneNumber,
-                    tagValue = (Just . show) =<< mbPhoneNumber
-                  }
-              ]
+            Just $
+              customerLanguageSingleton
+                ++ disabilityTagSingleton
+                ++ mbPhoneNumberSingleton
         }
     ]
+  where
+    customerLanguageSingleton
+      | isNothing customerLanguage = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "customer_language",
+                      descriptorName = Just "Customer Language",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = (Just . show) =<< customerLanguage
+            }
+    disabilityTagSingleton
+      | isNothing disabilityTag = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "customer_disability",
+                      descriptorName = Just "Customer Disability",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = (Just . show) =<< disabilityTag
+            }
+    mbPhoneNumberSingleton
+      | isNothing mbPhoneNumber = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "customer_phone_number",
+                      descriptorName = Just "Customer Phone Number",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = (Just . show) =<< mbPhoneNumber
+            }
 
 mkStops :: DSearchCommon.SearchReqLocation -> DSearchCommon.SearchReqLocation -> Maybe [Spec.Stop]
 mkStops origin destination =
@@ -138,12 +169,12 @@ mkStops origin destination =
                 Just $
                   Spec.Location
                     { locationAddress = origin.address.building, -- JAYPAL, Confirm if it is correct to put it here
-                      locationAreaText = origin.address.areaCode,
+                      locationAreaCode = origin.address.areaCode,
                       locationCity = Just $ Spec.City Nothing origin.address.city,
                       locationCountry = Just $ Spec.Country Nothing origin.address.country,
                       locationGps = Just . LT.toStrict . TB.toLazyText . encodeToTextBuilder $ toJSON originGps, -- JAYPAL, proper encoding to json is not happening.
                       locationState = Just $ Spec.State origin.address.state,
-                      locationText = Nothing -- JAYPAL, Not sure what to keep here
+                      locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
               stopType = Just "START"
             },
@@ -152,12 +183,12 @@ mkStops origin destination =
                 Just $
                   Spec.Location
                     { locationAddress = origin.address.building, -- JAYPAL, Confirm if it is correct to put it here
-                      locationAreaText = destination.address.areaCode,
+                      locationAreaCode = destination.address.areaCode,
                       locationCity = Just $ Spec.City Nothing destination.address.city,
                       locationCountry = Just $ Spec.Country Nothing destination.address.country,
                       locationGps = Just . LT.toStrict . TE.decodeUtf8 $ encode destinationGps, -- JAYPAL, proper encoding to json is not happening.
                       locationState = Just $ Spec.State destination.address.state,
-                      locationText = Nothing -- JAYPAL, Not sure what to keep here
+                      locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
               stopType = Just "END"
             }

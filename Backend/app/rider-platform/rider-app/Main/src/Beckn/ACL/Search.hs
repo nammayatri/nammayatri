@@ -153,7 +153,7 @@ buildSearchReqV2 origin destination searchId _ distance duration customerLanguag
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
-  searchMessage <- Search.buildSearchReqV2 customerLanguage destination disabilityTag distance duration mbPhoneNumber mbPoints origin
+  searchMessage <- Search.buildSearchReqV2 origin destination distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber
 
   pure $ BecknReq context searchMessage
 
