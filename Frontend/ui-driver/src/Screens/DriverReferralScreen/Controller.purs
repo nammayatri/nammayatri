@@ -68,7 +68,10 @@ data ScreenOutput = GoToHomeScreen DriverReferralScreenState
 
 eval :: Action -> DriverReferralScreenState -> Eval Action ScreenOutput DriverReferralScreenState
 
-eval BackPressed state = exit $ GoBack
+eval BackPressed state = 
+  if state.props.showDriverReferralQRCode then 
+    continue state{props{showDriverReferralQRCode = false}}
+  else exit $ GoBack
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
 

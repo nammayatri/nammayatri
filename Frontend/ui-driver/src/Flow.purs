@@ -3071,6 +3071,6 @@ referralFlow :: FlowBT String Unit
 referralFlow = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
   let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-  if cityConfig.showDriverReferral then driverReferralScreenFlow
+  if cityConfig.showDriverReferral || appConfig.enableDriverReferral then driverReferralScreenFlow
     else referralScreenFlow
 

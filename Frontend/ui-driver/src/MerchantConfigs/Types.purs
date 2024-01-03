@@ -34,6 +34,7 @@ type AppConfigDriver a =
     engilshInNative :: String,
     banners :: BannerConfig,
     referral :: ReferralConfig,
+    enableDriverReferral :: Boolean,
     rideRequest :: RideRequestConfig
     | a
   } 
