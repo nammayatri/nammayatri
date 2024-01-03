@@ -609,16 +609,12 @@
         ],
         "haskell-flake": [
           "shared-kernel",
-          "euler-hs",
-          "common",
           "haskell-flake"
         ],
         "hedis": "hedis",
         "juspay-extra": "juspay-extra",
         "nixpkgs": [
           "shared-kernel",
-          "euler-hs",
-          "common",
           "nixpkgs"
         ],
         "sequelize": "sequelize",
@@ -3184,7 +3180,36 @@
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "backend/adding-instances-for-column-mapping",
+        "repo": "shared-kernel",
+        "type": "github"
+      }
+    },
+    "shared-kernel_2": {
+      "inputs": {
+        "clickhouse-haskell": "clickhouse-haskell_2",
+        "common": "common_5",
+        "euler-hs": "euler-hs_2",
+        "haskell-flake": [
+          "shared-kernel",
+          "common",
+          "haskell-flake"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "passetto-hs": "passetto-hs_2",
+        "prometheus-haskell": "prometheus-haskell_4"
+      },
+      "locked": {
+        "lastModified": 1704258539,
+        "narHash": "sha256-/sqfOUwrVDd9jiXdBB7VMWo6NB7wlISXUVtuYc1M7Sg=",
+        "owner": "nammayatri",
+        "repo": "shared-kernel",
+        "rev": "b0049d7e998b615a9a0eb79831d8f56337144fd7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nammayatri",
         "repo": "shared-kernel",
         "type": "github"
       }
