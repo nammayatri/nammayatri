@@ -35,12 +35,6 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
--- TODO test this
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be BatchSplitByPickupDistance where
-  sqlValueSyntax = autoSqlValueSyntax
-
-$(mkBeamInstancesForList ''BatchSplitByPickupDistance)
-
 data DriverPoolBatchesConfig = DriverPoolBatchesConfig
   { driverBatchSize :: Int,
     maxNumberOfBatches :: Int,
@@ -60,3 +54,4 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be BatchSplitByPickupD
   sqlValueSyntax = autoSqlValueSyntax
 
 $(mkBeamInstancesForEnum ''PoolSortingType)
+$(mkBeamInstancesForList ''BatchSplitByPickupDistance)
