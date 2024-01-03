@@ -22,7 +22,7 @@ import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
 import Components.Banner.Controller as BannerConfig
 import Components.Banner.View as Banner
 import Components.MessagingView as MessagingView
-import Components.ChooseYourRide as ChooseYourRide
+import Components.ChooseYourRide as ChooseYourRide 
 import Components.DriverInfoCard as DriverInfoCard
 import Components.EmergencyHelp as EmergencyHelp
 import Components.ErrorModal as ErrorModal
@@ -66,7 +66,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -122,11 +122,7 @@ screen initialState =
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
-            if(initialState.props.currentStage /= HomeScreen) then do
-              setMapPadding 0 0 0 0
-            else do
-              let recentViewHeight = (runFn1 getLayoutBounds (getNewIDWithTag "buttonLayout")).height + 200
-              setMapPadding 0 0 0 recentViewHeight
+            updateMapPadding initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
               _ <- storeCallBackCustomer push NotificationListener
@@ -739,13 +735,14 @@ shareAppPopUp push state =
 
 buttonLayoutParentView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 buttonLayoutParentView push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , id $ getNewIDWithTag "buttonLayout"
-  , alignParentBottom "true,-1"
-  , orientation VERTICAL
-  ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push else emptyTextView state]
+  -- PrestoAnim.animationSet (buttonLayoutAnimation state) $
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , id $ getNewIDWithTag "buttonLayout"
+    , alignParentBottom "true,-1"
+    , orientation VERTICAL
+    ][ if (state.props.currentStage == HomeScreen && (not state.props.rideRequestFlow) && (not state.props.showlocUnserviceablePopUp)) then buttonLayout state push else emptyTextView state]
 
 recenterButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 recenterButtonView push state =
@@ -978,16 +975,12 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
       , if state.props.showShimmer && null state.data.tripSuggestions then shimmerView state
         else if suggestionViewVisibility state  then suggestionsView push state
         else emptySuggestionsBanner state push
-    -- , if (suggestionViewVisibility state)
-    --     then  suggestionsView push state
-    --     else emptySuggestionsBanner state push
     -- , if (not hideRecentSearches) then recentSearchesView state push else linearLayout[visibility GONE][]
     -- , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
     --     then updateDisabilityBanner state push
     --     else 
-      , if (state.data.config.feature.enableZooTicketBookingFlow) 
-            then zooTicketBookingBanner state push 
-            else linearLayout[visibility GONE][]])
+    ]
+    )
 
 updateDisabilityBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 updateDisabilityBanner state push = 
@@ -1130,8 +1123,13 @@ recentSearchesView state push =
     ]
 
 buttonLayoutAnimation :: HomeScreenState -> Array PrestoAnim.Animation
-buttonLayoutAnimation state = if os == "IOS" then [ fadeIn true ] else [ translateYAnimFromTop $ translateYAnimHomeConfig BOTTOM_TOP, fadeOut (state.props.showlocUnserviceablePopUp) ]
-
+buttonLayoutAnimation state = 
+  if state.props.showShimmer && os == "IOS" then 
+    [fadeIn true]
+  else if state.props.showShimmer then 
+    [translateYAnimFromTop $ translateYAnimHomeConfig BOTTOM_TOP, fadeOut state.props.showlocUnserviceablePopUp]
+  else 
+    []
 ------------- settingSideBarView ------------
 settingSideBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 settingSideBarView push state =
@@ -3696,52 +3694,54 @@ getMapDimensions state =
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestionsView push state = 
+  PrestoAnim.animationSet
+  [ Anim.fadeIn  (not state.props.showShimmer)] $
   linearLayout 
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , padding $ PaddingBottom 16
-    , margin $ MarginTop 16
-    -- , margin $ Margin 8 16 8 0
-    ][ textView $
-        [ height WRAP_CONTENT
-        , width (MATCH_PARENT)
-        , text if null state.data.tripSuggestions then getString SUGGESTED_DESTINATION else getString RECENT_RIDES
-        , color Color.black800
-        , padding $ Padding 8 0 8 0 
-        , margin $ MarginBottom 4
-        , accessibilityHint if null state.data.tripSuggestions then "Suggested Destinations" else "Recent Rides"
-        ] <> FontStyle.subHeading1 TypoGraphy
-      , textView $
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , text if null state.data.tripSuggestions then (getString PLACES_YOU_MIGHT_LIKE_TO_GO_TO) else (getString ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS)
-        , color Color.black600
-        , padding $ Padding 8 0 8 0 
-        , accessibilityHint if null state.data.tripSuggestions then "Places you might like to go to." else "One click booking for your favourite journeys!"
-        , margin $ MarginBottom 7
-        ] <> FontStyle.body3 TypoGraphy
-      , if null state.data.tripSuggestions 
-          then suggestedLocationCardView push state
-          else repeatRideCardParentView push state 
-      , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , visibility GONE
-                      -- if (length state.data.tripSuggestions  > 2 ) then VISIBLE 
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , padding $ PaddingBottom 16
+  , margin $ MarginTop 16
+  ]
+  [ textView $
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , text if null state.data.tripSuggestions then getString SUGGESTED_DESTINATION else getString RECENT_RIDES
+    , color Color.black800
+    , padding $ Padding 8 0 8 0 
+    , margin $ MarginBottom 4
+    , accessibilityHint if null state.data.tripSuggestions then "Suggested Destinations" else "Recent Rides"
+    ] <> FontStyle.subHeading1 TypoGraphy
+  , textView $
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , text if null state.data.tripSuggestions then getString PLACES_YOU_MIGHT_LIKE_TO_GO_TO else getString ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS
+    , color Color.black600
+    , padding $ Padding 8 0 8 0 
+    , accessibilityHint if null state.data.tripSuggestions then "Places you might like to go to." else "One click booking for your favourite journeys!"
+    , margin $ MarginBottom 7
+    ] <> FontStyle.body3 TypoGraphy
+  , if null state.data.tripSuggestions 
+    then suggestedLocationCardView push state
+    else repeatRideCardParentView push state 
+  , linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , visibility GONE
+    -- if (length state.data.tripSuggestions  > 2 ) then VISIBLE 
                       -- else if length state.data.tripSuggestions >0 then GONE
                       -- else if length state.data.destinationSuggestions  > 2 then VISIBLE
                       -- else GONE
-        , margin $ MarginTop 10
-        , gravity CENTER_HORIZONTAL
-        , onClick push $ const ShowMoreSuggestions
-        ][ textView $ 
-            [ text if state.props.suggestionsListExpanded then (getString VIEW_LESS) else (getString VIEW_MORE)
-            , color Color.blue900
-            ] <> FontStyle.tags TypoGraphy
-
-        ]
-      ]
+    , margin $ MarginTop 10
+    , gravity CENTER_HORIZONTAL
+    , onClick push $ const ShowMoreSuggestions
+    ]
+    [ textView $ 
+      [ text if state.props.suggestionsListExpanded then getString VIEW_LESS else getString VIEW_MORE
+      , color Color.blue900
+      ] <> FontStyle.tags TypoGraphy
+    ]
+  ]
 
 shimmerView :: forall w. HomeScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
@@ -3962,3 +3962,20 @@ reAllocateConfirmation push state action duration = do
   when state.props.reAllocation.showPopUp $
     void $ delay $ Milliseconds duration
   doAff do liftEffect $ push $ action
+
+updateMapPadding :: HomeScreenState -> Effect Unit
+updateMapPadding state = 
+  if state.props.currentStage /= HomeScreen then 
+    void $ setMapPadding 0 0 0 0
+  else 
+    void $ setMapPadding 0 0 0 requiredViewHeight
+  where
+    recentViewHeight = (runFn1 getLayoutBounds (getNewIDWithTag "buttonLayout")).height + 200
+    iosScale = runFn1 getPixels FunctionCall
+    iosNativeScale = runFn1 getDefaultPixels ""
+    displayZoomFactor = iosNativeScale / iosScale
+    pixels = runFn1 getPixels FunctionCall
+    density = (runFn1 getDeviceDefaultDensity FunctionCall) / defaultDensity
+    requiredViewHeight = if os /= "IOS" 
+                         then ceil ((toNumber recentViewHeight / pixels) * density) 
+                         else ceil ((toNumber recentViewHeight / displayZoomFactor) / iosScale)

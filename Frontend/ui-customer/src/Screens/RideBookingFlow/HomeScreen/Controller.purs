@@ -705,7 +705,7 @@ data ScreenOutput = LogoutUser
                   | SearchPlace String HomeScreenState
                   | UpdateLocationName HomeScreenState Number Number
                   | UpdatePickupName HomeScreenState Number Number
-                  | GoToHome
+                  | GoToHome 
                   | GoToFavourites HomeScreenState
                   | SubmitRating HomeScreenState
                   | UpdatedSource HomeScreenState
@@ -1199,30 +1199,33 @@ eval BackPressed state = do
   _ <- pure $ toggleBtnLoader "" false
   case state.props.currentStage of
     SearchLocationModel -> do
-                            if state.props.isSaveFavourite then continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
-                              else do
-                                if state.props.isSearchLocation == LocateOnMap then do
-                                    _ <- pure $ exitLocateOnMap ""
-                                    _ <- pure $ hideKeyboardOnNavigation true
-                                    continue state{props{isSearchLocation = SearchLocation, locateOnMap = false}}
-                                  else do
-                                    if (getSearchType unit) == "direct_search" then
-                                      pure $ terminateApp state.props.currentStage false
-                                      else pure unit
-                                    -- updateAndExit state{props{autoScroll = false, currentStage = HomeScreen, homeScreenSheetState = COLLAPSED, showShimmer = false}} $ GoToHome
-                                    updateAndExit state{props{isSearchLocation= NoView}} $ GoToHome
-    SettingPrice    -> do
-                      _ <- pure $ performHapticFeedback unit
-                      void $ pure $ clearTimerWithId state.props.repeatRideTimerId
-                      let updatedState = state{props{repeatRideTimer = "", repeatRideTimerId = ""}}
-                      if updatedState.props.showRateCard then do
-                        if (updatedState.data.rateCard.currentRateCardType /= DefaultRateCard) then
-                         continue updatedState{data{rateCard {currentRateCardType = DefaultRateCard}}}
-                        else continue updatedState{props{showRateCard = false}}
-                      else if updatedState.props.showMultipleRideInfo then continue updatedState{props{showMultipleRideInfo=false}}
-                        else do
-                        _ <- pure $ updateLocalStage SearchLocationModel
-                        continue updatedState{data{rideHistoryTrip = Nothing},props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
+      if state.props.isSaveFavourite then 
+        continueWithCmd state [pure $ (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose))]
+      else do
+        if state.props.isSearchLocation == LocateOnMap then do
+          _ <- pure $ exitLocateOnMap ""
+          _ <- pure $ hideKeyboardOnNavigation true
+          continue state{props{isSearchLocation = SearchLocation, locateOnMap = false}}
+        else do
+          if (getSearchType unit) == "direct_search" then
+            pure $ terminateApp state.props.currentStage false
+          else 
+            pure unit
+          updateAndExit state{props{autoScroll = false, currentStage = HomeScreen, homeScreenSheetState = COLLAPSED, showShimmer = true, isSearchLocation = NoView}} $ GoToHome
+    SettingPrice -> do
+      _ <- pure $ performHapticFeedback unit
+      void $ pure $ clearTimerWithId state.props.repeatRideTimerId
+      let updatedState = state{props{repeatRideTimer = "", repeatRideTimerId = ""}}
+      if updatedState.props.showRateCard then 
+        if updatedState.data.rateCard.currentRateCardType /= DefaultRateCard then
+          continue updatedState{data{rateCard {currentRateCardType = DefaultRateCard}}}
+        else 
+          continue updatedState{props{showRateCard = false}}
+      else if updatedState.props.showMultipleRideInfo then 
+        continue updatedState{props{showMultipleRideInfo=false}}
+      else do
+        _ <- pure $ updateLocalStage SearchLocationModel
+        continue updatedState{data{rideHistoryTrip = Nothing},props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
     ConfirmingLocation -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ exitLocateOnMap ""
@@ -1840,7 +1843,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
 
 eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
   _ <- pure $ performHapticFeedback unit
-  continueWithCmd state
+  continueWithCmd state{props{showShimmer = true}}
     [ do
         _ <- pure $ hideKeyboardOnNavigation true
         pure $ BackPressed
