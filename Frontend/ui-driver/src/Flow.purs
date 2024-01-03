@@ -123,6 +123,7 @@ import Types.ModifyScreenState (modifyScreenState, updateStage)
 import MerchantConfig.Types (AppConfig(..))
 import ConfigProvider
 import Timers (clearTimerWithId)
+import RemoteConfigs as RC
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -2936,14 +2937,15 @@ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
 
 updateBannerAndPopupFlags :: FlowBT String Unit
 updateBannerAndPopupFlags = do
-  globalstate <- getState
-  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate false
+  (GlobalState allState) <- getState
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   appConfig <- getAppConfigFlowBT Constants.appConfig
   let
     autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
     pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
     subscriptionConfig = appConfig.subscriptionConfig
     _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
+    subscriptionRemoteConfig = allState.homeScreen.data.subsRemoteConfig
     freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
     shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" 
                       && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" 
@@ -2957,9 +2959,9 @@ updateBannerAndPopupFlags = do
         case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
           true, true, _ -> FREE_TRIAL_BANNER
           _, false, true -> do
-            if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
-            else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
-            else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
+            if pendingTotalManualDues < subscriptionRemoteConfig.low_dues_warning_limit then LOW_DUES_BANNER
+            else if pendingTotalManualDues >= subscriptionRemoteConfig.low_dues_warning_limit && pendingTotalManualDues < subscriptionRemoteConfig.high_due_warning_limit then CLEAR_DUES_BANNER
+            else if pendingTotalManualDues >= subscriptionRemoteConfig.high_due_warning_limit && pendingTotalManualDues < subscriptionRemoteConfig.max_dues_limit then DUE_LIMIT_WARNING_BANNER
             else NO_SUBSCRIPTION_BANNER
           true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
           _, _, _ -> NO_SUBSCRIPTION_BANNER
@@ -2969,7 +2971,7 @@ updateBannerAndPopupFlags = do
       true, true , true -> case freeTrialDays of
         _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
         _ -> NO_SUBSCRIPTION_POPUP
-      false, _, true -> if pendingTotalManualDues >= subscriptionConfig.maxDuesLimit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
+      false, _, true -> if pendingTotalManualDues >= subscriptionRemoteConfig.max_dues_limit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
       _, _, _ -> NO_SUBSCRIPTION_POPUP
 
     shouldMoveDriverOffline = (withinTimeRange "12:00:00" "23:59:59" (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"))
@@ -2979,7 +2981,7 @@ updateBannerAndPopupFlags = do
         && shouldMoveDriverOffline
         && appConfig.subscriptionConfig.moveDriverToOfflineInHighDueDaily
         && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false"
-        && pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit
+        && pendingTotalManualDues >= subscriptionRemoteConfig.high_due_warning_limit
         && getDriverInfoResp.mode /= Just "OFFLINE"
   when moveDriverToOffline $ do
       setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")

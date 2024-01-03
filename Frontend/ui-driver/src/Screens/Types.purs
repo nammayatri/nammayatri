@@ -42,6 +42,7 @@ import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..))
 import Styles.Types (FontSize)
 import Common.Types.Config
+import RemoteConfigs as RC
 
 type EditTextInLabelState =
  {
@@ -866,6 +867,7 @@ type HomeScreenData =  {
   driverGotoState :: DriverGoToState,
   snappedOrigin :: Maybe Location,
   gender :: String,
+  subsRemoteConfig :: RC.SubsRemoteConfig,
   bannerData :: BannerCarousalData
 }
 

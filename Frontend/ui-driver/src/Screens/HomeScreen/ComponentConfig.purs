@@ -357,7 +357,7 @@ paymentPendingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 paymentPendingPopupConfig state =
   let popupType = state.props.subscriptionPopupType
       dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues <> ") " else ""
-      isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.highDueWarningLimit
+      isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.high_due_warning_limit
   in
   PopUpModal.config {
     gravity = CENTER,
@@ -822,7 +822,7 @@ autopayBannerConfig state configureImage =
                   FREE_TRIAL_BANNER -> getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES 
                   SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_FOR_EASY_PAYMENTS
                   _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getVarString CLEAR_DUES_BANNER_TITLE [dues]
-                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [HU.getFixedTwoDecimals state.data.config.subscriptionConfig.maxDuesLimit]
+                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [HU.getFixedTwoDecimals state.data.subsRemoteConfig.max_dues_limit]
                   _ -> "",
         titleColor = case bannerType of
                         DUE_LIMIT_WARNING_BANNER -> Color.red
