@@ -346,6 +346,7 @@ userNameEditTextView push state =
   , width MATCH_PARENT
   , orientation VERTICAL
   , accessibility if state.props.genderOptionExpanded then DISABLE_DESCENDANT else DISABLE
+  , accessibilityHint "Name edit Text field"
   ][
   PrimaryEditText.view (push <<< NameEditTextAction) (nameEditTextConfig state)]
 
