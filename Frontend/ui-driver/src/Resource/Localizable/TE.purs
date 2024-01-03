@@ -1099,7 +1099,7 @@ getTE stringKey =
         DISMISS -> "తొలగించు"
         DRIVER_REFERRAL_CODE -> "డ్రైవర్ రెఫరల్ కోడ్"
         APP_QR_CODE -> "యాప్ QR కోడ్"
-        START_TAKING_RIDES_AND_REFER -> "నమ్మ యాత్రి డ్రైవర్ యాప్‌లో సైన్ అప్ చేయడానికి రైడ్‌లు తీసుకోవడం మరియు డ్రైవర్లను సూచించడం ప్రారంభించండి"
+        START_TAKING_RIDES_AND_REFER _ -> "నమ్మ యాత్రి డ్రైవర్ యాప్‌లో సైన్ అప్ చేయడానికి రైడ్‌లు తీసుకోవడం మరియు డ్రైవర్లను సూచించడం ప్రారంభించండి"
         REFERRED_DRIVERS -> "సూచించిన డ్రైవర్లు"
         RIDE_LEADERBOARD -> "లీడర్‌బోర్డ్‌ను రైడ్ చేయండి"
         YOUR_RANK -> "మీ ర్యాంక్"
@@ -1107,7 +1107,7 @@ getTE stringKey =
         ENTER_REFERRAL_CODE -> "రెఫరల్ కోడ్‌ని నమోదు చేయండి"
         HAVE_A_REFERRAL_CODE -> "రెఫరల్ కోడ్ ఉందా?"
         COMPLETE_STEPS_TO_APPLY_REFERRAL -> "రెఫరల్ కోడ్‌ని వర్తింపజేయడానికి పై దశలను పూర్తి చేయండి"
-        DOWNLOAD_NAMMA_YATRI -> "నమ్మ యాత్రి డౌన్లోడ్"
+        DOWNLOAD_NAMMA_YATRI _-> "నమ్మ యాత్రి డౌన్లోడ్"
         ENTER_CODE -> "కోడ్ వ్రాయండి"
         COMPLETE_REGISTRATION -> "నమోదును పూర్తి చెయ్యండి"
     

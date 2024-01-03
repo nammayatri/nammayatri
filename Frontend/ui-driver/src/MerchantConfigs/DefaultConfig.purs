@@ -59,6 +59,7 @@ config =
     showFeeBreakup : true
   },
   showPaymentDetails : true,
+  enableDriverReferral: false,
   rideActionModelConfig : {
     showVehicleVariant : true
   }

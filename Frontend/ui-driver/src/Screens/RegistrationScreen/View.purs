@@ -198,7 +198,7 @@ view push state =
                 , width MATCH_PARENT
                 , margin $ Margin 16 0 16 16
                 , clickable false
-                , visibility $ boolToVisibility state.data.cityConfig.showDriverReferral
+                , visibility $ boolToVisibility $ state.data.cityConfig.showDriverReferral || state.data.config.enableDriverReferral
                 ][enterReferralCode push state]
             
             ]
