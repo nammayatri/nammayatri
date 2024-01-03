@@ -442,7 +442,7 @@ reportIssuePopUpConfig state =
         }
   in
     reportIssueConfig'
-  where options = if state.props.nightSafetyFlow then safetyIssueOptions FunctionCall else reportIssueOptions state
+  where options = if state.props.nightSafetyFlow then safetyIssueOptions false else reportIssueOptions state
 
 logOutPopUpModelConfig :: ST.HomeScreenState -> PopUpModal.Config
 logOutPopUpModelConfig state =
@@ -1482,20 +1482,22 @@ getCarouselData state =
         {image : "ny_ic_disability_illustration" , videoLink : "" , videoHeight :  0, imageHeight :  160, imageBgColor :  Color.white900, title :   (getString EDUCATIONAL_POP_UP_SLIDE_5_TITLE) , description :  (getString EDUCATIONAL_POP_UP_SLIDE_5_SUBTITLE) , descTextSize : 12 ,carouselBgColor :  Color.grey700, gravity : 0}
       ]
 
-safetyIssueOptions :: LazyCheck -> Array OptionButtonList 
-safetyIssueOptions dummy =
+safetyIssueOptions :: Boolean -> Array OptionButtonList 
+safetyIssueOptions forceEnglish =
+  let getValue str = if forceEnglish then getEN str else getString str
+  in
   [ { reasonCode: "DRIVER_BEHAVED_INAPPROPRIATELY"
-    , description: getString DRIVER_BEHAVED_INAPPROPRIATELY
+    , description: getValue DRIVER_BEHAVED_INAPPROPRIATELY
     , textBoxRequired : false
     , subtext : Nothing
     }
   , { reasonCode: "I_DID_NOT_FEEL_SAFE"
-    , description: getString I_DID_NOT_FEEL_SAFE
+    , description: getValue I_DID_NOT_FEEL_SAFE
     , textBoxRequired : false
     , subtext : Nothing
     }
   , { reasonCode: "OTHER"
-    , description: getString OTHER
+    , description: getValue OTHER
     , textBoxRequired : false
     , subtext : Nothing
     }

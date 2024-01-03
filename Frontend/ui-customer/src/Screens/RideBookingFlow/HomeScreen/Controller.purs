@@ -1714,7 +1714,7 @@ eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.On
 eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.UpdateIndex index))) state = continue state { data { ratingViewState { issueReportActiveIndex = Just index} } }
 
 eval ( RideCompletedAC (RideCompletedCard.IssueReportPopUpAC (CancelRidePopUp.Button2 PrimaryButtonController.OnClick))) state = do
-  let issue = (if state.props.nightSafetyFlow then safetyIssueOptions FunctionCall else reportIssueOptions state)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
+  let issue = (if state.props.nightSafetyFlow then safetyIssueOptions true else reportIssueOptions state)!!(fromMaybe 1 state.data.ratingViewState.issueReportActiveIndex)
       reason = (fromMaybe dummyCancelReason issue)
   exit $ ReportIssue state { data {
     ratingViewState { issueReason = Just reason.reasonCode, issueDescription = reason.description},
