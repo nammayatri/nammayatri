@@ -40,6 +40,10 @@ window.getMerchantConfig = function () {
     "leaderBoard": {
       "isMaskedName": false
     },
+    "gotoConfig" : {
+      "maxGotoLocations" : 5,
+      "enableGoto" : true
+    },
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
