@@ -59,7 +59,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback,onAnimationEnd)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -224,12 +224,12 @@ renderQRView state push =
             text state.data.payerVpa
           ] <> FontStyle.body2 TypoGraphy
         ]
-        , imageView[
+        , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ] $ imageView [
             height $ V 280
           , width $ V 280
           , margin $ MarginVertical 15 24
           , id $ getNewIDWithTag "renderQRView"
-          , afterRender push (const (UpiQrRendered $ getNewIDWithTag "renderQRView"))
+          , onAnimationEnd push (const (UpiQrRendered $ getNewIDWithTag "renderQRView"))
         ]
       ]
       -- To enable after an apk update
