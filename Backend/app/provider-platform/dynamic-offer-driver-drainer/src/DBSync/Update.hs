@@ -168,6 +168,7 @@ runUpdateCommands (cmd, val) dbStreamKey = do
     UpdateDBCommand id _ tag _ _ (GoHomeConfigOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("GoHomeConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (LocationOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("LocationConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (LocationMappingOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("LocationMappingConfig" :: Text) =<< dbConf
+    UpdateDBCommand id _ tag _ _ (SearchRequestMappingOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("SearchRequestMappingConfig" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (PaymentOrderOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("PaymentOrder" :: Text) =<< dbConf
     UpdateDBCommand id _ tag _ _ (PaymentTransactionOptions _ setClauses whereClause) -> runUpdateInKafkaAndDb id val dbStreamKey setClauses tag whereClause ("PaymentTransaction" :: Text) =<< dbConf
   where

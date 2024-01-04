@@ -51,6 +51,7 @@ import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
+import qualified "rider-app" Storage.Beam.SearchRequestMapping as SearchRequestMapping
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
@@ -106,6 +107,7 @@ data DBCreateObject
   | BecknRequestObject BecknRequest.BecknRequest
   | LocationObject Location.Location
   | LocationMappingObject LocationMapping.LocationMapping
+  | SearchRequestMappingObject SearchRequestMapping.SearchRequestMapping
   deriving (Generic, FromJSON, ToJSON, Show)
 
 modelName :: DBCreateObject -> Text
@@ -158,3 +160,4 @@ modelName (HotSpotConfigObject _) = "HotSpotConfig"
 modelName (BecknRequestObject _) = "BecknRequest"
 modelName (LocationObject _) = "Location"
 modelName (LocationMappingObject _) = "LocationMapping"
+modelName (SearchRequestMappingObject _) = "SearchRequestMapping"

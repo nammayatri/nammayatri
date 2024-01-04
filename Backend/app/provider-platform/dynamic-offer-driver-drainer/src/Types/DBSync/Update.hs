@@ -86,6 +86,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDeta
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
+import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestMapping as SearchRequestMapping
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
@@ -175,6 +176,7 @@ data UpdateModel
   | GoHomeConfigUpdate
   | LocationUpdate
   | LocationMappingUpdate
+  | SearchRequestMappingUpdate
   | PaymentOrderUpdate
   | PaymentTransactionUpdate
   deriving (Generic, Show)
@@ -260,6 +262,7 @@ getTagUpdate DriverHomeLocationUpdate = "DriverHomeLocationOptions"
 getTagUpdate GoHomeConfigUpdate = "GoHomeConfigOptions"
 getTagUpdate LocationUpdate = "LocationOptions"
 getTagUpdate LocationMappingUpdate = "LocationMappingOptions"
+getTagUpdate SearchRequestMappingUpdate = "SearchRequestMappingOptions"
 getTagUpdate PaymentOrderUpdate = "PaymentOrderOptions"
 getTagUpdate PaymentTransactionUpdate = "PaymentTransactionOptions"
 
@@ -344,6 +347,7 @@ parseTagUpdate "DriverHomeLocationOptions" = return DriverHomeLocationUpdate
 parseTagUpdate "GoHomeConfigOptions" = return GoHomeConfigUpdate
 parseTagUpdate "LocationOptions" = return LocationUpdate
 parseTagUpdate "LocationMappingOptions" = return LocationMappingUpdate
+parseTagUpdate "SearchRequestMappingOptions" = return SearchRequestMappingUpdate
 parseTagUpdate "PaymentOrderOptions" = return PaymentOrderUpdate
 parseTagUpdate "PaymentTransactionOptions" = return PaymentTransactionUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
@@ -429,6 +433,7 @@ data DBUpdateObject
   | GoHomeConfigOptions UpdateModel [Set Postgres GoHomeConfig.GoHomeConfigT] (Where Postgres GoHomeConfig.GoHomeConfigT)
   | LocationOptions UpdateModel [Set Postgres Location.LocationT] (Where Postgres Location.LocationT)
   | LocationMappingOptions UpdateModel [Set Postgres LocationMapping.LocationMappingT] (Where Postgres LocationMapping.LocationMappingT)
+  | SearchRequestMappingOptions UpdateModel [Set Postgres SearchRequestMapping.SearchRequestMappingT] (Where Postgres SearchRequestMapping.SearchRequestMappingT)
   | PaymentOrderOptions UpdateModel [Set Postgres PaymentOrder.PaymentOrderT] (Where Postgres PaymentOrder.PaymentOrderT)
   | PaymentTransactionOptions UpdateModel [Set Postgres PaymentTransaction.PaymentTransactionT] (Where Postgres PaymentTransaction.PaymentTransactionT)
 
@@ -688,3 +693,6 @@ instance FromJSON DBUpdateObject where
       PaymentTransactionUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ PaymentTransactionOptions updateModel updVals whereClause
+      SearchRequestMappingUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ SearchRequestMappingOptions updateModel updVals whereClause

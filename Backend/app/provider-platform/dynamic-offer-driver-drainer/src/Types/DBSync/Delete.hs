@@ -86,6 +86,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDeta
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
+import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestMapping as SearchRequestMapping
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
@@ -173,6 +174,7 @@ data DeleteModel
   | GoHomeConfigDelete
   | LocationDelete
   | LocationMappingDelete
+  | SearchRequestMappingDelete
   | PaymentOrderDelete
   | PaymentTransactionDelete
   deriving (Generic, Show)
@@ -258,6 +260,7 @@ getTagDelete DriverHomeLocationDelete = "DriverHomeLocationOptions"
 getTagDelete GoHomeConfigDelete = "GoHomeConfigOptions"
 getTagDelete LocationDelete = "LocationOptions"
 getTagDelete LocationMappingDelete = "LocationMappingOptions"
+getTagDelete SearchRequestMappingDelete = "SearchRequestMappingOptions"
 getTagDelete PaymentOrderDelete = "PaymentOrderOptions"
 getTagDelete PaymentTransactionDelete = "PaymentTransactionOptions"
 
@@ -338,6 +341,7 @@ parseTagDelete "DriverHomeLocationOptions" = return DriverHomeLocationDelete
 parseTagDelete "GoHomeConfigOptions" = return GoHomeConfigDelete
 parseTagDelete "LocationOptions" = return LocationDelete
 parseTagDelete "LocationMappingOptions" = return LocationMappingDelete
+parseTagDelete "SearchRequestMappingOptions" = return SearchRequestMappingDelete
 parseTagDelete "PaymentOrderOptions" = return PaymentOrderDelete
 parseTagDelete "PaymentTransactionOptions" = return PaymentTransactionDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
@@ -423,6 +427,7 @@ data DBDeleteObject
   | GoHomeConfigDeleteOptions DeleteModel (Where Postgres GoHomeConfig.GoHomeConfigT)
   | LocationDeleteOptions DeleteModel (Where Postgres Location.LocationT)
   | LocationMappingDeleteOptions DeleteModel (Where Postgres LocationMapping.LocationMappingT)
+  | SearchRequestMappingDeleteOptions DeleteModel (Where Postgres SearchRequestMapping.SearchRequestMappingT)
   | PaymentOrderDeleteOptions DeleteModel (Where Postgres PaymentOrder.PaymentOrderT)
   | PaymentTransactionDeleteOptions DeleteModel (Where Postgres PaymentTransaction.PaymentTransactionT)
 
@@ -680,3 +685,6 @@ instance FromJSON DBDeleteObject where
       PaymentTransactionDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ PaymentTransactionDeleteOptions deleteModel whereClause
+      SearchRequestMappingDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ SearchRequestMappingDeleteOptions deleteModel whereClause

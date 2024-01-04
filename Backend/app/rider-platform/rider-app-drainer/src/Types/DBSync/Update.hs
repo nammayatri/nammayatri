@@ -52,6 +52,7 @@ import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
+import qualified "rider-app" Storage.Beam.SearchRequestMapping as SearchRequestMapping
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
@@ -110,6 +111,7 @@ data UpdateModel
   | BecknRequestUpdate
   | LocationUpdate
   | LocationMappingUpdate
+  | SearchRequestMappingUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -161,6 +163,7 @@ getTagUpdate HotSpotConfigUpdate = "HotSpotConfigOptions"
 getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
 getTagUpdate LocationUpdate = "LocationOptions"
 getTagUpdate LocationMappingUpdate = "LocationMappingOptions"
+getTagUpdate SearchRequestMappingUpdate = "SearchRequestMappingOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "AppInstallsOptions" = return AppInstallsUpdate
@@ -211,6 +214,7 @@ parseTagUpdate "HotSpotConfigOptions" = return HotSpotConfigUpdate
 parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
 parseTagUpdate "LocationOptions" = return LocationUpdate
 parseTagUpdate "LocationMappingOptions" = return LocationMappingUpdate
+parseTagUpdate "SearchRequestMappingOptions" = return SearchRequestMappingUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -262,6 +266,7 @@ data DBUpdateObject
   | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
   | LocationOptions UpdateModel [Set Postgres Location.LocationT] (Where Postgres Location.LocationT)
   | LocationMappingOptions UpdateModel [Set Postgres LocationMapping.LocationMappingT] (Where Postgres LocationMapping.LocationMappingT)
+  | SearchRequestMappingOptions UpdateModel [Set Postgres SearchRequestMapping.SearchRequestMappingT] (Where Postgres SearchRequestMapping.SearchRequestMappingT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -417,3 +422,6 @@ instance FromJSON DBUpdateObject where
       LocationMappingUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ LocationMappingOptions updateModel updVals whereClause
+      SearchRequestMappingUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ SearchRequestMappingOptions updateModel updVals whereClause

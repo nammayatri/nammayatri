@@ -52,6 +52,7 @@ import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
+import qualified "rider-app" Storage.Beam.SearchRequestMapping as SearchRequestMapping
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
@@ -107,6 +108,7 @@ data DeleteModel
   | BecknRequestDelete
   | LocationDelete
   | LocationMappingDelete
+  | SearchRequestMappingDelete
   deriving (Generic, Show)
 
 getTagDelete :: DeleteModel -> Text
@@ -158,6 +160,7 @@ getTagDelete HotSpotConfigDelete = "HotSpotConfigOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
 getTagDelete LocationDelete = "LocationOptions"
 getTagDelete LocationMappingDelete = "LocationMappingOptions"
+getTagDelete SearchRequestMappingDelete = "SearchRequesMappingOptions"
 
 parseTagDelete :: Text -> Parser DeleteModel
 parseTagDelete "AppInstallsOptions" = return AppInstallsDelete
@@ -208,6 +211,7 @@ parseTagDelete "HotSpotConfigOptions" = return HotSpotConfigDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
 parseTagDelete "LocationOptions" = return LocationDelete
 parseTagDelete "LocationMappingOptions" = return LocationMappingDelete
+parseTagDelete "SearchRequestMappingOptions" = return SearchRequestMappingDelete
 parseTagDelete t = fail $ T.unpack ("Expected a DeleteModel but got '" <> t <> "'")
 
 data DBDeleteObject
@@ -259,6 +263,7 @@ data DBDeleteObject
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
   | LocationDeleteOptions DeleteModel (Where Postgres Location.LocationT)
   | LocationMappingDeleteOptions DeleteModel (Where Postgres LocationMapping.LocationMappingT)
+  | SearchRequestMappingDeleteOptions DeleteModel (Where Postgres SearchRequestMapping.SearchRequestMappingT)
 
 instance ToJSON DBDeleteObject where
   toJSON = error "ToJSON not implemented for DBDeleteObject - Use getDbDeleteCommandJson instead" -- Using getDbDeleteCommandJson instead of toJSON
@@ -412,3 +417,6 @@ instance FromJSON DBDeleteObject where
       LocationMappingDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ LocationMappingDeleteOptions deleteModel whereClause
+      SearchRequestMappingDelete -> do
+        whereClause <- parseDeleteCommandValues contents
+        return $ SearchRequestMappingDeleteOptions deleteModel whereClause

@@ -83,6 +83,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDeta
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
+import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestMapping as SearchRequestMapping
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
@@ -169,6 +170,7 @@ data DBCreateObject
   | GoHomeConfigObject GoHomeConfig.GoHomeConfig
   | LocationObject Location.Location
   | LocationMappingObject LocationMapping.LocationMapping
+  | SearchRequestMappingObject SearchRequestMapping.SearchRequestMapping
   | PaymentOrderObject PaymentOrder.PaymentOrder
   | PaymentTransactionObject PaymentTransaction.PaymentTransaction
   deriving (Generic, FromJSON, ToJSON, Show)
@@ -257,5 +259,6 @@ modelName (DriverHomeLocationObject _) = "DriverHomeLocation"
 modelName (GoHomeConfigObject _) = "GoHomeConfig"
 modelName (LocationObject _) = "Location"
 modelName (LocationMappingObject _) = "LocationMappingObject"
+modelName (SearchRequestMappingObject _) = "SearchRequestMappingObject"
 modelName (PaymentOrderObject _) = "PaymentOrder"
 modelName (PaymentTransactionObject _) = "PaymentTransaction"

@@ -214,6 +214,7 @@ library
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
+      Domain.Types.SearchRequestMapping
       Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
@@ -232,6 +233,7 @@ library
       SharedLogic.MetroOffer
       SharedLogic.Person
       SharedLogic.PublicTransport
+      SharedLogic.SearchRequestMapping
       Storage.Beam.AadhaarVerification.AadhaarOtpReq
       Storage.Beam.AadhaarVerification.AadhaarOtpVerify
       Storage.Beam.AadhaarVerification.AadhaarVerification
@@ -283,6 +285,7 @@ library
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
+      Storage.Beam.SearchRequestMapping
       Storage.Beam.Sos
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.TripTerms
@@ -349,6 +352,7 @@ library
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
+      Storage.Queries.SearchRequestMapping
       Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms

@@ -16,8 +16,8 @@
 module Storage.Queries.SearchRequestSpecialZone where
 
 import Data.Ord
-import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
+import qualified Domain.Types.SearchRequestMapping as DSRM
 import Domain.Types.SearchRequestSpecialZone as Domain
 import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
@@ -27,13 +27,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified SharedLogic.LocationMapping as SLM
+import qualified SharedLogic.SearchRequestMapping as SSRM
 import qualified Storage.Beam.SearchRequestSpecialZone as BeamSRSZ
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Location as QL
-import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.SearchRequest as QSL
+import qualified Storage.Queries.SearchRequestMapping as QSRM
 
 createSearchRequestSpecialZone' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequestSpecialZone -> m ()
 createSearchRequestSpecialZone' = createWithKV
@@ -46,9 +46,9 @@ create srsz = do
 
 createSearchRequestSpecialZone :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequestSpecialZone -> m ()
 createSearchRequestSpecialZone searchRequest = do
-  fromLocationMap <- SLM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
-  toLocationMaps <- SLM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DLM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
-  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create searchRequest
+  fromLocationMap <- SSRM.buildPickUpLocationMapping searchRequest.fromLocation.id searchRequest.id.getId DSRM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
+  toLocationMaps <- SSRM.buildDropLocationMapping searchRequest.toLocation.id searchRequest.id.getId DSRM.SEARCH_REQUEST (Just searchRequest.providerId) (Just searchRequest.merchantOperatingCityId)
+  QSRM.create fromLocationMap >> QSRM.create toLocationMaps >> create searchRequest
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequestSpecialZone -> m (Maybe SearchRequestSpecialZone)
 findById (Id searchRequestSpecialZoneId) = findOneWithKV [Se.Is BeamSRSZ.id $ Se.Eq searchRequestSpecialZoneId]
@@ -71,18 +71,18 @@ getValidTill (Id searchRequestId) = do
 
 instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone where
   fromTType' BeamSRSZ.SearchRequestSpecialZoneT {..} = do
-    mappings <- QLM.findByEntityId id
+    mappings <- QSRM.findByEntityId id
     (fl, tl) <-
       if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
         then do
           logInfo "Accessing Search Request Location Table"
-          pickupLoc <- QSL.upsertLocationForOldData (Id <$> fromLocationId) id
-          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST (Just $ Id providerId) (Id <$> merchantOperatingCityId)
-          QLM.create pickupLocMapping
+          pickupLoc <- QSL.upsertFromLocationForOldData id
+          pickupLocMapping <- SSRM.buildPickUpLocationMapping pickupLoc.id id DSRM.SEARCH_REQUEST (Just $ Id providerId) (Id <$> merchantOperatingCityId)
+          QSRM.create pickupLocMapping
 
-          dropLoc <- QSL.upsertLocationForOldData (Id <$> toLocationId) id
-          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST (Just $ Id providerId) (Id <$> merchantOperatingCityId)
-          QLM.create dropLocMapping
+          dropLoc <- QSL.upsertToLocationForOldData id
+          dropLocMapping <- SSRM.buildDropLocationMapping dropLoc.id id DSRM.SEARCH_REQUEST (Just $ Id providerId) (Id <$> merchantOperatingCityId)
+          QSRM.create dropLocMapping
           return (pickupLoc, dropLoc)
         else do
           let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
