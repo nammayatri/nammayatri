@@ -130,7 +130,7 @@ let
       passetto-server.service = {
         image = "juspayin/passetto-hs:0b18530";
         container_name = "passetto-enc-server";
-        ports = [ "8021:8012" ];
+        ports = [ "7777:8012" ];
         environment = {
           PASSETTO_PG_BACKEND_CONN_STRING = "postgresql://passetto:passetto@passetto-enc-db:5432/passetto";
         };

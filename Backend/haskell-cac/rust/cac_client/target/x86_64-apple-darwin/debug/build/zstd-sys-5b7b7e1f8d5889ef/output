@@ -1,0 +1,189 @@
+cargo:rerun-if-env-changed=ZSTD_SYS_USE_PKG_CONFIG
+TARGET = Some("x86_64-apple-darwin")
+OPT_LEVEL = Some("0")
+HOST = Some("aarch64-apple-darwin")
+cargo:rerun-if-env-changed=CC_x86_64-apple-darwin
+CC_x86_64-apple-darwin = None
+cargo:rerun-if-env-changed=CC_x86_64_apple_darwin
+CC_x86_64_apple_darwin = None
+cargo:rerun-if-env-changed=TARGET_CC
+TARGET_CC = None
+cargo:rerun-if-env-changed=CC
+CC = None
+RUSTC_LINKER = None
+cargo:rerun-if-env-changed=CROSS_COMPILE
+CROSS_COMPILE = None
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+DEBUG = Some("true")
+CARGO_CFG_TARGET_FEATURE = Some("cmpxchg16b,fxsr,sse,sse2,sse3,sse4.1,ssse3")
+cargo:rerun-if-env-changed=CFLAGS_x86_64-apple-darwin
+CFLAGS_x86_64-apple-darwin = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64_apple_darwin
+CFLAGS_x86_64_apple_darwin = None
+cargo:rerun-if-env-changed=TARGET_CFLAGS
+TARGET_CFLAGS = None
+cargo:rerun-if-env-changed=CFLAGS
+CFLAGS = None
+cargo:rerun-if-env-changed=CC_x86_64-apple-darwin
+CC_x86_64-apple-darwin = None
+cargo:rerun-if-env-changed=CC_x86_64_apple_darwin
+CC_x86_64_apple_darwin = None
+cargo:rerun-if-env-changed=TARGET_CC
+TARGET_CC = None
+cargo:rerun-if-env-changed=CC
+CC = None
+RUSTC_LINKER = None
+cargo:rerun-if-env-changed=CROSS_COMPILE
+CROSS_COMPILE = None
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+CARGO_CFG_TARGET_FEATURE = Some("cmpxchg16b,fxsr,sse,sse2,sse3,sse4.1,ssse3")
+cargo:rerun-if-env-changed=CFLAGS_x86_64-apple-darwin
+CFLAGS_x86_64-apple-darwin = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64_apple_darwin
+CFLAGS_x86_64_apple_darwin = None
+cargo:rerun-if-env-changed=TARGET_CFLAGS
+TARGET_CFLAGS = None
+cargo:rerun-if-env-changed=CFLAGS
+CFLAGS = None
+cargo:rerun-if-env-changed=CC_x86_64-apple-darwin
+CC_x86_64-apple-darwin = None
+cargo:rerun-if-env-changed=CC_x86_64_apple_darwin
+CC_x86_64_apple_darwin = None
+cargo:rerun-if-env-changed=TARGET_CC
+TARGET_CC = None
+cargo:rerun-if-env-changed=CC
+CC = None
+RUSTC_LINKER = None
+cargo:rerun-if-env-changed=CROSS_COMPILE
+CROSS_COMPILE = None
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+CARGO_CFG_TARGET_FEATURE = Some("cmpxchg16b,fxsr,sse,sse2,sse3,sse4.1,ssse3")
+cargo:rerun-if-env-changed=CFLAGS_x86_64-apple-darwin
+CFLAGS_x86_64-apple-darwin = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64_apple_darwin
+CFLAGS_x86_64_apple_darwin = None
+cargo:rerun-if-env-changed=TARGET_CFLAGS
+TARGET_CFLAGS = None
+cargo:rerun-if-env-changed=CFLAGS
+CFLAGS = None
+cargo:rerun-if-env-changed=CC_x86_64-apple-darwin
+CC_x86_64-apple-darwin = None
+cargo:rerun-if-env-changed=CC_x86_64_apple_darwin
+CC_x86_64_apple_darwin = None
+cargo:rerun-if-env-changed=TARGET_CC
+TARGET_CC = None
+cargo:rerun-if-env-changed=CC
+CC = None
+RUSTC_LINKER = None
+cargo:rerun-if-env-changed=CROSS_COMPILE
+CROSS_COMPILE = None
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+CARGO_CFG_TARGET_FEATURE = Some("cmpxchg16b,fxsr,sse,sse2,sse3,sse4.1,ssse3")
+cargo:rerun-if-env-changed=CFLAGS_x86_64-apple-darwin
+CFLAGS_x86_64-apple-darwin = None
+cargo:rerun-if-env-changed=CFLAGS_x86_64_apple_darwin
+CFLAGS_x86_64_apple_darwin = None
+cargo:rerun-if-env-changed=TARGET_CFLAGS
+TARGET_CFLAGS = None
+cargo:rerun-if-env-changed=CFLAGS
+CFLAGS = None
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/debug.o" "-c" "zstd/lib/common/debug.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/entropy_common.o" "-c" "zstd/lib/common/entropy_common.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/error_private.o" "-c" "zstd/lib/common/error_private.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/fse_decompress.o" "-c" "zstd/lib/common/fse_decompress.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/pool.o" "-c" "zstd/lib/common/pool.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/threading.o" "-c" "zstd/lib/common/threading.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/zstd_common.o" "-c" "zstd/lib/common/zstd_common.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/fse_compress.o" "-c" "zstd/lib/compress/fse_compress.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/hist.o" "-c" "zstd/lib/compress/hist.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/huf_compress.o" "-c" "zstd/lib/compress/huf_compress.c"
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_compress.o" "-c" "zstd/lib/compress/zstd_compress.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_compress_literals.o" "-c" "zstd/lib/compress/zstd_compress_literals.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_compress_sequences.o" "-c" "zstd/lib/compress/zstd_compress_sequences.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_compress_superblock.o" "-c" "zstd/lib/compress/zstd_compress_superblock.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_double_fast.o" "-c" "zstd/lib/compress/zstd_double_fast.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_fast.o" "-c" "zstd/lib/compress/zstd_fast.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_lazy.o" "-c" "zstd/lib/compress/zstd_lazy.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_ldm.o" "-c" "zstd/lib/compress/zstd_ldm.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_opt.o" "-c" "zstd/lib/compress/zstd_opt.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstdmt_compress.o" "-c" "zstd/lib/compress/zstdmt_compress.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/decompress/huf_decompress.o" "-c" "zstd/lib/decompress/huf_decompress.c"
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/decompress/zstd_ddict.o" "-c" "zstd/lib/decompress/zstd_ddict.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/decompress/zstd_decompress.o" "-c" "zstd/lib/decompress/zstd_decompress.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/decompress/zstd_decompress_block.o" "-c" "zstd/lib/decompress/zstd_decompress_block.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/dictBuilder/cover.o" "-c" "zstd/lib/dictBuilder/cover.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/dictBuilder/divsufsort.o" "-c" "zstd/lib/dictBuilder/divsufsort.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/dictBuilder/fastcover.o" "-c" "zstd/lib/dictBuilder/fastcover.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/dictBuilder/zdict.o" "-c" "zstd/lib/dictBuilder/zdict.c"
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v01.o" "-c" "zstd/lib/legacy/zstd_v01.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v02.o" "-c" "zstd/lib/legacy/zstd_v02.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v03.o" "-c" "zstd/lib/legacy/zstd_v03.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v04.o" "-c" "zstd/lib/legacy/zstd_v04.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v05.o" "-c" "zstd/lib/legacy/zstd_v05.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v06.o" "-c" "zstd/lib/legacy/zstd_v06.c"
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v07.o" "-c" "zstd/lib/legacy/zstd_v07.c"
+running: env -u IPHONEOS_DEPLOYMENT_TARGET "cc" "-O0" "-ffunction-sections" "-fdata-sections" "-fPIC" "-gdwarf-2" "-fno-omit-frame-pointer" "-m64" "-arch" "x86_64" "-I" "zstd/lib/" "-I" "zstd/lib/common" "-I" "zstd/lib/legacy" "-fvisibility=hidden" "-ffunction-sections" "-fdata-sections" "-fmerge-all-constants" "-DZSTD_LIB_DEPRECATED=0" "-DXXH_PRIVATE_API=" "-DZSTDLIB_VISIBILITY=" "-DZDICTLIB_VISIBILITY=" "-DZSTDERRORLIB_VISIBILITY=" "-DZSTD_LEGACY_SUPPORT=1" "-o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/decompress/huf_decompress_amd64.o" "-c" "zstd/lib/decompress/huf_decompress_amd64.S"
+exit status: 0
+exit status: 0
+exit status: 0
+exit status: 0
+cargo:rerun-if-env-changed=AR_x86_64-apple-darwin
+AR_x86_64-apple-darwin = None
+cargo:rerun-if-env-changed=AR_x86_64_apple_darwin
+AR_x86_64_apple_darwin = None
+cargo:rerun-if-env-changed=TARGET_AR
+TARGET_AR = None
+cargo:rerun-if-env-changed=AR
+AR = None
+cargo:rerun-if-env-changed=ARFLAGS_x86_64-apple-darwin
+ARFLAGS_x86_64-apple-darwin = None
+cargo:rerun-if-env-changed=ARFLAGS_x86_64_apple_darwin
+ARFLAGS_x86_64_apple_darwin = None
+cargo:rerun-if-env-changed=TARGET_ARFLAGS
+TARGET_ARFLAGS = None
+cargo:rerun-if-env-changed=ARFLAGS
+ARFLAGS = None
+running: ZERO_AR_DATE="1" "ar" "cq" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/libzstd.a" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/debug.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/entropy_common.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/error_private.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/fse_decompress.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/pool.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/threading.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/common/zstd_common.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/fse_compress.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/hist.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/huf_compress.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_compress.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_compress_literals.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_compress_sequences.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_compress_superblock.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_double_fast.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_fast.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_lazy.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_ldm.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstd_opt.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/compress/zstdmt_compress.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/decompress/huf_decompress.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/decompress/zstd_ddict.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/decompress/zstd_decompress.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/decompress/zstd_decompress_block.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/dictBuilder/cover.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/dictBuilder/divsufsort.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/dictBuilder/fastcover.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/dictBuilder/zdict.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v01.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v02.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v03.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v04.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v05.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v06.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/legacy/zstd_v07.o" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/zstd/lib/decompress/huf_decompress_amd64.o"
+exit status: 0
+running: "ar" "s" "/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out/libzstd.a"
+exit status: 0
+cargo:rustc-link-lib=static=zstd
+cargo:rustc-link-search=native=/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out
+cargo:root=/Users/akhilesh.b/Desktop/haskell_cac_client/rust/cac_client/target/x86_64-apple-darwin/debug/build/zstd-sys-5b7b7e1f8d5889ef/out
+cargo:include=/Users/akhilesh.b/.cargo/registry/src/index.crates.io-6f17d22bba15001f/zstd-sys-2.0.9+zstd.1.5.5/zstd/lib

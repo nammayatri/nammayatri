@@ -34,6 +34,7 @@ packages:
   lib/special-zone
   lib/scheduler
   lib/sessionizer-metrics
+  haskell-cac
   test
   lib/producer
   lib/utils

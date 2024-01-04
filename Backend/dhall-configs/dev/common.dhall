@@ -50,7 +50,7 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , smsUserName = sec.smsUserName
     , smsPassword = sec.smsPassword
     , InfoBIPConfig = sec.InfoBIPConfig
-    , passetto = { _1 = "localhost", _2 = 8021 }
+    , passetto = { _1 = "localhost", _2 = 7777 }
     , googleCfg
     , mockGoogleCfg
     , googleTranslateUrl = "https://www.googleapis.com/"
