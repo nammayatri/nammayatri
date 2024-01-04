@@ -119,7 +119,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private String key = "";
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     private SheetModel modelForLogs;
-    private static Boolean enableCleverTapEvents;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -265,7 +264,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             updateAcceptButtonText(holder, model.getRideRequestPopupDelayDuration(), model.getStartTime(), model.isGotoTag() ? getString(R.string.accept_goto) : getString(R.string.accept_offer));
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
-            CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(getApplicationContext());
             String vehicleVariant = sharedPref.getString("VEHICLE_VARIANT", null);
             holder.reqButton.setOnClickListener(view -> {
                 holder.reqButton.setClickable(false);
@@ -288,18 +286,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             }
                             String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
                             firebaseLogEvent(logEvent);
-                            if (enableCleverTapEvents) {
-                                HashMap<String, Object> cleverTapParams = new HashMap<>();
-                                try {
-                                    cleverTapParams.put("searchRequestId", model.getSearchRequestId());
-                                    cleverTapParams.put("rideRequestPopupDelayDuration", model.getRideRequestPopupDelayDuration());
-                                    cleverTapParams.put("vehicleVariant", vehicleVariant);
-                                    cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
-                                    clevertapDefaultInstance.pushEvent(logEvent, cleverTapParams);
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            }
+                            RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, logEvent, OverlaySheetService.this);
                             isRideAcceptedOrRejected = true;
                             handler.post(() -> {
                                 startLoader(model.getSearchRequestId());
@@ -321,7 +308,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             });
                         }
                     } catch (Exception e) {
-                        firebaseLogEventWithParams("exception", "request_button_click", e.toString());
+                        firebaseLogEventWithParams("exception_request_button_click", "request_button_click", String.valueOf(e));
                         cleanUp();
                     }
                 });
@@ -337,26 +324,15 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         holder.rejectButton.setClickable(false);
                         handler.post(() -> {
                             String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_declined" : "ride_declined";
+                            String event = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_rejected" : "ride_rejected";
                             Utils.logEvent (logEvent, getApplicationContext());
-                            if (enableCleverTapEvents) {
-                                HashMap<String, Object> cleverTapParams = new HashMap<>();
-                                try {
-                                    cleverTapParams.put("searchRequestId", model.getSearchRequestId());
-                                    cleverTapParams.put("rideRequestPopupDelayDuration", model.getRideRequestPopupDelayDuration());
-                                    cleverTapParams.put("vehicleVariant", vehicleVariant);
-                                    cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
-                                    String event = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_rejected" : "ride_rejected";
-                                    clevertapDefaultInstance.pushEvent(event, cleverTapParams);
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            }
+                            RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, event, OverlaySheetService.this);
                             removeCard(position);
                             executor.shutdown();
                             Toast.makeText(getApplicationContext(), getString(R.string.ride_rejected), Toast.LENGTH_SHORT).show();
                         });
                     } catch (Exception e) {
-                        firebaseLogEventWithParams("exception", "reject_button_click", e.toString());
+                        firebaseLogEventWithParams("exception_reject_button_click", "reject_button_click", String.valueOf(e));
                         System.out.println("reject exception: " + e);
                     }
                 });
@@ -448,7 +424,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             });
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "remove_card", e.toString());
+            firebaseLogEventWithParams("exception_in_remove_card", "remove_card", String.valueOf(e));
             e.printStackTrace();
         }
     }
@@ -456,33 +432,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void cleanUp() {
         if (!isRideAcceptedOrRejected) {
             firebaseLogEvent("ride_ignored");
-            try {
-                if (enableCleverTapEvents) {
-                    HashMap<String, Object> cleverTapParams = new HashMap<>();
-                    CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(getApplicationContext());
-
-                    if (modelForLogs != null) {
-                        cleverTapParams.put("searchRequestId", modelForLogs.getSearchRequestId());
-                        cleverTapParams.put("rideRequestPopupDelayDuration", modelForLogs.getRideRequestPopupDelayDuration());
-                    }
-
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
-                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-                        String formattedDateTime = utcDateTime.format(formatter);
-                        long millisecondsSinceEpoch = Instant.now().toEpochMilli();
-                        cleverTapParams.put("timeStampString", formattedDateTime);
-                        cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
-                    }
-
-                    cleverTapParams.put("vehicleVariant", sharedPref.getString("VEHICLE_VARIANT", null));
-                    cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
-
-                    clevertapDefaultInstance.pushEvent("ride_ignored", cleverTapParams);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            RideRequestUtils.addRideReceivedEvent(null,null, modelForLogs, "ride_ignored", this);
         }
         try {
             callBack.clear();
@@ -522,7 +472,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             NotificationUtils.listData = new ArrayList<>();
             this.stopSelf();
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "clean_up", e.toString());
+            firebaseLogEventWithParams("exception_in_clean_up", "clean_up", String.valueOf(e));
             Log.e("EXCEPTION", e.toString());
         }
     }
@@ -537,7 +487,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 mediaPlayer.setOnPreparedListener(mp -> mediaPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK));
             }
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "on_bind", e.toString());
+            firebaseLogEventWithParams("exception_in_on_bind", "on_bind", String.valueOf(e));
             e.printStackTrace();
         }
         return new OverlayBinder();
@@ -557,6 +507,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 boolean requestAlreadyPresent = findCardById(searchRequestId);
                 if (sheetArrayList.size() >= 3 || requestAlreadyPresent || isClearedReq ){
                     if (isClearedReq) MyFirebaseMessagingService.clearedRideRequest.remove(searchRequestId);
+                    String event = "ride_ignored_while_adding_to_list";
+                    RideRequestUtils.addRideReceivedEvent(null, rideRequestBundle,null, event, this);
+                    if (sheetArrayList.size() >= 3) event = "ride_ignored_list_full"; else if (requestAlreadyPresent) event = "ride_ignored_already_present"; else if (isClearedReq) event = "ride_ignored_already_cleared";
+                    firebaseLogEvent(event);
                     return;
                 }
                 if (progressDialog == null || apiLoader == null) {
@@ -635,10 +589,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
                     updateIndicators();
                     updateProgressBars(false);
+                    RideRequestUtils.addRideReceivedEvent(null,rideRequestBundle,null,"ride_request_popped", this);
                 });
             }), (rideRequestBundle.getInt("keepHiddenForSeconds", 0) * 1000L));
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "add_to_list", e.toString());
+            firebaseLogEventWithParams("exception_in_add_to_list", "add_to_list", String.valueOf(e));
             e.printStackTrace();
         }
     }
@@ -657,35 +612,6 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
 
     @SuppressLint("InflateParams")
     private void showOverLayPopup(Bundle rideRequestBundle) {
-        String merchantId = getResources().getString(R.string.merchant_id);
-        try{
-            if (remoteConfigs.hasKey("enable_clevertap_events")){
-                JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_clevertap_events"));
-                if (clevertapConfig.has(merchantId)){
-                    enableCleverTapEvents = clevertapConfig.getBoolean(merchantId);
-                }
-            }
-            if (enableCleverTapEvents) {
-                CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(getApplicationContext());
-                HashMap<String, Object> cleverTapParams = new HashMap<>();
-                cleverTapParams.put("searchRequestId", rideRequestBundle.getString("searchRequestId"));
-                cleverTapParams.put("rideRequestPopupDelayDuration", rideRequestBundle.getInt("rideRequestPopupDelayDuration"));
-                cleverTapParams.put("keepHiddenForSeconds", rideRequestBundle.getInt("keepHiddenForSeconds", 0));
-                cleverTapParams.put("requestedVehicleVariant", rideRequestBundle.getString("requestedVehicleVariant"));
-                cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-                    String formattedDateTime = utcDateTime.format(formatter);
-                    long millisecondsSinceEpoch = Instant.now().toEpochMilli();
-                    cleverTapParams.put("timeStampString", formattedDateTime);
-                    cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
-                }
-                clevertapDefaultInstance.pushEvent("overlay_is_popped_up", cleverTapParams);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         if (!Settings.canDrawOverlays(getApplicationContext())) return;
         windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         int layoutParamsType;
@@ -732,6 +658,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         windowManager.addView(floatyView, params);
         setIndicatorClickListener();
         firebaseLogEvent("Overlay_is_popped_up");
+        RideRequestUtils.addRideReceivedEvent(null, rideRequestBundle,null,"overlay_is_popped_up", this);
     }
 
     private void startTimer() {
@@ -835,7 +762,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             handler.post(() -> Toast.makeText(getApplicationContext(), "Request Timeout", Toast.LENGTH_SHORT).show());
             return false;
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "driver_respond_api", e.toString());
+            firebaseLogEventWithParams("exception_in_driver_respond_api", "driver_respond_api", String.valueOf(e));
             return false;
         }
     }
@@ -908,7 +835,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 }
             }.start();
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "start_loader", e.toString());
+            firebaseLogEventWithParams("exception_in_start_loader", "start_loader", String.valueOf(e));
             cleanUp();
             e.printStackTrace();
         }
@@ -966,7 +893,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 windowManager.addView(apiLoader, params);
             }
         } catch (Exception e) {
-            firebaseLogEventWithParams("exception", "start_api_loader", e.toString());
+            firebaseLogEventWithParams("exception_in_start_api_loader", "start_api_loader", String.valueOf(e));
             e.printStackTrace();
         }
     }
@@ -979,7 +906,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             try{
                 audio.setStreamVolume(AudioManager.STREAM_MUSIC, (int) (maxVolume * 0.9), AudioManager.ADJUST_SAME);
             }catch (Exception e){
-                RideRequestUtils.firebaseLogEventWithParams("exception", "increase_volume", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+                RideRequestUtils.firebaseLogEventWithParams("exception_in_increase_volume", "increase_volume", String.valueOf(e), this);
             }
         }
     }

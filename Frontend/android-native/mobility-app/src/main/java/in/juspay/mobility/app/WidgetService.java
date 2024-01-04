@@ -111,6 +111,7 @@ public class WidgetService extends Service {
 
     private void showSilentNotification(Intent intent) {
         if(widgetView == null) return;
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
         try {
             // Fetch TextView for fare and distanceToPickup
             TextView fareTextView = widgetView.findViewById(R.id.ride_fare);
@@ -262,12 +263,13 @@ public class WidgetService extends Service {
                     handler.removeCallbacksAndMessages(null);
                     calculatedTime = 0;
                 });
-                mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
                 mFirebaseAnalytics.logEvent("ny_silent_ride_request", params);
+                RideRequestUtils.addRideReceivedEvent(entity_payload,null,null,"silent_ride_request_popped", this);
             }
         } catch (Exception e) {
             e.printStackTrace();
             calculatedTime = 0;
+            if (mFirebaseAnalytics!=null) mFirebaseAnalytics.logEvent("exception_ny_silent_ride_request", params);
         }
     }
 
@@ -401,12 +403,12 @@ public class WidgetService extends Service {
         imageClose = new ImageView(this);
         try {
             imageClose.setImageResource(R.drawable.ny_ic_close_transparent);
+            imageClose.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.widget_close_gradient, null));
         } catch (Exception e) {
             Log.e("Exception in rendering Image", e.toString());
         }
         imageClose.setPadding(0, 0, 0, (int) (10 * scale + 0.5f));
         imageClose.setVisibility(View.INVISIBLE);
-        imageClose.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.widget_close_gradient, null));
         windowManager.addView(imageClose, closeImageParams);
         windowManager.addView(widgetView, widgetLayoutParams);
         widgetView.setVisibility(View.VISIBLE);

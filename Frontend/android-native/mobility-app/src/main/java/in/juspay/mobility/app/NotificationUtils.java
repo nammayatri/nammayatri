@@ -97,8 +97,6 @@ public class NotificationUtils {
     public static int notificationId = rand.nextInt(1000000);
     public static MediaPlayer mediaPlayer;
     public static Bundle lastRideReq = new Bundle();
-    private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
-    private static Boolean enableCleverTapEvents;
     private static final ArrayList<CallBack> callBack = new ArrayList<>();
 
     public static void registerCallback(CallBack notificationCallback) {
@@ -123,41 +121,12 @@ public class NotificationUtils {
             }
             SharedPreferences sharedPref = context.getSharedPreferences(
                     context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("In_if_in_notification before");
                 Bundle params = new Bundle();
                 mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                 mFirebaseAnalytics.logEvent("ride_request_received", params);
-                String merchantId = context.getResources().getString(R.string.merchant_id);
-                try{
-                    if (remoteConfigs.hasKey("enable_clevertap_events")){
-                        JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_clevertap_events"));
-                        if (clevertapConfig.has(merchantId)){
-                            enableCleverTapEvents = clevertapConfig.getBoolean(merchantId);
-                        }
-                    }
-                    if (enableCleverTapEvents) {
-                        HashMap<String, Object> cleverTapParams = new HashMap<>();
-                        cleverTapParams.put("searchRequestId", entity_payload.getString("searchRequestId"));
-                        cleverTapParams.put("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
-                        cleverTapParams.put("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
-                        cleverTapParams.put("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
-                        cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                            LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
-                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-                            String formattedDateTime = utcDateTime.format(formatter);
-                            long millisecondsSinceEpoch = Instant.now().toEpochMilli();
-                            cleverTapParams.put("timeStampString", formattedDateTime);
-                            cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
-                        }
-                        clevertapDefaultInstance.pushEvent("ride_request_received", cleverTapParams);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
+                RideRequestUtils.addRideReceivedEvent(entity_payload,null,null, "ride_request_received", context );
                 //Recieved Notification && checking for permission if overlay permission is given, if not then it will redirect to give permission
 
                 Intent svcT = new Intent(context, OverlaySheetService.class);
@@ -291,27 +260,7 @@ public class NotificationUtils {
                     overlayParams.putString("driver_id", sharedPref.getString("DRIVER_ID", "null"));
                     mFirebaseAnalytics = FirebaseAnalytics.getInstance(context);
                     mFirebaseAnalytics.logEvent("overlay_popup_expired", overlayParams);
-                    try {
-                        if (enableCleverTapEvents) {
-                            HashMap<String, Object> cleverTapParams = new HashMap<>();
-                            cleverTapParams.put("searchRequestId", entity_payload.getString("searchRequestId"));
-                            cleverTapParams.put("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
-                            cleverTapParams.put("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
-                            cleverTapParams.put("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
-                            cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                                LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
-                                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-                                String formattedDateTime = utcDateTime.format(formatter);
-                                long millisecondsSinceEpoch = Instant.now().toEpochMilli();
-                                cleverTapParams.put("timeStampString", formattedDateTime);
-                                cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
-                            }
-                            clevertapDefaultInstance.pushEvent("overlay_popup_expired", cleverTapParams);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                    RideRequestUtils.addRideReceivedEvent(entity_payload, null,null,"overlay_popup_expired", context);
                 }
                 notificationId++;
                 for(Iterator<Map.Entry<String, Long>> iterator = MyFirebaseMessagingService.clearedRideRequest.entrySet().iterator(); iterator.hasNext(); ) {
@@ -324,7 +273,7 @@ public class NotificationUtils {
             handleClearedReq(context, notificationType, data);
         } catch (Exception e) {
             e.printStackTrace();
-
+            if (mFirebaseAnalytics!=null) mFirebaseAnalytics.logEvent("exception_in_showAllocationNotification", new Bundle());
         }
     }
 

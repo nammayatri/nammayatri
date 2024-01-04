@@ -183,7 +183,7 @@ public class OverlayMessagingService extends Service {
             try {
                 setDataToMediaView(data);
             } catch (Exception e){
-                RideRequestUtils.firebaseLogEventWithParams("exception", "CONSTRUCT_MEDIA_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+                RideRequestUtils.firebaseLogEventWithParams("exception_in_construct_media_view", "CONSTRUCT_MEDIA_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
             }
             Boolean showContactSupport = supportPhoneNumber != null;
             if (showContactSupport) {
@@ -194,7 +194,7 @@ public class OverlayMessagingService extends Service {
             }
 
         } catch (Exception e) {
-            RideRequestUtils.firebaseLogEventWithParams("exception", "CONSTRUCT_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+            RideRequestUtils.firebaseLogEventWithParams("exception_construct_view", "CONSTRUCT_VIEW", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
             stopSelf();
         }
     }
@@ -361,9 +361,9 @@ public class OverlayMessagingService extends Service {
             } catch (ActivityNotFoundException e) {
                 String message = this.getResources().getString(Utils.getResIdentifier(getApplicationContext(), "no_enabled_browser", "string"));
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show();
-                RideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", "ActivityNotFoundException", this);
+                RideRequestUtils.firebaseLogEventWithParams("exception_in_open_link_no_activity", "OPEN_LINK", "ActivityNotFoundException", this);
             } catch (Exception e) {
-                RideRequestUtils.firebaseLogEventWithParams("exception", "OPEN_LINK", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
+                RideRequestUtils.firebaseLogEventWithParams("exception_in_open_link", "OPEN_LINK", Objects.requireNonNull(e.getMessage()).substring(0, 40), this);
             }
         }
     }
