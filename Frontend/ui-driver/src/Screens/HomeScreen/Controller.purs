@@ -952,7 +952,7 @@ eval (PaymentStatusAction status) state =
   
 eval (RideCompletedAC (RideCompletedCard.UpiQrRendered id)) state = do
   continueWithCmd state [ do
-                    runEffectFn4 generateQR ("upi://pay?pa=" <> state.data.endRideData.payerVpa) id 200 0
+                    runEffectFn4 generateQR ("upi://pay?pa=" <> state.data.endRideData.payerVpa <> "&am=" <> (show $ state.data.endRideData.finalAmount)) id 200 0
                     pure $ NoAction
                 ]
 

@@ -2,11 +2,12 @@ module Components.RideCompletedCard.View where
 
 import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..))
 
-import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom)
+import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY)
 import Components.Banner.View as Banner
 import Components.Banner as BannerConfig
 import Data.Functor (map)
 import PrestoDOM.Animation as PrestoAnim
+import Animation (fadeIn,fadeInWithDelay) as Anim
 import Effect (Effect)
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=))
 import Common.Styles.Colors as Color
@@ -387,6 +388,7 @@ driverSideBottomCardsView config push =
   scrollView[
     width MATCH_PARENT
   , height MATCH_PARENT
+  , scrollBarY false 
   ][
     linearLayout[
       height WRAP_CONTENT
@@ -471,12 +473,12 @@ driverUpiQrCodeView config push =
         ] <> FontStyle.body2 TypoGraphy
       ]
       ]
-      , imageView [
+      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ] $ imageView [
           height $ V 165
         , width $ V 165
         , margin $ MarginVertical 8 13
         , id $ getNewIDWithTag config.driverUpiQrCard.id
-        , afterRender push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
+        , onAnimationEnd push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
       ]
     ]
 
