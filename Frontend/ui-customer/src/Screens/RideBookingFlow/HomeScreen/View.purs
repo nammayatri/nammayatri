@@ -2557,11 +2557,12 @@ homeScreenView push state =
                         , background Color.white900
                         , margin $ MarginTop 35 
                         , padding $ PaddingTop 30 
-                        , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
+                        , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.grey700]) else (Linear 180.0 [Color.white900 , Color.grey700])
+                        -- , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
                         ][ scrollView
                           [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
                           , width MATCH_PARENT
-                          , padding $ PaddingBottom 70
+                          -- , padding $ PaddingBottom 1
                           , nestedScrollView true
                           ][ linearLayout
                               [ width $ V (screenWidth unit)
@@ -2592,7 +2593,6 @@ footerView push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.grey700]) else (Linear 180.0 [Color.white900 , Color.grey700])
     , padding $ Padding 24 24 24 30
     , gravity CENTER
     ][
@@ -2611,12 +2611,12 @@ footerView push state =
         , fontStyle $ FontStyle.bold TypoGraphy
         ] 
 
-      , linearLayout
-        [ height $ V 2
-        , width MATCH_PARENT
-        , background Color.grey800
-        , margin $ MarginVertical 24 24
-        ][]
+      -- , linearLayout
+      --   [ height $ V 2
+      --   , width MATCH_PARENT
+      --   , background Color.grey800
+      --   , margin $ MarginVertical 24 24
+      --   ][]
       , linearLayout  
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -2979,7 +2979,7 @@ suggestionsView push state =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , padding $ Padding 0 0 0 16
-    , margin $ Margin 8 16 8 0
+    , margin $ Margin 8 8 8 0
     ][ textView $
         [ height WRAP_CONTENT
         , width (MATCH_PARENT)
