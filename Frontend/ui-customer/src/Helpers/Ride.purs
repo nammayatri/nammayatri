@@ -102,7 +102,7 @@ checkRideStatus rideAssigned = do
                 pure unit
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
-        rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
+        rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED"
         case rideBookingListResponse of
           Right (RideBookingListRes listResp) -> do
             let (RideBookingRes resp) = fromMaybe HSD.dummyRideBooking $ head listResp.list
@@ -122,7 +122,7 @@ checkRideStatus rideAssigned = do
               pure unit
               else pure unit
             when (isNothing currRideListItem.rideRating) $ do
-              when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
+              when (length listResp.list > 0) $ do
                 let nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
