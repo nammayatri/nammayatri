@@ -22,4 +22,10 @@ data Provider = Provider
   { id :: Text,
     descriptor :: Maybe Descriptor
   }
-  deriving (Generic, Show, ToSchema, ToJSON, FromJSON)
+  deriving (Generic, Show, ToSchema)
+
+instance ToJSON Location where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON Location where
+  parseJSON = genericParseJSON removeNullFields

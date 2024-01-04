@@ -30,7 +30,13 @@ data Location = Location
     address :: Maybe Address,
     descriptor :: Maybe Descriptor
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show)
 
 instance ToSchema Location where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+instance ToJSON Location where
+  toJSON = genericToJSON removeNullFields
+
+instance FromJSON Location where
+  parseJSON = genericParseJSON removeNullFields
