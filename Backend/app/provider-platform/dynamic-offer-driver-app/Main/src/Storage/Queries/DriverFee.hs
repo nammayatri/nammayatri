@@ -172,7 +172,7 @@ findWindowsWithFeeTypeAndLimit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
 findWindowsWithFeeTypeAndLimit merchantId from to feeType limit =
   findAllWithOptionsKV
     [ Se.And
-        [ Se.Is BeamDF.endTime $ Se.GreaterThanOrEq from,
+        [ Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
           Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
           Se.Is BeamDF.feeType $ Se.Eq feeType,
           Se.Is BeamDF.merchantId $ Se.Eq merchantId.getId,
@@ -404,8 +404,9 @@ updateDriverFeeOverlayScheduled driverIds val from to =
     ]
     [ Se.And
         [ Se.Is BeamDF.driverId $ Se.In (getId <$> driverIds),
-          Se.Is BeamDF.endTime $ Se.GreaterThanOrEq from,
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq to
+          Se.Is BeamDF.startTime $ Se.GreaterThanOrEq from,
+          Se.Is BeamDF.endTime $ Se.LessThanOrEq to,
+          Se.Is BeamDF.feeType $ Se.Not $ Se.Eq Domain.MANDATE_REGISTRATION
         ]
     ]
 
