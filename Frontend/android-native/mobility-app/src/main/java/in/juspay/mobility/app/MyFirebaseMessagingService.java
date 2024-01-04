@@ -49,6 +49,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -210,8 +211,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             break;
 
                         case NotificationTypes.NEW_RIDE_AVAILABLE:
+                            RideRequestUtils.addRideReceivedEvent(entity_payload,null,null,"ride_request_fcm_received", this);
                             if(sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
                                 if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))  showRR(entity_payload, payload);
+                                else {
+                                    RideRequestUtils.addRideReceivedEvent(entity_payload, null,null, "ride_request_ignored", this);
+                                    firebaseLogEventWithParams("ride_ignored", "payload", entity_payload.toString());
+                                }
                             }else showRR(entity_payload, payload);
                             break;
 
@@ -538,7 +544,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             try {
                 getApplicationContext().startActivity(intent);
             } catch (Exception e) {
-                firebaseLogEventWithParams("exception", "startMainActivity", e.toString());
+                firebaseLogEventWithParams("exception_in_startMainActivity", "startMainActivity", String.valueOf(e));
             }
         }
     }
