@@ -282,6 +282,7 @@
       "ny_ic_download_button" : true,
       "ny_ic_driver_avatar" : true,
       "ny_ic_driver_gender_banner" : true,
+      "ny_ic_driver_leaderboard" : true,
       "ny_ic_driver_license_card" : true,
       "ny_ic_driver_location_undetectable" : true,
       "ny_ic_driver_offer" : true,

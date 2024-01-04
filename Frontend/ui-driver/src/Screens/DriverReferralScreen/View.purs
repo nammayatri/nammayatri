@@ -232,7 +232,7 @@ rideLeaderBoard push state =
         ][ imageView
             [ width $ V 97
             , height $ V 97
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_driver_leaderboard"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_driver_leaderboard"
             ]
           , linearLayout
             [weight 1.0][]
