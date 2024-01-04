@@ -18,6 +18,7 @@ import Control.Monad
 import Data.Aeson hiding (Success)
 import qualified Data.HashMap as HM
 import Data.Time hiding (getCurrentTime)
+import Data.Time.Calendar ()
 import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import Domain.Action.UI.Ride.EndRide.Internal as RideEndInt
 import qualified Domain.Types.Merchant as DM
@@ -106,6 +107,12 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
       return $ LeaderBoardRes (currDriverInfo : drivers') (Just now)
     else return $ LeaderBoardRes drivers' (Just now)
 
+getYearFromDay :: Day -> Integer
+getYearFromDay day = let (year, _, _) = toGregorian day in year
+
+getLastDayOfYear :: Integer -> Day
+getLastDayOfYear year = fromGregorian year 12 31
+
 getWeeklyDriverLeaderBoard ::
   (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, Redis.HedisFlow m r, CacheFlow m r) =>
   (Id Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -117,7 +124,8 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
   let currentDate = RideEndInt.getCurrentDate now
   let (currWeekNumber, _) = sundayStartWeek currentDate
   let (reqWeekNumber, reqDayIndex) = sundayStartWeek fromDate
-  let weekDiff = currWeekNumber - reqWeekNumber
+  let (lastWeekOfYear, _) = sundayStartWeek $ getLastDayOfYear $ getYearFromDay fromDate
+  let weekDiff = (currWeekNumber - reqWeekNumber + lastWeekOfYear) `mod` lastWeekOfYear
   weeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless weeklyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   let numberOfSets = weeklyLeaderBoardConfig.numberOfSets
