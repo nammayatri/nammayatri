@@ -16,7 +16,7 @@ imports:
   Fulfillment: BecknV2.OnDemand.Types
   Customer: BecknV2.OnDemand.Types
   Person: BecknV2.OnDemand.Types
-  mkStops: Beckn.OnDemand.Utils.Search
+  mkStops: Beckn.OnDemand.Utils.Common
   mkRouteInfoTags: Beckn.OnDemand.Utils.Search
   mkCustomerInfoTags: Beckn.OnDemand.Utils.Search
   Domain: Kernel.Types.Beckn.Context
@@ -26,10 +26,7 @@ imports:
   Context: BecknV2.OnDemand.Types
   Bool: Kernel.Prelude
   showBaseUrl: Kernel.Prelude
-  mkBapUri: Beckn.OnDemand.Utils.Common
-  contextSearchAction: Beckn.OnDemand.Utils.Common
-  contextMobilityDomain: Beckn.OnDemand.Utils.Common
-  buildContextLocation: Beckn.OnDemand.Utils.Common
+  buildContextV2: Beckn.OnDemand.Utils.Common
   getCurrentTime: Kernel.Types.Time
   fromText: Data.UUID
   SearchReq: BecknV2.OnDemand.Types
@@ -39,10 +36,11 @@ module: Search
 transformer:
   monads:
   - MonadFlow m
-  - "HasFlowEnv m r '[\"nwAddress\" ::: BaseUrl]"
   transformers:
     buildBecknSearchReqV2:
       params:
+        - action: Action
+        - domain: Domain
         - origin: SearchReqLocation
         - destination: SearchReqLocation
         - searchId : Id SearchRequest
@@ -51,39 +49,13 @@ transformer:
         - customerLanguage: Maybe Language
         - disabilityTag: Maybe Text
         - merchant: Merchant
+        - bapUri: BaseUrl
         - mbPoints: Maybe [LatLong]
         - mbPhoneNumber: Maybe Text
       toType: SearchReq
       mapping:
-        searchReqContext: /~buildContextV2 searchId.getId (Just searchId.getId) merchant.bapId merchant.id Nothing Nothing merchant.defaultCity merchant.country
+        searchReqContext: /~_buildContextV2 action domain searchId.getId (Just searchId.getId) merchant.bapId bapUri Nothing Nothing merchant.defaultCity merchant.country
         searchReqMessage: /~buildSearchMessageV2 origin destination distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber
-
-    buildContextV2:
-      params:
-        - messageId: Text
-        - transactionId: Maybe Text
-        - bapId: Text
-        - merchantId: Id Merchant
-        - bppId: Maybe Text
-        - bppUri: Maybe BaseUrl
-        - city: City
-        - country: Country
-        # - autoAssignEnabled: Bool
-      toType: Context
-      mapping:
-        contextAction: ~_contextSearchAction
-        contextBapId: Just bapId
-        contextBapUri: /~_mkBapUri merchantId
-        contextBppId: bppId
-        contextBppUri: ~_showBaseUrl <$> bppUri
-        contextDomain: ~_contextMobilityDomain
-        contextKey: Nothing
-        contextLocation: ~_buildContextLocation city country
-        contextMessageId: ~_fromText messageId
-        contextTimestamp: /~_getCurrentTime <&> Just
-        contextTransactionId: ~_fromText =<< transactionId
-        contextTtl: Nothing
-        contextVersion: Just "2.0.0"
 
     buildSearchMessageV2:
       params:

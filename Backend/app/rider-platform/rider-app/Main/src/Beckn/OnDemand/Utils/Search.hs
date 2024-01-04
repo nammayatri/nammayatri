@@ -15,15 +15,11 @@
 module Beckn.OnDemand.Utils.Search where
 
 import qualified BecknV2.OnDemand.Types as Spec
-import Data.Aeson (encode)
--- import Data.Aeson.Text (encodeToTextBuilder)
+import qualified Data.Aeson as A
 import qualified Data.List as List
 import qualified Data.Text.Lazy as LT
--- import qualified Data.Text.Lazy.Builder as TB
 import qualified Data.Text.Lazy.Encoding as TE
-import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
 import qualified Tools.Maps as Maps
 
@@ -90,7 +86,7 @@ mkRouteInfoTags distance duration mbPoints =
                       descriptorShortDesc = Nothing
                     },
               tagDisplay = Just False,
-              tagValue = (Just . LT.toStrict . TE.decodeUtf8 . encode) =<< mbPoints
+              tagValue = (Just . LT.toStrict . TE.decodeUtf8 . A.encode) =<< mbPoints
             }
 
 mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Maybe Text -> Maybe [Spec.TagGroup]
@@ -141,7 +137,7 @@ mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
                       descriptorShortDesc = Nothing
                     },
               tagDisplay = Just False,
-              tagValue = (Just . show) =<< disabilityTag
+              tagValue = (A.decode . A.encode) =<< disabilityTag
             }
     mbPhoneNumberSingleton
       | isNothing mbPhoneNumber = []
@@ -156,43 +152,5 @@ mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
                       descriptorShortDesc = Nothing
                     },
               tagDisplay = Just False,
-              tagValue = (Just . show) =<< mbPhoneNumber
+              tagValue = (A.decode . A.encode) =<< mbPhoneNumber
             }
-
-mkStops :: DSearchCommon.SearchReqLocation -> DSearchCommon.SearchReqLocation -> Maybe [Spec.Stop]
-mkStops origin destination =
-  let originGps = Gps.Gps {lat = origin.gps.lat, lon = origin.gps.lon}
-      destinationGps = Gps.Gps {lat = destination.gps.lat, lon = destination.gps.lon}
-   in Just
-        [ Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = origin.address.building, -- JAYPAL, Confirm if it is correct to put it here
-                      locationAreaCode = origin.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing origin.address.city,
-                      locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                      locationGps = Just $ gpsToText originGps,
-                      locationState = Just $ Spec.State origin.address.state,
-                      locationId = Nothing -- JAYPAL, Not sure what to keep here
-                    },
-              stopType = Just "START"
-            },
-          Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = origin.address.building, -- JAYPAL, Confirm if it is correct to put it here
-                      locationAreaCode = destination.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing destination.address.city,
-                      locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                      locationGps = Just $ gpsToText destinationGps,
-                      locationState = Just $ Spec.State destination.address.state,
-                      locationId = Nothing -- JAYPAL, Not sure what to keep here
-                    },
-              stopType = Just "END"
-            }
-        ]
-
-gpsToText :: Gps.Gps -> Text -- JAYPAL, Confirm if this is the correct way to encode GPS.
-gpsToText gps = show gps.lat <> ", " <> show gps.lon

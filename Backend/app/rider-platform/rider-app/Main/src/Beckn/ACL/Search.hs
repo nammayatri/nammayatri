@@ -22,6 +22,7 @@ where
 
 import Beckn.ACL.Common (mkLocation)
 import qualified Beckn.OnDemand.Transformer.Search as Search
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
@@ -69,7 +70,10 @@ buildOneWaySearchReqV2 ::
   DOneWaySearch.OneWaySearchRes ->
   m Spec.SearchReq
 buildOneWaySearchReqV2 DOneWaySearch.OneWaySearchRes {..} = do
+  bapUri <- Utils.mkBapUri merchant.id
   Search.buildBecknSearchReqV2
+    Context.SEARCH
+    Context.MOBILITY
     origin
     destination
     searchId
@@ -78,6 +82,7 @@ buildOneWaySearchReqV2 DOneWaySearch.OneWaySearchRes {..} = do
     customerLanguage
     disabilityTag
     merchant
+    bapUri
     (getPoints shortestRouteInfo)
     phoneNumber
   where
