@@ -125,6 +125,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
+import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -363,7 +364,7 @@ enableDriver merchantShortId opCity reqDriverId = do
   when (isNothing mVehicle && null linkedRCs) $
     throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs are linked to them")
 
-  QDriverInfo.updateEnabledState driverId True
+  enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False
   logTagInfo "dashboard -> enableDriver : " (show personId)
   fork "sending dashboard sms - onboarding" $ do
     Sms.sendDashboardSms merchant.id merchantOpCityId Sms.ONBOARDING Nothing personId Nothing 0
@@ -383,7 +384,7 @@ disableDriver merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  QDriverInfo.updateEnabledState driverId False
+  QDriverInfo.updateEnabledVerifiedState driverId False Nothing
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -693,7 +694,7 @@ unlinkVehicle merchantShortId opCity reqDriverId = do
 
   DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
-  QDriverInfo.updateEnabledVerifiedState driverId False False
+  QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -964,7 +965,7 @@ fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId vehicleNo = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
-  QDriverInfo.updateEnabledVerifiedState driverId False False
+  QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
   rc <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (RCNotFound vehicleNo)
   _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo "fleet -> unlinkVehicle : " (show personId)
@@ -1101,7 +1102,7 @@ unlinkDL merchantShortId opCity driverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   QDriverLicense.deleteByDriverId personId
-  QDriverInfo.updateEnabledVerifiedState driverId_ False False
+  QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success
 
@@ -1118,7 +1119,7 @@ unlinkAadhaar merchantShortId opCity driverId = do
 
   AV.deleteByDriverId personId
   QDriverInfo.updateAadhaarVerifiedState driverId_ False
-  unless (transporterConfig.aadhaarVerificationRequired) $ QDriverInfo.updateEnabledVerifiedState driverId_ False False
+  unless (transporterConfig.aadhaarVerificationRequired) $ QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
 
@@ -1145,7 +1146,7 @@ endRCAssociation merchantShortId opCity reqDriverId = do
       void $ DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
-  QDriverInfo.updateEnabledVerifiedState driverId False False
+  QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
 

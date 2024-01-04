@@ -30,6 +30,7 @@ data MessageT f = MessageT
     label :: B.C f (Maybe Text),
     likeCount :: B.C f Int,
     viewCount :: B.C f Int,
+    alwaysTriggerOnOnboarding :: B.C f (Maybe Bool),
     mediaFiles :: B.C f [Text],
     merchantId :: B.C f Text,
     merchantOperatingCityId :: B.C f (Maybe Text),

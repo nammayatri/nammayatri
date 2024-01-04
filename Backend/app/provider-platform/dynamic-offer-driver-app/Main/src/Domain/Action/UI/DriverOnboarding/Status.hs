@@ -36,6 +36,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error
+import SharedLogic.DriverOnboarding (enableAndTriggerOnboardingAlertsAndMessages)
 import Storage.CachedQueries.Merchant.TransporterConfig
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as SAV
@@ -72,7 +73,7 @@ statusHandler (personId, merchantId, merchantOpCityId) multipleRC = do
     activateRCAutomatically personId merchantId merchantOpCityId mRC
 
   when (dlStatus == VALID && rcStatus == VALID && (aadhaarStatus == VALID || not transporterConfig.aadhaarVerificationRequired)) $ do
-    enableDriver personId mDL
+    enableDriver merchantOpCityId personId mDL
   return $ StatusRes {dlVerificationStatus = dlStatus, rcVerificationStatus = rcStatus, aadhaarVerificationStatus = aadhaarStatus}
 
 getAadhaarStatus :: Id SP.Person -> Flow (ResponseStatus, Maybe AV.AadhaarVerification)
@@ -145,12 +146,12 @@ verificationStatus onboardingTryLimit imagesNum verificationReq =
         then LIMIT_EXCEED
         else NO_DOC_AVAILABLE
 
-enableDriver :: Id SP.Person -> Maybe DL.DriverLicense -> Flow ()
-enableDriver _ Nothing = return ()
-enableDriver personId (Just dl) = do
+enableDriver :: Id DMOC.MerchantOperatingCity -> Id SP.Person -> Maybe DL.DriverLicense -> Flow ()
+enableDriver _ _ Nothing = return ()
+enableDriver merchantOpCityId personId (Just dl) = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   unless driverInfo.enabled $ do
-    DIQuery.verifyAndEnableDriver personId
+    enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId True
     whenJust dl.driverName $ \name -> Person.updateName personId name
 
 activateRCAutomatically :: Id SP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe RC.VehicleRegistrationCertificate -> Flow ()

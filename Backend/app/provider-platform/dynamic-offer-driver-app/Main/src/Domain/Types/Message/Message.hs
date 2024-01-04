@@ -42,6 +42,7 @@ data Message = Message
     viewCount :: Int,
     mediaFiles :: [Id MF.MediaFile],
     messageTranslations :: [MessageTranslation],
+    alwaysTriggerOnOnboarding :: Bool,
     merchantId :: Id Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     createdAt :: UTCTime
@@ -65,6 +66,7 @@ data RawMessage = RawMessage
     label :: Maybe Text,
     likeCount :: Int,
     viewCount :: Int,
+    alwaysTriggerOnOnboarding :: Bool,
     mediaFiles :: [Id MF.MediaFile],
     merchantId :: Id Merchant,
     createdAt :: UTCTime
