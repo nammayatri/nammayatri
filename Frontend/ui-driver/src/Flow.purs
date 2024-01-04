@@ -403,6 +403,9 @@ handleDeepLinksFlow event activeRideResp = do
             "lang" -> do
               liftFlowBT hideSplash 
               selectLanguageFlow
+            "contest" -> do
+              liftFlowBT hideSplash
+              referralFlow
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
