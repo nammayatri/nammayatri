@@ -84,6 +84,7 @@ findByDriverIdAndLanguage driverId language mbLimit mbOffset = do
                 label = label,
                 likeCount = likeCount,
                 viewCount = viewCount,
+                alwaysTriggerOnOnboarding = alwaysTriggerOnOnboarding,
                 mediaFiles = mediaFiles,
                 merchantId = merchantId,
                 createdAt = createdAt

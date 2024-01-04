@@ -115,6 +115,7 @@ data AddMessageRequest = AddMessageRequest
     description :: Text, -- no max character limit
     shortDescription :: Text,
     label :: Maybe Text,
+    alwaysTriggerOnOnboarding :: Maybe Bool,
     translations :: [MessageTranslation],
     mediaFiles :: [Id File]
   }

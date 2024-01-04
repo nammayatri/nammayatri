@@ -30,16 +30,24 @@ module SharedLogic.MessageBuilder
     buildSendPaymentLink,
     BuildGenericMessageReq (..),
     buildGenericMessage,
+    addBroadcastMessageToKafka,
   )
 where
 
+import qualified Data.Map as M
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant.MerchantMessage as DMM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Message.Message as Message
+import qualified Domain.Types.Person as P
+import Environment
+import Kernel.Beam.Functions as B
 import Kernel.Prelude
+import Kernel.Streaming.Kafka.Producer
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.Queries.Message.MessageTranslation as MTQuery
 import Tools.Error
 
 templateText :: Text -> Text
@@ -172,3 +180,19 @@ buildGenericMessage merchantOpCityId messageKey _ = do
       & T.replace (templateText "var1") (fromMaybe "" jsonData.var1)
       & T.replace (templateText "var2") (fromMaybe "" jsonData.var2)
       & T.replace (templateText "var3") (fromMaybe "" jsonData.var3)
+
+addBroadcastMessageToKafka :: Message.RawMessage -> Id P.Person -> Flow ()
+addBroadcastMessageToKafka msg driverId = do
+  topicName <- asks (.broadcastMessageTopic)
+  msgDict <- createMessageLanguageDict msg
+  produceMessage
+    (topicName, Just (encodeUtf8 $ getId driverId))
+    msgDict
+  where
+    createMessageLanguageDict :: Message.RawMessage -> Flow Message.MessageDict
+    createMessageLanguageDict msg' = do
+      translations <- B.runInReplica $ MTQuery.findByMessageId msg'.id
+      pure $ Message.MessageDict msg' (M.fromList $ map (addTranslation msg') translations)
+
+    addTranslation Message.RawMessage {..} trans =
+      (show trans.language, Message.RawMessage {title = trans.title, description = trans.description, shortDescription = trans.shortDescription, label = trans.label, ..})

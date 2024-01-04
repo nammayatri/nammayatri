@@ -54,6 +54,7 @@ data MessageAPIEntityResponse = MessageAPIEntityResponse
     likeStatus :: Bool,
     likeCount :: Int,
     viewCount :: Int,
+    alwaysTriggerOnOnboarding :: Bool,
     messageId :: Id Domain.Message,
     mediaFiles :: [MediaFileApiResponse]
   }
@@ -85,6 +86,7 @@ messageList (driverId, _, _) mbLimit mbOffset = do
             likeStatus = messageReport.likeStatus,
             likeCount = rawMessage.likeCount,
             viewCount = rawMessage.viewCount,
+            alwaysTriggerOnOnboarding = rawMessage.alwaysTriggerOnOnboarding,
             messageId = rawMessage.id,
             mediaFiles = mediaFilesApiType
           }
@@ -109,6 +111,7 @@ getMessage (driverId, _, _) messageId = do
             likeStatus = messageReport.likeStatus,
             likeCount = rawMessage.likeCount,
             viewCount = rawMessage.viewCount,
+            alwaysTriggerOnOnboarding = rawMessage.alwaysTriggerOnOnboarding,
             messageId = rawMessage.id,
             mediaFiles = mediaFilesApiType
           }
