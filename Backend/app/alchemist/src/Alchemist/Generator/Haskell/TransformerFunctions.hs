@@ -49,7 +49,7 @@ generateTransformerFunctions input =
     makeImport x = "import qualified " <> x
 
     defaultImports :: [String]
-    defaultImports = ["EulerHS.Prelude hiding (id)"]
+    defaultImports = ["EulerHS.Prelude hiding (id)", "Kernel.Utils.Common (type (:::))"]
 
     defaultQualifiedImport :: [String]
     defaultQualifiedImport = ["Kernel.Prelude", "Kernel.Types.Id"] -- "Environment"
@@ -112,6 +112,10 @@ mkQualified importMap str =
 toQualified :: HM.HashMap Text Text -> Text -> Text
 toQualified _ "" = ""
 toQualified mp key
+  -- to handle HasFlowEnv m r '["something" ::: Type] types of monad
+  | "\'" `T.isPrefixOf` key = "\'" <> toQualified mp (T.tail key)
+  | "\"" `T.isPrefixOf` key && "\"" `T.isSuffixOf` key = key
+  | ":::" == key = key
   -- to handle list types.
   | "[" `T.isPrefixOf` key && "]" `T.isSuffixOf` key =
     let key' = fromMaybe key (T.stripPrefix "[" key)

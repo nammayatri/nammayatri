@@ -16,10 +16,10 @@ module Beckn.OnDemand.Utils.Search where
 
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Aeson (encode)
-import Data.Aeson.Text (encodeToTextBuilder)
+-- import Data.Aeson.Text (encodeToTextBuilder)
 import qualified Data.List as List
 import qualified Data.Text.Lazy as LT
-import qualified Data.Text.Lazy.Builder as TB
+-- import qualified Data.Text.Lazy.Builder as TB
 import qualified Data.Text.Lazy.Encoding as TE
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import EulerHS.Prelude hiding (id)
@@ -172,7 +172,7 @@ mkStops origin destination =
                       locationAreaCode = origin.address.areaCode,
                       locationCity = Just $ Spec.City Nothing origin.address.city,
                       locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                      locationGps = Just . LT.toStrict . TB.toLazyText . encodeToTextBuilder $ toJSON originGps, -- JAYPAL, proper encoding to json is not happening.
+                      locationGps = Just $ gpsToText originGps,
                       locationState = Just $ Spec.State origin.address.state,
                       locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
@@ -186,10 +186,13 @@ mkStops origin destination =
                       locationAreaCode = destination.address.areaCode,
                       locationCity = Just $ Spec.City Nothing destination.address.city,
                       locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                      locationGps = Just . LT.toStrict . TE.decodeUtf8 $ encode destinationGps, -- JAYPAL, proper encoding to json is not happening.
+                      locationGps = Just $ gpsToText destinationGps,
                       locationState = Just $ Spec.State destination.address.state,
                       locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
               stopType = Just "END"
             }
         ]
+
+gpsToText :: Gps.Gps -> Text -- JAYPAL, Confirm if this is the correct way to encode GPS.
+gpsToText gps = show gps.lat <> ", " <> show gps.lon

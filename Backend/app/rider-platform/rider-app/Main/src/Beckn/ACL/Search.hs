@@ -67,19 +67,17 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
 buildOneWaySearchReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOneWaySearch.OneWaySearchRes ->
-  m (BecknReq Spec.SearchReqMessage)
+  m Spec.SearchReq
 buildOneWaySearchReqV2 DOneWaySearch.OneWaySearchRes {..} = do
-  buildSearchReqV2
+  Search.buildBecknSearchReqV2
     origin
     destination
     searchId
-    device
     (shortestRouteInfo >>= (.distance))
     (shortestRouteInfo >>= (.duration))
     customerLanguage
     disabilityTag
     merchant
-    city
     (getPoints shortestRouteInfo)
     phoneNumber
   where
@@ -132,30 +130,30 @@ buildSearchReq origin destination searchId _ distance duration customerLanguage 
 
   pure $ BecknReq context searchMessage
 
-buildSearchReqV2 ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  DSearchCommon.SearchReqLocation ->
-  DSearchCommon.SearchReqLocation ->
-  Id DSearchReq.SearchRequest ->
-  Maybe Text ->
-  Maybe Meters ->
-  Maybe Seconds ->
-  Maybe Maps.Language ->
-  Maybe Text ->
-  DM.Merchant ->
-  Context.City ->
-  Maybe [Maps.LatLong] ->
-  Maybe Text ->
-  m (BecknReq Spec.SearchReqMessage)
-buildSearchReqV2 origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber = do
-  let transactionId = getId searchId
-      messageId = transactionId
-  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
-  -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
-  searchMessage <- Search.buildSearchReqV2 origin destination distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber
+-- buildSearchReqV2 ::
+--   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+--   DSearchCommon.SearchReqLocation ->
+--   DSearchCommon.SearchReqLocation ->
+--   Id DSearchReq.SearchRequest ->
+--   Maybe Text ->
+--   Maybe Meters ->
+--   Maybe Seconds ->
+--   Maybe Maps.Language ->
+--   Maybe Text ->
+--   DM.Merchant ->
+--   Context.City ->
+--   Maybe [Maps.LatLong] ->
+--   Maybe Text ->
+--   m (BecknReq Spec.SearchReqMessage)
+-- buildSearchReqV2 origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber = do
+--   let transactionId = getId searchId
+--       messageId = transactionId
+--   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
+--   -- TODO :: Add request city, after multiple city support on gateway.
+--   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
+--   searchMessage <- Search.buildSearchReqV2 origin destination distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber
 
-  pure $ BecknReq context searchMessage
+--   pure $ BecknReq context searchMessage
 
 mkIntent ::
   DSearchCommon.SearchReqLocation ->

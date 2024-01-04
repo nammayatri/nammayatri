@@ -54,6 +54,8 @@ module BecknV2.OnDemand.Types
     Tag (..),
     TagGroup (..),
     Vehicle (..),
+    -- searchAPIV2,
+    -- SearchRes
   )
 where
 
@@ -71,6 +73,18 @@ import Data.Time
 import Data.UUID (UUID)
 import GHC.Generics (Generic)
 import Prelude
+
+-- import Servant ((:>), JSON, Post, ReqBody, Proxy (..))
+
+-- type SearchRes = AckResponse
+
+-- type SearchAPI =
+--   "search"
+--     :> ReqBody '[JSON] SearchReq
+--     :> Post '[JSON] SearchRes
+
+-- searchAPIV2 :: Proxy SearchAPI
+-- searchAPIV2 = Proxy
 
 -- | Describes the acknowledgement sent in response to an API call. If the implementation uses HTTP/S, then Ack must be returned in the same session. Every API call to a BPP must be responded to with an Ack whether the BPP intends to respond with a callback or not. This has one property called &#x60;status&#x60; that indicates the status of the Acknowledgement.
 data Ack = Ack
