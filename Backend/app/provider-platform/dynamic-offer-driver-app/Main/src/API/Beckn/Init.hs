@@ -19,6 +19,7 @@ import qualified Beckn.ACL.OnInit as ACL
 import qualified Beckn.Core as CallBAP
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import Beckn.Types.Core.Taxi.API.OnInit as OnInit
+import qualified Data.Aeson as A
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -56,6 +57,8 @@ init transporterId (SignatureAuthResult _ subscriber) req =
       fork "init request processing" $ do
         Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
           dInitRes <- DInit.handler transporterId dInitReq validatedRes
+          let becknOnInitRespDebug = ACL.mkOnInitMessage dInitRes
+          logDebug $ "OTTL| CONTEXT|" <> (show $ A.encode context) <> "||MESSAGE|" <> (show $ A.encode becknOnInitRespDebug) <> "||ACTION|" <> (show $ A.encode Context.INIT)
           void . handle (errHandler dInitRes.booking) $
             CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri $
               pure $ ACL.mkOnInitMessage dInitRes

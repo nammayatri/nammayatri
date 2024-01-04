@@ -95,7 +95,7 @@ callOnSelect transporter searchRequest searchTry content = do
   bppUri <- buildBppUrl (transporter.id)
   let msgId = searchTry.estimateId.getId
   context <- buildContext Context.MOBILITY Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False
-  logDebug $ "on_select request bpp: " <> show content
+  logDebug $ "OTTL| on_select request bpp: MESSAGE|" <> (show $ A.encode content) <> "||CONTEXT|" <> (show $ A.encode context)
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnUpdate ::
@@ -118,6 +118,7 @@ callOnUpdate transporter bapId bapUri bapCity bapCountry transactionId content r
   bppUri <- buildBppUrl (transporter.id)
   msgId <- generateGUID
   context <- buildContext Context.MOBILITY Context.ON_UPDATE msgId (Just transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city bapCity) (fromMaybe Context.India bapCountry) False
+  logDebug $ "OTTL| on_update request bpp: MESSAGE|" <> (show $ A.encode content) <> "||CONTEXT|" <> (show $ A.encode context)
   void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 callOnConfirm ::
@@ -140,6 +141,7 @@ callOnConfirm transporter contextFromConfirm content = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl transporter.id
   context_ <- buildContext Context.MOBILITY Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
+  logDebug $ "OTTL| on_confirm request bpp: MESSAGE|" <> (show $ A.encode content) <> "||CONTEXT|" <> (show $ A.encode context_)
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPI bapUri . BecknCallbackReq context_ $ Right content
 
 buildBppUrl ::

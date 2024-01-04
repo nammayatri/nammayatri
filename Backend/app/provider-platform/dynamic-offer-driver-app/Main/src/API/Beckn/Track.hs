@@ -19,6 +19,7 @@ import qualified Beckn.ACL.Track as ACL
 import Beckn.Core (withCallback')
 import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
 import qualified Beckn.Types.Core.Taxi.API.Track as Track
+import qualified Data.Aeson as A
 import qualified Domain.Action.Beckn.Track as DTrack
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -49,6 +50,8 @@ track transporterId (SignatureAuthResult _ subscriber) req =
     dTrackReq <- ACL.buildTrackReq subscriber req
     let context = req.context
     dTrackRes <- DTrack.track transporterId dTrackReq
+    let becknOnTrackRespDebug = ACL.mkOnTrackMessage dTrackRes
+    logDebug $ "OTTL| CONTEXT|" <> (show $ A.encode context) <> "||MESSAGE|" <> (show $ A.encode becknOnTrackRespDebug) <> "||ACTION|" <> (show $ A.encode Context.TRACK)
     withCallback' withShortRetry dTrackRes.transporter Context.TRACK OnTrack.onTrackAPI context context.bap_uri $
       -- there should be DOnTrack.onTrack, but it is empty anyway
       pure $ ACL.mkOnTrackMessage dTrackRes

@@ -19,6 +19,7 @@ import qualified Beckn.ACL.Search as ACL
 import qualified Beckn.Core as CallBAP
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
+import qualified Data.Aeson as A
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -57,6 +58,8 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
           dSearchRes <- DSearch.handler merchant dSearchReq
           let context = req.context
           let callbackUrl = gateway.subscriber_url
+          let becknOnSearchRespDebug = ACL.mkOnSearchMessage dSearchRes
+          logDebug $ "OTTL| CONTEXT|" <> (show $ A.encode context) <> "||MESSAGE|" <> (show $ A.encode becknOnSearchRespDebug) <> "||ACTION|" <> (show $ A.encode Context.SEARCH)
           void $
             CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
               pure $ ACL.mkOnSearchMessage dSearchRes

@@ -19,6 +19,7 @@ import qualified Beckn.ACL.Status as ACL
 import qualified Beckn.Core as CallBAP
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
+import qualified Data.Aeson as A
 import qualified Domain.Action.Beckn.Status as DStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
@@ -51,6 +52,8 @@ status transporterId (SignatureAuthResult _ subscriber) req =
     dStatusRes <- DStatus.handler transporterId dStatusReq
 
     let context = req.context
+    let becknOnStatusRespDebug = ACL.mkOnStatusMessage dStatusRes
+    logDebug $ "OTTL| CONTEXT|" <> (show $ A.encode context) <> "||MESSAGE|" <> (show $ A.encode becknOnStatusRespDebug) <> "||ACTION|" <> (show $ A.encode Context.STATUS)
     void $
       CallBAP.withCallback dStatusRes.transporter Context.STATUS OnStatus.onStatusAPI context context.bap_uri $
         pure $ ACL.mkOnStatusMessage dStatusRes
