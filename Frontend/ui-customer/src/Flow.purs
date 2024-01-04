@@ -1471,7 +1471,7 @@ myRidesScreenFlow fromNavBar = do
     GO_TO_HELP_SCREEN -> helpAndSupportScreenFlow
     REPEAT_RIDE_FLOW state -> do
       let trip = getTripFromRideHistory state
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ rideHistoryTrip = Just trip}})
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ rideHistoryTrip = Just trip, settingSideBar{opened = SettingSideBarController.CLOSED}}})
       homeScreenFlow
 
 selectLanguageScreenFlow :: FlowBT String Unit

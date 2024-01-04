@@ -705,7 +705,7 @@ data ScreenOutput = LogoutUser
                   | SearchPlace String HomeScreenState
                   | UpdateLocationName HomeScreenState Number Number
                   | UpdatePickupName HomeScreenState Number Number
-                  | GoToHome 
+                  | GoToHome HomeScreenState
                   | GoToFavourites HomeScreenState
                   | SubmitRating HomeScreenState
                   | UpdatedSource HomeScreenState
@@ -1211,7 +1211,7 @@ eval BackPressed state = do
             pure $ terminateApp state.props.currentStage false
           else 
             pure unit
-          updateAndExit state{props{autoScroll = false, currentStage = HomeScreen, homeScreenSheetState = COLLAPSED, showShimmer = true, isSearchLocation = NoView}} $ GoToHome
+          updateAndExit state{props{autoScroll = false, currentStage = HomeScreen, homeScreenSheetState = COLLAPSED, showShimmer = true, isSearchLocation = NoView}} $ GoToHome state{data{tripSuggestions = state.data.tripSuggestions, destinationSuggestions = state.data.destinationSuggestions}}
     SettingPrice -> do
       _ <- pure $ performHapticFeedback unit
       void $ pure $ clearTimerWithId state.props.repeatRideTimerId
@@ -1528,7 +1528,7 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
                                         , exit_app : false
                                         }
                                         }
-              updateAndExit state GoToHome
+              updateAndExit state $ GoToHome state
 
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -2057,7 +2057,7 @@ eval (PickUpFarFromCurrentLocAC (PopUpModal.OnButton2Click)) state = do
 eval (PickUpFarFromCurrentLocAC (PopUpModal.OnButton1Click)) state = do 
   continueWithCmd state [ do pure $ ShortDistanceActionController (PopUpModal.OnButton1Click) ]
 
-eval (EstimateChangedPopUpController (PopUpModal.OnButton1Click)) state = exit GoToHome
+eval (EstimateChangedPopUpController (PopUpModal.OnButton1Click)) state = exit $ GoToHome state
 
 eval (EstimateChangedPopUpController (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ updateLocalStage FindingQuotes

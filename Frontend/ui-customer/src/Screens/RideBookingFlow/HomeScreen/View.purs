@@ -929,7 +929,7 @@ requestInfoCardView push state =
 
 buttonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 buttonLayout state push =
-  PrestoAnim.animationSet (buttonLayoutAnimation state)
+  PrestoAnim.animationSet (buttonLayoutAnimation FunctionCall)
   $ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -972,9 +972,12 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
   , padding $ Padding 16 0 16 (16+safeMarginBottom)
   , cornerRadii $ Corners (4.0) true true false false
   ]([ if (not hideSavedLocsView) then savedLocationsView state push else linearLayout[visibility GONE][]
-      , if state.props.showShimmer && null state.data.tripSuggestions then shimmerView state
-        else if suggestionViewVisibility state  then suggestionsView push state
-        else emptySuggestionsBanner state push
+      -- , if state.props.showShimmer && null state.data.tripSuggestions then shimmerView state
+      --   else if suggestionViewVisibility state  then suggestionsView push state
+      --   else emptySuggestionsBanner state push
+    , shimmerView state
+    , suggestionsView push state
+    , emptySuggestionsBanner state push
     -- , if (not hideRecentSearches) then recentSearchesView state push else linearLayout[visibility GONE][]
     -- , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
     --     then updateDisabilityBanner state push
@@ -1011,7 +1014,9 @@ emptySuggestionsBanner state push =
     , margin $ MarginVertical 10 10
     , background Color.white900
     , gravity CENTER_VERTICAL
-    , visibility if state.data.config.homeScreen.bannerViewVisibility then VISIBLE else GONE
+    , visibility $ boolToVisibility $ (not (suggestionViewVisibility state)) && not (state.props.showShimmer && null state.data.tripSuggestions) && state.data.config.homeScreen.bannerViewVisibility
+
+    -- , visibility  if state.data.config.homeScreen.bannerViewVisibility then VISIBLE else GONE
     ][ linearLayout
         [ height WRAP_CONTENT
           , width WRAP_CONTENT
@@ -1122,14 +1127,8 @@ recentSearchesView state push =
         )
     ]
 
-buttonLayoutAnimation :: HomeScreenState -> Array PrestoAnim.Animation
-buttonLayoutAnimation state = 
-  if state.props.showShimmer && os == "IOS" then 
-    [fadeIn true]
-  else if state.props.showShimmer then 
-    [translateYAnimFromTop $ translateYAnimHomeConfig BOTTOM_TOP, fadeOut state.props.showlocUnserviceablePopUp]
-  else 
-    []
+buttonLayoutAnimation :: LazyCheck -> Array PrestoAnim.Animation
+buttonLayoutAnimation lazyCheck = [fadeIn true]
 ------------- settingSideBarView ------------
 settingSideBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 settingSideBarView push state =
@@ -3700,8 +3699,8 @@ suggestionsView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , padding $ PaddingBottom 16
   , margin $ MarginTop 16
+  , visibility $ boolToVisibility $ suggestionViewVisibility state && not (state.props.showShimmer && null state.data.tripSuggestions)
   ]
   [ textView $
     [ height WRAP_CONTENT
@@ -3750,7 +3749,7 @@ shimmerView state =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , background Color.transparent
-    , visibility $ boolToVisibility state.props.showShimmer
+    , visibility $ boolToVisibility $ state.props.showShimmer && null state.data.tripSuggestions
     ] 
     [ linearLayout
         [ width MATCH_PARENT
@@ -3773,8 +3772,16 @@ shimmerView state =
             []
         , linearLayout
             [ width MATCH_PARENT
-            , height $ V 100
-            , margin $ Margin 16 16 16 0
+            , height $ V 80
+            , margin $ Margin 16 16 16 10
+            , cornerRadius 8.0
+            , background Color.greyDark
+            ]
+            []
+        , linearLayout
+            [ width MATCH_PARENT
+            , height $ V 80
+            , margin $ MarginHorizontal 16 16 
             , cornerRadius 8.0
             , background Color.greyDark
             ]
