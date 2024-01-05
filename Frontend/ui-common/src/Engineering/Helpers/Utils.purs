@@ -277,20 +277,20 @@ selectSingleCalendarDate date mbStartDate mbEndDate weeks = do
 
 cityCodeMap :: Array (Tuple String String)
 cityCodeMap = 
-  [ Tuple "std:080" "bangalore"
-  , Tuple "std:033" "kolkata"
-  , Tuple "std:001" "paris"
-  , Tuple "std:484" "kochi"
-  , Tuple "std:011" "delhi"
-  , Tuple "std:040" "hyderabad"
-  , Tuple "std:022" "mumbai"
-  , Tuple "std:044" "chennai"
-  , Tuple "std:0422" "coimbatore"
-  , Tuple "std:0413" "pondicherry"
-  , Tuple "std:08342" "goa"
-  , Tuple "std:020" "pune"
-  , Tuple "std:0821" "mysore"
-  , Tuple "std:0816" "tumakuru"
+  [ Tuple "std:080" "Bangalore"
+  , Tuple "std:033" "Kolkata"
+  , Tuple "std:001" "Paris"
+  , Tuple "std:484" "Kochi"
+  , Tuple "std:011" "Delhi"
+  , Tuple "std:040" "Hyderabad"
+  , Tuple "std:022" "Mumbai"
+  , Tuple "std:044" "Chennai"
+  , Tuple "std:0422" "Coimbatore"
+  , Tuple "std:0413" "Pondicherry"
+  , Tuple "std:08342" "Goa"
+  , Tuple "std:020" "Pune"
+  , Tuple "std:0821" "Mysore"
+  , Tuple "std:0816" "Tumakuru"
   ]
 
 getCityFromCode :: String -> String
