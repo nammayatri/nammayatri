@@ -1,26 +1,23 @@
 ### To set up your environment for load-test
 
 ```
-cd ./Backend/load-test
-bash setup.sh
-source ./bin/activate
-pip3 install -r requirements.txt
+You should have the Nammayatri servers and services running using
+, run-svc -d
+, run-mobility-stack-dev
 ```
 
 ### To run the load-test
 
+You can run the load test by
 ```
-, run-load-test
+ , run-load-test-dev
 ```
 
 
 ### To make changes in the load-test
 
-You can check `scripts.nix` file
+You can check `load-test.nix` file
 
-```
-locust --headless --run-time 1m --users 50  --only-summary --html ./output/riderApp.html -f ./scripts/riderApp.py
-```
 
 #### Params which can be modified in the locust command.
 
@@ -36,7 +33,3 @@ You can go to `.env` and modify the `NUM_DRIVERS` option
 
 You can check the results at `/load-test/output/driverOffer.html` and `/load-test/output/riderApp.html` <br/>
 The output files consists of `latency, number of requests and errors` of all the APIs.
-
-
-Note:- If there are background process running kill using the below command
-`ps | grep ".py" | awk '{print $1}' | xargs -r kill`
