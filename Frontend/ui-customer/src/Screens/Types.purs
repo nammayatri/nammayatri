@@ -753,6 +753,7 @@ type HomeScreenStateProps =
   , autoScrollTimer :: String
   , autoScrollTimerId :: String
   , autoScroll :: Boolean
+  , enableChatWidget :: Boolean
   }
 
 type SearchLocationModelProps = {

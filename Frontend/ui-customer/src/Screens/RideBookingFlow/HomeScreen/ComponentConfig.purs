@@ -905,8 +905,8 @@ getDefaultPeekHeight :: ST.HomeScreenState -> Int
 getDefaultPeekHeight state = do
   let isQuotes = state.data.currentSearchResultType == ST.QUOTES
       height = case state.props.currentStage == ST.RideAccepted of 
-                  true -> if isQuotes then 234 else 337
-                  false -> if isQuotes then 334 else 316
+                  true -> if isQuotes then 234 else 321
+                  false -> if isQuotes then 334 else 283
   height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
 
 metersToKm :: Int -> ST.HomeScreenState -> String

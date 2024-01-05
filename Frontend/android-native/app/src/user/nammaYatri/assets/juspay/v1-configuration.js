@@ -15,7 +15,7 @@ function getAppLink(os) {
 
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM","LOCATION_PERMISSION_SUBTITLE_NEW_USER","CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LEARN_HOW_TEXT", "FARE_INFO_TEXT", "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE", "PLEASE_ENABLE_LOCATION_PERMISSION", "TAXI_FROM_ZONE", "GO_TO_ZONE", "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN"],
+    "StringKeys": ["YOUR_LOCATION_HELPS_OUR_SYSTEM","LOCATION_PERMISSION_SUBTITLE_NEW_USER","CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "YOUR_FEEDBACK_HELPS_US", "LEARN_HOW_TEXT", "FARE_INFO_TEXT", "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE", "PLEASE_ENABLE_LOCATION_PERMISSION", "TAXI_FROM_ZONE", "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN"],
     "isReferralEnabled": "true",
     "showBookingPreference": "true",
     "showRateCard": "true",
@@ -82,7 +82,6 @@ window.getMerchantConfig = function () {
       "FARE_INFO_TEXT" : "The fare is based on the Karnataka State Government Rules factoring auto driver's additions and is not determined by Namma Yatri.",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Namma Yatri from the settings app to start looking for rides.",
       "TAXI_FROM_ZONE" : "from Namma Yatri Zone",
-      "GO_TO_ZONE" : "Go to Namma Yatri Zone",
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "OTP for the Namma Yatri zone has been expired, please try booking again"
     },
     "hindiStrings": {
@@ -95,7 +94,6 @@ window.getMerchantConfig = function () {
       "FARE_INFO_TEXT" : "किराया कर्नाटक राज्य सरकार के नियमों पर आधारित है जिसमें ऑटो चालक की संख्या को शामिल किया गया है और यह नम्मा यात्री द्वारा निर्धारित नहीं किया जाता है।",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "कृपया सवारी की तलाश शुरू करने के लिए सेटिंग ऐप से नम्मा यात्री के लिए स्थान अनुमतियाँ सक्षम करें।",
       "TAXI_FROM_ZONE" : "नम्मा यात्री जोन से",
-      "GO_TO_ZONE" : "नम्मा यात्री जोन पर जाएं",
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "नम्मा यात्री क्षेत्र के लिए OTP समाप्त हो गया है, कृपया पुनः बुकिंग का प्रयास करें"
     },
     "kannadaStrings": {
@@ -108,7 +106,6 @@ window.getMerchantConfig = function () {
       "FARE_INFO_TEXT" : "ದರವು ಕರ್ನಾಟಕ ರಾಜ್ಯ ಸರ್ಕಾರದ ನಿಯಮಗಳ ಅಂಶವನ್ನು ಆಧರಿಸಿದ ಆಟೋ ಚಾಲಕರ ಸೇರ್ಪಡೆಗಳನ್ನು ಆಧರಿಸಿದೆ ಮತ್ತು ನಮ್ಮ ಯಾತ್ರಿ ನಿರ್ಧರಿಸುವುದಿಲ್ಲ",
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "ಸವಾರಿಗಳಿಗಾಗಿ ಹುಡುಕುವುದನ್ನು ಪ್ರಾರಂಭಿಸಲು ದಯವಿಟ್ಟು ಸೆಟ್ಟಿಂಗ್‌ಗಳ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ನಮ್ಮ ಯಾತ್ರಿಗೆ ಸ್ಥಳ ಅನುಮತಿಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಿ.",
       "TAXI_FROM_ZONE" : " ಹತ್ತಿ",
-      "GO_TO_ZONE" : "ನಮ್ಮ ಯಾತ್ರಿ ವಲಯಕ್ಕೆ ಹೋಗಿ",
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "ನಮ್ಮ ಯಾತ್ರಿ ವಲಯದ OTP ಅವಧಿ ಮುಗಿದಿದೆ, ದಯವಿಟ್ಟು ಮತ್ತೆ ಬುಕ್ ಮಾಡಲು ಪ್ರಯತ್ನಿಸಿ"
     },
     "languageList": [{
