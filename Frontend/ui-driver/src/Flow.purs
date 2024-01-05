@@ -133,6 +133,7 @@ baseAppFlow baseFlow event = do
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
     void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
+    updateOperatingCity
     when baseFlow $ lift $ lift $ initUI
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
@@ -140,6 +141,13 @@ baseAppFlow baseFlow event = do
     if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "true" else pure unit
     initialFlow
     where
+    updateOperatingCity :: FlowBT String Unit
+    updateOperatingCity = do
+      let city = getValueToLocalStore DRIVER_LOCATION
+      if city /= "__failed" then do
+        void $ pure $ setValueToLocalStore DRIVER_LOCATION (capitalize (toLower city))
+        else pure unit
+        
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
       let bundle = getVersionByKey "app"
