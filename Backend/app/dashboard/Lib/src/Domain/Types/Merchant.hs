@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
 
@@ -11,21 +12,62 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE InstanceSigs #-}
 
 module Domain.Types.Merchant where
 
 import qualified Domain.Types.ServerName as DSN
+import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 
-data Merchant = Merchant
+data MerchantE e = Merchant
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
     serverNames :: [DSN.ServerName],
     is2faMandatory :: Bool,
     defaultOperatingCity :: City.City,
     supportedOperatingCities :: [City.City],
+    companyName :: Maybe Text,
+    domain :: Maybe Text,
+    website :: Maybe Text,
+    email :: Maybe (EncryptedHashedField e Text),
+    passwordHash :: Maybe DbHash,
     createdAt :: UTCTime
   }
-  deriving (Generic, Show, Eq, Ord)
+  deriving (Generic)
+
+type Merchant = MerchantE 'AsEncrypted
+
+type DecryptedMerchant = MerchantE 'AsUnencrypted
+
+instance EncryptedItem Merchant where
+  type Unencrypted Merchant = (DecryptedMerchant, HashSalt)
+  encryptItem (Merchant {..}, salt) = do
+    email_ <- encryptItem $ (,salt) <$> email
+    return Merchant {email = email_, ..}
+  decryptItem Merchant {..} = do
+    email_ <- fmap fst <$> decryptItem email
+    return (Merchant {email = email_, ..}, "")
+
+instance EncryptedItem' Merchant where
+  type UnencryptedItem Merchant = DecryptedMerchant
+  toUnencrypted :: UnencryptedItem Merchant -> HashSalt -> Unencrypted Merchant
+  toUnencrypted a salt = (a, salt)
+  fromUnencrypted = fst
+
+data MerchantAPIEntity = MerchantAPIEntity
+  { id :: Id Merchant,
+    shortId :: ShortId Merchant,
+    companyName :: Maybe Text,
+    domain :: Maybe Text,
+    website :: Maybe Text,
+    email :: Maybe Text,
+    supportedOperatingCities :: [City.City],
+    defaultOperatingCity :: City.City
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+mkMerchantAPIEntity :: DecryptedMerchant -> MerchantAPIEntity
+mkMerchantAPIEntity Merchant {..} = MerchantAPIEntity {..}

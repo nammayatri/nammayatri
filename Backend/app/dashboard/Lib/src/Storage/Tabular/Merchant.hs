@@ -21,6 +21,7 @@ module Storage.Tabular.Merchant where
 
 import qualified Domain.Types.Merchant as Domain
 import qualified Domain.Types.ServerName as Domain
+import Kernel.External.Encryption (DbHash, Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Beckn.City (City)
@@ -32,10 +33,16 @@ mkPersist
     MerchantT sql=merchant
       id Text
       shortId Text
-      serverNames [Domain.ServerName]
+      serverNames (PostgresList Domain.ServerName)
       is2faMandatory Bool
       defaultOperatingCity City
-      supportedOperatingCities [City]
+      supportedOperatingCities (PostgresList City)
+      companyName Text Maybe
+      domain Text Maybe
+      website Text Maybe
+      emailEncrypted Text Maybe
+      emailHash DbHash Maybe
+      passwordHash DbHash Maybe
       createdAt UTCTime
       Primary id
       UniqueMerchantShortId shortId
@@ -53,6 +60,11 @@ instance FromTType MerchantT Domain.Merchant where
       Domain.Merchant
         { id = Id id,
           shortId = ShortId shortId,
+          email = case (emailEncrypted, emailHash) of
+            (Just email, Just hash) -> Just $ EncryptedHashed (Encrypted email) hash
+            _ -> Nothing,
+          supportedOperatingCities = unPostgresList supportedOperatingCities,
+          serverNames = unPostgresList serverNames,
           ..
         }
 
@@ -61,5 +73,9 @@ instance ToTType MerchantT Domain.Merchant where
     MerchantT
       { id = getId id,
         shortId = getShortId shortId,
+        emailEncrypted = email <&> (unEncrypted . (.encrypted)),
+        emailHash = email <&> (.hash),
+        supportedOperatingCities = PostgresList supportedOperatingCities,
+        serverNames = PostgresList serverNames,
         ..
       }
