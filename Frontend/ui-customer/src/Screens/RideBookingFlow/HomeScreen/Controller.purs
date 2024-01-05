@@ -1176,7 +1176,7 @@ eval (MessageExpiryTimer seconds status timerID) state = do
   else
       continue newState
 
-eval (DriverInfoCardActionController (DriverInfoCardController.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,infoCardPeekHeight = getInfoCardPeekHeight state}}
+eval (DriverInfoCardActionController (DriverInfoCardController.NoAction)) state = continue state {data{infoCardPeekHeight = getInfoCardPeekHeight state}}
 
 eval (ScrollStateChanged scrollState) state = do
   let sheetState = case scrollState of 

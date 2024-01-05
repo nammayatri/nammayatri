@@ -135,7 +135,6 @@ titleAndETA push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  , afterRender push $ const $ NoAction
   ][ if state.props.currentStage == RideAccepted then specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
      else distanceView push state
   ]
@@ -225,7 +224,6 @@ driverInfoView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , visibility if state.props.currentSearchResultType == QUOTES then GONE else VISIBLE
-  , afterRender push $ const $ NoAction
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -314,11 +312,13 @@ driverInfoView push state =
 
 distanceView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 distanceView push state = 
+  PrestoAnim.animationSet [ scaleYAnimWithDelay (getAnimationDelay FunctionCall)] $ 
   linearLayout
   [ orientation HORIZONTAL
   , height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
+  , onAnimationEnd push $ const $ NoAction
   , padding $ Padding 16 8 16 14
   ][linearLayout
     [ height WRAP_CONTENT
@@ -375,7 +375,6 @@ cancelRideLayout push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , afterRender push $ const $ NoAction
   , onAnimationEnd push $ const $ NoAction
   , margin $ if state.data.config.showPickUpandDrop then MarginTop 0 else MarginTop 12
   , padding $ PaddingBottom if os == "IOS" then if safeMarginBottom == 0 then 24 else safeMarginBottom else 0
@@ -409,7 +408,6 @@ contactView push state =
     [ orientation HORIZONTAL
     , height WRAP_CONTENT
     , width MATCH_PARENT
-    , afterRender push $ const $ NoAction
     , gravity CENTER_VERTICAL
     , padding $ Padding 16 4 16 16
     , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
@@ -476,7 +474,6 @@ driverDetailsView push state uid =
   , height $ V 150
   , padding $ PaddingHorizontal 16 16
   , width MATCH_PARENT
-  , afterRender push $ const $ NoAction
   , id $ getNewIDWithTag uid
   , margin $ Margin 16 (if state.props.currentSearchResultType == QUOTES then 12 else 0) 16 0
   , background Color.white900
@@ -629,7 +626,6 @@ ratingView push state =
   , margin $ MarginTop 40
   , height $ V 19
   , width $ V 50
-  , afterRender push $ const $ NoAction
   , padding $ Padding 6 3 6 3
   , background state.data.config.driverInfoConfig.ratingBackground
   , gravity CENTER_VERTICAL
@@ -662,7 +658,6 @@ paymentMethodView push state title shouldShowIcon uid =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  , afterRender push $ const $ NoAction
   , id $ getNewIDWithTag uid
   , margin $ Margin 16 12 16 12
   , background Color.white900
@@ -719,7 +714,6 @@ sourceDestinationView push state =
   , orientation VERTICAL
   , margin $ Margin 16 0 16 (if os == "IOS" && state.props.currentStage == RideStarted then safeMarginBottom + 36 else 12)
   , background Color.white900
-  , afterRender push $ const $ NoAction
   , onAnimationEnd push $ const $ NoAction
   , cornerRadius 8.0
   , padding $ Padding 16 12 16 12
