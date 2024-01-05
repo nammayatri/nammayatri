@@ -305,15 +305,16 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1700137322,
-        "narHash": "sha256-QHWoOy48nH/V3uqPhIjQnCWqiIQVWuDOQlAe1KSjR84=",
+        "lastModified": 1704886280,
+        "narHash": "sha256-oZ1GDi+vbPT3vB+Frc8IfceWfBd2/sdsOt55vmR/VdU=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "d5e3ed3f389cc5f5d3272912aa5207afba9436a0",
+        "rev": "dfcfcfcd8893bcd83fe2dbc2fb2df6769a9ad0b3",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
+        "ref": "python",
         "repo": "common",
         "type": "github"
       }

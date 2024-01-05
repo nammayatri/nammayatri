@@ -10,7 +10,7 @@ class RiderApp(HttpUser):
 
     host = os.getenv('BASE_URL_RIDER')
     available_tokens = []
-    with open("./tokens/riderTokens.json", "r") as file:
+    with open("Backend/load-test/tokens/riderTokens.json", "r") as file:
         available_tokens = json.load(file)
 
     def on_start(cls):

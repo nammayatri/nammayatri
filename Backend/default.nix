@@ -6,6 +6,7 @@
     ./nix/run-mobility-stack.nix
     ./nix/arion-configuration.nix
     ./nix/osrm.nix
+    ./load-test
   ];
   perSystem = { config, self', pkgs, lib, ... }: {
     pre-commit.settings.imports = [
