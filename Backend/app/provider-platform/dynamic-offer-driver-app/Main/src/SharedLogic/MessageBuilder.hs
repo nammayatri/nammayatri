@@ -181,12 +181,12 @@ buildGenericMessage merchantOpCityId messageKey _ = do
       & T.replace (templateText "var2") (fromMaybe "" jsonData.var2)
       & T.replace (templateText "var3") (fromMaybe "" jsonData.var3)
 
-addBroadcastMessageToKafka :: Message.RawMessage -> Id P.Person -> Flow ()
-addBroadcastMessageToKafka msg driverId = do
+addBroadcastMessageToKafka :: Bool -> Message.RawMessage -> Id P.Person -> Flow ()
+addBroadcastMessageToKafka check msg driverId = do
   topicName <- asks (.broadcastMessageTopic)
   msgDict <- createMessageLanguageDict msg
   produceMessage
-    (topicName, Just (encodeUtf8 $ getId driverId))
+    (if check then "broadcast-message-check" else topicName, Just (encodeUtf8 $ getId driverId))
     msgDict
   where
     createMessageLanguageDict :: Message.RawMessage -> Flow Message.MessageDict
