@@ -40,7 +40,7 @@ import qualified Storage.Queries.Person as QPerson
 type API =
   Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth "Authorization"
-    :> Confirm.ConfirmAPI
+    :> Confirm.ConfirmAPIV1
 
 handler :: FlowServer API
 handler = confirm

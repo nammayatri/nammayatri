@@ -54,7 +54,20 @@ search ::
   m API.SearchRes
 search gatewayUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "search" API.searchAPI gatewayUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "search" API.searchAPIV1 gatewayUrl internalEndPointHashMap req
+
+searchV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  API.SearchReqV2 ->
+  m API.SearchRes
+searchV2 gatewayUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- req.searchReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
+  callBecknAPIWithSignature bapId "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
 
 searchMetro ::
   ( MonadFlow m,
@@ -78,7 +91,19 @@ select ::
   m SelectRes
 select providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "select" API.selectAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "select" API.selectAPIV1 providerUrl internalEndPointHashMap req
+
+-- selectV2 ::
+--   ( MonadFlow m,
+--     CoreMetrics m,
+--     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+--   ) =>
+--   BaseUrl ->
+--   SelectReqV2 ->
+--   m SelectRes
+-- selectV2 providerUrl req = do
+--   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+--   callBecknAPIWithSignature req.context.bap_id "select" API.selectAPIV2 providerUrl internalEndPointHashMap req
 
 init ::
   ( MonadFlow m,
@@ -90,7 +115,19 @@ init ::
   m API.InitRes
 init providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "init" API.initAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "init" API.initAPIV1 providerUrl internalEndPointHashMap req
+
+-- initV2 ::
+--   ( MonadFlow m,
+--     CoreMetrics m,
+--     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+--   ) =>
+--   BaseUrl ->
+--   API.InitReqV2 ->
+--   m API.InitRes
+-- initV2 providerUrl req = do
+--   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+--   callBecknAPIWithSignature req.context.bap_id "init" API.initAPIV2 providerUrl internalEndPointHashMap req
 
 confirm ::
   ( MonadFlow m,
@@ -102,7 +139,19 @@ confirm ::
   m ConfirmRes
 confirm providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "confirm" API.confirmAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "confirm" API.confirmAPIV1 providerUrl internalEndPointHashMap req
+
+-- confirmV2 ::
+--   ( MonadFlow m,
+--     CoreMetrics m,
+--     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+--   ) =>
+--   BaseUrl ->
+--   ConfirmReqV2 ->
+--   m ConfirmRes
+-- confirmV2 providerUrl req = do
+--   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+--   callBecknAPIWithSignature req.context.bap_id "confirm" API.confirmAPIV2 providerUrl internalEndPointHashMap req
 
 cancel ::
   ( MonadFlow m,
@@ -126,7 +175,19 @@ update ::
   m UpdateRes
 update providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "update" API.updateAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "update" API.updateAPIV1 providerUrl internalEndPointHashMap req
+
+-- updateV2 ::
+--   ( MonadFlow m,
+--     CoreMetrics m,
+--     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+--   ) =>
+--   BaseUrl ->
+--   UpdateReqV2 ->
+--   m UpdateRes
+-- updateV2 providerUrl req = do
+--   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+--   callBecknAPIWithSignature req.context.bap_id "update" API.updateAPIV2 providerUrl internalEndPointHashMap req
 
 callTrack ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

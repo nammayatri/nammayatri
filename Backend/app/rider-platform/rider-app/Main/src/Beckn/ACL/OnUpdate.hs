@@ -24,7 +24,7 @@ import EulerHS.Prelude hiding (state)
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Product.Validation.Context (validateContext)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.ReqTypes
+import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Tools.Error (GenericError (InvalidRequest))

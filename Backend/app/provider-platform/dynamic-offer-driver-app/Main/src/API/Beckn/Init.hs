@@ -37,7 +37,7 @@ import Storage.Beam.SystemConfigs ()
 type API =
   Capture "merchantId" (Id DM.Merchant)
     :> SignatureAuth "Authorization"
-    :> Init.InitAPI
+    :> Init.InitAPIV1
 
 handler :: FlowServer API
 handler = init
@@ -59,7 +59,7 @@ init transporterId (SignatureAuthResult _ subscriber) req =
           dInitRes <- DInit.handler transporterId dInitReq validatedRes
           internalEndPointHashMap <- asks (.internalEndPointHashMap)
           void . handle (errHandler dInitRes.booking) $
-            CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPI context context.bap_uri internalEndPointHashMap $
+            CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPIV1 context context.bap_uri internalEndPointHashMap $
               pure $ ACL.mkOnInitMessage dInitRes
       return ()
     pure Ack

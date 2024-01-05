@@ -27,7 +27,7 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   SignatureAuth "X-Gateway-Authorization"
-    :> OnSearch.OnSearchAPI
+    :> OnSearch.OnSearchAPIV1
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onSearch

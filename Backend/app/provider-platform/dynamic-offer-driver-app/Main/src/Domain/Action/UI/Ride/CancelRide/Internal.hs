@@ -79,6 +79,7 @@ cancelRideImpl ::
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "schedulerType" r SchedulerType,
+    HasField "isBecknSpecVersion2" r Bool,
     LT.HasLocationService m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
   ) =>
@@ -171,6 +172,7 @@ repeatSearch ::
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
+    HasField "isBecknSpecVersion2" r Bool,
     HasShortDurationRetryCfg r c,
     CacheFlow m r,
     LT.HasLocationService m r,

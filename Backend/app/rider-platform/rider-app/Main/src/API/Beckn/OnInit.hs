@@ -32,7 +32,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Queries.Booking as QRideB
 
-type API = OnInit.OnInitAPI
+type API = OnInit.OnInitAPIV1
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onInit

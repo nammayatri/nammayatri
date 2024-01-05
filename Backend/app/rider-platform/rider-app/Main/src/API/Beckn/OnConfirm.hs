@@ -25,7 +25,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 
-type API = OnConfirm.OnConfirmAPI
+type API = OnConfirm.OnConfirmAPIV1
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onConfirm

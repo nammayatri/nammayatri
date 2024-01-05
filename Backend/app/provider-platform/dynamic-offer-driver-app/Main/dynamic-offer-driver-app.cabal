@@ -117,6 +117,7 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Beckn.OnDemand.Utils.Common
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
@@ -566,10 +567,12 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      Beckn.OnDemand.Transformer.Search
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds

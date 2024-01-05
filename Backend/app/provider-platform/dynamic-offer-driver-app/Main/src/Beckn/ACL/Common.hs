@@ -20,6 +20,7 @@ import qualified Beckn.Types.Core.Taxi.Common.Payment as Payment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Types as Spec
 import Data.Maybe
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -95,3 +96,16 @@ getTag tagGroupCode tagCode (Tags.TG tagGroups) = do
   tagGroup <- find (\tagGroup -> tagGroup.code == tagGroupCode) tagGroups
   tag <- find (\tag -> tag.code == Just tagCode) tagGroup.list
   tag.value
+
+getTagV2 :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text
+getTagV2 tagGroupCode tagCode tagGroups = do
+  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just tagGroupCode) tagGroups
+  case tagGroup.tagGroupList of
+    Nothing -> Nothing
+    Just tagGroupList -> do
+      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just tagCode) tagGroupList
+      tag.tagValue
+  where
+    descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
+    descriptorCode (Just desc) = desc.descriptorCode
+    descriptorCode Nothing = Nothing

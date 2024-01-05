@@ -31,7 +31,7 @@ import Storage.Beam.SystemConfigs ()
 type API =
   Capture "merchantId" (Id Merchant)
     :> SignatureAuth "Authorization"
-    :> Update.UpdateAPI
+    :> Update.UpdateAPIV1
 
 handler :: FlowServer API
 handler = update

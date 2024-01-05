@@ -28,6 +28,31 @@ import SharedLogic.CallBAP (buildBppUrl)
 
 -- import Storage.Beam.BecknRequest ()
 
+-- withCallbackV2 ::
+--   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
+--     HasShortDurationRetryCfg r c,
+--     CacheFlow m r,
+--     EsqDBFlow m r
+--   ) =>
+--   DM.Merchant ->
+--   WithBecknCallbackMigV2 api callback_success m
+-- withCallbackV2 = withCallbackV2' withShortRetry
+
+-- withCallbackV2' ::
+--   (m () -> m ()) ->
+--   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
+--   DM.Merchant ->
+--   WithBecknCallbackMigV2 api callback_success m
+-- withCallbackV2' doWithCallback transporter action api context cbUrl internalEndPointHashMap f = do
+--   let bppSubscriberId = getShortId $ transporter.subscriberId
+--       authKey = getHttpManagerKey bppSubscriberId
+--   bppUri <- buildBppUrl (transporter.id)
+--   let context' =
+--         context
+--           & #bpp_uri ?~ bppUri
+--           & #bpp_id ?~ bppSubscriberId
+--   withBecknCallbackMigV2 doWithCallback (Just $ ET.ManagerSelector authKey) action api context' cbUrl internalEndPointHashMap f
+
 withCallback ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
     HasShortDurationRetryCfg r c,

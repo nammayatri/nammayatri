@@ -1,0 +1,93 @@
+imports:
+  Text: Data.Text
+  Merchant: Domain.Types.Merchant
+  Subscriber: Kernel.Types.Registry.Subscriber
+  SearchReqV2: Beckn.Types.Core.Taxi.API.Search
+  SearchReqMessage: BecknV2.OnDemand.Types
+  DSearchReq: Domain.Action.Beckn.Search
+  getIntent: Beckn.OnDemand.Utils.Common
+  getFulfillment: Beckn.OnDemand.Utils.Common
+  getFulfillmentStops: Beckn.OnDemand.Utils.Common
+  getCurrentTime: Kernel.Types.Common
+  Address: Beckn.Types.Core.Taxi.Common.Address
+  Location: BecknV2.OnDemand.Types
+  buildCustomerLanguage: Beckn.OnDemand.Utils.Common
+  getDistance: Beckn.OnDemand.Utils.Common
+  getDuration: Beckn.OnDemand.Utils.Common
+  getCity: Beckn.OnDemand.Utils.Common
+  buildCustomerPhoneNumber: Beckn.OnDemand.Utils.Common
+  buildRoutePoints: Beckn.OnDemand.Utils.Common
+  HasFlowEnv: Kernel.Types.App
+  CacheFlow: Kernel.Types.App
+  EsqDBFlow: Kernel.Types.App
+  MonadFlow: Kernel.Types.App
+  getPickUpLocation: Beckn.OnDemand.Utils.Common
+  getDropOffLocation: Beckn.OnDemand.Utils.Common
+  getPickUpLocationGps: Beckn.OnDemand.Utils.Common
+  getDropOffLocationGps: Beckn.OnDemand.Utils.Common
+  LatLong: Kernel.External.Maps
+  parseLatLong: Beckn.OnDemand.Utils.Common
+  ContextV2: Kernel.Types.Beckn.Context
+  Context: BecknV2.OnDemand.Types
+  City: Kernel.Types.Beckn.Context
+  buildDisabilityTag: Beckn.OnDemand.Utils.Common
+  getIsReallocationEnabled: Beckn.OnDemand.Utils.Common
+  getTransactionId: Beckn.OnDemand.Utils.Common
+  getContextCountry: Beckn.OnDemand.Utils.Common
+
+module: Search
+transformer:
+  monads:
+  - "HasFlowEnv m r '[\"_version\" ::: Text]"
+  transformers:
+    buildSearchReq:
+      params:
+        - messageId: Text
+        - city: City
+        - subscriber: Subscriber
+        - req: SearchReqMessage
+        - context: Context
+      toType: DSearchReq
+      mapping:
+        messageId: messageId
+        transactionId: /~_getTransactionId context
+        bapId: subscriber.subscriber_id
+        bapUri: subscriber.subscriber_url
+        bapCity: city
+        bapCountry: /~_getContextCountry context
+        pickupLocation: /~_getPickUpLocationGps req & tfLatLong
+        pickupTime: /~_getCurrentTime
+        dropLocation: /~_getDropOffLocationGps req & tfLatLong
+        pickupAddress: /~_getPickUpLocation req & tfAddress <&> Just
+        dropAddrress: /~_getDropOffLocation req & tfAddress <&> Just
+        routeDistance: ~_getDistance req
+        routeDuration: ~_getDuration req
+        device: Nothing
+        customerLanguage: ~_buildCustomerLanguage req
+        disabilityTag: ~_buildDisabilityTag req
+        customerPhoneNum: ~_buildCustomerPhoneNumber req
+        routePoints: ~_buildRoutePoints req
+        isReallocationEnabled: ~_getIsReallocationEnabled req
+
+    tfAddress:
+      params:
+        - location: Location
+      toType: Address
+      mapping:
+        door: location.locationAddress
+        locality : Nothing
+        state : Nothing
+        country : Nothing
+        building : Nothing
+        street : Nothing
+        city : Nothing
+        area_code : Nothing
+        ward : Nothing
+
+    tfLatLong:
+      params:
+        - locationGps: Text
+      toType: LatLong
+      mapping:
+        lat: _parseLatLong locationGps & (.lat)
+        lon: _parseLatLong locationGps & (.lon)

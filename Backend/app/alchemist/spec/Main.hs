@@ -56,10 +56,9 @@ main = do
   maybeGitRoot <- findGitRoot currentDir
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
 
+  processApp rootDir driverAppPath driverAppName
   processApp rootDir riderAppPath riderAppName
   where
-    -- processApp rootDir driverAppPath driverAppName
-
     processApp :: FilePath -> FilePath -> FilePath -> IO ()
     processApp rootDir appPath _appName = do
       -- applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "Storage") (processStorageDSL rootDir appPath appName)
