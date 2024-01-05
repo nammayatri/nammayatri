@@ -57,7 +57,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Suggestions as EHS
-import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?))
+import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), getCityFromCode)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import DecodeUtil (stringifyJSON)
@@ -342,6 +342,7 @@ getDriverInfoFlow event activeRideResp = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
   case getDriverInfoApiResp of
     Right (GetDriverInfoResp getDriverInfoResp) -> do
+      void $ pure $ setValueToLocalStore DRIVER_LOCATION <$> (getCityFromCode <$> getDriverInfoResp.operatingCity)
       updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
       liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
       if getDriverInfoResp.enabled then do

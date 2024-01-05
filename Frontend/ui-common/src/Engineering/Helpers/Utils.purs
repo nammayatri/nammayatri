@@ -20,8 +20,8 @@ import Control.Monad.Except (runExcept)
 import Control.Monad.Except.Trans (lift)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn2, runFn2, Fn3, Fn1)
-import Data.Maybe (Maybe(..))
-import Data.String (length, trim)
+import Data.Maybe (Maybe(..), maybe)
+import Data.String (length, trim, toLower)
 import Data.String.CodeUnits (charAt)
 import Data.Foldable (foldl)
 import Data.Time.Duration (Milliseconds(..))
@@ -44,6 +44,8 @@ import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, dela
 import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
+import Data.Array (find)
+import Data.Tuple (Tuple(..), fst, snd)
 
 -- Common Utils
 
@@ -272,3 +274,33 @@ selectSingleCalendarDate date mbStartDate mbEndDate weeks = do
       _ -> do
         let modifiedDates = map (updateWeeks date true dummyDateItem) weeks
         { startDate : Just date, endDate : Nothing, weeks : modifiedDates, selectedTimeSpan : date }
+
+cityCodeMap :: Array (Tuple String String)
+cityCodeMap = 
+  [ Tuple "std:080" "bangalore"
+  , Tuple "std:033" "kolkata"
+  , Tuple "std:001" "paris"
+  , Tuple "std:484" "kochi"
+  , Tuple "std:011" "delhi"
+  , Tuple "std:040" "hyderabad"
+  , Tuple "std:022" "mumbai"
+  , Tuple "std:044" "chennai"
+  , Tuple "std:0422" "coimbatore"
+  , Tuple "std:0413" "pondicherry"
+  , Tuple "std:08342" "goa"
+  , Tuple "std:020" "pune"
+  , Tuple "std:0821" "mysore"
+  , Tuple "std:0816" "tumakuru"
+  ]
+
+getCityFromCode :: String -> String
+getCityFromCode code = 
+  let 
+    cityCodeTuple = find (\ tuple -> (fst tuple) == code) cityCodeMap
+  in maybe "" (\tuple -> snd tuple) cityCodeTuple
+
+getCodeFromCity :: String -> String
+getCodeFromCity city = 
+  let 
+    cityCodeTuple = find (\tuple -> (snd tuple) == (toLower city)) cityCodeMap
+  in maybe "" (\tuple -> fst tuple) cityCodeTuple
