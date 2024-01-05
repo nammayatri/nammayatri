@@ -17,8 +17,10 @@ imports:
   Customer: BecknV2.OnDemand.Types
   Person: BecknV2.OnDemand.Types
   mkStops: Beckn.OnDemand.Utils.Common
-  mkRouteInfoTags: Beckn.OnDemand.Utils.Search
+  mkSearchFulFillmentTags: Beckn.OnDemand.Utils.Search
   mkCustomerInfoTags: Beckn.OnDemand.Utils.Search
+  Payment: BecknV2.OnDemand.Types
+  mkPaymentTags: Beckn.OnDemand.Utils.Common
   Domain: Kernel.Types.Beckn.Context
   Action: Kernel.Types.Beckn.Context
   City: Kernel.Types.Beckn.Context
@@ -26,7 +28,7 @@ imports:
   Context: BecknV2.OnDemand.Types
   Bool: Kernel.Prelude
   showBaseUrl: Kernel.Prelude
-  buildContextV2: Beckn.OnDemand.Utils.Common
+  buildContextV2: BecknV2.OnDemand.Utils.Context
   getCurrentTime: Kernel.Types.Time
   fromText: Data.UUID
   SearchReq: BecknV2.OnDemand.Types
@@ -52,10 +54,11 @@ transformer:
         - bapUri: BaseUrl
         - mbPoints: Maybe [LatLong]
         - mbPhoneNumber: Maybe Text
+        - isReallocationEnabled: Maybe Bool
       toType: SearchReq
       mapping:
         searchReqContext: /~_buildContextV2 action domain searchId.getId (Just searchId.getId) merchant.bapId bapUri Nothing Nothing merchant.defaultCity merchant.country
-        searchReqMessage: /~buildSearchMessageV2 origin destination distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber
+        searchReqMessage: /~buildSearchMessageV2 origin destination distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isReallocationEnabled
 
     buildSearchMessageV2:
       params:
@@ -67,9 +70,10 @@ transformer:
         - disabilityTag: Maybe Text
         - mbPoints: Maybe [LatLong]
         - mbPhoneNumber: Maybe Text
+        - isReallocationEnabled: Maybe Bool
       toType: SearchReqMessage
       mapping:
-        searchReqMessageIntent: /~Just <$> tfIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber
+        searchReqMessageIntent: /~tfIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled <&> Just
 
     tfIntent:
       params:
@@ -81,10 +85,11 @@ transformer:
         - duration: Maybe Seconds
         - mbPoints: Maybe [LatLong]
         - mbPhoneNumber: Maybe Text
+        - isReallocationEnabled: Maybe Bool
       toType: Intent
       mapping:
-        intentFulfillment: /~Just <$> tfFulfillment origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber
-        intentPayment: Nothing
+        intentFulfillment: /~tfFulfillment origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled <&> Just
+        intentPayment: /~tfPayment "BPP" <&> Just
         intentTags: Nothing
 
     tfFulfillment:
@@ -97,11 +102,12 @@ transformer:
         - duration: Maybe Seconds
         - mbPoints: Maybe [LatLong]
         - mbPhoneNumber: Maybe Text
+        - isReallocationEnabled: Maybe Bool
       toType: Fulfillment
       mapping:
         fulfillmentStops: ~_mkStops origin destination
-        fulfillmentCustomer: /~Just <$> tfCustomer customerLanguage disabilityTag mbPhoneNumber
-        fulfillmentTags: ~_mkRouteInfoTags distance duration mbPoints
+        fulfillmentCustomer: /~tfCustomer customerLanguage disabilityTag mbPhoneNumber <&> Just
+        fulfillmentTags: ~_mkSearchFulFillmentTags distance duration mbPoints isReallocationEnabled
         fulfillmentAgent: Nothing
         fulfillmentId: Nothing
         fulfillmentState: Nothing
@@ -115,7 +121,7 @@ transformer:
         - mbPhoneNumber: Maybe Text
       toType: Customer
       mapping:
-        customerPerson: /~Just <$> tfPerson customerLanguage disabilityTag mbPhoneNumber
+        customerPerson: /~tfPerson customerLanguage disabilityTag mbPhoneNumber <&> Just
         customerContact: Nothing
 
     tfPerson:
@@ -129,94 +135,17 @@ transformer:
         personName: Nothing
         personId: Nothing
 
-types:
-  SearchReq:
-    context: Context
-    message: SearchMessage
+    tfPayment:
+      params:
+        - collectedBy: Text
+      toType: Payment
+      mapping:
+        paymentCollectedBy: Just collectedBy
+        paymentTags: ~_mkPaymentTags
+        paymentId: Nothing
+        paymentParams: Nothing
+        paymentStatus: Nothing
+        paymentType: Nothing
 
-  Context:
-    action: ContextAction
-    messageId: Text
-    transactionId: Text
-    bapId: Text
-    bapUri: BaseUrl
-    loction: ContextLocation
-    bapCity: Text
-    bapCountry: Text
-
-  ContextAction:
-    enum: "search,on_search"
-
-  ContextLocation:
-    city: Descriptor
-    country: Descriptor
-
-  Descriptor:
-    code: Text
-
-  SearchMessage:
-    intent: SearchIntent
-
-  SearchIntent:
-    fulfillment: SearchFulfillment
-
-  SearchFulfillment:
-    stops: [FulfillmentStop]
-
-  FulfillmentStop:
-    location: Location
-
-  Location:
-    gps: Text
-
-  DSearchReq:
-    messageId: Text
-    transactionId: Text
-    bapId: Text
-    bapUri: BaseUrl
-    bapCity: Text
-    bapCountry: Text
-    customerPhoneNum: Maybe Text
-    pickupLocation: LatLong
-    pickupTime: UTCTime
-    dropLocation: LatLong
-    pickupAddress: Maybe Address
-    dropAddrress: Maybe Address
-    routeDistance: Maybe Meters
-    routeDuration: Maybe Seconds
-    device: Maybe Text
-    disabilityTag: Maybe Text
-    routePoints: Maybe [LatLong]
-
-  Address:
-    city: Text
-    area: Text
-
-  LatLong:
-    lat: Double
-    lon: Double
-
-  Meters:
-    getMeters: Int
-
-  Seconds:
-    getSeconds: Int
-
-# transformer:
-#   monads:
-#     - MonadThrow m
-#     - MonadTime m
-#     - Log m
-#   transformers:
-#     buildBecknSearchReq:
-#       # extraMonads: should we allow this
-#       params:
-#         domainSearchReq: Maybe (Id DomainSearchReq)
-#         context: Context
-#       toType: BecknSearchReq
-#       mapping:
-#         searchReqContext: ~_context context
-#         searchReqMessage: Just 10
-
-  # ~  -> pure    Haskell functions
-  # /~ -> impure  Haskell functions
+# ~  -> pure    Haskell functions
+# /~ -> impure  Haskell functions

@@ -18,64 +18,19 @@ module Beckn.OnDemand.Utils.Common where
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
+import qualified Data.List as List
 import qualified Data.Text as T
-import qualified Data.UUID as UUID
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id, (%~))
 import qualified Kernel.Prelude as KP
 import Kernel.Types.App
-import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
-import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
-
-showContextAction :: Context.Action -> Maybe Text
-showContextAction = A.decode . A.encode
-
-showContextDomain :: Context.Domain -> Maybe Text
-showContextDomain = A.decode . A.encode
-
-buildContextLocation :: Context.City -> Context.Country -> Maybe Spec.Location
-buildContextLocation city country = do
-  let specCityCode = A.decode $ A.encode city
-      specCountryCode = A.decode $ A.encode country
-      specCity = Spec.City {cityCode = specCityCode, cityName = Nothing}
-      specCountry = Spec.Country {countryCode = specCountryCode, countryName = Nothing}
-  Just $
-    Spec.Location
-      { locationAddress = Nothing,
-        locationAreaCode = Nothing,
-        locationCity = Just specCity,
-        locationCountry = Just specCountry,
-        locationGps = Nothing,
-        locationId = Nothing,
-        locationState = Nothing
-      }
-
-buildContextV2 :: (MonadFlow m) => Context.Action -> Context.Domain -> Text -> Maybe Text -> Text -> KP.BaseUrl -> Maybe Text -> Maybe KP.BaseUrl -> Context.City -> Context.Country -> m Spec.Context
-buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country = do
-  now <- getCurrentTime <&> Just
-  pure $
-    Spec.Context
-      { contextAction = showContextAction action,
-        contextBapId = Just bapId,
-        contextBapUri = Just $ KP.showBaseUrl bapUri,
-        contextBppId = bppId,
-        contextBppUri = KP.showBaseUrl <$> bppUri,
-        contextDomain = showContextDomain domain,
-        contextKey = Nothing,
-        contextLocation = buildContextLocation city country,
-        contextMessageId = UUID.fromText messageId,
-        contextTimestamp = now,
-        contextTransactionId = UUID.fromText =<< transactionId,
-        contextTtl = Nothing,
-        contextVersion = Just "2.0.0"
-      }
 
 mkStops :: DSearchCommon.SearchReqLocation -> DSearchCommon.SearchReqLocation -> Maybe [Spec.Stop]
 mkStops origin destination =
@@ -111,3 +66,87 @@ mkStops origin destination =
               stopType = Just "END"
             }
         ]
+
+mkPaymentTags :: Maybe [Spec.TagGroup]
+mkPaymentTags =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "BUYER_FINDER_FEES",
+                  descriptorName = Nothing,
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList = Just buyerFinderFeesSingleton
+        },
+      Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "SETTLEMENT_TERMS",
+                  descriptorName = Nothing,
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just $
+              delayInterestSingleton
+                ++ settlementTypeSingleton
+                ++ staticTermsSingleton
+        }
+    ]
+  where
+    buyerFinderFeesSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "BUYER_FINDER_FEES_PERCENTAGE",
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just "0"
+          }
+    delayInterestSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "DELAY_INTEREST",
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just "0"
+          }
+    settlementTypeSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "SETTLEMENT_TYPE",
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just "RSF"
+          }
+    staticTermsSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "STATIC_TERMS",
+                    descriptorName = Nothing,
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just "https://example-test-bap.com/static-terms.txt"
+          }

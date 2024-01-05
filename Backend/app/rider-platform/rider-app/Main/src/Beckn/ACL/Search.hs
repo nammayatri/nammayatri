@@ -85,6 +85,7 @@ buildOneWaySearchReqV2 DOneWaySearch.OneWaySearchRes {..} = do
     bapUri
     (getPoints shortestRouteInfo)
     phoneNumber
+    isReallocationEnabled
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
@@ -134,31 +135,6 @@ buildSearchReq origin destination searchId _ distance duration customerLanguage 
   let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
-
--- buildSearchReqV2 ::
---   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
---   DSearchCommon.SearchReqLocation ->
---   DSearchCommon.SearchReqLocation ->
---   Id DSearchReq.SearchRequest ->
---   Maybe Text ->
---   Maybe Meters ->
---   Maybe Seconds ->
---   Maybe Maps.Language ->
---   Maybe Text ->
---   DM.Merchant ->
---   Context.City ->
---   Maybe [Maps.LatLong] ->
---   Maybe Text ->
---   m (BecknReq Spec.SearchReqMessage)
--- buildSearchReqV2 origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber = do
---   let transactionId = getId searchId
---       messageId = transactionId
---   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
---   -- TODO :: Add request city, after multiple city support on gateway.
---   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
---   searchMessage <- Search.buildSearchReqV2 origin destination distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber
-
---   pure $ BecknReq context searchMessage
 
 mkIntent ::
   DSearchCommon.SearchReqLocation ->

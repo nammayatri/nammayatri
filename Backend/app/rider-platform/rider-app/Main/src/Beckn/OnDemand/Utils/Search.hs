@@ -23,25 +23,30 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common
 import qualified Tools.Maps as Maps
 
-mkRouteInfoTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe [Spec.TagGroup]
+mkSearchFulFillmentTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe Bool -> Maybe [Spec.TagGroup]
+mkSearchFulFillmentTags distance duration mbPoints mbIsReallocationEnabled =
+  Just $
+    mkRouteInfoTags distance duration mbPoints
+      ++ mkReallocationInfoTags mbIsReallocationEnabled
+
+mkRouteInfoTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> [Spec.TagGroup]
 mkRouteInfoTags distance duration mbPoints =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just "route_info",
-                  descriptorName = Just "Route Information",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just $
-              distanceSingleton
-                ++ durationSingleton
-                ++ mbPointsSingleton
-        }
-    ]
+  [ Spec.TagGroup
+      { tagGroupDescriptor =
+          Just $
+            Spec.Descriptor
+              { descriptorCode = Just "route_info",
+                descriptorName = Just "Route Information",
+                descriptorShortDesc = Nothing
+              },
+        tagGroupDisplay = Just False,
+        tagGroupList =
+          Just $
+            distanceSingleton
+              ++ durationSingleton
+              ++ mbPointsSingleton
+      }
+  ]
   where
     distanceSingleton
       | isNothing distance = []
@@ -154,3 +159,33 @@ mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber =
               tagDisplay = Just False,
               tagValue = (A.decode . A.encode) =<< mbPhoneNumber
             }
+
+mkReallocationInfoTags :: Maybe Bool -> [Spec.TagGroup]
+mkReallocationInfoTags = \case
+  Nothing -> []
+  Just isReallocationEnabled ->
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "reallocation_info",
+                  descriptorName = Just "Reallocation Information",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just
+              [ Spec.Tag
+                  { tagDescriptor =
+                      Just $
+                        Spec.Descriptor
+                          { descriptorCode = Just "is_reallocation_enabled",
+                            descriptorName = Just "Is Reallocation Enabled",
+                            descriptorShortDesc = Nothing
+                          },
+                    tagDisplay = Just False,
+                    tagValue = Just $ show isReallocationEnabled
+                  }
+              ]
+        }
+    ]
