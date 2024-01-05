@@ -1782,6 +1782,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return info.versionCode;
     }
 
+    @Deprecated
     @JavascriptInterface
     public void toggleLoader(final boolean visible) {
         ExecutorManager.runOnMainThread(() -> {

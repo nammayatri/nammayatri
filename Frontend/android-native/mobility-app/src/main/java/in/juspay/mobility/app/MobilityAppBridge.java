@@ -833,6 +833,7 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void cleverTapEvent(String event, String params) {
+        ExecutorManager.runOnBackgroundThread(() -> {
         if (clevertapDefaultInstance != null) {
             Map<String, Object> resultMap = new HashMap<>();
             try {
@@ -850,10 +851,12 @@ public class MobilityAppBridge extends HyperBridge {
             }
             clevertapDefaultInstance.pushEvent(event, resultMap);
         }
+        });
     }
 
     @JavascriptInterface
     public void setCleverTapUserData(String key, String value) {
+        ExecutorManager.runOnBackgroundThread(() -> {
         HashMap<String, Object> profileUpdate = new HashMap<>();
         try {
             profileUpdate.put(key, value);
@@ -867,10 +870,12 @@ public class MobilityAppBridge extends HyperBridge {
             String fcmRegId = sharedPrefs.getString("FCM_TOKEN", "null");
             clevertapDefaultInstance.pushFcmRegistrationId(fcmRegId, true);
         }
+        });
     }
 
     @JavascriptInterface
     public void setCleverTapUserProp(String key, String value) {
+        ExecutorManager.runOnBackgroundThread(() -> {
         HashMap<String, Object> propertiesUpdate = new HashMap<>();
         try {
             propertiesUpdate.put(key, value);
@@ -879,49 +884,58 @@ public class MobilityAppBridge extends HyperBridge {
         }
         if (clevertapDefaultInstance != null)
             clevertapDefaultInstance.pushProfile(propertiesUpdate);
+        });
     }
 
     @JavascriptInterface
     public void setCleverTapUserMultipleProp(String arr) {
-        if (clevertapDefaultInstance == null)
-            clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
+        ExecutorManager.runOnBackgroundThread(() -> {
+            if (clevertapDefaultInstance == null)
+                clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(bridgeComponents.getContext());
 
-        Map<String, Object> propertiesUpdate = new HashMap<>();
-        try {
-            JSONArray jsonArray = new JSONArray(arr);
+            Map<String, Object> propertiesUpdate = new HashMap<>();
+            try {
+                JSONArray jsonArray = new JSONArray(arr);
 
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject jsonObject = jsonArray.getJSONObject(i);
-                String key = jsonObject.getString("key");
-                Object value = jsonObject.get("value");
-                propertiesUpdate.put(key, value);
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    JSONObject jsonObject = jsonArray.getJSONObject(i);
+                    String key = jsonObject.getString("key");
+                    Object value = jsonObject.get("value");
+                    propertiesUpdate.put(key, value);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return;
             }
-        } catch (JSONException e) {
-            e.printStackTrace();
-            return;
-        }
-        clevertapDefaultInstance.pushProfile(propertiesUpdate);
+            clevertapDefaultInstance.pushProfile(propertiesUpdate);
+        });
     }
 
 
     @JavascriptInterface
     public void cleverTapCustomEvent(String event) {
+        ExecutorManager.runOnBackgroundThread(() -> {
         if (clevertapDefaultInstance != null)
             clevertapDefaultInstance.pushEvent(event);
+        });
     }
 
     @JavascriptInterface
     public void cleverTapCustomEventWithParams(String event, String paramKey, String paramValue) {
+        ExecutorManager.runOnBackgroundThread(() -> {
         HashMap<String, Object> mapCustomEvent = new HashMap<>();
         mapCustomEvent.put(paramKey, paramValue);
         if (clevertapDefaultInstance != null)
             clevertapDefaultInstance.pushEvent(event, mapCustomEvent);
+        });
     }
 
     @JavascriptInterface
     public void cleverTapSetLocation() {
+        ExecutorManager.runOnBackgroundThread(() -> {
         Location location = clevertapDefaultInstance.getLocation();
         clevertapDefaultInstance.setLocation(location);
+        });
     }
 
     @JavascriptInterface
