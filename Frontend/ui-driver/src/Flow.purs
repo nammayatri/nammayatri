@@ -70,6 +70,7 @@ import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapE
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
+import Mobility.Prelude (capitalize)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork)
@@ -342,7 +343,7 @@ getDriverInfoFlow event activeRideResp = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
   case getDriverInfoApiResp of
     Right (GetDriverInfoResp getDriverInfoResp) -> do
-      void $ pure $ setValueToLocalStore DRIVER_LOCATION <$> (getCityFromCode <$> getDriverInfoResp.operatingCity)
+      void $ pure $ setValueToLocalStore DRIVER_LOCATION <$> (capitalize <$> getCityFromCode <$> getDriverInfoResp.operatingCity)
       updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
       liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
       if getDriverInfoResp.enabled then do
