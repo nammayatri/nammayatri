@@ -22,10 +22,8 @@ import Engineering.Helpers.Commons
 
 foreign import waitingCountdownTimerV2Impl :: forall action. EffectFn5 Int String String (action -> Effect Unit) (String -> String -> Int -> action) Unit
 foreign import countDownImpl :: forall action. EffectFn4 Int String (action -> Effect Unit) (Int -> String -> String-> action) Unit
-foreign import clearTimer :: String -> Unit
 foreign import clearTimerWithId :: String -> Unit
 foreign import startTimerWithTimeV2Impl :: forall action. EffectFn5 String String String (action -> Effect Unit) (Int -> String -> String -> action) Unit
-foreign import clearAllTimers :: Unit -> Unit
 
 waitingCountdownTimerV2 :: forall action. Int -> String -> String -> (action -> Effect Unit) -> (String -> String -> Int -> action) -> Effect Unit
 waitingCountdownTimerV2 = runEffectFn5 waitingCountdownTimerV2Impl

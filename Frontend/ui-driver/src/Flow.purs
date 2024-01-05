@@ -122,7 +122,7 @@ import Helpers.Firebase
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import MerchantConfig.Types (AppConfig(..))
 import ConfigProvider
-import Timers (clearTimer)
+import Timers (clearTimerWithId)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -1958,7 +1958,7 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
-          void $ pure $ clearTimer updatedState.data.activeRide.waitTimerId
+          void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           currentRideFlow Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -2082,9 +2082,9 @@ homeScreenFlow = do
                                                                                         {key : "Pickup", value : unsafeToForeign state.data.activeRide.source},
                                                                                         {key : "Estimated Ride Distance (meters)" , value : unsafeToForeign state.data.activeRide.distance}]
       API.DriverCancelRideResponse cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
-      _ <- pure if state.data.driverGotoState.timerId /= "" then clearTimer state.data.driverGotoState.timerId else unit
+      _ <- pure if state.data.driverGotoState.timerId /= "" then clearTimerWithId state.data.driverGotoState.timerId else unit
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
-      void $ pure $ clearTimer state.data.activeRide.waitTimerId
+      void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
@@ -2105,7 +2105,7 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
           _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
-          void $ pure $ clearTimer state.data.activeRide.waitTimerId
+          void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
           (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
           removeChatService ""
           _ <- updateStage $ HomeScreenStage HomeScreen
@@ -2247,7 +2247,7 @@ homeScreenFlow = do
       case deactivateResp of
         Right _ -> do
           _ <- pure $ toast $ getString GOTO_LOC_IS_DISABLED
-          _ <- pure $ clearTimer state.data.driverGotoState.timerId
+          _ <- pure $ clearTimerWithId state.data.driverGotoState.timerId
           driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp})
           updateDriverDataToStates

@@ -384,7 +384,7 @@ eval (EnableGotoTimerAC PrimaryButtonController.OnClick)state = updateAndExit st
 eval AddGotoAC state = exit $ ExitGotoLocation state false
 
 eval (UpdateGoHomeTimer timerID timeInMinutes sec ) state = if sec <= 0 then do
-  void $ pure $ TF.clearTimer timerID
+  void $ pure $ TF.clearTimerWithId timerID
   void $ pure $ HU.setPopupType ST.VALIDITY_EXPIRED
   continue state { data { driverGotoState { goToPopUpType = ST.VALIDITY_EXPIRED}}}
   else continue state { data { driverGotoState { timerInMinutes = timeInMinutes <> " " <>(getString MIN_LEFT), timerId = timerID} } }
@@ -411,7 +411,7 @@ eval BackPressed state = do
     continue state{props{currentStage = ST.RideAccepted}}
   else if state.props.cancelRideModalShow then continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
   else if state.props.cancelConfirmationPopup then do
-    _ <- pure $ TF.clearTimer state.data.cancelRideConfirmationPopUp.timerID
+    _ <- pure $ TF.clearTimerWithId state.data.cancelRideConfirmationPopUp.timerID
     continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
   else if state.props.showBonusInfo then continue state { props { showBonusInfo = false } }
   else if state.data.paymentState.showRateCard then continue state { data { paymentState{ showRateCard = false } } }
@@ -748,14 +748,14 @@ eval (CancelRideModalAction (SelectListModal.Button2 PrimaryButtonController.OnC
 
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton2Click)) state = do
-  _ <- pure $ TF.clearTimer state.data.cancelRideConfirmationPopUp.timerID
+  _ <- pure $ TF.clearTimerWithId state.data.cancelRideConfirmationPopUp.timerID
   continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true, cancelConfirmationPopup = false},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds status timerID)) state = do
-  if status == "EXPIRED" && seconds == 0 then do
-    _ <- pure $ TF.clearTimer timerID
+  if status == "EXPIRED" then do
+    _ <- pure $ TF.clearTimerWithId timerID
     continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
     else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = seconds, timerID = timerID, continueEnabled = false}}}
 
