@@ -80,7 +80,7 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     hostName :: Text,
     searchRequestExpiry :: Maybe Seconds,
-    migrationPath :: Maybe FilePath,
+    migrationPath :: [FilePath],
     autoMigrate :: Bool,
     coreVersion :: Text,
     loggerConfig :: LoggerConfig,

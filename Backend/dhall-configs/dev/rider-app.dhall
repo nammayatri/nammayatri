@@ -188,8 +188,11 @@ in  { esqDBCfg
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
     , searchRequestExpiry = Some +600
-    , migrationPath = Some
-        (env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app")
+    , migrationPath =
+      [   env:RIDER_APP_MIGRATION_READ_ONLY_PATH as Text
+        ? "dev/migrations-read-only/rider-app"
+      , env:RIDER_APP_MIGRATION_PATH as Text ? "dev/migrations/rider-app"
+      ]
     , autoMigrate = True
     , coreVersion = "0.9.4"
     , loggerConfig =

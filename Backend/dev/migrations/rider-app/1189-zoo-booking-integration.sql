@@ -1,59 +1,8 @@
-CREATE TABLE atlas_app.ticket_place (
-    id CHARACTER(36) PRIMARY KEY NOT NULL,
-    merchant_operating_city_id CHARACTER(36),
-    name text NOT NULL,
-    description text,
-    lat double precision,
-    lon double precision,
-    gallery text[],
-    open_timings time without time zone,
-    close_timings time without time zone
-);
-
-CREATE TABLE atlas_app.ticket_service (
-    id CHARACTER(36) PRIMARY KEY NOT NULL,
-    places_id CHARACTER(36),
-    service VARCHAR(50) NOT NULL, -- Entrance | Aquarium | Video Photography
-    max_verification INT NOT NULL DEFAULT 1,
-    open_timings time without time zone,
-    close_timings time without time zone
-);
-
 CREATE TABLE atlas_app.ticket_service_price (
     ticket_service_id CHARACTER(36),
     attendee_type VARCHAR(36) NOT NULL, -- Adult | Kid | CameraUnit
     price_per_unit NUMERIC(30, 2) NOT NULL,
     PRIMARY KEY (ticket_service_id, attendee_type)
-);
-
--- User Bookings Table
-CREATE TABLE atlas_app.ticket_booking (
-    id CHARACTER(36) PRIMARY KEY NOT NULL,
-    short_id VARCHAR(36) NOT NULL,
-    merchant_operating_city_id CHARACTER(36),
-    ticket_place_id CHARACTER(36),
-    person_id character (36),
-    amount NUMERIC (30, 2) NOT NULL,
-    visit_date DATE NOT NULL,
-    status VARCHAR(10) NOT NULL, -- pending | failed | booked
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-CREATE TABLE atlas_app.ticket_booking_service (
-    id CHARACTER(36) PRIMARY KEY NOT NULL,
-    short_id VARCHAR(36) NOT NULL,
-    ticket_booking_id CHARACTER(36),
-    ticket_service_id CHARACTER(36),
-
-    amount NUMERIC (30, 2) NOT NULL,
-    status VARCHAR(10) NOT NULL, -- pending | failed | confirmed | verified
-    verification_count INT DEFAULT 0,
-    expiry_date TIMESTAMP WITH TIME ZONE,
-
-    merchant_operating_city_id CHARACTER(36),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE atlas_app.ticket_booking_service_price_breakup (

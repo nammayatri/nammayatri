@@ -6,7 +6,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/d73560368cb4a0d331fba67164ec8316c1f577dc";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -22,7 +22,7 @@
     };
 
     beckn-gateway = {
-      url = "github:nammayatri/beckn-gateway";
+      url = "github:nammayatri/beckn-gateway/4a28b8807b4aa50056557516ebed5b3b2ed4714a";
       inputs = {
         common.follows = "common";
         haskell-flake.follows = "haskell-flake";

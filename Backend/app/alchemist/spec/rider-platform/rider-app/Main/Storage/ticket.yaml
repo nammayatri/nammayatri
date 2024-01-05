@@ -40,6 +40,7 @@ TicketPlace:
       enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Other"
 
   default:
+    shortDesc: "'default'"
     termsAndConditions: "'{}'"
     placeType: "'Other'"
 

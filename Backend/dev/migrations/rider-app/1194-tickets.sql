@@ -1,66 +1,3 @@
-CREATE TABLE atlas_app.business_hour ();
-
-ALTER TABLE atlas_app.business_hour ADD COLUMN btype text NOT NULL;
-ALTER TABLE atlas_app.business_hour ADD COLUMN category_id text[] NOT NULL;
-ALTER TABLE atlas_app.business_hour ADD COLUMN id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.business_hour ADD PRIMARY KEY ( id);
-
-CREATE TABLE atlas_app.seat_management ();
-
-ALTER TABLE atlas_app.seat_management ADD COLUMN blocked integer NOT NULL;
-ALTER TABLE atlas_app.seat_management ADD COLUMN booked integer NOT NULL;
-ALTER TABLE atlas_app.seat_management ADD COLUMN date date NOT NULL;
-ALTER TABLE atlas_app.seat_management ADD COLUMN id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.seat_management ADD COLUMN ticket_service_category_id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.seat_management ADD PRIMARY KEY ( id);
-
-CREATE TABLE atlas_app.service_category ();
-
-ALTER TABLE atlas_app.service_category ADD COLUMN allowed_seats integer ;
-ALTER TABLE atlas_app.service_category ADD COLUMN available_seats integer ;
-ALTER TABLE atlas_app.service_category ADD COLUMN description text NOT NULL;
-ALTER TABLE atlas_app.service_category ADD COLUMN id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.service_category ADD COLUMN name text NOT NULL;
-ALTER TABLE atlas_app.service_category ADD COLUMN people_category text[] ;
-ALTER TABLE atlas_app.service_category ADD PRIMARY KEY ( id);
-
-CREATE TABLE atlas_app.service_people_category ();
-
-ALTER TABLE atlas_app.service_people_category ADD COLUMN description text NOT NULL;
-ALTER TABLE atlas_app.service_people_category ADD COLUMN id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.service_people_category ADD COLUMN name text NOT NULL;
-ALTER TABLE atlas_app.service_people_category ADD COLUMN price_per_unit double precision NOT NULL;
-ALTER TABLE atlas_app.service_people_category ADD PRIMARY KEY ( id);
-
-CREATE TABLE atlas_app.special_occasion ();
-
-ALTER TABLE atlas_app.special_occasion ADD COLUMN business_hours text[] NOT NULL;
-ALTER TABLE atlas_app.special_occasion ADD COLUMN date date ;
-ALTER TABLE atlas_app.special_occasion ADD COLUMN day_of_week text ;
-ALTER TABLE atlas_app.special_occasion ADD COLUMN description text ;
-ALTER TABLE atlas_app.special_occasion ADD COLUMN entity_id text NOT NULL;
-ALTER TABLE atlas_app.special_occasion ADD COLUMN id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.special_occasion ADD COLUMN special_day_type text NOT NULL;
-ALTER TABLE atlas_app.special_occasion ADD PRIMARY KEY ( id);
-
-CREATE TABLE atlas_app.ticket_booking_people_category ();
-
-ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN name text ;
-ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN number_of_units integer ;
-ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN price_per_unit double precision ;
-ALTER TABLE atlas_app.ticket_booking_people_category ADD COLUMN ticket_booking_service_category_id character varying(36) ;
-ALTER TABLE atlas_app.ticket_booking_people_category ADD PRIMARY KEY ( id);
-
-CREATE TABLE atlas_app.ticket_booking_service_category ();
-
-ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN amount double precision ;
-ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN booked_seats integer ;
-ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN name text ;
-ALTER TABLE atlas_app.ticket_booking_service_category ADD COLUMN ticket_booking_service_id character varying(36) ;
-ALTER TABLE atlas_app.ticket_booking_service_category ADD PRIMARY KEY ( id);
-
 -- ALTER QUERIES
 ALTER TABLE atlas_app.ticket_booking ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 ALTER TABLE atlas_app.ticket_booking ALTER COLUMN person_id SET NOT NULL;
@@ -71,16 +8,9 @@ ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN btype text NOT NULL defa
 ALTER TABLE atlas_app.ticket_place ALTER COLUMN merchant_operating_city_id SET NOT NULL;
 ALTER TABLE atlas_app.ticket_place ALTER COLUMN map_image_url type text;
 ALTER TABLE atlas_app.ticket_place ALTER COLUMN icon_url type text;
-ALTER TABLE atlas_app.ticket_place ADD COLUMN place_type text NOT NULL default 'WildLifeSanctuary';
 ALTER TABLE atlas_app.ticket_place ALTER COLUMN short_desc type text;
-ALTER TABLE atlas_app.ticket_place ADD COLUMN terms_and_conditions text[] NOT NULL default '{}';
 
 ALTER TABLE atlas_app.ticket_service ALTER COLUMN places_id SET NOT NULL;
-ALTER TABLE atlas_app.ticket_service ADD COLUMN allow_future_booking boolean NOT NULL default true;
-ALTER TABLE atlas_app.ticket_service ADD COLUMN business_hours text[] NOT NULL default '{}';
-ALTER TABLE atlas_app.ticket_service ADD COLUMN expiry text NOT NULL default 'VisitDate 12:00:00';
-ALTER TABLE atlas_app.ticket_service ADD COLUMN operational_days text[] NOT NULL default '{Monday,Tuesday,Wednesday,Friday,Saturday,Sunday}';
-ALTER TABLE atlas_app.ticket_service ADD COLUMN short_desc text ;
 
 insert into atlas_app.service_people_category (id, name, description, price_per_unit) values ('125378b5-0a86-44ce-afa1-b4d27d712a23', 'Adult', 'Adult', 50);
 insert into atlas_app.service_people_category (id, name, description, price_per_unit) values ('225378b5-0a86-44ce-afa1-b4d27d712a23', 'Kid', 'Kid', 20);
