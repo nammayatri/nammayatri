@@ -64,6 +64,7 @@ import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScre
 import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
 import Screens.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
+import Screens.DueDetailsScreen.ScreenData as DueDetailsScreenData
 import Data.Maybe (Maybe(..))
 import MerchantConfig.Types (AppConfig(..))
 import Screens.DriverReferralScreen.ScreenData as DriverReferralScreenData
@@ -116,6 +117,7 @@ newtype GlobalState = GlobalState {
   , welcomeScreen :: WelcomeScreenState
   , driverEarningsScreen :: DriverEarningsScreenState
   , driverReferralScreen :: DriverReferralScreenState
+  , dueDetailsScreen :: DueDetailsScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -164,6 +166,7 @@ defaultGlobalState = GlobalState {
 , welcomeScreen : WelcomeScreenData.initData
 , driverEarningsScreen : DriverEarningsScreenData.initData
 , driverReferralScreen : DriverReferralScreenData.initData
+, dueDetailsScreen : DueDetailsScreenData.initData
 }
 
 defaultGlobalProps :: GlobalProps
@@ -220,6 +223,7 @@ data ScreenType =
   | DriverEarningsScreenStateType (DriverEarningsScreenState -> DriverEarningsScreenState)
   | DriverReferralScreenStateType (DriverReferralScreenState -> DriverReferralScreenState)
   | RegistrationScreenStateType (RegistrationScreenState -> RegistrationScreenState)
+  | DueDetailsScreenStateType (DueDetailsScreenState -> DueDetailsScreenState)
   
 
 data ScreenStage = HomeScreenStage HomeScreenStage
@@ -417,6 +421,7 @@ data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | REFRESH_HELP_CENTRE SubscriptionScreenState
                                   | CLEAR_DUES_ACT
                                   | SUBSCRIBE_API SubscriptionScreenState
+                                  | DUE_DETAILS_SCREEN SubscriptionScreenState
 
 data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToRideHistory
@@ -450,3 +455,5 @@ data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen
 data CHOOSE_LANG_SCREEN_OUTPUT = LOGIN_FLOW
 data DRIVER_REFERRAL_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
                                    | DRIVER_CONTEST_SCREEN
+
+data DUE_DETAILS_SCREEN_OUTPUT = EXIT_TO_SUBSCRIPTION

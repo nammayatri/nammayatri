@@ -71,6 +71,7 @@ modifyScreenState st =
     DriverReferralScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {driverReferralScreen = a state.driverReferralScreen})
     RegistrationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {registrationScreen = a state.registrationScreen})
     DriverEarningsScreenStateType a ->  modifyState (\(GlobalState state) -> GlobalState $ state { driverEarningsScreen = a state.driverEarningsScreen })
+    DueDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {dueDetailsScreen = a state.dueDetailsScreen})
 
 updateStage :: ScreenStage -> FlowBT String Unit
 updateStage stage = do

@@ -196,7 +196,6 @@ view push state =
                 , autoPayDetailsView push state (state.props.subView == PlanDetails)
                 , if (state.props.subView == FindHelpCentre) then findHelpCentreView push state (state.props.subView == FindHelpCentre) else dummyView
                 , if (state.props.subView == DuesView) then duesOverView push state (state.props.subView == DuesView) else dummyView
-                , if (state.props.subView == DueDetails) then dueDetails push state (state.props.subView == DueDetails) else dummyView
               ]
           ]
         , linearLayout

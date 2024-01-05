@@ -88,3 +88,6 @@ subscriptionScreen = do
     SubscribeAPI updatedState -> do 
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ SUBSCRIBE_API updatedState)
+    DueDetailsScreen updatedState -> do
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ DUE_DETAILS_SCREEN updatedState)

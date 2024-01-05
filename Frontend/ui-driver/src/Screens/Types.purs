@@ -1926,7 +1926,7 @@ instance showAutoPayStatus:: Show AutoPayStatus where show = genericShow
 instance eqAutoPayStatus:: Eq AutoPayStatus where eq = genericEq
 instance encodeAutoPayStatus :: Encode AutoPayStatus where encode = defaultEnumEncode
 
-data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | DuesView | DueDetails | NoSubView 
+data SubscriptionSubview = JoinPlan | ManagePlan | MyPlan | PlanDetails | FindHelpCentre | DuesView | NoSubView 
 
 derive instance genericSubscriptionSubview :: Generic SubscriptionSubview _
 instance showSubscriptionSubview :: Show SubscriptionSubview where show = genericShow
@@ -2318,4 +2318,19 @@ type DriverReferralScreenData = {
 type DriverReferralScreenProps = {
   showDriverReferralQRCode :: Boolean
 , showNewDriverReferralText :: Boolean
+} 
+-- ######################################### DueDetailsScreenState ####################################################
+
+type DueDetailsScreenState = {
+  data :: DueDetailsScreenData ,
+  props :: DueDetailsScreenProps
 }
+
+type DueDetailsScreenData = {
+  dues :: Array DueCard,
+  selectedDue :: String
+} 
+
+type DueDetailsScreenProps = {
+  myPlanProps :: MyPlanProps
+} 

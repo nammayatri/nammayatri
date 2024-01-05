@@ -112,6 +112,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | ClearDues SubscriptionScreenState
                     | SubscribeAPI SubscriptionScreenState
                     | EarningsScreen SubscriptionScreenState 
+                    | DueDetailsScreen SubscriptionScreenState
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state = 
@@ -121,9 +122,6 @@ eval BackPressed state =
   else if state.props.confirmCancel then continue state{props { confirmCancel = false}}
   else if state.props.subView == ManagePlan then continue state{props { subView = MyPlan}}
   else if state.props.subView == DuesView then continue state{props { subView = MyPlan}}
-  else if state.props.subView == DueDetails then do
-    let subView' = if state.props.myPlanProps.multiTypeDues then DuesView else MyPlan
-    continue state{props { subView = subView'}, data{myPlanData{selectedDue = ""}}}
   else if state.props.subView == PlanDetails then continue state{props { subView = if state.data.config.subscriptionConfig.optionsMenuItems.managePlan then ManagePlan else MyPlan}}
   else if state.props.subView == FindHelpCentre then continue state {props { subView = state.props.prevSubView, kioskLocation = [], noKioskLocation = false, showError = false}}
   else if state.props.myPlanProps.isDueViewExpanded then continue state{props { myPlanProps{isDueViewExpanded = false}}}
@@ -375,7 +373,7 @@ eval (CheckPaymentStatusButton PrimaryButton.OnClick) state = continueWithCmd st
 
 eval ViewDuesOverView state = continue state{props{subView = DuesView}}
 
-eval (ViewDueDetails dueType) state = continue state{props{subView = DueDetails, myPlanProps {dueType = dueType}}}
+eval (ViewDueDetails dueType) state = exit $ DueDetailsScreen state{props{myPlanProps {dueType = dueType}}}
 
 eval (ClearManualDues PrimaryButton.OnClick) state = updateAndExit state $ ClearDues state
 

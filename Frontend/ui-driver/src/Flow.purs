@@ -107,6 +107,7 @@ import Screens.RideHistoryScreen.Transformer (getPaymentHistoryItemList)
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
+import Screens.SubscriptionScreen.ComponentConfig (dueDetailsListState)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
@@ -2585,6 +2586,10 @@ subScriptionFlow = do
       subScriptionFlow
     SUBSCRIBE_API state -> nyPaymentFlow state.data.myPlanData.planEntity "MYPLAN"
     CLEAR_DUES_ACT -> clearPendingDuesFlow false
+    DUE_DETAILS_SCREEN state -> do
+      let dueDetailsList = dueDetailsListState state
+      modifyScreenState $ DueDetailsScreenStateType (\dueDetailsScreenState -> dueDetailsScreenState { data {dues = dueDetailsList.dues, selectedDue = state.data.myPlanData.selectedDue}, props {myPlanProps = state.props.myPlanProps}})
+      dueDetailsScreenFlow
     _ -> subScriptionFlow
 
 constructLatLong :: String -> String -> Location
@@ -3155,3 +3160,8 @@ driverEarningsFlow = do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = (<$>) (\(DriverProfileStatsResp stats) -> DriverProfileStatsResp stats{ coinBalance = state.data.coinBalance }) globalProps.driverRideStats}
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{coinBalance = state.data.coinBalance}})
       flow
+
+dueDetailsScreenFlow :: FlowBT String Unit 
+dueDetailsScreenFlow = do 
+  _ <- UI.dueDetailsScreen
+  pure unit

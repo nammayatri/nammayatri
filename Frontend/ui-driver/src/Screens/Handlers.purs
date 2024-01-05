@@ -57,3 +57,4 @@ import Screens.ChooseCityScreen.Handler (chooseCityScreen) as UI
 import Screens.WelcomeScreen.Handler (welcomeScreen) as UI
 import Screens.DriverEarningsScreen.Handler (driverEarningsScreen) as UI
 import Screens.DriverReferralScreen.Handler (driverReferralScreen) as UI
+import Screens.DueDetailsScreen.Handler (dueDetailsScreen) as UI

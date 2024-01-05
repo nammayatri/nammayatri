@@ -443,10 +443,6 @@ getHeaderConfig subView isManualPayDue isMultiDueType =
     ST.PlanDetails -> {title : (getString AUTOPAY_DETAILS), actionText : "", backbutton : true}
     ST.FindHelpCentre -> {title : (getString (FIND_HELP_CENTRE "FIND_HELP_CENTRE")), actionText : "", backbutton : true}
     ST.DuesView -> {title : (getString DUE_OVERVIEW), actionText : "", backbutton : true}
-    ST.DueDetails -> {title : getString case isMultiDueType, isManualPayDue of 
-                                          true, false -> AUTOPAY_DUE_DETAILS
-                                          true, true -> MANUAL_DUE_DETAILS
-                                          _, _ -> DUE_DETAILS , actionText : "", backbutton : true}
     _           -> {title : (getString (MY_PLAN_TITLE "MY_PLAN_TITLE")), actionText : "", backbutton : false}
 
 type HeaderData = {title :: String, actionText :: String, backbutton :: Boolean}
