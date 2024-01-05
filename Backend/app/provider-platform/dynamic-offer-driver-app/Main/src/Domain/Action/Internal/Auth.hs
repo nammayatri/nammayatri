@@ -32,14 +32,12 @@ data InternalResp = InternalResp
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-internalAuth :: (HasField "locationTrackingServiceKey" AppEnv Text) => Maybe RegToken -> Maybe Text -> Maybe (Id Merchant) -> Flow InternalResp
-internalAuth token apiKey merchantId = do
+internalAuth :: (HasField "locationTrackingServiceKey" AppEnv Text) => Maybe RegToken -> Maybe Text -> Flow InternalResp
+internalAuth token apiKey = do
   locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
   unless (apiKey == Just locationTrackingServiceKey) $ do
     throwError $ InvalidRequest "Invalid API key"
   (driverId, currentMerchantId, merchantOpCityId) <- verifyPerson (fromMaybe "" token)
-  unless (currentMerchantId == fromMaybe "" merchantId) $ do
-    throwError $ InvalidRequest "Invalid merchant id"
   pure $
     InternalResp
       { driverId,
