@@ -31,6 +31,7 @@ instance FromTType' BeamDI.DriverInformation DriverInformation where
             adminId = Id <$> adminId,
             merchantId = Id <$> merchantId,
             referredByDriverId = Id <$> referredByDriverId,
+            merchantOperatingCityId = Id <$> merchantOperatingCityId,
             ..
           }
 
@@ -40,6 +41,7 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
       { BeamDI.driverId = getId driverId,
         BeamDI.adminId = getId <$> adminId,
         BeamDI.merchantId = getId <$> merchantId,
+        BeamDI.merchantOperatingCityId = getId <$> merchantOperatingCityId,
         BeamDI.active = active,
         BeamDI.onRide = onRide,
         BeamDI.enabled = enabled,

@@ -88,7 +88,7 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
   fork "Triggering onboarding messages" $ do
     -- broadcast messages
     messages <- MessageQuery.findAllOnboardingMessages merchant merchantOperatingCity
-    mapM_ (\msg -> addBroadcastMessageToKafka msg driver.id) messages
+    mapM_ (\msg -> addBroadcastMessageToKafka False msg driver.id) messages
 
     -- whatsapp message
     mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")

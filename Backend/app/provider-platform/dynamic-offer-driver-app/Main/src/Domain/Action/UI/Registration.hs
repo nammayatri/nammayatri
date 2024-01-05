@@ -205,7 +205,8 @@ createDriverDetails personId merchantId merchantOpCityId = do
             updatedAt = now,
             compAadhaarImagePath = Nothing,
             availableUpiApps = Nothing,
-            driverDob = (.driverDob) =<< mbDriverLicense
+            driverDob = (.driverDob) =<< mbDriverLicense,
+            merchantOperatingCityId = Just merchantOpCityId
           }
   QDriverStats.createInitialDriverStats driverId
   QD.create driverInfo

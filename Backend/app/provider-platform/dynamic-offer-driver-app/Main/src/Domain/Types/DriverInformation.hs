@@ -21,6 +21,7 @@ import Data.Aeson
 import Data.OpenApi (ToParamSchema, ToSchema)
 import Data.Time (UTCTime)
 import qualified Domain.Types.Merchant as DMerchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
@@ -91,7 +92,8 @@ data DriverInformation = DriverInformation
     compAadhaarImagePath :: Maybe Text,
     availableUpiApps :: Maybe Text,
     blockStateModifier :: Maybe Text,
-    driverDob :: Maybe UTCTime
+    driverDob :: Maybe UTCTime,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity)
   }
   deriving (Generic)
 

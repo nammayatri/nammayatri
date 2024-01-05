@@ -25,6 +25,7 @@ data DriverInformationT f = DriverInformationT
   { driverId :: B.C f Text,
     adminId :: B.C f (Maybe Text),
     merchantId :: B.C f (Maybe Text),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     active :: B.C f Bool,
     onRide :: B.C f Bool,
     enabled :: B.C f Bool,

@@ -46,10 +46,14 @@ import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
+import Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Message.Message as MQuery
 import qualified Storage.Queries.Message.MessageReport as MRQuery
-import qualified Storage.Queries.Person as QP
+import System.Environment (lookupEnv)
 import Tools.Error
+
+lookupBroadcastPush :: IO Bool
+lookupBroadcastPush = fromMaybe False . (>>= readMaybe) <$> lookupEnv "BROADCAST_KAFKA_PUSH"
 
 createFilePath ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
@@ -199,14 +203,15 @@ sendMessage merchantShortId opCity Common.SendMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   message <- B.runInReplica $ MQuery.findById (Id messageId) >>= fromMaybeM (InvalidRequest "Message Not Found")
+  kafkaPush <- L.runIO lookupBroadcastPush
   allDriverIds <- case _type of
-    AllEnabled -> B.runInReplica $ QP.findAllDriverIdExceptProvided merchant merchantOpCity []
+    AllEnabled -> B.runInReplica $ QDI.findAllDriverIdExceptProvided merchant merchantOpCity []
     Include -> readCsv
     Exclude -> do
       driverIds <- readCsv
-      B.runInReplica $ QP.findAllDriverIdExceptProvided merchant merchantOpCity driverIds
+      B.runInReplica $ QDI.findAllDriverIdExceptProvided merchant merchantOpCity driverIds
   logDebug $ "DriverId to which the message is sent" <> show allDriverIds
-  fork "Adding messages to kafka queue" $ mapM_ (addBroadcastMessageToKafka message) allDriverIds
+  fork "Adding messages to kafka queue" $ mapM_ (addBroadcastMessageToKafka kafkaPush message) allDriverIds
   return Success
   where
     readCsv = case csvFile of

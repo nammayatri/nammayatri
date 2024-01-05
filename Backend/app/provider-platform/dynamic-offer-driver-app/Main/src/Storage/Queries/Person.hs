@@ -353,35 +353,6 @@ findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber (Id mercha
         ]
     ]
 
-findAllDriverIdExceptProvided :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Driver] -> m [Id Driver]
-findAllDriverIdExceptProvided merchant opCity driverIdsToBeExcluded = do
-  dbConf <- getMasterBeamConfig
-  result <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        B.filter_'
-          ( \(person, driverInfo) ->
-              person.merchantId B.==?. B.val_ (getId merchant.id)
-                B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
-                B.&&?. driverInfo.verified B.==?. B.val_ True
-                B.&&?. driverInfo.enabled B.==?. B.val_ True
-                B.&&?. driverInfo.blocked B.==?. B.val_ False
-                B.&&?. B.sqlBool_ (B.not_ (driverInfo.driverId `B.in_` (B.val_ . getId <$> driverIdsToBeExcluded)))
-          )
-          do
-            person <- B.all_ (BeamCommon.person BeamCommon.atlasDB)
-            driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\info' -> BeamP.id person B.==?. BeamDI.driverId info')
-            pure (person, driverInfo)
-  case result of
-    Right x -> do
-      let persons = fmap fst x
-      p <- catMaybes <$> mapM fromTType' persons
-      pure (personIdToDrivrId . (Person.id :: PersonE e -> Id Person) <$> p)
-    Left _ -> pure []
-  where
-    personIdToDrivrId :: Id Person -> Id Driver
-    personIdToDrivrId = cast
-
 updateMerchantIdAndMakeAdmin :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id Merchant -> m ()
 updateMerchantIdAndMakeAdmin (Id personId) (Id merchantId) = do
   now <- getCurrentTime

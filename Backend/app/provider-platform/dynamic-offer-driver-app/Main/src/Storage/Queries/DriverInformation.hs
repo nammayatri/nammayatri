@@ -20,6 +20,7 @@ import qualified Database.Beam.Query ()
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -46,6 +47,29 @@ getEnabledAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver 
 getEnabledAt driverId = do
   dInfo <- findById driverId
   return (dInfo >>= (.enabledAt))
+
+findAllDriverIdExceptProvided :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Driver] -> m [Id Driver]
+findAllDriverIdExceptProvided merchant opCity driverIdsToBeExcluded = do
+  dbConf <- getMasterBeamConfig
+  result <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.filter_'
+          ( \driverInfo ->
+              driverInfo.merchantId B.==?. B.val_ (Just $ getId merchant.id)
+                B.&&?. (driverInfo.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ driverInfo.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                B.&&?. driverInfo.verified B.==?. B.val_ True
+                B.&&?. driverInfo.enabled B.==?. B.val_ True
+                B.&&?. driverInfo.blocked B.==?. B.val_ False
+                B.&&?. B.sqlBool_ (B.not_ (driverInfo.driverId `B.in_` (B.val_ . getId <$> driverIdsToBeExcluded)))
+          )
+          do
+            B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
+  case result of
+    Right res' -> do
+      driverInfos <- catMaybes <$> mapM fromTType' res'
+      pure $ DriverInfo.driverId <$> driverInfos
+    Left _ -> pure []
 
 findAllByEnabledAtInWindow :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Maybe UTCTime -> Maybe UTCTime -> m [DriverInformation]
 findAllByEnabledAtInWindow merchantId from to = do
