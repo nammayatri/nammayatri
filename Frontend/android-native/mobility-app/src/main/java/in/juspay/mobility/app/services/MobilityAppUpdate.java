@@ -12,6 +12,7 @@ package in.juspay.mobility.app.services;
 import android.app.Activity;
 import android.content.Context;
 import android.content.IntentSender;
+import android.graphics.Color;
 import android.util.Log;
 
 import com.google.android.gms.tasks.Task;
@@ -98,6 +99,7 @@ public class MobilityAppUpdate {
                             "An update has just been downloaded.",
                             Snackbar.LENGTH_INDEFINITE);
             snackbar.setAction("RESTART", view -> appUpdateManager.completeUpdate());
+            snackbar.setActionTextColor(Color.parseColor("#FCC32C"));
             snackbar.show();
         }catch (Exception e){
             e.printStackTrace();
