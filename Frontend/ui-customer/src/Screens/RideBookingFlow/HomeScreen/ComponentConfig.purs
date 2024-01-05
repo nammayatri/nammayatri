@@ -726,7 +726,7 @@ rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
   let
     config' = RateCard.config
-    bangaloreCode = HU.getCodeFromCity "Bangalore"
+    bangaloreCode = EHU.getCodeFromCity "Bangalore"
     fareInfoText = maybe (mkFareInfoText bangaloreCode) (\city -> mkFareInfoText city) state.props.city
     rateCardConfig' =
       config'
@@ -776,7 +776,7 @@ rateCardConfig state =
 
     mkFareInfoText :: String -> String
     mkFareInfoText city = 
-      let city_array = map (\item -> HU.getCodeFromCity item) [ "Bangalore", "Tumakuru" , "Mysore"]
+      let city_array = map (\item -> EHU.getCodeFromCity item) [ "Bangalore", "Tumakuru" , "Mysore"]
       in (if DA.any ( _ == city) city_array 
             then (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT") 
             else "")
