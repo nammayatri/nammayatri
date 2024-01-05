@@ -936,7 +936,7 @@ requestInfoCardView push state =
 
 buttonLayout :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 buttonLayout state push =
-  PrestoAnim.animationSet (buttonLayoutAnimation FunctionCall)
+  PrestoAnim.animationSet (buttonLayoutAnimation state)
   $ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -1134,8 +1134,8 @@ recentSearchesView state push =
         )
     ]
 
-buttonLayoutAnimation :: LazyCheck -> Array PrestoAnim.Animation
-buttonLayoutAnimation lazyCheck = [fadeIn true]
+buttonLayoutAnimation :: HomeScreenState -> Array PrestoAnim.Animation
+buttonLayoutAnimation state = [fadeIn state.props.showShimmer]
 ------------- settingSideBarView ------------
 settingSideBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 settingSideBarView push state =
@@ -3724,8 +3724,6 @@ getMapDimensions state =
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestionsView push state = 
-  PrestoAnim.animationSet
-  [ Anim.fadeIn  (not state.props.showShimmer)] $
   linearLayout 
   [ width MATCH_PARENT
   , height WRAP_CONTENT
