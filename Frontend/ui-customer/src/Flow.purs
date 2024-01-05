@@ -1478,9 +1478,30 @@ myRidesScreenFlow fromNavBar = do
     GO_TO_NAV_BAR -> homeScreenFlow
     GO_TO_HELP_SCREEN -> helpAndSupportScreenFlow
     REPEAT_RIDE_FLOW state -> do
+      logField_ <- lift $ lift $ getLogFields
       let trip = getTripFromRideHistory state
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ rideHistoryTrip = Just trip, settingSideBar{opened = SettingSideBarController.CLOSED}}})
-      homeScreenFlow
+      updateRepeatRideDetails trip
+      _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_repeat_trip"
+      setValueToLocalStore FLOW_WITHOUT_OFFERS (show true)
+      setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
+      setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
+      setValueToLocalStore TEST_POLLING_COUNT $ "22" 
+      
+      (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq trip.sourceLat trip.sourceLong)
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = sourceServiceabilityResp.city }})
+      let (SpecialLocation srcSpecialLocation) = fromMaybe HomeScreenData.specialLocation (sourceServiceabilityResp.specialLocation)
+      let pickUpPoints = map (\(GatesInfo item) -> {
+                                              place: item.name,
+                                              lat  : (item.point)^._lat,
+                                              lng : (item.point)^._lon,
+                                              address : item.address,
+                                              city : Nothing
+                                            }) srcSpecialLocation.gates
+      when (trip.isSpecialZone) $ do
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{sourceSelectedOnMap = false}, data{polygonCoordinates = fromMaybe "" sourceServiceabilityResp.geoJson, nearByPickUpPoints = pickUpPoints}})
+      rideSearchFlow "REPEAT_RIDE_FLOW"
+      -- modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ rideHistoryTrip = Just trip, settingSideBar{opened = SettingSideBarController.CLOSED}}})
+      -- homeScreenFlow
 
 selectLanguageScreenFlow :: FlowBT String Unit
 selectLanguageScreenFlow = do
