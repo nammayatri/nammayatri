@@ -103,7 +103,7 @@ findAllDriversWithInfoAndVehicle merchant opCity limitVal offsetVal mbVerified m
             B.filter_'
               ( \(person, driverInfo, vehicle) ->
                   person.merchantId B.==?. B.val_ (getId merchant.id)
-                    B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. ((person.merchantOperatingCityId B.==?. B.val_ Nothing) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                    B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehNum -> B.maybe_ (B.sqlBool_ $ B.val_ False) (\rNo -> B.sqlBool_ (B.like_ rNo (B.val_ ("%" <> vehNum <> "%")))) vehicle.registrationNo) mbVehicleNumberSearchString
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\verified -> driverInfo.verified B.==?. B.val_ verified) mbVerified
                     B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\enabled -> driverInfo.enabled B.==?. B.val_ enabled) mbEnabled
@@ -279,7 +279,7 @@ fetchDriverInfo merchant moCity mbMobileNumberDbHashWithCode mbVehicleNumber mbD
         B.filter_'
           ( \(person, _driverInfo, vehicle, driverLicense, _driverRCAssociation, vehicleRegistrationCertificate) ->
               person.merchantId B.==?. B.val_ merchant.id.getId
-                B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId moCity.id) B.||?. ((person.merchantOperatingCityId B.==?. B.val_ Nothing) B.&&?. B.sqlBool_ (B.val_ (merchant.city == moCity.city))))
+                B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId moCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == moCity.city))))
                 B.&&?. person.role B.==?. B.val_ Person.DRIVER
                 B.&&?. maybe
                   (B.sqlBool_ $ B.val_ True)
@@ -362,7 +362,7 @@ findAllDriverIdExceptProvided merchant opCity driverIdsToBeExcluded = do
         B.filter_'
           ( \(person, driverInfo) ->
               person.merchantId B.==?. B.val_ (getId merchant.id)
-                B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. ((person.merchantOperatingCityId B.==?. B.val_ Nothing) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                B.&&?. (person.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ person.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
                 B.&&?. driverInfo.verified B.==?. B.val_ True
                 B.&&?. driverInfo.enabled B.==?. B.val_ True
                 B.&&?. driverInfo.blocked B.==?. B.val_ False
