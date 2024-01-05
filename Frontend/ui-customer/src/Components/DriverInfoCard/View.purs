@@ -640,7 +640,7 @@ ratingView push state =
     [ text $ if state.data.rating == 0.0 then (getString NEW_) else show state.data.rating
     , color state.data.config.driverInfoConfig.ratingTextColor
     , gravity CENTER_VERTICAL
-    , margin $ MarginLeft if os == "IOS" then 0 else 5
+    , margin $ MarginLeft if os == "IOS" then 0 else 3
     , color Color.black700
     , accessibility DISABLE
     ] <> FontStyle.body16 TypoGraphy
