@@ -47,7 +47,7 @@ import Common.Types.App
 import Effect.Uncurried(runEffectFn4)
 import Storage(KeyStore(..), getValueToLocalStore)
 import ConfigProvider
-import Timers (clearTimer)
+import Timers (clearTimerWithId)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -286,7 +286,7 @@ eval (ContactSupportAction (PopUpModal.OnButton2Click)) state = do
     continue state { props = state.props { callSupportPopUpVisible = not state.props.callSupportPopUpVisible  }}
 
 eval (SuccessScreenExpireCountDwon seconds status timerId) state = if status == "EXPIRED" then do
-  _ <- pure $ clearTimer timerId
+  _ <- pure $ clearTimerWithId timerId
   continue state{props {stage = QRScreen}} else continue state
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do

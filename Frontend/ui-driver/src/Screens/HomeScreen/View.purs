@@ -84,7 +84,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Constants (defaultDensity)
 import Components.ErrorModal as ErrorModal
-import Timers (clearTimer, waitingCountdownTimerV2)
+import Timers (clearTimerWithId, waitingCountdownTimerV2)
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -110,13 +110,13 @@ screen initialState =
           if (localStage /= "RideAccepted" && localStage /= "ChatWithCustomer" && initialState.data.activeRide.waitTimerId /= "") then do
             void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
             push $ UpdateWaitTime ST.NoStatus
-            void $ pure $ clearTimer initialState.data.activeRide.waitTimerId
+            void $ pure $ clearTimerWithId initialState.data.activeRide.waitTimerId
             pure unit
           else pure unit
           
           void if (DA.any (_ == localStage)["RideRequested", "HomeScreen", "__failed"]) && initialState.data.driverGotoState.isGotoEnabled then 
             runEffectFn3 HU.countDownInMinutes (EHC.getExpiryTime (HU.istToUtcDate initialState.data.driverGotoState.gotoValidTill) false) push UpdateGoHomeTimer 
-            else if (initialState.data.driverGotoState.timerId /= "") then pure $ clearTimer initialState.data.driverGotoState.timerId
+            else if (initialState.data.driverGotoState.timerId /= "") then pure $ clearTimerWithId initialState.data.driverGotoState.timerId
             else pure unit
           case localStage of
             "RideRequested"  -> do

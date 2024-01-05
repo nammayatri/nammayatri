@@ -2106,6 +2106,8 @@ emptyLayout state =
 ------------------------ rideTrackingView ---------------------------
 rideTrackingView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideTrackingView push state =
+  let lowVisionDisability = maybe false (\dis -> if dis.tag == "BLIND_LOW_VISION" then true else false) state.data.disability
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -2137,17 +2139,17 @@ rideTrackingView push state =
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     ][ bottomSheetLayout
-                        [ height WRAP_CONTENT
+                      ( [ height WRAP_CONTENT
                         , width MATCH_PARENT
                         , background Color.transparent
                         , sheetState state.props.sheetState 
                         , accessibility DISABLE
                         , enableShift false
-                        , onStateChanged push $ ScrollStateChanged
                         , peakHeight $ getInfoCardPeekHeight state
                         , halfExpandedRatio $ halfExpanded
                         , orientation VERTICAL
-                        ]
+                        ] <> if lowVisionDisability then 
+                            [onStateChanged push $ ScrollStateChanged] else [])
                         [ linearLayout
                             [ height WRAP_CONTENT
                             , width MATCH_PARENT
@@ -2401,7 +2403,7 @@ quickReplyItem push state item idx =
   , visibility $ boolToVisibility $ not $ DS.null message
   , accessibilityHint $ (getMessageFromKey item $ "EN_US") <> ": Button : Select to send message to driver"
   , onClick (\action -> do
-                when (not $ DS.null state.data.lastReceivedMessage.sentBy) $ do void $ countDown 3 ("ChatNotificationRemoval" <> (show $ state.data.triggerPatchCounter)) push MessageExpiryTimer
+                when (not $ DS.null state.data.lastReceivedMessage.sentBy) $ do void $ startTimer 3 ("ChatNotificationRemoval" <> (show $ state.data.triggerPatchCounter)) "1" push MessageExpiryTimer
                 push action)
             (const $ SendQuickMessage item)
   , background Color.white900

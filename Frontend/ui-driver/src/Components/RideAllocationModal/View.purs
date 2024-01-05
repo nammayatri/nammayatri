@@ -35,7 +35,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Control.Monad.Except.Trans (runExceptT)
 import Common.Types.App
 import ConfigProvider
-import Timers (countDown)
+import Timers (startTimer)
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -44,7 +44,7 @@ view push config =
     , height MATCH_PARENT
     , afterRender (\action -> do
                           _ <- push action
-                          countDown config.seconds config.id push CountDown
+                          startTimer config.seconds config.id "1" push CountDown
                           pure unit
                         ) (const NoAction)
     ][ linearLayout
