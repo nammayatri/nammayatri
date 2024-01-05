@@ -13,7 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.TicketingScreen.Controller where 
+module Screens.TicketBookingFlow.PlaceList.Controller where 
 
 import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==))
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
@@ -36,8 +36,8 @@ instance loggableAction :: Loggable Action where
 
 data Action = HamburgerClick
             | BackPressed
-            | MyTicketsAC
-            | OnSelect API.TicketPlaceResp
+            | MyTickets
+            | SelectPlace API.TicketPlaceResp
             | NoAction
             | UpdatePlacesData API.TicketPlaceResponse
 
@@ -59,9 +59,9 @@ eval :: Action -> TicketingScreenState -> Eval Action ScreenOutput TicketingScre
 
 eval BackPressed state = exit $ ExitToHomeScreen state
 
-eval MyTicketsAC state = exit $ ExitToMyTicketsScreen state
+eval MyTickets state = exit $ ExitToMyTicketsScreen state
 
-eval (OnSelect item) state = exit $ BookTickets state item
+eval (SelectPlace item) state = exit $ BookTickets state item
 
 eval (UpdatePlacesData placesData) state = do
   let API.TicketPlaceResponse ticketPlaceResp = placesData

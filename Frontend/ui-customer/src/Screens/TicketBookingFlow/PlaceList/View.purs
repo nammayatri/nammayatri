@@ -12,7 +12,7 @@
  
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module Screens.TicketingScreen.View where
+module Screens.TicketBookingFlow.PlaceList.View where
 
 import Prelude
 import Animation as Anim
@@ -33,7 +33,7 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import PrestoDOM (lineHeight, Gravity(..), Length(..), Margin(..), maxLines, ellipsize, Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl, alignParentBottom)
-import Screens.TicketingScreen.Controller (Action(..), eval, ScreenOutput(..))
+import Screens.TicketBookingFlow.PlaceList.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.Types as ST
 import Styles.Colors as Color
 import Services.API as API
@@ -140,7 +140,7 @@ headerView push state =
             , padding $ Padding 8 8 8 8
             , gravity CENTER_VERTICAL
             , background Color.black700
-            , onClick push $ const $ MyTicketsAC
+            , onClick push $ const $ MyTickets
             , visibility $ boolToVisibility (not state.props.hideMyTickets)
             ]
             [ textView
@@ -190,7 +190,7 @@ ticketingItem push (API.TicketPlaceResp item) index =
           , cornerRadius 16.0
           , stroke $ "1," <> Color.grey900
           , padding $ Padding 12 12 12 12
-          , onClick push $ const $ OnSelect $ API.TicketPlaceResp item
+          , onClick push $ const $ SelectPlace $ API.TicketPlaceResp item
           ]
           [ linearLayout
               [ height WRAP_CONTENT

@@ -10,7 +10,7 @@ import Screens.TicketInfoScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Common.Types.App
--- import Screens.TicketBookingScreen.ComponentConfig 
+-- import Screens.TicketBookingFlow.TicketBooking.ComponentConfig 
 import Effect (Effect)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton

@@ -1,4 +1,4 @@
-module Screens.TicketBookingScreen.ComponentConfig where
+module Screens.TicketBookingFlow.PlaceDetails.ComponentConfig where
 
 import Prelude
 
@@ -85,71 +85,3 @@ primaryButtonConfig1 state =
         , enableLoader = JB.getBtnLoader "PayTicketsButton"
         }
   in primaryButtonConfig'
-
-shareTicketButtonConfig :: Boolean -> PrimaryButton.Config
-shareTicketButtonConfig visibility' = PrimaryButton.config
-  { textConfig 
-    { text = "Share Tickets"
-    , textStyle = Tags
-    , weight = Just 1.0
-    , gravity = CENTER
-    , color = Color.black800
-    }
-  , height = WRAP_CONTENT
-  , gravity = CENTER
-  , visibility = if visibility' then VISIBLE else GONE
-  , cornerRadius = 22.0
-  , width = MATCH_PARENT
-  , padding = Padding 16 11 16 11 
-  , margin = Margin 10 10 10 0
-  , isPrefixImage = true
-  , stroke = "1," <> Color.grey700
-  , background = Color.white900
-  , prefixImageConfig
-    { imageUrl = "ny_ic_share"
-    , height = V 15
-    , width = V 15
-    , margin = MarginRight 5
-    }
-  , id = "ShareButton"
-  }
-
-refreshStatusButtonConfig :: ST.TicketBookingScreenState -> PrimaryButton.Config
-refreshStatusButtonConfig state = PrimaryButton.config
-    { textConfig 
-      { text = "Refresh Status"
-      , textStyle = Tags
-      , weight = Just 1.0
-      , gravity = CENTER
-      , color = Color.black800
-      }
-      , height = WRAP_CONTENT
-      , gravity = CENTER
-      , cornerRadius = 32.0
-      , width = MATCH_PARENT
-      , padding =  Padding 0 13 0 13
-      , margin = Margin 16 16 16 0
-      , isPrefixImage = true
-      , background = Color.white900
-      , prefixImageConfig
-        { imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_history_unfilled"
-        , height = V 15
-        , width = V 15
-        , margin = MarginRight 5
-        }
-      , id = "RefershPaymentStatusButton"
-    }
-
-viewTicketButtonConfig :: String -> Boolean -> PrimaryButton.Config
-viewTicketButtonConfig text visibility' = 
-  PrimaryButton.config { 
-  textConfig
-      { text = text
-      , color = Color.yellow900
-      }
-    , cornerRadius = 8.0
-    , background = Color.black900 
-    , visibility = if visibility' then VISIBLE else GONE
-    , id = "ViewTicketsButton"
-    , margin = (Margin 16 16 16 16)
-    }
