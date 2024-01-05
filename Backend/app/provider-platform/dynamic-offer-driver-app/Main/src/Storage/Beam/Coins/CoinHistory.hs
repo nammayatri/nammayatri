@@ -33,6 +33,7 @@ data CoinHistoryT f = CoinHistoryT
     coins :: B.C f Int,
     driverId :: B.C f Text,
     createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime,
     expirationAt :: B.C f (Maybe UTCTime),
     status :: B.C f Domain.CoinStatus,
     coinsUsed :: B.C f Int,

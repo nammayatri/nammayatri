@@ -101,10 +101,12 @@ getDriverCoinInfo (Id driverId) timeDiffFromUtc = do
     Nothing
 
 updateStatusOfCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> CoinStatus -> m ()
-updateStatusOfCoins id coinsRemainingValue newStatus =
+updateStatusOfCoins id coinsRemainingValue newStatus = do
+  now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamDC.status newStatus,
-      Se.Set BeamDC.coinsUsed coinsRemainingValue
+      Se.Set BeamDC.coinsUsed coinsRemainingValue,
+      Se.Set BeamDC.updatedAt now
     ]
     [Se.Is BeamDC.id $ Se.Eq id]
 
@@ -120,6 +122,7 @@ instance FromTType' BeamDC.CoinHistory CoinHistory where
             merchantOptCityId = merchantOptCityId,
             coins = coins,
             createdAt = createdAt,
+            updatedAt = updatedAt,
             expirationAt = expirationAt,
             status = status,
             coinsUsed = coinsUsed,
@@ -132,6 +135,7 @@ instance ToTType' BeamDC.CoinHistory CoinHistory where
       { BeamDC.id = getId id,
         BeamDC.driverId = driverId,
         BeamDC.createdAt = createdAt,
+        BeamDC.updatedAt = updatedAt,
         BeamDC.eventFunction = eventFunction,
         BeamDC.merchantId = merchantId,
         BeamDC.merchantOptCityId = merchantOptCityId,
