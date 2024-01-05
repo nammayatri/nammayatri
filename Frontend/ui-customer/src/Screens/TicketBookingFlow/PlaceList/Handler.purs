@@ -13,21 +13,21 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.TicketingScreen.Handler where
+module Screens.TicketBookingFlow.PlaceList.Handler where
 
 import Engineering.Helpers.BackTrack (getState)
 import Prelude (bind, pure, discard, ($), (<$>))
-import Screens.TicketingScreen.Controller (ScreenOutput(..))
+import Screens.TicketBookingFlow.PlaceList.Controller (ScreenOutput(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
-import Screens.TicketingScreen.View as TicketingScreen
+import Screens.TicketBookingFlow.PlaceList.View as TicketingScreen
 import Types.App (FlowBT, GlobalState(..), TICKETING_SCREEN_SCREEN_OUTPUT(..),ScreenType(..))
 import ModifyScreenState (modifyScreenState)
 import Data.Maybe (Maybe(..))
 
-ticketingScreen :: FlowBT String TICKETING_SCREEN_SCREEN_OUTPUT
-ticketingScreen = do
+placeListScreen :: FlowBT String TICKETING_SCREEN_SCREEN_OUTPUT
+placeListScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ TicketingScreen.screen state.ticketingScreen
   case action of

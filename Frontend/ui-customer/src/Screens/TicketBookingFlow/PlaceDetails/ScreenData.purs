@@ -13,7 +13,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.TicketBookingScreen.ScreenData where
+module Screens.TicketBookingFlow.PlaceDetails.ScreenData where
 
 import Common.Types.App as Common
 import Data.Maybe (Maybe(..))

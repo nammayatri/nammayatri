@@ -118,7 +118,6 @@ withAPIResultBT url f errorHandler flow = do
     _ <- pure $ printLog "withAPIResultBT url" url
     case resp of
         Right res -> do
-            _ <- pure $ printLog "success resp" res
             pure res
         Left err -> do
             _ <- pure $ toggleBtnLoader "" false

@@ -1,4 +1,4 @@
-module Screens.TicketBookingScreen.Controller where
+module Screens.TicketBookingFlow.TicketStatus.Controller where
 
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
 import Prelude (class Show, discard, pure, map, unit, min, max, bind, ($), not, (+), (-), (==), (*), (<>), show, void, (+), (==), (-), show, (&&), (>), (/=), (||), (<=), (>=), (<))
@@ -22,14 +22,14 @@ import Resources.Constants
 import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), BusinessHoursResp(..), TicketServiceResp(..), PeopleCategoriesResp(..), BookingStatus(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), PlaceType(..))
 import Data.Int (ceil)
 import Common.Types.App as Common
-import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
+import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketBookingScreenData
 import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
 import JBridge as JB
 import Services.API (ServiceExpiry(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Screens.TicketBookingScreen.Transformer (transformRespToStateData, getValidBHid, getValidTimeIntervals)
+import Screens.TicketBookingFlow.TicketStatus.Transformer (transformRespToStateData, getValidBHid, getValidTimeIntervals)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -38,96 +38,23 @@ instance loggableAction :: Loggable Action where
   performLog action appId  = case action of
     AfterRender -> trackAppScreenRender appId "screen" (getScreen TICKET_BOOKING_SCREEN)
     _ -> pure unit
-    
+
 data Action = AfterRender
-            | UpdatePlacesData (Maybe TicketPlaceResp) (Maybe TicketServicesResponse)
-            | GenericHeaderAC GenericHeader.Action 
-            | PrimaryButtonAC PrimaryButton.Action
-            | ShareTicketAC PrimaryButton.Action
             | ViewTicketAC PrimaryButton.Action
-            | ToggleTicketOption String 
-            | IncrementTicket TicketPeopleCategoriesOptionData Int
-            | DecrementTicket TicketPeopleCategoriesOptionData Int
-            | DatePicker String String Int Int Int
-            | ToggleTermsAndConditions
-            | OpenCalendar 
             | NoAction
             | BackPressed
             | GetBookingInfo String BookingStatus
-            | TicketQRRendered String String
-            | IncrementSliderIndex
-            | DecrementSliderIndex
             | PaymentStatusAction String
             | GoHome
             | RefreshStatusAC PrimaryButton.Action
-            | SelectDestination TicketCategoriesOptionData
-            | SelectSlot String SlotInterval
-            | OpenGoogleMap (Maybe Number) (Maybe Number)
             | Copy String
 
 data ScreenOutput = GoToHomeScreen TicketBookingScreenState
-                  | GoToTicketPayment TicketBookingScreenState
                   | GoToGetBookingInfo TicketBookingScreenState BookingStatus
-                  | TryAgain TicketBookingScreenState
                   | RefreshPaymentStatus TicketBookingScreenState
-                  | BookTickets TicketBookingScreenState
-                  | GoToOpenGoogleMaps TicketBookingScreenState Number Number
+                  | GoBack TicketBookingScreenState
 
 eval :: Action -> TicketBookingScreenState -> Eval Action ScreenOutput TicketBookingScreenState
-
-eval (ToggleTicketOption ticketID) state = do
-  let updatedServicesInfo = map (updateExpandService ticketID) state.data.servicesInfo
-      updatedAmount = updateTicketAmount state ticketID updatedServicesInfo state.data.totalAmount
-  continue state { data { servicesInfo = updatedServicesInfo, totalAmount = updatedAmount } }
-
-eval (IncrementTicket peopleCat limit) state = do
-  if peopleCat.currentValue == limit then do
-    let updatedData = markLimitCrossed peopleCat true state.data.servicesInfo
-    continue state { data {servicesInfo = markLimitCrossed peopleCat true state.data.servicesInfo}}
-  else do
-    let {finalAmount, updateServicesInfo} = calculateTicketAmount peopleCat (Just true) state state.data.servicesInfo
-    continue state { data { totalAmount = finalAmount, servicesInfo = updateServicesInfo } }
-
-eval (DecrementTicket peopleCat limit) state = do
-  let {finalAmount, updateServicesInfo} = calculateTicketAmount peopleCat (Just false) state state.data.servicesInfo
-      limitUpdatedServicesInfo = markLimitCrossed peopleCat false updateServicesInfo
-  continue state { data { totalAmount = finalAmount, servicesInfo = limitUpdatedServicesInfo } }
-
-eval  (DatePicker _ resp year month date ) state = do
-  case resp of 
-    "SELECTED" -> do 
-      let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if date < 10 then "0"  else "") <> (show date)
-          validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (getLimitOfDaysAccToPlaceType state)) selectedDateString)
-                      && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
-          modifiedServicesData = map (modifyServicSelectedBHid selectedOpDay selectedDateString) state.data.servicesInfo
-          selectedOpDay = convertUTCtoISC ((show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month + 1)) <> "-" <> (show date)) "dddFull"
-      continue state { props{selectedOperationalDay = selectedOpDay, validDate = validDate },data { totalAmount = 0, servicesInfo = modifiedServicesData, dateOfVisit = selectedDateString }}
-    _ -> continue state
-  where
-    modifyServicSelectedBHid selectedOpDay selectedDateString service = service {businessHours = map initBusinessHours service.businessHours, selectedSlot = Nothing, selectedBHid = getValidBHid (getValidTimeIntervals service.timeIntervalData selectedOpDay) selectedOpDay selectedDateString state service.expiry}
-    initBusinessHours bh = bh { categories = map (initCategories bh) bh.categories }
-    initCategories bh cat = cat {isSelected = length bh.categories <= 1, peopleCategories = map initPeopleCategories cat.peopleCategories}
-    initPeopleCategories pc = pc {currentValue = 0}
-
-eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSelected = not state.props.termsAndConditionsSelected}}
-
-eval (PrimaryButtonAC (PrimaryButton.OnClick)) state = do 
-  case state.props.currentStage of 
-    DescriptionStage -> continue state{props{currentStage = ChooseTicketStage}}
-    ChooseTicketStage -> updateAndExit state{props{previousStage = ChooseTicketStage}} $ GoToTicketPayment state{props{previousStage = ChooseTicketStage}}
-    ViewTicketStage -> exit $ BookTickets state
-    _ -> continue state
-
-eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
-
-eval (UpdatePlacesData placeData Nothing) state = do
-  let newState = state { data { placeInfo = placeData }, props { showShimmer = false } }
-  continue newState
-
-eval (UpdatePlacesData placeData (Just (TicketServicesResponse serviceData))) state = do
-  let selectedOpDay = convertUTCtoISC (getCurrentUTC "") "dddFull"
-      servicesInfo = mapWithIndex (\i it -> transformRespToStateData (i==0) it state selectedOpDay) serviceData
-  continue state { data { placeInfo = placeData, servicesInfo = servicesInfo}, props {selectedOperationalDay = selectedOpDay, showShimmer = false } }
 
 eval BackPressed state = do
   case state.props.currentStage of 
@@ -135,11 +62,11 @@ eval BackPressed state = do
     ChooseTicketStage -> continue state{props{currentStage = if state.props.previousStage == ChooseTicketStage then DescriptionStage else state.props.previousStage}}
     ViewTicketStage -> exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     TicketInfoStage -> continue state{props{currentStage = ViewTicketStage}}
-    BookingConfirmationStage -> if state.props.previousStage == ViewTicketStage then continue state {props{currentStage = state.props.previousStage}}
+    BookingConfirmationStage -> if state.props.previousStage == ViewTicketStage then exit $ GoBack state{props{currentStage = MyTicketsStage}}
                                 else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
     _ -> continue state
 
-eval GoHome state = if state.props.previousStage == ViewTicketStage then continue state {props{currentStage = state.props.previousStage}}
+eval GoHome state = if state.props.previousStage == ViewTicketStage then exit $ GoBack state{props{currentStage = MyTicketsStage}}
                     else exit $ GoToHomeScreen state{props{currentStage = DescriptionStage, showShimmer = true}}
 
 eval (GetBookingInfo bookingShortId bookingStatus) state = do
@@ -159,30 +86,6 @@ eval (PaymentStatusAction status) state =
     _ -> continue state
 
 eval (RefreshStatusAC (PrimaryButton.OnClick)) state = exit $ RefreshPaymentStatus state
-
-eval (SelectDestination selCategory) state = do
-  let modifiedServicesData = map (modifyDestinationInfo) state.data.servicesInfo
-      finalAmount = calculateTotalAmount state modifiedServicesData
-  continue state {data {totalAmount = finalAmount, servicesInfo = modifiedServicesData}}
-  where
-    modifyDestinationInfo service = if service.id == selCategory.ticketID then service {businessHours = map (modifyBH service.selectedBHid) service.businessHours} else service
-    modifyBH selectedBHid bh = if (Just bh.bhourId == selectedBHid) then bh { categories = map modifyCategory bh.categories} else bh
-    modifyCategory category = category { isSelected = selCategory.categoryId == category.categoryId}
-
-eval (SelectSlot ticketId slot) state = do
-  let modifiedServicesData = map (modifySlotInfo) state.data.servicesInfo 
-      finalAmount = calculateTotalAmount state modifiedServicesData
-  continue state {data {totalAmount = finalAmount, servicesInfo = modifiedServicesData}}
-  where
-    modifySlotInfo service =  if service.id == ticketId then service { selectedSlot = Just slot.slot, selectedBHid = Just slot.bhourId, businessHours = map (modifyBH service.selectedBHid) service.businessHours} else service
-    modifyBH selectedBHid bh =  bh {categories = map (initCategories bh) bh.categories} 
-    initCategories bh cat = cat {isSelected = length bh.categories <= 1, peopleCategories = map initPeopleCategories cat.peopleCategories}
-    initPeopleCategories pc = pc {currentValue = 0}
-
-eval (OpenGoogleMap lat long) state = do
-  let dstLat = fromMaybe 0.0 lat
-      dstLong = fromMaybe 0.0 long
-  updateAndExit state $ GoToOpenGoogleMaps state dstLat dstLong
 
 eval (Copy text) state = continueWithCmd state [ do 
     void $ pure $ JB.copyToClipboard text

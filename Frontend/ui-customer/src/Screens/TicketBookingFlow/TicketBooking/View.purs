@@ -1,7 +1,7 @@
-module Screens.TicketBookingScreen.View where
+module Screens.TicketBookingFlow.TicketBooking.View where
 
 import Common.Types.App
-import Screens.TicketBookingScreen.ComponentConfig
+import Screens.TicketBookingFlow.TicketBooking.ComponentConfig
 
 import Animation as Anim
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
@@ -24,10 +24,10 @@ import JBridge as JB
 import Prelude (not, Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (&&), (<<<), (+), (<>), (==), map, show, (||), show, (-), (>), (>>=), mod, negate, (<=), (>=), (<))
 import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id, imageUrl, maxLines, ellipsize, lineHeight, fillViewport)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.TicketBookingScreen.Controller (Action(..), ScreenOutput, eval, getLimitOfDaysAccToPlaceType)
+import Screens.TicketBookingFlow.TicketBooking.Controller (Action(..), ScreenOutput, eval, getLimitOfDaysAccToPlaceType)
 import Screens.Types as ST
 import Styles.Colors as Color
-import Screens.TicketBookingScreen.ComponentConfig 
+import Screens.TicketBookingFlow.TicketBooking.ComponentConfig 
 import Resources.Constants -- TODO:: Replace these constants with API response
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag, convertUTCTimeToISTTimeinHHMMSS)
 import Services.API (BookingStatus(..), TicketPlaceResponse(..), TicketPlaceResp(..), TicketServiceResp(..), PlaceType(..), BusinessHoursResp(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), TicketServicesResponse(..), SpecialDayType(..))

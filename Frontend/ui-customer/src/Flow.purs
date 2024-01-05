@@ -74,9 +74,11 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag, getTripFromRideHistory)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
+import Screens.TicketBookingFlow.PlaceList.Controller as PlaceListC
+import Screens.TicketBookingFlow.PlaceDetails.Controller as PlaceDetailsC
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
-import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
-import Screens.TicketingScreen.ScreenData as TicketingScreenData
+import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
+import Screens.TicketBookingFlow.PlaceList.ScreenData as PlaceListData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), TipViewStage(..))
@@ -97,7 +99,7 @@ import Constants.Configs
 import PrestoDOM (initUI)
 import Common.Resources.Constants (zoomLevel)
 import PaymentPage
-import Screens.TicketBookingScreen.Transformer
+import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Screens.Types as ST
 import Common.Types.App as Common
 import PrestoDOM.Core (terminateUI)
@@ -114,6 +116,10 @@ import SuggestionUtils
 import ConfigProvider
 import Effect.Class (liftEffect)
 import Timers
+import Screens.TicketBookingFlow.PlaceList.View as PlaceListS
+import Screens.TicketBookingFlow.PlaceDetails.View as PlaceDetailsS
+import PrestoDOM.Core.Types.Language.Flow (runScreen)
+import Control.Transformers.Back.Trans as App
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -153,7 +159,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
           "help" -> hideSplashAndCallFlow helpAndSupportScreenFlow
           "prof" -> hideSplashAndCallFlow myProfileScreenFlow
           "lang" -> hideSplashAndCallFlow selectLanguageScreenFlow
-          "tkts" -> hideSplashAndCallFlow zooTicketBookingFlow
+          "tkts" -> hideSplashAndCallFlow placeListFlow
           _ -> if skipDefaultCase then pure unit else currentFlowStatus
         Nothing -> currentFlowStatus
     Nothing -> do
@@ -436,7 +442,7 @@ homeScreenFlow = do
       void $ pure $ spy "pendingRes" pendingRes
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{navigateToHome = true, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes)}})            
       modifyScreenState $ TicketingScreenStateType (\ticketingScreen -> ticketingScreen{ props { hideMyTickets = true }})
-      zooTicketBookingFlow
+      ticketListFlow
     GO_TO_MY_PROFILE  updateProfile -> do
         _ <- lift $ lift $ liftFlow $ logEvent logField_ (if updateProfile then "safety_banner_clicked" else "ny_user_profile_click")
         modifyScreenState $ MyProfileScreenStateType (\myProfileScreenState ->  MyProfileScreenData.initData{props{fromHomeScreen = updateProfile , updateProfile = updateProfile, changeAccessibility = true, isBtnEnabled = true , genderOptionExpanded = false , showOptions = false, expandEnabled = true }})
@@ -1227,7 +1233,7 @@ homeScreenFlow = do
       tripDetailsScreenFlow Home
     GO_TO_TICKET_BOOKING_FLOW state -> do 
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{props{currentStage = DescriptionStage, previousStage = DescriptionStage}})
-      zooTicketBookingFlow
+      placeListFlow
     REPEAT_RIDE_FLOW_HOME state -> do
       updateRepeatRideDetails state
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq state.sourceLat state.sourceLong)
@@ -1245,8 +1251,8 @@ homeScreenFlow = do
       rideSearchFlow "REPEAT_RIDE_FLOW"
     EXIT_TO_TICKETING _ -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{navigateToHome = true}})
-      modifyScreenState $ TicketingScreenStateType (\_ -> TicketingScreenData.initData{ props { hideMyTickets = false }})
-      ticketingScreenFlow
+      modifyScreenState $ TicketingScreenStateType (\_ -> PlaceListData.initData{ props { hideMyTickets = false }})
+      placeListFlow
     _ -> homeScreenFlow
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
@@ -2302,16 +2308,92 @@ updateUserInfoToState :: HomeScreenState -> FlowBT String Unit
 updateUserInfoToState state =
   modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{disability = state.data.disability, settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email}},props { isBanner = state.props.isBanner}})             
 
-zooTicketBookingFlow :: FlowBT String Unit
-zooTicketBookingFlow = do
+placeListFlow :: FlowBT String Unit 
+placeListFlow = do
+  (GlobalState currentState) <- getState
+  void $ pure $ spy "ZOO TICKET PLACE LIST CALLED" currentState
+  (GlobalState state) <- getState
+  uiAction <- lift $ lift $ runScreen $ PlaceListS.screen state.ticketingScreen
+  case uiAction of
+    PlaceListC.ExitToHomeScreen updatedState -> do
+      modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> homeScreenFlow)
+    PlaceListC.ExitToMyTicketsScreen updatedState -> do
+      modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
+      (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
+      (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes)}})            
+      (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> ticketListFlow)
+    PlaceListC.BookTickets updatedState selectedPlace -> do
+      modifyScreenState $ TicketingScreenStateType (\_ -> updatedState)
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{props{navigateToHome = false, currentStage = DescriptionStage, previousStage = DescriptionStage}, data { totalAmount = 0, placeInfo = Just selectedPlace}})
+      (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> placeDetailsFlow)
+    _ -> App.BackT $ pure App.GoBack
+
+placeDetailsFlow :: FlowBT String Unit
+placeDetailsFlow = do
+  (GlobalState currentState) <- getState
+  void $ pure $ spy "ZOO TICKET PLACE DETAILS CALLED" currentState
   liftFlowBT $ hideLoader
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{dateOfVisit = (getNextDateV2 "")}})             
-  flow <- UI.ticketBookingScreen
+  (GlobalState state) <- getState
+  action <- lift $ lift $ runScreen $ PlaceDetailsS.screen state.ticketBookingScreen
+  case action of
+    PlaceDetailsC.GoToHomeScreen updatedState -> do
+      modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
+    PlaceDetailsC.GoToTicketPayment state -> do
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> ticketPaymentFlow state.data)
+    PlaceDetailsC.GoToOpenGoogleMaps state lat2 long2 -> do
+      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreenState -> state)
+      (App.BackT $ App.BackPoint <$> pure unit) >>= (\_ -> openGoogleMaps lat2 long2)
+    PlaceDetailsC.BookTickets updatedState -> do
+      modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
+      (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
+  where
+    openGoogleMaps lat long = do
+      void $ lift $ lift $ fork $ liftFlow $ openNavigation 0.0 0.0 lat long "DRIVE"
+      placeDetailsFlow
+ 
+ticketStatusFlow :: FlowBT String Unit
+ticketStatusFlow = do
+  (GlobalState currentState) <- getState
+  void $ pure $ spy "ZOO TICKET STATUS CALLED" currentState
+  liftFlowBT $ hideLoader
+  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{dateOfVisit = (getNextDateV2 "")}})             
+  flow <- UI.ticketStatusScreen
+  case flow of
+    GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING state -> do
+      modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
+      if state.props.navigateToHome then homeScreenFlow else placeListFlow
+    RESET_SCREEN_STATE -> do
+      modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
+      ticketStatusFlow
+    REFRESH_PAYMENT_STATUS state -> do
+      (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT state.props.selectedBookingId
+      updatePaymentStatusData ticketStatus state.props.selectedBookingId
+      setValueToLocalStore PAYMENT_STATUS_POOLING "false"
+      ticketStatusFlow
+    GO_TO_TICKET_LIST state -> do
+      (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
+      (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
+      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes)}})
+      ticketListFlow
+    _ -> ticketStatusFlow
+
+ticketListFlow :: FlowBT String Unit
+ticketListFlow = do
+  (GlobalState currentState) <- getState
+  void $ pure $ spy "ZOO TICKET TICKET LIST CALLED" currentState
+  liftFlowBT $ hideLoader
+  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{dateOfVisit = (getNextDateV2 "")}})             
+  flow <- UI.ticketListScreen
   case flow of
     GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
     GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW dstLat1 dstLon2  -> do
       _ <- lift $ lift $ fork $ liftFlow $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
-      zooTicketBookingFlow
+      ticketListFlow
     GET_BOOKING_INFO_SCREEN state bookingStatus -> do
       (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId
       if bookingStatus == Pending
@@ -2319,7 +2401,7 @@ zooTicketBookingFlow = do
           modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
           setValueToLocalStore PAYMENT_STATUS_POOLING "true"
           fillBookingDetails (TicketBookingDetails resp) state.props.selectedBookingId "Pending"
-          zooTicketBookingFlow
+          ticketStatusFlow
         else do
           let ticketBookingDetails = (ticketDetailsTransformer (TicketBookingDetails resp))
           let dummyListItem = TicketBookingScreenData.dummyServiceDetails
@@ -2327,15 +2409,54 @@ zooTicketBookingFlow = do
           zooTicketInfoFlow
     GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING state -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
-      if state.props.navigateToHome then homeScreenFlow else ticketingScreenFlow
+      if state.props.navigateToHome then homeScreenFlow else placeListFlow
     RESET_SCREEN_STATE -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
-      zooTicketBookingFlow
+      ticketListFlow
     REFRESH_PAYMENT_STATUS state -> do
       (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT state.props.selectedBookingId
       updatePaymentStatusData ticketStatus state.props.selectedBookingId
       setValueToLocalStore PAYMENT_STATUS_POOLING "false"
-      zooTicketBookingFlow
+      ticketListFlow
+    _ -> ticketListFlow
+
+-- zooTicketBookingFlow :: FlowBT String Unit -- NOTE :: KEEPING IT FOR REFERENCE
+-- zooTicketBookingFlow = do
+--   (GlobalState currentState) <- getState
+--   void $ pure $ spy "ZOO TICKET BOOKING FLOW CALLED" currentState
+--   liftFlowBT $ hideLoader
+--   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{dateOfVisit = (getNextDateV2 "")}})             
+--   flow <- UI.ticketBookingScreen
+--   case flow of
+--     GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
+--     GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW dstLat1 dstLon2  -> do
+--       _ <- lift $ lift $ fork $ liftFlow $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
+--       zooTicketBookingFlow
+--     GET_BOOKING_INFO_SCREEN state bookingStatus -> do
+--       (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId
+--       if bookingStatus == Pending
+--         then do
+--           modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
+--           setValueToLocalStore PAYMENT_STATUS_POOLING "true"
+--           fillBookingDetails (TicketBookingDetails resp) state.props.selectedBookingId "Pending"
+--           zooTicketBookingFlow
+--         else do
+--           let ticketBookingDetails = (ticketDetailsTransformer (TicketBookingDetails resp))
+--           let dummyListItem = TicketBookingScreenData.dummyServiceDetails
+--           modifyScreenState $ TicketInfoScreenStateType (\ticketInfoScreen ->  ticketInfoScreen{data{selectedBookingInfo = ticketBookingDetails}, props {activeListItem = fromMaybe dummyListItem (ticketBookingDetails.services !! 0), rightButtonDisable = (length ticketBookingDetails.services < 2)}})
+--           zooTicketInfoFlow
+--     GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING state -> do
+--       modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
+--       if state.props.navigateToHome then homeScreenFlow else placeListFlow
+--     RESET_SCREEN_STATE -> do
+--       modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
+--       zooTicketBookingFlow
+--     REFRESH_PAYMENT_STATUS state -> do
+--       (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT state.props.selectedBookingId
+--       updatePaymentStatusData ticketStatus state.props.selectedBookingId
+--       setValueToLocalStore PAYMENT_STATUS_POOLING "false"
+--       zooTicketBookingFlow
+--     _ -> zooTicketBookingFlow
 
 ticketPaymentFlow :: TicketBookingScreenData -> FlowBT String Unit
 ticketPaymentFlow screenData = do
@@ -2356,7 +2477,7 @@ ticketPaymentFlow screenData = do
   modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
   updatePaymentStatusData ticketStatus shortOrderID
   void $ lift $ lift $ toggleLoader false
-  zooTicketBookingFlow
+  ticketStatusFlow
 
 updatePaymentStatusData :: String -> String -> FlowBT String Unit
 updatePaymentStatusData ticketStatus shortOrderID =
@@ -2417,22 +2538,6 @@ fillBookingDetails (TicketBookingDetails resp) shortOrderID ticketStatus = do
                 }
               }
         )
-
-ticketingScreenFlow :: FlowBT String Unit 
-ticketingScreenFlow = do 
-  uiAction <- UI.ticketingScreen
-  case uiAction of
-    EXIT_TO_HOME _ -> homeScreenFlow
-    EXIT_TO_MY_TICKETS _ -> do
-      (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
-      (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
-      modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes)}})            
-      zooTicketBookingFlow
-    BOOK_TICKETS _ -> do
-      modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{props{navigateToHome = false, currentStage = DescriptionStage, previousStage = DescriptionStage}})
-      zooTicketBookingFlow
-  pure unit
-
 
 getCurrentLocationItem :: LocationDetails -> HomeScreenState -> Number -> Number ->  Maybe LocationListItemState
 getCurrentLocationItem placeDetails state lat lon = 
