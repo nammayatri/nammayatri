@@ -71,7 +71,7 @@ config =
     { ratingTextColor: "#454545"
     , ratingBackground: "#F1F1F1"
     , ratingStroke: "0,#717171"
-    , ratingCornerRadius: 6.0
+    , ratingCornerRadius: 10.0
     , callBackground: "#2053BB6F"
     , callButtonStroke: "0,#EB0055" 
     , cardStroke: "1,#E5E7EB"
@@ -184,7 +184,7 @@ config =
     enableEmergencyContacts: true,
     enableReferral: true,
     enableSupport: true,
-    enableShareApp: true,
+    enableShareApp: false,
     enableReAllocation : true
   }
 

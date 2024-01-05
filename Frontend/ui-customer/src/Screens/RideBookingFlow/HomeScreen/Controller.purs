@@ -1059,7 +1059,7 @@ eval LoadMessages state = do
                             suggestions = getSuggestionsfromKey value.message
                             isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
                             showNotification = isChatNotificationDismissed && unReadMessages
-                        updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification}}
+                        updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
       Nothing -> continue state {props {canSendSuggestion = true}}
 
 eval (OpenChatScreen) state = do
@@ -1147,8 +1147,9 @@ eval RemoveNotification state = do
 
 eval NotificationAnimationEnd state = do
   let isExpanded = state.props.showChatNotification && state.props.chatcallbackInitiated
-      showNotification = (length (getChatMessages FunctionCall) == 0 || state.props.showChatNotification) && state.props.currentStage == RideAccepted && not state.props.isChatNotificationDismissed
-  continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification , removeNotification = not showNotification}}
+      areMessagesEmpty = (length (getChatMessages FunctionCall) == 0)
+      showNotification = (areMessagesEmpty || state.props.showChatNotification) && state.props.currentStage == RideAccepted && not state.props.isChatNotificationDismissed
+  continue state {props { isNotificationExpanded = isExpanded, showChatNotification = showNotification , removeNotification = not showNotification, enableChatWidget = isExpanded || areMessagesEmpty}}
 
 eval MessageViewAnimationEnd state = do
   continue state {props { removeNotification = not state.props.showChatNotification}}

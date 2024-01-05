@@ -85,7 +85,7 @@ eval (ErrorModalActionController (ErrorModalController.PrimaryButtonActionContro
 eval (LocationPermissionCallBackCustomer isLocationPermissionEnabled) state = do 
   let status = getLocationPermissionStatus unit
   if isLocationPermissionEnabled && elem state.stage [LOCATION_DISABLED, LOCATION_DENIED] then updateAndExit state (LocationCallBack state)
-    else continue state {stage = (if status == "DENIED" then LOCATION_DENIED else NORMAL)}
+    else continue state {stage = (if status == "DENIED" then LOCATION_DENIED else state.stage)}
 eval (InternetCallBackCustomer isInternetAvailable) state = do 
   if( isInternetAvailable == "true") then do
     updateAndExit state (InternetCallBack state)

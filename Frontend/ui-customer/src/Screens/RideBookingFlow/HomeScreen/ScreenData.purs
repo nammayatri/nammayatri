@@ -278,6 +278,7 @@ initData = {
     , autoScrollTimer : ""
     , autoScrollTimerId : ""
     , autoScroll : true
+    , enableChatWidget : false
     }
 }
 

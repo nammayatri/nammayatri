@@ -327,8 +327,7 @@ view push state =
                   -- , if isHomeScreenView state then emptyTextView state else mapView push state
                   --   ]
                    linearLayout
-                     [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" 
-                                then (V (((screenHeight unit)/ 15)*10)) 
+                     [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then getMapHeight state                                    
                                 else MATCH_PARENT
                      , width MATCH_PARENT
                      , accessibility DISABLE_DESCENDANT
@@ -438,6 +437,11 @@ view push state =
         ]
   ]
 
+getMapHeight :: HomeScreenState -> Length
+getMapHeight state = V (if state.data.currentSearchResultType == QUOTES then (((screenHeight unit)/ 4)*3) 
+                            else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then (((screenHeight unit)/ 10)*6) 
+                            else (((screenHeight unit)/ 15)*10))
+
 rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideCompletedCardView push state = 
   linearLayout
@@ -468,13 +472,14 @@ cancelSearchPopUp push state =
 rideInfoView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideInfoView push state = 
   let isClickable = os == "IOS"
+      isWidgetVisible = (((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat && state.data.config.feature.enableSuggestions && (os == "ANDROID" || state.props.enableChatWidget)) || (state.props.currentStage == RideStarted && os == "IOS")
+      disableChatWidget = (not (os == "IOS" || state.props.enableChatWidget)) && (((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions
   in 
-  relativeLayout
+  linearLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
   , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.props.bottomSheetState == STATE_EXPANDED || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
-  , clickable (os == "IOS" || state.props.bottomSheetState == STATE_EXPANDED)
-  , background if state.props.bottomSheetState == STATE_EXPANDED then Color.black400 else Color.transparent
+  , clickable isClickable
   , orientation VERTICAL
   ][ (if disableSuggestions state then 
         PrestoAnim.animationSet[] 
@@ -520,9 +525,11 @@ rideInfoView push state =
           ][ rideInfoActionView push state 
            ]
          ]
-       , messageNotificationView push state
+       , if disableChatWidget then -- Temp fix for chat widget
+            linearLayout[height $ V 138, width MATCH_PARENT][]
+         else messageNotificationView push state
        , linearLayout
-        [ height $ V $ ((getInfoCardPeekHeight state) - if ((((any (_ == state.props.currentStage)) [ RideAccepted, ChatWithDriver]) && state.data.currentSearchResultType /= QUOTES && state.data.config.feature.enableChat) && state.data.config.feature.enableSuggestions) || (state.props.currentStage == RideStarted && os == "IOS") then 140 else 0)
+        [ height $ V $ ((getInfoCardPeekHeight state) - if isWidgetVisible then 140 else 0)
         , width $ MATCH_PARENT
         , accessibility DISABLE
         ][]
@@ -1341,7 +1348,7 @@ topLeftIconView state push =
       , height WRAP_CONTENT
       , orientation HORIZONTAL
       , visibility if state.data.config.showHamMenu then VISIBLE else GONE
-      , margin (Margin 16 48 0 0)
+      , margin $ Margin 16 (if os == "IOS" then safeMarginTop else 20) 0 0
       , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
       ][
         linearLayout
@@ -1643,29 +1650,34 @@ showMenuButtonView push menuText menuImage autoAssign state =
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , margin $ (Margin 0 10 0 10)
+  , margin $ MarginVertical 10 5
   ][ linearLayout
-      [ height $ V 20
-      , width $ V 20
-      , stroke if ( state.props.flowWithoutOffers && autoAssign || not state.props.flowWithoutOffers && not autoAssign ) then ("2," <> state.data.config.primaryBackground) else ("2," <> Color.black600)
-      , cornerRadius 10.0
-      , gravity CENTER
-      , onClick push (const $ CheckBoxClick autoAssign)
-      ][  linearLayout
-          [ width $ V 10
-          , height $ V 10
-          , cornerRadius 5.0
-          , background $ state.data.config.primaryBackground
-          , visibility if ( state.props.flowWithoutOffers && autoAssign || not state.props.flowWithoutOffers && not autoAssign ) then VISIBLE else GONE
-          ][]
-        ]
+     [ height $ V 30
+     , width $ V 30
+     , gravity CENTER
+     , onClick push $ const $ CheckBoxClick autoAssign
+     ][ linearLayout
+        [ height $ V 20
+        , width $ V 20
+        , stroke if (state.props.flowWithoutOffers && autoAssign || not state.props.flowWithoutOffers && not autoAssign) then ("2," <> state.data.config.primaryBackground) else ("2," <> Color.black600)
+        , cornerRadius 10.0
+        , gravity CENTER
+        ][  linearLayout
+            [ width $ V 10
+            , height $ V 10
+            , cornerRadius 5.0
+            , background $ state.data.config.primaryBackground
+            , visibility if (state.props.flowWithoutOffers && autoAssign || not state.props.flowWithoutOffers && not autoAssign) then VISIBLE else GONE
+            ][]
+          ]
+     ]
     , textView $
       [ text menuText
       , width MATCH_PARENT
       , gravity CENTER
       , color state.data.config.estimateAndQuoteConfig.textColor
       , height WRAP_CONTENT
-      , margin (MarginHorizontal 10 10)
+      , margin $ MarginHorizontal 5 10
       , onClick push (const $ CheckBoxClick autoAssign)
       ] <> FontStyle.paragraphText LanguageStyle
     , if autoAssign then
@@ -2127,15 +2139,17 @@ rideTrackingView push state =
 
 messageNotificationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
 messageNotificationView push state =
+  let enableChatWidget = not (os == "ANDROID" || state.props.enableChatWidget)
+  in
   (if state.props.showChatNotification then 
     if os == "IOS" then PrestoAnim.animationSet[] else PrestoAnim.animationSet [fadeInWithDuration 1000 true]
   else if state.props.isNotificationExpanded then 
     if os == "IOS" then PrestoAnim.animationSet[] else PrestoAnim.animationSet [fadeOutWithDuration 1000 true]
   else  PrestoAnim.animationSet []) $ 
   linearLayout
-  [ height $ V $ 130
-  , width $ MATCH_PARENT
-  , margin $ MarginBottom 8
+  [ height $ if enableChatWidget then V 1 else V 130
+  , width $ if enableChatWidget then V 1 else MATCH_PARENT
+  , margin $ MarginBottom if enableChatWidget then 0 else 8
   , padding $ Padding 12 12 12 12
   , background Color.black900
   , orientation VERTICAL
@@ -2276,61 +2290,79 @@ quickRepliesView push state =
   ][ textView $
      [ width WRAP_CONTENT
      , height WRAP_CONTENT
-     , text $ getString QUICK <> " " <> getString CHATS
+     , text $ getString QUICK <> " " <> getString CHATS <> ":"
      , color Color.black700
      , accessibility ENABLE
      , accessibilityHint $ "Quick Chats"
      , margin $ MarginBottom 4
      ] <> FontStyle.captions TypoGraphy
-   , linearLayout
+   , relativeLayout
      [ height $ WRAP_CONTENT
      , width $ MATCH_PARENT
      , clickable true
      , accessibility DISABLE
-     ][ horizontalScrollView
+     ][horizontalScrollView
+      [ height $ WRAP_CONTENT
+      , width $ MATCH_PARENT
+      , scrollBarX false
+      , accessibility DISABLE
+      , clickable true
+      ][linearLayout
         [ height $ WRAP_CONTENT
         , width $ MATCH_PARENT
-        , scrollBarX false
-        , accessibility DISABLE
         , clickable true
-        ][ linearLayout
-            [ height $ WRAP_CONTENT
-            , width $ MATCH_PARENT
-            , clickable true
-            , accessibility DISABLE
-            ][linearLayout
-              [ height $ WRAP_CONTENT
-              , width $ WRAP_CONTENT
-              , cornerRadius 13.0
-              , background Color.white900
-              , padding $ Padding 16 6 16 6
-              , margin $ MarginRight 12
-              , clickable true
-              , accessibility ENABLE
-              , accessibilityHint $ "Custom Message : Button : Select to input custom message"
-              , onClick push $ const $ MessageDriver
-              ][ imageView
-                [ height $ V 16
-                , width $ V 16
-                , imageWithFallback $ fetchImage FF_ASSET "ny_ic_message_black"
-                ]
-              ]
-              , linearLayout
-                [ height $ WRAP_CONTENT
-                , width $ MATCH_PARENT
-                , clickable true
-                , accessibility DISABLE
-                ](mapWithIndex (\index item -> 
-                  quickReplyItem push state item index
-                 ) (getChatSuggestions state))
+        , accessibility DISABLE
+        ][linearLayout
+          [ height $ WRAP_CONTENT
+          , width $ WRAP_CONTENT
+          , cornerRadius 13.0
+          , background Color.white900
+          , padding $ Padding 16 6 16 6
+          , margin $ MarginRight 12
+          , clickable true
+          , accessibility ENABLE
+          , accessibilityHint $ "Custom Message : Button : Select to input custom message"
+          , onClick push $ const $ MessageDriver
+          ][ imageView
+            [ height $ V 16
+            , width $ V 16
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_message_black"
             ]
-          ]            
+          ]
+        , linearLayout
+          [ height $ WRAP_CONTENT
+          , width $ MATCH_PARENT
+          , clickable true
+          , id $ getNewIDWithTag "QuickReplyItems"
+          , accessibility DISABLE
+          ](mapWithIndex (\index item -> 
+            quickReplyItem push state item index
+          ) (getChatSuggestions state))
+        ]
+      ]
+    , linearLayout
+      [ height $ WRAP_CONTENT
+      , width $ MATCH_PARENT
+      , gravity RIGHT
+      , accessibility DISABLE
+      ][linearLayout
+        [ height $ V $ replyItemHeight FunctionCall
+        , width $ V 40
+        , accessibility DISABLE
+        , gradient $ if os == "IOS" then (Linear 180.0 ["#2C2F3A","#282C2F3A",Color.transparent]) else (Linear 90.0 [Color.transparent, "#282C2F3A", "#2C2F3A"])
+        ][]  
       ]
     ]
+  ]
+  where replyItemHeight :: LazyCheck -> Int
+        replyItemHeight dummy = do
+          let layout = runFn1 getLayoutBounds $ getNewIDWithTag "QuickReplyItems"
+          if layout.height == 0 then 32 else layout.height + 2
 
 quickReplyItem :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Int -> PrestoDOM ( Effect Unit) w
 quickReplyItem push state item idx = 
   let message = getMessageFromKey item $ getValueToLocalStore LANGUAGE_KEY
+      isLastItem = (idx == (length $ getChatSuggestions state) - 1)
   in
   linearLayout
   [ height $ WRAP_CONTENT
@@ -2339,15 +2371,15 @@ quickReplyItem push state item idx =
   , clickable true
   , rippleColor Color.rippleShade
   , accessibility ENABLE
+  , margin $ MarginRight if isLastItem then 18 else 12
   , visibility $ boolToVisibility $ not $ DS.null message
   , accessibilityHint $ (getMessageFromKey item $ "EN_US") <> ": Button : Select to send message to driver"
   , onClick (\action -> do
-                when (not $ DS.null state.data.lastReceivedMessage.sentBy) $ do void $ countDown 5 ("ChatNotificationRemoval" <> (show $ state.data.triggerPatchCounter)) push MessageExpiryTimer
+                when (not $ DS.null state.data.lastReceivedMessage.sentBy) $ do void $ countDown 3 ("ChatNotificationRemoval" <> (show $ state.data.triggerPatchCounter)) push MessageExpiryTimer
                 push action)
             (const $ SendQuickMessage item)
   , background Color.white900
   , padding $ Padding 16 6 16 6
-  , margin $ MarginLeft if idx == 0 then 0 else 12
   ][ textView $
       [ text $ message
       , color Color.black900
@@ -2449,7 +2481,7 @@ otpAndWaitView push state =
       , text $ getString OTP
       , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
       , color Color.black700
-      ] <> FontStyle.body2 TypoGraphy
+      ] <> FontStyle.body22 TypoGraphy
     , otpView push state
     ]
   ] <> if (state.data.currentSearchResultType == QUOTES || state.data.driverInfoCardState.driverArrived) then 
@@ -2475,7 +2507,7 @@ otpAndWaitView push state =
           , text $ if isQuotes then getString EXPIRES_IN else getString WAIT_TIME
           , color Color.black700
           , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
-          ] <> FontStyle.body2 TypoGraphy
+          ] <> FontStyle.body22 TypoGraphy
         , imageView
             [ height $ V 12
             , width  $ V 12
@@ -2542,7 +2574,7 @@ waitTimeView push state =
      , color Color.black900
      , gravity CENTER
      , singleLine true
-     ] <> FontStyle.body4 TypoGraphy
+     ] <> FontStyle.body22 TypoGraphy
   ]
 
 waitTimeHint :: HomeScreenState -> String
@@ -2588,13 +2620,16 @@ otpView push state =
         [ text $ state.data.driverInfoCardState.otp
         , color Color.black900
         , padding $ Padding 8 4 8 6
-        ] <> FontStyle.body4 TypoGraphy
+        ] <> FontStyle.body22 TypoGraphy
       ]
   , if state.data.currentSearchResultType == QUOTES then shineAnimation shimmerHeight shimmerWidth else emptyTextView state
   ]
 
 rideInfoActionView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
 rideInfoActionView push state =
+  let enableSupport = state.data.config.feature.enableSupport
+      enableShareRide = state.data.config.feature.enableShareRide
+  in 
   linearLayout
   [ height $ WRAP_CONTENT
   , width $ WRAP_CONTENT
@@ -2607,7 +2642,7 @@ rideInfoActionView push state =
     , height $ V 40
     , gravity CENTER
     , clickable true
-    , visibility $ boolToVisibility $ any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ] && state.data.config.feature.enableSupport
+    , visibility $ boolToVisibility $ enableSupport
     , background Color.white900
     , stroke $ "1,"<> Color.grey900
     , cornerRadius if os == "IOS" then 20.0 else 32.0
@@ -2620,14 +2655,13 @@ rideInfoActionView push state =
       , height $ V 16
       , width $ V 16
       , accessibility DISABLE
-      , clickable true
       ]
     ] 
     , linearLayout
       [ width $ V 40
       , height $ V 40
       , gravity CENTER
-      , visibility $ boolToVisibility $ any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ] && state.data.config.feature.enableChat
+      , visibility $ boolToVisibility $ enableShareRide
       , background Color.white900
       , stroke $ "1,"<> Color.grey900
       , cornerRadius if os == "IOS" then 20.0 else 32.0
@@ -2641,7 +2675,6 @@ rideInfoActionView push state =
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_icon"
         , height $ V 16
         , width $ V 16
-        , clickable true
         , accessibility DISABLE
         ]
       ]
@@ -3679,7 +3712,7 @@ mapView push state =
 getMapDimensions :: HomeScreenState -> {height :: Length, width :: Length}
 getMapDimensions state = 
   let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then 
-                    V (getMapHeight state)
+                    getMapHeight state
                   else if ( (suggestionViewVisibility state) && (isBannerVisible state)|| suggestionViewVisibility state) then 
                     V (getHeightFromPercent 27)
                   else if (isHomeScreenView state) then
@@ -3688,8 +3721,6 @@ getMapDimensions state =
                     MATCH_PARENT
       mapWidth =  if state.props.currentStage /= HomeScreen then MATCH_PARENT else V ((screenWidth unit)-32)
   in {height : mapHeight, width : mapWidth}
-  where getMapHeight :: HomeScreenState -> Int
-        getMapHeight state = if state.data.currentSearchResultType == QUOTES then (((screenHeight unit)/ 4)*3) else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then (((screenHeight unit)/ 10)*6) else (((screenHeight unit)/ 15)*10)
 
 suggestionsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestionsView push state = 
