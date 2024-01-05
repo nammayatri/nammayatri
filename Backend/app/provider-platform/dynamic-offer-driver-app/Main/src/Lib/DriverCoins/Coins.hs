@@ -190,6 +190,7 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
             coins = numCoins,
             status = status_,
             createdAt = now,
+            updatedAt = now,
             expirationAt = expiryTime,
             coinsUsed = 0,
             bulkUploadTitle = Nothing

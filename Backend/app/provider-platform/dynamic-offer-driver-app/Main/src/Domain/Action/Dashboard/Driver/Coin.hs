@@ -82,6 +82,7 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
             coins = coinsValue,
             status = status_,
             createdAt = now,
+            updatedAt = now,
             expirationAt = expiryTime,
             coinsUsed = 0,
             bulkUploadTitle = Just bulkUploadTitle
