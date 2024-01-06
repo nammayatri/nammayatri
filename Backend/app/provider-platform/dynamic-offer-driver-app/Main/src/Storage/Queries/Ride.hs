@@ -778,6 +778,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.numberOfDeviation = numberOfDeviation,
         BeamR.uiDistanceCalculationWithAccuracy = uiDistanceCalculationWithAccuracy,
         BeamR.uiDistanceCalculationWithoutAccuracy = uiDistanceCalculationWithoutAccuracy,
+        BeamR.isFreeRide = isFreeRide,
         BeamR.driverGoHomeRequestId = getId <$> driverGoHomeRequestId,
         BeamR.safetyAlertTriggered = safetyAlertTriggered
       }

@@ -51,7 +51,8 @@ data OnUpdateBuildReq
         ride :: DRide.Ride,
         booking :: DRB.Booking,
         image :: Maybe Text,
-        isDriverBirthDay :: Bool
+        isDriverBirthDay :: Bool,
+        isFreeRide :: Bool
       }
   | RideStartedBuildReq
       { driver :: SP.Person,
@@ -104,7 +105,7 @@ buildOnUpdateMessage ::
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
 buildOnUpdateMessage RideAssignedBuildReq {..} = do
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image Nothing isDriverBirthDay
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image Nothing isDriverBirthDay isFreeRide
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -117,7 +118,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
         update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing Nothing False
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing Nothing False False
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -130,7 +131,7 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
       }
 buildOnUpdateMessage req@RideCompletedBuildReq {} = do
   distanceTagGroup <- Common.buildDistanceTagGroup req.ride
-  fulfillment <- Common.mkFulfillment (Just req.driver) req.ride req.booking (Just req.vehicle) Nothing (Just $ Tags.TG distanceTagGroup) False
+  fulfillment <- Common.mkFulfillment (Just req.driver) req.ride req.booking (Just req.vehicle) Nothing (Just $ Tags.TG distanceTagGroup) False False
   quote <- Common.buildRideCompletedQuote req.ride req.fareParams
   return $
     OnUpdate.OnUpdateMessage
@@ -158,7 +159,7 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
       }
 buildOnUpdateMessage DriverArrivedBuildReq {..} = do
   let tagGroups = Common.mkArrivalTimeTagGroup arrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups) False
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups) False False
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -178,7 +179,7 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ Common.castCancellationSource cancellationSource)]
             }
         ]
-  fulfillment <- Common.mkFulfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups) False
+  fulfillment <- Common.mkFulfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups) False False
   let item = EstimateRepetitionOU.Item {id = estimateId.getId}
   return $
     OnUpdate.OnUpdateMessage
@@ -200,7 +201,7 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just "message") (Just "New Message") (Just message)]
             }
         ]
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups) False
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG tagGroups) False False
   return $
     OnUpdate.OnUpdateMessage
       { update_target = "order.fufillment.state.code, order.fulfillment.tags",
@@ -220,7 +221,7 @@ buildOnUpdateMessage SafetyAlertBuildReq {..} = do
               list = [Tags.Tag (Just False) (Just code) (Just "Safety Alert Trigger") (Just reason)]
             }
         ]
-  fulfillment <- Common.mkFulfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups) False
+  fulfillment <- Common.mkFulfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups) False False
   return $
     OnUpdate.OnUpdateMessage
       { order =

@@ -79,6 +79,7 @@ data OnUpdateReq
         driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
         isDriverBirthDay :: Bool,
+        isFreeRide :: Bool,
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
@@ -142,6 +143,7 @@ data ValidatedOnUpdateReq
         driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
         isDriverBirthDay :: Bool,
+        isFreeRide :: Bool,
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
@@ -319,6 +321,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             rideEndTime = Nothing,
             rideRating = Nothing,
             safetyCheckStatus = Nothing,
+            isFreeRide = Just isFreeRide,
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do

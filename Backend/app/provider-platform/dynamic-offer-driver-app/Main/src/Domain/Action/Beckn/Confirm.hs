@@ -51,6 +51,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.RiderDetails as SRD
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -242,6 +243,7 @@ handler transporter req quote = do
       shortId <- generateShortId
       -- let otp = T.takeEnd 4 customerPhoneNumber
       now <- getCurrentTime
+      transporterConfig <- TC.findByMerchantOpCityId booking.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       trackingUrl <- buildTrackingUrl guid
       return
         DRide.Ride
@@ -275,6 +277,7 @@ handler transporter req quote = do
             numberOfDeviation = Nothing,
             uiDistanceCalculationWithAccuracy = Nothing,
             uiDistanceCalculationWithoutAccuracy = Nothing,
+            isFreeRide = Just ((getId driverId) `elem` transporterConfig.specialDrivers),
             driverGoHomeRequestId = ghrId,
             safetyAlertTriggered = False
           }

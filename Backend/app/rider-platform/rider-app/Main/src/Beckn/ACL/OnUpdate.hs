@@ -67,7 +67,10 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
         readMaybe . T.unpack
           =<< getTag "driver_details" "rating" tagsGroup
       mbIsDriverBirthDay = getTag "driver_details" "is_driver_birthday" tagsGroup
-      isDriverBirthDay = case T.toLower <$> mbIsDriverBirthDay of
+      mbIsFreeRide = getTag "driver_details" "is_free_ride" tagsGroup
+      isDriverBirthDay = castToBool mbIsDriverBirthDay
+      isFreeRide = castToBool mbIsFreeRide
+      castToBool mbVar = case T.toLower <$> mbVar of
         Just "true" -> True
         _ -> False
   authorization <- fromMaybeM (InvalidRequest "authorization is not present in RideAssigned Event.") $ taEvent.fulfillment.start.authorization
@@ -83,6 +86,7 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
         driverImage = agent.image,
         driverRegisteredAt = registeredAt,
         isDriverBirthDay,
+        isFreeRide,
         vehicleNumber = vehicle.registration,
         vehicleColor = vehicle.color,
         vehicleModel = vehicle.model

@@ -450,5 +450,6 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.driverMobileCountryCode = driverMobileCountryCode,
         BeamR.driverImage = driverImage,
         BeamR.safetyCheckStatus = safetyCheckStatus,
-        BeamR.allowedEditLocationAttempts = allowedEditLocationAttempts
+        BeamR.allowedEditLocationAttempts = allowedEditLocationAttempts,
+        BeamR.isFreeRide = isFreeRide
       }

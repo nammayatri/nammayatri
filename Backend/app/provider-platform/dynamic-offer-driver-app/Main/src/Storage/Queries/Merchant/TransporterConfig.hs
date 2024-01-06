@@ -259,5 +259,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.driverAutoPayExecutionTimeFallBack = nominalDiffTimeToSeconds driverAutoPayExecutionTimeFallBack,
         BeamTC.orderAndNotificationStatusCheckFallBackTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckFallBackTime,
         BeamTC.createdAt = createdAt,
-        BeamTC.updatedAt = updatedAt
+        BeamTC.updatedAt = updatedAt,
+        BeamTC.specialDrivers = specialDrivers,
+        BeamTC.specialLocationTags = specialLocationTags
       }

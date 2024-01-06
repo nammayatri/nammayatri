@@ -114,7 +114,8 @@ data DriverRideRes = DriverRideRes
     driverGoHomeRequestId :: Maybe (Id DDGR.DriverGoHomeRequest),
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DI.DriverAutoPayStatus,
-    customerCancellationDues :: HighPrecMoney
+    customerCancellationDues :: HighPrecMoney,
+    isFreeRide :: Maybe Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -206,6 +207,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       driverGoHomeRequestId = goHomeReqId,
       payerVpa = driverInfo >>= (.payerVpa),
       autoPayStatus = driverInfo >>= (.autoPayStatus),
+      isFreeRide = ride.isFreeRide,
       customerCancellationDues = fareParams.customerCancellationDues
     }
 
@@ -320,6 +322,7 @@ otpRideCreate driver otpCode booking = do
             numberOfDeviation = Nothing,
             uiDistanceCalculationWithAccuracy = Nothing,
             uiDistanceCalculationWithoutAccuracy = Nothing,
+            isFreeRide = Nothing,
             driverGoHomeRequestId = ghrId,
             safetyAlertTriggered = False
           }
