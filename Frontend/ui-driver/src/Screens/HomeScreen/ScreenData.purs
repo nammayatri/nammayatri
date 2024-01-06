@@ -145,6 +145,7 @@ initData = {
         }
     },
     props: {
+        isFreeRide : false,
         statusOnline : true,
         driverStatusSet : Online,
         goOfflineModal : false,

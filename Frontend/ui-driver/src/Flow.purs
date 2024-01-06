@@ -2062,8 +2062,14 @@ homeScreenFlow = do
               specialZoneText = specialZoneConfig.text
             }})
           let payerVpa = fromMaybe "" response.payerVpa
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data { 
-            endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa }}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
+            { data { 
+                endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa }
+              },
+              props {
+                isFreeRide = fromMaybe false response.isFreeRide
+              }
+            })
         
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showRideCompleted = true}})
       _ <- updateStage $ HomeScreenStage RideCompleted
