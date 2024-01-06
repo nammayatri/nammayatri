@@ -5,10 +5,8 @@ module API.Internal.Auth
 where
 
 import qualified Domain.Action.Internal.Auth as Domain
-import Domain.Types.Merchant
 import Environment
 import EulerHS.Prelude
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
