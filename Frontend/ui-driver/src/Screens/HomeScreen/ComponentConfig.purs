@@ -1083,6 +1083,7 @@ getRideCompletedConfig state = let
                     ]
   pspIcon = (Const.getPspIcon payerVpa)
   config' = config{
+    isFreeRide = state.props.isFreeRide,
     primaryButtonConfig {
       width = MATCH_PARENT,
       margin = MarginTop 0,
@@ -1094,6 +1095,7 @@ getRideCompletedConfig state = let
       title = getString COLLECT_VIA_UPI_QR_OR_CASH,
       finalAmount = state.data.endRideData.finalAmount,
       initalAmount = state.data.endRideData.finalAmount,
+      fareUpdatedVisiblity = state.props.isFreeRide,
       gradient =  ["#F5F8FF","#E2EAFF"],
       infoPill {
         text = getString COLLECT_VIA_CASE_UPI,
@@ -1105,7 +1107,7 @@ getRideCompletedConfig state = let
         stroke = "1," <> Color.peacoat,
         alpha = 0.8,
         fontStyle = Body1,
-        visible = GONE
+        visible = if state.props.isFreeRide then VISIBLE else GONE
       },
       topPill{
         visible = disability,
