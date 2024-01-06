@@ -4,7 +4,7 @@ import Animation as Anim
 import Components.PrimaryButton as PrimaryButton
 import Debug (spy)
 import Effect (Effect)
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<))
+import Prelude (Unit, bind, const, discard, pure, unit, ($), (<<<))
 import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, accessibility, afterRender, background, gravity, height, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, orientation, padding, weight, width)
 import Screens.WelcomeScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (WelcomeScreenState)
@@ -64,8 +64,7 @@ carouselView state push =
     , weight 1.0
     , margin $ MarginBottom 20
     , afterRender (\action -> do
-        _ <- push action
-        _ <- runFn2 addCarousel (carouselData state) (getNewIDWithTag "CarouselView")
-        pure unit
+        addCarousel (carouselData state) (getNewIDWithTag "CarouselView")
+        push action
         ) (const AfterRender)
     ][]

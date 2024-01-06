@@ -3242,10 +3242,8 @@ carouselView state push =
           , accessibility DISABLE
           , gravity CENTER    
           , onAnimationEnd (\action -> do
-              _ <- push action
-              if (addCarouselWithVideoExists unit) then 
-                void $ runFn2 addCarousel { gravity : "TOP", carouselData : getCarouselData state } (getNewIDWithTag "AccessibilityCarouselView")
-                else pure unit
+              when (addCarouselWithVideoExists unit) $ addCarousel { gravity : "TOP", carouselData : getCarouselData state } (getNewIDWithTag "AccessibilityCarouselView")
+              push action
             ) (const AfterRender)
           ][]
         ]
