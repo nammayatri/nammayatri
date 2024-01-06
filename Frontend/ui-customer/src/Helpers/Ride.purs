@@ -44,6 +44,7 @@ import Helpers.Utils (getCurrentDate)
 import Resources.Constants (DecodeAddress(..), decodeAddress)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
+import Debug
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -58,6 +59,7 @@ checkRideStatus rideAssigned = do
         let state = state'.homeScreen
             (RideBookingRes resp) = (fromMaybe HSD.dummyRideBooking (head listResp.list))
             status = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._status
+            isFreeRideStatus = (fromMaybe dummyRideAPIEntity (head resp.rideList))^._isFreeRide
             rideStatus = if status == "NEW" then RideAccepted else if status == "INPROGRESS" then RideStarted else HomeScreen
             newState = 
               state
@@ -71,6 +73,7 @@ checkRideStatus rideAssigned = do
                     , bookingId = resp.id
                     , isPopUp = NoPopUp
                     , zoneType = getSpecialTag resp.specialLocationTag
+                    , isFreeRide = fromMaybe false isFreeRideStatus
                   }
                 }
         if rideStatus == HomeScreen then
@@ -108,6 +111,7 @@ checkRideStatus rideAssigned = do
                 (RideBookingDetails contents) = bookingDetails.contents
                 (RideAPIEntity currRideListItem) = fromMaybe dummyRideAPIEntity $ head resp.rideList
                 differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 currRideListItem.chargeableRideDistance)
+                isFreeRideStatus = currRideListItem.isFreeRide
                 lastRideDate = (case currRideListItem.rideStartTime of
                                 Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                 Nothing        -> "")
@@ -124,7 +128,8 @@ checkRideStatus rideAssigned = do
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
                           , estimatedDistance = contents.estimatedDistance
-                          , zoneType = getSpecialTag resp.specialLocationTag}
+                          , zoneType = getSpecialTag resp.specialLocationTag
+                          , isFreeRide = fromMaybe false isFreeRideStatus}
                   , data { rideRatingState
                           { driverName = currRideListItem.driverName
                           , rideId = currRideListItem.id

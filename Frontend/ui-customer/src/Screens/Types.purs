@@ -712,6 +712,7 @@ type HomeScreenStateProps =
   , isShorterTrip :: Boolean
   , city :: Maybe String
   , reAllocation :: ReAllocationProp
+  , isFreeRide :: Boolean
   }
 
 type SearchLocationModelProps = {

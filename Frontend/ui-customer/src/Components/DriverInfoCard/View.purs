@@ -38,7 +38,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant, getValueFromConfig)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (-), (*), bind, pure, discard, not, (&&), (||), (/=))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd, horizontalScrollView, scrollBarX)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, alignParentBottom, alignParentLeft, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, layoutGravity, accessibilityHint, accessibility, onAnimationEnd, horizontalScrollView, scrollBarX, textFromHtml)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -638,7 +638,7 @@ driverInfoView push state =
          , height WRAP_CONTENT
          , width MATCH_PARENT
          , margin $ MarginTop 14
-         , background if state.props.zoneType == METRO then Color.blue800 else Color.grey900
+         , background if state.props.zoneType == METRO || state.props.isFreeRide then Color.blue800 else Color.grey900
          , gravity CENTER
          , cornerRadii $ Corners 24.0 true true false false
          , stroke $ state.data.config.driverInfoConfig.cardStroke
@@ -650,21 +650,23 @@ driverInfoView push state =
             , gravity CENTER
             , orientation HORIZONTAL
             , padding (PaddingVertical 4 4)
-            , visibility if state.props.zoneType == METRO then VISIBLE else GONE
+            , visibility if state.props.zoneType == METRO || state.props.isFreeRide then VISIBLE else GONE
             ][ imageView
                 [ width (V 15)
                 , height (V 15)
                 , margin (MarginRight 6)
                 , accessibility DISABLE
+                , visibility if state.props.isFreeRide then GONE else VISIBLE
                 , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_metro_white"
                 ]
               , textView
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , textSize FontSize.a_14
-                , accessibility if state.props.zoneType == METRO then ENABLE else DISABLE
+                , gravity CENTER
+                , accessibility if state.props.zoneType == METRO || state.props.isFreeRide then ENABLE else DISABLE
                 , accessibilityHint "Metro Ride"
-                , text (getString METRO_RIDE)
+                , text if state.props.isFreeRide then "Zero fare ride・Chitra Santhe Special 🎨" else getString METRO_RIDE
                 , color Color.white900
                 ]
              ]
@@ -983,7 +985,7 @@ paymentMethodView push state title shouldShowIcon =
           , color Color.black700
           ] <> FontStyle.body3 TypoGraphy
         , textView $
-          [ text $ state.data.config.currency <> show state.data.price
+          [ textFromHtml if state.props.isFreeRide then state.data.config.currency <> "0 " <> "<strike> ₹" <> (show state.data.price) <> "</strike>" else state.data.config.currency <> (show state.data.price)
           , color Color.black800
           ] <> FontStyle.h2 TypoGraphy
       ]

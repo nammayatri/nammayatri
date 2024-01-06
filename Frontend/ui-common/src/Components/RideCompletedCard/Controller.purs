@@ -45,7 +45,8 @@ type Config = {
   isPrimaryButtonSticky :: Boolean,
   bannerConfig :: Banner.Config,
   viewsByOrder :: Array RideCompletedElements,
-  enableContactSupport :: Boolean
+  enableContactSupport :: Boolean,
+  isFreeRide :: Boolean
 }
 
 data Theme = DARK | LIGHT
@@ -64,6 +65,7 @@ instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericE
 config :: Config 
 config = {
   isDriver : true,
+  isFreeRide : false,
   topCard : {
     title : "",
     finalAmount : 0,

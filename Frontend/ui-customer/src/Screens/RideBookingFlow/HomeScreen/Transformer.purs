@@ -206,7 +206,8 @@ dummyRideAPIEntity = RideAPIEntity{
   rideEndTime : Nothing,
   rideRating : Nothing,
   driverArrivalTime : Nothing,
-  bppRideId : ""
+  bppRideId : "",
+  isFreeRide : Nothing
   }
 
 isForLostAndFound :: Boolean

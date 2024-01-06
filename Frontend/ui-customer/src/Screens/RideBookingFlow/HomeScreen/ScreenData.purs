@@ -200,6 +200,7 @@ initData = {
     , showChatNotification : false
     , cancelSearchCallDriver : false
     , zoneType : dummyZoneType
+    , isFreeRide : false
     , cancelRideConfirmationPopup : false
     , searchAfterEstimate : false
     , isChatOpened : false

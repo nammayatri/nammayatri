@@ -935,7 +935,8 @@ newtype RideAPIEntity = RideAPIEntity {
   rideEndTime:: Maybe String,
   rideRating :: Maybe Int,
   driverArrivalTime :: Maybe String,
-  bppRideId :: String
+  bppRideId :: String,
+  isFreeRide :: Maybe Boolean
 }
 
 newtype RideBookingAPIDetails = RideBookingAPIDetails {

@@ -869,6 +869,7 @@ driverInfoCardViewState state = { props:
                                   , isChatOpened : state.props.isChatOpened
                                   , chatcallbackInitiated : state.props.chatcallbackInitiated
                                   , merchantCity : state.props.city
+                                  , isFreeRide : state.props.isFreeRide
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -1291,12 +1292,13 @@ reportIssueOptions state =
   ]
 
 
-rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
+rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config
 rideCompletedCardConfig state = let
   config  = RideCompletedCard.config 
   waitingChargesApplied = isJust $ DA.find (\entity  -> entity ^._description == "WAITING_OR_PICKUP_CHARGES") (state.data.ratingViewState.rideBookingRes ^._fareBreakup)
   config' = config{
         isDriver = false,
+        isFreeRide = state.props.isFreeRide,
         customerIssueCard{
           reportIssueView = state.data.ratingViewState.openReportIssue,
           issueFaced = state.data.ratingViewState.issueFacedView,
@@ -1313,13 +1315,13 @@ rideCompletedCardConfig state = let
           title =  getString RIDE_COMPLETED,
           finalAmount = state.data.finalAmount,
           initalAmount = state.data.driverInfoCardState.price,
-          fareUpdatedVisiblity = state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing,
+          fareUpdatedVisiblity = (state.data.finalAmount /= state.data.driverInfoCardState.price && state.props.estimatedDistance /= Nothing) || state.props.isFreeRide,
           gradient = [state.data.config.primaryBackground, state.data.config.primaryBackground, state.data.config.rideCompletedCardConfig.topCard.gradient, state.data.config.primaryBackground],
           infoPill {
-            text = getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied,
+            text = if state.props.isFreeRide then "Your fare is zero for this special Chitra Santhe Ride 🎨" else getFareUpdatedStr state.data.rideRatingState.distanceDifference waitingChargesApplied,
             image = fetchImage FF_COMMON_ASSET "ny_ic_parallel_arrows",
             imageVis = VISIBLE,
-            visible = if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
+            visible = if state.props.isFreeRide then VISIBLE else if state.data.finalAmount == state.data.driverInfoCardState.price || state.props.estimatedDistance == Nothing then GONE else VISIBLE
           },
           bottomText =  getString RIDE_DETAILS
         },
