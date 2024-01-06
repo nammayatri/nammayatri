@@ -110,7 +110,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
                 allDriversNotOnRide <- calcDriverPool radiusStep merchantOpCityId_
                 logDebug $ "SpecialCase-allDriversNotOnRide-" <> show allDriversNotOnRide
                 let onlySpecialDrivers = filter (\dpr -> (getId dpr.driverPoolResult.driverId) `elem` transporterConfig.specialDrivers) allDriversNotOnRide
-                let onlySpecialDriversNotBlocked = filter (\dpr -> dpr.driverPoolResult.driverId `elem` blockListedDrivers) onlySpecialDrivers
+                let onlySpecialDriversNotBlocked = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` blockListedDrivers) onlySpecialDrivers
                 logDebug $ "SpecialCase-onlySpecialDriversNotBlocked-" <> show onlySpecialDriversNotBlocked
                 if null onlySpecialDriversNotBlocked
                   then (,False) <$> calcGoHomeDriverPool transporterConfig.specialDrivers merchantOpCityId_
