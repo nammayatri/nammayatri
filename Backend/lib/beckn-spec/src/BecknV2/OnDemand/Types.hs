@@ -21,6 +21,7 @@ module BecknV2.OnDemand.Types
     AckMessage (..),
     AckResponse (..),
     Agent (..),
+    Authorization (..),
     Billing (..),
     CancellationTerm (..),
     Catalog (..),
@@ -37,6 +38,7 @@ module BecknV2.OnDemand.Types
     Fee (..),
     Fulfillment (..),
     FulfillmentState (..),
+    Image (..),
     InitReq (..),
     Intent (..),
     Item (..),
@@ -67,8 +69,6 @@ module BecknV2.OnDemand.Types
     Tag (..),
     TagGroup (..),
     Vehicle (..),
-    -- searchAPIV2,
-    -- SearchRes
   )
 where
 
@@ -86,18 +86,6 @@ import Data.Time
 import Data.UUID (UUID)
 import GHC.Generics (Generic)
 import Prelude
-
--- import Servant ((:>), JSON, Post, ReqBody, Proxy (..))
-
--- type SearchRes = AckResponse
-
--- type SearchAPI =
---   "search"
---     :> ReqBody '[JSON] SearchReq
---     :> Post '[JSON] SearchRes
-
--- searchAPIV2 :: Proxy SearchAPI
--- searchAPIV2 = Proxy
 
 -- | Describes the acknowledgement sent in response to an API call. If the implementation uses HTTP/S, then Ack must be returned in the same session. Every API call to a BPP must be responded to with an Ack whether the BPP intends to respond with a callback or not. This has one property called &#x60;status&#x60; that indicates the status of the Acknowledgement.
 data Ack = Ack
@@ -202,6 +190,33 @@ optionsAgent =
     table =
       [ ("agentContact", "contact"),
         ("agentPerson", "person")
+      ]
+
+-- | Describes an authorization mechanism used to start or end the fulfillment of an order. For example, in the mobility sector, the driver may require a one-time password to initiate the ride. In the healthcare sector, a patient may need to provide a password to open a video conference link during a teleconsultation.
+data Authorization = Authorization
+  { -- | Token used for authorization. This is typically generated at the BPP. The BAP can send this value to the user via any channel that it uses to authenticate the user like SMS, Email, Push notification, or in-app rendering.
+    authorizationToken :: Maybe Text,
+    -- | Type of authorization mechanism used. The allowed values for this field can be published as part of the network policy.
+    authorizationType :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Authorization where
+  parseJSON = genericParseJSON optionsAuthorization
+
+instance ToJSON Authorization where
+  toJSON = genericToJSON optionsAuthorization
+
+optionsAuthorization :: Options
+optionsAuthorization =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("authorizationToken", "token"),
+        ("authorizationType", "type")
       ]
 
 -- | Describes the billing details of an entity.&lt;br&gt;This has properties like name,organization,address,email,phone,time,tax_number, created_at,updated_at
@@ -677,6 +692,39 @@ optionsFulfillmentState =
   where
     table =
       [ ("fulfillmentStateDescriptor", "descriptor")
+      ]
+
+-- | Describes an image
+data Image = Image
+  { -- | Height of the image in pixels
+    imageHeight :: Maybe Text,
+    -- | The size of the image. The network policy can define the default dimensions of each type
+    imageSizeType :: Maybe Text,
+    -- | URL to the image. This can be a data url or an remote url
+    imageUrl :: Maybe Text,
+    -- | Width of the image in pixels
+    imageWidth :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Image where
+  parseJSON = genericParseJSON optionsImage
+
+instance ToJSON Image where
+  toJSON = genericToJSON optionsImage
+
+optionsImage :: Options
+optionsImage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("imageHeight", "height"),
+        ("imageSizeType", "size_type"),
+        ("imageUrl", "url"),
+        ("imageWidth", "width")
       ]
 
 -- |
@@ -1182,6 +1230,8 @@ optionsPaymentParams =
 data Person = Person
   { -- | Describes the identity of the person
     personId :: Maybe Text,
+    -- |
+    personImage :: Maybe Image,
     -- | the name of the person
     personName :: Maybe Text,
     -- |
@@ -1204,13 +1254,16 @@ optionsPerson =
   where
     table =
       [ ("personId", "id"),
+        ("personImage", "image"),
         ("personName", "name"),
         ("personTags", "tags")
       ]
 
 -- | Describes the price of a product or service
 data Price = Price
-  { -- |
+  { -- | Describes a numerical value in decimal form
+    priceComputedValue :: Maybe Text,
+    -- |
     priceCurrency :: Maybe Text,
     -- | Describes a numerical value in decimal form
     priceMaximumValue :: Maybe Text,
@@ -1237,7 +1290,8 @@ optionsPrice =
     }
   where
     table =
-      [ ("priceCurrency", "currency"),
+      [ ("priceComputedValue", "computed_value"),
+        ("priceCurrency", "currency"),
         ("priceMaximumValue", "maximum_value"),
         ("priceMinimumValue", "minimum_value"),
         ("priceOfferedValue", "offered_value"),
@@ -1499,6 +1553,8 @@ optionsStatusReqMessage =
 -- | A logical point in space and time during the fulfillment of an order.
 data Stop = Stop
   { -- |
+    stopAuthorization :: Maybe Authorization,
+    -- |
     stopLocation :: Maybe Location,
     -- | The type of stop. Allowed values of this property can be defined by the network policy.
     stopType :: Maybe Text
@@ -1519,7 +1575,8 @@ optionsStop =
     }
   where
     table =
-      [ ("stopLocation", "location"),
+      [ ("stopAuthorization", "authorization"),
+        ("stopLocation", "location"),
         ("stopType", "type")
       ]
 
