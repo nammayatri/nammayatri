@@ -21,7 +21,7 @@ $(makeLenses ''TransformerTT)
 
 data Transformers = Transformers
   { _moduleName :: Text,
-    _imports :: HashMap Text Text,
+    _imports :: HashMap Text [Text],
     _functions :: [TransformerTT],
     _monads :: [Text]
   }

@@ -25,16 +25,16 @@ import qualified Data.Vector as V
 import qualified Data.Yaml as Yaml
 import Kernel.Prelude hiding (toText)
 
-defaultImportMap :: HM.HashMap Text Text
+defaultImportMap :: HM.HashMap Text [Text]
 defaultImportMap =
   HM.fromList
-    [ ("Id", "Kernel.Types.Id"),
-      ("getId", "Kernel.Types.Id"),
-      ("ShortId", "Kernel.Types.Id"),
-      ("getShortId", "Kernel.Types.Id"),
-      ("Maybe", ""), -- Already included in EulerHS.Prelude
-      ("Just", ""), -- Already included in EulerHS.Prelude
-      ("Nothing", "") -- Already included in EulerHS.Prelude
+    [ ("Id", ["Kernel.Types.Id"]),
+      ("getId", ["Kernel.Types.Id"]),
+      ("ShortId", ["Kernel.Types.Id"]),
+      ("getShortId", ["Kernel.Types.Id"]),
+      ("Maybe", [""]), -- Already included in EulerHS.Prelude
+      ("Just", [""]), -- Already included in EulerHS.Prelude
+      ("Nothing", [""]) -- Already included in EulerHS.Prelude
     ]
 
 pureIdentifier :: Text
@@ -54,13 +54,22 @@ parseTransformers :: Object -> ST.Transformers
 parseTransformers obj =
   let moduleName = preview (ix "module" . _String) obj & fromMaybe (error "Module name is required")
       importObj = preview (ix "imports" . _Object) obj & fromMaybe (error "Imports are required")
-      _imports = HM.fromList . map (\(k, v) -> (toText k, preview _String v & fromMaybe (error "Failed to parse imports"))) $ KM.toList importObj
+      _imports = HM.fromList . map toImportMap $ KM.toList importObj
       imports = HM.unionWith const defaultImportMap _imports
       transformerObj = preview (ix "transformer" . _Object) obj & fromMaybe (error "Failed to parse transformer")
       monads = preview (ix "monads" . _Array . to V.toList) transformerObj & convertToListOfText
       unParsedFunctions = preview (ix "transformers" . _Object) transformerObj & fromMaybe (error "Failed to parse transformers Key Object") & KM.toList
       functions = mapM parseSingleTransformer unParsedFunctions & fromMaybe (error "Failed to parse transformer functions")
    in ST.Transformers moduleName imports functions monads
+
+toImportMap :: (Key, Value) -> (Text, [Text])
+toImportMap (key, value) =
+  let key' = toText key
+      value' =
+        case preview (_Array . to V.toList) value of
+          Just val -> convertToListOfText $ Just val
+          Nothing -> [preview _String value & fromMaybe (error "Failed to parse imports")]
+   in (key', value')
 
 convertToListOfText :: Maybe [Value] -> [Text]
 convertToListOfText Nothing = []

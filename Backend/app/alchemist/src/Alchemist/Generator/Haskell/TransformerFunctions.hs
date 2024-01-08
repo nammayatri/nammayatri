@@ -8,6 +8,7 @@ import Control.Lens ((^.))
 import Data.Char (isLower)
 import qualified Data.HashMap.Strict as HM
 import Data.List (intercalate, nub, sort)
+import Data.List.Extra ((!?))
 import qualified Data.Text as T
 import Kernel.Prelude
 
@@ -24,6 +25,9 @@ whiteSpaceChar = ' '
 
 qualifiedFunctionPrefix :: Text
 qualifiedFunctionPrefix = "_"
+
+multipleImportInfix :: Text
+multipleImportInfix = "#"
 
 maybePrefix :: Text
 maybePrefix = "Maybe "
@@ -58,9 +62,11 @@ generateTransformerFunctions input =
     makeImport x = "import qualified " <> x
 
     getImportList :: [String]
-    getImportList = sort . filter (/= "") . map (T.unpack . snd) . HM.toList $ input ^. ST.imports
+    getImportList = do
+      let imports' = (concatMap snd . HM.toList) $ input ^. ST.imports
+      sort . filter (/= "") . map T.unpack $ imports'
 
-generateFunctions :: [Text] -> [ST.TransformerTT] -> HM.HashMap Text Text -> Text
+generateFunctions :: [Text] -> [ST.TransformerTT] -> HM.HashMap Text [Text] -> Text
 generateFunctions globalMonads functionList importMap = T.unlines $ concatMap processFunction functionList
   where
     processFunction :: ST.TransformerTT -> [Text]
@@ -75,7 +81,7 @@ generateFunctions globalMonads functionList importMap = T.unlines $ concatMap pr
               <> createOutput importMap toType outputTypeBindings
           )
 
-createFunctionDefinition :: Text -> [Text] -> [Text] -> HM.HashMap Text Text -> Text -> Text
+createFunctionDefinition :: Text -> [Text] -> [Text] -> HM.HashMap Text [Text] -> Text -> Text
 createFunctionDefinition name allMonads fromTypes importMap toType =
   let qualifiedMonads = defaultMonad : map (toQualified importMap) allMonads
       qualifiedInputTypes = map (toQualified importMap) fromTypes
@@ -88,13 +94,13 @@ createFunctionDefinition name allMonads fromTypes importMap toType =
       [] -> ""
       _ -> "m"
 
-createPureMappings :: HM.HashMap Text Text -> [(Text, Text)] -> [Text]
+createPureMappings :: HM.HashMap Text [Text] -> [(Text, Text)] -> [Text]
 createPureMappings importMap = map (\(x, y) -> "let " <> x <> " = " <> mkFunctionsQualified importMap y)
 
-createImpureMappings :: HM.HashMap Text Text -> [(Text, Text)] -> [Text]
+createImpureMappings :: HM.HashMap Text [Text] -> [(Text, Text)] -> [Text]
 createImpureMappings importMap = map (\(x, y) -> x <> " <- " <> mkFunctionsQualified importMap y)
 
-createOutput :: HM.HashMap Text Text -> Text -> [(Text, Text)] -> [Text]
+createOutput :: HM.HashMap Text [Text] -> Text -> [(Text, Text)] -> [Text]
 createOutput importMap toType outputTypeBindings = do
   let strippedToType = stripReturnType toType
   let returnValue = toQualified importMap strippedToType <> " { " <> T.intercalate ", " (map (\(x, y) -> x <> " = " <> y) outputTypeBindings) <> " }"
@@ -110,7 +116,7 @@ createOutput importMap toType outputTypeBindings = do
         <> ["  then pure Nothing"]
         <> ["  else pure $ Just returnData"]
 
-mkFunctionsQualified :: HM.HashMap Text Text -> Text -> Text
+mkFunctionsQualified :: HM.HashMap Text [Text] -> Text -> Text
 mkFunctionsQualified importMap str
   -- to handle list types.
   | "[" `T.isPrefixOf` str && "]" `T.isSuffixOf` str =
@@ -129,11 +135,17 @@ mkFunctionsQualified importMap str
         res2 = mkFunctionsQualified importMap rest
      in res1 <> whiteSpace <> res2
   | qualifiedFunctionPrefix `T.isPrefixOf` str = do
-    let functionName = T.tail str
-        prefix = HM.lookup functionName importMap & fromMaybe (error $ "No imports found for the function : " <> functionName)
-    if T.null prefix
-      then functionName
-      else prefix <> "." <> functionName
+    let splitList = T.splitOn multipleImportInfix $ T.tail str
+        (functionName, idx') = (head splitList, fromMaybe "0" $ splitList !? 1)
+        idx = read $ T.unpack idx'
+        matchedValue = HM.lookup functionName importMap & fromMaybe (error $ "No imports found for the function : " <> functionName)
+    if length matchedValue <= idx
+      then error ("Imports for the functionName: " <> functionName <> " is less than given index: " <> idx')
+      else do
+        let prefix = matchedValue !! idx
+        if T.null prefix
+          then functionName
+          else prefix <> "." <> functionName
   | otherwise = str
 
 stripReturnType :: Text -> Text
@@ -146,7 +158,7 @@ stripReturnType str
     stripReturnType str''
   | otherwise = str
 
-toQualified :: HM.HashMap Text Text -> Text -> Text
+toQualified :: HM.HashMap Text [Text] -> Text -> Text
 toQualified _ "" = ""
 toQualified mp key
   -- to handle HasFlowEnv m r '["something" ::: Type] types of monad
@@ -172,8 +184,15 @@ toQualified mp key
         res1 = toQualified mp firstWord
         res2 = toQualified mp rest
      in res1 <> whiteSpace <> res2
-  | otherwise =
-    let prefix = HM.lookup key mp & fromMaybe (error $ "No imports found for the type/function : " <> key)
-     in if T.null prefix
-          then key
-          else prefix <> "." <> key
+  | otherwise = do
+    let splitList = T.splitOn multipleImportInfix key
+        (type', idx') = (head splitList, fromMaybe "0" $ splitList !? 1)
+        idx = read $ T.unpack idx'
+        matchedValue = HM.lookup type' mp & fromMaybe (error $ "No imports found for the type: " <> type')
+    if length matchedValue <= idx
+      then error ("Imports for the type': " <> type' <> " is less than given index: " <> idx')
+      else do
+        let prefix = matchedValue !! idx
+        if T.null prefix
+          then type'
+          else prefix <> "." <> type'
