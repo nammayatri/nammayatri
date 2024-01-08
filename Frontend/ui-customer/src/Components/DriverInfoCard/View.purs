@@ -1220,4 +1220,4 @@ getVehicleImage variant vehicleDetail city = do
           else "ic_auto_rickshaw"
 
 getAnimationDelay :: LazyCheck -> Int
-getAnimationDelay dummy = 100
+getAnimationDelay dummy = 1000
