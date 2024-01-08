@@ -25,8 +25,17 @@ whiteSpaceChar = ' '
 qualifiedFunctionPrefix :: Text
 qualifiedFunctionPrefix = "_"
 
+maybePrefix :: Text
+maybePrefix = "Maybe "
+
 moduleNamePrefix :: String
 moduleNamePrefix = "module Beckn.OnDemand.Transformer."
+
+defaultImports :: [String]
+defaultImports = ["EulerHS.Prelude hiding (id)", "Kernel.Utils.Common (type (:::))"]
+
+defaultQualifiedImport :: [String]
+defaultQualifiedImport = ["Kernel.Prelude", "Kernel.Types.Id", "BecknV2.OnDemand.Utils.Common"] -- "Environment"
 
 -- monadVars :: [Text]
 -- monadVars = [" m", " m r"]
@@ -48,11 +57,6 @@ generateTransformerFunctions input =
     makeImport :: String -> String
     makeImport x = "import qualified " <> x
 
-    defaultImports :: [String]
-    defaultImports = ["EulerHS.Prelude hiding (id)", "Kernel.Utils.Common (type (:::))"]
-
-    defaultQualifiedImport :: [String]
-    defaultQualifiedImport = ["Kernel.Prelude", "Kernel.Types.Id"] -- "Environment"
     getImportList :: [String]
     getImportList = sort . filter (/= "") . map (T.unpack . snd) . HM.toList $ input ^. ST.imports
 
@@ -68,46 +72,79 @@ generateFunctions globalMonads functionList importMap = T.unlines $ concatMap pr
           ("  " <>)
           ( createPureMappings importMap pureMapping
               <> createImpureMappings importMap impureMapping
-              <> ["pure $"]
-              <> map
-                ("  " <>)
-                ( [toQualified importMap toType]
-                    <> ["  { " <> T.intercalate ",\n        " (map (\(x, y) -> x <> " = " <> y) outputTypeBindings) <> "\n      }"]
-                )
+              <> createOutput importMap toType outputTypeBindings
           )
 
 createFunctionDefinition :: Text -> [Text] -> [Text] -> HM.HashMap Text Text -> Text -> Text
 createFunctionDefinition name allMonads fromTypes importMap toType =
-  let qualifiedMonads = map (toQualified importMap) allMonads
+  let qualifiedMonads = defaultMonad : map (toQualified importMap) allMonads
       qualifiedInputTypes = map (toQualified importMap) fromTypes
       monadVar = getMonadVar
       qualifiedOutputType = toQualified importMap toType
-   in name <> " :: (" <> defaultMonad <> ", " <> T.intercalate ", " qualifiedMonads <> ") => " <> T.intercalate " -> " qualifiedInputTypes <> " -> " <> monadVar <> qualifiedOutputType
+   in name <> " :: (" <> T.intercalate ", " qualifiedMonads <> ") => " <> T.intercalate " -> " qualifiedInputTypes <> " -> " <> monadVar <> " (" <> qualifiedOutputType <> ")"
   where
     getMonadVar :: Text
     getMonadVar = case allMonads of
       [] -> ""
-      _ -> "m "
+      _ -> "m"
 
 createPureMappings :: HM.HashMap Text Text -> [(Text, Text)] -> [Text]
-createPureMappings importMap = map (\(x, y) -> "let " <> x <> " = " <> mkQualified importMap y)
+createPureMappings importMap = map (\(x, y) -> "let " <> x <> " = " <> mkFunctionsQualified importMap y)
 
 createImpureMappings :: HM.HashMap Text Text -> [(Text, Text)] -> [Text]
-createImpureMappings importMap = map (\(x, y) -> x <> " <- " <> mkQualified importMap y)
+createImpureMappings importMap = map (\(x, y) -> x <> " <- " <> mkFunctionsQualified importMap y)
 
-mkQualified :: HM.HashMap Text Text -> Text -> Text
-mkQualified importMap str =
-  let firstWord' = T.takeWhile (/= whiteSpaceChar) str
-      rest = fromMaybe "" (T.stripPrefix firstWord' str)
-      firstWord = fromMaybe firstWord' (T.stripPrefix qualifiedFunctionPrefix firstWord')
-      mbPrefix = HM.lookup firstWord importMap
-   in -- val = unsafePerformIO $ putStrLn $ "firstWord: " ++ show qualifiedFirstWord
+createOutput :: HM.HashMap Text Text -> Text -> [(Text, Text)] -> [Text]
+createOutput importMap toType outputTypeBindings = do
+  let strippedToType = stripReturnType toType
+  let returnValue = toQualified importMap strippedToType <> " { " <> T.intercalate ", " (map (\(x, y) -> x <> " = " <> y) outputTypeBindings) <> " }"
+  -- <> ["  { " <> T.intercalate ",\n        " (map (\(x, y) -> x <> " = " <> y) outputTypeBindings) <> "\n      }"]
+  if maybePrefix `T.isPrefixOf` toType
+    then textForMaybeToType returnValue
+    else ["pure $ " <> returnValue]
+  where
+    textForMaybeToType returnValue =
+      ["let returnData = " <> returnValue]
+        <> ["let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData"]
+        <> ["if allNothing"]
+        <> ["  then pure Nothing"]
+        <> ["  else pure $ Just returnData"]
 
-      case mbPrefix of
-        Nothing -> firstWord <> rest -- <> show val
-        Just prefix
-          | T.null prefix -> firstWord <> rest -- <> show val
-          | otherwise -> prefix <> "." <> firstWord <> rest -- <> show val
+mkFunctionsQualified :: HM.HashMap Text Text -> Text -> Text
+mkFunctionsQualified importMap str
+  -- to handle list types.
+  | "[" `T.isPrefixOf` str && "]" `T.isSuffixOf` str =
+    let str' = fromMaybe str (T.stripPrefix "[" str)
+        str'' = fromMaybe str' (T.stripSuffix "]" str')
+     in "[" <> mkFunctionsQualified importMap str'' <> "]"
+  -- to handle brackets in types.
+  | "(" `T.isPrefixOf` str && ")" `T.isSuffixOf` str =
+    let str' = fromMaybe str (T.stripPrefix "(" str)
+        str'' = fromMaybe str' (T.stripSuffix ")" str')
+     in "(" <> mkFunctionsQualified importMap str'' <> ")"
+  | whiteSpace `T.isInfixOf` str =
+    let firstWord = T.takeWhile (/= whiteSpaceChar) str
+        rest = T.tail $ fromMaybe whiteSpace (T.stripPrefix firstWord str)
+        res1 = mkFunctionsQualified importMap firstWord
+        res2 = mkFunctionsQualified importMap rest
+     in res1 <> whiteSpace <> res2
+  | qualifiedFunctionPrefix `T.isPrefixOf` str = do
+    let functionName = T.tail str
+        prefix = HM.lookup functionName importMap & fromMaybe (error $ "No imports found for the function : " <> functionName)
+    if T.null prefix
+      then functionName
+      else prefix <> "." <> functionName
+  | otherwise = str
+
+stripReturnType :: Text -> Text
+stripReturnType str
+  | "Maybe " `T.isPrefixOf` str = T.stripPrefix "Maybe " str & (stripReturnType . fromMaybe str)
+  | ")" `T.isSuffixOf` str = do
+    let prefix = T.takeWhile (/= '(') str
+        str' = T.stripPrefix prefix str <&> T.tail & fromMaybe (error $ "Mismatched parenthesis in the type " <> str)
+        str'' = T.stripSuffix ")" str' & fromMaybe (error $ "Mismatched parenthesis in the type " <> str')
+    stripReturnType str''
+  | otherwise = str
 
 toQualified :: HM.HashMap Text Text -> Text -> Text
 toQualified _ "" = ""

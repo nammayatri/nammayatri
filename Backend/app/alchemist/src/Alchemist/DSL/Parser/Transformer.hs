@@ -18,7 +18,6 @@ import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Lens (_Array, _Object, _String)
 import Data.Bool
 import qualified Data.ByteString as BS
-import Data.Char (toLower, toUpper)
 import qualified Data.HashMap.Strict as HM
 -- import Data.List.Split (splitWhen)
 import qualified Data.Text as T
@@ -76,7 +75,7 @@ parseSingleTransformer (key, value) = do
       paramNames = map fst params
       toType = preview (ix "toType" . _String) obj & fromMaybe (error "Transformer toType is required")
       mapping = preview (ix "mapping" . _Object) obj & fromMaybe (error "Transformer mapping is required") & KM.toList & map toTextPair
-      outputTypeBindings = map (setFieldBindings toType) mapping
+      outputTypeBindings = map setFieldBindings mapping
       impureMapping = map (setImpureBindings toType) $ filter (\(_, val) -> impureIdentifier `T.isPrefixOf` val) mapping
       pureMapping = map (setPureBindings toType) $ filter (\(_, val) -> not $ impureIdentifier `T.isPrefixOf` val) mapping
   pure $ ST.TransformerTT name fromTypes paramNames toType outputTypeBindings pureMapping impureMapping
@@ -95,22 +94,14 @@ parseSingleTransformer (key, value) = do
        in (key', value')
 
     setImpureBindings :: Text -> (Text, Text) -> (Text, Text)
-    setImpureBindings toType' (key', val') =
-      let outputTypePrefix = updateFirstChar toLower toType'
-          val = fromMaybe val' (T.stripPrefix impureIdentifier val')
-       in (outputTypePrefix <> updateFirstChar toUpper key', val)
+    setImpureBindings _toType' (key', val') =
+      let val = fromMaybe val' (T.stripPrefix impureIdentifier val')
+       in (key' <> "_", val)
 
     setPureBindings :: Text -> (Text, Text) -> (Text, Text)
-    setPureBindings toType' (key', val') =
-      let outputTypePrefix = updateFirstChar toLower toType'
-          val = fromMaybe val' (T.stripPrefix pureIdentifier val')
-       in (outputTypePrefix <> updateFirstChar toUpper key', val)
+    setPureBindings _toType' (key', val') =
+      let val = fromMaybe val' (T.stripPrefix pureIdentifier val')
+       in (key' <> "_", val)
 
-    setFieldBindings :: Text -> (Text, Text) -> (Text, Text)
-    setFieldBindings toType' (key', _) =
-      let outputTypePrefix = updateFirstChar toLower toType'
-       in (key', outputTypePrefix <> updateFirstChar toUpper key')
-
-    updateFirstChar :: (Char -> Char) -> Text -> Text
-    updateFirstChar _ "" = ""
-    updateFirstChar f xs = T.cons (f $ T.head xs) (T.tail xs)
+    setFieldBindings :: (Text, Text) -> (Text, Text)
+    setFieldBindings (key', _) = (key', key' <> "_")
