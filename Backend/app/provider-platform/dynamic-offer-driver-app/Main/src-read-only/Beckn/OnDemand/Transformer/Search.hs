@@ -7,6 +7,7 @@ import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.Types.Core.Taxi.API.Search
 import qualified Beckn.Types.Core.Taxi.Common.Address
 import qualified BecknV2.OnDemand.Types
+import qualified BecknV2.OnDemand.Utils.Common
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
 import qualified Domain.Types.Merchant
@@ -20,80 +21,48 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
 import Kernel.Utils.Common (type (:::))
 
-buildSearchReq :: (Monad m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m Domain.Action.Beckn.Search.DSearchReq
+buildSearchReq :: (Monad m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m (Domain.Action.Beckn.Search.DSearchReq)
 buildSearchReq messageId city subscriber req context = do
-  let dSearchReqBapCity = city
-  let dSearchReqBapId = subscriber.subscriber_id
-  let dSearchReqBapUri = subscriber.subscriber_url
-  let dSearchReqCustomerLanguage = Beckn.OnDemand.Utils.Common.buildCustomerLanguage req
-  let dSearchReqCustomerPhoneNum = Beckn.OnDemand.Utils.Common.buildCustomerPhoneNumber req
-  let dSearchReqDevice = Nothing
-  let dSearchReqDisabilityTag = Beckn.OnDemand.Utils.Common.buildDisabilityTag req
-  let dSearchReqIsReallocationEnabled = Beckn.OnDemand.Utils.Common.getIsReallocationEnabled req
-  let dSearchReqMessageId = messageId
-  let dSearchReqRouteDistance = Beckn.OnDemand.Utils.Common.getDistance req
-  let dSearchReqRouteDuration = Beckn.OnDemand.Utils.Common.getDuration req
-  let dSearchReqRoutePoints = Beckn.OnDemand.Utils.Common.buildRoutePoints req
-  dSearchReqBapCountry <- Beckn.OnDemand.Utils.Common.getContextCountry context
-  dSearchReqDropAddrress <- Beckn.OnDemand.Utils.Common.getDropOffLocation req & tfAddress <&> Just
-  dSearchReqDropLocation <- Beckn.OnDemand.Utils.Common.getDropOffLocationGps req & tfLatLong
-  dSearchReqPickupAddress <- Beckn.OnDemand.Utils.Common.getPickUpLocation req & tfAddress <&> Just
-  dSearchReqPickupLocation <- Beckn.OnDemand.Utils.Common.getPickUpLocationGps req & tfLatLong
-  dSearchReqPickupTime <- Kernel.Types.Common.getCurrentTime
-  dSearchReqTransactionId <- Beckn.OnDemand.Utils.Common.getTransactionId context
-  pure $
-    Domain.Action.Beckn.Search.DSearchReq
-      { bapCity = dSearchReqBapCity,
-        bapCountry = dSearchReqBapCountry,
-        bapId = dSearchReqBapId,
-        bapUri = dSearchReqBapUri,
-        customerLanguage = dSearchReqCustomerLanguage,
-        customerPhoneNum = dSearchReqCustomerPhoneNum,
-        device = dSearchReqDevice,
-        disabilityTag = dSearchReqDisabilityTag,
-        dropAddrress = dSearchReqDropAddrress,
-        dropLocation = dSearchReqDropLocation,
-        isReallocationEnabled = dSearchReqIsReallocationEnabled,
-        messageId = dSearchReqMessageId,
-        pickupAddress = dSearchReqPickupAddress,
-        pickupLocation = dSearchReqPickupLocation,
-        pickupTime = dSearchReqPickupTime,
-        routeDistance = dSearchReqRouteDistance,
-        routeDuration = dSearchReqRouteDuration,
-        routePoints = dSearchReqRoutePoints,
-        transactionId = dSearchReqTransactionId
-      }
+  let bapCity_ = city
+  let bapId_ = subscriber.subscriber_id
+  let bapUri_ = subscriber.subscriber_url
+  let customerLanguage_ = Beckn.OnDemand.Utils.Common.buildCustomerLanguage req
+  let customerPhoneNum_ = Beckn.OnDemand.Utils.Common.buildCustomerPhoneNumber req
+  let device_ = Nothing
+  let disabilityTag_ = Beckn.OnDemand.Utils.Common.buildDisabilityTag req
+  let isReallocationEnabled_ = Beckn.OnDemand.Utils.Common.getIsReallocationEnabled req
+  let messageId_ = messageId
+  let routeDistance_ = Beckn.OnDemand.Utils.Common.getDistance req
+  let routeDuration_ = Beckn.OnDemand.Utils.Common.getDuration req
+  let routePoints_ = Beckn.OnDemand.Utils.Common.buildRoutePoints req
+  bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
+  dropAddrress_ <- Beckn.OnDemand.Utils.Common.getDropOffLocation req & tfAddress
+  dropLocation_ <- Beckn.OnDemand.Utils.Common.getDropOffLocationGps req & tfLatLong
+  pickupAddress_ <- Beckn.OnDemand.Utils.Common.getPickUpLocation req & tfAddress
+  pickupLocation_ <- Beckn.OnDemand.Utils.Common.getPickUpLocationGps req & tfLatLong
+  pickupTime_ <- Kernel.Types.Common.getCurrentTime
+  transactionId_ <- Beckn.OnDemand.Utils.Common.getTransactionId context
+  pure $ Domain.Action.Beckn.Search.DSearchReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, customerLanguage = customerLanguage_, customerPhoneNum = customerPhoneNum_, device = device_, disabilityTag = disabilityTag_, dropAddrress = dropAddrress_, dropLocation = dropLocation_, isReallocationEnabled = isReallocationEnabled_, messageId = messageId_, pickupAddress = pickupAddress_, pickupLocation = pickupLocation_, pickupTime = pickupTime_, routeDistance = routeDistance_, routeDuration = routeDuration_, routePoints = routePoints_, transactionId = transactionId_}
 
-tfAddress :: (Monad m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => BecknV2.OnDemand.Types.Location -> m Beckn.Types.Core.Taxi.Common.Address.Address
+tfAddress :: (Monad m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => BecknV2.OnDemand.Types.Location -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
 tfAddress location = do
-  let addressArea_code = Nothing
-  let addressBuilding = Nothing
-  let addressCity = Nothing
-  let addressCountry = Nothing
-  let addressDoor = location.locationAddress
-  let addressLocality = Nothing
-  let addressState = Nothing
-  let addressStreet = Nothing
-  let addressWard = Nothing
-  pure $
-    Beckn.Types.Core.Taxi.Common.Address.Address
-      { area_code = addressArea_code,
-        building = addressBuilding,
-        city = addressCity,
-        country = addressCountry,
-        door = addressDoor,
-        locality = addressLocality,
-        state = addressState,
-        street = addressStreet,
-        ward = addressWard
-      }
+  let area_code_ = Nothing
+  let building_ = Nothing
+  let city_ = Nothing
+  let country_ = Nothing
+  let door_ = location.locationAddress
+  let locality_ = Nothing
+  let state_ = Nothing
+  let street_ = Nothing
+  let ward_ = Nothing
+  let returnData = Beckn.Types.Core.Taxi.Common.Address.Address {area_code = area_code_, building = building_, city = city_, country = country_, door = door_, locality = locality_, state = state_, street = street_, ward = ward_}
+  let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
+  if allNothing
+    then pure Nothing
+    else pure $ Just returnData
 
-tfLatLong :: (Monad m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> m Kernel.External.Maps.LatLong
+tfLatLong :: (Monad m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> m (Kernel.External.Maps.LatLong)
 tfLatLong locationGps = do
-  let latLongLat = Beckn.OnDemand.Utils.Common.parseLatLong locationGps & (.lat)
-  let latLongLon = Beckn.OnDemand.Utils.Common.parseLatLong locationGps & (.lon)
-  pure $
-    Kernel.External.Maps.LatLong
-      { lat = latLongLat,
-        lon = latLongLon
-      }
+  let lat_ = Beckn.OnDemand.Utils.Common.parseLatLong locationGps & Kernel.External.Maps.lat
+  let lon_ = Beckn.OnDemand.Utils.Common.parseLatLong locationGps & Kernel.External.Maps.lon
+  pure $ Kernel.External.Maps.LatLong {lat = lat_, lon = lon_}

@@ -49,7 +49,8 @@ mkStops origin destination =
                       locationState = Just $ Spec.State origin.address.state,
                       locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
-              stopType = Just "START"
+              stopType = Just "START",
+              stopAuthorization = Nothing
             },
           Spec.Stop
             { stopLocation =
@@ -63,7 +64,8 @@ mkStops origin destination =
                       locationState = Just $ Spec.State destination.address.state,
                       locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
-              stopType = Just "END"
+              stopType = Just "END",
+              stopAuthorization = Nothing
             }
         ]
 

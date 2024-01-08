@@ -73,7 +73,7 @@ transformer:
         - isReallocationEnabled: Maybe Bool
       toType: SearchReqMessage
       mapping:
-        searchReqMessageIntent: /~tfIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled <&> Just
+        searchReqMessageIntent: /~tfIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled
 
     tfIntent:
       params:
@@ -86,10 +86,10 @@ transformer:
         - mbPoints: Maybe [LatLong]
         - mbPhoneNumber: Maybe Text
         - isReallocationEnabled: Maybe Bool
-      toType: Intent
+      toType: Maybe Intent
       mapping:
-        intentFulfillment: /~tfFulfillment origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled <&> Just
-        intentPayment: /~tfPayment "BPP" <&> Just
+        intentFulfillment: /~tfFulfillment origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled
+        intentPayment: /~tfPayment "BPP"
         intentTags: Nothing
 
     tfFulfillment:
@@ -103,10 +103,10 @@ transformer:
         - mbPoints: Maybe [LatLong]
         - mbPhoneNumber: Maybe Text
         - isReallocationEnabled: Maybe Bool
-      toType: Fulfillment
+      toType: Maybe Fulfillment
       mapping:
         fulfillmentStops: ~_mkStops origin destination
-        fulfillmentCustomer: /~tfCustomer customerLanguage disabilityTag mbPhoneNumber <&> Just
+        fulfillmentCustomer: /~tfCustomer customerLanguage disabilityTag mbPhoneNumber
         fulfillmentTags: ~_mkSearchFulFillmentTags distance duration mbPoints isReallocationEnabled
         fulfillmentAgent: Nothing
         fulfillmentId: Nothing
@@ -119,9 +119,9 @@ transformer:
         - customerLanguage: Maybe Language
         - disabilityTag: Maybe Text
         - mbPhoneNumber: Maybe Text
-      toType: Customer
+      toType: Maybe Customer
       mapping:
-        customerPerson: /~tfPerson customerLanguage disabilityTag mbPhoneNumber <&> Just
+        customerPerson: /~tfPerson customerLanguage disabilityTag mbPhoneNumber
         customerContact: Nothing
 
     tfPerson:
@@ -129,16 +129,17 @@ transformer:
         - customerLanguage: Maybe Language
         - disabilityTag: Maybe Text
         - mbPhoneNumber: Maybe Text
-      toType: Person
+      toType: Maybe Person
       mapping:
         personTags: ~_mkCustomerInfoTags customerLanguage disabilityTag mbPhoneNumber
         personName: Nothing
         personId: Nothing
+        personImage: Nothing
 
     tfPayment:
       params:
         - collectedBy: Text
-      toType: Payment
+      toType: Maybe Payment
       mapping:
         paymentCollectedBy: Just collectedBy
         paymentTags: ~_mkPaymentTags

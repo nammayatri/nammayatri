@@ -26,6 +26,8 @@ imports:
   getPickUpLocationGps: Beckn.OnDemand.Utils.Common
   getDropOffLocationGps: Beckn.OnDemand.Utils.Common
   LatLong: Kernel.External.Maps
+  lat: Kernel.External.Maps
+  lon: Kernel.External.Maps
   parseLatLong: Beckn.OnDemand.Utils.Common
   ContextV2: Kernel.Types.Beckn.Context
   Context: BecknV2.OnDemand.Types
@@ -58,8 +60,8 @@ transformer:
         pickupLocation: /~_getPickUpLocationGps req & tfLatLong
         pickupTime: /~_getCurrentTime
         dropLocation: /~_getDropOffLocationGps req & tfLatLong
-        pickupAddress: /~_getPickUpLocation req & tfAddress <&> Just
-        dropAddrress: /~_getDropOffLocation req & tfAddress <&> Just
+        pickupAddress: /~_getPickUpLocation req & tfAddress
+        dropAddrress: /~_getDropOffLocation req & tfAddress
         routeDistance: ~_getDistance req
         routeDuration: ~_getDuration req
         device: Nothing
@@ -72,7 +74,7 @@ transformer:
     tfAddress:
       params:
         - location: Location
-      toType: Address
+      toType: Maybe Address
       mapping:
         door: location.locationAddress
         locality : Nothing
@@ -89,5 +91,5 @@ transformer:
         - locationGps: Text
       toType: LatLong
       mapping:
-        lat: _parseLatLong locationGps & (.lat)
-        lon: _parseLatLong locationGps & (.lon)
+        lat: _parseLatLong locationGps & _lat
+        lon: _parseLatLong locationGps & _lon
