@@ -204,7 +204,9 @@ type EstimateAndQuoteConfig = {
   enableOnlyAuto :: Boolean,
   showNearByDrivers :: Boolean,
   enableBookingPreference :: Boolean, 
-  textColor :: String
+  textColor :: String,
+  showInfoIcon :: Boolean,
+  variantInfo :: VariantConfig
 }
 
 type CustomerTip = {
@@ -316,4 +318,18 @@ type LocationTagBarConfig = {
   cornerRadius :: Number
 , textColor :: String
 , stroke:: String
+}
+
+type VariantConfig = {
+  hatchback :: VariantInfo,
+  sedan :: VariantInfo,
+  suv :: VariantInfo,
+  autoRickshaw :: VariantInfo,
+  taxi :: VariantInfo,
+  taxiPlus :: VariantInfo
+}
+
+type VariantInfo = {
+  name :: String,
+  image :: String
 }

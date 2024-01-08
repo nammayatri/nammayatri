@@ -696,3 +696,4 @@ getML stringKey =
         ENJOY_THE_RIDE -> "നിങ്ങളുടെ ലക്ഷ്യസ്ഥാനത്തേക്കുള്ള യാത്ര ആസ്വദിക്കൂ!"
         RIDE_STARTED -> "സവാരി തുടങ്ങി"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "നിങ്ങളുടെ ആവശ്യങ്ങളും ആസ്വദിക്കാൻ നിങ്ങളുടെ പ്രിയപ്പെട്ട സ്ഥലങ്ങൾ കണ്ടെത്തുക"
+        CONFIRM_YOUR_RIDE  -> "നിങ്ങളുടെ യാത്ര സ്ഥിരീകരിക്കുക"

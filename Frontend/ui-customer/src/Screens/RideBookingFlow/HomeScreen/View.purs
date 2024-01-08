@@ -20,6 +20,7 @@ import Animation (fadeIn, fadeOut, translateYAnimFromTop, scaleAnim, translateYA
 import Animation.Config (Direction(..), translateFullYAnimWithDurationConfig, translateYAnimHomeConfig, messageInAnimConfig, messageOutAnimConfig)
 import Common.Types.App (LazyCheck(..), YoutubeData, CarouselData)
 import Components.Banner.Controller as BannerConfig
+import Components.ChooseVehicle as ChooseVehicle
 import Components.Banner.View as Banner
 import Components.MessagingView as MessagingView
 import Components.ChooseYourRide as ChooseYourRide 
@@ -85,8 +86,8 @@ import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLoca
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
-import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..))
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
+import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
@@ -1252,7 +1253,7 @@ rideRequestFlowView push state =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadii $ Corners 24.0 true true false false
-    , visibility if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated]) then VISIBLE else GONE
+    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [ SettingPrice, ConfirmingLocation, RideCompleted, FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideRating, ReAllocated] 
     , alignParentBottom "true,-1"
     ]
     [ -- TODO Add Animations
@@ -1267,21 +1268,32 @@ rideRequestFlowView push state =
         , background Color.transparent
         , accessibility DISABLE
         ]
-        [ PrestoAnim.animationSet [ fadeIn true ]
-            $ if (state.props.currentStage == SettingPrice) then
-                if ( not state.data.config.estimateAndQuoteConfig.enableOnlyAuto || state.props.specialZoneType ==  "OneWaySpecialZoneAPIDetails")
-                 then ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state) 
-                 else estimatedFareView push state
-              else if (state.props.currentStage == ConfirmingLocation) then
-                confirmPickUpLocationView push state
-              else
-                emptyTextView state
-        , if (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes, ReAllocated]) then
+        [ PrestoAnim.animationSet [fadeIn true] $ getViewBasedOnStage push state
+        , if isStageInList state.props.currentStage [ FindingEstimate, ConfirmingRide, TryAgain, FindingQuotes, ReAllocated] then
             (loaderView push state)
           else
             emptyTextView state
         ]
     ]
+    where
+      getViewBasedOnStage :: (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+      getViewBasedOnStage push state = 
+        if state.props.currentStage == SettingPrice then
+          if isCityInList state.props.city [Bangalore] && state.props.isRepeatRide then
+            estimatedFareView push state
+          else
+            ChooseYourRide.view (push <<< ChooseYourRideAction) (chooseYourRideConfig state)
+        else if state.props.currentStage == ConfirmingLocation then
+          confirmPickUpLocationView push state
+        else
+          emptyTextView state
+
+      isCityInList :: City -> Array City -> Boolean
+      isCityInList city = any (_ == city)
+
+      isStageInList :: Stage -> Array Stage -> Boolean
+      isStageInList stage = any (_ == stage)
+
 
 -------------- rideRatingCardView -------------
 rideRatingCardView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -1350,7 +1362,7 @@ topLeftIconView state push =
         , if (not state.data.config.dashboard.enable) || (isPreviousVersion (getValueToLocalStore VERSION_NAME) (if os == "IOS" then "1.2.5" else "1.2.1")) then emptyTextView state else liveStatsDashboardView push state
       ]
 
------------ estimatedFareView -------------
+----------- estimatedFareView ----------------
 estimatedFareView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 estimatedFareView push state =
   linearLayout
@@ -1403,28 +1415,15 @@ estimatedFareView push state =
       , stroke ("1," <> Color.grey900)
       , gravity CENTER
       , cornerRadii $ Corners 24.0 true true false false
-      ][  textView $
-          [ text $ getString $ REQUEST_AUTO_RIDE "REQUEST_AUTO_RIDE"
-          , textSize FontSize.a_22
-          , color Color.black800
-          , accessibility ENABLE
-          , accessibilityHint $ "PickUp Location Is : " <> state.data.source <> " . And Destination Location Is : "  <> state.data.destination
-          , gravity CENTER_HORIZONTAL
-          , height WRAP_CONTENT
-          , width MATCH_PARENT
-          ] <> FontStyle.h1 TypoGraphy
+      ][ estimateHeaderView push state
         , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation VERTICAL
-          , stroke $ "1," <> Color.grey900
           , gravity CENTER
           , cornerRadius 8.0
           , margin $ MarginTop 16
-          , padding $ PaddingVertical 2 10
-          ][ rideDetailsView push state
-           , bookingPreferencesView push state
-           ]
+          ][ rideDetailsViewV2 push state]
         , sourceDestinationDetailsView push state
         , requestRideButtonView push state
         , linearLayout
@@ -1440,6 +1439,68 @@ estimatedFareView push state =
             ]
       ]
   ]
+
+estimateHeaderView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+estimateHeaderView push state =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER_HORIZONTAL
+    , accessibility ENABLE
+    , accessibilityHint $ "PickUp Location Is : " 
+                         <> state.data.source 
+                         <> " . And Destination Location Is : "  
+                         <> state.data.destination
+    ]
+    [ textView $
+        [ text (getString CHOOSE_YOUR_RIDE)
+        , color Color.black800
+        , gravity CENTER_HORIZONTAL
+        , height WRAP_CONTENT
+        , width MATCH_PARENT
+        ] 
+        <> FontStyle.h1 TypoGraphy
+    , estimatedTimeDistanceView push state
+    ]
+
+estimatedTimeDistanceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+estimatedTimeDistanceView push state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , gravity CENTER
+    , margin $ MarginTop 4
+    ]
+    [ createTextView state.data.rideDistance
+    , linearLayout
+        [ height $ V 4
+        , width $ V 4
+        , cornerRadius 2.5
+        , background Color.black600
+        , margin (Margin 6 2 6 0)
+        ]
+        []
+    , createTextView state.data.rideDuration
+    ]
+  where
+    createTextView :: String -> PrestoDOM (Effect Unit) w
+    createTextView textContent =
+      textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text textContent
+        , color Color.black650
+        ]
+        <> FontStyle.paragraphText TypoGraphy
+
+rideDetailsViewV2 :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rideDetailsViewV2 push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    ][ ChooseVehicle.view (push <<< ChooseSingleVehicleAction) (chooseVehicleConfig state)]
 
 rideDetailsView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideDetailsView push state = 
@@ -1542,7 +1603,7 @@ requestRideButtonView push state =
   relativeLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonRequestRideConfig state)
+    ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (confirmAndBookButtonConfig state)
       , PrestoAnim.animationSet
         [ translateOutXBackwardAnimY animConfig{duration = 4900, toX = (screenWidth unit), fromY = 0, ifAnim = state.props.repeatRideTimer /= "0"}]  $
         linearLayout

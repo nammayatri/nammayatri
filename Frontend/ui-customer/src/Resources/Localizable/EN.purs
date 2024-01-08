@@ -696,3 +696,4 @@ getEN stringKey =
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "The ride had to be cancelled, we’re finding you another"
         ENJOY_THE_RIDE -> "Enjoy the ride to your destination!"
         RIDE_STARTED -> "Ride started"
+        CONFIRM_YOUR_RIDE  -> "Confirm Your Ride"

@@ -696,3 +696,4 @@ getFR stringKey =
         ENJOY_THE_RIDE -> "Bon voyage jusqu'à votre destination !"
         RIDE_STARTED -> "Le trajet a commencé"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "Découvrez des endroits géniaux adaptés à vos besoins"
+        CONFIRM_YOUR_RIDE  -> "Confirmez votre trajet"

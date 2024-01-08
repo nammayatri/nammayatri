@@ -696,3 +696,4 @@ getHI stringKey =
         ENJOY_THE_RIDE -> "अपने गंतव्य तक यात्रा का आनंद लें!"
         RIDE_STARTED -> "सवारी शुरू हुई"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "आपके लिए विशेष रूप से तैयार किए गए शानदार स्पॉट खोजें"
+        CONFIRM_YOUR_RIDE  -> "अपनी सवारी की पुष्टि करें"

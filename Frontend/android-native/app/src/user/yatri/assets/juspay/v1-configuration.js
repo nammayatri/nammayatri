@@ -190,7 +190,34 @@ window.getMerchantConfig = function () {
     , "showDisabilityBanner" : false
   
     , "estimateAndQuoteConfig" : {
-      "enableBookingPreference" : false
+      "enableBookingPreference" : false,
+      "variantInfo" : {
+        "hatchback" : {
+          "name" : "Hatchback",
+          "image" : "ic_hatchback,https://assets.juspay.in/beckn/yatri/user/ic_hatchback.png"
+          },
+        "taxiPlus" : {
+          "name" : "AC Taxi",
+          "image" : "ic_sedan_ac,https://assets.juspay.in/beckn/yatri/user/ic_sedan_ac.png"
+        },
+        "sedan" : {
+          "name" : "Sedan",
+          "image" : "ic_sedan,https://assets.juspay.in/beckn/yatri/user/ic_sedan.png"
+        },
+        "taxi" : {
+          "name" : "Non-AC Taxi",
+          "image" : "ic_sedan,https://assets.juspay.in/beckn/yatri/user/ic_sedan.png"
+        },
+        "suv" : {
+          "name" : "SUV",
+          "image" : "ic_suv,https://assets.juspay.in/beckn/yatri/user/ic_suv.png"
+        },
+        "autoRickshaw" : {
+          "name" : "Auto Rickshaw",
+          "image" : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/yatri/user/ny_ic_auto_quote_list.png"
+        }
+
+      }
     }
     , "feature" : {
       "enableShareRide" : false

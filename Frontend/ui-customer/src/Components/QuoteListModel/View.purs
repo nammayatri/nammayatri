@@ -36,7 +36,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.Types (Stage(..))
+import Screens.Types (Stage(..), QuoteListItemState(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
@@ -667,7 +667,7 @@ getPrice state =
 
 
 
-dummyQuoteList :: QuoteListItem.QuoteListItemState
+dummyQuoteList :: QuoteListItemState
 dummyQuoteList = QuoteListItem.config{
    seconds = 15
   , id = ""  

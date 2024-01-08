@@ -697,3 +697,4 @@ getKN stringKey =
         ENJOY_THE_RIDE -> "ನಿಮ್ಮ ಗಮ್ಯಸ್ಥಾನಕ್ಕೆ ಸವಾರಿಯನ್ನು ಆನಂದಿಸಿ!"
         RIDE_STARTED -> "ಸವಾರಿ ಪ್ರಾರಂಭವಾಯಿತು"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "ನಿಮಗೆ ಸರಿಹೊಂದಿದ ಅದ್ಭುತ ಸ್ಥಳಗಳನ್ನು ಕಂಡುಕೊಳ್ಳಿ"
+        CONFIRM_YOUR_RIDE  -> "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ದೃಢೀಕರಿಸಿ"

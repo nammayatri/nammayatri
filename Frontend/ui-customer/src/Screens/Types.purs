@@ -21,7 +21,6 @@ import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardT
 import Common.Types.App as Common
 import Components.ChatView.Controller (ChatComponent)
 import Components.ChooseVehicle.Controller as ChooseVehicle
-import Components.QuoteListItem.Controller (QuoteListItemState)
 import Components.SettingSideBar.Controller (SettingSideBarState)
 import Data.Map (Map)
 import Data.Eq.Generic (genericEq)
@@ -624,6 +623,23 @@ type HomeScreenStateData =
   , rideHistoryTrip :: Maybe Trip
   }
 
+type QuoteListItemState = 
+  {
+    seconds :: Int
+  , id :: String  
+  , timer :: String
+  , timeLeft :: Int
+  , driverRating :: Number
+  , profile :: String
+  , price :: String
+  , vehicleType :: String
+  , driverName :: String
+  , selectedQuote :: Maybe String
+  , appConfig :: AppConfig
+  , city :: City
+  }
+
+
 type LocationDetails = {
     formattedAddress :: String,
     location :: LatLong,
@@ -739,7 +755,7 @@ type HomeScreenStateProps =
   , isNotificationExpanded :: Boolean
   , bottomSheetState :: SheetState
   , removeNotification :: Boolean
-  , city :: Maybe String
+  , city :: City
   , isHomescreenExpanded :: Boolean
   , isRepeatRide :: Boolean
   , currSlideIndex :: Number
@@ -755,6 +771,29 @@ type HomeScreenStateProps =
   , autoScroll :: Boolean
   , enableChatWidget :: Boolean
   }
+
+data City
+  = Bangalore
+  | Kolkata
+  | Paris
+  | Kochi
+  | Delhi
+  | Hyderabad
+  | Mumbai
+  | Chennai
+  | Coimbatore
+  | Pondicherry
+  | Goa
+  | Pune
+  | Mysore
+  | Tumakuru
+  | AnyCity
+
+derive instance genericCity :: Generic City _
+instance showCity :: Show City where show = genericShow
+instance eqCity :: Eq City where eq = genericEq
+instance encodeCity :: Encode City where encode = defaultEnumEncode
+instance decodeCity :: Decode City where decode = defaultEnumDecode
 
 type SearchLocationModelProps = {
     isAutoComplete :: Boolean

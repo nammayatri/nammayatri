@@ -696,3 +696,4 @@ getBN stringKey =
         ENJOY_THE_RIDE -> "আপনার গন্তব্যে রাইড উপভোগ করুন!"
         RIDE_STARTED -> "রাইড শুরু"
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "আপনার জন্য কাস্টমাইজড স্পট আবিষ্কার করুন!"
+        CONFIRM_YOUR_RIDE  -> "আপনার রাইড নিশ্চিত করুন"
