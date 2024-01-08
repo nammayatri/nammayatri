@@ -661,6 +661,7 @@ getEN stringKey =
         IF_YOUR_OTP_EXPIRES_ -> "If your OTP expires, you will need to book again."
         YOU_HAVE_REACHED_DESTINATION -> "You have arrived at your destination"
         PLACES_YOU_MIGHT_LIKE_TO_GO_TO -> "Places you might like to go to."
+        DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "Discover awesome spots tailored just for you!"
         SUGGESTED_DESTINATION -> "Suggested Destinations"
         RECENT_RIDES -> "Recent Rides"
         ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS -> "One click booking for your favourite journeys!"
@@ -695,3 +696,5 @@ getEN stringKey =
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "The ride had to be cancelled, we’re finding you another"
         ENJOY_THE_RIDE -> "Enjoy the ride to your destination!"
         RIDE_STARTED -> "Ride started"
+        ONE_CLICK -> "1 Click"
+        SMART -> "Smart"

@@ -695,3 +695,6 @@ getML stringKey =
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "യാത്ര റൈഡ് റദ്ദാക്കപ്പെട്ടു, നാം നിനക്ക് മറ്റൊരു യാത്ര തിരിച്ചെത്തുന്നു"
         ENJOY_THE_RIDE -> "നിങ്ങളുടെ ലക്ഷ്യസ്ഥാനത്തേക്കുള്ള യാത്ര ആസ്വദിക്കൂ!"
         RIDE_STARTED -> "സവാരി തുടങ്ങി"
+        DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "നിങ്ങളുടെ ആവശ്യങ്ങളും ആസ്വദിക്കാൻ നിങ്ങളുടെ പ്രിയപ്പെട്ട സ്ഥലങ്ങൾ കണ്ടെത്തുക"
+        ONE_CLICK -> "ഒരു ക്ലിക്ക്"
+        SMART -> "സ്മാർട്ട്"

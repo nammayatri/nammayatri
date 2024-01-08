@@ -679,7 +679,7 @@ instance loggableAction :: Loggable Action where
     OpenLiveDashboard -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "open_live_dashboard"
     UpdatePeekHeight -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_peek_height"
     ReAllocate -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "reallocate_ride"
-    AutoScrollCountDown arg1 arg2 arg3 arg4 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "auto_scroll_count_down"
+    AutoScrollCountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "auto_scroll_count_down"
     StopAutoScrollTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_auto_scroll_timer" 
     UpdateRepeatTrips arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_repeat_trips"
     RemoveShimmer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_shimmer"
@@ -870,7 +870,7 @@ data Action = NoAction
             | OpenLiveDashboard
             | UpdatePeekHeight 
             | ReAllocate
-            | AutoScrollCountDown Int String String String
+            | AutoScrollCountDown Int String String 
             | StopAutoScrollTimer 
             | UpdateRepeatTrips RideBookingListRes 
             | RemoveShimmer 
@@ -950,7 +950,7 @@ eval StopRepeatRideTimer state =  do
   void $ pure $ clearTimerWithId state.props.repeatRideTimerId
   continue state{props{repeatRideTimer = "", repeatRideTimerId = ""}}
 
-eval (AutoScrollCountDown seconds id status timerID) state = do
+eval (AutoScrollCountDown seconds status timerID) state = do
   if status == "EXPIRED" then do
     void $ pure $ clearTimerWithId timerID
     void $ pure $ performHapticFeedback unit
@@ -2273,8 +2273,7 @@ eval (RepeatRide index item) state = do
   void $ pure $ setValueToLocalStore TEST_MINIMUM_POLLING_COUNT $ "4" 
   void $ pure $ setValueToLocalStore TEST_POLLING_INTERVAL $ "8000.0" 
   void $ pure $ setValueToLocalStore TEST_POLLING_COUNT $ "22" 
-  -- updateAndExit state{props{currentStage = LoadMap}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true}} item
-  updateAndExit state{data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true}} item
+  updateAndExit state{props{currentStage = LoadMap}, data{settingSideBar { opened = SettingSideBarController.CLOSED }}} $ RepeatTrip state{props{isRepeatRide = true}} item
 
 eval (ReferralFlowAction) state = exit $ GoToReferral state
 eval NewUser state = continueWithCmd state [ do
@@ -2559,14 +2558,12 @@ tagClickEvent savedAddressType arrItem state =
               let newState = state {data{ source = item.description, sourceAddress = item.fullAddress},props{sourcePlaceId = item.placeId,sourceLat = fromMaybe 0.0 item.lat,sourceLong =fromMaybe 0.0  item.lon, sourceSelectedOnMap = true }}
               pure $ setText (getNewIDWithTag "SourceEditText") item.description
               pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
-              updateAndExit state $ LocationSelected item false newState
-              -- updateAndExit state{props{currentStage = LoadMap}} $ LocationSelected item false newState
+              updateAndExit state{props{currentStage = LoadMap}} $ LocationSelected item false newState
             else do
               let newState = state {data{ destination = item.description,destinationAddress = item.fullAddress},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
               pure $ setText (getNewIDWithTag "DestinationEditText") item.description
               pure $ removeMarker $ getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)
-              updateAndExit state $ LocationSelected item false newState
-              -- updateAndExit state{props{currentStage = LoadMap}} $ LocationSelected item false newState
+              updateAndExit state{props{currentStage = LoadMap}} $ LocationSelected item false newState
 
 flowWithoutOffers :: LazyCheck -> Boolean
 flowWithoutOffers dummy = not $ (getValueToLocalStore FLOW_WITHOUT_OFFERS) == "false"
@@ -2601,8 +2598,7 @@ locationSelected item addToRecents state = do
                                                                                                                     {key : "Favourite", value : unsafeToForeign favClick}]
       let newState = state {data{ destination = item.title,destinationAddress = encodeAddress (item.title <> ", " <>item.subTitle) [] item.placeId},props{destinationPlaceId = item.placeId, destinationLat = fromMaybe 0.0 item.lat, destinationLong = fromMaybe 0.0 item.lon}}
       pure $ setText (getNewIDWithTag "DestinationEditText") item.title
-      updateAndExit state $ LocationSelected item addToRecents newState
-      -- updateAndExit state{props{currentStage = LoadMap}} $ LocationSelected item addToRecents newState
+      updateAndExit state{props{currentStage = LoadMap}} $ LocationSelected item addToRecents newState
 
 checkCurrentLocation :: Number -> Number -> Array CurrentLocationDetails -> Boolean
 checkCurrentLocation lat lon previousCurrentLocations =  (length (filter (\ (item) -> (filterFunction lat lon item))(previousCurrentLocations)) > 0)

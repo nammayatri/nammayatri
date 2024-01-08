@@ -55,6 +55,10 @@ window.getMerchantConfig = function () {
     "driverInfoConfig": {
       "showTrackingButton" : false
     },
+    "dashboard" : {
+      "url" : "https://nammayatri.in/open?source=in-app"
+    , "enable" : true
+    },
     "profileBackground": "#2C2F3A",
     "profileName": "#FFFFFF",
     "profileImage": "#012A72",
@@ -142,7 +146,7 @@ window.getMerchantConfig = function () {
       "isServiceablePopupFullScreen" : true,
     }
     , "autoSelectBackground" : "#53BB6F"
-    , "enableMockLocation" : true
+    , "enableMockLocation" : false
     , "defaultLanguage" : "EN_US"
     , "specialLocationView" : false
     , "geoCoder": {

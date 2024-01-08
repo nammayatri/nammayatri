@@ -695,3 +695,6 @@ getBN stringKey =
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "চলন্ত ছিল, তা বাতিল করতে হয়েছে, আমরা তার জন্য আরও খোঁজছি"
         ENJOY_THE_RIDE -> "আপনার গন্তব্যে রাইড উপভোগ করুন!"
         RIDE_STARTED -> "রাইড শুরু"
+        DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "আপনার জন্য কাস্টমাইজড স্পট আবিষ্কার করুন!"
+        ONE_CLICK -> "1 ক্লিক"
+        SMART -> "স্মার্ট"

@@ -142,7 +142,9 @@ config =
         locationsToBeStored : 30,
         tripsToBeStored : 30,
         frequencyWeight : 0.7,
-        tripDistanceThreshold : 0.021
+        tripDistanceThreshold : 0.021,
+        repeatRideTime : 5,
+        autoScrollTime : 5
       }
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"

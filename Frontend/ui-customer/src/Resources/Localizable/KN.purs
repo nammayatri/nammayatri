@@ -696,3 +696,6 @@ getKN stringKey =
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "ಸವಾರಿ ರದ್ದಾಗಿದೆ, ನಾವು ನಿಮಗೆ ಇನ್ನೊಂದನ್ನು ಹುಡುಕುತ್ತಿದ್ದೇವೆ"
         ENJOY_THE_RIDE -> "ನಿಮ್ಮ ಗಮ್ಯಸ್ಥಾನಕ್ಕೆ ಸವಾರಿಯನ್ನು ಆನಂದಿಸಿ!"
         RIDE_STARTED -> "ಸವಾರಿ ಪ್ರಾರಂಭವಾಯಿತು"
+        DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "ನಿಮಗೆ ಸರಿಹೊಂದಿದ ಅದ್ಭುತ ಸ್ಥಳಗಳನ್ನು ಕಂಡುಕೊಳ್ಳಿ"
+        ONE_CLICK -> "ಒಂದು ಕ್ಲಿಕ್"
+        SMART -> "ಸ್ಮಾರ್ಟ್"

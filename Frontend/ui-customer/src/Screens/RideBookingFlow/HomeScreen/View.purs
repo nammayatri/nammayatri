@@ -45,13 +45,13 @@ import Components.SettingSideBar as SettingSideBar
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array (any, length, mapWithIndex,take, (!!),head, filter, cons, null)
+import Data.Array (any, length, mapWithIndex,take, (!!),head, filter, cons, null, tail)
 import Data.Array as Arr
 import Data.Either (Either(..))
 import Data.Int (ceil, floor, fromNumber, fromString, toNumber)
 import Data.Function.Uncurried (runFn1)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Number as NUM
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
@@ -72,7 +72,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||), (<$>))
+import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||), (<$>), identity)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout)
@@ -122,7 +122,6 @@ screen initialState =
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
-            updateMapPadding initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
               _ <- storeCallBackCustomer push NotificationListener
@@ -167,10 +166,8 @@ screen initialState =
                   pure unit
                 when (isJust initialState.data.rideHistoryTrip) $ do 
                   push $ RepeatRide 0 (fromMaybe HomeScreenData.dummyTrip initialState.data.rideHistoryTrip)
-                -- when (initialState.props.autoScroll) $ do
-                --   if (os == "IOS") 
-                --     then startTimerWithTime (show 5) "autScroll" "1" push AutoScrollCountDown
-                --     else countDown 5 "autScroll" push AutoScrollCountDown
+                when (initialState.props.autoScroll) $ 
+                  startTimer initialState.data.config.suggestedTripsAndLocationConfig.autoScrollTime "autScroll" "1" push AutoScrollCountDown
                 _ <- pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
                 _ <- pure $ removeAllPolylines ""
                 _ <- pure $ enableMyLocation true
@@ -180,7 +177,7 @@ screen initialState =
                 _ <- pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
                 when 
                   (initialState.props.isRepeatRide && initialState.data.config.estimateAndQuoteConfig.enableOnlyAuto) 
-                    $ startTimer 5 "repeatRide" "1" push RepeatRideCountDown
+                    $ startTimer initialState.data.config.suggestedTripsAndLocationConfig.repeatRideTime "repeatRide" "1" push RepeatRideCountDown
               PickUpFarFromCurrentLocation -> 
                 void $ pure $ removeMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME))
               RideAccepted -> do
@@ -289,18 +286,6 @@ view push state =
         , orientation VERTICAL
         , accessibility DISABLE
         , clickable true
-        , afterRender
-             ( \action -> do
-                 push action
-                 getCurrentPosition push CurrentLocation
-                 void $ showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
-                 if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
-                 else pure unit
-                 case state.props.currentStage of
-                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
-                   _ -> pure unit
-             )
-             (const MapReadyAction)
         ]
        [ relativeLayout
             [ width MATCH_PARENT
@@ -323,18 +308,9 @@ view push state =
                   , accessibility if any (_ == state.props.currentStage) [RideAccepted, RideStarted, HomeScreen] && not isAnyOverlayEnabled state then ENABLE else DISABLE
                   , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
                   ][ 
-                  --   if isHomeScreenView state then homeScreenView push state else emptyTextView state
-                  -- , if isHomeScreenView state then emptyTextView state else mapView push state
-                  --   ]
-                   linearLayout
-                     [ height if any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver] && os /= "IOS" then getMapHeight state                                    
-                                else MATCH_PARENT
-                     , width MATCH_PARENT
-                     , accessibility DISABLE_DESCENDANT
-                     , id $ getNewIDWithTag "CustomerHomeScreenMap"
-                     , visibility $ boolToVisibility state.props.isSrcServiceable
-                     ]
-                     []]
+                    if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
+                  , if isHomeScreenView state then emptyTextView state else mapView push state
+                    ]
                 , imageView
                     [ width  MATCH_PARENT
                     , height  MATCH_PARENT
@@ -377,8 +353,8 @@ view push state =
                         ]
                     ]
                 ]
-            , homeScreenView push state
-            , buttonLayoutParentView push state
+            -- , homeScreenView push state
+            -- , buttonLayoutParentView push state
             , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
@@ -979,16 +955,9 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
   , padding $ Padding 16 0 16 (16+safeMarginBottom)
   , cornerRadii $ Corners (4.0) true true false false
   ]([ if (not hideSavedLocsView) then savedLocationsView state push else linearLayout[visibility GONE][]
-      -- , if state.props.showShimmer && null state.data.tripSuggestions then shimmerView state
-      --   else if suggestionViewVisibility state  then suggestionsView push state
-      --   else emptySuggestionsBanner state push
     , shimmerView state
     , suggestionsView push state
     , emptySuggestionsBanner state push
-    -- , if (not hideRecentSearches) then recentSearchesView state push else linearLayout[visibility GONE][]
-    -- , if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
-    --     then updateDisabilityBanner state push
-    --     else 
     ]
     )
 
@@ -998,8 +967,7 @@ updateDisabilityBanner state push =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    -- , margin $ Margin 16 10 16 10
-    , margin $ MarginVertical 10 10
+    , margin $ Margin 16 10 16 10
     ][  Banner.view (push <<< DisabilityBannerAC) (disabilityBannerConfig state)]
 
 zooTicketBookingBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -1017,13 +985,10 @@ emptySuggestionsBanner state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , cornerRadius 12.0
-    -- , margin $ Margin 16 10 16 10
-    , margin $ MarginVertical 10 10
+    , margin $ Margin 16 10 16 10
     , background Color.white900
     , gravity CENTER_VERTICAL
     , visibility $ boolToVisibility $ (not (suggestionViewVisibility state)) && not (state.props.showShimmer && null state.data.tripSuggestions) && state.data.config.homeScreen.bannerViewVisibility
-
-    -- , visibility  if state.data.config.homeScreen.bannerViewVisibility then VISIBLE else GONE
     ][ linearLayout
         [ height WRAP_CONTENT
           , width WRAP_CONTENT
@@ -2033,7 +1998,7 @@ pricingTutorialView push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , weight 1.0
-    , padding $ PaddingVertical safeMarginTop safeMarginBottom
+    , padding (Padding 0 safeMarginTop 0 safeMarginBottom)
     , background Color.white900
     ]
     [ -- TODO Add Animations
@@ -3315,7 +3280,7 @@ homeScreenViewV2 push state =
                           [ height MATCH_PARENT
                           , width WRAP_CONTENT
                           , background Color.white900
-                          , margin $ MarginTop 35 
+                          , margin $ MarginTop 32 
                           , padding $ PaddingTop 30 
                           , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
                           ][ scrollView
@@ -3329,10 +3294,12 @@ homeScreenViewV2 push state =
                                   , orientation VERTICAL
                                   ][savedLocationsView state push
                                   , if isHomeScreenView state then mapView push state else emptyTextView state
-                                  , if isBannerVisible state then updateDisabilityBanner state push else emptyTextView state
-                                  , if state.props.showShimmer && null state.data.tripSuggestions then shimmerView state
-                                    else if (suggestionViewVisibility state)  then  suggestionsView push state
-                                    else emptySuggestionsBanner state push
+                                  , if state.data.config.feature.enableZooTicketBookingFlow
+                                      then zooTicketBookingBanner state push 
+                                      else linearLayout[visibility GONE][]
+                                  , shimmerView state
+                                  , suggestionsView push state
+                                  , emptySuggestionsBanner state push
                                   , footerView push state
                                   ]
                               ]
@@ -3443,13 +3410,13 @@ whereToButtonView push state  =
           , padding $ Padding 16 16 0 16
           , gravity CENTER_VERTICAL
           , accessibilityHint "Menu Button"
-          , visibility if state.props.isHomescreenExpanded then VISIBLE else GONE
+          , visibility $ boolToVisibility state.props.isHomescreenExpanded
+          , onClick push $ const OpenSettings
           ][ imageView
             [ height $ V 20
             , width $ if state.props.isHomescreenExpanded then V 20 else V 0
             , gravity CENTER_VERTICAL
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_menu_dark"
-            , onClick push $ const OpenSettings
             ]
           , linearLayout
                 [ width $ V 1
@@ -3518,6 +3485,15 @@ whereToButtonView push state  =
 
           ]
       ]
+    where
+      getMarginFromConfig :: MarginConfig -> Margin
+      getMarginFromConfig marginConfig = 
+        Margin marginConfig.left marginConfig.top marginConfig.right marginConfig.bottom
+
+      getShadowFromConfig :: ShadowConfig -> Shadow
+      getShadowFromConfig shadowConfig = 
+        Shadow shadowConfig.x shadowConfig.y shadowConfig.blur shadowConfig.spread shadowConfig.color shadowConfig.opacity
+
 
 pickupLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 pickupLocationView push state = 
@@ -3535,7 +3511,7 @@ pickupLocationView push state =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           , orientation HORIZONTAL
-          , margin $ MarginVertical 16 20 
+          , margin $ MarginBottom 8
           , gravity CENTER
           ][
             linearLayout
@@ -3557,8 +3533,7 @@ pickupLocationView push state =
                   [ imageWithFallback state.data.config.terminateBtnConfig.imageUrl
                   , height $ V 23
                   , width $ V 23
-                  , visibility if state.data.config.terminateBtnConfig.visibility then VISIBLE else GONE
-
+                  , visibility $ boolToVisibility state.data.config.terminateBtnConfig.visibility
                   ]
               ]
           , linearLayout
@@ -3569,7 +3544,6 @@ pickupLocationView push state =
               , clickable $ not (state.props.currentStage == SearchLocationModel)
               , visibility if state.props.isHomescreenExpanded then INVISIBLE else VISIBLE
               , onClick push $ const OpenSettings
-              , margin $ MarginRight 8
               , padding $ Padding 8 8 8 8 
               , background $ state.data.config.homeScreen.header.menuButtonBackground
               , cornerRadius 8.0
@@ -3638,9 +3612,9 @@ pickupLocationView push state =
             , onClick push $ if state.props.isSrcServiceable then (const $ OpenSearchLocation) else (const $ NoAction)
             ][ imageView
                   [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_circle"
-                  , height $ V 16
-                  , width $ V 16
-                  , margin (Margin 5 5 5 5)
+                  , height $ V 12
+                  , width $ V 12
+                  , margin (Margin 10 5 9 5)
                   , accessibility DISABLE
                   , onClick push $ if state.props.isSrcServiceable then (const $ OpenSearchLocation) else (const $ NoAction)
                   , gravity BOTTOM
@@ -3648,7 +3622,10 @@ pickupLocationView push state =
               , textView $
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text $ (getString PICKUP_) <> (getString CURRENT_LOCATION)
+                  , text $ (getString PICKUP_) <> (if state.props.isSrcServiceable then
+                              (if state.data.source /= "" then state.data.source else (getString CURRENT_LOCATION))
+                             else
+                               getString APP_NOT_SERVICEABLE)
                   , color state.data.config.homeScreen.pickupLocationTextColor
                   ] <> FontStyle.paragraphText TypoGraphy
             ]
@@ -3661,7 +3638,7 @@ mapView push state =
   relativeLayout
     [ height mapDimensions.height
     , width mapDimensions.width 
-    , margin if state.props.currentStage == HomeScreen then (Margin 16 20 16 0) else (Margin 0 0 0 0)
+    , margin if state.props.currentStage == HomeScreen then (Margin 16 16 16 0) else (Margin 0 0 0 0)
     , afterRender
             ( \action -> do
                 _ <- push action
@@ -3726,25 +3703,42 @@ suggestionsView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , margin $ MarginTop 16
+  , padding $ PaddingBottom 10
+  , margin $ Margin 8 14 8 0
   , visibility $ boolToVisibility $ suggestionViewVisibility state && not (state.props.showShimmer && null state.data.tripSuggestions)
   ]
-  [ textView $
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , text if null state.data.tripSuggestions then getString SUGGESTED_DESTINATION else getString RECENT_RIDES
-    , color Color.black800
-    , padding $ Padding 8 0 8 0 
-    , margin $ MarginBottom 4
-    , accessibilityHint if null state.data.tripSuggestions then "Suggested Destinations" else "Recent Rides"
-    ] <> FontStyle.subHeading1 TypoGraphy
+  [ let isTripSuggestionsEmpty = null state.data.tripSuggestions
+    in linearLayout
+      [ width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , gravity CENTER_VERTICAL
+      ][ textView $
+        [ height MATCH_PARENT
+        , width WRAP_CONTENT
+        , text if isTripSuggestionsEmpty then getString SUGGESTED_DESTINATION else getString RECENT_RIDES
+        , color Color.black800
+        , gravity CENTER_VERTICAL
+        , padding $ PaddingHorizontal 8 8 
+        , accessibilityHint 
+          if isTripSuggestionsEmpty 
+          then "Suggested Destinations" 
+          else "Recent Rides"
+        ] <> FontStyle.subHeading1 TypoGraphy
+      , pillTagView 
+          if isTripSuggestionsEmpty 
+          then { text: getString SMART, image: "ny_ic_filled_stars" } 
+          else { text: getString ONE_CLICK, image: "ny_ic_filled_lightning" }
+      ]
   , textView $
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , text if null state.data.tripSuggestions then getString PLACES_YOU_MIGHT_LIKE_TO_GO_TO else getString ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS
+    , text if null state.data.tripSuggestions then getString DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU else getString ONE_CLICK_BOOKING_FOR_YOUR_FAVOURITE_JOURNEYS
     , color Color.black600
-    , padding $ Padding 8 0 8 0 
-    , accessibilityHint if null state.data.tripSuggestions then "Places you might like to go to." else "One click booking for your favourite journeys!"
+    , padding $ PaddingHorizontal 8 8 
+    , accessibilityHint 
+      if null state.data.tripSuggestions 
+      then "Places you might like to go to." 
+      else "One click booking for your favourite journeys!"
     , margin $ MarginBottom 7
     ] <> FontStyle.body3 TypoGraphy
   , if null state.data.tripSuggestions 
@@ -3753,12 +3747,15 @@ suggestionsView push state =
   , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , visibility GONE
-    -- if (length state.data.tripSuggestions  > 2 ) then VISIBLE 
-                      -- else if length state.data.tripSuggestions >0 then GONE
-                      -- else if length state.data.destinationSuggestions  > 2 then VISIBLE
-                      -- else GONE
-    , margin $ MarginTop 10
+    , visibility $
+        if length state.data.tripSuggestions > 2 
+        then VISIBLE 
+        else if not $ null state.data.tripSuggestions 
+          then GONE
+          else if length state.data.destinationSuggestions > 2 
+            then VISIBLE
+            else GONE
+    , padding $ PaddingVertical 10 6
     , gravity CENTER_HORIZONTAL
     , onClick push $ const ShowMoreSuggestions
     ]
@@ -3825,7 +3822,7 @@ movingRightArrowView viewId =
       , afterRender (\action-> do
                     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson =  (getAssetsBaseUrl FunctionCall) <> "lottie/right_arrow.json" , speed = 1.0,lottieId = (getNewIDWithTag viewId) }
                     pure unit)(const NoAction)
-      , height $ V 45
+      , height $ V 43
       , width $ V 40
       , gravity CENTER_HORIZONTAL
       , margin $ MarginLeft 2
@@ -3845,6 +3842,8 @@ suggestedLocationCardView push state =
 
 suggestedDestinationCard ::  forall w. (Action -> Effect Unit) -> HomeScreenState ->Int -> LocationListItemState -> PrestoDOM (Effect Unit) w
 suggestedDestinationCard push state index suggestion = 
+  PrestoAnim.animationSet
+    [ Anim.fadeIn true] $
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -3855,7 +3854,7 @@ suggestedDestinationCard push state index suggestion =
     , padding $ Padding 16 16 16 16
     , background Color.white900
     , gravity CENTER_VERTICAL
-    , cornerRadii $ Corners 16.0 true true true true
+    , cornerRadius 16.0
     , onClick push $ const (SuggestedDestinationClicked suggestion)
     ][ linearLayout
         [ height WRAP_CONTENT
@@ -3866,7 +3865,7 @@ suggestedDestinationCard push state index suggestion =
         , layoutGravity "center_vertical"
         , margin $ MarginRight 4
         ][ imageView
-            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_destination"
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sd"
             , height $ V 20
             , width $ V 20
             ]
@@ -3874,10 +3873,11 @@ suggestedDestinationCard push state index suggestion =
       , linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
+        , margin $ MarginRight 24
         , orientation VERTICAL
         ][ textView $
             [ height WRAP_CONTENT
-            , width $ V 200
+            , width MATCH_PARENT
             , text suggestion.title
             , color Color.black800
             , ellipsize true
@@ -3886,7 +3886,7 @@ suggestedDestinationCard push state index suggestion =
             ] <> FontStyle.body1 TypoGraphy
           , textView $
             [ height WRAP_CONTENT
-            , width $ V 200
+            , width MATCH_PARENT
             , text suggestion.subTitle
             , color Color.black700
             , ellipsize true
@@ -3899,7 +3899,7 @@ suggestedDestinationCard push state index suggestion =
           , orientation VERTICAL
           , layoutGravity "center_vertical"
           , gravity CENTER
-          , background Color.blue600
+          , background Color.yellow900
           , cornerRadius 22.5
           ][ movingRightArrowView ("movingArrowView" <> show index)]
     ]
@@ -3915,56 +3915,57 @@ repeatRideCardParentView push state =
     , clipChildren false
     ]( mapWithIndex ( \index item -> repeatRideCard push state index item ) (take takeValue state.data.tripSuggestions))
 
+
 repeatRideCard :: forall w. (Action -> Effect Unit) -> HomeScreenState ->Int -> Trip -> PrestoDOM (Effect Unit) w
-repeatRideCard push state  index trip = 
+repeatRideCard push state index trip = 
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , stroke $ "1,"<> Color.grey800
-    , gravity CENTER_VERTICAL
-    , margin $ Margin 8 9 8 9
+    , margin $ Margin 8 8 8 8
     , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
-    , padding $ Padding 9 9 9 9
-    , cornerRadii $ Corners (8.0) true true true true
+    , padding $ Padding 16 16 16 16
     , background Color.white900
+    , gravity CENTER_VERTICAL
+    , cornerRadii $ Corners 16.0 true true true true
     , onClick push $ const (RepeatRide index trip)
-    , accessibilityHint $ trip.source <> " to " <> trip.destination <> ": Click to book this ride"
     ][ linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , gravity CENTER
-        , layoutGravity "center_vertical"
         , orientation VERTICAL
         , padding (Padding 3 3 3 3)
-        , margin $ MarginRight 5
+        , layoutGravity "center_vertical"
+        , margin $ MarginRight 4
         ][ imageView
-            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_src_to_dest"
-            , height $ V 60
-            , width $ V 16
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_repeat_trip"
+            , height $ V 20
+            , width $ V 20
             ]
         ]
       , linearLayout
         [ height WRAP_CONTENT
         , weight 1.0
         , orientation VERTICAL
+        , margin $ MarginRight 24
         ][ textView $
             [ height WRAP_CONTENT
-            , width $ V 225
-            , text trip.source
+            , width MATCH_PARENT
+            , text $ getTripTitle trip.destination 
             , color Color.black800
             , ellipsize true
-            , margin $ MarginBottom 10
+            , margin $ MarginBottom 5
             , singleLine true
             ] <> FontStyle.body1 TypoGraphy
           , textView $
             [ height WRAP_CONTENT
-            , width $ V 225
-            , text trip.destination
-            , color Color.black800
+            , width MATCH_PARENT
+            , text $ getTripSubTitle trip.destination
+            , color Color.black700
             , ellipsize true
             , singleLine true
-            ] <> FontStyle.body1 TypoGraphy
+            ] <> FontStyle.body3 TypoGraphy
         ]
       , linearLayout
           [ height WRAP_CONTENT
@@ -3972,18 +3973,42 @@ repeatRideCard push state  index trip =
           , orientation VERTICAL
           , layoutGravity "center_vertical"
           , gravity CENTER
+          , background Color.yellow900
           , cornerRadius 22.5
-          , background Color.blue600
-          ][ movingRightArrowView ("movingArrowView" <> show index) ]
+          ][ movingRightArrowView ("movingArrowView" <> show index)]
     ]
+  where
+    getTripTitle :: String -> String
+    getTripTitle destination = 
+      maybe "" identity $ head $ DS.split (DS.Pattern ",") destination
+    
+    getTripSubTitle :: String -> String
+    getTripSubTitle destination = 
+      (DS.drop ((fromMaybe 0 (DS.indexOf (DS.Pattern ",") (destination))) + 2) (destination))
 
-getMarginFromConfig :: MarginConfig -> Margin
-getMarginFromConfig marginConfig = 
-  Margin marginConfig.left marginConfig.top marginConfig.right marginConfig.bottom
-
-getShadowFromConfig :: ShadowConfig -> Shadow
-getShadowFromConfig shadowConfig = 
-  Shadow shadowConfig.x shadowConfig.y shadowConfig.blur shadowConfig.spread shadowConfig.color shadowConfig.opacity
+pillTagView :: forall w. {text :: String, image :: String} -> PrestoDOM (Effect Unit) w
+pillTagView config = 
+  linearLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , background Color.yellow800
+    , cornerRadius 14.0
+    , gravity CENTER
+    , padding $ Padding 8 4 8 4
+    ][  imageView
+        [ height $ V 13
+        , width $ V 13
+        , margin $ MarginRight 4
+        , imageWithFallback $ fetchImage FF_ASSET config.image
+        ]
+      , textView $
+        [ text $ config.text
+        , width WRAP_CONTENT
+        , gravity CENTER
+        , color Color.black900
+        , height WRAP_CONTENT
+        ] <> FontStyle.tags LanguageStyle
+      ]
 
 suggestionViewVisibility :: HomeScreenState -> Boolean
 suggestionViewVisibility state =  ((length state.data.tripSuggestions  > 0 || length state.data.destinationSuggestions  > 0) && isHomeScreenView state)
@@ -4013,3 +4038,4 @@ updateMapPadding state =
     requiredViewHeight = if os /= "IOS" 
                          then ceil ((toNumber recentViewHeight / pixels) * density) 
                          else ceil ((toNumber recentViewHeight / displayZoomFactor) / iosScale)
+
