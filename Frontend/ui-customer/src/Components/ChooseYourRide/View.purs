@@ -325,7 +325,10 @@ chooseYourRideView push config =
             --   ][]
             -- , 
             textView (
-              [ text (getString CHOOSE_YOUR_RIDE)
+              [ text 
+                  if length config.quoteList > 1 
+                  then (getString CHOOSE_YOUR_RIDE)
+                  else (getString CONFIRM_YOUR_RIDE)
               , color Color.black800
               , gravity CENTER_HORIZONTAL
               , height WRAP_CONTENT
@@ -341,6 +344,12 @@ chooseYourRideView push config =
               , width MATCH_PARENT
               , visibility $ boolToVisibility config.showTollExtraCharges
               ] <> FontStyle.paragraphText TypoGraphy
+            , linearLayout
+              [ height $ V 1
+              , width MATCH_PARENT
+              , margin $ MarginTop 12
+              , background Color.grey900
+              ][]
           ]
       , quoteListView push config
       ]
@@ -413,12 +422,12 @@ getHeightOfEstimateItem config = (runFn1 getLayoutBounds $ EHC.getNewIDWithTag (
 primaryButtonRequestRideConfig :: Config -> PrimaryButton.Config
 primaryButtonRequestRideConfig config = PrimaryButton.config
   { textConfig
-    { text = (getString CONFIRM_AND_BOOK)
+    { text = (getString BOOK_NOW)
     , color = Color.yellow900
     , accessibilityHint = "Confirm And Book Button"
     }
   , id = "ConfirmAndBookButton"
   , background = Color.black900
-  , margin = Margin 16 16 16 15
+  , margin = Margin 0 16 0 15
   }
 

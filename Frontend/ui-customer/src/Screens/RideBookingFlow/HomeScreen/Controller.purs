@@ -2731,7 +2731,7 @@ estimatesListFlow estimates state = do
         nearByDrivers = getNearByDrivers estimates
         nearByDriversLength = length nearByDrivers
     _ <- pure $ updateLocalStage SettingPrice
-    continue state 
+    exit $ SelectEstimate state 
       { data
         { specialZoneQuoteList = estimatesInfo.quoteList
         , currentSearchResultType = ESTIMATES

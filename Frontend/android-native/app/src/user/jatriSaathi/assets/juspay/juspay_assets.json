@@ -251,6 +251,7 @@
       "ny_ic_icon" : true,
       "ny_ic_info" : true,
       "ny_ic_info_blue" : true,
+      "ny_ic_info_blue_lg" : true,
       "ny_ic_info_grey" : true,
       "ny_ic_invoice_logo" : true,
       "ny_ic_invoice_sheet_icon" : true,

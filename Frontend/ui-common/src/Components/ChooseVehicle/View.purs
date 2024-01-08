@@ -26,7 +26,7 @@ view push config =
   , background if isActiveIndex then Color.blue600 else Color.white900
   , cornerRadius 6.0
   , id $ EHC.getNewIDWithTag config.id
-  , stroke $ if isActiveIndex then "1," <> Color.blue800 else "1," <> Color.white900
+  , stroke $ if isActiveIndex then "2," <> Color.blue800 else "1," <> Color.white900
   , margin $ config.layoutMargin
   , padding $ Padding 8 16 12 16
   , clickable config.isEnabled
@@ -80,19 +80,25 @@ vehicleDetailsView push config =
   where 
     getVehicleName :: Config -> String
     getVehicleName config = 
-      let variantConfig = (getAppConfig appConfig).estimateAndQuoteConfig.variantInfo
-      in
-        case config.vehicleVariant of
-          "AUTO_RICKSHAW" -> variantConfig.autoRickshaw.name
-          "TAXI" -> variantConfig.taxi.name
-          "TAXI_PLUS" -> variantConfig.taxiPlus.name
-          "SEDAN" -> variantConfig.sedan.name
-          "SUV" -> variantConfig.suv.name
-          "HATCHBACK" -> variantConfig.hatchback.name
-          _ -> "Non-AC Taxi"
+      case (getMerchant FunctionCall) of
+        YATRISATHI -> case config.vehicleVariant of
+                        "TAXI" -> "Non AC Taxi"
+                        "SUV"  -> "AC SUV"
+                        _      -> "AC Cab"
+        _          -> case config.vehicleVariant of
+                        "AUTO_RICKSHAW" -> "Auto Rickshaw"
+                        "TAXI" -> "Non-AC Taxi"
+                        "TAXI_PLUS" -> "AC Taxi"
+                        "SEDAN" -> "Sedan"
+                        "SUV" -> "SUV"
+                        "HATCHBACK" -> "Hatchback"
+                        _ -> "Non-AC Taxi"
 
 priceDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 priceDetailsView push config =
+  let isActiveIndex = config.index == config.activeIndex
+      infoIcon = if isActiveIndex then "ny_ic_info_blue_lg" else "ny_ic_info_grey"
+  in
   linearLayout
     [ height WRAP_CONTENT
     , width $  WRAP_CONTENT
@@ -108,7 +114,7 @@ priceDetailsView push config =
           ]
         <> FontStyle.h3 TypoGraphy
       , imageView
-        [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_grey"
+        [ imageWithFallback $ fetchImage FF_COMMON_ASSET infoIcon
         , width $ V 15
         , height $ V 15
         , margin $ Margin 4 6 0 0

@@ -1454,7 +1454,7 @@ estimateHeaderView push state =
                          <> state.data.destination
     ]
     [ textView $
-        [ text (getString CHOOSE_YOUR_RIDE)
+        [ text (getString CONFIRM_YOUR_RIDE)
         , color Color.black800
         , gravity CENTER_HORIZONTAL
         , height WRAP_CONTENT
@@ -1462,6 +1462,12 @@ estimateHeaderView push state =
         ] 
         <> FontStyle.h1 TypoGraphy
     , estimatedTimeDistanceView push state
+    , linearLayout
+        [ height $ V 1
+        , width MATCH_PARENT
+        , margin $ MarginTop 12
+        , background Color.grey900
+        ][]
     ]
 
 estimatedTimeDistanceView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1612,7 +1618,7 @@ requestRideButtonView push state =
             , alpha 0.5
             , background Color.white900
             , visibility if not DS.null state.props.repeatRideTimerId then VISIBLE else GONE
-            , margin $ MarginTop 32
+            , margin $ MarginTop 16
             ][]
     ]
 

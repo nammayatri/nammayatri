@@ -1306,13 +1306,13 @@ sourceToDestinationConfig state = let
   sourceToDestinationConfig' = config
     { sourceImageConfig {
         imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
-      , margin = (MarginTop 3)
+      , margin = MarginTop 3
       , width = V 20
       , height = V 20
       }
     , sourceTextConfig {
-        text = state.data.source
-      , padding = (Padding 2 0 2 2)
+        text = getTripTitle state.data.source
+      , padding = Padding 2 0 2 2
       , margin = MarginHorizontal 12 15
       , color = Color.black800
       , ellipsize = true
@@ -1320,26 +1320,34 @@ sourceToDestinationConfig state = let
       , textStyle = Body1
       }
     , rideStartedAtConfig {
-        text = ""
+        text = getTripSubTitle state.data.source
       , color = Color.black700
-      , visibility = GONE
-      , padding = (Padding 2 0 2 2)
+      , visibility = VISIBLE
+      , padding = Padding 2 0 2 2
       , margin = MarginHorizontal 12 15
       , maxLines = 1
       , ellipsize = true
     }
+    , rideEndedAtConfig {
+      text = getTripSubTitle state.data.destination
+    , color = Color.black700
+    , visibility = VISIBLE
+    , padding = Padding 2 0 2 2
+    , margin = MarginHorizontal 12 15
+    , maxLines = 1
+    , ellipsize = true
+    }
     , destinationImageConfig {
         imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_destination"
-      , margin = (MarginTop 3)
+      , margin = MarginTop 3
       , width = V 20
-      , height = V 20
+      , height = V 23
       }
-    , destinationBackground = Color.blue600
     , destinationTextConfig {
-        text = state.data.destination
-      , padding = (Padding 2 0 2 2)
+        text = getTripTitle state.data.destination
+      , padding = Padding 2 0 2 2
       , margin = MarginHorizontal 12 15
-      , color = Color.greyDavy
+      , color = Color.black800
       , ellipsize = true
       , maxLines = 1
       , textStyle = Body1
@@ -1347,11 +1355,19 @@ sourceToDestinationConfig state = let
     , horizontalSeperatorConfig {
         visibility = VISIBLE
       , background = Color.grey900
-      , padding = (Padding 2 0 2 2)
-      , margin = (Margin 12 18 15 0)
+      , padding = Padding 2 0 2 2
+      , margin = Margin 12 18 15 0
       }
     }
   in sourceToDestinationConfig'
+  where
+    getTripTitle :: String -> String
+    getTripTitle destination = 
+      maybe "" identity $ DA.head $ DS.split (DS.Pattern ",") destination
+
+    getTripSubTitle :: String -> String
+    getTripSubTitle destination = 
+      (DS.drop ((fromMaybe 0 (DS.indexOf (DS.Pattern ",") (destination))) + 2) (destination))
 
 chooseVehicleConfig :: ST.HomeScreenState -> ChooseVehicle.Config
 chooseVehicleConfig state = let
@@ -1378,6 +1394,7 @@ chooseVehicleConfig state = let
     , layoutMargin = Margin 0 0 0 0
     }
   in chooseVehicleConfig'
+
 
 rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 rideCompletedCardConfig state = 
