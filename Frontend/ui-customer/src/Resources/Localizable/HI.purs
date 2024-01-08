@@ -695,3 +695,4 @@ getHI stringKey =
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "यात्रा को रद्द कर दिया गया था, हम आपके लिए एक और ढूंढ़ रहे हैं"
         ENJOY_THE_RIDE -> "अपने गंतव्य तक यात्रा का आनंद लें!"
         RIDE_STARTED -> "सवारी शुरू हुई"
+        DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "आपके लिए विशेष रूप से तैयार किए गए शानदार स्पॉट खोजें"
