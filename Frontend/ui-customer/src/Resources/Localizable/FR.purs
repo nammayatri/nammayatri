@@ -695,3 +695,6 @@ getFR stringKey =
         THE_RIDE_HAD_BEEN_CANCELLED_WE_ARE_FINDING_YOU_ANOTHER -> "Le trajet a dû être annulé, nous vous en trouvons un autre"
         ENJOY_THE_RIDE -> "Bon voyage jusqu'à votre destination !"
         RIDE_STARTED -> "Le trajet a commencé"
+        DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "Découvrez des endroits géniaux adaptés à vos besoins"
+        ONE_CLICK -> "1 clic"
+        SMART -> "Intelligent"
