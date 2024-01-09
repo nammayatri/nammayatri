@@ -21,7 +21,7 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
 import Kernel.Utils.Common (type (:::))
 
-buildSearchReq :: (Monad m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m (Domain.Action.Beckn.Search.DSearchReq)
+buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m (Domain.Action.Beckn.Search.DSearchReq)
 buildSearchReq messageId city subscriber req context = do
   let bapCity_ = city
   let bapId_ = subscriber.subscriber_id
@@ -44,7 +44,7 @@ buildSearchReq messageId city subscriber req context = do
   transactionId_ <- Beckn.OnDemand.Utils.Common.getTransactionId context
   pure $ Domain.Action.Beckn.Search.DSearchReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, customerLanguage = customerLanguage_, customerPhoneNum = customerPhoneNum_, device = device_, disabilityTag = disabilityTag_, dropAddrress = dropAddrress_, dropLocation = dropLocation_, isReallocationEnabled = isReallocationEnabled_, messageId = messageId_, pickupAddress = pickupAddress_, pickupLocation = pickupLocation_, pickupTime = pickupTime_, routeDistance = routeDistance_, routeDuration = routeDuration_, routePoints = routePoints_, transactionId = transactionId_}
 
-tfAddress :: (Monad m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => BecknV2.OnDemand.Types.Location -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
+tfAddress :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => BecknV2.OnDemand.Types.Location -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
 tfAddress location = do
   let area_code_ = Nothing
   let building_ = Nothing
@@ -61,7 +61,7 @@ tfAddress location = do
     then pure Nothing
     else pure $ Just returnData
 
-tfLatLong :: (Monad m, Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> m (Kernel.External.Maps.LatLong)
+tfLatLong :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> m (Kernel.External.Maps.LatLong)
 tfLatLong locationGps = do
   let lat_ = Beckn.OnDemand.Utils.Common.parseLatLong locationGps & Kernel.External.Maps.lat
   let lon_ = Beckn.OnDemand.Utils.Common.parseLatLong locationGps & Kernel.External.Maps.lon

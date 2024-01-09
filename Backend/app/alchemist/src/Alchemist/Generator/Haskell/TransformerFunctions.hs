@@ -14,9 +14,6 @@ import Kernel.Prelude
 
 -- import GHC.IO (unsafePerformIO)
 
-defaultMonad :: Text
-defaultMonad = "Monad m"
-
 whiteSpace :: Text
 whiteSpace = " "
 
@@ -78,19 +75,19 @@ generateFunctions globalMonads functionList importMap = T.unlines $ concatMap pr
           ("  " <>)
           ( createPureMappings importMap pureMapping
               <> createImpureMappings importMap impureMapping
-              <> createOutput importMap toType outputTypeBindings
+              <> createOutput importMap toType outputTypeBindings (not $ null globalMonads)
           )
 
 createFunctionDefinition :: Text -> [Text] -> [Text] -> HM.HashMap Text [Text] -> Text -> Text
 createFunctionDefinition name allMonads fromTypes importMap toType =
-  let qualifiedMonads = defaultMonad : map (toQualified importMap) allMonads
+  let qualifiedMonads = map (toQualified importMap) allMonads
       qualifiedInputTypes = map (toQualified importMap) fromTypes
       monadVar = getMonadVar
       qualifiedOutputType = toQualified importMap toType
-   in name <> " :: (" <> T.intercalate ", " qualifiedMonads <> ") => " <> T.intercalate " -> " qualifiedInputTypes <> " -> " <> monadVar <> " (" <> qualifiedOutputType <> ")"
+   in name <> " :: (" <> T.intercalate ", " qualifiedMonads <> ") => " <> T.intercalate " -> " qualifiedInputTypes <> " -> " <> monadVar qualifiedMonads <> " (" <> qualifiedOutputType <> ")"
   where
-    getMonadVar :: Text
-    getMonadVar = case allMonads of
+    getMonadVar :: [Text] -> Text
+    getMonadVar = \case
       [] -> ""
       _ -> "m"
 
@@ -100,21 +97,21 @@ createPureMappings importMap = map (\(x, y) -> "let " <> x <> " = " <> mkFunctio
 createImpureMappings :: HM.HashMap Text [Text] -> [(Text, Text)] -> [Text]
 createImpureMappings importMap = map (\(x, y) -> x <> " <- " <> mkFunctionsQualified importMap y)
 
-createOutput :: HM.HashMap Text [Text] -> Text -> [(Text, Text)] -> [Text]
-createOutput importMap toType outputTypeBindings = do
+createOutput :: HM.HashMap Text [Text] -> Text -> [(Text, Text)] -> Bool -> [Text]
+createOutput importMap toType outputTypeBindings anyMonad = do
   let strippedToType = stripReturnType toType
   let returnValue = toQualified importMap strippedToType <> " { " <> T.intercalate ", " (map (\(x, y) -> x <> " = " <> y) outputTypeBindings) <> " }"
   -- <> ["  { " <> T.intercalate ",\n        " (map (\(x, y) -> x <> " = " <> y) outputTypeBindings) <> "\n      }"]
   if maybePrefix `T.isPrefixOf` toType
     then textForMaybeToType returnValue
-    else ["pure $ " <> returnValue]
+    else [(if anyMonad then "pure $ " else "") <> returnValue]
   where
     textForMaybeToType returnValue =
       ["let returnData = " <> returnValue]
         <> ["let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData"]
         <> ["if allNothing"]
-        <> ["  then pure Nothing"]
-        <> ["  else pure $ Just returnData"]
+        <> ["  then " <> (if anyMonad then "pure " else "") <> "Nothing"]
+        <> ["  else " <> (if anyMonad then "pure $ " else "") <> "Just returnData"]
 
 mkFunctionsQualified :: HM.HashMap Text [Text] -> Text -> Text
 mkFunctionsQualified importMap str

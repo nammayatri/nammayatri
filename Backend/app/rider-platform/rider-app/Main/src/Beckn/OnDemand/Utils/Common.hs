@@ -57,7 +57,7 @@ mkStops origin destination =
             { stopLocation =
                 Just $
                   Spec.Location
-                    { locationAddress = origin.address.building, -- JAYPAL, Confirm if it is correct to put it here
+                    { locationAddress = destination.address.building, -- JAYPAL, Confirm if it is correct to put it here
                       locationAreaCode = destination.address.areaCode,
                       locationCity = Just $ Spec.City Nothing destination.address.city,
                       locationCountry = Just $ Spec.Country Nothing destination.address.country,
