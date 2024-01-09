@@ -119,6 +119,7 @@ library
       Beckn.Core
       Beckn.OnDemand.Utils.Callback
       Beckn.OnDemand.Utils.Common
+      Beckn.OnDemand.Utils.Init
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.OnUpdate
       Beckn.OnDemand.Utils.Search
@@ -572,6 +573,7 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      Beckn.OnDemand.Transformer.Init
       Beckn.OnDemand.Transformer.OnSearch
       Beckn.OnDemand.Transformer.RideAssigned
       Beckn.OnDemand.Transformer.Search

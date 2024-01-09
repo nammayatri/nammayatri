@@ -1,0 +1,40 @@
+imports:
+  Text: Data.Text
+  BaseUrl: Kernel.Prelude
+  MonadFlow: Kernel.Types.App
+  HasFlowEnv: Kernel.Types.App
+  InitReq: [BecknV2.OnDemand.Types, Domain.Action.Beckn.Init]
+  Subscriber: Kernel.Types.Registry.Subscriber
+  InvalidRequest: Kernel.Types.Error
+
+  fromMaybeM: Kernel.Utils.Common
+  mapM: Kernel.Prelude
+  join: Kernel.Prelude
+  castVehicleVariant: Beckn.OnDemand.Utils.Init
+  buildInitTypeReq: Beckn.OnDemand.Utils.Init
+  getMaxEstimateDistance: Beckn.OnDemand.Utils.Init
+  mkPaymentMethodInfo: Beckn.OnDemand.Utils.Init
+  listToMaybe: Kernel.Prelude
+  decodeFromText: Kernel.Utils.Text
+
+module: Init
+transformer:
+  monads:
+    - MonadFlow m
+  transformers:
+    buildDInitReq:
+      params:
+        - subscriber: Subscriber
+        - req: InitReq#0
+      toType: InitReq#1
+      mapping:
+        estimateId: /~req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= _listToMaybe >>= (.fulfillmentId) & _fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
+        driverId: req.initReqMessage.confirmReqMessageOrder.orderProvider >>= (.providerId)
+        vehicleVariant: /~req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= _listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleCategory) & _fromMaybeM (Kernel.Types.Error.InvalidRequest "Vehicle Category not found") >>= _castVehicleVariant
+        bapId: subscriber.subscriber_id
+        bapUri: subscriber.subscriber_url
+        bapCity: /~req.initReqContext.contextLocation >>= (.locationCity) >>= (.cityCode) >>= _decodeFromText & _fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't find/parse City")
+        bapCountry: /~req.initReqContext.contextLocation >>= (.locationCountry) >>= (.countryCode) >>= _decodeFromText & _fromMaybeM (Kernel.Types.Error.InvalidRequest "Couldn't find/parse Country")
+        initTypeReq: /~req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= _listToMaybe >>= (.fulfillmentType) & _fromMaybeM (Kernel.Types.Error.InvalidRequest "FulfillmentType not found") >>= _buildInitTypeReq
+        maxEstimatedDistance: /~req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= _listToMaybe >>= (.fulfillmentTags) & _fromMaybeM (Kernel.Types.Error.InvalidRequest "Fulfillment Tags not found") >>= (return . _getMaxEstimateDistance)
+        paymentMethodInfo: /~req.initReqMessage.confirmReqMessageOrder.orderPayments >>= _listToMaybe & (\mpayment -> _mapM _mkPaymentMethodInfo mpayment) <&> _join
