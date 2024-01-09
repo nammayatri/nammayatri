@@ -698,3 +698,7 @@ getHI stringKey =
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "आपके लिए विशेष रूप से तैयार किए गए शानदार स्पॉट खोजें"
         ONE_CLICK -> "1 क्लिक"
         SMART -> "स्मार्ट"
+        NOT_SERVICEABLE -> "सेवा योग्य नहीं"
+        WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "हम अभी तक आपके क्षेत्र में नहीं रहते हैं! \nआप ऊपर बाईं ओर मेनू से सवारी इतिहास और अन्य \nसेटिंग्स तक पहुंच सकते हैं।"
+        FACING_PROBLEM_WITH_APP -> "ऐप के साथ समस्याओं का सामना करना पड़ रहा है?"
+        TAP_HERE_TO_REPORT -> "<u>समस्या की रिपोर्ट करने के लिए यहां टैप करें</u>"

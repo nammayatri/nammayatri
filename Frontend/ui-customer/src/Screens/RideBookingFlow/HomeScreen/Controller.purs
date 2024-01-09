@@ -683,6 +683,8 @@ instance loggableAction :: Loggable Action where
     StopAutoScrollTimer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "stop_auto_scroll_timer" 
     UpdateRepeatTrips arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_repeat_trips"
     RemoveShimmer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_shimmer"
+    ReportIssueClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "report_issue_click"
+
 
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
@@ -874,6 +876,7 @@ data Action = NoAction
             | StopAutoScrollTimer 
             | UpdateRepeatTrips RideBookingListRes 
             | RemoveShimmer 
+            | ReportIssueClick
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1764,7 +1767,7 @@ eval (FavouriteLocationModelAC (FavouriteLocationModelController.FavouriteLocati
       pure $ setText (getNewIDWithTag "DestinationEditText") item.savedLocation
       exit $ LocationSelected item  false newState
 
-eval (SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem)) state =  tagClickEvent savedAddressType arrItem state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
+eval (SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem)) state = if not state.props.isSrcServiceable then continue state else tagClickEvent savedAddressType arrItem state{data{source = (getString CURRENT_LOCATION)}, props{isSource = Just false}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SavedAddressClicked (LocationTagBarController.TagClick savedAddressType arrItem))) state = tagClickEvent savedAddressType arrItem state
 
@@ -2369,6 +2372,8 @@ eval CheckAndAskNotificationPermission state = do
 eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowType
 
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state true
+
+eval ReportIssueClick state = exit $  GoToHelp state
 
 eval _ state = continue state
 

@@ -75,7 +75,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, bind, const, discard, map, negate, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<=), (<>), (==), (>), (||), (<$>), identity)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
-import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout)
+import PrestoDOM (BottomSheetState(..), Gradient(..), Gravity(..), Length(..), Accessiblity(..), Margin(..), Accessiblity(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Shadow(..), adjustViewWithKeyboard, afterRender, alignParentBottom, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, frameLayout, gradient, gravity, halfExpandedRatio, height, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, scaleType, singleLine, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibilityHint, accessibility, accessibilityFocusable, focusable, scrollView, onAnimationEnd, clipChildren, enableShift,horizontalScrollView, shadow,onStateChanged,scrollBarX, clipToPadding, onSlide, rotation, rippleColor, shimmerFrameLayout)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
@@ -311,12 +311,6 @@ view push state =
                     if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
                   , if isHomeScreenView state then emptyTextView state else mapView push state
                     ]
-                , imageView
-                    [ width  MATCH_PARENT
-                    , height  MATCH_PARENT
-                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_map_blur"
-                    , visibility if state.props.isSrcServiceable then GONE else VISIBLE
-                    ]
                 , linearLayout
                     [ width MATCH_PARENT
                     , height MATCH_PARENT
@@ -368,7 +362,7 @@ view push state =
                 ]
               else emptyTextView state
             , if state.props.currentStage == ChatWithDriver then messagingView push state else emptyTextView state
-            , if ((state.props.currentStage /= RideRating) && (state.props.showlocUnserviceablePopUp || (state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI))) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else emptyTextView state
+            , if state.props.currentStage /= RideRating && state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI) && state.props.currentStage == HomeScreen then (sourceUnserviceableView push state) else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain ]) then (quoteListModelView push state) else emptyTextView state
@@ -887,10 +881,7 @@ sourceUnserviceableView push state =
         , cornerRadii $ Corners 24.0 true true false false
         , alignParentBottom "true,-1"
         , gravity BOTTOM
-        ]
-        [ recenterButtonView push state
-        , ErrorModal.view (push <<< SourceUnserviceableActionController) (sourceUnserviceableConfig state)
-        ]
+        ][ErrorModal.view (push <<< SourceUnserviceableActionController) (isMockLocationConfig state)]
 
 rateCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rateCardView push state =
@@ -1052,11 +1043,14 @@ savedLocationsView state push =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
+    , clickable state.props.isSrcServiceable
     ]
     [ linearLayout
         [ width MATCH_PARENT
         , height MATCH_PARENT
         , margin $ MarginTop 16
+        , alpha if state.props.isSrcServiceable then 1.0 else 0.4
+        , onClick push (const NoAction)
         ]
         [ LocationTagBar.view (push <<< SavedAddressClicked) { savedLocations: state.data.savedLocations } ]
     ]
@@ -3292,16 +3286,18 @@ homeScreenViewV2 push state =
                                   [ width $ V (screenWidth unit)
                                   , height WRAP_CONTENT
                                   , orientation VERTICAL
-                                  ][savedLocationsView state push
-                                  , if isHomeScreenView state then mapView push state else emptyTextView state
-                                  , if state.data.config.feature.enableZooTicketBookingFlow
-                                      then zooTicketBookingBanner state push 
-                                      else linearLayout[visibility GONE][]
-                                  , shimmerView state
-                                  , suggestionsView push state
-                                  , emptySuggestionsBanner state push
-                                  , footerView push state
-                                  ]
+                                  ] $ [savedLocationsView state push] <> 
+                                    (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
+                                      [locationUnserviceableView push state]
+                                    else 
+                                      [if isHomeScreenView state then mapView push state else emptyTextView state
+                                      , if state.data.config.feature.enableZooTicketBookingFlow
+                                          then zooTicketBookingBanner state push 
+                                          else linearLayout[visibility GONE][]
+                                      , shimmerView state
+                                      , suggestionsView push state
+                                      , emptySuggestionsBanner state push
+                                      , footerView push state])
                               ]
                           ]
                         , whereToButtonView push state
@@ -3466,6 +3462,8 @@ whereToButtonView push state  =
           , padding $ Padding (if state.props.isHomescreenExpanded then 0 else 16) 16 16 16
           , gravity CENTER_VERTICAL
           , accessibilityHint "Where To Button"
+          , clickable $ state.props.isSrcServiceable
+          , alpha if state.props.isSrcServiceable then 1.0 else 0.4 
           ][ 
             imageView
               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_destination"
@@ -3622,10 +3620,7 @@ pickupLocationView push state =
               , textView $
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
-                  , text $ (getString PICKUP_) <> (if state.props.isSrcServiceable then
-                              (if state.data.source /= "" then state.data.source else (getString CURRENT_LOCATION))
-                             else
-                               getString APP_NOT_SERVICEABLE)
+                  , text $ (getString PICKUP_) <> ( if state.props.isSrcServiceable then (getString CURRENT_LOCATION) else getString NOT_SERVICEABLE)
                   , color state.data.config.homeScreen.pickupLocationTextColor
                   ] <> FontStyle.paragraphText TypoGraphy
             ]
@@ -3824,8 +3819,8 @@ movingRightArrowView viewId =
                     pure unit)(const NoAction)
       , height $ V 43
       , width $ V 40
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yellow_arrow"
       , gravity CENTER_HORIZONTAL
-      , margin $ MarginLeft 2
       , accessibility DISABLE
       ]
 
@@ -4039,3 +4034,82 @@ updateMapPadding state =
                          then ceil ((toNumber recentViewHeight / pixels) * density) 
                          else ceil ((toNumber recentViewHeight / displayZoomFactor) / iosScale)
 
+
+
+locationUnserviceableView ::  forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+locationUnserviceableView push state = 
+  linearLayout[
+    height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ Margin 17 24 17 0
+  , clickable true
+  , orientation VERTICAL
+  , gravity CENTER
+  ][
+    relativeLayout[
+      height WRAP_CONTENT
+    , width MATCH_PARENT
+    , gravity CENTER_HORIZONTAL
+    , cornerRadius 16.0
+    ][
+      linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , gravity CENTER
+      ][
+        imageView[
+          imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_white_blur_map"
+        , width WRAP_CONTENT
+        , height $ WRAP_CONTENT
+        , gravity CENTER
+        ]
+      ]
+    , linearLayout[
+        width MATCH_PARENT
+      , height WRAP_CONTENT 
+      , orientation VERTICAL
+      , gravity CENTER
+      , margin $ Margin 22 83 22 83 
+      , background Color.transparent
+      ][
+        imageView[
+          imageWithFallback $ fetchImage FF_ASSET "ny_ic_location_unserviceable"
+        , width $ V 108
+        , height $ V 101
+        ]
+      , textView  $ [
+          text $ getString LOCATION_UNSERVICEABLE
+        , width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER 
+        , color Color.black800
+        , margin $ MarginTop 10
+        ] <> (FontStyle.h1 TypoGraphy)
+      , textView $ [
+          text $ getString WE_ARE_NOT_LIVE_IN_YOUR_AREA
+        , width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , color Color.black700
+        , margin $ MarginTop 8
+        ] <> (FontStyle.paragraphText TypoGraphy)
+      ]
+    ]
+  , linearLayout [
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , gravity CENTER
+    ][
+      textView $ [
+        text $ getString FACING_PROBLEM_WITH_APP
+      , color Color.black700
+      ] <> (FontStyle.tags TypoGraphy)
+    , textView $ [
+        textFromHtml $ getString TAP_HERE_TO_REPORT 
+      , color Color.blue900
+      , margin $ MarginLeft 4
+      , onClick push $ const ReportIssueClick
+      ] <> (FontStyle.tags TypoGraphy)
+    ]
+  ]

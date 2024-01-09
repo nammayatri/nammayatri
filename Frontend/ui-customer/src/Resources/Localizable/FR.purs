@@ -698,3 +698,7 @@ getFR stringKey =
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "Découvrez des endroits géniaux adaptés à vos besoins"
         ONE_CLICK -> "1 clic"
         SMART -> "Intelligent"
+        NOT_SERVICEABLE -> "Non réparable"
+        WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "Nous ne sommes pas encore en ligne dans votre région ! \nVous pouvez accéder à l'historique des courses et à d'autres \nparamètres à partir du menu en haut à gauche."
+        FACING_PROBLEM_WITH_APP -> "Vous rencontrez des problèmes avec l'application ?"
+        TAP_HERE_TO_REPORT -> "<u>Appuyez ici pour signaler un problème</u>"

@@ -698,3 +698,7 @@ getEN stringKey =
         RIDE_STARTED -> "Ride started"
         ONE_CLICK -> "1 Click"
         SMART -> "Smart"
+        NOT_SERVICEABLE -> "Not Serviceable"
+        WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "We are not live in your area yet! \nYou can access ride history and other \nsettings from the menu on the top left."
+        FACING_PROBLEM_WITH_APP -> "Facing problems with the app?"
+        TAP_HERE_TO_REPORT -> "<u>Tap here to report issue</u>"
