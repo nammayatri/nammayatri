@@ -30,6 +30,10 @@ runDelete deleteEntry _ = do
   case A.eitherDecode @DBDeleteObject . LBS.fromStrict $ streamData of
     Right deleteDBModel -> do
       EL.logDebug ("DB OBJECT" :: Text) (show deleteDBModel)
+      -- uncomment for debug purposes
+      -- let tableName = deleteDBModel.dbModel
+      -- writeDebugFile "delete" tableName entryId "streamData.json" streamData
+      -- writeDebugFile "delete" tableName entryId "dbObject.txt" $ show deleteDBModel
       runDeleteQuery deleteEntry deleteDBModel
     _ -> do
       EL.logError ("DELETE FAILED" :: Text) ("Invalid streamData or Extraction of data from redis stream failed :: " <> TE.decodeUtf8 streamData)
@@ -39,6 +43,7 @@ runDeleteQuery :: (EL.KVDBStreamEntryID, ByteString) -> DBDeleteObject -> Reader
 runDeleteQuery deleteEntries dbDeleteObject = do
   Env {..} <- ask
   let (entryId, byteString) = deleteEntries
+  let dbModel = dbDeleteObject.dbModel
   let deleteQuery = getDeleteQueryForTable dbDeleteObject
   case deleteQuery of
     Just query -> do
@@ -47,7 +52,7 @@ runDeleteQuery deleteEntries dbDeleteObject = do
       case result of
         Left (QueryError errorMsg) -> do
           EL.logError ("QUERY DELETE FAILED" :: Text) (errorMsg <> " for query :: " <> query)
-          void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Delete" dbDeleteObject.dbModel.getDBModel
+          void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Delete" dbModel.getDBModel
           -- uncomment for debug purposes
           -- writeDebugFile "delete" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
           return $ Left entryId

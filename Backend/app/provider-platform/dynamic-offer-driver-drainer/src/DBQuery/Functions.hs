@@ -70,7 +70,7 @@ quote' :: Text -> Text
 quote' t = "\"" <> t <> "\""
 
 quote :: Text -> Text
-quote t = "'" <> t <> "'"
+quote t = "'" <> T.replace "'" "''" t <> "'"
 
 -- for "contents_v2" field
 valueToText :: Value -> T.Text

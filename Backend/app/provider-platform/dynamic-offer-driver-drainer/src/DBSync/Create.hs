@@ -21,12 +21,6 @@ import Types.DBSync.Create
 import Types.Event as Event
 import Utils.Utils
 
--- import qualified Data.ByteString as BS
--- import Kernel.Prelude (UTCTime)
--- import qualified Data.Time.Clock.POSIX as Time
--- import System.FilePath.Posix as Path
--- import qualified System.Directory as Dir
-
 -- | This function is used to run the create operation for a single entry in the stream
 runCreate :: (EL.KVDBStreamEntryID, ByteString) -> Text -> ReaderT Env EL.Flow (Either EL.KVDBStreamEntryID EL.KVDBStreamEntryID)
 runCreate createDataEntry streamName = do
@@ -40,8 +34,8 @@ runCreate createDataEntry streamName = do
       EL.logDebug ("DB OBJECT" :: Text) (show createDBModel)
       let tableName = createDBModel.dbModel
       -- uncomment for debug purposes
-      -- writeDebugFile tableName entryId "streamData.json" streamData
-      -- writeDebugFile tableName entryId "dbObject.txt" $ show createDBModel
+      -- writeDebugFile "create" tableName entryId "streamData.json" streamData
+      -- writeDebugFile "create" tableName entryId "dbObject.txt" $ show createDBModel
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
         then runCreateQuery createDataEntry createDBModel
         else do
@@ -103,19 +97,3 @@ getCreateObjectForKafka model content =
       "tag" A..= ((T.pack . pascal . T.unpack) model.getDBModel <> "Object"),
       "type" A..= ("INSERT" :: Text)
     ]
-
--- uncomment for debug purposes
--- writeDebugFile ::
---   DBModel ->
---   EL.KVDBStreamEntryID ->
---   String ->
---   BS.ByteString ->
---   ReaderT Env EL.Flow ()
--- writeDebugFile dbModel entryId fileName entity = EL.runIO $ do
---   let fullPath'Name = "/tmp/drainer/driver/create/" <> T.unpack dbModel.getDBModel <> "/" <> show (mkTimeStamp entryId) <> "/" <> fileName
---   let fullPath = Path.takeDirectory fullPath'Name
---   Dir.createDirectoryIfMissing True fullPath
---   BS.writeFile fullPath'Name entity
-
--- mkTimeStamp :: EL.KVDBStreamEntryID -> UTCTime
--- mkTimeStamp (EL.KVDBStreamEntryID posixTime _) = Time.posixSecondsToUTCTime $ fromInteger (posixTime `div` 1000)
