@@ -54,6 +54,10 @@
             android:name="CLEVERTAP_REGION"
             android:value="@string/clevertap_region" />
 
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="ocr" />
+
         <activity
             android:name="com.facebook.FacebookActivity"
             android:exported="false"

@@ -727,6 +727,8 @@ addVehicleDetailsflow addRcFromProf = do
   flow <- UI.addVehicleDetails
   case flow of
     VALIDATE_DETAILS state -> do
+      text <- HU.scanDocument state.data.rc_base64 500 ---For refrence
+      void $ pure $ spy "recognisedText " text
       validateImageResp <- lift $ lift $ Remote.validateImage (makeValidateImageReq state.data.rc_base64 "VehicleRegistrationCertificate")
       case validateImageResp of
        Right (ValidateImageRes resp) -> do

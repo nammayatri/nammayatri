@@ -74,5 +74,8 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.1'
     implementation("com.google.firebase:firebase-crashlytics-ndk")
     implementation 'com.google.firebase:firebase-perf'
+    //    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.0' // from remote
+    implementation 'com.google.mlkit:text-recognition:16.0.0' //for local
+    implementation 'com.google.mlkit:vision-common:17.3.0'
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
 }

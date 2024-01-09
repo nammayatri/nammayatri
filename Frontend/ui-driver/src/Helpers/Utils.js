@@ -579,3 +579,25 @@ export const getPopupType = function (just, nothing) {
     return just(localPopup);
   }
 }
+
+export const scanDocWithTimeout = function (cb) {
+  return function (action) {
+    return function (delay) {
+      return function (value) {
+        return function () {
+          if(window.JBridge.decodeImageInText){
+            const callbackFallback = function (){
+              cb(action(""))();
+            };
+            const timer = setTimeout(callbackFallback, delay);
+            const callback = callbackMapper.map(function (res) {
+              clearTimeout(timer);
+              cb(action(res))();
+            });
+            window.JBridge.decodeImageInText(callback, value);
+          }
+        }
+      }
+    }
+  }
+}

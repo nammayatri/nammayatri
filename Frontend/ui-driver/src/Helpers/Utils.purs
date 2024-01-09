@@ -146,6 +146,7 @@ foreign import downloadQR  :: String -> Effect Unit
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 foreign import setPopupType :: ST.GoToPopUpType -> Unit
 foreign import getPopupType :: forall f. Fn2 (f -> Maybe f) (Maybe f) (Maybe ST.GoToPopUpType)
+foreign import scanDocWithTimeout :: forall action. (action -> Effect Unit) -> (String -> action) -> Int -> String -> Effect Unit
 
 
 generateQR:: EffectFn4 String String Int Int Unit
@@ -465,6 +466,12 @@ translateString toTranslate timeOut = do
   (Translation translation) <- (lift $ lift $ doAff $ makeAff \cb -> translateStringWithTimeout (cb <<< Right) Translation timeOut toTranslate $> nonCanceler )
   pure $ ( translation)
 
+data RecognisedString = RecognisedString String
+
+scanDocument :: String -> Int -> FlowBT String String 
+scanDocument base64Image timeOut = do
+  (RecognisedString recognisedText) <- lift $ lift $ doAff $ makeAff \cb -> scanDocWithTimeout (cb <<< Right) RecognisedString timeOut base64Image $> nonCanceler
+  pure recognisedText
 
 getRideTypeColor :: Maybe String -> String
 getRideTypeColor variant = case getCategorizedVariant variant of

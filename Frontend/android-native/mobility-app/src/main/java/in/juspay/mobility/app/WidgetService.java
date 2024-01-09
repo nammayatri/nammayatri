@@ -401,12 +401,12 @@ public class WidgetService extends Service {
         imageClose = new ImageView(this);
         try {
             imageClose.setImageResource(R.drawable.ny_ic_close_transparent);
+            imageClose.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.widget_close_gradient, null));
         } catch (Exception e) {
             Log.e("Exception in rendering Image", e.toString());
         }
         imageClose.setPadding(0, 0, 0, (int) (10 * scale + 0.5f));
         imageClose.setVisibility(View.INVISIBLE);
-        imageClose.setBackground(ResourcesCompat.getDrawable(getResources(), R.drawable.widget_close_gradient, null));
         windowManager.addView(imageClose, closeImageParams);
         windowManager.addView(widgetView, widgetLayoutParams);
         widgetView.setVisibility(View.VISIBLE);
