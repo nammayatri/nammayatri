@@ -67,16 +67,17 @@ generateFunctions :: [Text] -> [ST.TransformerTT] -> HM.HashMap Text [Text] -> T
 generateFunctions globalMonads functionList importMap = T.unlines $ concatMap processFunction functionList
   where
     processFunction :: ST.TransformerTT -> [Text]
-    processFunction (ST.TransformerTT name fromTypes paramNames toType outputTypeBindings pureMapping impureMapping) =
-      [ createFunctionDefinition name globalMonads fromTypes importMap toType,
-        name <> whiteSpace <> T.intercalate whiteSpace paramNames <> " = do"
-      ]
-        <> map
-          ("  " <>)
-          ( createPureMappings importMap pureMapping
-              <> createImpureMappings importMap impureMapping
-              <> createOutput importMap toType outputTypeBindings (not $ null globalMonads)
-          )
+    processFunction (ST.TransformerTT name extraMonads fromTypes paramNames toType outputTypeBindings pureMapping impureMapping) =
+      let allMonads = nub $ globalMonads <> extraMonads
+       in [ createFunctionDefinition name allMonads fromTypes importMap toType,
+            name <> whiteSpace <> T.intercalate whiteSpace paramNames <> " = do"
+          ]
+            <> map
+              ("  " <>)
+              ( createPureMappings importMap pureMapping
+                  <> createImpureMappings importMap impureMapping
+                  <> createOutput importMap toType outputTypeBindings (not $ null allMonads)
+              )
 
 createFunctionDefinition :: Text -> [Text] -> [Text] -> HM.HashMap Text [Text] -> Text -> Text
 createFunctionDefinition name allMonads fromTypes importMap toType =

@@ -8,6 +8,7 @@ import Kernel.Prelude
 
 data TransformerTT = TransformerTT
   { _name :: Text,
+    _extraMonads :: [Text],
     _fromTypes :: [Text],
     _paramNames :: [Text],
     _toType :: Text,

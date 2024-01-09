@@ -75,5 +75,6 @@ mkTransformerFunctions filePath yaml = do
     checkIfImpureMappingsExist :: [Text] -> ST.TransformerTT -> IO ()
     checkIfImpureMappingsExist allMonads fn = do
       let impureMappings = ST._impureMapping fn
-      when (not (null impureMappings) && null allMonads) $
+          extraMonads = ST._extraMonads fn
+      when (not (null impureMappings) && null allMonads && null extraMonads) $
         error "Impure mappings exist but no monads are provided in the transformer definition"
