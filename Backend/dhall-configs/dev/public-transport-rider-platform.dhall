@@ -49,10 +49,10 @@ let rccfg =
 
 in  { esqDBCfg
     , esqDBReplicaCfg
-    , migrationPath = Some
-        (   env:PUBLIC_TRANSPORT_RIDER_PLATFORM_MIGRATION_PATH as Text
-          ? "dev/migrations/public-transport-rider-platform"
-        )
+    , migrationPath =
+      [   env:PUBLIC_TRANSPORT_RIDER_PLATFORM_MIGRATION_PATH as Text
+        ? "dev/migrations/public-transport-rider-platform"
+      ]
     , autoMigrate = True
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg

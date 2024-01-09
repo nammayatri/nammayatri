@@ -18,8 +18,8 @@ in  { port = +8020
         common.loggerConfig // { logFilePath = "/tmp/mock-registry.log" }
     , esqDBCfg
     , autoMigrate = True
-    , migrationPath = Some
-        (   env:MOCK_REGISTRY_MIGRATION_PATH as Text
-          ? "dev/migrations/mock-registry"
-        )
+    , migrationPath =
+      [   env:MOCK_REGISTRY_MIGRATION_PATH as Text
+        ? "dev/migrations/mock-registry"
+      ]
     }

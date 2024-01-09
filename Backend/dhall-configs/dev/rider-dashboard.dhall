@@ -69,10 +69,10 @@ in  { esqDBCfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = True
     , port = +8017
-    , migrationPath = Some
-        (   env:RIDER_DASHBOARD_MIGRATION_PATH as Text
-          ? "dev/migrations/rider-dashboard"
-        )
+    , migrationPath =
+      [   env:RIDER_DASHBOARD_MIGRATION_PATH as Text
+        ? "dev/migrations/rider-dashboard"
+      ]
     , autoMigrate = True
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/rider-dashboard.log" }

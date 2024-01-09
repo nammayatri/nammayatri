@@ -37,7 +37,7 @@ import Tools.Streaming.Kafka.Environment
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
-    migrationPath :: Maybe FilePath,
+    migrationPath :: [FilePath],
     autoMigrate :: Bool,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,

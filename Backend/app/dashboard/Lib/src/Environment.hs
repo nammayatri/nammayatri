@@ -43,7 +43,7 @@ data AppCfg = AppCfg
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     port :: Int,
-    migrationPath :: Maybe FilePath,
+    migrationPath :: [FilePath],
     autoMigrate :: Bool,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
