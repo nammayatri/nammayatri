@@ -46,7 +46,7 @@ runService configModifier = do
 defaultConfig :: AppCfg
 defaultConfig =
   AppCfg
-    { migrationPath = Just "dev/migrations/scheduler-example",
+    { migrationPath = ["dev/migrations/scheduler-example"],
       autoMigrate = True,
       esqDBCfg =
         EsqDBConfig

@@ -250,10 +250,10 @@ in  { esqDBCfg
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
-    , migrationPath = Some
-        (   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
-          ? "dev/migrations/dynamic-offer-driver-app"
-        )
+    , migrationPath =
+      [   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
+        ? "dev/migrations/dynamic-offer-driver-app"
+      ]
     , autoMigrate = True
     , coreVersion = "0.9.4"
     , loggerConfig =

@@ -38,7 +38,7 @@ data AppCfg = AppCfg
     hedisNonCriticalCfg :: HedisCfg,
     hedisNonCriticalClusterCfg :: HedisCfg,
     graceTerminationPeriod :: Seconds,
-    migrationPath :: Maybe FilePath,
+    migrationPath :: [FilePath],
     autoMigrate :: Bool,
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,

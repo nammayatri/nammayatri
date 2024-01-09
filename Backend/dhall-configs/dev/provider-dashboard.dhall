@@ -87,10 +87,10 @@ in  { esqDBCfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = True
     , port = +8018
-    , migrationPath = Some
-        (   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text
-          ? "dev/migrations/provider-dashboard"
-        )
+    , migrationPath =
+      [   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text
+        ? "dev/migrations/provider-dashboard"
+      ]
     , autoMigrate = True
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/provider-dashboard.log" }
