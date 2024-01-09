@@ -104,8 +104,8 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
 enableAndTriggerOnboardingAlertsAndMessages :: Id DMOC.MerchantOperatingCity -> Id Person -> Bool -> Flow ()
 enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  DIQuery.updateEnabledVerifiedState personId True (Just verified)
   when (not driverInfo.enabled && isNothing driverInfo.enabledAt) $ do
-    DIQuery.updateEnabledVerifiedState personId True (Just verified)
     merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
     merchant <- CQM.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
