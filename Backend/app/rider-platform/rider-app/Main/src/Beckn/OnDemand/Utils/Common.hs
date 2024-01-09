@@ -22,6 +22,7 @@ import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, (%~))
 import qualified Kernel.Prelude as KP
 import Kernel.Types.App
@@ -152,3 +153,12 @@ mkPaymentTags =
             tagDisplay = Just False,
             tagValue = Just "https://example-test-bap.com/static-terms.txt"
           }
+
+castVehicleVariant :: VehVar.VehicleVariant -> Text
+castVehicleVariant = \case
+  VehVar.SEDAN -> "SEDAN"
+  VehVar.SUV -> "SUV"
+  VehVar.HATCHBACK -> "HATCHBACK"
+  VehVar.AUTO_RICKSHAW -> "AUTO_RICKSHAW"
+  VehVar.TAXI -> "TAXI"
+  VehVar.TAXI_PLUS -> "TAXI_PLUS"

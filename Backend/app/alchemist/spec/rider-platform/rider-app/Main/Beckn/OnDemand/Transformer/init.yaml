@@ -1,0 +1,168 @@
+imports:
+  Text: Data.Text
+  BaseUrl: Kernel.Prelude
+  MonadFlow: Kernel.Types.App
+  HasFlowEnv: Kernel.Types.App
+  Fulfillment: BecknV2.OnDemand.Types
+  Domain: Kernel.Types.Beckn.Context
+  Action: Kernel.Types.Beckn.Context
+  Context: BecknV2.OnDemand.Types
+  InitReq: BecknV2.OnDemand.Types
+  ConfirmReqMessage: BecknV2.OnDemand.Types
+  Vehicle: BecknV2.OnDemand.Types
+  Order: BecknV2.OnDemand.Types
+  Billing: BecknV2.OnDemand.Types
+  Item: BecknV2.OnDemand.Types
+  Provider: BecknV2.OnDemand.Types
+  Quotation: BecknV2.OnDemand.Types
+  Price: BecknV2.OnDemand.Types
+  DConfirmRes: SharedLogic.Confirm
+
+  castVehicleVariant: Beckn.OnDemand.Utils.Common
+  mkPayment: Beckn.OnDemand.Utils.Init
+  mkFulfillmentTags: Beckn.OnDemand.Utils.Init
+  encodeToText: Kernel.Utils.Text
+  mkStops: Beckn.OnDemand.Utils.Init
+  singleton: Data.List
+  buildContextV2: BecknV2.OnDemand.Utils.Context
+  fromIntegral: Kernel.Prelude
+
+module: Init
+transformer:
+  monads:
+    - MonadFlow m
+  transformers:
+    buildInitReq:
+      params:
+        - uiConfirm: DConfirmRes
+        - bapUrl: BaseUrl
+        - action: Action
+        - domain: Domain
+        - fulfillmentType: Text
+        - mbBppFullfillmentId: Maybe Text
+        - mbDriverId: Maybe Text
+      toType: InitReq
+      mapping:
+        initReqContext: /~_buildContextV2 action domain uiConfirm.booking.id.getId (Just uiConfirm.searchRequestId.getId) uiConfirm.merchant.bapId bapUrl (Just uiConfirm.providerId) (Just uiConfirm.providerUrl) uiConfirm.merchant.defaultCity uiConfirm.merchant.country
+        initReqMessage: /~buildInitReqMessage uiConfirm fulfillmentType mbBppFullfillmentId mbDriverId
+
+    buildInitReqMessage:
+      params:
+        - uiConfirm: DConfirmRes
+        - fulfillmentType: Text
+        - mbBppFullfillmentId: Maybe Text
+        - mbDriverId: Maybe Text
+      toType: ConfirmReqMessage
+      mapping:
+        confirmReqMessageOrder: /~tfOrder uiConfirm fulfillmentType mbBppFullfillmentId mbDriverId
+
+    tfOrder:
+      params:
+        - uiConfirm: DConfirmRes
+        - fulfillmentType: Text
+        - mbBppFullfillmentId: Maybe Text
+        - mbDriverId: Maybe Text
+      toType: Order
+      mapping:
+        orderBilling: /~tfOrderBilling uiConfirm <&> Just
+        orderCancellationTerms: Nothing
+        orderFulfillments: /~_singleton <$> tfOrderFulfillments uiConfirm fulfillmentType mbBppFullfillmentId <&> Just
+        orderId: Nothing
+        orderItems: /~_singleton <$> tfOrderItems uiConfirm mbBppFullfillmentId <&> Just
+        orderPayments: ~_mkPayment uiConfirm.paymentMethodInfo & Just
+        orderProvider: /~tfOrderProvider mbDriverId <&> Just
+        orderQuote: /~tfOrderQuote uiConfirm <&> Just
+        orderStatus: Nothing
+
+    tfOrderBilling:
+      params:
+        - uiConfirm: DConfirmRes
+      toType: Billing
+      mapping:
+        billingPhone: uiConfirm.riderPhone
+
+    # tfOrderCancellationTerms:
+    #   params:
+    #     - uiConfirm: DConfirmRes
+    #   toType: CancellationTerms
+    #   mapping:
+    #     cancellationTermCancellationFee: /~_fromText "cancellation_terms"
+    #     cancellationTermFulfillmentState: /~_fromText "customer"
+    #     cancellationTermReasonRequired: /~_fromText "free_cancellation"
+
+    tfOrderFulfillments:
+      params:
+        - uiConfirm: DConfirmRes
+        - fulfillmentType: Text
+        - mbBppFullfillmentId: Maybe Text
+      toType: Fulfillment
+      mapping:
+        fulfillmentAgent: Nothing
+        fulfillmentCustomer: Nothing
+        fulfillmentId: mbBppFullfillmentId
+        fulfillmentState: Nothing
+        fulfillmentStops: ~_mkStops uiConfirm.fromLoc uiConfirm.toLoc Nothing
+        fulfillmentTags: ~_mkFulfillmentTags uiConfirm.maxEstimatedDistance
+        fulfillmentType: Just fulfillmentType
+        fulfillmentVehicle: /~tfFulfillmentVehicle uiConfirm <&> Just
+
+    tfFulfillmentVehicle:
+      params:
+        - uiConfirm: DConfirmRes
+      toType: Vehicle
+      mapping:
+        vehicleCategory: Nothing
+        vehicleColor: Nothing
+        vehicleMake: Nothing
+        vehicleModel: Nothing
+        vehicleRegistration: Nothing
+        vehicleVariant: ~_castVehicleVariant uiConfirm.vehicleVariant & Just
+
+    tfOrderItems:
+      params:
+        - uiConfirm: DConfirmRes
+        - mbBppFullfillmentId: Maybe Text
+      toType: Item
+      mapping:
+        itemDescriptor: Nothing
+        itemFulfillmentIds: _singleton <$> mbBppFullfillmentId
+        itemId: Just uiConfirm.itemId
+        itemLocationIds: Nothing
+        itemPaymentIds: Nothing
+        itemPrice: Nothing
+        itemTags: Nothing
+
+    tfOrderProvider:
+      params:
+        - mbDriverId: Maybe Text
+      toType: Provider
+      mapping:
+        providerDescriptor: Nothing
+        providerFulfillments: Nothing
+        providerId: mbDriverId
+        providerItems: Nothing
+        providerLocations: Nothing
+        providerPayments: Nothing
+
+    tfOrderQuote:
+      params:
+        - uiConfirm: DConfirmRes
+      toType: Quotation
+      mapping:
+        quotationBreakup: Nothing
+        quotationPrice: /~tfPrice uiConfirm <&> Just
+        quotationTtl: Nothing
+
+    tfPrice:
+      params:
+        - uiConfirm: DConfirmRes
+      toType: Price
+      mapping:
+        priceComputedValue: Nothing
+        priceCurrency: Nothing
+        priceMaximumValue: Nothing
+        priceMinimumValue: Nothing
+        priceOfferedValue: _encodeToText uiConfirm.booking.estimatedTotalFare.getMoney & Just
+        priceValue: _encodeToText uiConfirm.booking.estimatedTotalFare.getMoney & Just
+# ~  -> pure    Haskell functions
+# /~ -> impure  Haskell functions

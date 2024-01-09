@@ -79,11 +79,11 @@ parseSingleTransformer :: (Key, Value) -> Maybe ST.TransformerTT
 parseSingleTransformer (key, value) = do
   obj <- preview _Object value
   let name = toText key
-      params = preview (ix "params" . _Array . to V.toList) obj & fromMaybe (error "Transformer params is required") & map (toTextPair . toKeyValue)
+      params = preview (ix "params" . _Array . to V.toList) obj & fromMaybe (error $ "Transformer params is required " <> show key) & map (toTextPair . toKeyValue)
       fromTypes = map snd params
       paramNames = map fst params
-      toType = preview (ix "toType" . _String) obj & fromMaybe (error "Transformer toType is required")
-      mapping = preview (ix "mapping" . _Object) obj & fromMaybe (error "Transformer mapping is required") & KM.toList & map toTextPair
+      toType = preview (ix "toType" . _String) obj & fromMaybe (error $ "Transformer toType is required " <> show key)
+      mapping = preview (ix "mapping" . _Object) obj & fromMaybe (error $ "Transformer mapping is required " <> show key) & KM.toList & map toTextPair
       outputTypeBindings = map setFieldBindings mapping
       impureMapping = map (setImpureBindings toType) $ filter (\(_, val) -> impureIdentifier `T.isPrefixOf` val) mapping
       pureMapping = map (setPureBindings toType) $ filter (\(_, val) -> not $ impureIdentifier `T.isPrefixOf` val) mapping

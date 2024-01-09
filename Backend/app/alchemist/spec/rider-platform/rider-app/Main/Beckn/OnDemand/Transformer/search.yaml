@@ -33,11 +33,10 @@ imports:
   fromText: Data.UUID
   SearchReq: BecknV2.OnDemand.Types
 
-
 module: Search
 transformer:
   monads:
-  - MonadFlow m
+    - MonadFlow m
   transformers:
     buildBecknSearchReqV2:
       params:
@@ -45,7 +44,7 @@ transformer:
         - domain: Domain
         - origin: SearchReqLocation
         - destination: SearchReqLocation
-        - searchId : Id SearchRequest
+        - searchId: Id SearchRequest
         - distance: Maybe Meters
         - duration: Maybe Seconds
         - customerLanguage: Maybe Language
@@ -147,6 +146,5 @@ transformer:
         paymentParams: Nothing
         paymentStatus: Nothing
         paymentType: Nothing
-
 # ~  -> pure    Haskell functions
 # /~ -> impure  Haskell functions
