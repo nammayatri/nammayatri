@@ -75,7 +75,7 @@ token: {{app-token}}
           "state": "Karnataka",
           "door": "",
           "country": "India",
-          "city": "Davanagere",
+          "city": "Davanagere'test",
           "building": " ",
           "areaCode": "",
           "area": "Vidyanagar"
