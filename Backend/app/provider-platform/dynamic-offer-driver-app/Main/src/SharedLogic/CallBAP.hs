@@ -238,7 +238,8 @@ buildBppUrl (Id transporterId) =
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
 sendRideAssignedUpdateToBAP ::
-  ( EsqDBFlow m r,
+  ( MonadFlow m,
+    EsqDBFlow m r,
     EncFlow m r,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -275,9 +276,11 @@ sendRideAssignedUpdateToBAP booking ride = do
       Nothing -> pure veh
   resp <- try @_ @SomeException (fetchAndCacheAadhaarImage driver driverInfo)
   let image = join (eitherToMaybe resp)
-  let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
+  let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
-  -- rideAssignedMsgV2 <- ACL.buildOnUpdateMessage rideAssignedBuildReq -- shrey00 : implement buildOnUpdateMessageV2
+  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter rideAssignedBuildReq
+  let generatedMsg = A.encode rideAssignedMsgV2
+  logDebug $ "on_update request bppv2: " <> T.pack (show generatedMsg)
 
   retryConfig <- asks (.shortDurationRetryCfg)
   _isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)

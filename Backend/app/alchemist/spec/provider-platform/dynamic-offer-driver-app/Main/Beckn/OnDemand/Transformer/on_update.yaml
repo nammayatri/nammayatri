@@ -1,0 +1,152 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  BaseUrl: Kernel.Prelude
+  MonadFlow: Kernel.Types.App
+  Domain: Kernel.Types.Beckn.Context
+  Action: Kernel.Types.Beckn.Context
+  City: Kernel.Types.Beckn.Context
+  Country: Kernel.Types.Beckn.Context
+  OnUpdateReq: BecknV2.OnDemand.Types
+  ConfirmReqMessage: BecknV2.OnDemand.Types
+  DRideAssignedReq: Domain.Types.OnUpdate
+  Order: BecknV2.OnDemand.Types
+  Fulfillment: BecknV2.OnDemand.Types
+  Person: [Domain.Types.Person, BecknV2.OnDemand.Types]
+  Ride: Domain.Types.Ride
+  Booking: Domain.Types.Booking
+  Vehicle: [Domain.Types.Vehicle, BecknV2.OnDemand.Types]
+  TagGroups: Beckn.Types.Core.Taxi.Common.Tags
+  Agent: BecknV2.OnDemand.Types
+  Contact: BecknV2.OnDemand.Types
+  Image: BecknV2.OnDemand.Types
+  buildContextV2: BecknV2.OnDemand.Utils.Context
+  singleton: Data.List
+  getPersonNumber: Domain.Types.Person
+  getPersonFullName: Domain.Types.Person
+  mkStops: Beckn.OnDemand.Utils.OnUpdate
+  mkFulfillmentType: Beckn.OnDemand.Utils.OnUpdate
+  mkRideAssignedPersonTags: Beckn.OnDemand.Utils.OnUpdate
+  showVariant: Beckn.OnDemand.Utils.OnUpdate
+
+module: RideAssigned
+transformer:
+  monads: []
+  transformers:
+    buildOnUpdateReqV2:
+      extraMonads:
+        - MonadFlow m
+      params:
+        - action: Action
+        - domain: Domain
+        - messageId: Text
+        - bppSubscriberId: Text
+        - bppUri: BaseUrl
+        - city: City
+        - country: Country
+        - req : DRideAssignedReq
+        - driverNumber: Text
+      toType: OnUpdateReq
+      mapping:
+        onUpdateReqContext: /~_buildContextV2 action domain messageId (Just req.booking.transactionId) req.booking.bapId req.booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+        onUpdateReqError: Nothing
+        onUpdateReqMessage: ~buildOnUpdateMessageV2 req driverNumber
+
+    buildOnUpdateMessageV2:
+      params:
+        - req: DRideAssignedReq
+        - driverNumber: Text
+      toType: Maybe ConfirmReqMessage
+      mapping:
+        confirmReqMessageOrder: ~buildOnUpdateOrderV2 req driverNumber
+
+    buildOnUpdateOrderV2:
+      params:
+        - req: DRideAssignedReq
+        - driverNumber: Text
+      toType: Order
+      mapping:
+        orderBilling: Nothing
+        orderCancellationTerms: Nothing
+        orderFulfillments: ~_singleton <$> (buildOnUpdateFulfillmentV2 (Just req.driver) req.ride req.booking (Just req.vehicle) req.image driverNumber)
+        orderId: Just req.booking.id.getId
+        orderItems: Nothing
+        orderPayments: Nothing
+        orderProvider: Nothing
+        orderQuote: Nothing
+        orderStatus: Just "ACTIVE"
+
+    buildOnUpdateFulfillmentV2:
+      params:
+        - mbDriver: Maybe Person
+        - ride: Ride
+        - booking: Booking
+        - mbVehicle: Maybe Vehicle
+        - mbImage: Maybe Text
+        - driverNumber: Text
+      toType: Maybe Fulfillment
+      mapping:
+        fulfillmentAgent: ~buildOnUpdateAgentV2 mbDriver mbImage driverNumber
+        fulfillmentCustomer: Nothing
+        fulfillmentId: ride.id.getId & Just
+        fulfillmentState: Nothing
+        fulfillmentStops: ~_mkStops booking ride.otp
+        fulfillmentTags: Nothing
+        fulfillmentType: ~_mkFulfillmentType booking.bookingType & Just
+        fulfillmentVehicle: ~buildOnUpdateVehicleV2 =<< mbVehicle
+
+    buildOnUpdateAgentV2:
+      params:
+        - mbDriver: Maybe Person
+        - mbImage: Maybe Text
+        - driverNumber: Text
+      toType: Maybe Agent
+      mapping:
+        agentContact: ~buildOnUpdateContactV2 (Just driverNumber)
+        agentPerson: ~buildOnUpdatePersonV2 mbDriver mbImage
+
+    buildOnUpdateContactV2:
+      params:
+        - mbPhone: Maybe Text
+      toType: Maybe Contact
+      mapping:
+        contactPhone: mbPhone
+
+    buildOnUpdatePersonV2:
+      params:
+        - mbDriver: Maybe Person
+        - mbImage: Maybe Text
+      toType: Maybe Person#1
+      mapping:
+        personId: Nothing
+        personImage: ~buildOnUpdateImageV2 mbImage
+        personName: ~_getPersonFullName =<< mbDriver
+        personTags: ~_mkRideAssignedPersonTags =<< mbDriver
+
+    buildOnUpdateVehicleV2:
+      params:
+        - vehicle: Vehicle
+      toType: Maybe Vehicle#1
+      mapping:
+        vehicleCategory: Nothing
+        vehicleColor: Just vehicle.color
+        vehicleMake: Nothing
+        vehicleModel: Just vehicle.model
+        vehicleRegistration: Just vehicle.registrationNo
+        vehicleVariant: ~_showVariant vehicle.variant
+
+    buildOnUpdateImageV2:
+      params:
+        - mbImage: Maybe Text
+      toType: Maybe Image
+      mapping:
+        imageHeight: Nothing
+        imageSizeType: Nothing
+        imageUrl: mbImage
+        imageWidth: Nothing
+
+# ~  -> pure    Haskell functions
+# /~ -> impure  Haskell functions
+# _ -> functions from other modules
+# '#' -> select import from array of import key. e.g. Person#idx (0-based)
+

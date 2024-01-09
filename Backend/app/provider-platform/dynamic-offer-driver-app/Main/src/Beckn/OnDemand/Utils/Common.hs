@@ -11,22 +11,9 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.OnDemand.Utils.Common where
-
--- import qualified Domain.Types.Merchant as Merchant
-
--- import qualified Storage.CachedQueries.Merchant as CQM
-
--- import Data.Aeson.Lens
--- import Data.Aeson.Key
--- import Kernel.Types.CacheFlow
--- import Kernel.Types.App
-
--- import Kernel.Types.Geofencing
-
--- import Control.Lens.Combinators
--- import Kernel.Types.Id
 
 import Beckn.ACL.Common (getTagV2)
 import qualified BecknV2.OnDemand.Types as Spec
@@ -34,7 +21,7 @@ import Control.Lens
 import Data.Aeson
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
-import EulerHS.Prelude hiding (id, view, (^?))
+import EulerHS.Prelude hiding (id, view, (%~), (^?))
 import Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -225,20 +212,17 @@ getContextBppUri context = do
     Just bppUriText -> Just <$> (decode $ encodeUtf8 bppUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBppUri: " <> bppUriText)
 
 withTransactionIdLogTag :: (Log m) => Text -> m a -> m a
-withTransactionIdLogTag transactionId toLog =
-  withTransactionIdLogTag' transactionId toLog
-
--- let transactionUuid = req.searchReqContext.contextTransactionId
--- let transactionId = T.pack $ show transactionUuid
--- transactionId <- getTransactionId req.searchReqContext
+withTransactionIdLogTag = withTransactionIdLogTag'
 
 getContextBapId :: MonadFlow m => Spec.Context -> m Text
 getContextBapId context = do
   context.contextBapId & fromMaybeM (InvalidRequest "Missing contextBapId")
 
--- getContextBppId :: MonadFlow m => Spec.Context -> m (Maybe Text)
--- getContextBppId context = do
---   let mbBppId = context.contextBppId
---   case mbBppId of
---     Nothing -> pure Nothing
---     Just bppId -> pure bppId
+mkBppUri ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  Text ->
+  m BaseUrl
+mkBppUri merchantId =
+  asks (.nwAddress)
+    <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId)

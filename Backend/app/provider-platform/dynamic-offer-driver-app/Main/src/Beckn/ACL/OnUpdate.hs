@@ -11,15 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# OPTIONS_GHC -Wwarn=incomplete-record-updates #-}
 
 module Beckn.ACL.OnUpdate
   ( buildOnUpdateMessage,
-    OnUpdateBuildReq (..),
+    buildOnUpdateMessageV2,
+    module Reexport,
   )
 where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.OnDemand.Transformer.RideAssigned as TFRA
+import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified Beckn.Types.Core.Taxi.Common.FulfillmentInfo as RideFulfillment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
@@ -32,73 +34,22 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpda
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent as SafetyAlertDU
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FareParameters as DFParams
-import qualified Domain.Types.FareParameters as Fare
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Merchant as DM
+import Domain.Types.OnUpdate as Reexport
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import Kernel.Prelude
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 import Tools.Error
-
-data OnUpdateBuildReq
-  = RideAssignedBuildReq
-      { driver :: SP.Person,
-        vehicle :: SVeh.Vehicle,
-        ride :: DRide.Ride,
-        booking :: DRB.Booking,
-        image :: Maybe Text
-      }
-  | RideStartedBuildReq
-      { driver :: SP.Person,
-        vehicle :: SVeh.Vehicle,
-        ride :: DRide.Ride,
-        booking :: DRB.Booking
-      }
-  | RideCompletedBuildReq
-      { ride :: DRide.Ride,
-        driver :: SP.Person,
-        vehicle :: SVeh.Vehicle,
-        booking :: DRB.Booking,
-        fareParams :: Fare.FareParameters,
-        paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-        paymentUrl :: Maybe Text
-      }
-  | BookingCancelledBuildReq
-      { booking :: DRB.Booking,
-        cancellationSource :: SBCR.CancellationSource
-      }
-  | DriverArrivedBuildReq
-      { ride :: DRide.Ride,
-        driver :: SP.Person,
-        vehicle :: SVeh.Vehicle,
-        booking :: DRB.Booking,
-        arrivalTime :: Maybe UTCTime
-      }
-  | EstimateRepetitionBuildReq
-      { ride :: DRide.Ride,
-        booking :: DRB.Booking,
-        estimateId :: Id DEst.Estimate,
-        cancellationSource :: SBCR.CancellationSource
-      }
-  | NewMessageBuildReq
-      { ride :: DRide.Ride,
-        driver :: SP.Person,
-        vehicle :: SVeh.Vehicle,
-        booking :: DRB.Booking,
-        message :: Text
-      }
-  | SafetyAlertBuildReq
-      { ride :: DRide.Ride,
-        reason :: Text
-      }
 
 mkFullfillment ::
   (EsqDBFlow m r, EncFlow m r) =>
@@ -177,7 +128,7 @@ buildOnUpdateMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
-buildOnUpdateMessage RideAssignedBuildReq {..} = do
+buildOnUpdateMessage (RideAssignedBuildReq DRideAssignedReq {..}) = do
   fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) image Nothing
   return $
     OnUpdate.OnUpdateMessage
@@ -188,6 +139,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
                 state = "ACTIVE",
                 ..
               },
+        -- JAYPAL, TODO check where to place update_target
         update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
 buildOnUpdateMessage RideStartedBuildReq {..} = do
@@ -379,3 +331,23 @@ castCancellationSource = \case
   SBCR.ByMerchant -> BookingCancelledOU.ByMerchant
   SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
   SBCR.ByApplication -> BookingCancelledOU.ByApplication
+
+buildOnUpdateMessageV2 ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  DM.Merchant ->
+  OnUpdateBuildReq ->
+  m Spec.OnUpdateReq
+buildOnUpdateMessageV2 merchant (RideAssignedBuildReq req) = do
+  msgId <- generateGUID
+  let bppId = getShortId $ merchant.subscriberId
+      city = fromMaybe merchant.city req.booking.bapCity
+      country = fromMaybe merchant.country req.booking.bapCountry
+  bppUri <- BUtils.mkBppUri merchant.id.getId
+  driverNumber <- SP.getPersonNumber req.driver >>= fromMaybeM (InternalError "Driver mobile number is not present in RideAssignedBuildReq.")
+  TFRA.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country req driverNumber
+buildOnUpdateMessageV2 _ _ =
+  throwError $ InternalError "buildOnUpdateMessageV2: Not implemented for this OnUpdateBuildReq." -- JAYPAL

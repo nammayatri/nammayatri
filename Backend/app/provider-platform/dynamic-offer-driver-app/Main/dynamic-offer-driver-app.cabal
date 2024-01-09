@@ -118,6 +118,7 @@ library
       Beckn.ACL.Update
       Beckn.Core
       Beckn.OnDemand.Utils.Common
+      Beckn.OnDemand.Utils.OnUpdate
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
@@ -259,6 +260,7 @@ library
       Domain.Types.Message.MessageTranslation
       Domain.Types.MetaData
       Domain.Types.Notification
+      Domain.Types.OnUpdate
       Domain.Types.Person
       Domain.Types.Plan
       Domain.Types.PlanTranslation
@@ -567,6 +569,7 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      Beckn.OnDemand.Transformer.RideAssigned
       Beckn.OnDemand.Transformer.Search
   other-modules:
       Paths_dynamic_offer_driver_app
