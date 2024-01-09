@@ -219,18 +219,21 @@ public class MobilityAppBridge extends HyperBridge {
 
                             SharedPreferences sharedPref = bridgeComponents.getContext().getSharedPreferences(bridgeComponents.getContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
                             sharedPref.edit().putString("REFERRER_URL", referrerUrl).apply();
-                            firebaseLogEvent("REFERRER_URL:" + referrerUrl);
+                            firebaseLogEvent("referrer_url_" + referrerUrl);
 
                         } catch (RemoteException e) {
                             Log.d(REFERRER, "error occurred in fetching referrer info");
+                            firebaseLogEvent("referrer_url_error_occurred_in_fetching_referrer_info");
                             e.printStackTrace();
                         }
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.FEATURE_NOT_SUPPORTED:
                         Log.i(REFERRER, "Feature not supported");
+                        firebaseLogEvent("referrer_url_feature_not_supported");
                         break;
                     case InstallReferrerClient.InstallReferrerResponse.SERVICE_UNAVAILABLE:
                         Log.i(REFERRER, "Service unavailable");
+                        firebaseLogEvent("referrer_url_service_unavailable");
                         break;
                 }
             }

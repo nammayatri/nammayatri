@@ -225,7 +225,8 @@ type Features = {
   enableReferral :: Boolean,
   enableSupport :: Boolean,
   enableShareApp:: Boolean,
-  enableReAllocation :: Boolean
+  enableReAllocation :: Boolean,
+  forceLogReferrerUrl :: Boolean
   }
 
 type RideCompletedCardConfig = {

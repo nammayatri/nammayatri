@@ -192,7 +192,6 @@ public class RideRequestUtils {
         mBuilder.setContentTitle(context.getString(R.string.new_ride_req))
                 .setContentText(context.getString(R.string.new_ride_available_for_offering))
                 .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap"))
-                .setColor(rgb(253, 197, 44))
                 .setAutoCancel(true)
                 .setVibrate(vibrationPattern)
                 .setSound(null)

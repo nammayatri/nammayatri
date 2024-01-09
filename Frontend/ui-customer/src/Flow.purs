@@ -282,12 +282,13 @@ enterMobileNumberScreenFlow = do
   config <- getAppConfigFlowBT appConfig
   hideLoaderFlow -- Removed initial choose langauge screen
   if( any (_ == getValueToLocalStore LANGUAGE_KEY) ["__failed", "(null)"]) then setValueToLocalStore LANGUAGE_KEY $ config.defaultLanguage else pure unit
-  if ( any (_ == getValueToLocalStore REGISTERATION_TOKEN) ["__failed", "(null)"]) && ( any (_ == getValueToLocalStore REFERRER_URL) ["__failed", "(null)"]) then do
+  logField_ <- lift $ lift $ getLogFields
+  if config.feature.forceLogReferrerUrl || ( any (_ == getValueToLocalStore REGISTERATION_TOKEN) ["__failed", "(null)"]) && ( any (_ == getValueToLocalStore REFERRER_URL) ["__failed", "(null)"]) then do
     _ <- pure $ extractReferrerUrl unit
+    _ <- lift $ lift $ liftFlow $ logEvent logField_ $ "referrer_url_inside_pure_script_" <> getValueToLocalStore REFERRER_URL
     pure unit
   else pure unit
   void $ lift $ lift $ toggleLoader false
-  logField_ <- lift $ lift $ getLogFields
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_enter_mob_num_scn_view"
   flow <- UI.enterMobileNumberScreen
   case flow of
