@@ -33,7 +33,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode)
 import Language.Strings (getString)
 import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
@@ -44,7 +44,7 @@ import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margi
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..))
+import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -1200,11 +1200,11 @@ configurations =
               , paddingOTP : Padding 11 0 11 7
               }
 
-getVehicleImage :: String -> String -> Maybe String -> String
+getVehicleImage :: String -> String -> City -> String
 getVehicleImage variant vehicleDetail city = do
   let details = (toLower vehicleDetail)
   fetchImage FF_ASSET $ 
-    if variant == "AUTO_RICKSHAW" then maybe "ic_auto_rickshaw" mkVehicleImage city
+    if variant == "AUTO_RICKSHAW" then mkVehicleImage city
     else
       if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
       else 
@@ -1214,9 +1214,9 @@ getVehicleImage variant vehicleDetail city = do
                           _     -> "ny_ic_sedan_concept"
           _          -> "ic_white_taxi"
     where 
-      mkVehicleImage :: String -> String
-      mkVehicleImage cityCode = 
-        if cityCode == "std:040" then "ic_auto_rickshaw_black_yellow"
+      mkVehicleImage :: City -> String
+      mkVehicleImage city = 
+        if city == Hyderabad then "ic_auto_rickshaw_black_yellow"
           else "ic_auto_rickshaw"
 
 getAnimationDelay :: LazyCheck -> Int

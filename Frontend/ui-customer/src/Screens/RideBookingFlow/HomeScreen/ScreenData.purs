@@ -20,7 +20,7 @@ import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe (Maybe(..))
-import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), SheetState(..), Trip(..))
+import Screens.Types (Contact, DriverInfoCard, HomeScreenState, LocationListItemState, PopupType(..), RatingCard(..), SearchLocationModelType(..), Stage(..), Address, EmergencyHelpModelState,Location, ZoneType(..), SpecialTags, TipViewStage(..), SearchResultType(..), Trip(..), City(..), SheetState(..))
 import Services.API (DriverOfferAPIEntity(..), QuoteAPIDetails(..), QuoteAPIEntity(..), PlaceName(..), LatLong(..), SpecialLocation(..), QuoteAPIContents(..), RideBookingRes(..), RideBookingAPIDetails(..), RideBookingDetails(..), FareRange(..), FareBreakupAPIEntity(..))
 import Prelude (($) ,negate)
 import Data.Array (head)
@@ -28,7 +28,7 @@ import Prelude(negate)
 import Foreign.Object (empty)
 import ConfigProvider
 import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
-import PrestoDOM (BottomSheetState(..))
+import PrestoDOM (BottomSheetState(..), Margin(..))
 import Data.Map as Map 
 
 initData :: HomeScreenState
@@ -112,6 +112,7 @@ initData = {
       , searchResultType : CV.ESTIMATES
       , isBookingOption : false
       , pickUpCharges : 0
+      , layoutMargin : Margin 0 0 0 0
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -264,7 +265,7 @@ initData = {
     , isNotificationExpanded : false
     , bottomSheetState : STATE_COLLAPSED
     , removeNotification : true
-    , city : Nothing
+    , city : AnyCity
     , isRepeatRide : false
     , currSlideIndex : 0.0
     , suggestionsListExpanded : false

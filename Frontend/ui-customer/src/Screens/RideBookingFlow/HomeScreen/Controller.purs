@@ -112,7 +112,7 @@ import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
 import Timers (clearTimerWithId)
-import Mobility.Prelude (boolToInt)
+import Mobility.Prelude (boolToInt, toBool)
 import SuggestionUtils
 
 instance showAction :: Show Action where
@@ -506,6 +506,9 @@ instance loggableAction :: Loggable Action where
     ChooseYourRideAction act -> case act of 
       ChooseYourRideController.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "no_action"
       ChooseYourRideController.ChooseVehicleAC arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "choose_vehicle"
+      ChooseYourRideController.RadioButtonClick arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "CheckBoxClick"
+      ChooseYourRideController.OnIconClick arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnIconClick"
+      ChooseYourRideController.PreferencesDropDown -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "preferences_drop_down"
       ChooseYourRideController.PrimaryButtonActionController act -> case act of
         PrimaryButtonController.OnClick -> trackAppActionClick appId (getScreen HOME_SCREEN) "choose_your_ride_action" "primary_button"
         PrimaryButtonController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "choose_your_ride_action" "primary_button_no_action"
@@ -684,7 +687,11 @@ instance loggableAction :: Loggable Action where
     UpdateRepeatTrips arg1 -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "update_repeat_trips"
     RemoveShimmer -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "remove_shimmer"
     ReportIssueClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "report_issue_click"
-
+    ChooseSingleVehicleAction act -> case act of 
+          ChooseVehicleController.NoAction -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "no_action"
+          ChooseVehicleController.ShowRateCard arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "ShowRateCard"
+          ChooseVehicleController.OnImageClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnImageClick" 
+          ChooseVehicleController.OnSelect arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnSelect"
 
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
@@ -877,8 +884,23 @@ data Action = NoAction
             | UpdateRepeatTrips RideBookingListRes 
             | RemoveShimmer 
             | ReportIssueClick
+            | ChooseSingleVehicleAction ChooseVehicleController.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
+
+eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
+  continue state 
+    { props 
+      { showRateCard = true }
+    , data 
+      { rateCard 
+        { onFirstPage = false
+        , vehicleVariant = config.vehicleVariant
+        , currentRateCardType = DefaultRateCard
+        , pickUpCharges = config.pickUpCharges
+        }
+      }
+    }
 
 eval ShowMoreSuggestions state = continue state { props {suggestionsListExpanded = not state.props.suggestionsListExpanded} }
 
@@ -2091,10 +2113,7 @@ eval (StartLocationTracking item) state = do
 eval (GetEstimates (GetQuotesRes quotesRes)) state = do
   case null quotesRes.quotes of
     false -> specialZoneFlow quotesRes.quotes state
-    true -> case (getMerchant FunctionCall) of
-      YATRI -> estimatesListFlow quotesRes.estimates state
-      YATRISATHI -> estimatesListFlow quotesRes.estimates state
-      _ -> estimatesFlow quotesRes.estimates state
+    true -> estimatesListFlow quotesRes.estimates state 
 
 
 eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
@@ -2364,6 +2383,17 @@ eval MapReadyAction state = continueWithCmd state [ do
                     else CheckAndAskNotificationPermission
       pure action
     ]
+
+eval (ChooseYourRideAction( ChooseYourRideController.RadioButtonClick autoAssign)) state = 
+  continueWithCmd state [ do
+    pure (CheckBoxClick autoAssign)
+  ]
+  
+eval (ChooseYourRideAction (ChooseYourRideController.OnIconClick autoAssign)) state = 
+  continue state { props {showMultipleRideInfo = not autoAssign}}
+
+eval (ChooseYourRideAction ChooseYourRideController.PreferencesDropDown) state = do
+  continue state { data { showPreferences = not state.data.showPreferences}}
 
 eval CheckAndAskNotificationPermission state = do 
   _ <- pure $ checkAndAskNotificationPermission false
@@ -2671,50 +2701,6 @@ isTipEnabled state = do
                     "AUTO_RICKSHAW" -> tipConfig.auto
                     _ -> tipConfig.cabs
 
-estimatesFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-estimatesFlow estimatedQuotes state = do
-  let estimatesInfo = getEstimatesInfo estimatedQuotes "AUTO_RICKSHAW" state
-      _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_estimate"
-  void $ pure $ setSelectedEstimatesObject estimatesInfo.defaultQuote
-  if not (null estimatesInfo.estimatedVarient) && isLocalStageOn FindingEstimate then do
-    let lang = getValueToLocalStore LANGUAGE_KEY
-    exit
-      $ SelectEstimate
-          state
-            { data  { suggestedAmount = estimatesInfo.estimatedPrice,
-                      currentSearchResultType = ESTIMATES,
-                      rateCard =  { additionalFare: estimatesInfo.additionalFare
-                                  , nightShiftMultiplier: estimatesInfo.nightShiftMultiplier
-                                  , nightCharges: estimatesInfo.nightCharges
-                                  , currentRateCardType: DefaultRateCard
-                                  , onFirstPage: false
-                                  , baseFare: estimatesInfo.baseFare, extraFare: estimatesInfo.extraFare, pickUpCharges: estimatesInfo.pickUpCharges
-                                  , vehicleVariant : estimatesInfo.defaultQuote.vehicleVariant
-                                  }
-                                  ,
-                      selectedEstimatesObject = estimatesInfo.defaultQuote
-                      }
-            , props { estimateId = estimatesInfo.estimateId, currentStage = SettingPrice, showRateCardIcon = estimatesInfo.showRateCardIcon, zoneType = estimatesInfo.zoneType, specialZoneType = ""}
-            }
-  else do
-    _ <- pure $ hideKeyboardOnNavigation true
-    _ <- pure $ if (null estimatesInfo.estimatedVarient) then toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN) else unit
-    let lang = getValueToLocalStore LANGUAGE_KEY
-    continue
-      state
-        { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true, showRateCardIcon = estimatesInfo.showRateCardIcon }
-        , data { currentSearchResultType = ESTIMATES, rateCard = { additionalFare: estimatesInfo.additionalFare
-                            , nightShiftMultiplier: estimatesInfo.nightShiftMultiplier
-                            , nightCharges: estimatesInfo.nightCharges
-                            , currentRateCardType: DefaultRateCard
-                            , onFirstPage: false
-                            , baseFare: estimatesInfo.baseFare, extraFare: estimatesInfo.extraFare, pickUpCharges: estimatesInfo.pickUpCharges
-                            , vehicleVariant : ""
-                            }
-                , selectedEstimatesObject = estimatesInfo.defaultQuote
-                }
-        }
-
 specialZoneFlow :: Array OfferRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 specialZoneFlow estimatedQuotes state = do
   let quoteList = getSpecialZoneQuotes estimatedQuotes state.data.config.estimateAndQuoteConfig
@@ -2740,7 +2726,28 @@ estimatesListFlow estimates state = do
         nearByDrivers = getNearByDrivers estimates
         nearByDriversLength = length nearByDrivers
     _ <- pure $ updateLocalStage SettingPrice
-    continue state { data {specialZoneQuoteList = estimatesInfo.quoteList, currentSearchResultType = ESTIMATES, rateCard {vehicleVariant = estimatesInfo.defaultQuote.vehicleVariant, nightShiftMultiplier= estimatesInfo.nightShiftMultiplier, nightCharges= estimatesInfo.nightCharges}, selectedEstimatesObject = estimatesInfo.defaultQuote, pickUpCharges = estimatesInfo.pickUpCharges, nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing}, props {currentStage = SettingPrice, estimateId = estimatesInfo.defaultQuote.id}}
+    exit $ SelectEstimate state 
+      { data
+        { specialZoneQuoteList = estimatesInfo.quoteList
+        , currentSearchResultType = ESTIMATES
+        , rateCard
+          { vehicleVariant = estimatesInfo.defaultQuote.vehicleVariant
+          , nightShiftMultiplier = estimatesInfo.nightShiftMultiplier
+          , nightCharges = estimatesInfo.nightCharges
+          , baseFare = estimatesInfo.baseFare
+          , extraFare = estimatesInfo.extraFare
+          , pickUpCharges = estimatesInfo.pickUpCharges
+          , additionalFare = estimatesInfo.additionalFare
+          }
+        , selectedEstimatesObject = estimatesInfo.defaultQuote
+        , pickUpCharges = estimatesInfo.pickUpCharges
+        , nearByDrivers = if nearByDriversLength > 0 then Just nearByDriversLength else Nothing
+        }
+      , props
+        { currentStage = SettingPrice
+        , estimateId = estimatesInfo.defaultQuote.id
+        }
+      }
   else do
     _ <- pure $ hideKeyboardOnNavigation true
     _ <- pure $ updateLocalStage SearchLocationModel

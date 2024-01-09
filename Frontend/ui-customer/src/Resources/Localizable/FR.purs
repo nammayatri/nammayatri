@@ -702,3 +702,4 @@ getFR stringKey =
         WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "Nous ne sommes pas encore en ligne dans votre région ! \nVous pouvez accéder à l'historique des courses et à d'autres \nparamètres à partir du menu en haut à gauche."
         FACING_PROBLEM_WITH_APP -> "Vous rencontrez des problèmes avec l'application ?"
         TAP_HERE_TO_REPORT -> "<u>Appuyez ici pour signaler un problème</u>"
+        CONFIRM_YOUR_RIDE  -> "Confirmez votre trajet"
