@@ -28,7 +28,7 @@ import Effect.Exception (error)
 import Effect.Ref (new)
 import Engineering.Helpers.Commons (flowRunner, getWindowVariable, liftFlow)
 import Flow as Flow
-import Helpers.Version
+import Engineering.Helpers.Version
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Generic (decode)
 import JBridge as JBridge

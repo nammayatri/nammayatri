@@ -29,8 +29,8 @@ import Data.Maybe (Maybe(..))
 import PrestoDOM.Core (terminateUI)
 
 
-handleAppUpdatePopUp :: FlowBT String APP_UPDATE_POPUP
-handleAppUpdatePopUp  = do
+showPopUpOverlay :: FlowBT String APP_UPDATE_POPUP
+showPopUpOverlay  = do
   (GlobalState state) ← getState
   _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing
   act <- lift $ lift $ showScreenWithNameSpace ( AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen)

@@ -50,7 +50,7 @@ import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenTyp
 import Screens.Types as ST
 import Services.API (GetDriverInfoResp(..), Vehicle(..), DriverProfileSummaryRes(..))
 import Services.API as SA
-import Services.Accessor (_vehicleColor, _vehicleModel, _certificateNumber)
+import Accessor (_vehicleColor, _vehicleModel, _certificateNumber)
 import Services.Backend (dummyVehicleObject)
 import Services.Config (getSupportNumber)
 import Storage (setValueToLocalNativeStore, KeyStore(..), getValueToLocalStore)

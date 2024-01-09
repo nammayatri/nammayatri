@@ -14,6 +14,7 @@
 -}
 module Common.Types.Config where
 
+import Data.Maybe
 
 type CommonAppConfig = (
     colors :: Colors
@@ -31,7 +32,8 @@ type CommonAppConfig = (
   , privacyLink :: String
   , dashboard :: DashboardConfig
   , logFunctionCalls :: Boolean
-  , defaultLanguage :: String)
+  , defaultLanguage :: String
+  , appUpdate :: Maybe AppVersion)
   
 type Colors = {
   black800 :: String
@@ -98,4 +100,15 @@ type CityConfig = {
 type DashboardConfig = {
     url :: String
   , enable :: Boolean
+}
+
+type AppVersion = {
+    android :: Versions
+  , ios :: Versions
+}
+
+type Versions = {
+  min :: String
+, latest :: String
+, forceUpdate :: Boolean
 }

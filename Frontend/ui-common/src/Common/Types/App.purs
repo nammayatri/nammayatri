@@ -15,7 +15,7 @@
 
 module Common.Types.App where
 
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show, class Ord)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 import Data.Generic.Rep (class Generic)
@@ -24,6 +24,7 @@ import Data.Newtype (class Newtype)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
 import Data.Eq.Generic (genericEq)
+import Data.Ord.Generic (genericCompare)
 import Foreign (Foreign)
 import Presto.Core.Types.API (standardEncode,class StandardEncode)
 import Foreign.Generic (class Decode, class Encode)
@@ -184,6 +185,7 @@ instance showVersion :: Show Version where show = genericShow
 instance decodeVersion :: Decode Version where decode = defaultDecode
 instance encodeVersion  :: Encode Version where encode = defaultEncode
 instance eqVersion :: Eq Version where eq = genericEq
+instance ordVersion :: Ord Version where compare = genericCompare
 
 newtype EventPayload = EventPayload {
     event :: String

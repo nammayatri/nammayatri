@@ -20,7 +20,7 @@ import Animation.Config as AnimConfig
 import Prelude (Unit, bind, const, pure, unit, ($), (<>), (<<<), (==),(/=))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), onBackPressed, Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, width, visibility, afterRender, imageWithFallback)
 import Screens.Types as ST
-import Screens.Types (UpdatePopupType(..))
+import Screens.Types (PopupOverlayType(..))
 import Data.Maybe (Maybe(..))
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Effect (Effect)
@@ -70,7 +70,7 @@ view push state =
     , onBackPressed push (const $ BackPressed)
     , clickable true
   ]
-  [ if (state.updatePopup == AppVersion) then  updateRequiredView push state
+  [ if (state.updatePopup == AppUpdate) then  updateRequiredView push state
     else if (state.updatePopup == AppUpdated) then appUpdatedView push state
     else inaccurateDateAndTimeView push state 
   ] 

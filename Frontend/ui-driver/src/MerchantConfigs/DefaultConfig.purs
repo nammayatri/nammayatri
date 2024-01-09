@@ -2,6 +2,7 @@ module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
 import Common.DefaultConfig
+import Data.Maybe
 
 config :: AppConfig
 config =
@@ -264,4 +265,5 @@ config =
         auto : "10"
       }
   }
+  , appUpdate : Nothing
 }

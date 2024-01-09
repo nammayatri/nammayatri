@@ -13,11 +13,12 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Services.Accessor where
+module Accessor (module Reexport, module Accessor) where
 
 import Prelude
 import Data.Lens (Lens', lens)
 import Data.Newtype (class Newtype, unwrap, wrap)
+import Common.Accessor as Reexport
 
 _id :: forall a b c. Newtype a {id :: c | b} => Lens' a c
 _id = lens (unwrap >>> _.id) (\oldRec newVal -> wrap ((unwrap oldRec) {id = newVal}))

@@ -13,14 +13,14 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.AppUpdatePopUp.Controller where
+module PopUpOverlay.Controller where
 
 import Prelude (Unit, pure, unit, class Show, ($), bind, discard)
 
 import Effect (Effect)
 import PrestoDOM (Eval, Props, exit, continue)
 import PrestoDOM.Types.Core (class Loggable)
-import Screens.Types (AppUpdatePopUpState)
+import PopUpOverlay.Types
 import JBridge (firebaseLogEvent)
 import Log (trackAppActionClick, trackAppScreenRender, trackAppEndScreen)
 import Screens (getScreen, ScreenName(..))
@@ -50,7 +50,7 @@ data Action = OnCloseClick
             | AfterRender
             | AppUpdatedModelAction PopUpModal.Action
 
-eval :: Action -> AppUpdatePopUpState -> Eval Action ScreenOutput AppUpdatePopUpState
+eval :: Action -> PopUpOverlayState -> Eval Action ScreenOutput PopUpOverlayState
 eval OnCloseClick state = do
     exit Decline 
 eval OnAccept state = do 
@@ -61,5 +61,5 @@ eval (AppUpdatedModelAction (PopUpModal.OnButton2Click)) state = exit Accept
 eval AfterRender state = continue state
 eval _ state = continue state
 
-overrides :: String -> (Action -> Effect Unit) -> AppUpdatePopUpState -> Props (Effect Unit)
+overrides :: String -> (Action -> Effect Unit) -> PopUpOverlayState -> Props (Effect Unit)
 overrides _ push state = [] 

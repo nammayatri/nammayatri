@@ -2,6 +2,7 @@ module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
 import Common.DefaultConfig
+import Data.Maybe
 
 config :: AppConfig 
 config =
@@ -273,4 +274,5 @@ config =
   , textColor : "#454545"
   , stroke: "1,#E5E7EB"
   }
+  , appUpdate : Nothing
 }

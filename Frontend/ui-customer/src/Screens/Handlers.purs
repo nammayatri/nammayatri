@@ -18,7 +18,6 @@ module Screens.Handlers (module UI) where
 import Screens.AboutUsScreen.Handler (aboutUsScreen) as UI
 import Screens.AccountSetUpScreen.Handler (accountSetUpScreen) as UI
 import Screens.AddNewAddressScreen.Handler (addNewAddressScreen) as UI
-import Screens.AppUpdatePopUp.Handler (handleAppUpdatePopUp) as UI
 import Screens.ChooseLanguageScreen.Handler (chooseLanguageScreen) as UI
 import Screens.ContactUsScreen.Handler (contactUsScreen) as UI
 import Screens.EnterMobileNumberScreen.Handler (enterMobileNumberScreen) as UI

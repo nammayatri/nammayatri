@@ -17,7 +17,7 @@ module Screens.Handlers (module UI) where
 
 import Screens.AboutUsScreen.Handler (aboutUsScreen) as UI
 import Screens.AddVehicleDetailsScreen.Handler (addVehicleDetails) as UI
-import Screens.AppUpdatePopUpScreen.Handler (handleAppUpdatePopUp) as UI
+import Screens.AppUpdatePopUpScreen.Handler (showPopUpOverlay) as UI
 import Screens.ApplicationStatusScreen.Handler (applicationStatus) as UI
 import Screens.BankDetailScreen.Handler (bankDetail) as UI
 import Screens.ChooseLanguageScreen.Handler (chooseLanguage) as UI

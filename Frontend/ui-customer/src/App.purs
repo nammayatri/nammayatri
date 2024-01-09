@@ -41,8 +41,7 @@ import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.TicketBookingScreen.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketingScreen.ScreenData as TicketingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState ) 
-import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState ) 
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
 import Foreign (Foreign)
@@ -69,7 +68,6 @@ newtype GlobalState = GlobalState {
   , myProfileScreen :: MyProfileScreenState
   , savedLocationScreen :: SavedLocationScreenState
   , addNewAddressScreen :: AddNewAddressScreenState
-  , appUpdatePopUpScreen :: AppUpdatePopUpState
   , referralScreen :: ReferralScreenState
   , emergencyContactsScreen :: EmergencyContactsScreenState
   , welcomeScreen :: WelcomeScreenState
@@ -98,7 +96,6 @@ defaultGlobalState = GlobalState {
   , myProfileScreen : MyProfileScreenData.initData
   , savedLocationScreen : SavedLocationScreenData.initData
   , addNewAddressScreen : AddNewAddressScreenData.initData
-  , appUpdatePopUpScreen : AppUpdatePopUpScreenData.initData
   , referralScreen : ReferralScreenData.initData
   , emergencyContactsScreen : EmergencyContactsScreenData.initData
   , welcomeScreen : WelcomeScreenData.initData
@@ -231,6 +228,5 @@ data ScreenType =
   | TicketInfoScreenStateType (TicketInfoScreenState -> TicketInfoScreenState)
   | PermissionScreenStateType (PermissionScreenState -> PermissionScreenState)
   | AboutUsScreenStateType (AboutUsScreenState -> AboutUsScreenState)
-  | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)
   | AppConfigType (Maybe AppConfig -> Maybe AppConfig)
   | TicketingScreenStateType (TicketingScreenState -> TicketingScreenState)

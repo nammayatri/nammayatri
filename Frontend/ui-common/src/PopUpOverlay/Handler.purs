@@ -13,12 +13,13 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.AppUpdatePopUp.Handler where
+module PopUpOverlay.Handler where
 
-import Prelude (bind, pure, ($), (<$>))
+import Prelude (Unit, bind, discard, pure, unit, ($), (<$>))
 import Presto.Core.Types.Language.Flow (doAff)
-import Screens.AppUpdatePopUp.Controller as CD
-import Screens.AppUpdatePopUp.View as AppUpdatePopUpScreen
+import PopUpOverlay.Controller as CD
+import PopUpOverlay.View as PopUpOverlay
+import PopUpOverlay.ScreenData as PopUpOverlayScreenData
 import PrestoDOM.Core.Types.Language.Flow(runScreenWithNameSpace, initUIWithNameSpace)
 import Types.App (FlowBT, GlobalState(..), APP_UPDATE_POPUP(..))
 import Control.Monad.Except.Trans (lift)
@@ -29,13 +30,15 @@ import Data.Maybe (Maybe(..))
 import PrestoDOM.Core (terminateUI)
 import Presto.Core.Types.Language.Flow (getLogFields)
 
-handleAppUpdatePopUp :: FlowBT String APP_UPDATE_POPUP
-handleAppUpdatePopUp  = do
-  (GlobalState state) ← getState
+showPopUpOverlay :: (FlowBT String Unit) -> FlowBT String Unit
+showPopUpOverlay acceptFlow = do
+  let state = PopUpOverlayScreenData.initData
   logField_ <-lift $ lift $ getLogFields
-  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing 
-  act <- lift $ lift $ runScreenWithNameSpace ( AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen{logField = logField_})
-  _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "AppUpdatePopUpScreen"
+  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "PopUpOverlay" Nothing 
+  act <- lift $ lift $ runScreenWithNameSpace ( PopUpOverlay.screen state{logField = logField_})
+  _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "PopUpOverlay"
   case act of
-    CD.Accept -> App.BackT $ App.NoBack <$> pure UpdateNow
-    CD.Decline -> App.BackT $ App.BackPoint <$> pure Later
+    CD.Accept -> do 
+      acceptFlow
+      showPopUpOverlay acceptFlow
+    CD.Decline -> pure unit

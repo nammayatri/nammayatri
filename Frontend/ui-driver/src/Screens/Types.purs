@@ -1458,7 +1458,7 @@ type DriverRideRatingScreenProps = {
 
 type AppUpdatePopUpScreenState = {
   version :: Int
-  , updatePopup :: UpdatePopupType
+  , updatePopup :: PopupOverlayType
   , appUpdatedView :: AppUpdatedViewState
 }
 
@@ -1469,14 +1469,14 @@ type AppUpdatedViewState = {
   coverImageUrl :: String
 }
 
-data UpdatePopupType =  AppVersion
+data PopupOverlayType =  AppUpdate
                       | DateAndTime
-                      | NoUpdatePopup
+                      | NoUpdate
                       | AppUpdated
 
-derive instance genericUpdatePopupType :: Generic UpdatePopupType _
-instance showUpdatePopupType :: Show UpdatePopupType where show = genericShow
-instance eqUpdatePopupType :: Eq UpdatePopupType where eq = genericEq
+derive instance genericUpdatePopupType :: Generic PopupOverlayType _
+instance showUpdatePopupType :: Show PopupOverlayType where show = genericShow
+instance eqUpdatePopupType :: Eq PopupOverlayType where eq = genericEq
 
 data FeedbackSuggestions
  = CUSTOMER_RUDE_BEHAVIOUR

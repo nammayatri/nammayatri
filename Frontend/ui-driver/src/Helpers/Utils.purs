@@ -72,7 +72,7 @@ import Data.Newtype (class Newtype)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig)
 import Storage (KeyStore) 
-import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer)
+import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer, hideLoader)
 import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -95,7 +95,6 @@ foreign import shuffle :: forall a. Array a -> Array a
 foreign import generateUniqueId :: Unit -> String
 foreign import storeCallBackTime :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action)  -> Effect Unit
 foreign import getTime :: Unit -> Int
-foreign import hideSplash :: Effect Unit
 foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
 foreign import differenceBetweenTwoUTC :: String -> String -> Int
@@ -198,6 +197,9 @@ otpRule =
   otp : "\\d{4}",
   group : Nothing
 }
+
+hideSplash :: Effect Unit
+hideSplash = hideLoader
 
 startOtpReciever :: forall action. (String -> action) -> (action -> Effect Unit) -> Effect (Effect Unit)
 startOtpReciever action push = do

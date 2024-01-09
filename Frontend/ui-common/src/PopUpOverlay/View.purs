@@ -13,15 +13,13 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.AppUpdatePopUp.View where
+module PopUpOverlay.View where
 
 import Animation as Anim
-import Animation.Config (translateYAnimConfigUpdate)
 import Prelude (Unit, bind, const, pure, unit, ($), (<>), (==),(/=),(<<<))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, ScopedScreen, Visibility(..), onBackPressed, alpha, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, width, afterRender)
-import Screens.Types (AppUpdatePopUpState)
+import PopUpOverlay.Types
 import Components.PopUpModal as PopUpModal
-import Screens.Types (UpdatePopupType(..))
 import Data.Maybe (Maybe(..))
 import Effect (Effect)
 import JBridge as JB 
@@ -30,7 +28,7 @@ import Language.Types (STR(..))
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP 
 import Engineering.Helpers.Commons as EHC 
-import Screens.AppUpdatePopUp.Controller (Action(..), eval, ScreenOutput)
+import PopUpOverlay.Controller (Action(..), eval, ScreenOutput)
 import Styles.Colors as Color
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -39,31 +37,32 @@ import MerchantConfig.Utils(Merchant(..), getMerchant)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Common.Types.App (LazyCheck(..))
+import Common.Animation.Config
 
 
-screen :: AppUpdatePopUpState -> ScopedScreen Action AppUpdatePopUpState ScreenOutput
+screen :: PopUpOverlayState -> ScopedScreen Action PopUpOverlayState ScreenOutput
 screen initialState =
   { initialState
   , view
-  , parent : Just "AppUpdatePopUpScreen"
-  , name : "PopUpScreen"
+  , parent : Just "PopUpOverlay"
+  , name : "PopUpOverlay"
   , globalEvents : []
   , eval
   }
   
-view :: forall w .  (Action  -> Effect Unit) -> AppUpdatePopUpState -> PrestoDOM (Effect Unit) w
+view :: forall w .  (Action  -> Effect Unit) -> PopUpOverlayState -> PrestoDOM (Effect Unit) w
 view push state =
    linearLayout
   [ height MATCH_PARENT
     , width MATCH_PARENT
     , clickable true
   ]
-  [ if (state.updatePopup == AppVersion) then  updateRequiredView push state
+  [ if (state.updatePopup == AppUpdate) then  updateRequiredView push state
     else if (state.updatePopup == AppUpdated) then appUpdatedView push state
     else linearLayout[][] 
   ]
    
-updateRequiredView :: forall w .  (Action  -> Effect Unit) -> AppUpdatePopUpState -> PrestoDOM (Effect Unit) w
+updateRequiredView :: forall w .  (Action  -> Effect Unit) -> PopUpOverlayState -> PrestoDOM (Effect Unit) w
 updateRequiredView push state =   
    linearLayout [
     width MATCH_PARENT
@@ -169,7 +168,7 @@ updateRequiredView push state =
   ]
 
 
-appUpdatedView :: forall w. (Action  -> Effect Unit) -> AppUpdatePopUpState -> PrestoDOM (Effect Unit) w
+appUpdatedView :: forall w. (Action  -> Effect Unit) -> PopUpOverlayState -> PrestoDOM (Effect Unit) w
 appUpdatedView push state = 
   linearLayout [
     width MATCH_PARENT
@@ -185,7 +184,7 @@ appUpdatedView push state =
     ] $ PopUpModal.view (push <<< AppUpdatedModelAction) (appUpdatedModelConfig state) 
   ]
 
-appUpdatedModelConfig :: AppUpdatePopUpState -> PopUpModal.Config
+appUpdatedModelConfig :: PopUpOverlayState -> PopUpModal.Config
 appUpdatedModelConfig state =
   let
     config' = PopUpModal.config
@@ -217,3 +216,10 @@ appUpdatedModelConfig state =
     }
   }
   in popUpConfig'
+
+
+translateYAnimConfigUpdate :: AnimConfig
+translateYAnimConfigUpdate = animConfig {
+ fromY = (300)
+, toY = 0
+}

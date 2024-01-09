@@ -57,12 +57,6 @@ translateYAnimConfig = animConfig {
 , toY = 0
 }
 
-translateYAnimConfigUpdate :: Common.AnimConfig
-translateYAnimConfigUpdate = animConfig {
- fromY = (300)
-, toY = 0
-}
-
 translateYAnimHomeConfig :: Direction -> Common.AnimConfig
 translateYAnimHomeConfig direction = animConfig {
   duration = 1000
