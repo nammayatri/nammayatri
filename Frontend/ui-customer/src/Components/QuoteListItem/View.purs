@@ -19,7 +19,7 @@ import Common.Types.App
 
 import Animation (translateInXForwardAnim)
 import Common.Types.App (LazyCheck(..))
-import Components.QuoteListItem.Controller (Action(..), QuoteListItemState)
+import Components.QuoteListItem.Controller (Action(..))
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -44,6 +44,7 @@ import Types.App (defaultGlobalState)
 import Timers
 import Debug
 import Engineering.Helpers.Commons (liftFlow)
+import Screens.Types (QuoteListItemState(..), City(..))
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -125,7 +126,7 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback $ fetchImage FF_ASSET $ if state.city == Just "std:040" then "ny_ic_black_yellow_auto_quote_list" else "ny_ic_auto_quote_list"
+        , imageWithFallback $ fetchImage FF_ASSET $ if state.city == Hyderabad then "ny_ic_black_yellow_auto_quote_list" else "ny_ic_auto_quote_list"
         , weight 1.0
         ]
       ]

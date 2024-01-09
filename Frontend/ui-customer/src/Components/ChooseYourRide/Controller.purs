@@ -10,6 +10,10 @@ data Action
   = NoAction
   | ChooseVehicleAC ChooseVehicleController.Action
   | PrimaryButtonActionController PrimaryButtonController.Action
+  | PreferencesDropDown
+  | RadioButtonClick Boolean
+  | OnIconClick Boolean
+
 
 type Config
   = { rideDistance :: String
@@ -18,6 +22,9 @@ type Config
     , quoteList :: Array ChooseVehicleController.Config
     , showTollExtraCharges :: Boolean
     , nearByDrivers :: Maybe Int
+    , showPreferences :: Boolean
+    , bookingPreferenceEnabled :: Boolean
+    , flowWithoutOffers :: Boolean
     }
 
 config :: Config
@@ -28,4 +35,7 @@ config =
   , quoteList: []
   , showTollExtraCharges : (getAppConfig appConfig).searchLocationConfig.showAdditionalChargesText
   , nearByDrivers : Nothing
+  , showPreferences : false
+  , bookingPreferenceEnabled : false
+  , flowWithoutOffers : false
   }

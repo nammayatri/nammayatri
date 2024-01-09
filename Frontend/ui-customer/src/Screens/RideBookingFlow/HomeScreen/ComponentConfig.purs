@@ -57,7 +57,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Foreign.Class (class Encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseFloat, getCityNameFromCode)
 import Helpers.Utils as HU
 import JBridge as JB
 import Language.Types (STR(..))
@@ -65,7 +65,7 @@ import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps)
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..))
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
@@ -726,8 +726,8 @@ rateCardConfig :: ST.HomeScreenState -> RateCard.Config
 rateCardConfig state =
   let
     config' = RateCard.config
-    bangaloreCode = EHU.getCodeFromCity "Bangalore"
-    fareInfoText = maybe (mkFareInfoText bangaloreCode) (\city -> mkFareInfoText city) state.props.city
+    bangaloreCode = HU.getCityCodeFromCity Bangalore
+    fareInfoText =  mkFareInfoText state.props.city
     rateCardConfig' =
       config'
         { nightCharges = state.data.rateCard.nightCharges
@@ -774,12 +774,11 @@ rateCardConfig state =
     rateCardConfig'
   where 
 
-    mkFareInfoText :: String -> String
+    mkFareInfoText :: City -> String
     mkFareInfoText city = 
-      let city_array = map (\item -> EHU.getCodeFromCity item) [ "Bangalore", "Tumakuru" , "Mysore"]
-      in (if DA.any ( _ == city) city_array 
-            then (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT") 
-            else "")
+      if DA.any ( _ == city) [ Bangalore, Tumakuru , Mysore]
+        then (getString $ FARE_INFO_TEXT "FARE_INFO_TEXT") 
+        else ""
 
 
 
@@ -1109,6 +1108,17 @@ callSupportConfig state = let
   }
   in popUpConfig'
 
+confirmAndBookButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+confirmAndBookButtonConfig config = PrimaryButton.config
+  { textConfig
+    { text = (getString CONFIRM_AND_BOOK)
+    , color = Color.yellow900
+    , accessibilityHint = "Confirm And Book Button"
+    }
+  , id = "ConfirmAndBookButton"
+  , background = Color.black900
+  , margin = Margin 0 16 0 0
+  }
 
 zoneTimerExpiredConfig :: ST.HomeScreenState ->  PopUpModal.Config
 zoneTimerExpiredConfig state = let
@@ -1175,7 +1185,10 @@ chooseYourRideConfig state = ChooseYourRide.config
     rideDuration = state.data.rideDuration,
     quoteList = state.data.specialZoneQuoteList,
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
-    nearByDrivers = state.data.nearByDrivers
+    nearByDrivers = state.data.nearByDrivers,
+    showPreferences = state.data.showPreferences,
+    bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference,
+    flowWithoutOffers = state.props.flowWithoutOffers
   }
 
 
@@ -1293,13 +1306,13 @@ sourceToDestinationConfig state = let
   sourceToDestinationConfig' = config
     { sourceImageConfig {
         imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_source_dot"
-      , margin = (MarginTop 3)
-      , width = V 20
-      , height = V 20
+      , margin = MarginTop 3
+      , width = V 18
+      , height = V 18
       }
     , sourceTextConfig {
-        text = state.data.source
-      , padding = (Padding 2 0 2 2)
+        text = getTripTitle state.data.source
+      , padding = Padding 2 0 2 2
       , margin = MarginHorizontal 12 15
       , color = Color.black800
       , ellipsize = true
@@ -1307,26 +1320,34 @@ sourceToDestinationConfig state = let
       , textStyle = Body1
       }
     , rideStartedAtConfig {
-        text = ""
+        text = getTripSubTitle state.data.source
       , color = Color.black700
-      , visibility = GONE
-      , padding = (Padding 2 0 2 2)
+      , visibility = VISIBLE
+      , padding = Padding 2 0 2 2
       , margin = MarginHorizontal 12 15
       , maxLines = 1
       , ellipsize = true
     }
+    , rideEndedAtConfig {
+      text = getTripSubTitle state.data.destination
+    , color = Color.black700
+    , visibility = VISIBLE
+    , padding = Padding 2 0 2 2
+    , margin = MarginHorizontal 12 15
+    , maxLines = 1
+    , ellipsize = true
+    }
     , destinationImageConfig {
         imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_destination"
-      , margin = (MarginTop 3)
+      , margin = MarginTop 3
       , width = V 20
-      , height = V 20
+      , height = V 23
       }
-    , destinationBackground = Color.blue600
     , destinationTextConfig {
-        text = state.data.destination
-      , padding = (Padding 2 0 2 2)
+        text = getTripTitle state.data.destination
+      , padding = Padding 2 0 2 2
       , margin = MarginHorizontal 12 15
-      , color = Color.greyDavy
+      , color = Color.black800
       , ellipsize = true
       , maxLines = 1
       , textStyle = Body1
@@ -1334,11 +1355,45 @@ sourceToDestinationConfig state = let
     , horizontalSeperatorConfig {
         visibility = VISIBLE
       , background = Color.grey900
-      , padding = (Padding 2 0 2 2)
-      , margin = (Margin 12 18 15 0)
+      , padding = Padding 2 0 2 2
+      , margin = Margin 12 12 15 9
       }
     }
   in sourceToDestinationConfig'
+  where
+    getTripTitle :: String -> String
+    getTripTitle destination = 
+      maybe "" identity $ DA.head $ DS.split (DS.Pattern ",") destination
+
+    getTripSubTitle :: String -> String
+    getTripSubTitle destination = 
+      (DS.drop ((fromMaybe 0 (DS.indexOf (DS.Pattern ",") (destination))) + 2) (destination))
+
+chooseVehicleConfig :: ST.HomeScreenState -> ChooseVehicle.Config
+chooseVehicleConfig state = let
+  config = ChooseVehicle.config
+  selectedEstimates = state.data.selectedEstimatesObject
+  chooseVehicleConfig' = config
+    { vehicleImage = "ny_ic_auto_quote_list"
+    , isSelected = true
+    , vehicleVariant = selectedEstimates.vehicleVariant
+    , vehicleType = selectedEstimates.vehicleType
+    , capacity = selectedEstimates.capacity
+    , price = selectedEstimates.price
+    , isCheckBox = false
+    , isEnabled = true
+    , index = 1
+    , activeIndex = 1
+    , id = selectedEstimates.id
+    , maxPrice = selectedEstimates.maxPrice
+    , basePrice = selectedEstimates.basePrice
+    , showInfo = selectedEstimates.showInfo
+    , searchResultType = selectedEstimates.searchResultType
+    , isBookingOption = false
+    , pickUpCharges = selectedEstimates.pickUpCharges 
+    , layoutMargin = Margin 0 0 0 0
+    }
+  in chooseVehicleConfig'
 
 rideCompletedCardConfig :: ST.HomeScreenState -> RideCompletedCard.Config 
 rideCompletedCardConfig state = 

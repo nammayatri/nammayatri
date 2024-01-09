@@ -254,6 +254,33 @@ window.getMerchantConfig = function () {
       , "enableOnlyAuto" : false
       , "showNearByDrivers": true
       , "enableBookingPreference" : false
+      , "showInfoIcon" : false
+      , "variantInfo" : {
+          "hatchback" : {
+            "name" : "AC Cab",
+            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png"
+          },
+          "taxiPlus" : {
+            "name" : "AC Cab",
+            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png"
+          },
+          "sedan" : {
+            "name" : "AC Cab",
+            "image" : "ny_ic_sedan_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_sedan_ac_side.png"
+          },
+          "taxi" : {
+            "name" : "Non AC Taxi",
+            "image" : "ny_ic_taxi_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_taxi_side.png"
+          },
+          "suv" : {
+            "name" : "SUV",
+            "image" : "ny_ic_suv_ac_side,https://assets.juspay.in/beckn/jatrisaathi/jatrisaathicommon/images/ny_ic_suv_ac_side.png"
+          },
+          "autoRickshaw" : {
+            "name" : "Auto Rickshaw",
+            "image" : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+          }
+        }
       }
     , "dashboard" : {
       "enable" : false

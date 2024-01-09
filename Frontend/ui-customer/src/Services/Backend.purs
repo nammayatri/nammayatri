@@ -40,8 +40,8 @@ import Log (printLog)
 import ModifyScreenState (modifyScreenState)
 import Prelude (Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
-import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
-import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, PeopleCategoriesRespData)
+import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS) 
+import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, City(..), PeopleCategoriesRespData)
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker (trackApiCallFlow, trackExceptionFlow)
@@ -734,27 +734,25 @@ type Markers = {
 data TrackingType = RIDE_TRACKING | DRIVER_TRACKING
 
 
-getRouteMarkers :: String -> Maybe String -> TrackingType -> Markers
+getRouteMarkers :: String -> City -> TrackingType -> Markers
 getRouteMarkers variant city trackingType = 
   { srcMarker : mkSrcMarker ,
     destMarker : mkDestMarker 
   }
   where 
     mkSrcMarker :: String 
-    mkSrcMarker =
-        maybe (getMarker variant) (getCitySpecificMarker ) city
+    mkSrcMarker = getCitySpecificMarker city
     
-    getCitySpecificMarker :: String -> String 
-    getCitySpecificMarker cityCode = 
-        if cityCode == "std:040" 
-            then "ny_ic_black_yellow_auto" 
-            else getMarker variant
+    getCitySpecificMarker :: City -> String
+    getCitySpecificMarker city = case city of
+        Hyderabad -> "ny_ic_black_yellow_auto"
+        _         -> getMarkerVariant variant
 
-    getMarker :: String -> String
-    getMarker variant = 
-        if variant == "AUTO_RICKSHAW" 
-            then "ic_auto_nav_on_map" 
-            else "ny_ic_vehicle_nav_on_map"
+    getMarkerVariant :: String -> String
+    getMarkerVariant variant =
+        case variant of
+            "AUTO_RICKSHAW" -> "ic_auto_nav_on_map"
+            _               -> "ny_ic_vehicle_nav_on_map"
     
     mkDestMarker :: String
     mkDestMarker = 

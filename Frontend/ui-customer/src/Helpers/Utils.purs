@@ -26,7 +26,7 @@ import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Pay
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
@@ -74,7 +74,7 @@ import Prelude (class Eq, class Ord, class Show, Unit, bind, compare, comparing,
 import Prelude (class EuclideanRing, Unit, bind, discard, identity, pure, unit, void, ($), (+), (<#>), (<*>), (<>), (*>), (>>>), ($>), (/=), (&&), (<=), show, (>=), (>), (<))
 import Presto.Core.Flow (Flow, doAff)
 import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
-import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent)
+import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location)
@@ -86,6 +86,7 @@ import Unsafe.Coerce (unsafeCoerce)
 import Data.Function.Uncurried (Fn1)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
+import Data.Tuple(Tuple(..) ,snd, fst)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -559,22 +560,17 @@ fetchDefaultPickupPoint locations lati longi =
 
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
-  let url = getAssetLink FunctionCall
-      commonUrl = getCommonAssetLink FunctionCall
-  in case getMerchant FunctionCall of
-        YATRISATHI -> case variant of
-                        "TAXI" -> "ny_ic_taxi_side," <> commonUrl <> "ny_ic_taxi_side.png"
-                        "SUV"  -> "ny_ic_suv_ac_side," <> commonUrl <> "ny_ic_suv_ac_side.png"
-                        _      -> "ny_ic_sedan_ac_side," <> commonUrl <> "ny_ic_sedan_ac_side.png"
-        _          -> case variant of
-                        "TAXI"          -> "ic_sedan,"<> url <>"ic_sedan.png"
-                        "TAXI_PLUS"     -> "ic_sedan_ac,"<> url <>"ic_sedan_ac.png"
-                        "SEDAN"         -> "ic_sedan,"<> url <>"ic_sedan.png"
-                        "SUV"           -> "ic_suv,"<> url <>"ic_suv.png"
-                        "HATCHBACK"     -> "ic_hatchback,"<> url <>"ic_hatchback.png"
-                        "AUTO_RICKSHAW" -> "ny_ic_auto_quote_list,"<> url <>"ic_auto_side_view.png"
-                        _               -> "ic_sedan_non_ac,"<> url <>"ic_sedan_non_ac.png"
-
+  let variantConfig = (getAppConfig appConfig).estimateAndQuoteConfig.variantInfo
+  in 
+    case variant of
+      "TAXI"          ->  variantConfig.taxi.image 
+      "TAXI_PLUS"     -> variantConfig.taxiPlus.image
+      "SEDAN"         -> variantConfig.sedan.image
+      "SUV"           -> variantConfig.suv.image
+      "HATCHBACK"     -> variantConfig.hatchback.image
+      "AUTO_RICKSHAW" -> variantConfig.autoRickshaw.image
+      _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
+        
 getVariantRideType :: String -> String
 getVariantRideType variant =
   case getMerchant FunctionCall of
@@ -596,3 +592,34 @@ getTitleConfig vehicleVariant =
             text : text',
             color : color'
           }
+
+cityCodeMap :: Array (Tuple (Maybe String) City)
+cityCodeMap = 
+  [ Tuple (Just "std:080") Bangalore
+  , Tuple (Just "std:033") Kolkata
+  , Tuple (Just "std:001") Paris
+  , Tuple (Just "std:484") Kochi
+  , Tuple (Just "std:011") Delhi
+  , Tuple (Just "std:040") Hyderabad
+  , Tuple (Just "std:022") Mumbai
+  , Tuple (Just "std:044") Chennai
+  , Tuple (Just "std:0422") Coimbatore
+  , Tuple (Just "std:0413") Pondicherry
+  , Tuple (Just "std:08342") Goa
+  , Tuple (Just "std:020") Pune
+  , Tuple (Just "std:0821") Mysore
+  , Tuple (Just "std:0816") Tumakuru
+  , Tuple Nothing AnyCity
+  ]
+
+getCityNameFromCode :: Maybe String -> City
+getCityNameFromCode mbCityCode =
+  let 
+    cityCodeTuple = find (\ tuple -> (fst tuple) == mbCityCode) cityCodeMap
+  in maybe AnyCity (\tuple -> snd tuple) cityCodeTuple
+
+getCityCodeFromCity :: City -> Maybe String
+getCityCodeFromCity city =
+    let 
+      cityCodeTuple = find (\tuple -> (snd tuple) == city) cityCodeMap
+    in maybe Nothing (\tuple -> fst tuple) cityCodeTuple
