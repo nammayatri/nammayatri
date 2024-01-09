@@ -643,14 +643,14 @@ shortDistanceConfig state =
   in
     popUpConfig'
 
-sourceUnserviceableConfig :: ST.HomeScreenState -> ErrorModal.Config
-sourceUnserviceableConfig state =
+isMockLocationConfig :: ST.HomeScreenState -> ErrorModal.Config
+isMockLocationConfig state =
   let
     config = ErrorModal.config
     appConfig = state.data.config
     errorModalConfig' =
       config
-        { height = if appConfig.homeScreen.isServiceablePopupFullScreen && state.props.isMockLocation then MATCH_PARENT else WRAP_CONTENT
+        { height = MATCH_PARENT 
         , background = Color.white900
         , stroke = ("1," <> Color.borderGreyColor)
         , imageConfig

@@ -698,3 +698,7 @@ getBN stringKey =
         DISCOVER_AWESOME_SPOTS_TAILORED_JUST_FOR_YOU -> "আপনার জন্য কাস্টমাইজড স্পট আবিষ্কার করুন!"
         ONE_CLICK -> "1 ক্লিক"
         SMART -> "স্মার্ট"
+        NOT_SERVICEABLE -> "পরিষেবাযোগ্য নয়"
+        WE_ARE_NOT_LIVE_IN_YOUR_AREA -> "আমরা এখনও আপনার এলাকায় বাস করিনি! \nআপনি উপরে বাম দিকের মেনু থেকে রাইডের ইতিহাস এবং অন্যান্য \nসেটিংস অ্যাক্সেস করতে পারেন।"
+        FACING_PROBLEM_WITH_APP -> "অ্যাপটি নিয়ে সমস্যার সম্মুখীন হচ্ছেন?"
+        TAP_HERE_TO_REPORT -> "<u>সমস্যার প্রতিবেদন করতে এখানে আলতো চাপুন</u>"
