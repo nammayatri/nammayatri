@@ -437,6 +437,8 @@ data LatLon = LatLon String String String
 
 data Translation = Translation String
 
+-- data DatePicker = DatePicker String Int Int Int
+
 getCurrentLocation :: Number -> Number -> Number -> Number -> Int -> Boolean -> Boolean -> FlowBT String LatLon
 getCurrentLocation currentLat currentLon defaultLat defaultLon timeOut specialLocation shouldFallback = do
   (LatLon startRideCurrentLat startRideCurrentLong ts) <- (lift $ lift $ doAff $ makeAff \cb -> getCurrentPositionWithTimeout (cb <<< Right) LatLon timeOut shouldFallback $> nonCanceler)
@@ -459,6 +461,7 @@ getCurrentLocation currentLat currentLon defaultLat defaultLon timeOut specialLo
           Just lat, Just lon -> pure (LatLon lat lon lastKnownTs)
           _,_ -> pure (LatLon "0.0" "0.0" currentUtc)
         else pure (LatLon (show defaultLat) (show defaultLon) currentUtc)
+
 
 translateString :: String -> Int -> FlowBT String String 
 translateString toTranslate timeOut = do

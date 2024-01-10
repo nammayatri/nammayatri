@@ -1535,12 +1535,30 @@ public class MobilityCommonBridge extends HyperBridge {
             Log.e(DTUTILS, "Time picker called");
             TimePickerDialog timePickerDialog = new TimePickerDialog(bridgeComponents.getActivity(), (timePicker, hourOfDay, minute1) -> {
                 if (callback != null) {
-                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%d,%d);",
-                            callback, hourOfDay, minute1);
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
+                            callback, "SELECTED", hourOfDay, minute1);
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
             }, hour, minute, false);
+
+
+            timePickerDialog.setOnCancelListener(var1 -> {
+                if (callback != null) {
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
+                      callback, "CANCELLED", 0, 0);
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            });
+            timePickerDialog.setOnDismissListener(var1 -> {
+                if (callback != null) {
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
+                      callback,"DISMISSED", 0, 0);
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            });
+
             timePickerDialog.show();
+
         });
     }
 
@@ -1601,6 +1619,8 @@ public class MobilityCommonBridge extends HyperBridge {
         ExecutorManager.runOnMainThread(new Runnable() {
             @Override
             public void run() {
+
+                System.out.println("Inside datePicker MERCY HERE ------------------------");
                 final Calendar c = Calendar.getInstance();
                 int mYear = c.get(Calendar.YEAR);
                 int mMonth = c.get(Calendar.MONTH);
@@ -1610,6 +1630,7 @@ public class MobilityCommonBridge extends HyperBridge {
 
                 DatePickerDialog datePickerDialog = new DatePickerDialog(bridgeComponents.getActivity(), datePickerTheme, (datePicker, year, month, date) -> {
                     if (callback != null) {
+                        System.out.println("Inside date picker callback");
                         String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d,%d);",
                                 callback, "SELECTED", year, month, date);
                         bridgeComponents.getJsCallback().addJsToWebView(javascript);

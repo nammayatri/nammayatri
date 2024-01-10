@@ -73,7 +73,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, recentDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, showDatePicker)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -114,6 +114,8 @@ import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
 import Timers (clearTimerWithId)
 import Mobility.Prelude (boolToInt, toBool)
 import SuggestionUtils
+import Data.Tuple (Tuple(..))
+import PrestoDOM.Core (getPushFn)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -692,6 +694,7 @@ instance loggableAction :: Loggable Action where
           ChooseVehicleController.ShowRateCard arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "ShowRateCard"
           ChooseVehicleController.OnImageClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnImageClick" 
           ChooseVehicleController.OnSelect arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnSelect"
+    _ -> pure unit 
 
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
@@ -884,10 +887,10 @@ data Action = NoAction
             | UpdateRepeatTrips RideBookingListRes 
             | RemoveShimmer 
             | ReportIssueClick
+            | DateTimePickerAction String Int Int Int String Int Int
             | ChooseSingleVehicleAction ChooseVehicleController.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
   continue state 
     { props 
@@ -1558,6 +1561,7 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
 
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
+  -- _ <- launchAff $ showDatePicker 30000
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_burger_menu"
   continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
@@ -1762,7 +1766,7 @@ eval (PredictionClickedAction (LocationListItemController.FavClick item)) state 
   if (length state.data.savedLocations >= 20) then do
     void $ pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     continue state
-    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, tagData = [], isBtnActive = false }, selectedLocationListItem = Just item}}
+    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, isBtnActive = false }, selectedLocationListItem = Just item}}
 
 eval (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose)) state = continue state{props{isSaveFavourite = false},data{selectedLocationListItem = Nothing, saveFavouriteCard {address = "" , tag = "", isBtnActive = false}}}
 
@@ -1882,41 +1886,49 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetCurr
   continue state{ data{source = (getString CURRENT_LOCATION)} ,props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap, searchLocationModelProps{isAutoComplete = false}}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
-  _ <- pure $ performHapticFeedback unit
-  let isSource = case state.props.isSource of
-                    Just true -> true
-                    _         -> false
-      isDestinationNotEmpty = (not isSource && state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0)
-      lat = if isDestinationNotEmpty then state.props.destinationLat else state.props.sourceLat
-      lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
-  _ <- pure $ hideKeyboardOnNavigation true
-  _ <- pure $ removeAllPolylines ""
-  _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
-  pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
-  let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
-  when (state.data.destination == "") $ do
-    pure $ setText (getNewIDWithTag "DestinationEditText") ""
-  let newState = state
-                  { data {source = srcValue}
-                  , props { isSearchLocation = LocateOnMap
-                          , currentStage = SearchLocationModel
-                          , locateOnMap = true,
-                           isRideServiceable = true
-                           , showlocUnserviceablePopUp = false
-                           , searchLocationModelProps{isAutoComplete = false}
-                           , locateOnMapLocation
-                              { sourceLat = state.props.sourceLat
-                              , sourceLng = state.props.sourceLong
-                              , source = state.data.source
-                              , sourceAddress = state.data.sourceAddress
-                              , destinationLat = if state.props.destinationLat /= 0.0 then state.props.destinationLat else state.props.sourceLat
-                              , destinationLng = if state.props.destinationLong /= 0.0 then state.props.destinationLong else state.props.sourceLong
-                              , destination = state.data.destination
-                              , destinationAddress = state.data.destinationAddress 
-                              }
-                           }
-                    }
-  (updateAndExit newState) $ UpdatedState newState false
+  continueWithCmd state
+    [ do 
+      push <- getPushFn Nothing "HomeScreen"
+      _ <- launchAff $ showDatePicker push DateTimePickerAction 
+      pure NoAction
+    ]
+  
+  -- continue state
+  -- _ <- pure $ performHapticFeedback unit
+  -- let isSource = case state.props.isSource of
+  --                   Just true -> true
+  --                   _         -> false
+  --     isDestinationNotEmpty = (not isSource && state.props.destinationLat /= 0.0 && state.props.destinationLong /= 0.0)
+  --     lat = if isDestinationNotEmpty then state.props.destinationLat else state.props.sourceLat
+  --     lon = if isDestinationNotEmpty then state.props.destinationLong else state.props.sourceLong
+  -- _ <- pure $ hideKeyboardOnNavigation true
+  -- _ <- pure $ removeAllPolylines ""
+  -- _ <- pure $ unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = lat, lon = lon, geoJson = state.data.polygonCoordinates, points = state.data.nearByPickUpPoints, zoomLevel = pickupZoomLevel, labelId = getNewIDWithTag "LocateOnMapPin"}
+  -- pure $ unsafePerformEffect $ logEvent state.data.logField if state.props.isSource == Just true  then "ny_user_src_set_location_on_map" else "ny_user_dest_set_location_on_map"
+  -- let srcValue = if state.data.source == "" then getString CURRENT_LOCATION else state.data.source
+  -- when (state.data.destination == "") $ do
+  --   pure $ setText (getNewIDWithTag "DestinationEditText") ""
+  -- let newState = state
+  --                 { data {source = srcValue}
+  --                 , props { isSearchLocation = LocateOnMap
+  --                         , currentStage = SearchLocationModel
+  --                         , locateOnMap = true,
+  --                          isRideServiceable = true
+  --                          , showlocUnserviceablePopUp = false
+  --                          , searchLocationModelProps{isAutoComplete = false}
+  --                          , locateOnMapLocation
+  --                             { sourceLat = state.props.sourceLat
+  --                             , sourceLng = state.props.sourceLong
+  --                             , source = state.data.source
+  --                             , sourceAddress = state.data.sourceAddress
+  --                             , destinationLat = if state.props.destinationLat /= 0.0 then state.props.destinationLat else state.props.sourceLat
+  --                             , destinationLng = if state.props.destinationLong /= 0.0 then state.props.destinationLong else state.props.sourceLong
+  --                             , destination = state.data.destination
+  --                             , destinationAddress = state.data.destinationAddress 
+  --                             }
+  --                          }
+  --                   }
+  -- (updateAndExit newState) $ UpdatedState newState false
 
 eval (SearchLocationModelActionController (SearchLocationModelController.UpdateSource lat lng name)) state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -2404,6 +2416,10 @@ eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowTy
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state true
 
 eval ReportIssueClick state = exit $  GoToHelp state
+
+eval (DateTimePickerAction dateResp year month day timeResp hour minute) state = do 
+  let _ = spy "DatePIcker Action" "kuhjhh" 
+  continue state
 
 eval _ state = continue state
 

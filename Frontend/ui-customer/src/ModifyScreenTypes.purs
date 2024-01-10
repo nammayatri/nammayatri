@@ -50,6 +50,8 @@ modifyScreenState st =
     AppUpdatePopUpScreenType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appUpdatePopUpScreen = a state.appUpdatePopUpScreen })
     TicketInfoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {ticketInfoScreen = a state.ticketInfoScreen})
     AppConfigType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appConfig = a state.appConfig })
+    SearchLocationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {searchLocationScreen = a state.searchLocationScreen})
+    GlobalPropsType a -> modifyState (\(GlobalState state) -> GlobalState $ state {globalProps = a state.globalProps})
 
 
 updateRideDetails :: MyRidesScreenState -> FlowBT String Unit

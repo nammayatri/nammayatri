@@ -41,7 +41,8 @@ import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState ) 
+import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, SearchLocationScreenState, GlobalProps ) 
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
@@ -76,6 +77,8 @@ newtype GlobalState = GlobalState {
   , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
   , ticketBookingScreen :: TicketBookingScreenState
   , ticketInfoScreen :: TicketInfoScreenState
+  , searchLocationScreen :: SearchLocationScreenState
+  , globalProps :: GlobalProps
   , appConfig :: Maybe AppConfig
   }
 
@@ -105,8 +108,17 @@ defaultGlobalState = GlobalState {
   , loaderOverlay : LoaderScreenScreenData.initData
   , ticketBookingScreen : TicketBookingScreenData.initData
   , ticketInfoScreen : TicketInfoScreenData.initData
+  , searchLocationScreen : SearchLocationScreenData.initData
+  , globalProps : defaultGlobalProps
   , appConfig : Nothing
   }
+
+defaultGlobalProps :: GlobalProps 
+defaultGlobalProps = {
+  savedLocations : [] ,
+  recentSearches : []
+}
+
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 
@@ -191,6 +203,7 @@ data ADD_NEW_ADDRESS_SCREEN_OUTPUT =  SEARCH_ADDRESS String AddNewAddressScreenS
                                     | GO_TO_FAVOURITES
                                     | CHECK_LOCATION_SERVICEABILITY AddNewAddressScreenState LocItemType
                                     | GO_TO_HOME_SCREEN_FLOW
+                                    | GO_TO_SEARCH_LOC_SCREEN
 
 data MY_PROFILE_SCREEN_OUTPUT = UPDATE_USER_PROFILE MyProfileScreenState | GO_TO_HOME_
 
@@ -235,3 +248,5 @@ data ScreenType =
   | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)
   | AppConfigType (Maybe AppConfig -> Maybe AppConfig)
   | TicketingScreenStateType (TicketingScreenState -> TicketingScreenState)
+  | SearchLocationScreenStateType (SearchLocationScreenState -> SearchLocationScreenState)
+  | GlobalPropsType (GlobalProps -> GlobalProps) 

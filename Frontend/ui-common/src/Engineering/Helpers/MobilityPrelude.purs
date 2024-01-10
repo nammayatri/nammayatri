@@ -21,6 +21,7 @@ import Prelude
 import Data.Array (elem, cons)
 import Data.Array as DA
 import Data.Foldable (foldl)
+import Data.Number as NUM
 
 has :: String -> String -> Boolean
 has msg errorPattern = contains (Pattern errorPattern) msg
@@ -68,3 +69,6 @@ caseInsensitiveCompare str1 str2 =
 groupAdjacent :: forall a. Array a -> Array (Array a)
 groupAdjacent [] = []
 groupAdjacent x = cons (DA.take 2 x) (groupAdjacent (DA.drop 2 x))
+
+strToNumber :: String -> Maybe Number 
+strToNumber str = NUM.fromString str
