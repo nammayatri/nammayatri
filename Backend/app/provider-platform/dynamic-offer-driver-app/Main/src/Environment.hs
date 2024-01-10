@@ -32,6 +32,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
 import Kernel.Types.Cache
 import Kernel.Types.Common (HighPrecMeters, Seconds)
+import qualified Kernel.Types.Common as KTC
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id (Id (..))
@@ -125,7 +126,8 @@ data AppCfg = AppCfg
     modelNamesMap :: M.Map Text Text,
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    kafkaProperties :: [KTC.KafkaProperties]
   }
   deriving (Generic, FromDhall)
 
@@ -203,7 +205,8 @@ data AppEnv = AppEnv
     maxMessages :: Text,
     modelNamesHashMap :: HM.Map Text Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl,
+    kafkaProperties :: [KTC.KafkaProperties]
   }
   deriving (Generic)
 
