@@ -44,7 +44,7 @@ primaryEditTextConfig _ = let
       , editText
         { placeholder = getString $ REPORT_ISSUE_CHAT_PLACEHOLDER $ if EHC.os == "IOS" then "" else "REPORT_ISSUE_CHAT_PLACEHOLDER"
         , singleLine = false
-        , pattern = Just "[]*,255"
+        , pattern = Just "[^\n]*,255"
         }
       }
     in primaryEditTextConfig'
