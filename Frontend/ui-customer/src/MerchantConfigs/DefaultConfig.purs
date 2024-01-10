@@ -299,7 +299,7 @@ config =
       url : "https://nammayatri.in/open?source=in-app"
     , enable : false
   }
-  , logFunctionCalls : true
+  , logFunctionCalls : false
   , locationTagBar : {
     cornerRadius : 8.0
   , textColor : "#454545"
