@@ -189,9 +189,9 @@ runUpdateCommands (cmd, val) dbStreamKey = do
                   newObject = replaceMappings (toJSON dataObj) mappings
               res'' <- EL.runIO $ streamDriverDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
-                ( \_ -> do
+                ( \error' -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Driver Update Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) (("Kafka Driver Update Error " <> error' <> " for model :" <> model) :: Text)
                     pure $ Left (UnexpectedError "Kafka Driver Update Error", id)
                 )
                 (\_ -> pure $ Right id)
