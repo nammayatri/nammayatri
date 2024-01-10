@@ -81,6 +81,9 @@
     devShells.backend = pkgs.mkShell {
       name = "ny-backend";
       meta.description = "Backend development environment for nammayatri";
+      packages = with pkgs; [
+        redis # redis-cli is used in scripts.nix
+      ];
       # cf. https://haskell.flake.page/devshell#composing-devshells
       inputsFrom = [
         config.mission-control.devShell
