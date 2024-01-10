@@ -18,3 +18,7 @@ ALTER TABLE atlas_app.ticket_place ADD COLUMN merchant_operating_city_id charact
 ALTER TABLE atlas_app.ticket_place ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_place ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_place ADD PRIMARY KEY ( id);
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ALTER COLUMN short_desc SET DEFAULT 'Short description not available';
