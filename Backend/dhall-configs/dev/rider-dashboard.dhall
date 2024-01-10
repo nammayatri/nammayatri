@@ -87,6 +87,7 @@ in  { esqDBCfg
     , encTools
     , exotelToken = ""
     , dataServers = [ appBackend, appBackendManagement ]
+    , merchantUserAccountNumber = +5
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , slackToken = sec.slackToken
