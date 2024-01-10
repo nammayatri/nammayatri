@@ -644,7 +644,7 @@ getEN stringKey =
         LEARN_MORE -> "Learn more"
         PICKUP -> "Pickup"
         PAY_BY_CASH_OR_UPI -> "Pay by Cash / UPI "
-        YOU_WILL_PAY_FOR_EVERY_MINUTE -> "Waiting charge is zero for the first 3 minutes. You will be charged for ₹1.5 per minute of wait time after that."
+        YOU_WILL_PAY_FOR_EVERY_MINUTE -> "Waiting Charge is zero for the first 3 minutes. Waiting Charge of ₹1.5 per minute will be applicable thereafter."
         WAIT_TIMER -> "Wait Timer"
         HOW_LONG_DRIVER_WAITED_FOR_PICKUP -> "Shows you how long the driver has waited at pickup."
         CHAT_WITH -> "Chat with"
