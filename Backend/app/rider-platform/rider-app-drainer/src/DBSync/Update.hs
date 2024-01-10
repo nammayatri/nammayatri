@@ -166,9 +166,9 @@ runUpdateCommands (cmd, val) streamKey = do
               Env {..} <- ask
               res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
               either
-                ( \_ -> do
+                ( \error' -> do
                     void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Rider Update Error " :: Text)
+                    EL.logError ("ERROR:" :: Text) (("Kafka Rider Update Error " <> error' <> " for model :" <> model) :: Text)
                     pure $ Left (UnexpectedError "Kafka Rider Update Error", id)
                 )
                 (\_ -> pure $ Right id)
