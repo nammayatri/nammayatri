@@ -523,6 +523,8 @@ onBoardingFlow = do
       referDriverResponse <- lift $ lift $ Remote.referDriver $ makeReferDriverReq state.data.referralCode
       case referDriverResponse of
         Right (ReferDriverResp resp) -> do
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ref_code_submitted" $ [{key : "Referee Code", value : unsafeToForeign state.data.referralCode}]
+          void $ pure $ setCleverTapUserProp [{key : "Entered Referral Code", value : unsafeToForeign state.data.referralCode}]
           modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = true, referralCodeSubmitted = true, enterReferralCodeModal = false}})
           setValueToLocalStore REFERRAL_CODE_ADDED "true"
           onBoardingFlow
@@ -2880,6 +2882,7 @@ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)= do
 
   void $ traverse (setCleverTapUserData "gender") $ getDriverInfoResp.gender
   void $ traverse (setCleverTapUserData "Alternate Number") $ getDriverInfoResp.alternateNumber
+  void $ pure $ setCleverTapUserProp [{key : "Driver Referral Code", value : unsafeToForeign $ fromMaybe "" getDriverInfoResp.referralCode}]
 
   case getDriverInfoResp.numberOfRides of
     Just value -> void $ pure $ setCleverTapUserProp [{key : "total_driver_trips", value : unsafeToForeign value }]
