@@ -21,7 +21,7 @@ mkDBSyncMetric = do
       QueryDrainLatency action latency -> observe (metrics </> #driver_query_drain_latency) latency action
       DrainerStopStatus status -> setGauge (metrics </> #driver_drainer_stop_status) status
       KafkaUpdateMissing -> inc (metrics </> #driver_kafka_update_missing)
-      KafkaPushFailure -> inc (metrics </> #driver_kafka_push_failure)
+      KafkaPushFailure action model -> inc (metrics </> #driver_kafka_push_failure) action model
   where
     collectionDBSyncMetric =
       driver_peek_db_command_error

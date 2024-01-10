@@ -154,9 +154,9 @@ runUpdateCommands (cmd, val) streamKey = do
                   newObject = replaceMappings (toJSON dataObj) mappings
               res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection newObject dbStreamKey' model
               either
-                ( \_ -> do
-                    void $ publishDBSyncMetric Event.KafkaPushFailure
-                    EL.logError ("ERROR:" :: Text) ("Kafka Rider Update Error " :: Text)
+                ( \error' -> do
+                    void $ publishDBSyncMetric $ Event.KafkaPushFailure "Update" model
+                    EL.logError ("ERROR:" :: Text) (("Kafka Rider Update Error for model :" <> error' <> " for model :" <> model) :: Text)
                     pure $ Left (UnexpectedError "Kafka Rider Update Error", id)
                 )
                 (\_ -> pure $ Right id)
@@ -167,7 +167,7 @@ runUpdateCommands (cmd, val) streamKey = do
               res'' <- EL.runIO $ streamRiderDrainerUpdates _kafkaConnection updatedJSON dbStreamKey' model
               either
                 ( \error' -> do
-                    void $ publishDBSyncMetric Event.KafkaPushFailure
+                    void $ publishDBSyncMetric $ Event.KafkaPushFailure "Update" model
                     EL.logError ("ERROR:" :: Text) (("Kafka Rider Update Error " <> error' <> " for model :" <> model) :: Text)
                     pure $ Left (UnexpectedError "Kafka Rider Update Error", id)
                 )
