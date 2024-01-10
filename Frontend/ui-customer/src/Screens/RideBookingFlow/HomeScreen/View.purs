@@ -1597,22 +1597,33 @@ sourceDestinationDetailsView push state =
 
 requestRideButtonView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 requestRideButtonView push state =
+  let 
+    animationDuration = state.data.config.suggestedTripsAndLocationConfig.repeatRideTime * 1000 - 100
+    isRepeatRideTimerNonZero = state.props.repeatRideTimer /= "0"
+  in
   relativeLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (confirmAndBookButtonConfig state)
-      , PrestoAnim.animationSet
-        [ translateOutXBackwardAnimY animConfig{duration = 4900, toX = (screenWidth unit), fromY = 0, ifAnim = state.props.repeatRideTimer /= "0"}]  $
-        linearLayout
+    ] 
+    [ PrimaryButton.view (push <<< PrimaryButtonActionController) (confirmAndBookButtonConfig state)
+    , PrestoAnim.animationSet
+        [ translateOutXBackwardAnimY animConfig
+            { duration = animationDuration
+            , toX = (screenWidth unit)
+            , fromY = 0
+            , ifAnim = isRepeatRideTimerNonZero
+            }
+        ]  
+        $ linearLayout
             [ height $ V 50
             , width MATCH_PARENT
             , alpha 0.5
             , background Color.white900
-            , visibility if not DS.null state.props.repeatRideTimerId then VISIBLE else GONE
+            , visibility $ boolToVisibility (not DS.null state.props.repeatRideTimerId)
             , margin $ MarginTop 16
             ][]
     ]
-
+    
 bookingPreferencesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bookingPreferencesView push state = 
  linearLayout
