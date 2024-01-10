@@ -176,6 +176,9 @@ window.getMerchantConfig = function () {
       "enableSupport" : false
       , "enableSuggestions" : true
     }
+    , "features" : {
+      "enableSuggestions" : true
+    }
     , "appData" : {
       "link" : getAppLink(window.__OS)
       , "supportMail" :"nammayatri.support@juspay.in"

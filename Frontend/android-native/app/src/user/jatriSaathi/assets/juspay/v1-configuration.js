@@ -241,7 +241,8 @@ window.getMerchantConfig = function () {
   , "showNearByDrivers" : true
   , "features" : {
     "enableAutoReadOtp" : true ,
-    "enableZooTicketBookingFlow" : true
+    "enableZooTicketBookingFlow" : true,
+    "enableSuggestions" : true
       }
   , "showDisabilityBanner" : false
   , "notifyRideConfirmationConfig" : 

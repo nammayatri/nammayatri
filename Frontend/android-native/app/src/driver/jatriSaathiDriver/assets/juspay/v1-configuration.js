@@ -220,6 +220,9 @@ window.getMerchantConfig = function () {
       , "enableGender" : false
       , "enableOtpRide" : true
     }
+    , "features" : {
+      "enableSuggestions" : true
+    } 
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.jatrisaathidriver"
       , "name" : "Yatri Sathi"
