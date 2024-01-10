@@ -19,6 +19,8 @@ module Lib.DriverCoins.Coins
     setCoinAccumulationByDriverIdKey,
     getCoinsByDriverId,
     getExpirationSeconds,
+    checkHasTakenValidRide,
+    incrementValidRideCount,
     updateDriverCoins,
   )
 where
@@ -110,13 +112,13 @@ handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance
     _ -> pure 0
 
 handleEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
-handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ eventFunction mbexpirationTime numCoins transporterConfig = do
+handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ eventFunction mbexpirationTime numCoins _ = do
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
   validRideTaken <- checkHasTakenValidRide (Just chargeableDistance_)
   case eventFunction of
     DCT.RideCompleted -> do
-      expirationPeriod <- getExpirationSeconds transporterConfig.timeDiffFromUtc
-      when validRideTaken $ incrementValidRideCount driverId expirationPeriod 1
+      -- expirationPeriod <- getExpirationSeconds transporterConfig.timeDiffFromUtc
+      -- when validRideTaken $ incrementValidRideCount driverId expirationPeriod 1
       runActionWhenValidConditions
         [ pure validRideTaken
         ]
