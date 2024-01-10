@@ -341,7 +341,11 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
         _ -> pure ()
 
     logDebug "RideCompleted Coin Event"
-    fork "DriverRideCompletedCoin Event : " $ DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) chargeableDistance)
+    fork "DriverRideCompletedCoin Event : " $ do
+      expirationPeriod <- DC.getExpirationSeconds thresholdConfig.timeDiffFromUtc
+      validRideTaken <- DC.checkHasTakenValidRide (Just chargeableDistance)
+      when validRideTaken $ DC.incrementValidRideCount driverId expirationPeriod 1
+      DC.driverCoinsEvent driverId booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) chargeableDistance)
 
   return $ EndRideResp {result = "Success", homeLocationReached = homeLocationReached'}
   where
