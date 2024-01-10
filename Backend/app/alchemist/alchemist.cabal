@@ -27,6 +27,8 @@ flag Local
 executable alchemist-generator-exe
   main-is: Main.hs
   other-modules:
+      Utils.Types
+      Utils.Utils
       Paths_alchemist
   hs-source-dirs:
       spec

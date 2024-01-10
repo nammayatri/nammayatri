@@ -1,77 +1,41 @@
+{-# OPTIONS_GHC -Wno-unused-matches #-}
+
 module Main where
 
+import Data.IORef
 import Kernel.Prelude
 import qualified NammaDSL.App as NammaDSL
 import System.Directory
+import System.Environment as SE
 import System.FilePath
-
-findGitRoot :: FilePath -> IO (Maybe FilePath)
-findGitRoot dir = do
-  let gitPath = dir </> ".git"
-  exists <- doesDirectoryExist gitPath
-  if exists
-    then return (Just dir)
-    else
-      let parent = takeDirectory dir
-       in if parent == dir
-            then return Nothing -- No more directories to check
-            else findGitRoot parent
-
-dslInputPathPrefix :: FilePath
-dslInputPathPrefix = "Backend" </> "app" </> "alchemist" </> "spec"
-
-haskellOutputPathPrefix :: FilePath
-haskellOutputPathPrefix = "Backend" </> "app"
-
-sqlOutputPathPrefix :: FilePath
-sqlOutputPathPrefix = "Backend" </> "dev" </> "migrations-read-only"
-
-rideAppName :: FilePath
-rideAppName = "rider-app"
-
-driverAppName :: FilePath
-driverAppName = "dynamic-offer-driver-app"
-
-riderAppPath :: FilePath
-riderAppPath = "rider-platform" </> rideAppName </> "Main"
-
-driverAppPath :: FilePath
-driverAppPath = "provider-platform" </> driverAppName </> "Main"
-
-applyDirectory :: FilePath -> (FilePath -> IO ()) -> IO ()
-applyDirectory dirPath processFile = do
-  files <- listDirectory dirPath
-  let yamlFiles = filter (\file -> takeExtension file `elem` [".yaml", ".yml"]) files
-  mapM_ (processFile . (dirPath </>)) yamlFiles
+import qualified Utils.Types as UT
+import Utils.Utils as U
 
 main :: IO ()
 main = do
+  dhallConfigPath <- SE.getEnv "DHALL_PATH"
   currentDir <- getCurrentDirectory
-  maybeGitRoot <- findGitRoot currentDir
+  maybeGitRoot <- U.findGitRoot currentDir
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
+  dhallConfigsRef <- U.readAndStoreAlchemistConfig dhallConfigPath
+  configs <- readIORef dhallConfigsRef
 
-  processApp rootDir riderAppPath rideAppName
-  processApp rootDir driverAppPath driverAppName
+  processApp rootDir (UT.riderApp configs)
   where
-    processApp :: FilePath -> FilePath -> FilePath -> IO ()
-    processApp rootDir appPath appName = do
-      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "Storage") (processStorageDSL rootDir appPath appName)
-      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "API") (processAPIDSL rootDir appPath)
+    processApp :: FilePath -> UT.AppConfigs -> IO ()
+    processApp rootDir appPath = do
+      let
+      U.applyDirectory (rootDir </> (UT.storageYaml $ UT.inputFileConfigs appPath)) (processStorageDSL rootDir appPath)
+      U.applyDirectory (rootDir </> (UT.apiYaml $ UT.inputFileConfigs appPath)) (processAPIDSL rootDir appPath)
 
-    processStorageDSL rootDir appPath appName inputFile = do
-      let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
-      let readOnlyMigration = rootDir </> sqlOutputPathPrefix </> appName
-
-      NammaDSL.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
-      NammaDSL.mkBeamQueries (readOnlySrc </> "Storage/Queries") inputFile
-      NammaDSL.mkDomainType (readOnlySrc </> "Domain/Types") inputFile
-      NammaDSL.mkSQLFile readOnlyMigration inputFile
+    processStorageDSL rootDir appPath inputFile = do
+      NammaDSL.mkBeamTable (UT.beamTableOutputFilePath $ UT.outputFileConfigs appPath) inputFile
+      NammaDSL.mkBeamQueries (UT.beamQueriesOutputFilePath $ UT.outputFileConfigs appPath) inputFile
+      NammaDSL.mkDomainType (UT.domainTypeOutputFilePath $ UT.outputFileConfigs appPath) inputFile
+      NammaDSL.mkSQLFile (UT.sqlOutputFilePath $ UT.outputFileConfigs appPath) inputFile
 
     processAPIDSL rootDir appPath inputFile = do
-      let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
-      let src = rootDir </> haskellOutputPathPrefix </> appPath </> "src"
-
       -- NammaDSL.mkFrontendAPIIntegration (readOnlySrc </> "Domain/Action") inputFile
-      NammaDSL.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
-      NammaDSL.mkApiTypes (readOnlySrc </> "API/Types/UI") inputFile
-      NammaDSL.mkDomainHandler (src </> "Domain/Action/UI") inputFile
+      NammaDSL.mkServantAPI (UT.servantAPIOutputFilePath $ UT.outputFileConfigs appPath) inputFile
+      NammaDSL.mkApiTypes (UT.apiTypesOutputFilePath $ UT.outputFileConfigs appPath) inputFile
+      NammaDSL.mkDomainHandler (UT.domainHandlerOutputFilePath $ UT.outputFileConfigs appPath) inputFile
