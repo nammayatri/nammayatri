@@ -25,7 +25,7 @@ import Font.Style as FontStyle
 import Data.Array (mapWithIndex , (!!), length, null)
 import Data.String (split, Pattern(..), length, null, null) as STR
 import Data.Maybe (fromMaybe, Maybe(..), maybe)
-import JBridge (renderBase64Image, scrollToEnd, addMediaFile, getSuggestionfromKey, getWidthFromPercent, getLayoutBounds)
+import JBridge (renderBase64Image, scrollToEnd, addMediaFile, getSuggestionfromKey, getWidthFromPercent, getLayoutBounds, displayBase64Image, displayBase64ImageConfig)
 import Components.ChatView.Controller (Action(..), Config(..), ChatComponentConfig)
 import Common.Types.App
 import Common.Styles.Colors as Color
@@ -36,6 +36,7 @@ import Engineering.Helpers.Suggestions(getMessageFromKey)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude (boolToVisibility)
+import Effect.Uncurried (runEffectFn1)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -405,7 +406,7 @@ chatComponentView state push config nextConfig isLastItem userType index =
                  , width $ V 180
                  , id $ getNewIDWithTag config.message
                  , onAnimationEnd (\action -> do
-                                renderBase64Image config.message (getNewIDWithTag config.message) true "FIT_CENTER"
+                                runEffectFn1 displayBase64Image displayBase64ImageConfig {source = config.message, id = (getNewIDWithTag config.message), scaleType =  "FIT_CENTER", inSampleSize = 2} 
                  ) (const NoAction)
                  , onClick push (const $ OnImageClick config.message)
                  , height $ V 180

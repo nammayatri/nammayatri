@@ -916,7 +916,10 @@ eval (UpdateRepeatTrips rideList) state = do
   if not (null list) then do
     let updatedMap = updateMapWithPastTrips list shimmerState
     void $ pure $ setSuggestionsMap updatedMap
-    updateCurrentLocation shimmerState (show state.props.sourceLat) (show state.props.sourceLong)
+    if state.props.sourceLat /= 0.0 && state.props.sourceLong /= 0.0 then
+      updateCurrentLocation shimmerState (show state.props.sourceLat) (show state.props.sourceLong)
+    else 
+      continue shimmerState
   else do
     continue shimmerState
 

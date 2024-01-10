@@ -29,9 +29,10 @@ import Font.Size (a_18) as FontSize
 import Font.Style (h3) as FontStyle
 import Common.Types.App (LazyCheck(..))
 import Data.Maybe (Maybe(..))
-import JBridge (renderBase64Image)
+import JBridge (renderBase64Image, displayBase64Image, displayBase64ImageConfig)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons as EHC
+import Effect.Uncurried (runEffectFn1)
 
 view :: forall w. (Action -> Effect Unit) -> ViewImageModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -54,7 +55,7 @@ view push state =
     , width MATCH_PARENT
     , height MATCH_PARENT
     , gravity CENTER
-    , afterRender (\action -> do renderBase64Image state.image (EHC.getNewIDWithTag "view_image_model_image") false "CENTER_CROP") (const NoAction)
+    , afterRender (\action ->  runEffectFn1 displayBase64Image displayBase64ImageConfig { source = state.image , id = (EHC.getNewIDWithTag "view_image_model_image") , scaleType =  "CENTER_CROP", inSampleSize = 2} ) (const NoAction)
     , id (EHC.getNewIDWithTag "view_image_model_image")
     ][ progressBar
        [ width WRAP_CONTENT
