@@ -3897,7 +3897,7 @@ movingRightArrowView viewId =
       , afterRender (\action-> do
                     void $ pure $ startLottieProcess lottieAnimationConfig{ rawJson =  (getAssetsBaseUrl FunctionCall) <> "lottie/right_arrow.json" , speed = 1.0,lottieId = (getNewIDWithTag viewId) }
                     pure unit)(const NoAction)
-      , height $ V 43
+      , height $ V 40
       , width $ V 40
       , imageWithFallback $ fetchImage FF_ASSET "ny_ic_yellow_arrow"
       , gravity CENTER_HORIZONTAL
