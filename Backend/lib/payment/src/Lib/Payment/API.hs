@@ -14,6 +14,7 @@
 
 module Lib.Payment.API
   ( API,
+    PaymentCustomerAPI,
   )
 where
 
@@ -39,3 +40,9 @@ type API (entityId :: Symbol) (notificationEntityId :: Symbol) entity notificati
            :> "notification"
            :> Get '[JSON] notificationResp
        )
+
+type PaymentCustomerAPI (customerEntityId :: Symbol) customerEntity customerResponse =
+  "paymentInfo"
+    :> Capture "customerId" (Id customerEntity)
+    :> "customer"
+    :> Get '[JSON] customerResponse

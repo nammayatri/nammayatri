@@ -48,6 +48,9 @@ mandateNotificationStatus = runWithServiceConfig Payment.mandateNotificationStat
 mandateExecution :: ServiceFlow m r => Id DM.Merchant -> Payment.MandateExecutionReq -> m Payment.MandateExecutionRes
 mandateExecution = runWithServiceConfig Payment.mandateExecution
 
+getCustomer :: ServiceFlow m r => Id DM.Merchant -> Payment.GetCustomerReq -> m Payment.GetCustomerResp
+getCustomer = runWithServiceConfig Payment.getCustomer
+
 runWithServiceConfig ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->

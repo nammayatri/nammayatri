@@ -14,7 +14,9 @@
 
 module API.UI.Payment
   ( API,
+    PaymentCustomerAPI,
     handler,
+    handler2,
   )
 where
 
@@ -23,6 +25,7 @@ import Domain.Types.Invoice (Invoice)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Notification (Notification)
+import Domain.Types.Person (Person)
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -39,12 +42,19 @@ type API =
   TokenAuth
     :> Payment.API "invoiceId" "notificationId" Invoice Notification Payment.NotificationStatusResp
 
+type PaymentCustomerAPI =
+  TokenAuth
+    :> Payment.PaymentCustomerAPI "customerId" Person Payment.GetCustomerResp
+
 handler :: FlowServer API
 handler authInfo =
   createOrder authInfo
     :<|> getStatus authInfo
     :<|> getOrder authInfo
     :<|> getNotificationStatus authInfo
+
+handler2 :: FlowServer PaymentCustomerAPI
+handler2 = getCustomer
 
 createOrder :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Invoice -> FlowHandler Payment.CreateOrderResp
 createOrder tokenDetails invoiceId = withFlowHandlerAPI $ DPayment.createOrder tokenDetails invoiceId
@@ -58,3 +68,6 @@ getOrder tokenDetails orderId = withFlowHandlerAPI $ DPayment.getOrder tokenDeta
 
 getNotificationStatus :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Notification -> FlowHandler Payment.NotificationStatusResp
 getNotificationStatus notificationId = withFlowHandlerAPI . DPayment.pdnNotificationStatus notificationId
+
+getCustomer :: (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Person -> FlowHandler Payment.GetCustomerResp
+getCustomer customerId = withFlowHandlerAPI . DPayment.getCustomer customerId

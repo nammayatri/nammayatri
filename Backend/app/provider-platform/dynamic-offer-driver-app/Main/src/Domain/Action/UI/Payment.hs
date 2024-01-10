@@ -20,6 +20,7 @@ module Domain.Action.UI.Payment
     getOrder,
     juspayWebhookHandler,
     pdnNotificationStatus,
+    getCustomer,
   )
 where
 
@@ -377,3 +378,22 @@ processMandate driverId mandateStatus startDate endDate mandateId maxAmount paye
       case existingMandateEntry of
         Just mandateEntry -> (mandateEntry.status /= DM.ACTIVE && autoPayStatus /= Just DI.SUSPENDED) || (mandateEntry.status == DM.ACTIVE && isNothing (mandateEntry.payerVpa))
         Nothing -> True
+
+getCustomer ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    MonadFlow m,
+    HasShortDurationRetryCfg r c,
+    ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Id DP.Person ->
+  m DPayments.GetCustomerResp
+getCustomer (_, merchantId, _) customerId = do
+  resp <- Payment.getCustomer merchantId $ DPayments.GetCustomerReq {customerId = customerId.getId}
+  return resp

@@ -60,6 +60,7 @@ type API =
            :<|> DriverOnboarding.API
            :<|> OrgAdmin.API
            :<|> Payment.API
+           :<|> Payment.PaymentCustomerAPI
            :<|> Driver.API
            :<|> DriverProfileSummary.API
            :<|> Vehicle.API
@@ -94,6 +95,7 @@ handler =
     :<|> DriverOnboarding.handler
     :<|> OrgAdmin.handler
     :<|> Payment.handler
+    :<|> Payment.handler2
     :<|> Driver.handler
     :<|> DriverProfileSummary.handler
     :<|> Vehicle.handler
