@@ -21,7 +21,7 @@ mkDBSyncMetric = do
       QueryDrainLatency action latency -> observe (metrics </> #query_drain_latency) latency action
       DrainerStopStatus status -> setGauge (metrics </> #drainer_stop_status) status
       KafkaUpdateMissing -> inc (metrics </> #rider_kafka_update_missing)
-      KafkaPushFailure -> inc (metrics </> #rider_kafka_push_failure)
+      KafkaPushFailure action model -> inc (metrics </> #rider_kafka_push_failure) action model
   where
     collectionDBSyncMetric =
       peek_db_command_error

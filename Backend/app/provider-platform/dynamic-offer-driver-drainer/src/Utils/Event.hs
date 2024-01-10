@@ -55,9 +55,11 @@ driver_drainer_stop_status =
   gauge #driver_drainer_stop_status
     .& build
 
-driver_kafka_push_failure :: PromRep 'Counter "driver_kafka_push_failure" '[]
+driver_kafka_push_failure :: PromRep 'Counter "driver_kafka_push_failure" '[ '("action", Text), '("model", Text)]
 driver_kafka_push_failure =
   counter #driver_kafka_push_failure
+    .& lbl @"action" @Text
+    .& lbl @"model" @Text
     .& build
 
 driver_kafka_update_missing :: PromRep 'Counter "driver_kafka_update_missing" '[]

@@ -135,7 +135,7 @@ runCreateCommands cmds streamKey = do
               res <- EL.runIO $ streamDriverDrainerCreates _kafkaConnection newObjects streamKey' model
               either
                 ( \error' -> do
-                    void $ publishDBSyncMetric Event.KafkaPushFailure
+                    void $ publishDBSyncMetric $ Event.KafkaPushFailure "Create" model
                     EL.logError ("ERROR:" :: Text) (("Kafka Driver Create Error :" <> error' <> " for model :" <> model) :: Text)
                     pure [Left entryIds]
                 )
