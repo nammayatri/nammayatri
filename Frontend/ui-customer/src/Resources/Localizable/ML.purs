@@ -655,7 +655,7 @@ getML stringKey =
         YOU_SENT -> "നീ അയച്ചു"
         MESSAGE_YOUR_DRIVER -> "നിങ്ങളുടെ ഡ്രൈവർക്ക് സന്ദേശം അയക്കണോ?"
         CHECK_IN_WITH_YOUR_DRIVER -> "ഒരു ദ്രുത ചാറ്റ് ഉപയോഗിച്ച് നിങ്ങളുടെ ഡ്രൈവർ പരിശോധിക്കുക"
-        TRACK_ON_GOOGLE_MAPS -> "Google Maps-ൽ ട്രാക്ക് ചെയ്യുക"
+        TRACK_ON_GOOGLE_MAPS -> "തത്സമയ ട്രാക്കിംഗ്"
         OTP_EXPIRE_TIMER -> "OTP കാലഹരണപ്പെടുന്ന ടൈമർ"
         SHOWS_FOR_HOW_LONG_YOUR_OTP_ -> "റൈഡ് ആരംഭിക്കാൻ നിങ്ങളുടെ OTP എത്ര കാലത്തേക്ക് സാധുവായി തുടരുമെന്ന് കാണിക്കുന്നു."
         IF_YOUR_OTP_EXPIRES_ -> "നിങ്ങളുടെ OTP കാലഹരണപ്പെടുകയാണെങ്കിൽ, നിങ്ങൾ വീണ്ടും ബുക്ക് ചെയ്യേണ്ടതുണ്ട്."

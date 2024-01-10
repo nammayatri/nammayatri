@@ -655,7 +655,7 @@ getKN stringKey =
         YOU_SENT -> "ನೀವು ಕಳುಹಿಸಿದ್ದೀರಿ"
         MESSAGE_YOUR_DRIVER -> "ನಿಮ್ಮ ಚಾಲಕನಿಗೆ ಸಂದೇಶ ಕಳುಹಿಸಿ?"
         CHECK_IN_WITH_YOUR_DRIVER -> "ನಿಮ್ಮ ಚಾಲಕನೊಂದಿಗೆ ಪರಿಶೀಲಿಸಿ"
-        TRACK_ON_GOOGLE_MAPS -> "ಗೂಗಲ್ ನಕ್ಷೆಗಳಲ್ಲಿ ಟ್ರ್ಯಾಕ್ ಮಾಡಿ"
+        TRACK_ON_GOOGLE_MAPS -> "ರಿಯಲ್ ಟೈಮ್ ಟ್ರ್ಯಾಕಿಂಗ್"
         OTP_EXPIRE_TIMER -> "OTP ಅವಧಿ ಮುಗಿಯುವ ಟೈಮರ್"
         SHOWS_FOR_HOW_LONG_YOUR_OTP_ -> "ಸವಾರಿಯನ್ನು ಪ್ರಾರಂಭಿಸಲು ನಿಮ್ಮ OTP ಎಷ್ಟು ಸಮಯದವರೆಗೆ ಮಾನ್ಯವಾಗಿರುತ್ತದೆ ಎಂಬುದನ್ನು ತೋರಿಸುತ್ತದೆ."
         IF_YOUR_OTP_EXPIRES_ -> "ನಿಮ್ಮ OTP ಅವಧಿ ಮುಗಿದರೆ, ನೀವು ಮತ್ತೆ ಬುಕ್ ಮಾಡಬೇಕಾಗುತ್ತದೆ."
