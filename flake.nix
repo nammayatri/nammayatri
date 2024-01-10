@@ -1,6 +1,6 @@
 {
   inputs = {
-    common.url = "github:nammayatri/common/python"; # https://github.com/nammayatri/common/pull/22
+    common.url = "github:nammayatri/common";
     nixpkgs.follows = "common/nixpkgs";
     haskell-flake.follows = "common/haskell-flake";
 
