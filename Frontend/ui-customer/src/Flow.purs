@@ -345,6 +345,7 @@ enterMobileNumberScreenFlow = do
     GoToOTP state -> do
             when((getValueToLocalStore MOBILE_NUMBER) /= state.data.mobileNumber) $ do
               deleteValueFromLocalStore SUGGESTIONS_MAP
+              deleteValueFromLocalStore RECENT_SEARCHES
             setValueToLocalStore MOBILE_NUMBER (state.data.mobileNumber)
             setValueToLocalStore COUNTRY_CODE (state.data.countryObj.countryCode)
             void $ liftFlowBT $ setCleverTapUserData "Phone" (state.data.countryObj.countryCode <> (getValueToLocalStore MOBILE_NUMBER))
