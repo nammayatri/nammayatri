@@ -409,6 +409,7 @@ type DriverProfileScreenProps = {
   removeAlternateNumber :: Boolean,
   enterOtpModal :: Boolean,
   enterOtpFocusIndex :: Int,
+  enterOdometerFocusIndex :: Int,
   otpIncorrect :: Boolean,
   otpAttemptsExceeded :: Boolean,
   alternateMobileOtp :: String,
@@ -737,7 +738,7 @@ type DriverDetailsScreenState = {
   props :: DriverDetailsScreenStateProps
 }
 
-data KeyboardModalType = MOBILE__NUMBER | OTP | NONE
+data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE
 
 derive instance genericKeyboardModalType :: Generic KeyboardModalType _
 instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
@@ -862,6 +863,7 @@ type HomeScreenData =  {
   config :: AppConfig,
   triggerPatchCounter :: Int,
   peekHeight :: Int,
+  odometerReading :: OdometerReading,
   driverGotoState :: DriverGoToState,
   snappedOrigin :: Maybe Location,
   gender :: String
@@ -989,8 +991,16 @@ type ActiveRide = {
   specialLocationTag :: Maybe String,
   requestedVehicleVariant :: Maybe String,
   disabilityTag :: Maybe DisabilityType,
-  waitTimeSeconds :: Int
+  waitTimeSeconds :: Int,
+  rentalBooking :: Boolean,
+  rideType :: RideType
 }
+
+data RideType = NORMAL_BOOKING | RENTAL_BOOKING
+
+derive instance genericRideType :: Generic RideType _
+instance showRideType :: Show RideType where show = genericShow
+instance eqRideType :: Eq RideType where eq = genericEq
 
 type HomeScreenProps =  {
   isFreeRide :: Boolean,
@@ -999,7 +1009,13 @@ type HomeScreenProps =  {
   screenName :: String,
   rideActionModal :: Boolean,
   enterOtpModal :: Boolean,
+  endRideOtpModal :: Boolean,
   rideOtp :: String,
+  odometerValueInKm :: String,
+  editedOdometerValue :: String,
+  odometerValue :: String,
+  enterOdometerReadingModal :: Boolean,
+  endRideOdometerReadingModal :: Boolean,
   enterOtpFocusIndex :: Int,
   time :: Int,
   otpIncorrect :: Boolean,
@@ -1021,6 +1037,7 @@ type HomeScreenProps =  {
   driverStatusSet :: DriverStatus,
   silentPopUpView :: Boolean,
   zoneRideBooking :: Boolean,
+  rentalBooking :: Boolean,
   showGenderBanner :: Boolean,
   notRemoveBanner :: Boolean,
   showBonusInfo :: Boolean,
@@ -1041,8 +1058,19 @@ type HomeScreenProps =  {
   waitTimeStatus :: TimerStatus,
   isMockLocation :: Boolean,
   accountBlockedPopup :: Boolean,
-  tobeLogged :: Boolean
+  tobeLogged :: Boolean,
+  odometerConfig :: OdometerConfig
  }
+
+type OdometerConfig = {
+  updateKm :: Boolean,
+  updateM :: Boolean
+}
+
+type OdometerReading = {
+  valueInM :: String,
+  valueInkm :: String
+}
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
 

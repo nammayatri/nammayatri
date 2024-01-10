@@ -122,6 +122,9 @@ homeScreen = do
     ClearPendingDues updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)
+    FetchOdometerReading updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)
     EnableGoto updatedState locationId -> do
       LatLon lat lon _ <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.dest_lat updatedState.data.activeRide.dest_lon 700 false true
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
@@ -138,3 +141,7 @@ homeScreen = do
     RefreshGoTo updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_GOTO updatedState)
+    FetchOdometerReading updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)
+

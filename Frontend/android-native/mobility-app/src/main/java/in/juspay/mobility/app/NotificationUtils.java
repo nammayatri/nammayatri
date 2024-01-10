@@ -80,6 +80,7 @@ public class NotificationUtils {
     public static String FLOATING_NOTIFICATION = "FLOATING_NOTIFICATION";
     public static String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
     public static String ALLOCATION_TYPE = "NEW_RIDE_AVAILABLE";
+    public static  String RENTAL_ALLOCATION_TYPE = "NEW_RENTAL_RIDE_AVAILABLE";
     public static String TRIP_STARTED = "TRIP_STARTED";
     public static String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
     public static String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
@@ -114,7 +115,6 @@ public class NotificationUtils {
             final SimpleDateFormat f = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",new Locale("en","US"));
             f.setTimeZone(TimeZone.getTimeZone("IST"));
             String currTime = f.format(new Date());
-
             String notificationType = data.getString("notification_type");
             if (ALLOCATION_TYPE.equals(notificationType) && MyFirebaseMessagingService.clearedRideRequest.containsKey(data.getString("entity_ids"))) {
                 System.out.println("The remove notification cleare "+data.getString("entity_ids"));
@@ -124,6 +124,12 @@ public class NotificationUtils {
             SharedPreferences sharedPref = context.getSharedPreferences(
                     context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+            
+            if (RENTAL_ALLOCATION_TYPE.equals(notificationType) && MyFirebaseMessagingService.clearedRideRequest.containsKey(data.getString("entity_ids"))) {
+                MyFirebaseMessagingService.clearedRideRequest.remove(data.getString("entity_ids"));
+                return;
+            }
+
             if (ALLOCATION_TYPE.equals(notificationType)) {
                 System.out.println("In_if_in_notification before");
                 Bundle params = new Bundle();
@@ -192,6 +198,7 @@ public class NotificationUtils {
                     sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
+                    sheetData.putString("notificationType" , notificationType);
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
                     System.out.println(entity_payload);
@@ -316,10 +323,10 @@ public class NotificationUtils {
                 notificationId++;
                 for(Iterator<Map.Entry<String, Long>> iterator = MyFirebaseMessagingService.clearedRideRequest.entrySet().iterator(); iterator.hasNext(); ) {
                     Map.Entry<String, Long> entry = iterator.next();
-                      if(RideRequestUtils.timeDifferenceInMinutes(entry.getValue(), System.currentTimeMillis()) > 30) {
-                          iterator.remove();
-                      }
-                  }
+                    if(RideRequestUtils.timeDifferenceInMinutes(entry.getValue(), System.currentTimeMillis()) > 30) {
+                        iterator.remove();
+                    }
+                }
             }
             handleClearedReq(context, notificationType, data);
         } catch (Exception e) {

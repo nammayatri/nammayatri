@@ -55,7 +55,9 @@ initData = {
           waitTimeInfo : false,
           rideCreatedAt : "",
           requestedVehicleVariant : Nothing,
-          disabilityTag : Nothing
+          disabilityTag : Nothing,
+          rentalBooking : false,
+          rideType : RENTAL_BOOKING
         },
         cancelRideModal : {
           selectionOptions : [],
@@ -142,7 +144,11 @@ initData = {
           gotoEnabledForMerchant : false,
           confirmGotoCancel : false,
           savedLocationCount : 0
-        }
+        },
+        odometerReading : {
+          valueInkm : "",
+          valueInM : ""}
+    
     },
     props: {
         isFreeRide : false,
@@ -153,6 +159,12 @@ initData = {
         rideActionModal : false,
         updatedArrivalInChat : false,
         enterOtpModal : false,
+        endRideOtpModal : false,
+        odometerValue : "0000•0",
+        odometerValueInKm : "",
+        editedOdometerValue : "",
+        enterOdometerReadingModal : false,
+        endRideOdometerReadingModal : false,
         rideOtp : "",
         enterOtpFocusIndex : 0,
         time : 0,
@@ -173,6 +185,7 @@ initData = {
         openChatScreen : false,
         silentPopUpView : false,
         zoneRideBooking : true,
+        rentalBooking : true,
         showGenderBanner : false,
         notRemoveBanner : true,
         showBonusInfo : false,
@@ -190,6 +203,10 @@ initData = {
         showChatBlockerPopUp : false,
         subscriptionPopupType : NO_SUBSCRIPTION_POPUP,
         showGenericAccessibilityPopUp : false,
+        odometerConfig : {
+            updateKm : true,
+            updateM : false
+        },
         waitTimeStatus : NoStatus,
         isMockLocation : false,
         accountBlockedPopup : false,

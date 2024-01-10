@@ -109,7 +109,7 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_PICKUP)),
                     rideRequestBundle.getString(getResources().getString(R.string.ADDRESS_DROP)),
                     rideRequestBundle.getInt(getResources().getString(R.string.BASE_FARE)),
-                    Math.min(calculatedTime, 25),
+                    Math.min(calculatedTime, 25),,
                     rideRequestBundle.getString(getResources().getString(R.string.SEARCH_REQUEST_ID)),
                     rideRequestBundle.getString("destinationArea"),
                     rideRequestBundle.getString("sourceArea"),
@@ -126,7 +126,8 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString("requestedVehicleVariant"),
                     rideRequestBundle.getBoolean("disabilityTag"),
                     rideRequestBundle.getBoolean("isTranslated"),
-                    rideRequestBundle.getBoolean("gotoTag")
+                    rideRequestBundle.getBoolean("gotoTag"),
+                    rideRequestBundle.getString("notificationType")
             );
 
             sheetArrayList.add(sheetModel);

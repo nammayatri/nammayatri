@@ -78,8 +78,8 @@ rideActionModalConfig state =
                       else
                         (fromMaybe "" ((DS.split (DS.Pattern " ") (state.data.activeRide.riderName)) DA.!! 0)),
     sourceAddress  {
-      titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.source)) DA.!! 0),
-      detailText = state.data.activeRide.source
+      titleText = "Dakshineshwar Kalibari",  --fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.source)) DA.!! 0),
+      detailText = "Dakshineswar, Kolkata, West Bengal  700076"--state.data.activeRide.source
     },
     destinationAddress {
       titleText = fromMaybe "" ((DS.split (DS.Pattern ",") (state.data.activeRide.destination)) DA.!! 0),
@@ -93,6 +93,7 @@ rideActionModalConfig state =
     requestedVehicleVariant = state.data.activeRide.requestedVehicleVariant,
     accessibilityTag = state.data.activeRide.disabilityTag,
     appConfig = state.data.config,
+    rideType = ST.RENTAL_BOOKING,--tate.data.activeRide.rideType,
     waitTimeStatus = state.props.waitTimeStatus,
     waitTimeSeconds = state.data.activeRide.waitTimeSeconds,
     thresholdTime = state.data.config.waitTimeConfig.thresholdTime
@@ -600,7 +601,7 @@ enterOtpStateConfig state = let
         , textStyle = FontStyle.Heading1
       },
       headingConfig {
-        text = getString (ENTER_OTP)
+        text = if state.props.endRideOtpModal then (getString ENTER_END_RIDE_OTP) else getString (ENTER_OTP)
       },
       errorConfig {
         text = if (state.props.otpIncorrect && state.props.wrongVehicleVariant) then (getString OTP_INVALID_FOR_THIS_VEHICLE_VARIANT) else if state.props.otpIncorrect then (getString ENTERED_WRONG_OTP)  else (getString OTP_LIMIT_EXCEEDED),
@@ -608,13 +609,48 @@ enterOtpStateConfig state = let
       },
       subHeadingConfig {
         text = getString (PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP),
-        visibility = if (state.props.otpAttemptsExceeded) then GONE else VISIBLE
-      , textStyle = FontStyle.Body1
+        visibility = if (state.props.otpAttemptsExceeded) then GONE else VISIBLE,
+        textStyle = FontStyle.Body2,
+        color = Color.black600
       },
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
       },
-      modalType = ST.OTP
+      modalType = ST.OTP,
+      confirmBtnColor = if state.props.endRideOtpModal then Color.red else Color.darkMint
+      }
+      in inAppModalConfig'
+
+enterOdometerReadingConfig :: ST.HomeScreenState -> InAppKeyboardModal.InAppKeyboardModalState
+enterOdometerReadingConfig state = let
+  config' = InAppKeyboardModal.config
+  inAppModalConfig' = config'{
+      otpIncorrect = if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
+      otpAttemptsExceeded = (state.props.otpAttemptsExceeded),
+      inputTextConfig {
+        text = state.props.odometerValueInKm,
+        focusIndex = 5,
+        textStyle = FontStyle.Heading1
+      },
+      headingConfig {
+        text = "Enter current odo reading",
+        margin = (MarginLeft 0)
+      },
+      errorConfig {
+        text = if (state.props.otpIncorrect && state.props.wrongVehicleVariant) then (getString OTP_INVALID_FOR_THIS_VEHICLE_VARIANT) else if state.props.otpIncorrect then (getString ENTERED_WRONG_OTP)  else (getString OTP_LIMIT_EXCEEDED),
+        visibility = if (state.props.otpIncorrect || state.props.otpAttemptsExceeded) then VISIBLE else GONE
+      },
+      subHeadingConfig {
+        visibility = GONE
+      },
+      imageConfig {
+        alpha = 1.0
+      },
+      modalType = ST.ODOMETER,
+      confirmBtnColor = if state.props.endRideOdometerReadingModal then Color.red else Color.darkMint,
+      isDismissable = false,
+      odometerReading{ kiloMeters = state.data.odometerReading.valueInkm, meters = state.data.odometerReading.valueInM},
+      odometerConfig { updateKm = state.props.odometerConfig.updateKm , updateM = state.props.odometerConfig.updateM}
       }
       in inAppModalConfig'
 
@@ -1076,6 +1112,7 @@ getRideCompletedConfig state = let
   showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
   viewOrderConfig = [ {condition : autoPayBanner == DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
                       {condition : autoPayStatus == ACTIVE_AUTOPAY && payerVpa /= "", elementView :  RideCompletedCard.QR_VIEW },
+                      {condition : true, elementView : RideCompletedCard.RENTAL_RIDE_VIEW},
                       {condition : not (autoPayStatus == ACTIVE_AUTOPAY) && state.data.config.subscriptionConfig.enableSubscriptionPopups && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"), elementView :  RideCompletedCard.NO_VPA_VIEW },
                       {condition : autoPayBanner /= DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
                       {condition : disability, elementView :  RideCompletedCard.BADGE_CARD },

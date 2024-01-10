@@ -160,6 +160,9 @@ data STR = LETS_GET_STARTED
         | ONLINE_
         | GO_ONLINE_POPUP
         | DISTANCE
+        | DURATION
+        | START_TIME 
+        | START_ODO_READING
         | REPORT_AN_ISSUE
         | TIME_TAKEN
         | MAPS
@@ -939,6 +942,15 @@ data STR = LETS_GET_STARTED
         | SPACIOUS
         | COMFY
         | PEOPLE
+        | RIDE_START
+        | RIDE_END 
+        | RIDE_STARTED_AT 
+        | RIDE_ENDED_AT
+        | ODOMETER_READING
+        | PICKED_UP_AT
+        | RIDE_TIME
+        | YOU_ARE_ON_A_RENTAL_RIDE
+        | ENTER_END_RIDE_OTP
         | GO_TO
         | SELECT_ON_MAP
         | CONFIRM_LOCATION_STR

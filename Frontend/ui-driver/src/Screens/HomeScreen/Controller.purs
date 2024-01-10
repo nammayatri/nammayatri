@@ -43,12 +43,13 @@ import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
+import Data.String.Common (joinWith)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, uploadFile)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (saveObject)
@@ -92,6 +93,7 @@ import Engineering.Helpers.Commons as EHC
 import Data.String as DS
 import Services.Config as SC
 import Timers as TF
+import Debug(spy)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -128,7 +130,7 @@ instance loggableAction :: Loggable Action where
       -- InAppKeyboardModal.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_backpressed"
       -- InAppKeyboardModal.OnClickDone text -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_done"
       -- _ -> pure unit
-
+    InAppKeyboardModalOdometerAction act -> pure unit
     CountDown seconds -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "count_down"
     PopUpModalAction act -> pure unit --case act of
       -- PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_end_ride" "go_back_onclick"
@@ -219,6 +221,8 @@ instance loggableAction :: Loggable Action where
     OfferPopupAC _ -> pure unit
     RCDeactivatedAC _ -> pure unit
     FreeTrialEndingAC _ -> pure unit
+    UploadImage -> pure unit
+    CallBackImageUpload _ _ _ -> pure unit
     _ -> pure unit
 
 
@@ -253,6 +257,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | DisableGoto ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
+                    | FetchOdometerReading ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -266,6 +271,7 @@ data Action = NoAction
             | BottomNavBarAction BottomNavBar.Action
             | RideActionModalAction RideActionModal.Action
             | InAppKeyboardModalAction InAppKeyboardModal.Action
+            | InAppKeyboardModalOdometerAction InAppKeyboardModal.Action
             | CountDown Int
             | CurrentLocation String String
             | ActiveRideAPIResponseAction (Array RidesInfo)
@@ -344,7 +350,10 @@ data Action = NoAction
             | AddNewLocation
             | AddGotoAC
             | LinkAadhaarAC
-            
+            | CallBackImageUpload String String String
+            | UploadImage
+          
+
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -466,6 +475,20 @@ eval (ShowMap key lat lon) state = continueWithCmd state [ do
   id <- checkPermissionAndUpdateDriverMarker state
   pure AfterRender
   ]
+
+eval (UploadImage) state = continueWithCmd state [do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "UPLOAD odometer reading"
+  _ <- liftEffect $ uploadFile false
+  pure NoAction]
+
+
+eval (CallBackImageUpload image imageName imagePath) state = do
+    _ <- pure $ setValueToLocalStore RIDE_START_ODOMETER image -- After it normal ride flow will start
+    _ <- pure $ printLog "value of image base 64 taking time" image
+    _ <- pure $ printLog "value of image base 64 from local store" (getValueToLocalStore RIDE_START_ODOMETER )
+    continue state{props{enterOdometerReadingModal = false , currentStage= ST.RideStarted}}
+
+
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
     "Rides" -> exit $ GoToRidesScreen state
@@ -557,7 +580,7 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state
     rideOtp = if (index + 1) > (length state.props.rideOtp) then ( take 4 (state.props.rideOtp <> key)) else (take index (state.props.rideOtp)) <> key <> (take 4 (drop (index+1) state.props.rideOtp))
     focusIndex = length rideOtp
     newState = state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex ,otpIncorrect = false} }
-    exitAction = if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
+    exitAction = if state.props.endRideOtpModal then EndRide newState else if  state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
   if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then updateAndExit newState exitAction
   else continue newState
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickBack text)) state = do
@@ -571,14 +594,35 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state 
   continue state { props = state.props { enterOtpFocusIndex = focusIndex, rideOtp = rideOtp, otpIncorrect = false } }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
   continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
-eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
-    let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
-    exit exitState
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = continue state{props{enterOdometerReadingModal = state.props.enterOtpModal , enterOtpModal = false, endRideOtpModal = false, endRideOdometerReadingModal = state.props.endRideOtpModal}}
+    -- let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
+    -- exit exitState
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone text)) state = continueWithCmd state  [ pure UploadImage] -- make api call
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index)) state = do 
+  let kmStrLen = length state.data.odometerReading.valueInkm 
+      mStrLen = length state.data.odometerReading.valueInM 
+  if(state.props.odometerConfig.updateKm && kmStrLen >= 6  || state.props.odometerConfig.updateM && mStrLen >= 3) then continue state
+    else  
+      continue state{props{odometerValueInKm = if state.props.odometerConfig.updateKm then state.props.odometerValueInKm <> key else state.props.odometerValueInKm}
+                      , data {odometerReading {valueInM = (if (not state.props.odometerConfig.updateKm) then (state.data.odometerReading.valueInM <> key) else (state.data.odometerReading.valueInM )), valueInkm = if (state.props.odometerConfig.updateKm) then (state.data.odometerReading.valueInkm <> key) else state.data.odometerReading.valueInkm }}}
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnTextViewClick str)) state = 
+  continue state{props{odometerConfig {updateKm = (str == "Km") , updateM = (str == "m")}}}
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickBack _)) state = do 
+  if (state.props.odometerConfig.updateKm) then 
+    continue state{data{odometerReading{valueInkm = (if length state.data.odometerReading.valueInkm > 0 then (take (length state.data.odometerReading.valueInkm - 1) state.data.odometerReading.valueInkm) else "")}}}
+    else if (state.props.odometerConfig.updateM) then 
+      continue state{data{odometerReading{valueInM = (if length state.data.odometerReading.valueInM > 0 then (take (length state.data.odometerReading.valueInM - 1) state.data.odometerReading.valueInM) else "")}}}
+      else continue state
+
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
-  continue $ (state {props {endRidePopUp = true}, data {route = []}})
+  if state.data.activeRide.rideType == ST.RENTAL_BOOKING then continue state{props{endRideOtpModal = true}, data{route = []}}
+    else 
+    continue $ (state {props {endRidePopUp = true}, data {route = []}})
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   let lat = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lat else state.data.activeRide.dest_lat
@@ -1066,7 +1110,9 @@ activeRideDetail state (RidesInfo ride) =
               Just "LOCOMOTOR_DISABILITY" -> Just ST.LOCOMOTOR_DISABILITY
               Just "OTHER" -> Just ST.OTHER_DISABILITY
               Just _ -> Just ST.OTHER_DISABILITY
-              Nothing -> Nothing
+              Nothing -> Nothing,
+  rentalBooking : ride.rentalBooking,
+  rideType : if ride.rentalBooking then ST.RENTAL_BOOKING else ST.NORMAL_BOOKING
 }
 
 cancellationReasons :: String -> Array Common.OptionButtonList
@@ -1166,3 +1212,4 @@ getPreviousVersion merchant =
     YATRI -> "2.3.0"
     YATRISATHI -> "0.1.8"
     _ -> "100.100.100"
+

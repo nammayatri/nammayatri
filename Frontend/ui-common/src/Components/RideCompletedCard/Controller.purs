@@ -11,10 +11,14 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Prim.TypeError as String
 import Common.Styles.Colors as Color
 import Font.Style (Style (..))
+import Font.Style as FontStyle
+import Styles.Types (FontStyle)
 import Components.PopUpModal as PopUpModal
 import Data.Eq.Generic (genericEq)
+import Common.Types.App (LazyCheck(..))
 import Foreign.Generic (class Decode, class Encode)
 import Data.Generic.Rep (class Generic)
+import Halogen.VDom.DOM.Prop (Prop)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode, defaultEnumDecode, defaultEnumEncode)
 
 data Action = Support
@@ -27,6 +31,7 @@ data Action = Support
             | ContactSupportPopUpAC PopUpModal.Action
             | UpiQrRendered String
             | BannerAction Banner.Action
+            | NoAction
             
 type Config = {
   isDriver :: Boolean,
@@ -46,7 +51,18 @@ type Config = {
   bannerConfig :: Banner.Config,
   viewsByOrder :: Array RideCompletedElements,
   enableContactSupport :: Boolean,
-  isFreeRide :: Boolean
+  isFreeRide :: Boolean,
+  rentalRideConfig :: RentalRideConfig,
+  strings :: Strings
+}
+
+type Strings = {
+  rideTime :: String,
+  rideDistance :: String,
+  rideStart :: String,
+  rideStartedAt :: String,
+  rideEnd :: String,
+  rideEndedAt :: String
 }
 
 data Theme = DARK | LIGHT
@@ -56,7 +72,7 @@ instance decodeTheme :: Decode Theme where decode = defaultEnumDecode
 instance encodeTheme :: Encode Theme where encode = defaultEnumEncode
 instance eqTheme :: Eq Theme where eq = genericEq
 
-data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW
+data RideCompletedElements = BANNER | QR_VIEW | NO_VPA_VIEW | BADGE_CARD | DRIVER_BOTTOM_VIEW | RENTAL_RIDE_VIEW
 
 derive instance genericRideCompletedElements :: Generic RideCompletedElements _
 instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericEq
@@ -152,7 +168,23 @@ config = {
   isPrimaryButtonSticky : false,
   bannerConfig : Banner.config,
   viewsByOrder : [],
-  enableContactSupport : true
+  enableContactSupport : true,
+  rentalRideConfig : {
+    rideStartODOReading : "",
+    rideEndODOReading : "",
+    possibleRideDuration : "",
+    possibleRideDistance : "",
+    actualRideDuration : "",
+    actualRideDistance : ""
+  },
+  strings : {
+    rideTime : "Ride Time",
+    rideDistance : "Ride Distance",
+    rideStart : "Ride Start",
+    rideStartedAt : "Ride Started At",
+    rideEnd : "Ride End",
+    rideEndedAt : "Ride Ended At"
+  }
 }
 
 type CustomerIssueCard = {
@@ -247,4 +279,38 @@ type TopPill = {
   background :: String,
   text :: String,
   textColor :: String
+}
+
+type InfoCardConfig = {
+  height :: Length,
+  width :: Length,
+  margin :: Margin,
+  image :: InfoCardImageConfig , 
+  heading :: InfocardTextConfig,
+  subHeading1 :: InfocardTextConfig,
+  subHeading2 :: InfocardTextConfig,
+  id :: String
+}
+
+type InfoCardImageConfig = {
+  width :: Length,
+  height :: Length,
+  visibility :: Visibility,
+  renderImage :: String
+}
+
+type InfocardTextConfig = {
+  text :: String,
+  color :: String,
+  fontStyle :: forall properties. (Array (Prop properties)),
+  visibility :: Visibility
+}
+
+type RentalRideConfig = {
+  rideStartODOReading :: String,
+  rideEndODOReading :: String,
+  possibleRideDuration :: String,
+  possibleRideDistance :: String,
+  actualRideDuration :: String,
+  actualRideDistance :: String
 }

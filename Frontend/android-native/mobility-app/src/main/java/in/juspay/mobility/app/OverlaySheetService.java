@@ -108,7 +108,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private FirebaseAnalytics mFirebaseAnalytics;
     private Boolean isRideAcceptedOrRejected = false;
     private TextView indicatorText1, indicatorText2, indicatorText3, vehicleText1, vehicleText2, vehicleText3;
-    private TextView indicatorTip1, indicatorTip2, indicatorTip3;
+    private TextView indicatorTip1, indicatorTip2, indicatorTip3, rentalIndicator;
     private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
     private ArrayList<TextView> indicatorTextList, vehicleVariantList;
@@ -119,7 +119,9 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private String key = "";
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
     private SheetModel modelForLogs;
-    private static Boolean enableCleverTapEvents;
+    private static Boolean enableCleverTapEvents;    
+    private  String notificationType ="";
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -204,6 +206,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
         public void onViewHolderBind(SheetAdapter.SheetViewHolder holder, int position, ViewPager2 viewPager, List<Object> payloads) {
             SheetModel model = sheetArrayList.get(position);
             modelForLogs = model;
+            notificationType = model.getNotificationType();
             String x = payloads.size() > 0 ? (String) payloads.get(0) : "";
             switch (x) {
                 case "inc":
@@ -254,6 +257,23 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             }
             if (model.getspecialLocationTag() != null) {
                 RideRequestUtils.setSpecialZoneAttrs(holder, model.getspecialLocationTag(), OverlaySheetService.this);
+            }
+            if(notificationType.equals("NEW_RENTAL_RIDE_AVAILABLE")){
+                 holder.destinationPinCode.setVisibility(View.GONE);
+                 holder.destinationArea.setVisibility(View.GONE);
+                 holder.destinationAddress.setVisibility(View.GONE);
+                 holder.sourcePinCode.setVisibility(View.VISIBLE);
+                 holder.destinationIcon.setVisibility(View.GONE);
+                 holder.dashedLine.setVisibility(View.GONE);
+                 holder.durationToPickup.setVisibility(View.GONE);
+                 holder.durationToPickupImage.setVisibility(View.GONE);
+                 holder.distanceToBeCovered.setVisibility(View.GONE);
+                 holder.rentalTime.setVisibility(View.VISIBLE);
+                 holder.rentalDistance.setVisibility(View.VISIBLE);
+                 holder.rentalBookingDateAndTime.setVisibility(View.VISIBLE);
+                 holder.rentalBookingDate.setVisibility(View.VISIBLE);
+                 holder.rentalBookingTime.setVisibility(View.VISIBLE);
+
             }
             sharedPref = getApplication().getSharedPreferences(getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String useMLKit = sharedPref.getString("USE_ML_TRANSLATE", "false");
@@ -597,6 +617,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                     boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
+                    notificationType = rideRequestBundle.getString("notificationType");
+                    
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
 
@@ -624,7 +646,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             requestedVehicleVariant,
                             disabilityTag,
                             isTranslated,
-                            gotoTag);
+                            gotoTag,
+                            notificationType);
 
                     if (floatyView == null) {
                         startTimer();
@@ -1011,8 +1034,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             shimmerTip3 = floatyView.findViewById(R.id.shimmer_view_container_2);
             tipsList = new ArrayList<>(Arrays.asList(indicatorTip1, indicatorTip2, indicatorTip3));
             shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3));
+            rentalIndicator = floatyView.findViewById(R.id.rental_view_0);
+            if(notificationType.equals("NEW_RENTAL_RIDE_AVAILABLE")) rentalIndicator.setVisibility(View.VISIBLE);
+            if(!notificationType.equals("NEW_RENTAL_RIDE_AVAILABLE")) indicatorList.get(0).setBackgroundColor(R.color.white);
             for (int i = 0; i < 3; i++) {
                 if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))) {
+                    if(!(notificationType.equals("NEW_RENTAL_RIDE_AVAILABLE")  && i == 0))
                     indicatorList.get(i).setBackgroundColor(getColor(R.color.grey900));
                     progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
                     shimmerTipList.get(i).stopShimmer();

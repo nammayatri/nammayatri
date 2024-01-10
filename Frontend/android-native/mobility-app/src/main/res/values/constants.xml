@@ -49,4 +49,5 @@
     <string name="REGISTRATION_APPROVED" translatable="false">REGISTRATION_APPROVED</string>
     <string name="ReAllocated" translatable="false">ReAllocated</string>
     <string name="FINDING_QUOTES_START_TIME" translatable="false">FINDING_QUOTES_START_TIME</string>
+    <string name="NEW_RENTAL_RIDE_AVAILABLE" translatable="false" >NEW_RENTAL_RIDE_AVAILABLE</string>
 </resources>

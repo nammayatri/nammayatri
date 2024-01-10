@@ -105,6 +105,7 @@ initData =
     checkAlternateNumber : true,
     otpAttemptsExceeded: false,
     enterOtpFocusIndex : 0,
+    enterOdometerFocusIndex : 5,
     otpIncorrect : false,
     alternateMobileOtp : "",
     isEditAlternateMobile : false,

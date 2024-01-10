@@ -48,4 +48,5 @@
     <string name="message_from_customer">Message from Customer</string>
     <string name="go_to">Go-To</string>
     <string name="call_support">Call Support</string>
+    <string name="today">Today</string>
 </resources>

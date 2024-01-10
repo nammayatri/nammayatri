@@ -1110,4 +1110,16 @@ getTE stringKey =
         DOWNLOAD_NAMMA_YATRI _-> "నమ్మ యాత్రి డౌన్లోడ్"
         ENTER_CODE -> "కోడ్ వ్రాయండి"
         COMPLETE_REGISTRATION -> "నమోదును పూర్తి చెయ్యండి"
-    
+        DURATION -> "వ్యవధి"
+        START_TIME -> "ప్రారంభ సమయం"
+        START_ODO_READING -> "ప్రారంభ ఓడో రీడింగ్"
+        RIDE_TIME -> "సవారి సమయం"
+        RIDE_START -> "సవారి ప్రారంభం"
+        RIDE_END -> "సవారి ముగింపు"
+        RIDE_STARTED_AT -> "సవారి ప్రారంభం"
+        RIDE_ENDED_AT -> "సవారి ముగింపు"
+        ODOMETER_READING -> "ఓడోమీటర్ రీడింగ్"
+        PICKED_UP_AT -> "పిక్ చేసినది"
+        YOU_ARE_ON_A_RENTAL_RIDE -> "మీరు రెంటల్ సవారిలో ఉన్నారు"
+        ENTER_END_RIDE_OTP -> "ఎండ్ రైడ్ OTPని నమోదు చేయండి"
+

@@ -3,12 +3,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:gravity="center_vertical">
+    >
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="24dp"
+        android:gravity="center"
         android:elevation="1dp"
         android:orientation="vertical">
 
@@ -16,8 +16,10 @@
             android:id="@+id/indicatorLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="15dp">
-
+            android:layout_marginHorizontal="15dp"
+            android:background="#1A09C3C6">
+            
+                        
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -56,6 +58,16 @@
                                 android:gravity="center"
                                 android:textStyle="bold"
                                 android:background="@drawable/rectangle_9506"
+                                android:visibility="gone" />
+                            <TextView
+                                android:id="@+id/rental_view_0"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="Rental"
+                                android:textColor="@color/Black900"
+                                android:gravity="center"
+                                android:textStyle="bold"
+                                android:background="@drawable/rectangle_9506_rental"
                                 android:visibility="invisible" />
                         </com.facebook.shimmer.ShimmerFrameLayout>
 

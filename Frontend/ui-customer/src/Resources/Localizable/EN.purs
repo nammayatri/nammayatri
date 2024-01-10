@@ -698,3 +698,10 @@ getEN stringKey =
         RIDE_STARTED -> "Ride started"
         ONE_CLICK -> "1 Click"
         SMART -> "Smart"
+        RIDE_TIME -> "Ride Time"
+        RIDE_DISTANCE -> "Ride Distance"
+        RIDE_START -> "Ride Start"
+        RIDE_STARTED_AT -> "Ride started at"
+        RIDE_END -> "Ride End"
+        RIDE_ENDED_AT -> "Ride ended at"
+
