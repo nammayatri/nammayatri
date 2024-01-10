@@ -24,7 +24,7 @@ import Helpers.Utils (getStatus, contactSupportNumber)
 import JBridge as JB
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (class Show, bind, discard, pure, show, unit, ($), void, (>), (+), (<>), (>=), (-), not, min)
+import Prelude (class Show, bind, discard, pure, show, unit, ($), void, (>), (+), (<>), (>=), (-), not, min, when)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -36,7 +36,8 @@ import Data.String as DS
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.LogEvent (logEvent, logEventWithMultipleParams)
+import Foreign (Foreign, unsafeToForeign)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -128,6 +129,9 @@ eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {
 
 eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_complete_registration"
+  when state.props.referralCodeSubmitted $ do
+    let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_driver_complete_registration_with_referral_code" $ [{key : "Referee Code", value : unsafeToForeign state.data.referralCode}]
+    pure unit
   exit GoToHomeScreen
 
 eval Refresh state = exit RefreshPage
