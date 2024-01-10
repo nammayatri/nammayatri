@@ -128,13 +128,13 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
           bulkUploadTitle = historyItem.bulkUploadTitle
         }
 
-getCoinUsageSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow CoinsUsageRes
-getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) = do
+getCoinUsageSummary :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Integer -> Maybe Integer -> Flow CoinsUsageRes
+getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset = do
   transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
-  purchaseSummary <- PHistory.getPurchasedHistory driverId
+  purchaseSummary <- PHistory.getPurchasedHistory driverId mbLimit mbOffset
   mbDriverPlan <- DPlan.findByDriverId driverId
   let coinUsageHistory = map toUsageHistoryItem purchaseSummary
   coinAdjustedInSubscriptionKeyExists <- getCoinAdjustedInSubscriptionByDriverIdKey driverId

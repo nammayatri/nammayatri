@@ -20,6 +20,9 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Storage.Tabular.Merchant
 
+create :: Merchant -> SqlDB ()
+create = Esq.create
+
 findById ::
   Transactionable m =>
   Id Merchant ->

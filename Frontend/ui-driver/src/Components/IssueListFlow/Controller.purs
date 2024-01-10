@@ -191,9 +191,9 @@ config = {
 getTitle :: String -> String
 getTitle menuOption =
   case menuOption of
-     "Ride Related Issue"-> (getString RIDE_RELATED_ISSUE)
-     "App Related Issue" -> (getString APP_RELATED_ISSUE)
-     "Fare Related Issue" -> (getString FARE_RELATED_ISSUE) 
-     "Lost Item"       -> (getString LOST_ITEM)
-     "Issue Number"  -> (getString ISSUE_NUMBER)
-     _ -> ""
+    "Ride Related Issue" -> getString RIDE_RELATED_ISSUE
+    "App Related Issue" -> getString APP_RELATED_ISSUE
+    "Fare Related Issue" -> getString FARE_RELATED_ISSUE
+    "Lost Item" -> getString LOST_ITEM
+    "Issue Number"  -> getString ISSUE_NUMBER
+    option -> option

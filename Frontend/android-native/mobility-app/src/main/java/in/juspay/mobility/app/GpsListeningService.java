@@ -148,7 +148,6 @@ public class GpsListeningService extends Service {
         mBuilder.setLargeIcon(BitmapFactory.decodeResource(this.getResources(), Utils.getResIdentifier(getApplicationContext(),"ic_launcher", "drawable")));
         mBuilder.setContentTitle(getString(R.string.we_made_you_online))
                 .setSmallIcon(Utils.getResIdentifier(getApplicationContext(), (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
-                .setColor(rgb(252, 196, 44))
                 .setContentText(getString(R.string.location_is_turned_on))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX);

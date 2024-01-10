@@ -223,13 +223,25 @@ getLicenseStatus :: Int -> Int -> Maybe DriverLicense -> Maybe IV.IdfyVerificati
 getLicenseStatus onboardingTryLimit currentTries mbLicense mbLicReq =
   case mbLicense of
     Just driverLicense -> St.mapStatus driverLicense.verificationStatus
-    Nothing -> St.verificationStatus onboardingTryLimit currentTries mbLicReq
+    Nothing -> verificationState onboardingTryLimit currentTries mbLicReq
 
 getRegCertStatus :: Int -> Int -> Maybe (DriverRCAssociation, VehicleRegistrationCertificate) -> Maybe IV.IdfyVerification -> St.ResponseStatus
 getRegCertStatus onboardingTryLimit currentTries mbRegCert mbVehRegReq =
   case mbRegCert of
     Just (_assoc, vehicleRC) -> St.mapStatus vehicleRC.verificationStatus
-    Nothing -> St.verificationStatus onboardingTryLimit currentTries mbVehRegReq
+    Nothing -> verificationState onboardingTryLimit currentTries mbVehRegReq
+
+verificationState :: Int -> Int -> Maybe IV.IdfyVerification -> ResponseStatus
+verificationState onboardingTryLimit imagesNum verificationReq =
+  case verificationReq of
+    Just req -> do
+      if req.status == "pending"
+        then PENDING
+        else FAILED
+    Nothing -> do
+      if imagesNum > onboardingTryLimit
+        then LIMIT_EXCEED
+        else NO_DOC_AVAILABLE
 
 ---------
 
@@ -1560,7 +1572,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
         overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing >>= fromMaybeM (OverlayKeyNotFound oKey)
         let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
         let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
-        TN.sendOverlay merchantOpCityId driver.id driver.deviceToken overlay.title description overlay.imageUrl okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
+        TN.sendOverlay merchantOpCityId driver.id driver.deviceToken $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
       ALERT -> do
         _mId <- fromMaybeM (InvalidRequest "Message Id field is required for channel : ALERT") messageId -- whenJust messageId $ \_mId -> do
         topicName <- asks (.broadcastMessageTopic)

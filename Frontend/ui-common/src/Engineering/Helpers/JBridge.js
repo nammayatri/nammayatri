@@ -2147,7 +2147,7 @@ export const addCarouselWithVideoExists = function () {
   return JBridge.addCarouselWithVideo;
 }
 
-export const addCarousel = function (carouselModalJson, id) {
+export const addCarouselImpl = function (carouselModalJson, id) {
   const carouselJson = JSON.stringify(carouselModalJson);
   const data = JSON.parse(carouselJson);
   const originalArray = data.carouselData;

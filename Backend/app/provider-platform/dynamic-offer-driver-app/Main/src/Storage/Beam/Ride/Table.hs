@@ -53,6 +53,7 @@ data RideT f = RideT
     numberOfDeviation :: B.C f (Maybe Bool),
     uiDistanceCalculationWithAccuracy :: B.C f (Maybe Int),
     uiDistanceCalculationWithoutAccuracy :: B.C f (Maybe Int),
+    isFreeRide :: B.C f (Maybe Bool),
     driverGoHomeRequestId :: B.C f (Maybe Text),
     safetyAlertTriggered :: B.C f Bool
   }

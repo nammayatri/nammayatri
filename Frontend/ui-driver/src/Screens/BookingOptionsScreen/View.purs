@@ -2,7 +2,6 @@ module Screens.BookingOptionsScreen.View where
 
 import Animation as Anim
 import Common.Types.App (LazyCheck(..))
-import Components.ChooseVehicle as ChooseVehicle
 import Data.Maybe (Maybe(..), fromMaybe)
 import Debug (spy)
 import Effect (Effect)
@@ -343,40 +342,6 @@ headerLayout push state =
         , background Color.greyLight
         ]
         []
-    ]
-
-downgradeOptionsView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w
-downgradeOptionsView push state =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ MarginTop 56
-    ]
-    [ linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , padding $ PaddingHorizontal 16 16
-        , margin $ MarginBottom 14
-        ]
-        [ customTV (getString MAKE_YOURSELF_AVAILABLE_FOR) FontSize.a_20 FontStyle.h3 Color.black
-        ]
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ]
-        ( map
-            ( \item ->
-                linearLayout
-                  [ height WRAP_CONTENT
-                  , width MATCH_PARENT
-                  , padding $ PaddingVertical 6 6
-                  ]
-                  [ ChooseVehicle.view (push <<< ChooseVehicleAC) item
-                  ]
-            ) state.data.downgradeOptions
-        )
     ]
 
 customTV :: forall w. String -> Int -> (LazyCheck -> forall properties. (Array (Prop properties))) -> String -> PrestoDOM (Effect Unit) w

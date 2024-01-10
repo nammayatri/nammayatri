@@ -2423,15 +2423,12 @@ instance encodeTicketPlaceReq  :: Encode TicketPlaceReq where encode = defaultEn
 derive instance genericTicketBookingRequest :: Generic TicketBookingRequest _
 instance standardEncodeTicketBookingRequest :: StandardEncode TicketBookingRequest where standardEncode (TicketBookingRequest id body) = standardEncode body
 instance showTicketBookingRequest :: Show TicketBookingRequest where show = genericShow
-instance decodeTicketBookingRequest :: Decode TicketBookingRequest where decode = defaultDecode
 instance encodeTicketBookingRequest  :: Encode TicketBookingRequest where encode = defaultEncode
 
 derive instance genericTicketPlaceResponse :: Generic TicketPlaceResponse _
 derive instance newtypeTicketPlaceResponse :: Newtype TicketPlaceResponse _
-instance standardEncodeTicketPlaceResponse :: StandardEncode TicketPlaceResponse where standardEncode (TicketPlaceResponse body) = standardEncode body
 instance showTicketPlaceResponse :: Show TicketPlaceResponse where show = genericShow
 instance decodeTicketPlaceResponse :: Decode TicketPlaceResponse where decode = defaultDecode
-instance encodeTicketPlaceResponse  :: Encode TicketPlaceResponse where encode = defaultEncode
 
 derive instance genericPlaceType :: Generic PlaceType _
 instance standardEncodePlaceType :: StandardEncode PlaceType where standardEncode _ = standardEncode {}

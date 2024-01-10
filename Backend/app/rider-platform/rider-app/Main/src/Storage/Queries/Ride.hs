@@ -281,7 +281,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
     findAllWithOptionsKV
       [ Se.And
           ( [Se.Is BeamB.riderId $ Se.Eq personId]
-              <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED] | isOnlyActive])
+              <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | isOnlyActive])
               <> ([Se.Is BeamB.status $ Se.Eq (fromJust mbBookingStatus) | isJust mbBookingStatus])
           )
       ]
@@ -450,5 +450,6 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.driverMobileCountryCode = driverMobileCountryCode,
         BeamR.driverImage = driverImage,
         BeamR.safetyCheckStatus = safetyCheckStatus,
-        BeamR.allowedEditLocationAttempts = allowedEditLocationAttempts
+        BeamR.allowedEditLocationAttempts = allowedEditLocationAttempts,
+        BeamR.isFreeRide = isFreeRide
       }

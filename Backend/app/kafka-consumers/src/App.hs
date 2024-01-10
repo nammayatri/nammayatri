@@ -18,15 +18,21 @@ import qualified Consumer.Flow as CF
 import Data.Function
 import Environment
 import EulerHS.Interpreters (runFlow)
+import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as L
 import qualified EulerHS.Runtime as R
 import qualified Kafka.Consumer as Consumer
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
+import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
+import Kernel.Storage.Queries.SystemConfigs as QSC
+import Kernel.Types.Error
+import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.Common hiding (id)
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import qualified Kernel.Utils.FlowLogging as L
+import "dynamic-offer-driver-app" Storage.Beam.SystemConfigs ()
 import System.Environment (lookupEnv)
 
 startKafkaConsumer :: IO ()
@@ -44,8 +50,19 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
   R.withFlowRuntime (Just loggerRuntime) $ \flowRt' -> do
     managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty -- default manager is created
     let flowRt = flowRt' {L._httpClientManagers = managers}
+    flowRt'' <- runFlowR flowRt appEnv $ do
+      fork
+        "Fetching Kv configs"
+        ( forever $ do
+            kvConfigs <-
+              QSC.findById "kv_configs" >>= pure . decodeFromText' @Tables
+                >>= fromMaybeM (InternalError "Couldn't find kv_configs table for kafka consumer")
+            L.setOption KBT.Tables kvConfigs
+            threadDelay (appCfg.kvConfigUpdateFrequency * 1000000)
+        )
+      pure flowRt
     runFlow
-      flowRt
+      flowRt''
       ( prepareConnectionRider
           ( ConnectionConfigRider
               { esqDBCfg = appCfg.esqDBCfg,

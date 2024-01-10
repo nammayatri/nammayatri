@@ -993,6 +993,7 @@ type ActiveRide = {
 }
 
 type HomeScreenProps =  {
+  isFreeRide :: Boolean,
   statusOnline :: Boolean,
   goOfflineModal :: Boolean,
   screenName :: String,

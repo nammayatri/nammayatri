@@ -126,6 +126,8 @@ data TransporterConfigT f = TransporterConfigT
     numOfCancellationsAllowed :: B.C f Int,
     canAddCancellationFee :: B.C f Bool,
     allowDefaultPlanAllocation :: B.C f Bool,
+    specialDrivers :: B.C f [Text],
+    specialLocationTags :: B.C f [Text],
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     notificationRetryEligibleErrorCodes :: B.C f [Text],

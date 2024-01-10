@@ -31,7 +31,7 @@ executable alchemist-generator-exe
       Utils.Utils
       Paths_alchemist
   hs-source-dirs:
-      spec
+      src
   default-extensions:
       ConstraintKinds
       DataKinds

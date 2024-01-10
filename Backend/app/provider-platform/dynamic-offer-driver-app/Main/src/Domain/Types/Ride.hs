@@ -74,6 +74,7 @@ data Ride = Ride
     numberOfDeviation :: Maybe Bool,
     uiDistanceCalculationWithAccuracy :: Maybe Int,
     uiDistanceCalculationWithoutAccuracy :: Maybe Int,
+    isFreeRide :: Maybe Bool,
     driverGoHomeRequestId :: Maybe (Id DriverGoHomeRequest),
     safetyAlertTriggered :: Bool
   }

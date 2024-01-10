@@ -25,7 +25,7 @@ import Components.LocationTagBar as LocationTagBar
 import Components.PrimaryButton as PrimaryButton
 import Components.SearchLocationModel.Controller (Action(..), SearchLocationModelState)
 import Components.SeparatorView.View as SeparatorView
-import Data.Array (mapWithIndex, length, take)
+import Data.Array (mapWithIndex, length, take, null)
 import Data.Function (flip)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
@@ -48,6 +48,7 @@ import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w. (Action -> Effect Unit) -> SearchLocationModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -126,9 +127,9 @@ searchResultsParentView state push =
   linearLayout
   [ width MATCH_PARENT
   , height MATCH_PARENT
-  , margin $ Margin 16 15 16 0
+  , margin $ MarginHorizontal 16 16
   , orientation VERTICAL
-  , visibility if state.isSearchLocation == SearchLocation && state.isRideServiceable && not state.showLoader then VISIBLE else GONE
+  , visibility $ boolToVisibility $ state.isSearchLocation == SearchLocation && state.isRideServiceable && not state.showLoader 
     ][  savedLocationBar state push
       , findPlacesIllustration  push state
       , searchResultsView state push ]
@@ -396,7 +397,7 @@ searchResultsView state push =
     , padding (PaddingBottom 60)
     , background Color.white900
     , scrollBarY false
-    , visibility if (length state.locationList == 0 || state.findPlaceIllustration) then GONE else VISIBLE
+    , visibility $ boolToVisibility $ not (null state.locationList || state.findPlaceIllustration) 
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -404,7 +405,7 @@ searchResultsView state push =
         ][  textView $
               [ text searchResultText
               , color Color.black700
-              , margin $ MarginVertical 16 8
+              , margin $ MarginVertical 14 8
               ] <> FontStyle.body3 TypoGraphy
           , linearLayout
             [ height WRAP_CONTENT
@@ -457,7 +458,7 @@ savedLocationBar state push =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , margin $ MarginVertical 15 15
+  , margin $ MarginTop 15 
   , accessibility DISABLE_DESCENDANT
   , visibility if (not state.isAutoComplete) then VISIBLE else GONE
   ][ linearLayout

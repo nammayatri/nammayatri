@@ -71,6 +71,7 @@ data Ride = Ride
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
     allowedEditLocationAttempts :: Maybe Int,
+    isFreeRide :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     safetyCheckStatus :: Maybe Bool
@@ -97,6 +98,7 @@ data RideAPIEntity = RideAPIEntity
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
+    isFreeRide :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bppRideId :: Id BPPRide

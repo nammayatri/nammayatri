@@ -255,6 +255,7 @@ buildNewRide mbMerchant booking NewRideInfo {..} = do
       rideStartTime = Nothing
       rideEndTime = Nothing
       rideRating = Nothing
+      isFreeRide = Nothing
       safetyCheckStatus = Nothing
   pure $ DRide.Ride {..}
 

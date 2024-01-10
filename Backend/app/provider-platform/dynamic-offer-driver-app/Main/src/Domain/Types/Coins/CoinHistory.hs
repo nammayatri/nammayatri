@@ -30,6 +30,7 @@ data CoinHistory = CoinHistory
     eventFunction :: DCT.DriverCoinsFunctionType,
     coins :: Int,
     createdAt :: UTCTime,
+    updatedAt :: UTCTime,
     expirationAt :: Maybe UTCTime,
     coinsUsed :: Int,
     status :: CoinStatus,

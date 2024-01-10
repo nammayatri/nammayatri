@@ -86,7 +86,7 @@ executables:
   alchemist-generator-exe:
     main: Main.hs
     source-dirs:
-      - spec
+      - src
     ghc-options:
       - -threaded
       - -rtsopts

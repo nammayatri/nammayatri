@@ -393,9 +393,10 @@ public class NotificationUtils {
         if (imageUrl != null) {
             mBuilder.setLargeIcon(bitmap)
                     .setSmallIcon(smallIcon)
-                    .setColor(rgb(252, 197, 43))
                     .setContentTitle(title)
                     .setContentText(msg)
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(title))
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(msg))
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
                     .setChannelId(channelId)
@@ -405,9 +406,10 @@ public class NotificationUtils {
                                     .bigLargeIcon(null));
         } else {
             mBuilder.setSmallIcon(smallIcon)
-                    .setColor(rgb(252, 197, 42))
                     .setContentTitle(title)
                     .setContentText(msg)
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(title))
+                    .setStyle(new NotificationCompat.BigTextStyle().bigText(msg))
                     .setAutoCancel(true)
                     .setContentIntent(pendingIntent)
                     .setChannelId(channelId);
@@ -611,8 +613,9 @@ public class NotificationUtils {
                 new NotificationCompat.Builder(context, "MessageUpdates")
                         .setContentTitle(titleBold)
                         .setAutoCancel(true)
-                        .setColor(rgb(251, 197, 44))
                         .setContentText(message)
+                        .setStyle(new NotificationCompat.BigTextStyle().bigText(titleBold))
+                        .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
                         .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
                         .setDefaults(Notification.DEFAULT_ALL)
                         .setPriority(NotificationCompat.PRIORITY_HIGH)

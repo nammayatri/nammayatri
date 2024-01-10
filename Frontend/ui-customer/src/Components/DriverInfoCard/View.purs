@@ -33,7 +33,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode)
 import Language.Strings (getString)
 import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
@@ -44,7 +44,7 @@ import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margi
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
-import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..))
+import Screens.Types (Stage(..), ZoneType(..), SearchResultType(..), SheetState(..),City(..))
 import Storage (isLocalStageOn, getValueToLocalStore)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
@@ -135,7 +135,6 @@ titleAndETA push state =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  , afterRender push $ const $ NoAction
   ][ if state.props.currentStage == RideAccepted then specialZoneHeader (getValueToLocalStore SELECTED_VARIANT)
      else distanceView push state
   ]
@@ -225,7 +224,6 @@ driverInfoView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , visibility if state.props.currentSearchResultType == QUOTES then GONE else VISIBLE
-  , afterRender push $ const $ NoAction
   ][ (if os == "IOS" then linearLayout else scrollView)
       [ height MATCH_PARENT
       , width MATCH_PARENT
@@ -314,37 +312,26 @@ driverInfoView push state =
 
 distanceView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 distanceView push state = 
+  PrestoAnim.animationSet [ scaleYAnimWithDelay (getAnimationDelay FunctionCall)] $ 
   linearLayout
   [ orientation HORIZONTAL
   , height WRAP_CONTENT
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
-  , padding $ Padding 16 16 16 16
+  , onAnimationEnd push $ const $ NoAction
+  , padding $ Padding 16 8 16 14
   ][linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , accessibility ENABLE
-    , accessibilityHint $ "Arriving at your destination in " <> if (secondsToHms $ fromMaybe 0 state.data.eta) == "--" then "" else (secondsToHms $ fromMaybe 0 state.data.eta) 
-    , visibility $ boolToVisibility $ not $ state.props.currentStage /= RideAccepted && isJust state.data.eta && (secondsToHms $ fromMaybe 0 state.data.eta) == "--"
+    , accessibilityHint $ getEN ENJOY_THE_RIDE
     ][ textView $
-       [ text $ getString REACHING_YOUR_DESTINATION_IN_ <> " "
-       , color Color.black800
+       [ text $ getString ENJOY_THE_RIDE
+       , color Color.black900
        , ellipsize true
        , singleLine true
-       ] <> FontStyle.subHeading1 TypoGraphy
-     , textView $
-       [ text $ (secondsToHms $ fromMaybe 0 state.data.eta)
-       , color Color.green900
-       , ellipsize true
-       , singleLine true
-       ] <> FontStyle.subHeading1 TypoGraphy
+       ] <> FontStyle.body7 TypoGraphy
      ]
-   , textView $ 
-     [text $ getString YOU_HAVE_REACHED_DESTINATION
-     , color Color.black800
-     , visibility $ boolToVisibility $ state.props.currentStage /= RideAccepted && isJust state.data.eta && (secondsToHms $ fromMaybe 0 state.data.eta) == "--"
-     , singleLine true
-     ] <> FontStyle.subHeading1 TypoGraphy
   ]
 
 brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> PrestoDOM (Effect Unit) w
@@ -388,7 +375,6 @@ cancelRideLayout push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , afterRender push $ const $ NoAction
   , onAnimationEnd push $ const $ NoAction
   , margin $ if state.data.config.showPickUpandDrop then MarginTop 0 else MarginTop 12
   , padding $ PaddingBottom if os == "IOS" then if safeMarginBottom == 0 then 24 else safeMarginBottom else 0
@@ -422,14 +408,13 @@ contactView push state =
     [ orientation HORIZONTAL
     , height WRAP_CONTENT
     , width MATCH_PARENT
-    , afterRender push $ const $ NoAction
     , gravity CENTER_VERTICAL
-    , padding $ Padding 16 20 16 16
+    , padding $ Padding 16 4 16 16
     , visibility if (Array.any (_ == state.props.currentStage) [ RideAccepted, ChatWithDriver ]) then VISIBLE else GONE
     ][  linearLayout
         [ width (V (((screenWidth unit)/3 * 2)-27))
         , height WRAP_CONTENT
-        , accessibilityHint $ "Ride Status : " <>  if state.data.distance > 1000 then (state.data.driverName <> " is " <> eta <> " and " <> show (toNumber (state.data.distance) / 1000.0) <> " Kilo Meters Away ") else (state.data.driverName <> if state.data.waitingTime == "--" then " is on the way" else " is waiting for you.")
+        , accessibilityHint $ "Ride Status : " <> if eta /= "--" then (state.data.driverName <> " is " <> eta <> " Away") else if state.data.waitingTime == "--" then (state.data.driverName <> " is on the way") else (state.data.driverName <> " is waiting for you.") 
         , accessibility ENABLE
         , orientation if length state.data.driverName > 16 then VERTICAL else HORIZONTAL
         ][  textView $
@@ -437,7 +422,7 @@ contactView push state =
             , color Color.black900
             , ellipsize true
             , singleLine true
-            ] <> FontStyle.subHeading1 TypoGraphy
+            ] <> FontStyle.body7 TypoGraphy
           , linearLayout
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -445,14 +430,14 @@ contactView push state =
             ][ textView $
                 [ text $"is " <> eta
                 , color Color.black900
-                , visibility $ boolToVisibility $ state.data.distance > 1000 && eta /= "--"
-                ] <> FontStyle.subHeading1 TypoGraphy
+                , visibility $ boolToVisibility $ eta /= "--"
+                ] <> FontStyle.body7 TypoGraphy
               , textView $
-                [ text case (state.data.distance > 1000 && eta /= "--") of
+                [ text case eta /= "--" of
                     true -> getString AWAY
                     false -> if state.data.waitingTime == "--" then getString IS_ON_THE_WAY else getString IS_WAITING_AT_PICKUP
                 , color Color.black900
-                ] <> FontStyle.subHeading1 TypoGraphy
+                ] <> FontStyle.body7 TypoGraphy
               ]
           ]
       , linearLayout
@@ -489,7 +474,6 @@ driverDetailsView push state uid =
   , height $ V 150
   , padding $ PaddingHorizontal 16 16
   , width MATCH_PARENT
-  , afterRender push $ const $ NoAction
   , id $ getNewIDWithTag uid
   , margin $ Margin 16 (if state.props.currentSearchResultType == QUOTES then 12 else 0) 16 0
   , background Color.white900
@@ -642,28 +626,28 @@ ratingView push state =
   , margin $ MarginTop 40
   , height $ V 19
   , width $ V 50
-  , afterRender push $ const $ NoAction
-  , padding $ Padding 8 3 6 3
+  , padding $ Padding 6 3 6 3
   , background state.data.config.driverInfoConfig.ratingBackground
   , gravity CENTER_VERTICAL
   , stroke  state.data.config.driverInfoConfig.ratingStroke
   , cornerRadius state.data.config.driverInfoConfig.ratingCornerRadius
   , accessibility DISABLE
-  ][  imageView
-      [ imageWithFallback $ fetchImage FF_COMMON_ASSET  "ny_ic_star_active"
-      , height $ V 13
-      , width $ V 13
-      , accessibility DISABLE
-      ]
-    , textView $
-      [ text $ if state.data.rating == 0.0 then (getString NEW_) else show state.data.rating
-      , color state.data.config.driverInfoConfig.ratingTextColor
-      , gravity CENTER_VERTICAL
-      , margin (Margin 3 0 3 1)
-      , textSize $ FontSize.a_10
-      , accessibility DISABLE
-      ] <> FontStyle.tags TypoGraphy
+  ][textView $
+    [ text $ if state.data.rating == 0.0 then (getString NEW_) else show state.data.rating
+    , color state.data.config.driverInfoConfig.ratingTextColor
+    , gravity CENTER_VERTICAL
+    , margin $ MarginLeft if os == "IOS" then 0 else 3
+    , color Color.black700
+    , accessibility DISABLE
+    ] <> FontStyle.body16 TypoGraphy
+  , imageView
+    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_star_active_rounded"
+    , height $ V 11
+    , width $ V 11
+    , margin $ MarginLeft 3
+    , accessibility DISABLE
     ]
+  ]
 
 ---------------------------------- paymentMethodView ---------------------------------------
 
@@ -674,7 +658,6 @@ paymentMethodView push state title shouldShowIcon uid =
   , width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER_VERTICAL
-  , afterRender push $ const $ NoAction
   , id $ getNewIDWithTag uid
   , margin $ Margin 16 12 16 12
   , background Color.white900
@@ -708,7 +691,7 @@ paymentMethodView push state title shouldShowIcon uid =
           , gravity CENTER
           , visibility if shouldShowIcon then VISIBLE else GONE
           ][  imageView
-              [ imageWithFallback $ fetchImage FF_ASSET  "ny_ic_wallet"
+              [ imageWithFallback $ fetchImage FF_ASSET  "ny_ic_wallet_filled"
               , height $ V 20
               , width $ V 20
               ]
@@ -731,7 +714,6 @@ sourceDestinationView push state =
   , orientation VERTICAL
   , margin $ Margin 16 0 16 (if os == "IOS" && state.props.currentStage == RideStarted then safeMarginBottom + 36 else 12)
   , background Color.white900
-  , afterRender push $ const $ NoAction
   , onAnimationEnd push $ const $ NoAction
   , cornerRadius 8.0
   , padding $ Padding 16 12 16 12
@@ -760,7 +742,7 @@ sourceDestinationView push state =
          [ text state.data.source
          , maxLines 1
          , ellipsize true
-         , width $ V ((screenWidth unit) / 10 * 6)
+         , width $ V ((screenWidth unit) / 10 * 8)
          , height MATCH_PARENT
          , gravity LEFT
          , color Color.black900
@@ -793,7 +775,7 @@ sourceDestinationView push state =
         [ text state.data.destination
         , maxLines 1
         , ellipsize true
-        , width $ V ((screenWidth unit) / 10 * 6)
+        , width $ V ((screenWidth unit) / 10 * 8)
         , height MATCH_PARENT
         , gravity LEFT
         , margin $ MarginTop 3
@@ -1218,11 +1200,11 @@ configurations =
               , paddingOTP : Padding 11 0 11 7
               }
 
-getVehicleImage :: String -> String -> Maybe String -> String
+getVehicleImage :: String -> String -> City -> String
 getVehicleImage variant vehicleDetail city = do
   let details = (toLower vehicleDetail)
   fetchImage FF_ASSET $ 
-    if variant == "AUTO_RICKSHAW" then maybe "ic_auto_rickshaw" mkVehicleImage city
+    if variant == "AUTO_RICKSHAW" then mkVehicleImage city
     else
       if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
       else 
@@ -1232,9 +1214,9 @@ getVehicleImage variant vehicleDetail city = do
                           _     -> "ny_ic_sedan_concept"
           _          -> "ic_white_taxi"
     where 
-      mkVehicleImage :: String -> String
-      mkVehicleImage cityCode = 
-        if cityCode == "std:040" then "ic_auto_rickshaw_black_yellow"
+      mkVehicleImage :: City -> String
+      mkVehicleImage city = 
+        if city == Hyderabad then "ic_auto_rickshaw_black_yellow"
           else "ic_auto_rickshaw"
 
 getAnimationDelay :: LazyCheck -> Int

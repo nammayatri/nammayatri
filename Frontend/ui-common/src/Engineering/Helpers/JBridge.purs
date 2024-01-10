@@ -35,7 +35,7 @@ import Foreign.Generic (decodeJSON)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Data.Either (Either(..))
 import Engineering.Helpers.Commons (screenHeight, screenWidth, parseFloat)
-import Effect.Uncurried (EffectFn3, EffectFn2, EffectFn1, runEffectFn1, EffectFn4, runEffectFn4)
+import Effect.Uncurried
 import Data.Maybe (Maybe(..))
 -- import LoaderOverlay.Handler as UI
 -- import Effect.Aff (launchAff)
@@ -183,7 +183,7 @@ foreign import sendMessage :: String -> Unit
 foreign import getSuggestionsfromLocal :: String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String
 foreign import setYoutubePlayer :: Fn3 YoutubeData String String Unit
-foreign import addCarousel :: Fn2 CarouselModal String (Effect Unit)
+foreign import addCarouselImpl :: EffectFn2 CarouselModal String Unit
 foreign import scrollToEnd :: String -> Boolean -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
 foreign import metaLogEventWithParams :: String -> String -> String -> Effect Unit
@@ -542,3 +542,7 @@ fromMetersToKm distanceInMeters
 
 getArray :: Int ->Array Int
 getArray count = if count == 0 then [count] else [count] <> (getArray (count - 1))
+
+
+addCarousel :: CarouselModal ->  String -> Effect Unit
+addCarousel = runEffectFn2 addCarouselImpl

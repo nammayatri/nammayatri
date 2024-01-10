@@ -118,5 +118,6 @@ instance ToTType' BeamMPN.Overlay Overlay where
         BeamMPN.contactSupportNumber = contactSupportNumber,
         BeamMPN.toastMessage = toastMessage,
         BeamMPN.secondaryActions = secondaryActions,
-        BeamMPN.socialMediaLinks = toJSON <$> socialMediaLinks
+        BeamMPN.socialMediaLinks = toJSON <$> socialMediaLinks,
+        BeamMPN.showPushNotification = showPushNotification
       }

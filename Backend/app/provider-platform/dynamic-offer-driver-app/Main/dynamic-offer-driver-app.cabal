@@ -212,6 +212,7 @@ library
       Domain.Types.DriverOnboarding.DriverLicense
       Domain.Types.DriverOnboarding.DriverRCAssociation
       Domain.Types.DriverOnboarding.Error
+      Domain.Types.DriverOnboarding.ErrorMessagesTranslations
       Domain.Types.DriverOnboarding.IdfyVerification
       Domain.Types.DriverOnboarding.Image
       Domain.Types.DriverOnboarding.OperatingCity
@@ -356,6 +357,7 @@ library
       Storage.Beam.DriverOnboarding.AadhaarVerification
       Storage.Beam.DriverOnboarding.DriverLicense
       Storage.Beam.DriverOnboarding.DriverRCAssociation
+      Storage.Beam.DriverOnboarding.ErrorMessagesTranslations
       Storage.Beam.DriverOnboarding.IdfyVerification
       Storage.Beam.DriverOnboarding.Image
       Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
@@ -478,6 +480,7 @@ library
       Storage.Queries.DriverOnboarding.AadhaarVerification
       Storage.Queries.DriverOnboarding.DriverLicense
       Storage.Queries.DriverOnboarding.DriverRCAssociation
+      Storage.Queries.DriverOnboarding.ErrorMessagesTranslations
       Storage.Queries.DriverOnboarding.IdfyVerification
       Storage.Queries.DriverOnboarding.Image
       Storage.Queries.DriverOnboarding.Status

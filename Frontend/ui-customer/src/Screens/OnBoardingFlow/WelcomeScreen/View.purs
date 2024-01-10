@@ -6,7 +6,7 @@ import Debug (spy)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Prelude (Unit, const, map, ($), (<<<), (<>), bind, pure, unit, (==))
+import Prelude (Unit, const, map, ($), (<<<), (<>), bind, discard, pure, unit, (==))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Prop, Screen, afterRender, alpha, background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, id, imageUrl, accessibilityHint, accessibility)
 import Screens.OnBoardingFlow.WelcomeScreen.Controller (Action(..), ScreenOutput, eval)
 import Styles.Colors as Color
@@ -68,9 +68,8 @@ carouselView state push =
     , weight 1.0
     , margin $ MarginBottom 20
     , afterRender (\action -> do
-        _ <- push action
-        _ <- runFn2 addCarousel state.data.carouselModal (getNewIDWithTag "CarouselView")
-        pure unit
+        addCarousel state.data.carouselModal (getNewIDWithTag "CarouselView")
+        push action
         ) (const AfterRender)
     ][]
 
