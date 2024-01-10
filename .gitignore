@@ -9,6 +9,7 @@ result-*
 
 # Backend ignores
 dist-newstyle
+/data
 
 # Frontend ignores
 Frontend/.DS_Store
