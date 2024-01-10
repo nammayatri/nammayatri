@@ -2461,7 +2461,7 @@ trackRideView push state =
     , onClick push $ const $ StartLocationTracking "GOOGLE_MAP"
     , gravity CENTER
     , accessibility ENABLE
-    , accessibilityHint $ "Track on Google Maps : Button"
+    , accessibilityHint $ "Real Time Tracking on Google Maps : Button"
     , accessibility DISABLE_DESCENDANT
     ][ linearLayout
       [ height $ WRAP_CONTENT
