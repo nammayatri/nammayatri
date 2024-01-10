@@ -1109,16 +1109,24 @@ callSupportConfig state = let
   in popUpConfig'
 
 confirmAndBookButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
-confirmAndBookButtonConfig config = PrimaryButton.config
-  { textConfig
-    { text = (getString CONFIRM_AND_BOOK)
-    , color = Color.yellow900
-    , accessibilityHint = "Confirm And Book Button"
+confirmAndBookButtonConfig state = 
+  PrimaryButton.config
+    { textConfig
+        { text = getBtnTextWithTimer state
+        , color = Color.yellow900
+        , accessibilityHint = "Confirm And Book Button"
+        }
+    , id = "ConfirmAndBookButton"
+    , background = Color.black900
+    , margin = MarginTop 16
     }
-  , id = "ConfirmAndBookButton"
-  , background = Color.black900
-  , margin = Margin 0 16 0 0
-  }
+  where
+    getBtnTextWithTimer state = 
+      if state.props.repeatRideTimer /= "0" && not DS.null state.props.repeatRideTimerId 
+      then ((getString REQUESTING_RIDE_IN) <> " " <> state.props.repeatRideTimer <> "s") 
+      else if state.props.repeatRideTimer == "0" 
+           then (getString REQUESTING_RIDE) <> "..." 
+           else (getString REQUEST_RIDE)
 
 zoneTimerExpiredConfig :: ST.HomeScreenState ->  PopUpModal.Config
 zoneTimerExpiredConfig state = let
