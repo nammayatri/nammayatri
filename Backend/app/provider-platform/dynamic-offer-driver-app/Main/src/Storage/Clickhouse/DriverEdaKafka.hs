@@ -53,9 +53,7 @@ data Status
   | IDLE
   deriving (Show, Read)
 
-instance ClickhouseValue Status where
-  toClickhouseValue = Value . show
-  fromClickhouseValue = readMaybe . getValue
+instance ClickhouseValue Status
 
 driverEdaKafkaTTable :: DriverEdaKafkaT (FieldModification DriverEdaKafkaT)
 driverEdaKafkaTTable =
