@@ -744,6 +744,7 @@ data ScreenOutput = LogoutUser
                   | RepeatTrip HomeScreenState Trip
                   | ExitToTicketing HomeScreenState
                   | GoToHelpAndSupport HomeScreenState
+                  | ReAllocateRide HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -931,7 +932,8 @@ eval (Scroll item) state = do
 eval ReAllocate state =
   if isLocalStageOn ReAllocated then do
     void $ pure $ setValueToLocalStore LOCAL_STAGE ( show FindingQuotes)
-    exit $ Retry state{ props{ currentStage = FindingQuotes } }
+    let updatedState = state{ props{ currentStage = FindingQuotes } }
+    updateAndExit updatedState $ ReAllocateRide updatedState
   else continue state
 
 eval SearchForSelectedLocation state = do
@@ -1295,6 +1297,7 @@ eval BackPressed state = do
     RideRating ->     do
                       _ <- pure $ updateLocalStage RideCompleted
                       continue state {props {currentStage = RideCompleted}}
+    ReAllocated ->    continue state
     _               -> do
                         if state.props.isLocationTracking then continue state{props{isLocationTracking = false}}
                           else if state.props.cancelSearchCallDriver then continue state{props{cancelSearchCallDriver = false}}
