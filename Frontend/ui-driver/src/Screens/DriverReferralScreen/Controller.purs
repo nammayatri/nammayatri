@@ -15,13 +15,14 @@ import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Components.BottomNavBar as BottomNavBar
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, getValueToLocalStore)
-import Helpers.Utils (incrementValueOfLocalStoreKey)
+import Helpers.Utils (incrementValueOfLocalStoreKey, generateQR)
 import Components.PrimaryButton as PrimaryButton
 import Common.Types.App (ShareImageConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
+import Effect.Uncurried(runEffectFn4)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -31,21 +32,24 @@ instance loggableAction :: Loggable Action where
     BackPressed -> trackAppBackPress appId (getScreen HOME_SCREEN)
     GenericHeaderActionController act -> case act of
       GenericHeader.PrefixImgOnClick -> do
-        trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "back_icon"
-        trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
-      GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "forward_icon"
+        trackAppActionClick appId (getScreen 
+        REFERRAL_SCREEN) "generic_header_action" "back_icon"
+        trackAppEndScreen appId (getScreen DRIVER_REFERRAL_SCREEN)
+      GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen DRIVER_REFERRAL_SCREEN) "generic_header_action" "forward_icon"
     ShowQRCode -> pure unit
     ShareOptions -> pure unit
     BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
-      trackAppActionClick appId (getScreen REFERRAL_SCREEN) "bottom_nav_bar" "on_navigate"
-      trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
+      trackAppActionClick appId (getScreen DRIVER_REFERRAL_SCREEN) "bottom_nav_bar" "on_navigate"
+      trackAppEndScreen appId (getScreen DRIVER_REFERRAL_SCREEN)
     LearnMore -> pure unit
     PrimaryButtonActionController state act -> case act of
       PrimaryButton.OnClick -> do
-        trackAppActionClick appId (getScreen CHOOSE_LANGUAGE_SCREEN) "primary_button_action" "next_on_click"
-        trackAppEndScreen appId (getScreen CHOOSE_LANGUAGE_SCREEN)
-      PrimaryButton.NoAction -> trackAppActionClick appId (getScreen CHOOSE_LANGUAGE_SCREEN) "primary_button_action" "no_action"
+        trackAppActionClick appId (getScreen DRIVER_REFERRAL_SCREEN) "primary_button_action" "next_on_click"
+        trackAppEndScreen appId (getScreen DRIVER_REFERRAL_SCREEN)
+      PrimaryButton.NoAction -> trackAppActionClick appId (getScreen DRIVER_REFERRAL_SCREEN) "primary_button_action" "no_action"
     ReferredDriversAPIResponseAction val -> pure unit
+    NoAction -> trackAppScreenEvent appId (getScreen DRIVER_REFERRAL_SCREEN) "in_screen" "no_action"
+    ReferralQrRendered _ -> trackAppScreenEvent appId (getScreen DRIVER_REFERRAL_SCREEN) "in_screen" "referral_qr_rendered"
 
 data Action = BackPressed
             | AfterRender
@@ -56,6 +60,8 @@ data Action = BackPressed
             | LearnMore
             | PrimaryButtonActionController DriverReferralScreenState PrimaryButton.Action
             | ReferredDriversAPIResponseAction Int
+            | ReferralQrRendered String
+            | NoAction
 
 
 data ScreenOutput = GoToHomeScreen DriverReferralScreenState
@@ -106,12 +112,18 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
 
 eval (ReferredDriversAPIResponseAction val) state = continue state {data {referredDrivers = show val}, props {showNewDriverReferralText = val < 1}}
 
+eval (ReferralQrRendered id) state = 
+  continueWithCmd state [ do
+    runEffectFn4 generateQR state.data.config.appData.link id 200 0
+    pure $ NoAction
+  ]
+
 eval _ state = continue state
 
 shareImageMessageConfig :: DriverReferralScreenState -> ShareImageConfig
 shareImageMessageConfig state = {
   code : state.data.referralCode,
-  viewId : getNewIDWithTag "DriverReferralQRScreen",
+  viewId : getNewIDWithTag "DriverReferralQR",
   logoId : getNewIDWithTag "DriverReferralScreenLogo",
   isReferral : true
   }

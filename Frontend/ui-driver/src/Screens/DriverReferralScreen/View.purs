@@ -98,7 +98,7 @@ view push state =
           , qrScreenView push state
           ]
           , bottomNavBarView push state]
-          , if state.props.showDriverReferralQRCode then appQRCodeView push state  else linearLayout[][]
+          , appQRCodeView push state
   ]
 
 
@@ -285,6 +285,7 @@ appQRCodeView push state =
     , gravity CENTER
     , background Color.blackLessTrans
     , onClick push $ const $ BackPressed
+    , visibility $ boolToVisibility $ state.props.showDriverReferralQRCode
     ][
       linearLayout
         [ width MATCH_PARENT
@@ -307,7 +308,8 @@ appQRCodeView push state =
             [ width $ V 280
             , height $ V 280
             , gravity CENTER
-            , imageWithFallback $ fetchImage FF_ASSET "ny_driver_app_qr_code"
+            , id $ getNewIDWithTag "DriverReferralQR"
+            , afterRender push (const (ReferralQrRendered $ getNewIDWithTag "DriverReferralQR"))
             ]
           , PrimaryButton.view (push <<< PrimaryButtonActionController state) (primaryButtonConfig state)
          ]
