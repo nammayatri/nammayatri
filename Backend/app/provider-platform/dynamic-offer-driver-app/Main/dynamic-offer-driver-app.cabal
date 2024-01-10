@@ -117,8 +117,11 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Beckn.OnDemand.Utils.Callback
       Beckn.OnDemand.Utils.Common
+      Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.OnUpdate
+      Beckn.OnDemand.Utils.Search
       Domain.Action.Beckn.Cancel
       Domain.Action.Beckn.Confirm
       Domain.Action.Beckn.Init
@@ -569,6 +572,7 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      Beckn.OnDemand.Transformer.OnSearch
       Beckn.OnDemand.Transformer.RideAssigned
       Beckn.OnDemand.Transformer.Search
   other-modules:

@@ -1,0 +1,100 @@
+imports:
+  Text: Data.Text
+  MonadFlow: Kernel.Types.App
+  fromMaybeM: Kernel.Utils.Error
+  Item: BecknV2.OnDemand.Types
+  OnSearchReq: BecknV2.OnDemand.Types
+  Provider: BecknV2.OnDemand.Types
+  DOnSearchReq: Domain.Action.Beckn.OnSearch
+  ProviderInfo: Domain.Action.Beckn.OnSearch
+  EstimateInfo: Domain.Action.Beckn.OnSearch
+  QuoteInfo: Domain.Action.Beckn.OnSearch
+  OneWaySpecialZoneDetails: Domain.Action.Beckn.OnSearch
+  OneWaySpecialZoneQuoteDetails: Domain.Action.Beckn.OnSearch
+  getMessageId: Beckn.OnDemand.Utils.Common
+  getContextBppUri: Beckn.OnDemand.Utils.Common
+  getProviderName: Beckn.OnDemand.Utils.OnSearch
+  getFulfillmentId: Beckn.OnDemand.Utils.OnSearch
+  getQuoteFulfillmentId: Beckn.OnDemand.Utils.OnSearch
+  getVehicleVariant: Beckn.OnDemand.Utils.OnSearch
+  getEstimatedFare: Beckn.OnDemand.Utils.OnSearch
+  getItemId: Beckn.OnDemand.Utils.OnSearch
+  getTotalFareRange: Beckn.OnDemand.Utils.OnSearch
+  getProviderLocation: Beckn.OnDemand.Utils.OnSearch
+  buildEstimateBreakupList: Beckn.OnDemand.Utils.OnSearch
+  buildNightShiftInfo: Beckn.OnDemand.Utils.OnSearch
+  buildWaitingChargeInfo: Beckn.OnDemand.Utils.OnSearch
+  buildSpecialLocationTag: Beckn.OnDemand.Utils.OnSearch
+  InvalidRequest: Tools.Error
+  fromMaybe: Data.Maybe
+
+module: OnSearch
+transformer:
+  monads:
+  - MonadFlow m
+  transformers:
+    buildOnSearchReq:
+      params:
+        - req: OnSearchReq
+        - provider: Provider
+        - items: "[Item]"
+      toType: DOnSearchReq
+      mapping:
+        requestId: /~ _getMessageId req.onSearchReqContext
+        providerInfo: /~ tfProviderInfo req
+        estimatesInfo: /~ traverse (tfEstimatesInfo provider) items
+        quotesInfo: /~ traverse (tfQuotesInfo provider) items
+        paymentMethodsInfo: "[]"
+
+    tfProviderInfo:
+      params:
+        - req: OnSearchReq
+      toType: ProviderInfo
+      mapping:
+        providerId: /~ req.onSearchReqContext.contextBppId & _fromMaybeM (_InvalidRequest "Missing bpp_id")
+        name: _getProviderName req
+        url: /~ _getContextBppUri req.onSearchReqContext >>= _fromMaybeM (_InvalidRequest "Missing bpp_uri")
+        mobileNumber: "\"\""
+        ridesCompleted: "0"
+
+    tfEstimatesInfo:
+      params:
+        - provider: Provider
+        - item: Item
+      toType: EstimateInfo
+      mapping:
+        bppEstimateId: _getFulfillmentId item
+        vehicleVariant: _getVehicleVariant provider item
+        estimatedFare: _getEstimatedFare item
+        discount: Nothing
+        estimatedTotalFare: _getEstimatedFare item
+        itemId: _getItemId item
+        totalFareRange: _getTotalFareRange item
+        descriptions: "[]"
+        estimateBreakupList: /~ _buildEstimateBreakupList item
+        nightShiftInfo: _buildNightShiftInfo item
+        waitingCharges: _buildWaitingChargeInfo item
+        driversLocation: _getProviderLocation provider
+        specialLocationTag: _buildSpecialLocationTag item
+
+    tfQuotesInfo:
+      params:
+        - provider: Provider
+        - item: Item
+      toType: QuoteInfo
+      mapping:
+        vehicleVariant: _getVehicleVariant provider item
+        estimatedFare: _getEstimatedFare item
+        discount: Nothing
+        estimatedTotalFare: _getEstimatedFare item
+        quoteDetails: /~ _OneWaySpecialZoneDetails <$> tfQuoteDetails item
+        itemId: _getItemId item
+        descriptions: "[]"
+        specialLocationTag: _buildSpecialLocationTag item
+
+    tfQuoteDetails:
+      params:
+        - item: Item
+      toType: OneWaySpecialZoneQuoteDetails
+      mapping:
+        quoteId: _getQuoteFulfillmentId item

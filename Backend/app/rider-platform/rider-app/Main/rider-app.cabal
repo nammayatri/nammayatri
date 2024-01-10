@@ -118,6 +118,7 @@ library
       Beckn.Core
       Beckn.OnDemand.Utils.Common
       Beckn.OnDemand.Utils.Init
+      Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.Search
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
@@ -380,6 +381,7 @@ library
       API.Action.UI.TicketService
       API.Types.UI.TicketService
       Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.OnSearch
       Beckn.OnDemand.Transformer.Search
       Domain.Types.BusinessHour
       Domain.Types.SeatManagement

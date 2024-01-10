@@ -22,13 +22,16 @@ import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, (%~))
+import Kernel.External.Maps as Maps
 import qualified Kernel.Prelude as KP
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Tools.Error
 
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
@@ -162,3 +165,41 @@ castVehicleVariant = \case
   VehVar.AUTO_RICKSHAW -> "AUTO_RICKSHAW"
   VehVar.TAXI -> "TAXI"
   VehVar.TAXI_PLUS -> "TAXI_PLUS"
+
+getContextBapId :: MonadFlow m => Spec.Context -> m Text -- shrey00 : move to common
+getContextBapId context = do
+  context.contextBapId & fromMaybeM (InvalidRequest "Missing contextBapId")
+
+getMessageId :: MonadFlow m => Spec.Context -> m (Id SearchRequest.SearchRequest) -- shrey00 : move to common
+getMessageId context = do
+  messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
+  pure $ Id $ T.pack $ show messageUuid
+
+getMessageIdText :: MonadFlow m => Spec.Context -> m Text -- shrey00 : move to common
+getMessageIdText context = do
+  messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
+  pure $ T.pack $ show messageUuid
+
+parseLatLong :: Text -> Maps.LatLong
+parseLatLong a =
+  case T.splitOn "," a of
+    [latStr, longStr] ->
+      let lat = fromMaybe 0.0 $ readMaybe $ T.unpack latStr
+          lon = fromMaybe 0.0 $ readMaybe $ T.unpack longStr
+       in LatLong lat lon
+    _ -> error "Unable to parse LatLong"
+
+getContextBppUri :: MonadFlow m => Spec.Context -> m (Maybe BaseUrl)
+getContextBppUri context = do
+  let mbBppUriText = context.contextBppUri
+  case mbBppUriText of
+    Nothing -> pure Nothing
+    Just bppUriText -> Just <$> A.decode (encodeUtf8 bppUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBppUri: " <> bppUriText)
+
+withTransactionIdLogTag :: (Log m) => Text -> m a -> m a
+withTransactionIdLogTag = withTransactionIdLogTag'
+
+getTransactionId :: MonadFlow m => Spec.Context -> m Text
+getTransactionId context = do
+  transactionUuid <- context.contextTransactionId & fromMaybeM (InvalidRequest "Missing transaction_id")
+  pure $ T.pack $ show transactionUuid

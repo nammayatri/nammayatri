@@ -11,20 +11,20 @@ imports:
   getCurrentTime: Kernel.Types.Common
   Address: Beckn.Types.Core.Taxi.Common.Address
   Location: BecknV2.OnDemand.Types
-  buildCustomerLanguage: Beckn.OnDemand.Utils.Common
-  getDistance: Beckn.OnDemand.Utils.Common
-  getDuration: Beckn.OnDemand.Utils.Common
+  buildCustomerLanguage: Beckn.OnDemand.Utils.Search
+  getDistance: Beckn.OnDemand.Utils.Search
+  getDuration: Beckn.OnDemand.Utils.Search
   getCity: Beckn.OnDemand.Utils.Common
-  buildCustomerPhoneNumber: Beckn.OnDemand.Utils.Common
-  buildRoutePoints: Beckn.OnDemand.Utils.Common
+  buildCustomerPhoneNumber: Beckn.OnDemand.Utils.Search
+  buildRoutePoints: Beckn.OnDemand.Utils.Search
   HasFlowEnv: Kernel.Types.App
   CacheFlow: Kernel.Types.App
   EsqDBFlow: Kernel.Types.App
   MonadFlow: Kernel.Types.App
-  getPickUpLocation: Beckn.OnDemand.Utils.Common
-  getDropOffLocation: Beckn.OnDemand.Utils.Common
-  getPickUpLocationGps: Beckn.OnDemand.Utils.Common
-  getDropOffLocationGps: Beckn.OnDemand.Utils.Common
+  getPickUpLocation: Beckn.OnDemand.Utils.Search
+  getDropOffLocation: Beckn.OnDemand.Utils.Search
+  getPickUpLocationGps: Beckn.OnDemand.Utils.Search
+  getDropOffLocationGps: Beckn.OnDemand.Utils.Search
   LatLong: Kernel.External.Maps
   lat: Kernel.External.Maps
   lon: Kernel.External.Maps
@@ -32,8 +32,8 @@ imports:
   ContextV2: Kernel.Types.Beckn.Context
   Context: BecknV2.OnDemand.Types
   City: Kernel.Types.Beckn.Context
-  buildDisabilityTag: Beckn.OnDemand.Utils.Common
-  getIsReallocationEnabled: Beckn.OnDemand.Utils.Common
+  buildDisabilityTag: Beckn.OnDemand.Utils.Search
+  getIsReallocationEnabled: Beckn.OnDemand.Utils.Search
   getTransactionId: Beckn.OnDemand.Utils.Common
   getContextCountry: Beckn.OnDemand.Utils.Common
 

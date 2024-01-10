@@ -1,0 +1,145 @@
+imports:
+  DSearchRes: Domain.Action.Beckn.Search
+  OnSearchReq: BecknV2.OnDemand.Types
+  buildContextV2: BecknV2.OnDemand.Utils.Context
+  Domain: Kernel.Types.Beckn.Context
+  Action: Kernel.Types.Beckn.Context
+  Text: Data.Text
+  City: Kernel.Types.Beckn.Context
+  Country: Kernel.Types.Beckn.Context
+  OnSearchReqMessage: BecknV2.OnDemand.Types
+  MonadFlow: Kernel.Types.App
+  BaseUrl: Kernel.Prelude
+  Catalog: BecknV2.OnDemand.Types
+  Descriptor: BecknV2.OnDemand.Types
+  Provider: BecknV2.OnDemand.Types
+  Location: BecknV2.OnDemand.Types
+  castVariant: Beckn.OnDemand.Utils.Common # should we define again in Beckn.OnDemand.Utils.Common?
+  mkItemId: Beckn.ACL.Common # should we define again in Beckn.OnDemand.Utils.Common?
+  mkStops: Beckn.OnDemand.Utils.Common
+  Fulfillment: BecknV2.OnDemand.Types
+  Item: BecknV2.OnDemand.Types
+  Price: BecknV2.OnDemand.Types
+  Vehicle: BecknV2.OnDemand.Types
+  singleton: Data.List
+  EstimateInfo: Domain.Action.Beckn.Search
+  mkProviderLocations: Beckn.OnDemand.Utils.OnSearch
+  mkItemTags: Beckn.OnDemand.Utils.OnSearch
+  rationaliseMoney: Beckn.OnDemand.Utils.Common
+  listToMaybe: Kernel.Prelude
+
+module: OnSearch
+transformer:
+  monads:
+  - MonadFlow m
+  transformers:
+    buildOnSearchRideReq:
+      params:
+        - estimates: "[EstimateInfo]" # has to be list
+        - res: DSearchRes
+        - action: Action
+        - domain: Domain
+        - messageId: Text
+        - transactionId: Maybe Text
+        - bapId: Text
+        - bapUri: BaseUrl
+        - bppId: Maybe Text
+        - bppUri: Maybe BaseUrl
+        - city: City
+        - country: Country
+      toType: OnSearchReq
+      mapping:
+        onSearchReqContext: /~_buildContextV2 action domain messageId transactionId bapId bapUri bppId bppUri city country
+        onSearchReqMessage: /~buildOnSearchMessage estimates res
+        onSearchReqError: Nothing
+
+    buildOnSearchMessage:
+      params:
+        - estimates: "[EstimateInfo]" # has to be list
+        - res: DSearchRes
+      toType: Maybe OnSearchReqMessage
+      mapping:
+        onSearchReqMessageCatalog: /~tfCatalog estimates res
+
+    tfCatalog:
+      params:
+        - estimates: "[EstimateInfo]" # has to be list
+        - res: DSearchRes
+      toType: Catalog
+      mapping:
+        catalogDescriptor: /~tfCatalogDescriptor res
+        catalogProviders: /~tfCatalogProviders estimates res <&> _singleton <&> Just
+    tfCatalogDescriptor:
+      params:
+        - res: DSearchRes
+      toType: Maybe Descriptor
+      mapping:
+        descriptorCode: Nothing
+        descriptorName: Just res.provider.name
+        descriptorShortDesc: Nothing
+
+    tfCatalogProviders:
+      params:
+        - estimates: "[EstimateInfo]" # has to be list
+        - res: DSearchRes
+      toType: Provider
+      mapping:
+        providerDescriptor: /~tfCatalogDescriptor res
+        providerFulfillments: /~mapM (tfProviderFulfillments res) estimates <&> Just
+        providerId: Just res.provider.subscriberId.getShortId
+        providerItems: /~mapM (tfProviderItems res) estimates <&> Just
+        providerLocations: ~_mkProviderLocations estimates & Just # TODO : write this function
+        providerPayments: Nothing # add a payment uri?
+
+    tfProviderFulfillments:
+      params:
+        - res: DSearchRes
+        - estInfo: EstimateInfo
+      toType: Fulfillment
+      mapping:
+        fulfillmentAgent: Nothing
+        fulfillmentCustomer: Nothing
+        fulfillmentId: Just estInfo.estimate.id.getId
+        fulfillmentState: Nothing
+        fulfillmentStops: ~_mkStops res.fromLocation res.toLocation
+        fulfillmentTags: Nothing
+        fulfillmentType: Just "RIDE"
+        fulfillmentVehicle: /~tfVehicle estInfo
+
+    tfVehicle:
+      params:
+        - estInfo: EstimateInfo
+      toType: Maybe Vehicle
+      mapping:
+        vehicleVariant: ~_castVariant estInfo.estimate.vehicleVariant & Just
+        vehicleCategory: Nothing
+        vehicleColor: Nothing
+        vehicleMake: Nothing
+        vehicleModel: Nothing
+        vehicleRegistration: Nothing
+
+    tfProviderItems:
+      params:
+        - res: DSearchRes
+        - estInfo: EstimateInfo
+      toType: Item
+      mapping:
+        itemDescriptor: Nothing
+        itemFulfillmentIds: Just [estInfo.estimate.id.getId]
+        itemId: ~_mkItemId res.provider.shortId.getShortId estInfo.estimate.vehicleVariant & Just
+        itemLocationIds: Nothing
+        itemPaymentIds: Nothing
+        itemPrice: /~tfItemPrice estInfo
+        itemTags: ~_mkItemTags estInfo & Just
+
+    tfItemPrice:
+      params:
+        - estInfo: EstimateInfo
+      toType: Maybe Price
+      mapping:
+        priceCurrency: Just "INR"
+        priceValue: _rationaliseMoney estInfo.estimate.minFare & Just
+        priceOfferedValue: _rationaliseMoney estInfo.estimate.minFare & Just
+        priceMinimumValue: _rationaliseMoney estInfo.estimate.minFare & Just
+        priceMaximumValue: _rationaliseMoney estInfo.estimate.maxFare & Just
+        priceComputedValue: Nothing

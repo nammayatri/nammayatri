@@ -15,15 +15,21 @@
 module Beckn.ACL.OnSearch where
 
 import qualified Beckn.ACL.Common as Common
+import Beckn.OnDemand.Transformer.OnSearch as TOnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Core.Taxi.OnSearch.Item (BreakupItem (..), BreakupPrice (..))
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import GHC.Float (double2Int)
 import Kernel.Prelude
+import Kernel.Types.App
+import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
+import Kernel.Utils.Error
+import Tools.Error
 
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
@@ -74,6 +80,26 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
     mkProviderLocations estimatesList =
       foldl (<>) [] $ map mkProviderLocation estimatesList
     mkProviderLocation DSearch.EstimateInfo {..} = toList driverLatLongs
+
+mkOnSearchRequest ::
+  (MonadFlow m) =>
+  DSearch.DSearchRes ->
+  Context.Action ->
+  Context.Domain ->
+  Text ->
+  Maybe Text ->
+  Text ->
+  BaseUrl ->
+  Maybe Text ->
+  Maybe BaseUrl ->
+  Context.City ->
+  Context.Country ->
+  m Spec.OnSearchReq
+mkOnSearchRequest res@DSearch.DSearchRes {..} action domain messageId transactionId bapId bapUri bppId bppUri city country = do
+  case (estimateList, specialQuoteList) of
+    (Just estimates, _) -> TOnSearch.buildOnSearchRideReq estimates res action domain messageId transactionId bapId bapUri bppId bppUri city country -- map (mkQuoteEntities startInfo stopInfo provider) estimates
+    (_, _) -> throwError (InvalidRequest "No estimates or quotes are present") --this won't happen
+    -- (Nothing, Just quotes) -> map (mkQuoteEntitiesSpecialZone startInfo stopInfo provider) quotes
 
 mkStartInfo :: DSearch.DSearchRes -> OS.StartInfo
 mkStartInfo dReq =

@@ -20,9 +20,12 @@ import qualified Beckn.Core as CallBAP
 -- import Beckn.OnDemand.Transformer.Search as TSearch
 
 -- import Kernel.Product.Validation.Context (validateContextV2)
+
+import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -94,20 +97,19 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
             country <- Utils.getContextCountry context
             pure (bapUri, bapId, messageId, city, country, transactionId, context.contextBppId, bppUri)
         internalEndPointHashMap <- asks (.internalEndPointHashMap)
-        -- isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-        -- if isBecknSpecVersion2
-        --   then do
-        --     context <- buildTaxiContextV2 Context.ON_SEARCH msgId txnId bapId bapUri bppId bppUri city country
-        --     logTagInfo "SearchV2 API Flow" "Sending OnSearch"
-        --     void $
-        --       CallBAP.withCallbackV2 dSearchRes.provider Context.SEARCH OnSearch.onSearchAPIV2 context callbackUrl internalEndPointHashMap $ do
-        --         pure $ ACL.mkOnSearchMessageV2 dSearchRes
-        -- else do
-        context <- buildTaxiContext Context.ON_SEARCH msgId txnId bapId bapUri bppId bppUri city country False
-        logTagInfo "Search API Flow" "Sending OnSearch"
-        void $
-          CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPIV1 context callbackUrl internalEndPointHashMap $ do
-            pure $ ACL.mkOnSearchMessage dSearchRes
+        isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+        if isBecknSpecVersion2
+          then do
+            context <- ContextV2.buildContextV2 Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
+            logTagInfo "SearchV2 API Flow" "Sending OnSearch"
+            onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
+            void $ Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 context callbackUrl internalEndPointHashMap $ do onSearchReq
+          else do
+            context <- buildTaxiContext Context.ON_SEARCH msgId txnId bapId bapUri bppId bppUri city country False
+            logTagInfo "Search API Flow" "Sending OnSearch"
+            void $
+              CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPIV1 context callbackUrl internalEndPointHashMap $ do
+                pure $ ACL.mkOnSearchMessage dSearchRes
   pure Ack
 
 searchLockKey :: Text -> Text -> Text

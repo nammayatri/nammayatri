@@ -189,6 +189,7 @@ library
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent.Payment
       Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType
       BecknV2.OnDemand.Types
+      BecknV2.OnDemand.Utils.Callback
       BecknV2.OnDemand.Utils.Common
       BecknV2.OnDemand.Utils.Context
   other-modules:
@@ -251,6 +252,7 @@ library
     , fast-logger
     , generic-lens
     , geojson
+    , hashmap
     , hedis
     , hex-text
     , hspec

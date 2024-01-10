@@ -4,6 +4,7 @@
 module Beckn.OnDemand.Transformer.Search where
 
 import qualified Beckn.OnDemand.Utils.Common
+import qualified Beckn.OnDemand.Utils.Search
 import qualified Beckn.Types.Core.Taxi.API.Search
 import qualified Beckn.Types.Core.Taxi.Common.Address
 import qualified BecknV2.OnDemand.Types
@@ -26,20 +27,20 @@ buildSearchReq messageId city subscriber req context = do
   let bapCity_ = city
   let bapId_ = subscriber.subscriber_id
   let bapUri_ = subscriber.subscriber_url
-  let customerLanguage_ = Beckn.OnDemand.Utils.Common.buildCustomerLanguage req
-  let customerPhoneNum_ = Beckn.OnDemand.Utils.Common.buildCustomerPhoneNumber req
+  let customerLanguage_ = Beckn.OnDemand.Utils.Search.buildCustomerLanguage req
+  let customerPhoneNum_ = Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
   let device_ = Nothing
-  let disabilityTag_ = Beckn.OnDemand.Utils.Common.buildDisabilityTag req
-  let isReallocationEnabled_ = Beckn.OnDemand.Utils.Common.getIsReallocationEnabled req
+  let disabilityTag_ = Beckn.OnDemand.Utils.Search.buildDisabilityTag req
+  let isReallocationEnabled_ = Beckn.OnDemand.Utils.Search.getIsReallocationEnabled req
   let messageId_ = messageId
-  let routeDistance_ = Beckn.OnDemand.Utils.Common.getDistance req
-  let routeDuration_ = Beckn.OnDemand.Utils.Common.getDuration req
-  let routePoints_ = Beckn.OnDemand.Utils.Common.buildRoutePoints req
+  let routeDistance_ = Beckn.OnDemand.Utils.Search.getDistance req
+  let routeDuration_ = Beckn.OnDemand.Utils.Search.getDuration req
+  let routePoints_ = Beckn.OnDemand.Utils.Search.buildRoutePoints req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
-  dropAddrress_ <- Beckn.OnDemand.Utils.Common.getDropOffLocation req & tfAddress
-  dropLocation_ <- Beckn.OnDemand.Utils.Common.getDropOffLocationGps req & tfLatLong
-  pickupAddress_ <- Beckn.OnDemand.Utils.Common.getPickUpLocation req & tfAddress
-  pickupLocation_ <- Beckn.OnDemand.Utils.Common.getPickUpLocationGps req & tfLatLong
+  dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
+  dropLocation_ <- Beckn.OnDemand.Utils.Search.getDropOffLocationGps req & tfLatLong
+  pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req & tfAddress
+  pickupLocation_ <- Beckn.OnDemand.Utils.Search.getPickUpLocationGps req & tfLatLong
   pickupTime_ <- Kernel.Types.Common.getCurrentTime
   transactionId_ <- Beckn.OnDemand.Utils.Common.getTransactionId context
   pure $ Domain.Action.Beckn.Search.DSearchReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, customerLanguage = customerLanguage_, customerPhoneNum = customerPhoneNum_, device = device_, disabilityTag = disabilityTag_, dropAddrress = dropAddrress_, dropLocation = dropLocation_, isReallocationEnabled = isReallocationEnabled_, messageId = messageId_, pickupAddress = pickupAddress_, pickupLocation = pickupLocation_, pickupTime = pickupTime_, routeDistance = routeDistance_, routeDuration = routeDuration_, routePoints = routePoints_, transactionId = transactionId_}

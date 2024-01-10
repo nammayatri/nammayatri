@@ -19,6 +19,7 @@ import qualified Beckn.OnDemand.Transformer.Search as TSearch
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
+import qualified BecknV2.OnDemand.Utils.Context as ContextUtils
 import Data.Aeson
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Search as DSearch
@@ -107,7 +108,7 @@ buildSearchReqV2 ::
   m DSearch.DSearchReq
 buildSearchReqV2 merchantId subscriber req = do
   let context = req.searchReqContext
-  Utils.validateContext Context.SEARCH context
+  ContextUtils.validateContext Context.SEARCH context
   messageId <- Utils.getMessageId context
   let message = req.searchReqMessage
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)

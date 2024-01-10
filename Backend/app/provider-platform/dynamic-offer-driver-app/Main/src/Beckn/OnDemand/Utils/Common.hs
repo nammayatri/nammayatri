@@ -16,16 +16,17 @@
 module Beckn.OnDemand.Utils.Common where
 
 import Beckn.ACL.Common (getTagV2)
+import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
 import Data.Aeson
+import qualified Data.Aeson as A
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
+import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, view, (%~), (^?))
 import Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
-import qualified Kernel.Types.Error as Error
 import Kernel.Utils.Common
 import Tools.Error
 
@@ -35,104 +36,40 @@ firstStop = find (\stop -> Spec.stopType stop == Just "START")
 lastStop :: [Spec.Stop] -> Maybe Spec.Stop
 lastStop = find (\stop -> Spec.stopType stop == Just "END")
 
-getPickUpLocation :: Spec.SearchReqMessage -> Spec.Location
-getPickUpLocation req = do
-  let intent = req.searchReqMessageIntent & fromMaybe (error "Missing Intent")
-  let fulfillment = intent.intentFulfillment & fromMaybe (error "Missing Fulfillment")
-  let stops = fulfillment.fulfillmentStops & fromMaybe (error "Missing Stops")
-  let pickUp = firstStop stops & fromMaybe (error "Missing Pickup")
-  pickUp.stopLocation & fromMaybe (error "Missing Location")
-
-getDropOffLocation :: Spec.SearchReqMessage -> Spec.Location
-getDropOffLocation req = do
-  let intent = req.searchReqMessageIntent & fromMaybe (error "Missing Intent")
-  let fulfillment = intent.intentFulfillment & fromMaybe (error "Missing Fulfillment")
-  let stops = fulfillment.fulfillmentStops & fromMaybe (error "Missing Stops")
-  let dropOff = lastStop stops & fromMaybe (error "Missing DropOff")
-  dropOff.stopLocation & fromMaybe (error "Missing Location")
-
-getPickUpLocationGps :: Spec.SearchReqMessage -> Text
-getPickUpLocationGps req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let stops = fromMaybe (error "Missing Stops") $ fulfillment.fulfillmentStops
-  let pickUp = lastStop stops & fromMaybe (error "Missing DropOff")
-  let location = pickUp.stopLocation & fromMaybe (error "Missing Location")
-  location.locationGps & fromMaybe (error "Missing GPS")
-
-getDropOffLocationGps :: Spec.SearchReqMessage -> Text
-getDropOffLocationGps req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let stops = fromMaybe (error "Missing Stops") $ fulfillment.fulfillmentStops
-  let dropOff = lastStop stops & fromMaybe (error "Missing DropOff")
-  let location = dropOff.stopLocation & fromMaybe (error "Missing Location")
-  location.locationGps & fromMaybe (error "Missing GPS")
-
-getDistance :: Spec.SearchReqMessage -> Maybe Meters
-getDistance req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let tagGroups = fromMaybe (error "Missing Tags") $ fulfillment.fulfillmentTags
-  tagValue <- getTagV2 "route_info" "distance_info_in_m" tagGroups
-  distanceValue <- readMaybe $ T.unpack tagValue
-  return $ Meters distanceValue
-
-getDuration :: Spec.SearchReqMessage -> Maybe Seconds
-getDuration req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let tagGroups = fromMaybe (error "Missing Tags") $ fulfillment.fulfillmentTags
-  tagValue <- getTagV2 "route_info" "duration_info_in_s" tagGroups
-  durationValue <- readMaybe $ T.unpack tagValue
-  Just $ Seconds durationValue
-
-buildCustomerLanguage :: Spec.SearchReqMessage -> Maybe Language
-buildCustomerLanguage req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let customer = fromMaybe (error "Missing Customer") $ fulfillment.fulfillmentCustomer
-  let customerPerson = fromMaybe (error "Missing Person") $ customer.customerPerson
-  let tagGroups = fromMaybe (error "Missing Tags") $ customerPerson.personTags
-  tagValue <- getTagV2 "customer_info" "customer_language" tagGroups
-  readMaybe $ T.unpack tagValue
-
-buildDisabilityTag :: Spec.SearchReqMessage -> Maybe Text
-buildDisabilityTag req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let customer = fromMaybe (error "Missing Customer") $ fulfillment.fulfillmentCustomer
-  let customerPerson = fromMaybe (error "Missing Person") $ customer.customerPerson
-  let tagGroups = fromMaybe (error "Missing Tags") $ customerPerson.personTags
-  tagValue <- getTagV2 "customer_info" "disability_tag" tagGroups
-  Just tagValue
-
-buildCustomerPhoneNumber :: Spec.SearchReqMessage -> Maybe Text
-buildCustomerPhoneNumber req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let customer = fromMaybe (error "Missing Customer") $ fulfillment.fulfillmentCustomer
-  let customerPerson = fromMaybe (error "Missing Person") $ customer.customerPerson
-  let tagGroups = fromMaybe (error "Missing Tags") $ customerPerson.personTags
-  tagValue <- getTagV2 "customer_info" "customer_phone_number" tagGroups
-  readMaybe $ T.unpack tagValue
-
--- customerPerson <- req ^? (ix "searchReqMessageIntent" . key "intentFulfillment" . key "fulfillmentCustomer" . key "customerPerson" . key "tags") & fromMaybeM (InvalidRequest "Missing Fields")
-
-getIsReallocationEnabled :: Spec.SearchReqMessage -> Maybe Bool
-getIsReallocationEnabled req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let tagGroups = fromMaybe (error "Missing Tags") $ fulfillment.fulfillmentTags
-  tagValue <- getTagV2 "reallocation_info" "is_reallocation_enabled" tagGroups
-  readMaybe $ T.unpack tagValue
-
-buildRoutePoints :: Spec.SearchReqMessage -> Maybe [Maps.LatLong]
-buildRoutePoints req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let tagGroups = fromMaybe (error "Missing Tags") $ fulfillment.fulfillmentTags
-  getTagV2 "route_info" "route_points" tagGroups >>= decode . encodeUtf8
+mkStops :: LatLong -> LatLong -> Maybe [Spec.Stop]
+mkStops originGps destinationGps =
+  Just
+    [ Spec.Stop
+        { stopLocation =
+            Just $
+              Spec.Location
+                { locationAddress = Nothing, -- JAYPAL, Confirm if it is correct to put it here
+                  locationAreaCode = Nothing,
+                  locationCity = Nothing,
+                  locationCountry = Nothing,
+                  locationGps = A.decode $ A.encode originGps,
+                  locationState = Nothing,
+                  locationId = Nothing -- JAYPAL, Not sure what to keep here
+                },
+          stopType = Just "START",
+          stopAuthorization = Nothing
+        },
+      Spec.Stop
+        { stopLocation =
+            Just $
+              Spec.Location
+                { locationAddress = Nothing, -- JAYPAL, Confirm if it is correct to put it here
+                  locationAreaCode = Nothing,
+                  locationCity = Nothing,
+                  locationCountry = Nothing,
+                  locationGps = A.decode $ A.encode destinationGps,
+                  locationState = Nothing,
+                  locationId = Nothing -- JAYPAL, Not sure what to keep here
+                },
+          stopType = Just "END",
+          stopAuthorization = Nothing
+        }
+    ]
 
 parseLatLong :: Text -> LatLong
 parseLatLong a =
@@ -153,63 +90,31 @@ getMessageId context = do
   messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
   pure $ T.pack $ show messageUuid
 
-validateContext :: (HasFlowEnv m r '["_version" ::: Text]) => Context.Action -> Spec.Context -> m ()
-validateContext action context = do
-  validateDomain Context.MOBILITY context
-  validateContextCommons action context
-
-validateDomain :: (L.MonadFlow m, Log m) => Context.Domain -> Spec.Context -> m ()
-validateDomain expectedDomain context = do
-  domainText <- context.contextDomain & fromMaybeM (InvalidRequest "Missing contextDomain")
-  domain <- (decode $ encode domainText) & fromMaybeM (InvalidRequest $ "Error in parsing contextDomain: " <> domainText <> " shrey00")
-  unless (domain == expectedDomain) $
-    throwError Error.InvalidDomain
-
-validateContextCommons :: (HasFlowEnv m r '["_version" ::: Text], Log m) => Context.Action -> Spec.Context -> m ()
-validateContextCommons expectedAction context = do
-  validateAction expectedAction context
-  validateCoreVersion context
-
-validateAction :: (L.MonadFlow m, Log m) => Context.Action -> Spec.Context -> m ()
-validateAction expectedAction context = do
-  actionText <- context.contextAction & fromMaybeM (InvalidRequest "Missing contextAction")
-  action <- (decode $ encode actionText) & fromMaybeM (InvalidRequest $ "Error in parsing contextAction: " <> actionText)
-  -- convert context.contextAction to CoreContext.Action
-  unless (action == expectedAction) $
-    throwError Error.InvalidAction
-
-validateCoreVersion :: (HasFlowEnv m r '["_version" ::: Text], Log m) => Spec.Context -> m ()
-validateCoreVersion context = do
-  supportedVersion <- asks (._version)
-  version <- context.contextVersion & fromMaybeM (InvalidRequest "Missing contextVersion")
-  unless (version == supportedVersion) $
-    throwError Error.UnsupportedCoreVer
-
 getContextCity :: MonadFlow m => Spec.Context -> m Context.City
 getContextCity context = do
   location <- context.contextLocation & fromMaybeM (InvalidRequest "Missing contextLocation")
   city <- location.locationCity & fromMaybeM (InvalidRequest "Missing locationCity")
   cityText <- city.cityCode & fromMaybeM (InvalidRequest "Missing cityCode")
-  (decode $ encode cityText) & fromMaybeM (InvalidRequest $ "Error in parsing cityCode: " <> cityText)
+  decode (encode cityText) & fromMaybeM (InvalidRequest $ "Error in parsing cityCode: " <> cityText)
 
 getContextCountry :: MonadFlow m => Spec.Context -> m Context.Country
 getContextCountry context = do
   location <- context.contextLocation & fromMaybeM (InvalidRequest "Missing contextLocation")
   country <- location.locationCountry & fromMaybeM (InvalidRequest "Missing locationCountry")
   countryCodeText <- country.countryCode & fromMaybeM (InvalidRequest "Missing countryCode")
-  (decode $ encode countryCodeText) & fromMaybeM (InvalidRequest $ "Error in parsing countryCode: " <> countryCodeText)
+  decode (encode countryCodeText) & fromMaybeM (InvalidRequest $ "Error in parsing countryCode: " <> countryCodeText)
 
 getContextBapUri :: MonadFlow m => Spec.Context -> m BaseUrl
 getContextBapUri context = do
   bapUriText <- context.contextBapUri & fromMaybeM (InvalidRequest "Missing contextBapUri")
-  (decode $ encode bapUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBapUri: " <> bapUriText)
+  decode (encode bapUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBapUri: " <> bapUriText)
 
 getContextBppUri :: MonadFlow m => Spec.Context -> m (Maybe BaseUrl)
 getContextBppUri context = do
   let mbBppUriText = context.contextBppUri
   case mbBppUriText of
     Nothing -> pure Nothing
-    Just bppUriText -> Just <$> (decode $ encodeUtf8 bppUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBppUri: " <> bppUriText)
+    Just bppUriText -> Just <$> decode (encodeUtf8 bppUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBppUri: " <> bppUriText)
 
 withTransactionIdLogTag :: (Log m) => Text -> m a -> m a
 withTransactionIdLogTag = withTransactionIdLogTag'
@@ -226,3 +131,14 @@ mkBppUri ::
 mkBppUri merchantId =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId)
+
+castVariant :: Variant.Variant -> Text
+castVariant Variant.SEDAN = "SEDAN"
+castVariant Variant.HATCHBACK = "HATCHBACK"
+castVariant Variant.SUV = "SUV"
+castVariant Variant.AUTO_RICKSHAW = "AUTO_RICKSHAW"
+castVariant Variant.TAXI = "TAXI"
+castVariant Variant.TAXI_PLUS = "TAXI_PLUS"
+
+rationaliseMoney :: Money -> Text
+rationaliseMoney fare = T.pack $ show $ OS.DecimalValue (toRational fare)
