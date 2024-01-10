@@ -258,7 +258,7 @@ config =
       enable : false,
       url : ""
     }
-  , logFunctionCalls : true
+  , logFunctionCalls : false
   , rideRequest : {
       negotiationUnit : {
         cab : "20",
