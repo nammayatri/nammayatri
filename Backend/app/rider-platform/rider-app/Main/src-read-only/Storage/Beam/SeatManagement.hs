@@ -7,7 +7,7 @@ module Storage.Beam.SeatManagement where
 import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SeatManagement
 import qualified Domain.Types.ServiceCategory
 import Kernel.External.Encryption

@@ -18,7 +18,7 @@ module Storage.CachedQueries.Person
   )
 where
 
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

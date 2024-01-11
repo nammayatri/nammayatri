@@ -5,7 +5,7 @@ module Storage.Queries.TicketService where
 
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TicketService
 import Kernel.Beam.Functions
 import Kernel.External.Encryption

@@ -18,8 +18,8 @@ module Storage.CachedQueries.MerchantConfig
   )
 where
 
-import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.MerchantConfig
+import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id

@@ -7,7 +7,7 @@ module Storage.Beam.TicketBookingService where
 import qualified Database.Beam as B
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TicketBooking
 import qualified Domain.Types.TicketBookingService
 import qualified Domain.Types.TicketService

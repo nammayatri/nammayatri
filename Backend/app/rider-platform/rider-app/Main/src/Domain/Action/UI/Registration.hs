@@ -34,7 +34,7 @@ import Data.OpenApi hiding (email, info)
 import qualified Data.Text.Encoding as TE
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person (PersonAPIEntity, PersonE (updatedAt))
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS

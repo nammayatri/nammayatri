@@ -4,7 +4,7 @@
 module Storage.Queries.ServiceCategory where
 
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceCategory
 import qualified Domain.Types.ServicePeopleCategory
 import Kernel.Beam.Functions

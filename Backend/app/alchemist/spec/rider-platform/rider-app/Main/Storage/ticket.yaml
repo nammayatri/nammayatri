@@ -1,5 +1,6 @@
 imports:
-  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
   HighPrecMoney: Kernel.Types.Common
   UTCTime: Kernel.Prelude
   Person: Domain.Types.Person

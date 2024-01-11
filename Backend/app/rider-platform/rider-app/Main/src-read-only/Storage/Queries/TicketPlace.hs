@@ -4,7 +4,7 @@
 module Storage.Queries.TicketPlace where
 
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TicketPlace
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -27,8 +27,8 @@ findById (Kernel.Types.Id.Id id) = do
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-getTicketPlaces :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> m ([Domain.Types.TicketPlace.TicketPlace])
-getTicketPlaces merchantOperatingCityId = do
+getTicketPlaces :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.TicketPlace.TicketPlace])
+getTicketPlaces (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findAllWithKV
     [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
