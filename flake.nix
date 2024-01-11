@@ -4,6 +4,8 @@
     nixpkgs.follows = "common/nixpkgs";
     haskell-flake.follows = "common/haskell-flake";
 
+    debug.url = "github:boolean-option/false";
+
     # Backend inputs
     shared-kernel = {
       url = "github:nammayatri/shared-kernel";
