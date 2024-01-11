@@ -44,6 +44,8 @@ primaryButtonViewConfig state = let
       , height = (V 60)
       , cornerRadius = 0.0
       , margin = (Margin 0 0 0 0)
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in primaryButtonConfig'
 
@@ -57,6 +59,8 @@ mobileNumberButtonConfig state = let
       , alpha = if state.props.btnActive then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in primaryButtonConfig'
 

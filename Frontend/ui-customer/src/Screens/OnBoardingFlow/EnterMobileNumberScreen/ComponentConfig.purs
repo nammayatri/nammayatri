@@ -54,6 +54,8 @@ mobileNumberButtonConfig state = let
       , margin = (Margin 0 0 0 0 )
       , background = state.data.config.primaryBackground
       , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in primaryButtonConfig'
 

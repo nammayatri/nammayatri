@@ -430,5 +430,7 @@ primaryButtonRequestRideConfig config = PrimaryButton.config
   , id = "ConfirmAndBookButton"
   , background = Color.black900
   , margin = Margin 0 16 0 15
+  , enableRipple = true
+  , rippleColor = Color.rippleShade
   }
 

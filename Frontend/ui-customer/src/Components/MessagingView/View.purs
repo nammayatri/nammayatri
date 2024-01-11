@@ -104,18 +104,19 @@ chatHeaderView config push =
     , accessibility DISABLE
     , padding $ PaddingHorizontal 8 16
     ][ linearLayout
-        [ height $ V 40
-        , width $ V 40
+        [ height $ V 36
+        , width $ V 36
         , gravity CENTER
         , accessibilityHint "Back : Button : Return to ride details"
         , accessibility ENABLE
         , onClick push $ const BackPressed
+        , rippleColor Color.rippleShade
+        , cornerRadius 20.0
         ][ imageView
           [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
           , height $ V 24
           , width $ V 24
           , accessibility DISABLE
-          , rippleColor Color.rippleShade
           , cornerRadius 24.0
           ]
         ]
@@ -138,6 +139,7 @@ headerNameView config push =
   [ height WRAP_CONTENT
   , width $ V (((screenWidth unit)/10)* 6)
   , orientation VERTICAL
+  , margin $ MarginLeft 8
   ][linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT

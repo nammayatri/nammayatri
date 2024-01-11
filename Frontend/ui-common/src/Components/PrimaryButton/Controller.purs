@@ -54,6 +54,8 @@ type Config =
     , weight :: Maybe Number
     , enableButtonLayoutId :: Boolean
     , underlineConfig :: UnderLineConfig 
+    , enableRipple :: Boolean
+    , rippleColor :: String
   }
 
 type TextConfig =
@@ -114,6 +116,8 @@ config =
     , textFromHtml : Nothing
     , id : ""
     }
+  , enableRipple : false
+  , rippleColor : Color.rippleShade
   , width: MATCH_PARENT
   , height: V 50
   , cornerRadius: 8.0

@@ -123,7 +123,9 @@ type ButtonConfig = {
   height :: Length,
   image :: ImageConfig,
   showShimmer :: Boolean,
-  gravity :: Gravity
+  gravity :: Gravity,
+  enableRipple :: Boolean,
+  rippleColor :: String
 }
 
 type DismissPopupConfig =
@@ -258,6 +260,8 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
   } 
   , option1 : {
       background : Color.white900
@@ -284,6 +288,8 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , option2 : {
       background : Color.black900
@@ -310,6 +316,8 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , optionWithHtml : {
       background : Color.black900,

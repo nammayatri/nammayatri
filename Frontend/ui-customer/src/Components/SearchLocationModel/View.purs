@@ -42,7 +42,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude ((<>))
 import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (+), (-), (/), (/=), (<<<), (<>), (==), (||), not, discard, (>=), void)
-import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, autoCorrectionType, background, clickable, color, cornerRadius, cursorColor, disableClickFeedback, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, hintColor, id, imageUrl, imageView, imageWithFallback, inputTypeI, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onChange, onClick, onFocus, orientation, padding, relativeLayout, scrollBarY, scrollView, selectAllOnFocus, singleLine, stroke, text, textSize, textView, visibility, weight, width, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import Resources.Constants (getDelayForAutoComplete)
 import Screens.Types (SearchLocationModelType(..), LocationListItemState)
@@ -78,9 +78,11 @@ view push state =
                     , width WRAP_CONTENT
                     , onClick push (const GoBack)
                     , disableClickFeedback true
-                    , margin (Margin 9 21 0 0)
+                    , margin (Margin 5 17 0 0)
                     , gravity CENTER
                     , padding (Padding 4 4 4 4)
+                    , cornerRadius 20.0
+                    , rippleColor Color.rippleShade
                     ]
                   [ imageView
                       [ height $ V 23
@@ -88,6 +90,7 @@ view push state =
                       , accessibilityHint "Back : Button"
                       , accessibility ENABLE
                       , imageWithFallback state.appConfig.searchLocationConfig.backArrow
+                      , margin $ Margin 4 4 4 4
                       ]
                   ]
                   , sourceDestinationImageView state
@@ -202,7 +205,7 @@ sourceDestinationImageView state =
   linearLayout
     [ height WRAP_CONTENT
     , width $ V 20
-    , margin $ Margin 8 9 8 0
+    , margin $ Margin 4 9 8 0
     , orientation VERTICAL
     , gravity CENTER
     ][ linearLayout
@@ -450,6 +453,8 @@ primaryButtonConfig state =
       , margin = (MarginHorizontal 16 16)
       , isClickable = true
       , id = "SelectLocationFromMap"
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in primaryButtonConfig'
 

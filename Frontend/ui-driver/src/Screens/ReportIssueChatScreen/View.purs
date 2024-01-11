@@ -30,7 +30,7 @@ import Prelude (Unit, bind, const, not, pure, show, unit, ($), (&&), (-), (<<<),
 import PrestoDOM (linearLayout)
 import PrestoDOM.Elements.Elements (frameLayout, imageView, relativeLayout, textView)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
-import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, clickable)
+import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, clickable, rippleColor)
 import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, Screen, Visibility(..))
 import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig, viewImageModelConfig, addImageModelConfig, recordAudioModelConfig, addAudioModelConfig)
 import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
@@ -38,7 +38,7 @@ import Screens.Types (ReportIssueChatScreenState)
 import Components.AddAudioModel (view) as AddAudioModel
 import Components.AddImagesModel (view) as AddImagesModel
 import Components.ChatView as ChatView
-import Styles.Colors (black800, black900, black9000, blue900, brightBlue, blueTextColor, grey900, greyLight, lightGreyBlue, white900) as Color
+import Styles.Colors (black800, black900, black9000, blue900, brightBlue, blueTextColor, grey900, greyLight, lightGreyBlue, white900, rippleShade) as Color
 import Font.Size (a_16, a_20, a_14, a_17, a_18) as FontSize
 import Font.Style (h3, semiBold) as FontStyle
 import JBridge (storeCallBackImageUpload, storeCallBackUploadMultiPartData) as JB
@@ -121,19 +121,21 @@ headerLayout state push =
         , padding $ Padding 5 16 5 16
         ]
         [ imageView
-            [ width $ V 30
-            , height $ V 30
+            [ width $ V 40
+            , height $ V 40
             , imageUrl "ny_ic_chevron_left"
             , onClick push $ const BackPressed
-            , padding $ Padding 2 2 2 2
+            , padding $ Padding 7 7 7 7
             , margin $ MarginLeft 5
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text state.data.categoryName
               , textSize FontSize.a_18
-              , margin $ MarginLeft 20
+              , margin $ MarginLeft 10
               , weight 1.0
               , color Color.black900
               ]

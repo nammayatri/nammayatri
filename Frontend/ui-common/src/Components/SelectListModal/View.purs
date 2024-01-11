@@ -447,6 +447,7 @@ primaryButtonConfig config = let
       , width = if(config.secondaryButtonVisibility) then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
       , id = "Button1"
       , visibility = if config.primaryButtonVisibility then VISIBLE else GONE
+      , enableRipple = true
       }
   in primaryButtonConfig'
 
@@ -467,6 +468,7 @@ secondaryButtonConfig config =
           , isClickable = config.isSelectButtonActive
           , background = if (not config.isSelectButtonActive) && btnConfig.isGradient then "#F1F1F4" else config.config.primaryBackground
           , stroke = (if btnConfig.isGradient then "0," else "1,") <> config.config.primaryBackground
+          , enableRipple = config.isSelectButtonActive
         }
 
 

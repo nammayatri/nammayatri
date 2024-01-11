@@ -59,7 +59,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
 import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback,onAnimationEnd)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), horizontalScrollView, afterRender, alpha, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, visibility, weight, width, webView, url, clickable, relativeLayout, stroke, alignParentBottom, disableClickFeedback,onAnimationEnd, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii, scrollBarY)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -292,18 +292,22 @@ headerView state push =
   , width MATCH_PARENT
   , orientation HORIZONTAL
   , gravity BOTTOM
-  , padding $ Padding 16 16 16 16
+  , padding $ Padding 5 16 5 16
   ][ imageView
-      [ width $ V 30
-      , height $ V 30
+      [ width $ V 40
+      , height $ V 40
       , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , onClick push $ const BackPressed
+      , rippleColor Color.rippleShade
+      , cornerRadius 20.0
+      , padding $ Padding 7 7 7 7
+      , margin $ MarginLeft 5
       ]
     , textView
       ([ weight 1.0
       , height MATCH_PARENT
       , text (getString MY_PROFILE)
-      , margin $ MarginLeft 20
+      , margin $ Margin 10 2 0 0
       , color Color.black900
       ] <> FontStyle.h3 TypoGraphy)
     , linearLayout
@@ -311,6 +315,9 @@ headerView state push =
       , width WRAP_CONTENT
       , gravity CENTER
       , onClick push $ const OpenSettings
+      , rippleColor Color.rippleShade
+      , cornerRadius 20.0
+      , padding $ PaddingHorizontal 3 6
       ][  imageView
           [ height $ V 20
           , width $ V 20

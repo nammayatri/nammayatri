@@ -80,5 +80,6 @@ primaryButtonConfig state = let
       { textConfig { text = "Get Started"
       , accessibilityHint = "Get Started : Button" }
       , id = "PrimaryButtonWelcomeScreen"
+      , enableRipple = true
       }
   in primaryButtonConfig'

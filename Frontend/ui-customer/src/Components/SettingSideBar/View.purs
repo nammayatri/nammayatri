@@ -30,7 +30,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY, accessibility, accessibilityHint)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY, accessibility, accessibilityHint, rippleColor, cornerRadius)
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..), isLocalStageOn)
 import Styles.Colors as Color
@@ -88,7 +88,7 @@ settingsView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , padding (Padding 18 24 18 8)
+  , padding (Padding 8 24 8 8)
   , orientation VERTICAL
   ](map (\item -> 
         case item of
@@ -234,8 +234,10 @@ settingsMenuView item push  =
   , width MATCH_PARENT
   , gravity CENTER_VERTICAL
   , disableClickFeedback false
-  , padding (Padding 0 16 16 16 )
+  , padding (Padding 10 16 16 16 )
   , accessibilityHint $ item.accessibilityHint <> " : Button"
+  , rippleColor Color.rippleShade
+  , cornerRadius 12.0
   , onClick push $ ( const case item.tag of
                               SETTINGS_RIDES          -> PastRides
                               SETTINGS_TICKETS        -> GoToMyTickets

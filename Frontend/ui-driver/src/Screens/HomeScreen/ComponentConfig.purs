@@ -110,8 +110,8 @@ endRidePopUp state = let
   popUpConfig' = config'{
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
-    option1 {text =(getString GO_BACK)},
-    option2 {text = (getString END_RIDE)}
+    option1 {text = (getString GO_BACK), enableRipple = true},
+    option2 {text = (getString END_RIDE), enableRipple = true}
   }
 in popUpConfig'
 
@@ -348,6 +348,7 @@ freeTrialEndingPopupConfig state =
       text = if autoPayStatus == NO_AUTOPAY then getString JOIN_NOW else getString SETUP_AUTOPAY
     , background = Color.black900
     , color = Color.yellow900
+    , enableRipple = true
     },
     option2 {
       visibility = false
@@ -426,6 +427,7 @@ paymentPendingPopupConfig state =
     , background = Color.black900
     , color = Color.yellow900
     , showShimmer = state.data.paymentState.showShimmer
+    , enableRipple = true
     },
     option2 {
       visibility = false
@@ -496,6 +498,7 @@ cancelConfirmationConfig state = let
     , background = Color.white900
     , strokeColor = Color.black500
     , color = Color.black700
+    , enableRipple = state.data.cancelRideConfirmationPopUp.continueEnabled
     },
     option2 {
       text = (getString GO_BACK)
@@ -504,6 +507,7 @@ cancelConfirmationConfig state = let
     , color = Color.yellow900
     , strokeColor = Color.black900
     , background = Color.black900
+    , enableRipple = true
     },
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
@@ -627,10 +631,12 @@ silentModeConfig state = let
     , option1 {
       text =   getString GO_OFFLINE
       , width = (V 140)
+      , enableRipple = true
     }
   , option2 {
       width = (V 170)
       , text =  getString GO_SILENT
+      , enableRipple = true
     }
   }
   in popUpConfig'
@@ -1122,7 +1128,9 @@ getRideCompletedConfig state = let
       margin = MarginTop 0,
       textConfig {
         text = getString FARE_COLLECTED
-      }
+      },
+      enableRipple = true,
+      rippleColor = Color.rippleShade
     },
     topCard {
       title = getString COLLECT_VIA_UPI_QR_OR_CASH,
@@ -1540,6 +1548,8 @@ gotoButtonConfig state = PrimaryButton.config
   , id = "GotoClick"
   , alpha = if state.data.driverGotoState.gotoCount == 0 then 0.3 else 1.0
   , enableLoader = JB.getBtnLoader "GotoClick"
+  , enableRipple = true
+  , rippleColor = Color.rippleShade
   , lottieConfig 
     { lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader.json"
     , width = V 100

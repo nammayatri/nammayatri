@@ -24,7 +24,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (getLocationName)
 import Prelude (Unit, const, bind, pure, unit, ($), (<>), (==), (||), (&&), (>) , (>=))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), background, clickable, color, accessibilityHint, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, alpha, imageWithFallback, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..), background, clickable, color, accessibilityHint, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, alpha, imageWithFallback, accessibility, rippleColor)
 import Screens.Types (LocationListItemState)
 import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..))

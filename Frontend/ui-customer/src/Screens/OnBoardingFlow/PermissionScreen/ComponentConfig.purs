@@ -59,6 +59,7 @@ errorModalConfig state = let
       , margin = (Margin 16 0 16 24)
       , background = state.appConfig.primaryBackground
       , color = state.appConfig.primaryTextColor
+      , enableRipple = true
       }
     }
   in errorModalConfig' 
@@ -80,6 +81,7 @@ primaryButtonConfig  state = let
       , margin = (Margin 0 0 0 0)
       , id = "PermissionScreenButton"
       , enableLoader = (JB.getBtnLoader "PermissionScreenButton")
+      , enableRipple = true
       }
   in primaryButtonConfig'
 

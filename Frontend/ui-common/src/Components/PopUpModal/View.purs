@@ -16,7 +16,7 @@ module Components.PopUpModal.View where
 
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map, when)
 import Effect (Effect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, rippleColor)
 import Components.PopUpModal.Controller (Action(..), Config, CoverVideoConfig)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -249,7 +249,7 @@ view push state =
                 , orientation if state.optionButtonOrientation == "VERTICAL" then VERTICAL else HORIZONTAL
                 ]
                 [ linearLayout
-                    [ if state.option2.visibility then width state.option1.width else weight 1.0
+                    ([ if state.option2.visibility then width state.option1.width else weight 1.0
                     , background state.option1.background
                     , height $ state.option1.height
                     , cornerRadius 8.0
@@ -268,7 +268,7 @@ view push state =
                             pure unit
                         )
                         (const OnButton1Click)
-                    ]
+                    ] <> (if state.option1.enableRipple then [rippleColor state.option1.rippleColor] else []))
                     [   shimmerFrameLayout
                         [ width MATCH_PARENT
                         , height MATCH_PARENT
@@ -307,7 +307,7 @@ view push state =
                         ]
                     ]
                 , linearLayout
-                    [ if state.option1.visibility then width state.option2.width else weight 1.0
+                    ([ if state.option1.visibility then width state.option2.width else weight 1.0
                     , height state.option2.height
                     , background state.option2.background
                     , cornerRadius 8.0
@@ -328,7 +328,7 @@ view push state =
                     , gravity state.option2.gravity
                     , clickable state.option2.isClickable
                     , alpha (if state.option2.isClickable then 1.0 else 0.5)
-                    ]
+                    ] <> (if state.option2.enableRipple then [rippleColor state.option2.rippleColor] else []))
                     [   imageView [
                             imageWithFallback state.option2.image.imageUrl
                             , height state.option2.image.height

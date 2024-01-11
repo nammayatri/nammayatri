@@ -49,6 +49,7 @@ primaryButtonConfig isActive =
     , margin = Margin 16 24 16 16
     , isClickable = isActive
     , alpha = if isActive then 1.0 else 0.5
+    , enableRipple = isActive
     }
 
 genericHeaderConfig :: ST.DriverEarningsScreenState -> GenericHeaderConfig.Config
@@ -78,9 +79,11 @@ genericHeaderConfig state =
       , prefixImageConfig
         { height = V 30
         , width = V 30
-        , padding = PaddingTop 5
         , imageUrl = "ny_ic_chevron_left_black"
         , visibility = boolToVisibility enableYatriCoins
+        , enableRipple = true
+        , margin = Margin 8 8 8 8
+        , layoutMargin = Margin 4 4 4 4
         }
       , suffixImageConfig
         { visibility = GONE

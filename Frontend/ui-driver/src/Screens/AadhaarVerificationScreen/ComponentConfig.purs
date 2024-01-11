@@ -133,6 +133,6 @@ logOutPopUpModelConfig :: ST.AadhaarVerificationScreenState -> PopUpModal.Config
 logOutPopUpModelConfig state = PopUpModal.config
             { primaryText { text = (getString LOGOUT) }
             , secondaryText { text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT) }
-            , option1 { text = (getString GO_BACK) }
-            , option2 { text = (getString LOGOUT) }
+            , option1 { text = (getString GO_BACK), enableRipple = true }
+            , option2 { text = (getString LOGOUT), enableRipple = true }
             }

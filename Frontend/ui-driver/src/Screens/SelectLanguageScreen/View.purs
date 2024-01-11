@@ -27,7 +27,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, ($), (<<<), (==))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, afterRender, alpha, background, color, fontStyle, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, text, textSize, textView, weight, width, rippleColor, cornerRadius)
 import Screens.SelectLanguageScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -82,21 +82,23 @@ headerLayout push state =
     , height MATCH_PARENT
     , orientation HORIZONTAL
     , layoutGravity "center_vertical"
-    , padding (Padding 5 5 5 0)
+    , padding (Padding 5 12 5 12)
     ][ imageView
-        [ width $ V 25
-        , height MATCH_PARENT
+        [ width $ V 40
+        , height $ V 40
         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
         , gravity CENTER_VERTICAL
         , onClick push (const BackPressed)
-        , padding (Padding 2 2 2 2)
+        , padding (Padding 10 10 10 10)
         , margin (MarginLeft 5)
+        , rippleColor Color.rippleShade
+        , cornerRadius 20.0
         ]
       , textView $
         [ width WRAP_CONTENT
         , height MATCH_PARENT
         , text (getString SELECT_LANGUAGE)
-        , margin (MarginLeft 20)
+        , margin (MarginLeft 10)
         , color Color.black
         , weight 1.0
         , gravity CENTER_VERTICAL

@@ -2,7 +2,7 @@ module Components.RideCompletedCard.View where
 
 import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..))
 
-import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView)
+import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView, rippleColor)
 import Components.Banner.View as Banner
 import Components.Banner as BannerConfig
 import Data.Functor (map)
@@ -60,7 +60,7 @@ topGradientView config push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , padding $ Padding 16 16 16 16
+    , padding $ Padding 16 16 16 6
     , gradient $ Linear (if os == "IOS" then 90.0 else 0.0) config.topCard.gradient
     , id $ getNewIDWithTag "topViewId"
     ]
@@ -94,6 +94,7 @@ topPillAndSupportView config push =
               , accessibilityHint "Contact Support : Button"
               , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if config.theme == LIGHT then "ny_ic_black_headphone" else "ny_ic_headphone"
               , onClick push $ const Support
+              , rippleColor Color.rippleShade
               ]
             ]
         ]
@@ -194,11 +195,14 @@ rideDetailsButtonView config push =
     linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
-          , margin $ MarginTop 10
+          , margin $ MarginTop 4
           , gravity CENTER_VERTICAL
           , onClick push $ const RideDetails
           , accessibility config.accessibility
           , accessibilityHint "Ride Details : Button"
+          , cornerRadius 4.0
+          , padding $ Padding 4 5 4 5
+          , rippleColor Color.rippleShade
           ][  textView $
               [ height WRAP_CONTENT
               , text config.topCard.bottomText
@@ -395,6 +399,7 @@ needHelpPillView config push =
     , cornerRadius if os == "IOS" then 20.0 else 24.0
     , onClick push $ const $ HelpAndSupportAC
     , margin $ MarginVertical 20 20
+    , rippleColor Color.rippleShade
     ][imageView [
         width $ V 16
       , height $ V 16

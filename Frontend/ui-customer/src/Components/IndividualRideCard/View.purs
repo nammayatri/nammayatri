@@ -29,7 +29,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, ($), (<>), (<<<), (==), const, not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..),alpha, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), Accessiblity(..),alpha, background, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, maxLines, orientation, padding, relativeLayout, shimmerFrameLayout, stroke, text, textSize, textView, visibility, weight, width, accessibilityHint, accessibility, rippleColor)
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -80,7 +80,7 @@ cardView push state =
     , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , padding $ Padding 16 20 16 (if not state.optionsVisibility then 10 else 20)
+      , padding $ Padding 16 20 16 10
       , cornerRadius 8.0
       , orientation VERTICAL
       , background Color.white900
@@ -370,13 +370,16 @@ viewDetailsAndRepeatRide push state =
       , accessibilityHint $ "View Details : Button"
       , accessibility ENABLE
       , color Color.blue900
-      , padding $ Padding 26 18 (if state.isSrcServiceable then 50 else 26) 3
+      , padding $ Padding 26 7 (if state.isSrcServiceable then 50 else 26) 7
+      , margin $ MarginVertical 5 2
       , PrestoList.onClickHolder push OnClick
+      , rippleColor Color.rippleShade
+      , cornerRadius 8.0
       ] <> FontStyle.body1 LanguageStyle
     , linearLayout 
       [ width $ V 1
       , height if os == "IOS" then (V 20) else MATCH_PARENT
-      , margin $ MarginTop 15
+      , margin $ Margin 15 15 15 7
       , background Color.grey900
       , visibility if state.isSrcServiceable then VISIBLE else GONE
       ][]
@@ -390,7 +393,10 @@ viewDetailsAndRepeatRide push state =
       , PrestoList.alphaHolder "alpha"
       , alpha $ if (isLocalStageOn HomeScreen) then 1.0 else 0.5
       , PrestoList.onClickHolder push $ if isLocalStageOn HomeScreen then RepeatRide else (const OnRideToastAC)
-      , padding $ PaddingVertical 18 3
+      , padding $ PaddingVertical 7 7
+      , margin $ MarginVertical 5 2
+      , cornerRadius 8.0
+      , rippleColor Color.rippleShade
       , weight 1.0
       , gravity CENTER
       , visibility if state.isSrcServiceable then VISIBLE else GONE

@@ -66,6 +66,7 @@ type ButtonConfig =
   , stroke :: String
   , background :: String
   , visibility :: Visibility
+  , enableRipple :: Boolean
   }
 
 config :: Config
@@ -109,6 +110,7 @@ config =
     , stroke : "0,#ffffff"
     , background : Color.black
     , visibility : VISIBLE
+    , enableRipple : false
     }
 
   }

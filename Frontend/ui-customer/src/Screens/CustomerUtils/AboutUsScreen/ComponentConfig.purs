@@ -41,6 +41,9 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , visibility = btnVisibility
+      , margin = Margin 8 8 8 8 
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       } 
     , textConfig {
         text = (getString ABOUT)

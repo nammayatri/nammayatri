@@ -32,6 +32,7 @@ genericHeaderConfig state =
       , margin = (MarginRight 16)
       , imageUrl = fetchImage FF_ASSET "ny_ic_chevron_left"
       , padding = (Padding 5 5 5 5)
+      , enableRipple = true
       }
     , textConfig
       { text = getString if state.props.currentStage == SELECT_LANG then SELECT_LANGUAGE else SELECT_LOCATION
