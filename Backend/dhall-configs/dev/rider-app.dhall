@@ -146,6 +146,8 @@ let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 let cacheFeedbackFormConfig = { configsExpTime = +5184000 }
 
+let kafkaProperties = [] : List { propName : Text, propValue : Text }
+
 let hccfg =
       { connectHost = "localhost"
       , connectPort = 30001
@@ -228,4 +230,5 @@ in  { esqDBCfg
     , maxMessages
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap
+    , kafkaProperties
     }

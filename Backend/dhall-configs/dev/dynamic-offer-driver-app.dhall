@@ -231,6 +231,8 @@ let modelNamesMap =
         }
       ]
 
+let kafkaProperties = [] : List { propName : Text, propValue : Text }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -307,4 +309,5 @@ in  { esqDBCfg
     , modelNamesMap
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap
+    , kafkaProperties
     }

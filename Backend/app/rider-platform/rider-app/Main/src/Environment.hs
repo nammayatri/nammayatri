@@ -42,6 +42,7 @@ import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
 import Kernel.Types.App
 import Kernel.Types.Cache
 import Kernel.Types.Common (HighPrecMeters, Meters, Seconds)
+import qualified Kernel.Types.Common as KTC
 import Kernel.Types.Credentials (PrivateKey)
 import Kernel.Types.Error
 import Kernel.Types.Flow
@@ -121,7 +122,8 @@ data AppCfg = AppCfg
     dontEnableForKafka :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    kafkaProperties :: [KTC.KafkaProperties]
   }
   deriving (Generic, FromDhall)
 
@@ -187,7 +189,8 @@ data AppEnv = AppEnv
     dontEnableForKafka :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
+    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl,
+    kafkaProperties :: [KTC.KafkaProperties]
   }
   deriving (Generic)
 
