@@ -17,6 +17,7 @@ module API.Dashboard.Management.Driver.Coin where
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as Common
 import qualified Domain.Action.Dashboard.Driver.Coin as DDriverCoins
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
@@ -28,9 +29,15 @@ import Servant hiding (throwError)
 type API =
   "coins"
     :> Common.BulkUploadCoinsAPI
+      :<|> Common.CoinHistoryAPI
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
-handler = bulkUploadCoins
+handler merchantShortId opCity =
+  bulkUploadCoins merchantShortId opCity
+    :<|> coinHistory merchantShortId opCity
 
 bulkUploadCoins :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReq -> FlowHandler APISuccess
 bulkUploadCoins merchantShortId opCity = withFlowHandlerAPI . DDriverCoins.bulkUploadCoinsHandler merchantShortId opCity
+
+coinHistory :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Integer -> Maybe Integer -> FlowHandler Common.CoinHistoryRes
+coinHistory merchantShortId opCity driverId mbLimit mbOffset = withFlowHandlerAPI $ DDriverCoins.coinHistoryHandler merchantShortId opCity (cast @Common.Driver @DP.Driver driverId) mbLimit mbOffset

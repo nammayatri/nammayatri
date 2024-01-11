@@ -110,6 +110,16 @@ updateStatusOfCoins id coinsRemainingValue newStatus = do
     ]
     [Se.Is BeamDC.id $ Se.Eq id]
 
+totalCoinEarnHistory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Maybe Integer -> Maybe Integer -> m [CoinHistory]
+totalCoinEarnHistory (Id driverId) mbLimit mbOffset = do
+  let limitVal = maybe 10 fromInteger mbLimit
+      offsetVal = maybe 0 fromInteger mbOffset
+  findAllWithOptionsKV
+    [Se.Is BeamDC.driverId $ Se.Eq driverId]
+    (Se.Desc BeamDC.createdAt)
+    (Just limitVal)
+    (Just offsetVal)
+
 instance FromTType' BeamDC.CoinHistory CoinHistory where
   fromTType' BeamDC.CoinHistoryT {..} = do
     pure $

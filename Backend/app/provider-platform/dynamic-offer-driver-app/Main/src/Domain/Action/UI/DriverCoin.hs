@@ -14,7 +14,7 @@
 
 module Domain.Action.UI.DriverCoin where
 
-import "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver.Coin as DCoins hiding (CoinStatus)
 import Data.OpenApi hiding (title)
 import Data.Time (UTCTime (utctDay))
 import Domain.Types.Coins.CoinHistory
@@ -25,6 +25,7 @@ import Domain.Types.Merchant.TransporterConfig ()
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Beam.Functions as B
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
@@ -43,7 +44,7 @@ import Tools.Error
 data CoinTransactionHistoryItem = CoinTransactionHistoryItem
   { coins :: Int,
     eventFunction :: DCT.DriverCoinsFunctionType,
-    bulkUploadTitle :: Maybe Translations,
+    bulkUploadTitle :: Maybe DCoins.Translations,
     createdAt :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -94,16 +95,16 @@ getCoinEventSummary (driverId, merchantId_, merchantOpCityId) dateInUTC = do
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   let timeDiffFromUtc = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
   let dateInIst = addUTCTime timeDiffFromUtc dateInUTC
-  driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   let coinUsed_ = driver.usedCoins
       totalCoinsEarned_ = driver.totalEarnedCoins
       coinExpired_ = totalCoinsEarned_ - (coinBalance_ + coinUsed_)
-  coinSummary <- CHistory.getCoinEventSummary driverId dateInIst timeDiffFromUtc
+  coinSummary <- B.runInReplica $ CHistory.getCoinEventSummary driverId dateInIst timeDiffFromUtc
   let todayCoinSummary_ = sum $ map (.coins) coinSummary
-  lastDayHistory <- CHistory.getCoinsEarnedLastDay driverId dateInIst timeDiffFromUtc
+  lastDayHistory <- B.runInReplica $ CHistory.getCoinsEarnedLastDay driverId dateInIst timeDiffFromUtc
   let coinsEarnedPreviousDay_ = sum $ map (.coins) lastDayHistory
       coinTransactionHistory = map toTransactionHistoryItem coinSummary
-  coinsExpiring <- CHistory.getExpiringCoinsInXDay driverId transporterConfig.coinExpireTime timeDiffFromUtc
+  coinsExpiring <- B.runInReplica $ CHistory.getExpiringCoinsInXDay driverId transporterConfig.coinExpireTime timeDiffFromUtc
   let totalExpiringCoins = sum $ map (\coinHistory -> coinHistory.coins - coinHistory.coinsUsed) coinsExpiring
       expiringDays_ = fromIntegral (nominalDiffTimeToSeconds transporterConfig.coinExpireTime) `div` 86400
   pure
@@ -134,7 +135,7 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset =
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchantId_.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
-  purchaseSummary <- PHistory.getPurchasedHistory driverId mbLimit mbOffset
+  purchaseSummary <- B.runInReplica $ PHistory.getPurchasedHistory driverId mbLimit mbOffset
   mbDriverPlan <- DPlan.findByDriverId driverId
   let coinUsageHistory = map toUsageHistoryItem purchaseSummary
   coinAdjustedInSubscriptionKeyExists <- getCoinAdjustedInSubscriptionByDriverIdKey driverId
@@ -213,7 +214,7 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
               }
       void $ PHistory.createPurchaseHistory history
       void $ DPlan.updateCoinFieldsByDriverId driverId calculatedAmount
-      driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       void $ Person.updateUsedCoins driverId (coins + driver.usedCoins)
       histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
       logDebug $ "histories : " <> show histories
