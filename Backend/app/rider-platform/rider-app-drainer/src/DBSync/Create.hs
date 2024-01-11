@@ -41,8 +41,8 @@ runCreate createDataEntry streamName = do
           res <- EL.runIO $ createInKafka _kafkaConnection createObject streamName tableName
           case res of
             Left err -> do
-              EL.logError ("KAFKA CREATE FAILED" :: Text) (err <> " for Object :: " <> show createDBModel.contents)
-              void $ publishDBSyncMetric Event.KafkaPushFailure
+              EL.logError ("KAFKA CREATE FAILED" :: Text) ("Kafka create failed for drainer : " <> err <> " for table :: " <> show tableName)
+              void $ publishDBSyncMetric $ Event.KafkaPushFailure "Create" tableName.getDBModel
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("KAFKA CREATE SUCCESSFUL" :: Text) (" Create successful for object :: " <> show createDBModel.contents)
