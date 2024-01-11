@@ -265,4 +265,7 @@ config =
         auto : "10"
       }
   }
+  , inAppKeyboardModalConfig : {
+      enableDeviceKeyboard : true
+    }
 }

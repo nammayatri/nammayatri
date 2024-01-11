@@ -33,6 +33,7 @@ data Action = OnSelection String Int
             | BackPressed
             | OnClickResendOtp
             | OnClickTextCross
+            | NoAction
 
 ----------------------------------------------- InAppKeyboardModalState ---------------------------------------------
 type InAppKeyboardModalState = {
@@ -49,6 +50,7 @@ type InAppKeyboardModalState = {
     , isValidAlternateNumber :: Boolean
     , showResendOtpButton :: Boolean
     , textBoxConfig :: TextBoxConfig
+    , enableDeviceKeyboard :: Boolean
 }
 
 type TextBoxConfig = {
@@ -201,4 +203,5 @@ config = {
       width : V 48,
       height : V 56
   }
+  , enableDeviceKeyboard : false
   }

@@ -1982,6 +1982,7 @@ homeScreenFlow = do
         Right startZoneRideResp -> do
           liftFlowBT $ logEvent logField_ "ny_driver_special_zone_ride_start"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
+          _ <- pure $ hideKeyboardOnNavigation true
           void $ lift $ lift $ toggleLoader false
           void $ updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"

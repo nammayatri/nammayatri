@@ -22,14 +22,14 @@ import Animation.Config (translateYAnimConfig)
 import Data.Array (mapWithIndex)
 import Data.String (take, drop, length)
 import Effect (Effect)
-import Engineering.Helpers.Commons (screenWidth)
+import Engineering.Helpers.Commons (screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Language.Types (STR(..))
-import Prelude (Unit, const, map, unit, ($), (/), (<>), (==), (||), (>=), (&&), (<), not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha)
+import Prelude (Unit, const, map, unit, void, ($), (/), (<>), (==), (||), (>=), (&&), (<), not, pure)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), InputType(..), LetterSpacing(..), imageUrl, imageView, linearLayout, onBackPressed, onClick, textView, alpha, editText, afterRender, onChange, inputType, relativeLayout, letterSpacing)
 import PrestoDOM.Animation as PrestoAnim
-import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility,imageWithFallback)
+import PrestoDOM.Properties (background, backgroundDrawable, clickable, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, margin, orientation, padding, stroke, text, textSize, weight, width, visibility,imageWithFallback, lineHeight, id, pattern)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Styles.Colors as Color
 import Screens.Types(KeyboardModalType(..)) as KeyboardModalType
@@ -39,6 +39,7 @@ import Common.Types.App (LazyCheck(..))
 import Prelude ((<>))
 import Debug (spy)
 import Data.Array as DA
+import JBridge (showKeyboard)
 
 view :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -56,11 +57,11 @@ view push state =
         linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , cornerRadius 20.0
+        , cornerRadii $ Corners 20.0 true true false false
         , orientation VERTICAL
         , background Color.white900
         , gravity CENTER
-        ][  linearLayout
+        ] $ [linearLayout
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation VERTICAL
@@ -95,9 +96,38 @@ view push state =
                 ]
               , otpView push state
             ]
-          , keyboard push state
-        ]
+        ] <> if not state.enableDeviceKeyboard then [keyboard push state] else []
     ]
+
+editTextSingleBox :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
+editTextSingleBox push state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation HORIZONTAL
+  , gravity CENTER
+  , visibility if state.modalType == KeyboardModalType.OTP && not state.otpAttemptsExceeded && state.enableDeviceKeyboard then VISIBLE else GONE
+  ][  editText $
+      [ width $ V 200
+      , height WRAP_CONTENT
+      , color Color.greyTextColor
+      , margin (MarginHorizontal 10 10)
+      , letterSpacing $ PX 2.0
+      , gravity CENTER
+      , id $ getNewIDWithTag "OtpKeyboard"
+      , afterRender (\_ -> void $ pure $ showKeyboard (getNewIDWithTag "OtpKeyboard")
+            ) (const NoAction)
+      , onChange (\action -> do case action of
+                                  OnClickDone text -> 
+                                    if length text == 4 then do
+                                      void $ push action
+                                    else pure unit
+                                  _ -> pure unit
+                  ) OnClickDone
+      , pattern "[0-9]*,4"
+      , inputType Numeric
+      ] <> (FontStyle.priceFont_big LanguageStyle)
+   ]
 
 textBoxes :: forall w . (Action -> Effect Unit) -> InAppKeyboardModalState -> PrestoDOM (Effect Unit) w
 textBoxes push state =
@@ -106,7 +136,7 @@ textBoxes push state =
   , height WRAP_CONTENT
   , orientation HORIZONTAL
   , gravity CENTER
-  , visibility if state.modalType == KeyboardModalType.OTP && not state.otpAttemptsExceeded then VISIBLE else GONE
+  , visibility if state.modalType == KeyboardModalType.OTP && not state.otpAttemptsExceeded && not state.enableDeviceKeyboard then VISIBLE else GONE
   , margin (Margin 0 20 0 20)
   , clickable false
   ](mapWithIndex (\index item ->
@@ -165,7 +195,7 @@ otpView push state =
            , orientation VERTICAL
            , gravity if(state.modalType == KeyboardModalType.OTP) then CENTER else LEFT
        ]
-             ([] <> [textBoxes push state] <> [singleTextBox push state] <>
+             ([] <> [if state.enableDeviceKeyboard then editTextSingleBox push state else textBoxes push state] <> [singleTextBox push state] <>
                     [textView $
                     [ width state.subHeadingConfig.width
                     , height state.subHeadingConfig.height
