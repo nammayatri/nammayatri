@@ -26,6 +26,7 @@ data Action = SendMessage
             | Navigate
             | NoAction
             | OnImageClick String
+            | MessageAnimationEnd
 
 type Config = 
   { userConfig :: UserConfig

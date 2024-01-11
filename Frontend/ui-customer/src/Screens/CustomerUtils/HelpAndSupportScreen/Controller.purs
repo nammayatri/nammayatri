@@ -296,7 +296,7 @@ eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  exit $ GoH
 
 eval (FetchIssueListApiCall issueList) state = do
      let apiIssueList = getApiIssueList issueList
-         updatedResolvedIssueList = getUpdatedIssueList ["CLOSED"] apiIssueList
+         updatedResolvedIssueList = getUpdatedIssueList ["CLOSED", "NOT_APPLICABLE"] apiIssueList
          updatedOngoingIssueList =  getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] apiIssueList
      continue state {data {issueList =apiIssueList, resolvedIssueList =  updatedResolvedIssueList , ongoingIssueList =  updatedOngoingIssueList}}
 eval _ state = continue state
@@ -365,7 +365,8 @@ getApiIssueList issueList = (map (\(IssueReportCustomerListItem issue) -> {
                     in (toUpper before <> after)
                   ) (split (Pattern " ") issue.category))
                 else issue.category,
-   createdAt : getExactTime (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") (issue.createdAt)) issue.createdAt
+   createdAt : getExactTime (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") (issue.createdAt)) issue.createdAt,
+   issueReportShortId : issue.issueReportShortId
 }) issueList)
 
 getExactTime :: Int -> String -> String 
@@ -415,7 +416,7 @@ reportsList state = []
         }]
   <> if null state.data.resolvedIssueList then [] else [
         { categoryAction : "CLOSED"
-        , categoryName : getString RESOLVED <> " : " <> (toStringJSON (DA.length (state.data.resolvedIssueList)))
+        , categoryName : getString HISTORY <> " : " <> (toStringJSON (DA.length (state.data.resolvedIssueList)))
         , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_resolved"
         , categoryId : "2"
         }]

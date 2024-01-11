@@ -386,12 +386,13 @@ chatComponentView state push config nextConfig isLastItem userType index =
   , gravity chatConfig.gravity
   , orientation VERTICAL
   , visibility $ boolToVisibility $ not $ (not state.spanParent && STR.null value)
-  , onAnimationEnd (\action ->
+  , onAnimationEnd (\action -> do
+      push action
       if isLastItem || state.spanParent then do
         _ <- scrollToEnd (getNewIDWithTag "ChatScrollView") true
         pure unit
       else
-        pure unit) (const NoAction)
+        pure unit) (const MessageAnimationEnd)
   ][ linearLayout
      [ padding (Padding 12 12 12 12)
      , height WRAP_CONTENT

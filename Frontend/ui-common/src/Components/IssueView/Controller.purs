@@ -19,6 +19,7 @@ import Font.Size as FontSize
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), height, width)
 import Styles.Colors as Color
 import Common.Types.App(LazyCheck(..))
+import Data.Maybe (Maybe(..))
 
 type IssueState = {
     firstTextConfig :: TextConfig ,
@@ -55,7 +56,8 @@ type IssueInfo = {
     issueReportId :: String,
     status :: String,
     category :: String,
-    createdAt :: String
+    createdAt :: String,
+    issueReportShortId :: Maybe String
 }
 
 config :: IssueState
@@ -141,6 +143,6 @@ config = {
     , alpha : 0.9
     },
     headingText : "Updated",
-    issue :  { issueReportId: "", status: "",  category: "", createdAt: ""}
+    issue :  { issueReportId: "", status: "",  category: "", createdAt: "", issueReportShortId: Nothing }
 }
 

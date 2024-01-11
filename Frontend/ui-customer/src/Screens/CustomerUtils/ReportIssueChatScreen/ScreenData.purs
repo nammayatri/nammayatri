@@ -48,6 +48,7 @@ initData = {
         showStillHaveIssue : false,
         selectedRide : Nothing, 
         entryPoint : TripDetailsScreenEntry,
+        issueReportShortId : Nothing,
         config : DC.config
     },
     props : {
@@ -63,7 +64,8 @@ initData = {
       timerId : "",
       initalizedCallbacks : false,
       isResolved: false, 
-      isEndFlow : false
+      isEndFlow : false,
+      showEndFlowMessage : false
     }
 }
 

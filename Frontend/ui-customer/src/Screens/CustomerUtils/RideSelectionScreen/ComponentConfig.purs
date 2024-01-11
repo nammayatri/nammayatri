@@ -24,12 +24,13 @@ import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude ((<>))
+import Prelude
 import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..))
 import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.Types as ST
 import Storage as Storage
 import Styles.Colors as Color
+import Data.Maybe 
 
 apiErrorModalConfig :: ST.RideSelectionScreenState -> ErrorModal.Config 
 apiErrorModalConfig state = let 
@@ -111,7 +112,8 @@ cancelButtonConfig _ = let
   config = PrimaryButton.config
   primaryButtonConfig' = config
     { textConfig
-      { text = getString I_DONT_KNOW_WHICH_RIDE
+      { 
+        textFromHtml = Just $ "<u>"  <> (getString I_DONT_KNOW_WHICH_RIDE) <> "</u>"
       , color = Color.black700
       , id = "cancelButtonTextConfig"
       }
@@ -121,10 +123,5 @@ cancelButtonConfig _ = let
     , cornerRadius= 0.0
     , margin = Margin 0 0 0 0
     , id = "cancelButtonConfig"
-    , underlineConfig {
-      visibility = VISIBLE
-    , color = Color.black700
-    , height = V 1
-    }
     }
   in primaryButtonConfig'

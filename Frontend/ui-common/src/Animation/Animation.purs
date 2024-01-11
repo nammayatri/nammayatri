@@ -382,3 +382,4 @@ triggerOnAnimationEnd ifAnim =
   PrestoAnim.Animation
     [ PrestoAnim.duration 250
     ] ifAnim
+

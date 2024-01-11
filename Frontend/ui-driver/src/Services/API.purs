@@ -1621,8 +1621,8 @@ newtype IssueReportDriverListItem = IssueReportDriverListItem
     issueReportId :: String,
     status :: String,
     category :: String,
-    createdAt :: String
-
+    createdAt :: String,
+    issueReportShortId :: Maybe String
   }
 
 instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq FetchIssueListResp where

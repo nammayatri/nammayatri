@@ -54,6 +54,8 @@ import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneBu
 import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ReportIssueChatScreenState)
 import Styles.Colors (black700, black800, black900, black9000, blue900, brightBlue, blueTextColor, grey700, grey900, greyLight, lightGreyBlue, white900) as Color
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 screen :: ReportIssueChatScreenState -> Screen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
@@ -96,6 +98,7 @@ view push state =
               , width MATCH_PARENT
               , orientation VERTICAL
               , adjustViewWithKeyboard "true"
+              , background Color.white900
               ]
               [ linearLayout
                   [ width MATCH_PARENT
@@ -109,7 +112,7 @@ view push state =
               , linearLayout
                   [ height WRAP_CONTENT
                   , width MATCH_PARENT
-                  , background if state.props.showSubmitComp then Color.white900 else Color.grey700
+                  , background Color.white900 
                   , orientation VERTICAL
                   ]
                   [ submitView push state
@@ -188,7 +191,7 @@ issueIdHeader state push =
     [ textView $ 
         [ width WRAP_CONTENT
         , height MATCH_PARENT
-        , text $ (getString ISSUE_NO) <> ": " <> fromMaybe "" state.data.issueId
+        , text $ (getString ISSUE_NO) <> ": " <> fromMaybe (fromMaybe "" state.data.issueId) state.data.issueReportShortId
         , gravity CENTER_VERTICAL
         , color Color.black800
         ] <> FontStyle.body2 TypoGraphy
@@ -213,7 +216,6 @@ chatView push state =
     , afterRender push $ pure ShowOptions
     , background Color.white900
     , orientation VERTICAL
-    , margin $ MarginBottom (runFn1 getLayoutBounds (getNewIDWithTag "bottom_issue_text_indicator")).height
     ]
     [ ChatView.view (push <<< ChatViewActionController) (chatConfig state)
     ]
@@ -344,67 +346,58 @@ submitView push state =
 
 helperView :: (Action -> Effect Unit) -> ReportIssueChatScreenState -> forall w. PrestoDOM (Effect Unit) w
 helperView push state =
-  linearLayout
+  PrestoAnim.animationSet [Anim.fadeIn true ] $ linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , background Color.grey700
     , visibility $ boolToVisibility $ not state.props.showSubmitComp
     , orientation VERTICAL
-    ]
-    [ linearLayout
-        [ width MATCH_PARENT
-        , height $ V 1
-        , background Color.greyLight
-        ]
-        []
-    , textView $ 
+    , padding $ PaddingVertical (if EHC.os == "IOS" then 24 else 18 ) 24
+    ][
+      textView $ 
         [ width MATCH_PARENT
         , layoutGravity "center"
         , color Color.black700
         , visibility $ boolToVisibility $ not $ null state.data.options
         , text $ getString CHOOSE_AN_OPTION
-        , margin $ MarginVertical 18 24
         , gravity CENTER
         ] <> FontStyle.body5 TypoGraphy
-    , linearLayout
-        [ width MATCH_PARENT
-        , gravity CENTER
-        , id $ getNewIDWithTag "bottom_issue_text_indicator"
-        , margin $ MarginVertical (if EHC.os == "IOS" then 24 else 18) 24
-        , visibility $ boolToVisibility $ null state.data.options 
+  , linearLayout
+      [ width MATCH_PARENT
+      , gravity CENTER
+      , visibility $ boolToVisibility $ null state.data.options 
+      ][
+        linearLayout
+          [ width MATCH_PARENT
+          , gravity CENTER
+          , visibility $ boolToVisibility  state.data.showStillHaveIssue
+          ][ textView $ 
+              [ width WRAP_CONTENT
+              , layoutGravity "center"
+              , color Color.black700
+              , text $ getString ISSUE_MARKED_AS_RESOLVED
+              , gravity CENTER
+              , margin $ MarginRight 2
+              ] <> FontStyle.body5 TypoGraphy
+          , textView $
+              [ width WRAP_CONTENT
+              , layoutGravity "center"
+              , color Color.blue900
+              , text $ getString STILL_HAVING_ISSUE
+              , gravity CENTER
+              , onClick push $ const ReopenIssuePress
+              ] <> FontStyle.body5 TypoGraphy
+          ]
+      , textView $ 
+          [ width MATCH_PARENT
+          , layoutGravity "center"
+          , color Color.black700
+          , visibility $ boolToVisibility $ not state.data.showStillHaveIssue
+          , text $ getString if state.props.isResolved then ISSUE_RESOLVED_TEXT else if state.props.showEndFlowMessage then WE_HOPE_THE_ISSUE_IS_RESOLVED "WE_HOPE_THE_ISSUE_IS_RESOLVED" else ISSUE_SUBMITTED_TEXT
+          , gravity CENTER
+          ] <> FontStyle.paragraphText TypoGraphy
         ]
-        [ linearLayout
-            [ width MATCH_PARENT
-            , gravity CENTER
-            , visibility $ boolToVisibility  state.data.showStillHaveIssue
-            ]
-            [ textView $ 
-                [ width WRAP_CONTENT
-                , layoutGravity "center"
-                , color Color.black700
-                , text $ getString ISSUE_MARKED_AS_RESOLVED
-                , gravity CENTER
-                , margin $ MarginRight 2
-                ] <> FontStyle.body5 TypoGraphy
-            , textView $
-                [ width WRAP_CONTENT
-                , layoutGravity "center"
-                , color Color.blue900
-                , text $ getString STILL_HAVING_ISSUE
-                , gravity CENTER
-                , onClick push $ const ReopenIssuePress
-                ] <> FontStyle.body5 TypoGraphy
-            ]
-        , textView $ 
-            [ width MATCH_PARENT
-            , layoutGravity "center"
-            , color Color.black700
-            , visibility $ boolToVisibility $ not state.data.showStillHaveIssue
-            , text $ getString if state.props.isResolved then ISSUE_RESOLVED_TEXT else if state.props.isEndFlow then WE_HOPE_THE_ISSUE_IS_RESOLVED "WE_HOPE_THE_ISSUE_IS_RESOLVED" else ISSUE_SUBMITTED_TEXT
-            , gravity CENTER
-            ] <> FontStyle.paragraphText TypoGraphy
-        ]
-    ]
+      ]
 
 addAudioModel :: ReportIssueChatScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 addAudioModel state push = AddAudioModel.view (push <<< AddAudioModelAction) (addAudioModelConfig state)

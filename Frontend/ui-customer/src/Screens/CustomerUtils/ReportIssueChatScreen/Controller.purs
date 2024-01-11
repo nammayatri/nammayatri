@@ -442,8 +442,12 @@ eval (ChatViewActionController (ChatView.OnImageClick url)) state = do
                  , props { showViewImageModel = true } }
 
 eval (ChatViewActionController (ChatView.EnableSuggestions)) state =
-  continue state { data { chatConfig { enableSuggestionClick = true } } }
+  continue state { data { chatConfig { enableSuggestionClick = true }}, props { showEndFlowMessage = state.props.isEndFlow } }
 
+
+eval (ChatViewActionController (ChatView.MessageAnimationEnd)) state =
+  continue state { props { showEndFlowMessage = state.props.isEndFlow } }
+  
 eval (SendMessage message toggleSubmitComp) state = do
   let messages'       = snoc state.data.chatConfig.messages message
       showSubmitComp' = if toggleSubmitComp then not state.props.showSubmitComp else state.props.showSubmitComp
