@@ -24,7 +24,7 @@ import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L

@@ -18,9 +18,9 @@ module Domain.Types.Person where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant as DMerchant
-import Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.RiderConfig as DRC
 import qualified Domain.Types.MerchantConfig as DMC
+import Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)

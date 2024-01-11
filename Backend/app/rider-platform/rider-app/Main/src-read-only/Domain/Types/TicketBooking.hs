@@ -6,7 +6,7 @@ module Domain.Types.TicketBooking where
 import Data.Aeson
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.TicketPlace
 import Kernel.Prelude
@@ -19,7 +19,7 @@ data TicketBooking = TicketBooking
   { amount :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,
     status :: Domain.Types.TicketBooking.BookingStatus,

@@ -1,0 +1,27 @@
+imports:
+  City: Kernel.Types.Beckn.Context
+  Merchant: Domain.Types.Merchant
+
+MerchantOperatingCity:
+  tableName: merchant_operating_city
+
+  fields:
+    id: Id MerchantOperatingCity
+    merchantId: Id Merchant
+    merchantShortId: ShortId Merchant
+    city: City
+
+  excludedFields: [merchantOperatingCityId]
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByMerchantShortIdAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantShortId, city]
+    findByMerchantIdAndCity:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, city]

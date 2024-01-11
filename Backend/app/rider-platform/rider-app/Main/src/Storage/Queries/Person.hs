@@ -21,8 +21,8 @@ import qualified Data.Time as T
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking.Type as Booking
 import Domain.Types.Merchant (Merchant)
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantConfig as DMC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions

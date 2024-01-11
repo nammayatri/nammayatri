@@ -20,8 +20,8 @@ module Storage.Queries.Merchant.MerchantPaymentMethod
     #-}
 where
 
-import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.MerchantPaymentMethod
+import Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common

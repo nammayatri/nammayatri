@@ -19,7 +19,7 @@ import Data.Aeson
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Types.Common

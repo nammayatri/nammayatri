@@ -18,7 +18,7 @@ module Domain.Types.Quote where
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote

@@ -20,8 +20,8 @@ module Tools.AadhaarVerification
 where
 
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.AadhaarVerification as Reexport hiding
   ( generateAadhaarOtp,
     verifyAadhaarOtp,
