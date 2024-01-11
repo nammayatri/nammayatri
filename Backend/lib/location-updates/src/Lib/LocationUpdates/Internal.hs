@@ -104,6 +104,16 @@ processWaypoints ih@RideInterpolationHandler {..} driverId ending estDist pickup
 lastTwoOnRidePointsRedisKey :: Id person -> Text
 lastTwoOnRidePointsRedisKey driverId = "Driver-Location-Last-Two-OnRide-Points:DriverId-" <> driverId.getId
 
+data SnapToRoadState = SnapToRoadState
+  { distanceTravelled :: HighPrecMeters,
+    googleSnapToRoadCalls :: Int,
+    osrmSnapToRoadCalls :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON)
+
+onRideSnapToRoadStateKey :: Id person -> Text
+onRideSnapToRoadStateKey driverId = "Driver-Location-OnRide-SnapToRoad:DriverId-" <> driverId.getId
+
 takeLastTwo :: [a] -> [a]
 takeLastTwo xs = drop (max 0 (length xs - 2)) xs
 
@@ -129,31 +139,44 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pi
   let currentLastTwoPoints = takeLastTwo (toList waypoints)
   Redis.setExp (lastTwoOnRidePointsRedisKey driverId) currentLastTwoPoints 21600 -- 6 hours
   routeDeviation <- updateRouteDeviation driverId (toList modifiedWaypoints)
-  when ending $ do
-    Redis.del (lastTwoOnRidePointsRedisKey driverId)
-    if routeDeviation || pickupDropOutsideThreshold
-      then do
-        (distanceToUpdate, googleSnapToRoadCalls, osrmSnapToRoadCalls, snapToRoadCallFailed) <- recalcDistanceBatches' 0 0 0 False
-        updateDistance driverId distanceToUpdate googleSnapToRoadCalls osrmSnapToRoadCalls
-        when snapToRoadCallFailed $ throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
-      else updateDistance driverId (metersToHighPrecMeters estDist) 0 0
+  let snapToRoadCallCondition = routeDeviation || pickupDropOutsideThreshold
+  if ending
+    then do
+      if snapToRoadCallCondition
+        then do
+          currSnapToRoadState <- processSnapToRoadCall
+          updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls
+        else updateDistance driverId (metersToHighPrecMeters estDist) 0 0
+    else do
+      isAtLeastBatchPlusOne <- atLeastBatchPlusOne
+      when (snapToRoadCallCondition && isAtLeastBatchPlusOne) $ do
+        currSnapToRoadState <- processSnapToRoadCall
+        Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 21600 -- 6 hours
   where
-    -- atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
-    continueCondition = if ending then pointsRemaining else return False
+    atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
 
-    recalcDistanceBatches' acc googleSnapToRoadCalls osrmSnapToRoadCalls snapToRoadCallFailed = do
-      batchLeft <- continueCondition
-      if batchLeft
+    recalcDistanceBatches' snapToRoad'@SnapToRoadState {..} snapToRoadCallFailed isBatchLeft = do
+      if isBatchLeft
         then do
           (dist, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h driverId
           let googleCalled = Google `elem` servicesUsed
               osrmCalled = OSRM `elem` servicesUsed
           if snapCallFailed
-            then pure (acc, googleSnapToRoadCalls + fromBool googleCalled, osrmSnapToRoadCalls + fromBool osrmCalled, snapCallFailed)
+            then pure (SnapToRoadState distanceTravelled (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled), snapCallFailed)
             else do
-              recalcDistanceBatches' (acc + dist) (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled) snapCallFailed
-        else pure (acc, googleSnapToRoadCalls, osrmSnapToRoadCalls, snapToRoadCallFailed)
+              batchLeft <- atLeastBatchPlusOne
+              recalcDistanceBatches' (SnapToRoadState (distanceTravelled + dist) (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled)) snapCallFailed batchLeft
+        else pure (snapToRoad', snapToRoadCallFailed)
+
+    processSnapToRoadCall = do
+      prevSnapToRoadState :: SnapToRoadState <- (Redis.safeGet $ onRideSnapToRoadStateKey driverId) >>= pure . fromMaybe (SnapToRoadState 0 0 0)
+      arePointsRemaining <- pointsRemaining
+      (currSnapToRoadState, snapToRoadCallFailed) <- recalcDistanceBatches' prevSnapToRoadState False arePointsRemaining
+      when snapToRoadCallFailed $ do
+        updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls
+        throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
+      return currSnapToRoadState
 
 recalcDistanceBatchStep ::
   (Monad m, Log m) =>
@@ -170,6 +193,11 @@ recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
     logInfo $ mconcat ["calculated distance for ", show (length interpolatedWps), " points, ", "distance is ", show distance]
     deleteFirstNwaypoints driverId batchSize
   pure (distance, servicesUsed, snapToRoadFailed)
+
+redisOnRideSnapToRoadKeysCleanup :: (HedisFlow m env) => Id person -> m ()
+redisOnRideSnapToRoadKeysCleanup driverId = do
+  Redis.del (lastTwoOnRidePointsRedisKey driverId)
+  Redis.del (onRideSnapToRoadStateKey driverId)
 
 -------------------------------------------------------------------------
 mkRideInterpolationHandler ::
@@ -249,6 +277,7 @@ clearInterpolatedPointsImplementation :: HedisFlow m env => Id person -> m ()
 clearInterpolatedPointsImplementation driverId = do
   let key = makeInterpolatedPointsRedisKey driverId
   clearList key
+  redisOnRideSnapToRoadKeysCleanup driverId
   logInfo $ mconcat ["cleared interpolated location updates for driverId = ", driverId.getId]
 
 getInterpolatedPointsImplementation :: HedisFlow m env => Id person -> m [LatLong]
