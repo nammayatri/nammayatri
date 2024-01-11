@@ -42,8 +42,8 @@ runUpdate updateDataEntries streamName = do
           res <- EL.runIO $ createInKafka _kafkaConnection updateObject streamName tableName
           case res of
             Left err -> do
-              EL.logError ("KAFKA UPDATE FAILED" :: Text) (err <> " for Object :: " <> show updateDBModel.contents)
-              void $ publishDBSyncMetric Event.KafkaPushFailure
+              EL.logError ("KAFKA UPDATE FAILED" :: Text) ("Kafka update failed for drainer : " <> err <> " for table :: " <> show tableName)
+              void $ publishDBSyncMetric $ Event.KafkaPushFailure "Update" tableName.getDBModel
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("KAFKA UPDATE SUCCESSFUL" :: Text) (" Update successful for object :: " <> show updateDBModel.contents)
