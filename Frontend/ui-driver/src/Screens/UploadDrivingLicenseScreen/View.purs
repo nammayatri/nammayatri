@@ -132,7 +132,6 @@ linearLayout
                       , visibility $ fromMaybeVisibility state.data.dateOfIssue
                       ] <> FontStyle.body3 TypoGraphy
                 , enterLicenceNumber state push
-                , if state.data.cityConfig.uploadRCandDL then reEnterLicenceNumber state push else dummyLinearLayout
                 , dateOfBirth push state
                 , dateOfIssue push state
                 , howToUpload push state

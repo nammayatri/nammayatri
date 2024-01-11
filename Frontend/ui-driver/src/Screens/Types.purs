@@ -266,7 +266,11 @@ type RegistrationScreenData = {
   config :: AppConfig,
   referralCode :: String,
   referral_code_input_data :: String,
-  logField :: Object Foreign
+  logField :: Object Foreign,
+  enteredDL :: String,
+  enteredRC :: String,
+  dlVerficationMessage :: String,
+  rcVerficationMessage :: String
 }
 
 type StepProgress = {
@@ -280,8 +284,14 @@ type RegistrationScreenProps = {
   isValidReferralCode :: Boolean,
   enterOtpFocusIndex :: Int,
   enterReferralCodeModal :: Boolean,
-  referralCodeSubmitted :: Boolean
+  referralCodeSubmitted :: Boolean,
+  contactSupportView :: Boolean,
+  contactSupportModal :: AnimType
 }
+
+data AnimType = HIDE | SHOW | ANIMATING
+derive instance genericAnimType :: Generic AnimType _
+instance eqAnimType :: Eq AnimType where eq = genericEq
 
 data RegisterationStep = DRIVING_LICENSE_OPTION | VEHICLE_DETAILS_OPTION | GRANT_PERMISSION | SUBSCRIPTION_PLAN
 derive instance genericRegisterationStep :: Generic RegisterationStep _

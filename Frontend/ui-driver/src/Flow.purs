@@ -490,6 +490,10 @@ onBoardingFlow = do
                       vehicleDetailsStatus = getStatusValue resp.rcVerificationStatus,
                       drivingLicenseStatus = getStatusValue resp.dlVerificationStatus, 
                       lastUpdateTime = convertUTCtoISC (getCurrentUTC "") "hh:mm A",
+                      enteredDL = getValueToLocalStore ENTERED_DL,
+                      enteredRC = getValueToLocalStore ENTERED_RC,
+                      dlVerficationMessage = resp.dlVerficationMessage,
+                      rcVerficationMessage = resp.rcVerficationMessage,
                       permissionsStatus = case permissions of
                         true -> ST.COMPLETED
                         false -> ST.NOT_STARTED,
@@ -660,6 +664,7 @@ uploadDrivingLicenseFlow = do
         liftFlowBT $ logEvent logField_ "ny_driver_dl_photo_confirmed"
         modifyScreenState $ UploadDrivingLicenseScreenStateType (\uploadDrivingLicenseScreen -> uploadDrivingLicenseScreen { data {imageIDFront = resp.imageId}, props{errorVisibility = false}})
         registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue resp.imageId resp.imageId)
+        void $ pure $ setValueToLocalStore ENTERED_DL state.data.driver_license_number
         case registerDriverDLResp of
           Right (DriverDLResp resp) -> do
             liftFlowBT $ logEvent logField_ "ny_driver_submit_dl_details"
@@ -698,6 +703,7 @@ uploadDrivingLicenseFlow = do
       void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
       registerDriverDLResp <- lift $ lift $ Remote.registerDriverDL (makeDriverDLReq state.data.driver_license_number state.data.dob state.data.dateOfIssue state.data.imageIDFront state.data.imageIDFront)
+      void $ pure $ setValueToLocalStore ENTERED_DL state.data.driver_license_number
       case registerDriverDLResp of
         Right (DriverDLResp resp) -> do
           void $ lift $ lift $ toggleLoader false
@@ -745,6 +751,7 @@ addVehicleDetailsflow addRcFromProf = do
           addVehicleDetailsflow state.props.addRcFromProfile
         else do
           registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number resp.imageId state.data.dateOfRegistration true)
+          void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
               _ <- pure $ toast $ getString RC_ADDED_SUCCESSFULLY
@@ -793,6 +800,7 @@ addVehicleDetailsflow addRcFromProf = do
           addVehicleDetailsflow state.props.addRcFromProfile
         else do
           registerDriverRCResp <- lift $ lift $ Remote.registerDriverRC (makeDriverRCReq state.data.vehicle_registration_number state.data.rcImageID state.data.dateOfRegistration true)
+          void $ pure $ setValueToLocalStore ENTERED_RC state.data.vehicle_registration_number
           case registerDriverRCResp of
             Right (DriverRCResp resp) -> do
               _ <- pure $ toast $ getString RC_ADDED_SUCCESSFULLY

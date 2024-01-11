@@ -258,7 +258,9 @@ eval (CallBackImageUpload base_64 imageName imagePath) state = do
   _ <- pure $ printLog "imageName" imageName
   if base_64 /= "" then do
     let newState = state { props = state.props { validateProfilePicturePopUp = true, imageCaptureLayoutView = false, rcAvailable = true, rc_name = imageName, isValidState = (checkRegNum (state.data.vehicle_registration_number))}, data = state.data { rc_base64 = base_64 }}
-    continue newState
+    continueWithCmd newState [ do
+      void $ runEffectFn4 renderBase64ImageFile base_64 (getNewIDWithTag "ValidateProfileImage") false "CENTER_CROP"
+      pure $ ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionController (PrimaryButtonController.OnClick))]
     else continue state{props{isValidState = false}}
 eval (UploadFile) state = continueWithCmd (state {props {validateProfilePicturePopUp = false, imageCaptureLayoutView = true}}) [do
      _ <- liftEffect $ renderCameraProfilePicture (getNewIDWithTag "ProfilePictureCaptureLayout")

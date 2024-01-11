@@ -255,12 +255,16 @@ eval (GenericMessageModalAction (GenericMessageModal.PrimaryButtonActionControll
    exit $ GoBack state {props {openGenericMessageModal = false}}
 
 
-eval (CallBackImageUpload image imageName imagePath) state = if(state.props.clickedButtonType == "front") then do
-                                                      continue  state {data {imageFrontUrl = image, imageFront = image, imageNameFront = imageName}, props{validateProfilePicturePopUp = true, imageCaptureLayoutView = false}}
-                                                        else if(state.props.clickedButtonType == "back") then do
-                                                          continue state {data {imageBack = image, imageNameBack = imageName}, props{validateProfilePicturePopUp = true, imageCaptureLayoutView = false}}
-                                                        else do
-                                                           continue state                    
+eval (CallBackImageUpload image imageName imagePath) state = 
+  if(state.props.clickedButtonType == "front") then do
+    let newState = state {data {imageFrontUrl = image, imageFront = image, imageNameFront = imageName}, props{validateProfilePicturePopUp = true, imageCaptureLayoutView = false}}
+    continueWithCmd newState [ do
+      void $ runEffectFn4 renderBase64ImageFile image (getNewIDWithTag "ValidateProfileImage") false "CENTER_CROP"
+      pure $ ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionController (PrimaryButton.OnClick))]
+  else if(state.props.clickedButtonType == "back") then do
+    continue state {data {imageBack = image, imageNameBack = imageName}, props{validateProfilePicturePopUp = true, imageCaptureLayoutView = false}}
+  else do
+    continue state                    
 
 eval (DatePicker (label) resp year month date) state = do
   let fullDate = (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" 

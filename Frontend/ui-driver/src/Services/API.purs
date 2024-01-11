@@ -953,6 +953,8 @@ newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     { dlVerificationStatus :: String
     , rcVerificationStatus :: String
     , aadhaarVerificationStatus :: String
+    , dlVerficationMessage :: String
+    , rcVerficationMessage :: String
     }
 
 instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatusReq DriverRegistrationStatusResp where

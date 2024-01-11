@@ -1222,3 +1222,6 @@ getEN stringKey =
         ACTIVATED_CUSTOMERS_INFO -> "Referred Customers who have successfully completed their first ride"
         CUSTOMER_REFERRAL_CODE -> "Customer \n Referral Code"
         ACCEPT_RIDE_TO_ENTER_LEADERBOARD -> "Accept rides and\nbecome a top driver"
+        CONTACT_SUPPORT_VIA -> "Contact Support via"
+        YOU_CAN_SHARE_SCREENSHOT -> "You can share screenshots and documents  for manual onboarding"
+        PLACE_A_CALL -> "Place a call for quick help in getting documents verified"
