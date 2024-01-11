@@ -92,6 +92,7 @@
         config.pre-commit.devShell
         config.haskellProjects.default.outputs.devShell
         config.flake-root.devShell
+        self'.devShells.debug
       ];
     };
   };
