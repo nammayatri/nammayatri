@@ -404,6 +404,9 @@
       "rounded_corner_background" : true,
       "separator_silent_mode" : true,
       "silent_popup_background" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ny_ic_ride_scheduled" : true,
+      "ny_ic_alarm" : true,
+      "ny_ic_plus_circle": true
    }
 }
