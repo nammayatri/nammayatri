@@ -1712,3 +1712,16 @@ type TicketingScreenProps = {
 type ReAllocationProp =
   { showPopUp :: Boolean
   }
+
+-- ######################################### RideScheduledState ####################################################
+type RideScheduledScreenState = {
+    primaryButtonText :: String
+  , source :: String
+  , destination :: Maybe String
+  , startDate :: String
+  , startTime :: String
+  , finalPrice :: String
+  , baseDuration :: String
+  , baseDistance :: String
+  , driverAllocationTime :: String
+}

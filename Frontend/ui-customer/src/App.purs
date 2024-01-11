@@ -41,13 +41,14 @@ import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState ) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState) 
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
 import Foreign (Foreign)
 import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
+import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -77,6 +78,7 @@ newtype GlobalState = GlobalState {
   , ticketBookingScreen :: TicketBookingScreenState
   , ticketInfoScreen :: TicketInfoScreenState
   , appConfig :: Maybe AppConfig
+  , rideScheduledScreen :: RideScheduledScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -106,6 +108,7 @@ defaultGlobalState = GlobalState {
   , ticketBookingScreen : TicketBookingScreenData.initData
   , ticketInfoScreen : TicketInfoScreenData.initData
   , appConfig : Nothing
+  , rideScheduledScreen : RideScheduledScreenData.initData
   }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
@@ -235,3 +238,4 @@ data ScreenType =
   | AppUpdatePopUpScreenType (AppUpdatePopUpState -> AppUpdatePopUpState)
   | AppConfigType (Maybe AppConfig -> Maybe AppConfig)
   | TicketingScreenStateType (TicketingScreenState -> TicketingScreenState)
+  | RideScheduledScreenStateType (RideScheduledScreenState -> RideScheduledScreenState)

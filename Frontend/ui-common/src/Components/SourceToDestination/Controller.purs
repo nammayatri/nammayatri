@@ -78,6 +78,7 @@ type TextConfig =
   , ellipsize :: Boolean
   , maxLines :: Int
   , textStyle :: Style
+  , isEditable :: Boolean
   }
 
 type TimeConfig =
@@ -113,6 +114,7 @@ config = {
     , ellipsize : false  
     , maxLines : 10
     , textStyle : Body3
+    , isEditable : false
   }
   , rideStartedAtConfig : {
       text : ""
@@ -140,6 +142,7 @@ config = {
     , ellipsize : false
     , maxLines : 10
     , textStyle : Body3
+    , isEditable : false
     }
   , rideEndedAtConfig : {
       text : ""
