@@ -1583,6 +1583,7 @@ type NotificationCardPropState = {
   messageId :: PropValue,
   imageWithUrl :: PropValue,
   imageWithUrlVisibility :: PropValue,
+  backgroundHolder :: PropValue,
   likeCount :: PropValue,
   viewCount :: PropValue
 }
