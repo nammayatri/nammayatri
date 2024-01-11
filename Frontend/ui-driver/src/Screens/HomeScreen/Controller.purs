@@ -474,10 +474,13 @@ eval (KeyboardCallback keyBoardState) state = do
                     "onKeyboardOpen" -> true
                     "onKeyboardClose" -> false
                     _ -> false 
-  if state.props.currentStage == ST.ChatWithCustomer && isOpen then
-    void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true 
-  else pure unit
-  continue state
+  if state.props.currentStage == ST.ChatWithCustomer && isOpen then do
+    void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
+    continue state
+  else if state.props.enterOtpModal && not isOpen then
+    continue state{ props{ rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false } }
+  else
+    continue state
 
 eval (Notification notificationType) state = do
   _ <- pure $ printLog "notificationType" notificationType
@@ -602,10 +605,13 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state 
   let rideOtp = take index state.props.rideOtp
   continue state { props = state.props { enterOtpFocusIndex = focusIndex, rideOtp = rideOtp, otpIncorrect = false } }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
+  void $ pure $ hideKeyboardOnNavigation true
   continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
-eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
-    let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
+    let updatedState = state{ props{ rideOtp = otp } }
+        exitState = if state.props.zoneRideBooking then StartZoneRide updatedState else StartRide updatedState
     exit exitState
+
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }

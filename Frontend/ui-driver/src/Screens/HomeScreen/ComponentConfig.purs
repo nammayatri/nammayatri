@@ -65,6 +65,7 @@ import Styles.Colors as Color
 import Components.ErrorModal as ErrorModal
 import MerchantConfig.Utils as MU
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import ConfigProvider as CP
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -610,7 +611,8 @@ silentModeConfig state = let
 
 
 enterOtpStateConfig :: ST.HomeScreenState -> InAppKeyboardModal.InAppKeyboardModalState
-enterOtpStateConfig state = let
+enterOtpStateConfig state = 
+  let appConfig = CP.getAppConfig CP.appConfig
       config' = InAppKeyboardModal.config
       inAppModalConfig' = config'{
       otpIncorrect = if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
@@ -635,7 +637,8 @@ enterOtpStateConfig state = let
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
       },
-      modalType = ST.OTP
+      modalType = ST.OTP,
+      enableDeviceKeyboard = appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard
       }
       in inAppModalConfig'
 

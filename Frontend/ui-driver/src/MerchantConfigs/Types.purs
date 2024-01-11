@@ -35,7 +35,8 @@ type AppConfigDriver a =
     banners :: BannerConfig,
     referral :: ReferralConfig,
     enableDriverReferral :: Boolean,
-    rideRequest :: RideRequestConfig
+    rideRequest :: RideRequestConfig,
+    inAppKeyboardModalConfig :: InAppKeyboardModalConfig
     | a
   } 
 
@@ -196,4 +197,8 @@ type RideRequestConfig = {
 type NegotiationUnit = {
   auto :: String,
   cab :: String
+}
+
+type InAppKeyboardModalConfig = {
+  enableDeviceKeyboard :: Boolean
 }
