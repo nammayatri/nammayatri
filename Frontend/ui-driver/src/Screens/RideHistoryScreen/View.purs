@@ -178,22 +178,22 @@ headerView push state =
     ][ linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , padding $ PaddingVertical 17 16
-        , background Color.white900
         , gravity CENTER_VERTICAL
+        , background Color.white900
         ][ imageView
-            [ width $ V 24
-            , height $ V 24
-            , imageWithFallback "ny_ic_chevron_left,https://assets.juspay.in/nammayatri/images/driver/ny_ic_chevron_left.png"
-            , margin $ MarginLeft 16
+            [ width $ V 55
+            , height $ V 55
+            , imageWithFallback $ fetchImage FF_ASSET  "ny_ic_chevron_left"
             , onClick push $ const BackPressed
+            , gravity CENTER_VERTICAL
+            , padding $ Padding 10 13 10 13
             ]
           , textView $
             [ text $ getString MY_RIDES
             , gravity CENTER_VERTICAL
             , color Color.black900
-            , margin $ MarginLeft 5
-            , padding $ PaddingBottom 2
+            , margin $ MarginLeft 10
+            , padding $ PaddingBottom 3
             ] <> FontStyle.h3 TypoGraphy
         ]
       , tabsView push state
