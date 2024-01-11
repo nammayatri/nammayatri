@@ -13,31 +13,31 @@ if (!window.__OS) {
   window.__OS = getOS();
 }
 
-const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
+// const blackListFunctions = ["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "addToLogList", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds"]
 
-if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
-  Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
-    return blackListFunctions.indexOf(fnName) == -1
-  }).forEach(fnName => {
-    window.JBridgeProxy = window.JBridgeProxy || {};
-    window.JBridgeProxy[fnName] = window.JBridge[fnName];
-    window.JBridge[fnName] = function () {
-      let params = Object.values(arguments).join(", ");
-      if (fnName === "callAPI") {
-        params = arguments[1].split("/").splice(6).join("/");
-      }
-      let shouldLog = true;
-      if (window.appConfig) {
-        shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
-      }
-      if (shouldLog) {
-        window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
-      }
-      const result = window.JBridgeProxy[fnName](...arguments);
-      return result;
-    };
-  });
-}
+// if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
+//   Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
+//     return blackListFunctions.indexOf(fnName) == -1
+//   }).forEach(fnName => {
+//     window.JBridgeProxy = window.JBridgeProxy || {};
+//     window.JBridgeProxy[fnName] = window.JBridge[fnName];
+//     window.JBridge[fnName] = function () {
+//       let params = Object.values(arguments).join(", ");
+//       if (fnName === "callAPI") {
+//         params = arguments[1].split("/").splice(6).join("/");
+//       }
+//       let shouldLog = true;
+//       if (window.appConfig) {
+//         shouldLog = window.appConfig.logFunctionCalls ? window.appConfig.logFunctionCalls : shouldLog;
+//       }
+//       if (shouldLog) {
+//         window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+//       }
+//       const result = window.JBridgeProxy[fnName](...arguments);
+//       return result;
+//     };
+//   });
+// }
 
 function guid() {
   function s4() {
