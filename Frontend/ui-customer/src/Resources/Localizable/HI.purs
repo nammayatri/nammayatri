@@ -672,7 +672,7 @@ getHI stringKey =
         BOOK_AND_MOVE -> "बुक करें और चलें"
         ANYWHERE_IN_THE_CITY -> "शहर में कहीं भी"
         CHECKOUT_OUR_LIVE_STATS -> "हमारे लाइव आँकड़े देखें"
-        MOST_LOVED_APP _ -> "बेंगलुरु का सबसे ❤️ ऑटो ऐप"
+        MOST_LOVED_APP _ -> "सबसे ❤️ ऑटो ऐप"
         PICKUP_ -> "पिक अप-> "
         PAST_SEARCHES -> "पिछली खोजें"
         SEARCH_RESULTS -> "खोज परिणाम"
