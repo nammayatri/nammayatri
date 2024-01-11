@@ -55,6 +55,7 @@ apiErrorModalConfig state = let
       , margin = (Margin 16 0 16 16)
       , background = state.data.config.primaryBackground
       , color = state.data.config.primaryTextColor
+      , enableRipple = true
       }
     }
   in errorModalConfig' 
@@ -84,6 +85,7 @@ errorModalConfig state = let
       , background = state.data.config.primaryBackground
       , color = state.data.config.primaryTextColor
       , visibility = if (Storage.isLocalStageOn ST.HomeScreen) && not (isParentView FunctionCall) then VISIBLE else GONE
+      , enableRipple = true
       }
     }
   in errorModalConfig' 
@@ -101,6 +103,9 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , visibility = btnVisibility
+      , margin = Margin 8 8 8 8
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       } 
     , textConfig {
         text = (getString MY_RIDES)

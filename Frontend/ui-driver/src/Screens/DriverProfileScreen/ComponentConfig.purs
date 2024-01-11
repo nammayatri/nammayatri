@@ -55,8 +55,8 @@ logoutPopUp  state = let
   popUpConfig' = config' {
     primaryText {text = (getString LOGOUT)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
-    option1 {text = (getString GO_BACK)},
-    option2 {text = (getString LOGOUT)}
+    option1 {text = (getString GO_BACK), enableRipple = true},
+    option2 {text = (getString LOGOUT), enableRipple = true}
   }
   in popUpConfig'
 
@@ -71,7 +71,9 @@ genericHeaderConfig state = let
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , height = (V 25)
       , width = (V 25)
-      , margin = (Margin 16 16 16 16)
+      , margin = (Margin 8 8 8 8)
+      , layoutMargin = Margin 8 8 8 8
+      , enableRipple = true
       }
     , padding = (PaddingVertical 5 5)
     , textConfig {
@@ -143,6 +145,8 @@ primaryButtonConfig state = let
       , background = Color.black900
       , height = (V 48)
       , id = "DriverProfilePrimaryButton"
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       , isClickable = (state.props.updateLanguages && DA.length (getSelectedLanguages state) > 0)|| ( state.props.showGenderView && isJust state.data.genderTypeSelect && state.data.driverGender /= state.data.genderTypeSelect) || (state.props.alternateNumberView && (DS.length (fromMaybe "" state.data.driverEditAlternateMobile))==10 && state.props.checkAlternateNumber && state.data.driverAlternateNumber /= state.data.driverEditAlternateMobile)
       , alpha = if (state.props.updateLanguages && DA.length (getSelectedLanguages state) > 0) || (state.props.showGenderView && isJust state.data.genderTypeSelect && state.data.driverGender /= state.data.genderTypeSelect) || (state.props.alternateNumberView && DS.length(fromMaybe "" state.data.driverEditAlternateMobile)==10 && state.props.checkAlternateNumber && state.data.driverAlternateNumber /= state.data.driverEditAlternateMobile) then 1.0 else 0.7
       }

@@ -34,7 +34,7 @@ import JBridge (getBtnLoader, startLottieProcess, lottieAnimationConfig)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..), QuoteListItemState(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -481,17 +481,19 @@ quoteListTopSheetView state push =
               , width MATCH_PARENT
               , orientation HORIZONTAL
               ][ linearLayout
-                  [ height $ V 40
-                  , width $ V 40
+                  [ height $ V 36
+                  , width $ V 36
                   , onClick push $ const GoBack
                   , accessibilityHint "Cancel Search : Button"
                   , accessibility ENABLE
+                  , rippleColor Color.rippleShade
+                  , cornerRadius 18.0
                   ][  imageView
                       [ height $ V 24
                       , width $ V 24
                       , accessibility DISABLE
                       , imageWithFallback state.appConfig.quoteListModel.closeIcon
-                      , margin $ MarginTop 7
+                      , margin $ Margin 6 6 6 6
                       ]
                   ]
                 , sourceDestinationView state push
@@ -621,6 +623,8 @@ continueWithTipButtonConfig state = let
       , id = "ContinueWithTipButtonQuoteList"
       , margin = MarginTop 10
       , background = state.appConfig.primaryBackground
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in continueWithTipButtonConfig'
 
@@ -656,6 +660,8 @@ tryAgainButtonConfig state = let
       , id = "TryAgainButtonQuoteList"
       , enableLoader = (getBtnLoader "TryAgainButtonQuoteList")
       , background = state.appConfig.primaryBackground
+      , enableRipple = true
+      , rippleColor = Color.rippleShade
       }
   in tryAgainButtonConfig'
 

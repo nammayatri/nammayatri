@@ -24,7 +24,7 @@ import Effect (Effect)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, map, unit, ($), (*), (/), (<>),bind,pure,(/=),(<<<),(==), discard, (||), (&&), (>), void)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, alpha, scrollView, cornerRadius, onBackPressed, stroke, lineHeight, visibility, afterRender, scrollBarY, imageWithFallback, rippleColor)
 import PrestoDOM.Elements.Elements (scrollView)
 import PrestoDOM.Events (onClick)
 import PrestoDOM.Properties (cornerRadius, fontStyle, gravity, height, imageWithFallback, layoutGravity, margin, padding, scrollBarY, weight)
@@ -124,19 +124,21 @@ headerLayout state push =
         , padding $ Padding 5 16 5 16
         ]
         [ imageView
-            [ width $ V 30
-            , height $ V 30
+            [ width $ V 40
+            , height $ V 40
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
             , onClick push $ const BackPressed
-            , padding $ Padding 2 2 2 2
+            , padding $ Padding 7 7 7 7
             , margin $ MarginLeft 5
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text (getString HELP_AND_SUPPORT)
               , textSize FontSize.a_18
-              , margin $ MarginLeft 20
+              , margin $ MarginLeft 10
               , weight 1.0
               , color Color.black900
               ]
@@ -233,6 +235,7 @@ categoryView categoryGroup marginLeft marginRight state push =
   , cornerRadius 8.0
   , stroke $ "1," <> Color.grey900
   , gravity CENTER
+  , rippleColor Color.rippleShade
   ][ imageView
       [ width (V (round (30.0 * vw)))
       , height(V (round (30.0 * vw)))

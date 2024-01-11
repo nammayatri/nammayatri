@@ -73,6 +73,7 @@ clearDueButtonConfig state = let
       , id = "SetupAutoPayPrimaryButton"
       , enableLoader = JB.getBtnLoader "SetupAutoPayPrimaryButton"
       , margin = (Margin 16 12 16 12)
+      , enableRipple = true
       }
   in primaryButtonConfig'
 
@@ -89,6 +90,7 @@ settlementButtonConfig state =
       , margin = (Margin 16 0 16 12)
       , background = Color.white900
       , stroke = "1," <> Color.black500
+      , enableRipple = true
     }
 
 retryPaymentButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config

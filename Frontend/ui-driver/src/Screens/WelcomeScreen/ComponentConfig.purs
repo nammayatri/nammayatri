@@ -47,6 +47,7 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = getString GET_STARTED }
       , id = "PrimaryButtonWelcomeScreen"
+      , enableRipple = true
       }
   in primaryButtonConfig'
 

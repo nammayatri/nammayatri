@@ -26,7 +26,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, const, ($), (<>), (==), bind, pure, unit, (<<<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, background, color, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, text, textView, visibility, weight, width, cornerRadius, rippleColor)
 import Screens.AboutUsScreen.ComponentConfig (demoModePopUpConfig)
 import Screens.AboutUsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -109,22 +109,24 @@ headerLayout state push =
         , height MATCH_PARENT
         , orientation HORIZONTAL
         , layoutGravity "center_vertical"
-        , padding (Padding 5 5 5 0)
+        , padding (Padding 5 12 5 12)
         ]
         [ imageView
-            [ width $ V 25
-            , height MATCH_PARENT
+            [ width $ V 40
+            , height $ V 40
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_back"
             , gravity CENTER_VERTICAL
             , onClick push (const $ BackPressed state.props.demoModePopup)
-            , padding (Padding 2 2 2 2)
+            , padding (Padding 10 10 10 10)
             , margin (MarginLeft 5)
+            , cornerRadius 20.0
+            , rippleColor Color.rippleShade
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height MATCH_PARENT
               , text (getString ABOUT)
-              , margin (MarginLeft 20)
+              , margin (MarginLeft 10)
               , color Color.black
               , weight 1.0
               , gravity CENTER_VERTICAL

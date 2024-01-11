@@ -36,6 +36,7 @@ primaryButtonConfig state = PrimaryButton.config { textConfig
       , background = Color.black900
       , height = (V 60)
       , id = "SelectLanguageScreenPrimaryButton"
+      , enableRipple = true
       }
   
 

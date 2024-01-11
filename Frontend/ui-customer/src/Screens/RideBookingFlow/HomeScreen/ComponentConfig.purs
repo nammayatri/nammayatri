@@ -142,6 +142,7 @@ cancelAppConfig state = let
       , strokeColor = Color.transparent
       , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT
+      , enableRipple = true
       },
       option2 {
         text = getString CANCEL_RIDE
@@ -198,6 +199,8 @@ skipButtonConfig state =
         , visibility = boolToVisibility $ doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
         , isClickable = issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
         , alpha = if issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
+        , enableRipple = issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
+        , rippleColor = Color.rippleShade
         }
   in
     primaryButtonConfig'
@@ -296,6 +299,8 @@ primaryButtonRequestRideConfig state =
         , margin = (Margin 0 32 0 0)
         , id = "RequestRideButton"
         , background = state.data.config.primaryBackground
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
         }
   in
     primaryButtonConfig'
@@ -315,6 +320,8 @@ primaryButtonConfirmPickupConfig state =
         , margin = (MarginTop 8)
         , id = "ConfirmLocationButton"
         , background = state.data.config.primaryBackground
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
         }
   in
     primaryButtonConfig'
@@ -460,12 +467,14 @@ logOutPopUpModelConfig state =
               , strokeColor = state.data.config.primaryBackground
               , color = state.data.config.primaryBackground
               , text = (getString GO_BACK_)
+              , enableRipple = true
               }
             , option2 {
                 color = state.data.config.primaryTextColor
               , strokeColor = state.data.config.primaryBackground
               , background = state.data.config.primaryBackground
               , text = (getString LOGOUT_)
+              , enableRipple = true
               }
             }
       in
@@ -537,6 +546,7 @@ logOutPopUpModelConfig state =
             , strokeColor = state.data.config.primaryBackground
             , background = state.data.config.primaryBackground
             , padding = (Padding 0 10 0 10)
+            , enableRipple = true
             }
             , option2 {
                text = if (isLocalStageOn ST.QuoteList) then (getString HOME) else (getString NO_DONT)
@@ -577,6 +587,7 @@ distanceOusideLimitsConfig state =
           , color = state.data.config.primaryTextColor
           , text = (getString CHANGE_DROP_LOCATION)
           , margin = (Margin 16 0 16 EHC.safeMarginBottom)
+          , enableRipple = true
           }
         }
   in
@@ -633,12 +644,14 @@ shortDistanceConfig state =
           , strokeColor = state.data.config.primaryBackground
           , color = state.data.config.primaryBackground
           , text = (getString GO_BACK_)
+          , enableRipple = true
           }
         , option2 {
             color = state.data.config.primaryTextColor
           , strokeColor = state.data.config.primaryBackground
           , background = state.data.config.primaryBackground
           , text = (getString BOOK_RIDE_)
+          , enableRipple = true
           }
         }
   in
@@ -993,6 +1006,8 @@ ratingCardViewState state = {
     alpha = if not (state.data.ratingViewState.selectedRating< 1) then 1.0 else 0.4
     , id = "RateYourDriverButton"
     , enableLoader = (JB.getBtnLoader "RateYourDriverButton")
+    , enableRipple = true
+    , rippleColor = Color.rippleShade
   }
   , showProfileImg : true
   , title : getRateYourRideString ( getString RATE_YOUR_RIDE_WITH) state.data.rideRatingState.driverName
@@ -1107,6 +1122,7 @@ callSupportConfig state = let
     , background = state.data.config.popupBackground
     , strokeColor = state.data.config.primaryBackground
     , color = state.data.config.primaryBackground
+    , enableRipple = true
     }
   , option2 {
       text =  getString CALL_SUPPORT
@@ -1114,6 +1130,7 @@ callSupportConfig state = let
     , strokeColor = state.data.config.primaryBackground
     , background = state.data.config.primaryBackground
     , margin = (MarginLeft 12)
+    , enableRipple = true
     }
   }
   in popUpConfig'
@@ -1129,6 +1146,8 @@ confirmAndBookButtonConfig state =
     , id = "ConfirmAndBookButton"
     , background = Color.black900
     , margin = MarginTop 16
+    , enableRipple = true
+    , rippleColor = Color.rippleShade
     }
   where
     getBtnTextWithTimer state = 

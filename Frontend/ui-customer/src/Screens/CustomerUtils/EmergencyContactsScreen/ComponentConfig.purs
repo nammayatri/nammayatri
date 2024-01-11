@@ -32,7 +32,9 @@ genericHeaderConfig state =
           { height = V 25
           , width = V 25
           , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-          , margin = (Margin 12 12 12 12)
+          , margin = Margin 8 8 8 8 
+          , layoutMargin = Margin 4 4 4 4
+          , enableRipple = true
           }
         , padding = (Padding 0 5 0 5)
         , textConfig
@@ -64,6 +66,8 @@ primaryButtonConfig state =
         , margin = (MarginBottom 24)
         , visibility = if ((length state.data.contactsList) == 3) then GONE else VISIBLE
         , id = "ConfirmEmergencyContactsButton"
+        , enableRipple = true
+        , rippleColor = Color.rippleShade
         }
   in
     primaryButtonConfig'

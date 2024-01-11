@@ -187,6 +187,7 @@ callPoliceConfig state  =
     , strokeColor = state.config.primaryBackground
     , background = state.config.popupBackground
     , color = state.config.primaryBackground
+    , enableRipple = true
     }
     , option2 {
       text = getString DIAL_112
@@ -194,6 +195,7 @@ callPoliceConfig state  =
     , strokeColor = state.config.primaryBackground
     , background = state.config.primaryBackground
     , color = state.config.primaryTextColor
+    , enableRipple = true
     }
     , backgroundClickable = true
     , secondaryText {
@@ -287,6 +289,7 @@ callSuccessfulConfig state  =
     , strokeColor = state.config.primaryBackground
     , background = state.config.popupBackground
     , color = state.config.primaryBackground
+    , enableRipple = true
     }
     , option2 {
       text = (getString YES)
@@ -294,6 +297,7 @@ callSuccessfulConfig state  =
     , strokeColor = state.config.primaryBackground
     , background = state.config.primaryBackground
     , color = state.config.primaryTextColor
+    , enableRipple = true
     }
     , backgroundClickable = true
     , secondaryText {
@@ -466,6 +470,9 @@ genericHeaderConfig state = let
         height = V 25
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
+      , margin = Margin 8 8 8 8
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       } 
     , suffixImageConfig {
         visibility = GONE }

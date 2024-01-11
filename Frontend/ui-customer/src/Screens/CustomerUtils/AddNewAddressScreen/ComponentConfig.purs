@@ -46,6 +46,8 @@ primaryButtonConfigConfirmLoc state = let
     , background = state.data.config.primaryBackground
     , margin = (Margin 0 22 0 16)
     , id = "AddNewaddressConfirmLocationButton"
+    , enableRipple = true
+    , rippleColor = Color.rippleShade
     -- , isClickable = state.props.isServiceable  :: TODO - Need proper design for this to be handled. Till then we can go with current implementation. 
     }
   in primaryButtonConfig'
@@ -60,11 +62,13 @@ genericHeaderConfig state = let
     , prefixImageConfig {
         height = (V 25)
       , width = (V 25)
-      , margin = (Margin 10 17 16 15)
+      , margin = (Margin 8 8 8 8)
+      , layoutMargin = (Margin 2 9 8 7)
       , accessibilityHint = if state.props.showSavePlaceView then "Close : Button" else "Back : Button"
       , visibility = VISIBLE
       , accessibility = ENABLE
       , imageUrl = if state.props.showSavePlaceView then fetchImage FF_COMMON_ASSET "ny_ic_close_white" else config.prefixImageConfig.imageUrl
+      , enableRipple = true
       }
     , textConfig {
         text = if state.props.showSavePlaceView then (getString FAVOURITE_LOCATION) else if state.props.editLocation then (getString EDIT_FAVOURITE) else (getString ADD_FAVOURITE)

@@ -46,14 +46,14 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Prelude (Unit, bind, const, discard, not, pure, show, unit, void, when, ($), (-), (<<<), (<>), (==), (>), (||))
-import PrestoDOM (Margin(..), background, frameLayout, imageView, linearLayout, relativeLayout, textView)
+import PrestoDOM (Margin(..), background, frameLayout, imageView, linearLayout, relativeLayout, textView, rippleColor)
 import PrestoDOM.Events (afterRender, onBackPressed, onClick)
 import PrestoDOM.Properties (adjustViewWithKeyboard, alignParentBottom, alpha, background, color, cornerRadii, cornerRadius, fontStyle, gravity, height, imageUrl, imageWithFallback, layoutGravity, lineHeight, margin, maxWidth, orientation, padding, position, stroke, text, textSize, visibility, weight, width, id)
 import PrestoDOM.Types.Core (Corners(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Position(..), PrestoDOM, Screen, Visibility(..))
 import Screens.ReportIssueChatScreen.ComponentConfig (cancelButtonConfig, doneButtonConfig, primaryEditTextConfig, viewImageModelConfig, addImageModelConfig, recordAudioModelConfig, addAudioModelConfig, chatConfig)
 import Screens.ReportIssueChatScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (ReportIssueChatScreenState)
-import Styles.Colors (black700, black800, black900, black9000, blue900, brightBlue, blueTextColor, grey700, grey900, greyLight, lightGreyBlue, white900) as Color
+import Styles.Colors (black700, black800, black900, black9000, blue900, brightBlue, blueTextColor, grey700, grey900, greyLight, lightGreyBlue, white900, rippleShade) as Color
 
 screen :: ReportIssueChatScreenState -> Screen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
@@ -151,18 +151,19 @@ headerLayout state push =
         , padding $ Padding 5 16 5 16
         ]
         [ imageView
-            [ width $ V 30
-            , height $ V 30
+            [ width $ V 40
+            , height $ V 40
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
             , onClick push $ const BackPressed
-            , padding $ Padding 2 2 2 2
-            , margin $ MarginLeft 5
+            , padding $ Padding 7 7 7 7
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text state.data.categoryName
-              , margin $ MarginLeft 20
+              , margin $ MarginLeft 5
               , weight 1.0
               , color Color.black900
               ]

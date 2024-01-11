@@ -71,10 +71,10 @@ config = {
       , gravity : CENTER
       , visibility : VISIBLE
       , color : Color.red
-      , height : V 30
-      , width : V 30
+      , height : V 40
+      , width : V 40
       , cornerRadius : 0.0
-      , padding : Padding 2 2 2 2
+      , padding : Padding 7 7 7 7
       , margin : MarginLeft 5
       , weight : 1.0
       , alpha : 0.0
@@ -91,7 +91,7 @@ config = {
       , width : WRAP_CONTENT
       , cornerRadius : 0.0
       , padding : Padding 0 0 0 0
-      , margin : MarginLeft 20
+      , margin : MarginLeft 10
       , weight : 1.0
       , alpha : 0.0
       } },

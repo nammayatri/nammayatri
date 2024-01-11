@@ -125,12 +125,14 @@ callConfirmationPopup state = let
       , strokeColor = state.data.config.primaryBackground
       , background = state.data.config.popupBackground
       , color = state.data.config.primaryBackground
+      , enableRipple = true
       },
       option2 {
         text = (getString CALL)
       , strokeColor = state.data.config.primaryBackground
       , background = state.data.config.primaryBackground
       , color = state.data.config.primaryTextColor
+      , enableRipple = true
       }
     }
   in popUpConfig'
@@ -148,6 +150,9 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
       , visibility =  btnVisibility
+      , margin = Margin 8 8 8 8 
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       } 
     , textConfig {
         text = (getString HELP_AND_SUPPORT)
@@ -170,7 +175,9 @@ deleteGenericHeaderConfig state = let
         height = V 25
       , width = V 25
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-      , margin = Margin 12 12 12 12
+      , margin = Margin 8 8 8 8
+      , layoutMargin = Margin 4 4 4 4
+      , enableRipple = true
       }
     , padding = PaddingVertical 5 5
     , textConfig {

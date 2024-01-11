@@ -37,7 +37,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, background, color, gravity, height, id, imageUrl, imageView, layoutGravity, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, background, color, gravity, height, id, imageUrl, imageView, layoutGravity, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, imageWithFallback, rippleColor, cornerRadius)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -251,14 +251,17 @@ headerLayout state push =
         , orientation HORIZONTAL
         , layoutGravity "center_vertical"
         , gravity CENTER_VERTICAL
+        , padding $ Padding 5 8 5 8
         ]
         [ imageView
-            [ width $ V 55
-            , height $ V 55
+            [ width $ V 40
+            , height $ V 40
             , imageWithFallback $ fetchImage FF_ASSET $ "ny_ic_chevron_left"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackPressed
-            , padding $ Padding 10 13 10 13
+            , padding $ Padding 7 7 7 7
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT

@@ -36,7 +36,7 @@ import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, discard, ($), (<<<), (<>), (==), (&&), (-), (*), (/))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, background, clickable, color, cornerRadius, fontStyle, gravity, height, id, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, progressBar, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollBarY, scrollView, lineHeight, textFromHtml, imageWithFallback, rippleColor)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (NotificationDetailModelState, YoutubeVideoStatus(..))
 import Services.API (MediaType(..))
@@ -255,14 +255,17 @@ headerLayout state push =
         , height MATCH_PARENT
         , orientation HORIZONTAL
         , gravity CENTER_VERTICAL
+        , padding $ Padding 5 8 5 8
         ]
         [ imageView
-            [ width $ V 55
-            , height $ V 55
+            [ width $ V 40
+            , height $ V 40
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_left"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackArrow
-            , padding $ Padding 10 13 10 13
+            , padding $ Padding 7 7 7 7
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
             ]
         , textView
             $ [ width WRAP_CONTENT

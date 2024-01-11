@@ -51,6 +51,10 @@ type ImageConfig =
   , visibility :: Visibility
   , accessibilityHint :: String
   , accessibility :: Accessiblity
+  , cornerRadius :: Number
+  , layoutMargin :: Margin
+  , enableRipple :: Boolean
+  , rippleColor :: String
   }
 
 type TextConfig =
@@ -84,6 +88,10 @@ config =
     , visibility : VISIBLE
     , accessibility : ENABLE
     , accessibilityHint : "Back : Button"
+    , cornerRadius : 30.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , textConfig : {
       text : ""
@@ -101,6 +109,10 @@ config =
     , visibility : GONE
     , accessibility : DISABLE 
     , accessibilityHint : ""
+    , cornerRadius : 0.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , visibility : VISIBLE
 }
@@ -127,6 +139,10 @@ merchantConfig =
     , visibility : VISIBLE
     , accessibility : ENABLE 
     , accessibilityHint : "Back : Button"
+    , cornerRadius : 30.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , textConfig : {
       text : ""
@@ -144,6 +160,10 @@ merchantConfig =
     , visibility : GONE
     , accessibility : DISABLE 
     , accessibilityHint : ""
+    , cornerRadius : 0.0
+    , layoutMargin : (Margin 0 0 0 0)
+    , enableRipple : false
+    , rippleColor : Color.rippleShade
     }
   , visibility : VISIBLE
 }

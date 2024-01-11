@@ -1339,8 +1339,6 @@ topLeftIconView state push =
               [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then fetchImage FF_COMMON_ASSET "ny_ic_chevron_left" else if state.data.config.dashboard.enable && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ic_menu_notify" else fetchImage FF_ASSET "ny_ic_hamburger"
               , height $ V 25
               , accessibility DISABLE
-              , clickable true
-              , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
               , width $ V 25
               ]
           ]
@@ -2362,6 +2360,7 @@ quickRepliesView push state =
           , accessibility ENABLE
           , accessibilityHint $ "Custom Message : Button : Select to input custom message"
           , onClick push $ const $ MessageDriver
+          , rippleColor Color.rippleShade
           ][ imageView
             [ height $ V 16
             , width $ V 16
@@ -2477,6 +2476,7 @@ trackRideView push state =
     , accessibility ENABLE
     , accessibilityHint $ "Real Time Tracking on Google Maps : Button"
     , accessibility DISABLE_DESCENDANT
+    , rippleColor Color.rippleShade
     ][ linearLayout
       [ height $ WRAP_CONTENT
       , width $ WRAP_CONTENT
@@ -3516,7 +3516,7 @@ whereToButtonView push state  =
                         { fromX = 20
                         , toX = 0
                         , duration = 300
-                        , ifAnim = state.props.isHomescreenExpanded 
+                        , ifAnim = not state.props.isHomescreenExpanded 
                         }
                 else
                   animConfig
@@ -3529,13 +3529,13 @@ whereToButtonView push state  =
               (if os == "IOS" 
                 then
                   animConfig
-                        { toX =  25
+                        { toX =  20
                         , duration = 300
                         , ifAnim = state.props.isHomescreenExpanded 
                         }
                 else
                   animConfig
-                        { toX = 10
+                        { toX = 5
                         , duration = 300
                         , ifAnim = state.props.isHomescreenExpanded 
                         })
@@ -3544,11 +3544,14 @@ whereToButtonView push state  =
           [ height WRAP_CONTENT
           , weight 1.0
           , onClick push $ const WhereToClick
-          , padding $ Padding (if state.props.isHomescreenExpanded then 0 else 16) 16 16 16
+          , padding $ Padding (if state.props.isHomescreenExpanded then 0 else 16) 16 0 16
+          , margin $ MarginRight $ if state.props.isHomescreenExpanded then 10 else 0
           , gravity CENTER_VERTICAL
           , accessibilityHint "Where To Button"
+          , rippleColor Color.rippleShade
           , clickable $ state.props.isSrcServiceable
           , alpha if state.props.isSrcServiceable then 1.0 else 0.4 
+          , cornerRadius 8.0
           ][ 
             imageView
               [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_destination"
@@ -3629,7 +3632,8 @@ pickupLocationView push state =
               , onClick push $ const OpenSettings
               , padding $ Padding 8 8 8 8 
               , background $ state.data.config.homeScreen.header.menuButtonBackground
-              , cornerRadius 8.0
+              , cornerRadius 20.0
+              , rippleColor Color.rippleShade
               ]
               [ imageView
                   [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_menu"
@@ -3935,6 +3939,7 @@ suggestedDestinationCard push state index suggestion =
     , gravity CENTER_VERTICAL
     , cornerRadius 16.0
     , onClick push $ const (SuggestedDestinationClicked suggestion)
+    , rippleColor Color.rippleShade
     ][ linearLayout
         [ height $ V 26
         , width $ V 26
@@ -4007,6 +4012,7 @@ repeatRideCard push state index trip =
     , gravity CENTER_VERTICAL
     , cornerRadii $ Corners 16.0 true true true true
     , onClick push $ const (RepeatRide index trip)
+    , rippleColor Color.rippleShade
     ][ linearLayout
         [ height $ V 26
         , width $ V 26

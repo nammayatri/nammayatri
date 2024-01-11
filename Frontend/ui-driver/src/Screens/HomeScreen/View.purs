@@ -65,7 +65,7 @@ import MerchantConfig.Utils as MU
 import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*), (-), (/), (<), (<<<), (<>), (==), (>), (>=), (||), (<=), show, void, (/=), when, map, otherwise, (+), negate)
 import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (BottomSheetState(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), adjustViewWithKeyboard, afterRender, alignParentBottom, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, lottieAnimationView, margin, onBackPressed, onClick, orientation, padding, peakHeight, relativeLayout, singleLine, stroke, text, textSize, textView, visibility, weight, width, topShift, onAnimationEnd, horizontalScrollView, scrollBarX)
-import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY)
+import PrestoDOM (BottomSheetState(..), alignParentBottom, layoutGravity, Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Prop, afterRender, alpha, background, bottomSheetLayout, clickable, color, cornerRadius, fontStyle, frameLayout, gravity, halfExpandedRatio, height, id, imageUrl, imageView, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, peakHeight, stroke, text, textSize, textView, visibility, weight, width, imageWithFallback, adjustViewWithKeyboard, lottieAnimationView, relativeLayout, ellipsize, singleLine, scrollView, scrollBarY, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
@@ -507,6 +507,7 @@ helpAndSupportBtnView push showReportText =
   , padding $ Padding 16 12 16 12
   , gravity CENTER
   , stroke $ "1,"<> Color.grey900
+  , rippleColor Color.rippleShade
   ][ imageView
      [ width $ V 15
      , height $ V 15
@@ -531,6 +532,7 @@ recenterBtnView state push =
   , visibility if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || not state.props.statusOnline) then GONE else VISIBLE
   , cornerRadius 24.0
   , margin $ MarginLeft 12
+  , rippleColor Color.rippleShade
   ][ imageView
     [ width ( V 40 )
     , height ( V 40 )
@@ -622,6 +624,7 @@ offlineView push state =
                     , cornerRadius 75.0
                     , background if showGoInYellow then Color.yellowText else Color.darkMint
                     , onClick  push  (const $ SwitchDriverStatus Online)
+                    , rippleColor Color.rippleShade
                     ][]
                   , textView
                     [ height MATCH_PARENT
@@ -756,6 +759,8 @@ driverStatusPill pillConfig push state index =
       , orientation HORIZONTAL
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
       , clickable if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then false else true
+      , rippleColor Color.rippleShade
+      , cornerRadius 20.0
       ][ imageView
         [ width $ V 15
         , height $ V 15
@@ -1441,6 +1446,7 @@ goOfflineModal push state =
              , gravity CENTER
              , margin (MarginRight 10)
              , onClick push (const CancelGoOffline)
+             , rippleColor Color.rippleShade
              ][ textView (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -1458,6 +1464,7 @@ goOfflineModal push state =
              , margin (MarginRight 10)
              , background Color.black900
              , onClick push (const $ GoOffline if state.props.statusOnline then false else true)
+             , rippleColor Color.rippleShade
              ][ textView  (
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
@@ -1485,6 +1492,7 @@ addAlternateNumber push state visibility' =
   , gravity CENTER_VERTICAL
   , onClick push $ const ClickAddAlternateButton
   , visibility if visibility' then VISIBLE else GONE
+  , rippleColor Color.rippleShade
   ][  imageView
       [ width $ V 20
       , height $ V 15
@@ -1525,6 +1533,7 @@ offlineNavigationLinks push state =
             , gravity CENTER_VERTICAL
             , onClick push $ const item.action
             , visibility $ itemVisibility item.action
+            , rippleColor Color.rippleShade
             ][  imageView
                 [ width $ V 16
                 , height $ V 16

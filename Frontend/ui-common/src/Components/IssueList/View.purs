@@ -16,7 +16,7 @@ module Components.IssueList.View where
 
 import Components.IssueView as IssueView
 import Prelude (Unit, const, map, ($), (/), (==), (<>), (<<<), (<))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, gravity, height, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, scrollView, onBackPressed, afterRender, imageWithFallback)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, gravity, height, imageView, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, layoutGravity, scrollView, onBackPressed, afterRender, imageWithFallback, rippleColor, cornerRadius)
 import Effect (Effect)
 import Styles.Colors as Color
 import Font.Style as FontStyle
@@ -65,6 +65,8 @@ headerLayout state push =
             , onClick push $ const BackPressed
             , padding state.headerConfig.imageConfig.padding
             , margin state.headerConfig.imageConfig.margin
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
             ]
         , textView
             $ [ width state.headerConfig.headTextConfig.width

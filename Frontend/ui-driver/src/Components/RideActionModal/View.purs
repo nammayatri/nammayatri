@@ -36,7 +36,7 @@ import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude ((<>))
 import Prelude (Unit, bind, const, not, discard, pure, show, unit, ($), (/=), (<>), (&&), (==), (-), (>), (||), (/), (*), (+), negate)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id, layoutGravity, horizontalScrollView, scrollBarX, fillViewport)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alpha, background, clickable, color, ellipsize, fontSize, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, margin, maxLines, onClick, orientation, padding, relativeLayout, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, id, pivotY, onAnimationEnd, id, layoutGravity, horizontalScrollView, scrollBarX, fillViewport, rippleColor)
 import PrestoDOM.Properties (cornerRadii, cornerRadius)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (HomeScreenStage(..), TimerStatus(..), DisabilityType(..))
@@ -99,6 +99,7 @@ messageButton push config =
   , onClick push $ const $  if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then VisuallyImpairedCustomer else MessageCustomer
   , alpha if config.accessibilityTag == Maybe.Just BLIND_AND_LOW_VISION then 0.5 else 1.0
   , clickable true
+  , rippleColor Color.rippleShade
   ][  imageView
       [ imageWithFallback $ fetchImage FF_ASSET $ if config.unReadMessages then "ic_chat_badge" else "ic_chat"
       , height $ V 20
@@ -135,6 +136,7 @@ callButton push config =
   , visibility if (config.currentStage == RideAccepted || config.currentStage == ChatWithCustomer) then VISIBLE else GONE
   , onClick push (const $ CallCustomer)
   , clickable (not (config.accessibilityTag == Maybe.Just HEAR_IMPAIRMENT))
+  , rippleColor Color.rippleShade
   ][  imageView
       [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_phone"
       , height $ V 20
@@ -296,6 +298,7 @@ openGoogleMap push config =
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const OnNavigate)
+      , rippleColor Color.rippleShade
       ][  imageView
           [ width $ V 20
           , height $ V 20
@@ -393,6 +396,7 @@ startRide push config =
   , pivotY 0.0
   , onAnimationEnd push $ const NoAction
   , afterRender push $ const NoAction
+  , rippleColor Color.rippleShade
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -413,6 +417,7 @@ endRide push config =
   , cornerRadius 8.0
   , gravity CENTER
   , onClick push (const $ EndRide)
+  , rippleColor Color.rippleShade
   , afterRender push $ const NoAction
   ][  textView (
       [ width WRAP_CONTENT
@@ -533,10 +538,12 @@ waitTimeView push config =
         ,
         imageView
           [ height MATCH_PARENT
-            , width  $ V 25
+            , width  $ V 20
             , visibility if config.notifiedCustomer then VISIBLE else GONE
             , onClick push (const WaitingInfo)
             , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
+            , rippleColor Color.rippleShade
+            , cornerRadius 20.0
           ]
          ]
        , linearLayout
