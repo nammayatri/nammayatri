@@ -49,6 +49,6 @@ withCallback' doWithCallback transporter action api context cbUrl internalEndPoi
   bppUri <- buildBppUrl (transporter.id)
   let context' =
         context
-          & #contextBppUri ?~ (show bppUri)
-          & #contextBppId ?~ (show bppSubscriberId)
+          & #contextBppUri ?~ show bppUri
+          & #contextBppId ?~ show bppSubscriberId
   withBecknCallbackMig doWithCallback (Just $ ET.ManagerSelector authKey) action api context' cbUrl internalEndPointHashMap f

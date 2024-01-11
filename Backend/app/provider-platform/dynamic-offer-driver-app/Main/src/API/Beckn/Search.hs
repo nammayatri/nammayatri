@@ -100,12 +100,12 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
         isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
         if isBecknSpecVersion2
           then do
-            context <- ContextV2.buildContextV2 Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
+            context <- ContextV2.buildContextV2 Context.SEARCH Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
             logTagInfo "SearchV2 API Flow" "Sending OnSearch"
             onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
             void $ Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 context callbackUrl internalEndPointHashMap $ do onSearchReq
           else do
-            context <- buildTaxiContext Context.ON_SEARCH msgId txnId bapId bapUri bppId bppUri city country False
+            context <- buildTaxiContext Context.SEARCH msgId txnId bapId bapUri bppId bppUri city country False
             logTagInfo "Search API Flow" "Sending OnSearch"
             void $
               CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPIV1 context callbackUrl internalEndPointHashMap $ do

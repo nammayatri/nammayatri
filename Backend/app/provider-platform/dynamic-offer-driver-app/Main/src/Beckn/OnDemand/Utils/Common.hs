@@ -15,7 +15,6 @@
 
 module Beckn.OnDemand.Utils.Common where
 
-import Beckn.ACL.Common (getTagV2)
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
