@@ -49,7 +49,6 @@ data Env = Env
     _kafkaConnection :: Producer.KafkaProducer,
     _pgConnection :: Connection,
     _dontEnableDbTables :: [Text],
-    _dontEnableForKafka :: [Text],
     _dontEnableForKafka :: [Text]
   }
 
