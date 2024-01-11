@@ -193,7 +193,12 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : true
+        "enableYatriCoins" : true,
+        "registration" : {
+            "supportWAN" : "919625724848",
+            "callSupport" : true,
+            "whatsappSupport" : true
+        }
       },
       {
         "cityName" : "Hyderabad",
@@ -207,7 +212,12 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : true,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+            "supportWAN" : "",
+            "callSupport" : true,
+            "whatsappSupport" : false
+        }
       },
       {
         "cityName" : "Mysore",
@@ -221,7 +231,12 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+            "supportWAN" : "",
+            "callSupport" : true,
+            "whatsappSupport" : false
+        }
       },
       {
         "cityName" : "Delhi",
@@ -235,7 +250,12 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : true,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+            "supportWAN" : "",
+            "callSupport" : true,
+            "whatsappSupport" : false
+        }
       },
       {
         "cityName" : "Chennai",
@@ -249,7 +269,12 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : true,
         "showCustomerReferral" : true,
         "uploadRCandDL" : false,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+            "supportWAN" : "",
+            "callSupport" : true,
+            "whatsappSupport" : false
+        }
       },
       {
         "cityName" : "Coimbatore",
@@ -263,7 +288,12 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : true,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+            "supportWAN" : "",
+            "callSupport" : true,
+            "whatsappSupport" : false
+        }
       },
       {
         "cityName" : "Puducherry",
@@ -277,7 +307,12 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : true,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+          "supportWAN" : "",
+          "callSupport" : true,
+          "whatsappSupport" : false
+      }
       },
       {
         "cityName" : "Tumakuru",
@@ -291,7 +326,12 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false
+        "enableYatriCoins" : false,
+        "registration" : {
+          "supportWAN" : "",
+          "callSupport" : true,
+          "whatsappSupport" : false
+      }
       }
   ]
   , "dashboard" : {

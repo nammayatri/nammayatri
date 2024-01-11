@@ -2,6 +2,7 @@ module MerchantConfig.DefaultConfig where
 
 import MerchantConfig.Types
 import Common.DefaultConfig
+import Common.Types.Config as CTC
 
 config :: AppConfig
 config =
@@ -131,7 +132,8 @@ config =
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : true
+              enableYatriCoins : true,
+              registration : registrationConfig
             },
             {
               cityName : "Hyderabad",
@@ -145,7 +147,8 @@ config =
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig
             },
             {
               cityName : "Mysore",
@@ -159,7 +162,8 @@ config =
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig
             },
             {
               cityName : "Delhi",
@@ -173,7 +177,8 @@ config =
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig
             },
             {
               cityName : "Chennai",
@@ -187,7 +192,8 @@ config =
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : false,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig
             },
             {
               cityName : "Coimbatore",
@@ -201,7 +207,8 @@ config =
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig
             },
             {
               cityName : "Puducherry",
@@ -215,7 +222,8 @@ config =
               showDriverReferral : true,
               showCustomerReferral : false,
               uploadRCandDL : true,
-              enableYatriCoins : false
+              enableYatriCoins : false,
+              registration : registrationConfig
             }--, For future use
             -- {
             --   cityName : "Madurai",
@@ -310,4 +318,11 @@ config =
   , chooseCity : {
       straightLineDistLogic : false
   }
+}
+
+registrationConfig :: CTC.RegistrationConfig
+registrationConfig = {
+  supportWAN : "919625724848",
+  callSupport : true,
+  whatsappSupport : false
 }

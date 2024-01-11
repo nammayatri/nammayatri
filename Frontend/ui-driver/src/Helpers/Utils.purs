@@ -602,7 +602,12 @@ getCityConfig cityConfig cityName = do
                           enableYatriCoins : false,
                           showDriverReferral : false,
                           showCustomerReferral : false,
-                          uploadRCandDL : true
+                          uploadRCandDL : true,
+                          registration : { 
+                            callSupport : false,
+                            supportWAN : "", 
+                            whatsappSupport : false
+                          }
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig
   

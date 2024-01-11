@@ -24,6 +24,7 @@ import Prelude (class Eq)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
 import ConfigProvider
 import Foreign.Object (empty)
+import Screens.Types as ST
 
 initData :: RegistrationScreenState
 initData = {
@@ -57,7 +58,11 @@ initData = {
         config : getAppConfig appConfig,
         referralCode : "",
         referral_code_input_data : "",
-        logField : empty
+        logField : empty,
+        enteredDL : "",
+        enteredRC : "",
+        dlVerficationMessage : "",
+        rcVerficationMessage : ""
       },
       props: {
         limitReachedFor : Nothing,
@@ -65,7 +70,9 @@ initData = {
         isValidReferralCode : true,
         enterOtpFocusIndex : 0,
         enterReferralCodeModal : false,
-        referralCodeSubmitted : false
+        referralCodeSubmitted : false,
+        contactSupportView : true,
+        contactSupportModal : ST.HIDE
       }
   }
 
@@ -82,5 +89,10 @@ dummyCityConfig = {
                     showDriverReferral : false,
                     showCustomerReferral : false,
                     uploadRCandDL : true,
-                    enableYatriCoins : false
+                    enableYatriCoins : false,
+                    registration : { 
+                      callSupport : false,
+                      supportWAN : "", 
+                      whatsappSupport : false
+                    }
                   }

@@ -120,6 +120,8 @@ data KeyStore = USER_NAME
                 | SAVED_GOTO_COUNT
                 | OLD_COIN_BALANCE
                 | TIMES_OPENED_NEW_BENEFITS
+                | ENTERED_RC
+                | ENTERED_DL
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

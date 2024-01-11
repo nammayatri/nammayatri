@@ -95,10 +95,17 @@ type CityConfig = {
   showDriverReferral :: Boolean,
   showCustomerReferral :: Boolean,
   uploadRCandDL :: Boolean,
-  enableYatriCoins :: Boolean
+  enableYatriCoins :: Boolean,
+  registration :: RegistrationConfig
 }
 
 type DashboardConfig = {
     url :: String
   , enable :: Boolean
+}
+
+type RegistrationConfig = {
+  supportWAN :: String,
+  callSupport :: Boolean,
+  whatsappSupport :: Boolean
 }
