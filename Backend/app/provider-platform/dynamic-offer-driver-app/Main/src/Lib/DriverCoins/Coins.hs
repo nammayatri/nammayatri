@@ -32,6 +32,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
+import qualified Kernel.Beam.Functions as B
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
@@ -72,7 +74,7 @@ updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
 
 updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> Seconds -> m ()
 updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
-  driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   void $ Person.updateTotalEarnedCoins driverId (finalCoinsValue + driver.totalEarnedCoins)
   updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
 
@@ -198,6 +200,11 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
             bulkUploadTitle = Nothing
           }
   CHistory.updateCoinEvent driverCoinEvent
+  when (numCoins > 0) $ do
+    driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    let coinTitle = "Coins earned!"
+        coinMessage = "You have earned " <> show numCoins <> " coins. Check them out."
+    Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS coinTitle coinMessage driverId driver.deviceToken
   pure numCoins
 
 checkHasTakenValidRide :: (MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) => Maybe Meters -> m Bool

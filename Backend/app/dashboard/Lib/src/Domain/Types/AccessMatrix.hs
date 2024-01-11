@@ -200,6 +200,7 @@ data UserActionType
   | CHANGE_OPERATING_CITY
   | SCHEDULER_TRIGGER
   | DRIVER_COIN_BULK_UPLOAD
+  | DRIVER_COIN_HISTORY
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

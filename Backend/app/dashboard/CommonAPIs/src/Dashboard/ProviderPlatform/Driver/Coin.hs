@@ -13,12 +13,31 @@
 -}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Dashboard.ProviderPlatform.Driver.Coin where
+module Dashboard.ProviderPlatform.Driver.Coin
+  ( module Dashboard.ProviderPlatform.Driver.Coin,
+    module Reexport,
+  )
+where
 
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForJSON)
+import Dashboard.Common as Reexport
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForJSON)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.Common (HighPrecMoney)
+import Kernel.Types.Id
 import Servant hiding (Summary, throwError)
+
+type BulkUploadCoinsAPI =
+  "bulkUploadCoins"
+    :> ReqBody '[JSON] BulkUploadCoinsReq
+    :> Post '[JSON] APISuccess
+
+type CoinHistoryAPI =
+  "coinHistory"
+    :> Capture "driverId" (Id Driver)
+    :> QueryParam "limit" Integer
+    :> QueryParam "offset" Integer
+    :> Get '[JSON] CoinHistoryRes
 
 data BulkUploadCoinsReq = BulkUploadCoinsReq
   { driverIdListWithCoins :: [DriverIdListWithCoins],
@@ -45,9 +64,54 @@ data Translations = Translations
   }
   deriving (Generic, Read, Eq, Show, FromJSON, ToJSON, Ord, ToSchema)
 
-$(mkBeamInstancesForJSON ''Translations)
+data CoinHistoryRes = CoinHistoryRes
+  { coinBalance :: Int,
+    coinEarned :: Int,
+    coinUsed :: Int,
+    coinExpired :: Int,
+    coinEarnHistory :: [CoinEarnHistoryItem],
+    coinBurnHistory :: [CoinBurnHistoryItem]
+  }
+  deriving (Generic, Read, Eq, Show, FromJSON, ToJSON, Ord, ToSchema)
 
-type BulkUploadCoinsAPI =
-  "bulkUploadCoins"
-    :> ReqBody '[JSON] BulkUploadCoinsReq
-    :> Post '[JSON] APISuccess
+data CoinEarnHistoryItem = CoinEarnHistoryItem
+  { coins :: Int,
+    eventFunction :: DriverCoinsFunctionType,
+    createdAt :: UTCTime,
+    expirationAt :: Maybe UTCTime,
+    coinsUsed :: Int,
+    status :: CoinStatus,
+    bulkUploadTitle :: Maybe Translations
+  }
+  deriving (Generic, Read, Eq, Show, FromJSON, ToJSON, Ord, ToSchema)
+
+data CoinBurnHistoryItem = CoinBurnHistoryItem
+  { numCoins :: Int,
+    cash :: HighPrecMoney,
+    title :: Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, Read, Eq, Show, FromJSON, ToJSON, Ord, ToSchema)
+
+data CoinStatus = Used | Remaining deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data DriverCoinsFunctionType
+  = OneOrTwoStarRating
+  | RideCompleted
+  | FiveStarRating
+  | BookingCancellation
+  | CustomerReferral
+  | DriverReferral
+  | EightPlusRidesInOneDay
+  | PurpleRideCompleted
+  | LeaderBoardTopFiveHundred
+  | TrainingCompleted
+  | BulkUploadFunction
+  deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
+
+$(mkBeamInstancesForEnum ''DriverCoinsFunctionType)
+
+$(mkBeamInstancesForEnum ''CoinStatus)
+
+$(mkBeamInstancesForJSON ''Translations)
