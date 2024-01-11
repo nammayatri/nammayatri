@@ -22,3 +22,8 @@ ALTER TABLE atlas_app.ticket_place ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_place ALTER COLUMN short_desc SET DEFAULT 'Short description not available';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ALTER COLUMN merchant_operating_city_id SET NOT NULL;

@@ -38,12 +38,12 @@ findByShortId (Kernel.Types.Id.ShortId shortId) = do
     [ Se.Is Beam.shortId $ Se.Eq shortId
     ]
 
-getAllBookingsByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity) -> Domain.Types.TicketBooking.BookingStatus -> m ([Domain.Types.TicketBooking.TicketBooking])
-getAllBookingsByPersonId limit offset (Kernel.Types.Id.Id personId) merchantOperatingCityId status = do
+getAllBookingsByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.TicketBooking.BookingStatus -> m ([Domain.Types.TicketBooking.TicketBooking])
+getAllBookingsByPersonId limit offset (Kernel.Types.Id.Id personId) (Kernel.Types.Id.Id merchantOperatingCityId) status = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.personId $ Se.Eq personId,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
           Se.Is Beam.status $ Se.Eq status
         ]
     ]
@@ -74,15 +74,15 @@ updateByPrimaryKey Domain.Types.TicketBooking.TicketBooking {..} = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.amount $ amount,
+      Se.Set Beam.createdAt $ createdAt,
+      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.personId $ (Kernel.Types.Id.getId personId),
       Se.Set Beam.shortId $ (Kernel.Types.Id.getShortId shortId),
       Se.Set Beam.status $ status,
       Se.Set Beam.ticketPlaceId $ (Kernel.Types.Id.getId ticketPlaceId),
+      Se.Set Beam.updatedAt $ now,
       Se.Set Beam.visitDate $ visitDate,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId)
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
@@ -95,30 +95,30 @@ instance FromTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking 
       Just
         Domain.Types.TicketBooking.TicketBooking
           { amount = amount,
+            createdAt = createdAt,
             id = Kernel.Types.Id.Id id,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             personId = Kernel.Types.Id.Id personId,
             shortId = Kernel.Types.Id.ShortId shortId,
             status = status,
             ticketPlaceId = Kernel.Types.Id.Id ticketPlaceId,
+            updatedAt = updatedAt,
             visitDate = visitDate,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+            merchantId = Kernel.Types.Id.Id <$> merchantId
           }
 
 instance ToTType' Beam.TicketBooking Domain.Types.TicketBooking.TicketBooking where
   toTType' Domain.Types.TicketBooking.TicketBooking {..} = do
     Beam.TicketBookingT
       { Beam.amount = amount,
+        Beam.createdAt = createdAt,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
         Beam.status = status,
         Beam.ticketPlaceId = Kernel.Types.Id.getId ticketPlaceId,
+        Beam.updatedAt = updatedAt,
         Beam.visitDate = visitDate,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
+        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId
       }
