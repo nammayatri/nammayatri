@@ -24,7 +24,7 @@ import Data.Aeson (fromJSON)
 import qualified Data.Aeson as A
 import Data.Default.Class (Default (..))
 import Domain.Types.Merchant.MerchantMessage
-import Domain.Types.Merchant.MerchantOperatingCity as DOrg
+import Domain.Types.MerchantOperatingCity as DOrg
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common

@@ -5,7 +5,7 @@ module Domain.Types.TicketBookingService where
 
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TicketBooking
 import qualified Domain.Types.TicketService
 import Kernel.Prelude
@@ -19,7 +19,7 @@ data TicketBookingService = TicketBookingService
     createdAt :: Kernel.Prelude.UTCTime,
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService,
     status :: Domain.Types.TicketBookingService.ServiceStatus,
     ticketBookingId :: Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking,

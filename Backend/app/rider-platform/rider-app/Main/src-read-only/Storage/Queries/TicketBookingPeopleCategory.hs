@@ -4,7 +4,7 @@
 module Storage.Queries.TicketBookingPeopleCategory where
 
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TicketBookingPeopleCategory
 import qualified Domain.Types.TicketBookingServiceCategory
 import Kernel.Beam.Functions

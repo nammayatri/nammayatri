@@ -28,7 +28,7 @@ module Storage.CachedQueries.Exophone
 where
 
 import Domain.Types.Exophone
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
