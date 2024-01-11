@@ -1,6 +1,7 @@
 { inputs, ... }:
 {
   imports = [
+    ./nix/debug.nix
     ./nix/docker.nix
     ./nix/scripts.nix
     ./nix/run-mobility-stack.nix
