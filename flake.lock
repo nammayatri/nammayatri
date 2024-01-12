@@ -90,6 +90,8 @@
           "common"
         ],
         "haskell-flake": [
+          "beckn-gateway",
+          "common",
           "haskell-flake"
         ],
         "nixpkgs": [
@@ -420,21 +422,6 @@
       "original": {
         "owner": "ipetkov",
         "repo": "crane",
-        "type": "github"
-      }
-    },
-    "debug": {
-      "locked": {
-        "lastModified": 1657739266,
-        "narHash": "sha256-vLy8GQr0noEcoA+jX24FgUVBA/poV36zDWAUChN3hIY=",
-        "owner": "boolean-option",
-        "repo": "false",
-        "rev": "d06b4794a134686c70a1325df88a6e6768c6b212",
-        "type": "github"
-      },
-      "original": {
-        "owner": "boolean-option",
-        "repo": "false",
         "type": "github"
       }
     },
@@ -1354,11 +1341,11 @@
     },
     "haskell-flake": {
       "locked": {
-        "lastModified": 1704968632,
-        "narHash": "sha256-QUxzfOGRyDXhCnIYLyLQ5dF3SXQiBjA/XcrKuZhi0iI=",
+        "lastModified": 1705067885,
+        "narHash": "sha256-al2JqNIkXfLiVreqSJWly64Z6YVNphWBh4m3IxGIdYI=",
         "owner": "srid",
         "repo": "haskell-flake",
-        "rev": "c9c28dc5c27cb23b032f76b4bd4adc1fa715bcdc",
+        "rev": "8a526aaf98cde6af6b2d1d368e9acb460ee34547",
         "type": "github"
       },
       "original": {
@@ -2918,12 +2905,7 @@
         "amazonka-git": "amazonka-git",
         "beckn-gateway": "beckn-gateway",
         "common": "common",
-        "debug": "debug",
         "easy-purescript-nix": "easy-purescript-nix",
-        "haskell-flake": [
-          "common",
-          "haskell-flake"
-        ],
         "location-tracking-service": "location-tracking-service",
         "namma-dsl": "namma-dsl",
         "nixpkgs": [

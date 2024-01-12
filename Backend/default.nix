@@ -81,7 +81,7 @@
     };
 
     devShells.backend = pkgs.mkShell {
-      name = "ny-backend";
+      name = builtins.traceVerbose "devShells.backend" "ny-backend";
       meta.description = "Backend development environment for nammayatri";
       packages = with pkgs; [
         redis # redis-cli is used in scripts.nix
@@ -92,7 +92,6 @@
         config.pre-commit.devShell
         config.haskellProjects.default.outputs.devShell
         config.flake-root.devShell
-        self'.devShells.debug
       ];
     };
   };
