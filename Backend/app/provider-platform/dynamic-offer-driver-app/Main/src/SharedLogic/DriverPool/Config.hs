@@ -24,6 +24,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error
+import Kernel.Utils.Logging
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
