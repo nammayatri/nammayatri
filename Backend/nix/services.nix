@@ -38,29 +38,19 @@
             replica.port = 5435;
           };
 
-          postgres-with-replica.location-db = {
+          redis."redis".enable = true;
+
+          redis-cluster."cluster1".enable = true;
+
+          zookeeper."zookeeper".enable = true;
+
+          apache-kafka."kafka" = {
+            port = 29092;
             enable = true;
-            master.extraInitialDumps = [
-              ../dev/sql-seed/driver-location-seed.sql
-              ../dev/local-testing-data/person-location.sql
-            ];
-            master.port = 5454;
-            replica.port = 5456;
           };
+
+          nginx."nginx".enable = true;
         };
-
-        services.redis."redis".enable = true;
-
-        services.redis-cluster."cluster1".enable = true;
-
-        services.zookeeper."zookeeper".enable = true;
-
-        services.apache-kafka."kafka" = {
-          port = 29092;
-          enable = true;
-        };
-
-        services.nginx."nginx".enable = true;
 
         services.passetto = {
           enable = true;
