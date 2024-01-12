@@ -2,7 +2,7 @@ module Components.RideCompletedCard.View where
 
 import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..))
 
-import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY)
+import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView)
 import Components.Banner.View as Banner
 import Components.Banner as BannerConfig
 import Data.Functor (map)
@@ -30,6 +30,7 @@ import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude
 import ConfigProvider
 import Mobility.Prelude (boolToVisibility)
+import Engineering.Helpers.Commons as EHC
 
 view :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 view config push =
@@ -429,7 +430,12 @@ rideEndBannerView config push =
 ------------------------------------- (Driver Card 2) driverUpiQrCodeView --------------------------------------------------------------------------------------------------------------
 driverUpiQrCodeView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
 driverUpiQrCodeView config push = 
-  linearLayout 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  ][ if config.lottieQRAnim then lottieQRView config push else dummyTextView
+  , linearLayout 
     [
       height WRAP_CONTENT
     , width MATCH_PARENT
@@ -437,7 +443,7 @@ driverUpiQrCodeView config push =
     , orientation VERTICAL
     , cornerRadius 16.0
     , gravity CENTER
-    , margin $ MarginBottom 24
+    , margin $ MarginVertical 10 14
     ][linearLayout 
     [
       height MATCH_PARENT
@@ -481,6 +487,7 @@ driverUpiQrCodeView config push =
         , onAnimationEnd push (const (UpiQrRendered $ getNewIDWithTag config.driverUpiQrCard.id))
       ]
     ]
+  ]
 
 --------------------------------------------------- (Driver Card 3) noVpaView --------------------------------------------------------------------------------------------------------------------------------------------
 noVpaView :: forall w. Config -> PrestoDOM (Effect Unit) w 
@@ -673,3 +680,16 @@ whiteHorizontalLine config =
 
 getBottomCardHeight :: String -> Length 
 getBottomCardHeight id = V $ (screenHeight unit) - (runFn1 JB.getLayoutBounds $ getNewIDWithTag id).height - 82
+
+lottieQRView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+lottieQRView config push = 
+  PrestoAnim.animationSet [ Anim.fadeInWithDelay 250 true ] $
+    lottieAnimationView
+      [ id $ EHC.getNewIDWithTag "QRLottie"
+      , background Color.white900
+      , cornerRadius 16.0
+      , height WRAP_CONTENT
+      , padding $ PaddingTop 5
+      , width MATCH_PARENT
+      , onAnimationEnd (\_-> void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "end_ride_qr_anim.json", lottieId = (EHC.getNewIDWithTag "QRLottie"), speed = 1.0 , scaleType = "CENTER_CROP"})(const UpiQrRendered)
+      ]

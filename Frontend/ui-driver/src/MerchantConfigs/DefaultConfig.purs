@@ -20,7 +20,8 @@ config =
     isMaskedName : true
   }
   , rideCompletedCardConfig : {
-      showSavedCommission : false
+      showSavedCommission : false,
+      lottieQRAnim : false
     }
   , subscriptionConfig : {
     enableBlocking : false,
