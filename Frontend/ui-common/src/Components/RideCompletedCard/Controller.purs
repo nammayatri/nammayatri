@@ -46,7 +46,8 @@ type Config = {
   bannerConfig :: Banner.Config,
   viewsByOrder :: Array RideCompletedElements,
   enableContactSupport :: Boolean,
-  isFreeRide :: Boolean
+  isFreeRide :: Boolean,
+  lottieQRAnim :: Boolean
 }
 
 data Theme = DARK | LIGHT
@@ -152,7 +153,8 @@ config = {
   isPrimaryButtonSticky : false,
   bannerConfig : Banner.config,
   viewsByOrder : [],
-  enableContactSupport : true
+  enableContactSupport : true,
+  lottieQRAnim : false
 }
 
 type CustomerIssueCard = {

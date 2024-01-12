@@ -268,5 +268,8 @@ window.getMerchantConfig = function () {
   , "profile" : {
     "showBookingOption" : false
   }
+  , "rideCompletedCardConfig" : {
+      "lottieQRAnim" : true
+  }
   })
 }

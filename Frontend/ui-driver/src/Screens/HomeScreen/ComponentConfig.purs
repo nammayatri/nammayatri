@@ -1079,6 +1079,7 @@ getRideCompletedConfig state = let
   autoPayBanner = state.props.autoPayBanner
   autoPayStatus = state.data.paymentState.autoPayStatus
   payerVpa = state.data.endRideData.payerVpa
+  bannerConfig = autopayBannerConfig state false
   disability = state.data.endRideData.disability /= Nothing
   showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
   viewOrderConfig = [ {condition : autoPayBanner == DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
@@ -1175,8 +1176,9 @@ getRideCompletedConfig state = let
     accessibility = DISABLE,
     theme = LIGHT,
     isPrimaryButtonSticky = true,
-    bannerConfig = autopayBannerConfig state false,
-    viewsByOrder = map (_.elementView) (DA.filter (_.condition) viewOrderConfig)
+    bannerConfig = bannerConfig{isBanner = autoPayBanner /= NO_SUBSCRIPTION_BANNER},
+    viewsByOrder = map (_.elementView) (DA.filter (_.condition) viewOrderConfig),
+    lottieQRAnim = state.data.config.rideCompletedCardConfig.lottieQRAnim
   }
   in config'
 
