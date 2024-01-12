@@ -44,6 +44,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as DCQ
 import qualified Storage.Queries.Person as Person
+import qualified Tools.Notifications as Notify
 
 type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
 
@@ -181,7 +182,6 @@ updateEventAndGetCoinsvalue :: EventFlow m r => Id DP.Person -> Id DM.Merchant -
 updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins = do
   now <- getCurrentTime
   uuid <- generateGUIDText
-  -- Extract the integer value from maybeExpirationTime and then make it start of that day
   let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
       status_ = if numCoins > 0 then Remaining else Used
   let driverCoinEvent =
