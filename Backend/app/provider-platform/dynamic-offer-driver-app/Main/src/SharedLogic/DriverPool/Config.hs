@@ -14,7 +14,13 @@
 
 module SharedLogic.DriverPool.Config where
 
+import Client.Main as CM
+import Data.Aeson as DA
+import qualified Data.ByteString.Lazy.Char8 as BL
+import Data.HashMap.Strict as HashMap
+import Data.Text as Text
 import Domain.Types.Merchant.DriverPoolConfig
+import Domain.Types.Merchant.DriverPoolConfig as DPC
 import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
@@ -23,6 +29,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error
+import Kernel.Utils.Logging
 import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
@@ -38,24 +45,37 @@ getDriverPoolConfig ::
   Maybe Variant.Variant ->
   Meters ->
   m DriverPoolConfig
-getDriverPoolConfig merchantOpCityId Nothing dist = do
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  getDefaultDriverPoolConfig configs dist
-getDriverPoolConfig merchantOpCityId (Just vehicle) dist = do
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
-  let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) dist) configs
-  case configs of
-    [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
-    _ ->
-      case mbApplicableConfig of
-        Just applicableConfig -> return applicableConfig
-        Nothing -> getDefaultDriverPoolConfig configs dist
-
-filterByDistAndDveh :: Maybe Variant.Variant -> Meters -> DriverPoolConfig -> Bool
-filterByDistAndDveh mbVehicle_ dist cfg =
-  dist >= cfg.tripDistance && cfg.vehicleVariant == mbVehicle_
-
-getDefaultDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Meters -> m DriverPoolConfig
-getDefaultDriverPoolConfig configs dist = do
-  find (filterByDistAndDveh Nothing dist) configs
-    & fromMaybeM (InvalidRequest "DriverPool default config not found")
+getDriverPoolConfig merchantOpCityId mbvt dist = do
+  dpcCond <- liftIO $ CM.hashMapToString HashMap.fromList $ [(pack "merchantOperatingCityId", DA.String (Text.pack ("favorit0-0000-0000-0000-00000favorit"))), (pack "tripDistance", DA.String (Text.pack (dist)))] <> (bool [] [(pack "variant", DA.String (Text.pack (dist)))] (isJust mbvt))
+  contextValue <- liftIO $ CM.evalCtx "test" dpcCond
+  logDebug $ "the fetched context value is " <> show contextValue
+  value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
+  return $ buildDpcType (fromMaybe value contextValue)
+  where
+    buildDpcType cv =
+      DPC.DriverPoolConfig
+        { id = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "id" cv),
+          merchantId = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "merchantId" cv),
+          merchantOperatingCityId = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "merchantOperatingCityId" cv),
+          minRadiusOfSearch = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "minRadiusOfSearch" cv),
+          maxRadiusOfSearch = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "maxRadiusOfSearch" cv),
+          radiusStepSize = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "radiusStepSize" cv),
+          driverPositionInfoExpiry = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "driverPositionInfoExpiry" cv),
+          actualDistanceThreshold = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "actualDistanceThreshold" cv),
+          maxDriverQuotesRequired = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "maxDriverQuotesRequired" cv),
+          driverQuoteLimit = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "driverQuoteLimit" cv),
+          driverRequestCountLimit = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "driverRequestCountLimit" cv),
+          driverBatchSize = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "driverBatchSize" cv),
+          distanceBasedBatchSplit = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "distanceBasedBatchSplit" cv),
+          maxNumberOfBatches = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "maxNumberOfBatches" cv),
+          maxParallelSearchRequests = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "maxParallelSearchRequests" cv),
+          poolSortingType = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "poolSortingType" cv),
+          singleBatchProcessTime = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "singleBatchProcessTime" cv),
+          tripDistance = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "tripDistance" cv),
+          radiusShrinkValueForDriversOnRide = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "radiusShrinkValueForDriversOnRide" cv),
+          driverToDestinationDistanceThreshold = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "driverToDestinationDistanceThreshold" cv),
+          driverToDestinationDuration = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "driverToDestinationDuration" cv),
+          createdAt = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "createdAt" cv),
+          updatedAt = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "updatedAt" cv),
+          vehicleVariant = fromMaybe "" $ BL.unpack . encode <$> (HashMap.lookup "vehicleVariant" cv)
+        }
