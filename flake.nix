@@ -14,6 +14,13 @@
       url = "github:nammayatri/namma-dsl";
     };
 
+    haskell-cac = {
+      url = "path:/Users/akhilesh.b/Desktop/haskell_cac_client";
+      inputs = {
+        common.follows = "common";
+      };
+    };
+
     beckn-gateway = {
       url = "github:nammayatri/beckn-gateway";
       inputs = {
@@ -57,6 +64,7 @@
 
   outputs = inputs:
     inputs.common.lib.mkFlake { inherit inputs; } {
+      debug = true;
       imports = [
         ./Backend/default.nix
         ./Frontend/default.nix
