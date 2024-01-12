@@ -2524,16 +2524,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1705050525,
-        "narHash": "sha256-dJX4FmgeVYYZ5Qz3g5zEW7wCzByknD4pUrq7v3Fkl2k=",
-        "owner": "rsrohitsingh682",
+        "lastModified": 1705057915,
+        "narHash": "sha256-ZLGPxeY4rUdM4cRr6a1b9VsV0esxaq31kHNQ6ADqeWI=",
+        "owner": "nammayatri",
         "repo": "passetto",
-        "rev": "620d7a1b0dd08a76e06d166cd812efdb5315c75b",
+        "rev": "b12a0a880a2fbdac0d047555fc28ebe72eaa4ad1",
         "type": "github"
       },
       "original": {
-        "owner": "rsrohitsingh682",
-        "ref": "add-initial-dumps",
+        "owner": "nammayatri",
+        "ref": "nixify",
         "repo": "passetto",
         "type": "github"
       }

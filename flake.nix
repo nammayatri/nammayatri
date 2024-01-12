@@ -22,7 +22,7 @@
 
     location-tracking-service.url = "github:nammayatri/location-tracking-service/86def9d54734c0bfd45375ca97ece0a461254745";
     passetto = {
-      url = "github:rsrohitsingh682/passetto/add-initial-dumps";
+      url = "github:nammayatri/passetto/nixify";
       inputs = {
         nixpkgs.follows = "common/nixpkgs";
         flake-parts.follows = "common/flake-parts";
