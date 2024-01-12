@@ -176,7 +176,8 @@ type SuggestedDestinationAndTripsConfig = {
   frequencyWeight :: Number,
   tripDistanceThreshold :: Number,
   repeatRideTime :: Int,
-  autoScrollTime :: Int
+  autoScrollTime :: Int,
+  tripWithinXDist :: Number
 }
 
 type Language =  {

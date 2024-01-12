@@ -141,10 +141,11 @@ config =
         minTripsToBeShown : 2,
         locationsToBeStored : 30,
         tripsToBeStored : 30,
-        frequencyWeight : 0.7,
+        frequencyWeight : 0.85,
         tripDistanceThreshold : 0.021,
         repeatRideTime : 8,
-        autoScrollTime : 5
+        autoScrollTime : 5,
+        tripWithinXDist : 0.05
       }
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"
