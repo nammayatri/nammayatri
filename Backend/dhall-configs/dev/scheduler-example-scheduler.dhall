@@ -4,7 +4,7 @@ let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = 5436
       , connectUser = "atlas_scheduler_example_user"
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"

@@ -20,6 +20,10 @@ module Domain.Action.Beckn.Select
   )
 where
 
+import qualified Client.Main as CM
+import Data.Aeson as DA
+import Data.HashMap.Strict as HashMap
+import Data.Text as Text
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.FarePolicy as DFarePolicy
@@ -64,7 +68,10 @@ handler merchant sReq estimate = do
   searchReq <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
   QDQ.setInactiveAllDQByEstId sReq.estimateId now
   farePolicy <- getFarePolicy searchReq.merchantOperatingCityId estimate.vehicleVariant searchReq.area
-
+  farePolicyCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (Text.pack ("NAMMA_YATRI"))), (pack "tripDistance", DA.String (Text.pack ("500")))]
+  contextValue <- liftIO $ CM.evalCtx "test" farePolicyCond
+  value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
+  logDebug $ "contextValueEvaluated: " <> show value
   searchTry <- createNewSearchTry farePolicy searchReq searchReq.customerCancellationDues
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId (Just searchTry.vehicleVariant) searchReq.estimatedDistance
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId

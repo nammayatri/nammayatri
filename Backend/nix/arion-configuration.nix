@@ -18,7 +18,7 @@ let
       db-primary.service = {
         image = "bitnami/postgresql:12.3.0";
         container_name = "atlas-db-primary";
-        ports = [ "5434:5432" ];
+        ports = [ "5436:5432" ];
         volumes = [
           "${../dev/sql-seed/pre-init.sql}:/docker-entrypoint-initdb.d/0-pre-init.sql:Z"
           "${../dev/sql-seed/rider-app-seed.sql}:/docker-entrypoint-initdb.d/1-rider-app-seed.sql:Z"
@@ -54,7 +54,7 @@ let
       db-replica.service = {
         image = "bitnami/postgresql:12.3.0";
         container_name = "atlas-dev-replica";
-        ports = [ "5435:5432" ];
+        ports = [ "5437:5432" ];
         depends_on = [ "db-primary" ];
         environment = {
           BITNAMI_DEBUG = "true";
@@ -130,7 +130,7 @@ let
       passetto-server.service = {
         image = "juspayin/passetto-hs:0b18530";
         container_name = "passetto-enc-server";
-        ports = [ "8021:8012" ];
+        ports = [ "8085:8012" ];
         environment = {
           PASSETTO_PG_BACKEND_CONN_STRING = "postgresql://passetto:passetto@passetto-enc-db:5432/passetto";
         };
@@ -190,7 +190,7 @@ let
       nginx.service = {
         image = "nginx:stable";
         container_name = "beckn-nginx";
-        ports = [ "8080:80" ];
+        ports = [ "8091:80" ];
         volumes = [
           "${../dev/nginx/nginx.conf}:/etc/nginx/nginx.conf"
         ];

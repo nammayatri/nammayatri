@@ -1353,6 +1353,28 @@
         "type": "github"
       }
     },
+    "haskell-cac": {
+      "inputs": {
+        "common": [
+          "common"
+        ],
+        "nixpkgs": [
+          "haskell-cac",
+          "common",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1705490307,
+        "narHash": "sha256-N6gaprJ5+106feB3X/0IZu9Qf/snZ49zNIOwnAqPYjA=",
+        "path": "/Users/akhilesh.b/Desktop/haskell_cac_client",
+        "type": "path"
+      },
+      "original": {
+        "path": "/Users/akhilesh.b/Desktop/haskell_cac_client",
+        "type": "path"
+      }
+    },
     "haskell-flake": {
       "locked": {
         "lastModified": 1705067885,
@@ -1646,11 +1668,11 @@
     "namma-dsl": {
       "flake": false,
       "locked": {
-        "lastModified": 1704969554,
-        "narHash": "sha256-4XhG4paLeRhevfe35Tbr1RPS1CxisLhQWucIiVmbsk4=",
+        "lastModified": 1705393403,
+        "narHash": "sha256-9JH3AxYbBQO6v551zPJEwHqbxHZdlO9bbzAg04J7i6Y=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "99ea894ee5879bfef574f850dc64f99c2a953d99",
+        "rev": "26253b1ff640f70bb5515ce3722feb1085c1416e",
         "type": "github"
       },
       "original": {
@@ -2955,6 +2977,7 @@
         "beckn-gateway": "beckn-gateway",
         "common": "common",
         "easy-purescript-nix": "easy-purescript-nix",
+        "haskell-cac": "haskell-cac",
         "haskell-flake": [
           "common",
           "haskell-flake"
