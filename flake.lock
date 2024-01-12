@@ -90,8 +90,6 @@
           "common"
         ],
         "haskell-flake": [
-          "beckn-gateway",
-          "common",
           "haskell-flake"
         ],
         "nixpkgs": [
@@ -2906,6 +2904,10 @@
         "beckn-gateway": "beckn-gateway",
         "common": "common",
         "easy-purescript-nix": "easy-purescript-nix",
+        "haskell-flake": [
+          "common",
+          "haskell-flake"
+        ],
         "location-tracking-service": "location-tracking-service",
         "namma-dsl": "namma-dsl",
         "nixpkgs": [

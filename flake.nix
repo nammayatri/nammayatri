@@ -2,6 +2,7 @@
   inputs = {
     common.url = "github:nammayatri/common";
     nixpkgs.follows = "common/nixpkgs";
+    haskell-flake.follows = "common/haskell-flake";
 
     # Backend inputs
     shared-kernel = {
@@ -14,6 +15,7 @@
       flake = false;
       # inputs = {
       #   # common.follows = "common";
+      #   # haskell-flake.follows = "haskell-flake";
       #   # nixpkgs.follows = "nixpkgs";
       #   # shared-kernel.follows = "shared-kernel";
       # };
@@ -23,6 +25,7 @@
       url = "github:nammayatri/beckn-gateway";
       inputs = {
         common.follows = "common";
+        haskell-flake.follows = "haskell-flake";
         nixpkgs.follows = "nixpkgs";
         shared-kernel.follows = "shared-kernel";
       };
