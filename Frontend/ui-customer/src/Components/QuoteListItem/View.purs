@@ -45,6 +45,7 @@ import Timers
 import Debug
 import Engineering.Helpers.Commons (liftFlow)
 import Screens.Types (QuoteListItemState(..), City(..))
+import Locale.Utils
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -181,7 +182,7 @@ timerView state push =
   ][  textView (
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , text $ case (getValueToLocalStore LANGUAGE_KEY) of
+      , text $ case (getLanguageLocale languageKey) of
             "EN_US" -> (getString EXPIRES_IN ) <>" : " <> state.timer <> "s"
             "FR_FR" -> (getString EXPIRES_IN ) <>" : " <> state.timer <> "s"
             _ -> state.timer <> "s " <> (getString EXPIRES_IN )
@@ -269,7 +270,7 @@ autoAcceptingView state push =
             , weight 1.0
             , gravity CENTER_VERTICAL
             , color Color.black900
-            , text $ case (getValueToLocalStore LANGUAGE_KEY) of
+            , text $ case (getLanguageLocale languageKey) of
                 "EN_US" -> (getString AUTO_ACCEPTING_SELECTED_RIDE) <> " : " <> state.timer <> "s"
                 _ -> state.timer <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE)
             ] <> FontStyle.tags LanguageStyle)

@@ -1,8 +1,17 @@
 
 const JBridge = window.JBridge;
 
+function getLanguageLocale (){
+  if (!window.languageKey) {
+    const locale = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+    window.languageKey = locale;
+    return locale;
+  } 
+  return window.languageKey;
+}
+
 export const getMerchantString = function(key) {
-  const selectedLanguage = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+  const selectedLanguage = getLanguageLocale();
   switch (selectedLanguage) {
     case "HI_IN":
       return window.appConfig.hindiStrings[key];

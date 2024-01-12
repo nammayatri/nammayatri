@@ -2,6 +2,15 @@ import { callbackMapper as PrestoCallbackMapper } from "presto-ui";
 
 const { JBridge, Android } = window;
 
+function getLanguageLocale (){
+  if (!window.languageKey) {
+    const locale = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
+    window.languageKey = locale;
+    return locale;
+  } 
+  return window.languageKey;
+}
+
 const idMap = {};
 
 export const getOs = function () {
@@ -232,7 +241,7 @@ function getFormattedLanguage(language){
 export const getPastDays = function (count) {
   try {
     const result = [];
-    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+    const language = getLanguageLocale();
     for (let i = 0; i < count; i++) {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -254,7 +263,7 @@ export const getPastWeeks = function (count) {
     while (currentDate.getDay() != 0) {
       currentDate.setDate(currentDate.getDate() - 1);
     }
-    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+    const language = getLanguageLocale();
     currentDate.setDate(currentDate.getDate() + 7);
     for (let i = 0; i < count; i++) {
       const dStart = new Date(currentDate);
@@ -405,7 +414,7 @@ export const camelCaseToSentenceCase = function(string) {
 export const convertUTCtoISC = function (str) {
   return function (format) {
     let localTime = new Date(str);
-    const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+    const language = getLanguageLocale();
     localTime = formatDates(localTime, format, getFormattedLanguage(language));
     return localTime;
   };
@@ -419,7 +428,7 @@ export const convertUTCTimeToISTTimeinHHMMSS = function (utcTime) {
 
 export const getFormattedDate = function (str) {
   const date = new Date(str);
-  const language = JBridge.getFromSharedPrefs("LANGUAGE_KEY");
+  const language = getLanguageLocale();
   return formatDates(new Date(date),"MMMM Do, YYYY", getFormattedLanguage(language));
 }
 

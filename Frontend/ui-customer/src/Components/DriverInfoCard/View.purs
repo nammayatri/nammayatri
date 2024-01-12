@@ -57,6 +57,7 @@ import Helpers.Utils (parseFloat)
 import Data.Int(toNumber)
 import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility)
+import Locale.Utils
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -164,7 +165,7 @@ specialZoneHeader vehicleVariant =
           [ text $ (getTitleConfig vehicleVariant).text <> " "
           , color $ (getTitleConfig vehicleVariant).color
           , height WRAP_CONTENT
-          , visibility if (getValueToLocalStore LANGUAGE_KEY == "ML_IN") then GONE else VISIBLE
+          , visibility if ((getLanguageLocale languageKey)  == "ML_IN") then GONE else VISIBLE
           , width WRAP_CONTENT
           ] <> FontStyle.h2 TypoGraphy
       ]
@@ -176,7 +177,7 @@ specialZoneHeader vehicleVariant =
           [ text $ (getTitleConfig vehicleVariant).text <> " "
           , color $ (getTitleConfig vehicleVariant).color
           , height WRAP_CONTENT
-          , visibility if (getValueToLocalStore LANGUAGE_KEY == "ML_IN") then VISIBLE else GONE
+          , visibility if ((getLanguageLocale languageKey) == "ML_IN") then VISIBLE else GONE
           , width WRAP_CONTENT
           ] <> FontStyle.h2 TypoGraphy
         , textView $

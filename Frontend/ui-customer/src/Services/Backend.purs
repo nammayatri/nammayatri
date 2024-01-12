@@ -52,6 +52,7 @@ import Types.EndPoint as EP
 import Foreign.Object (empty)
 import Data.String as DS
 import ConfigProvider as CP
+import Locale.Utils
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -495,7 +496,7 @@ mkUpdateProfileRequest _ =
         , email : Nothing
         , referralCode : Nothing
         , gender : Nothing
-        , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
+        , language : Just case getLanguageLocale languageKey of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
@@ -519,7 +520,7 @@ editProfileRequest firstName middleName lastName emailID gender hasDisability di
         , email : emailID
         , referralCode : Nothing
         , gender : gender
-        , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
+        , language : Just case getLanguageLocale languageKey of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"

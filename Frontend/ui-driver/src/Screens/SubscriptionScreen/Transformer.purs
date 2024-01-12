@@ -38,7 +38,7 @@ import MerchantConfig.Types (SubscriptionConfig, GradientConfig)
 import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScreenState, DueItem)
 import Services.API (DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
-
+import Locale.Utils
 
 type PlanData = {
     title :: String,
@@ -91,7 +91,7 @@ decodeOfferDescription str = do
     fromMaybe "" (strArray !! (getLanguage (length strArray)))
     where 
         getLanguage len = do
-            case getValueToLocalStore LANGUAGE_KEY of
+            case getLanguageLocale languageKey of
                 "KN_IN" | len > 1 -> 1
                 "HI_IN" | len > 2 -> 2
                 "BN_IN" | len > 3 -> 3

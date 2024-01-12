@@ -50,6 +50,7 @@ import Debug (spy)
 import Data.String as DS
 import Styles.Colors as Color
 import Common.Resources.Constants (pickupZoomLevel)
+import Locale.Utils
 
 screen :: ST.AddNewAddressScreenState -> Screen Action ST.AddNewAddressScreenState ScreenOutput
 screen initialState =
@@ -666,6 +667,6 @@ locationUnserviceableView state push =
   ]
 
 getText ::  ST.AddNewAddressScreenState -> String
-getText state = case (getValueToLocalStore LANGUAGE_KEY) of
+getText state = case (getLanguageLocale languageKey) of
                   "EN_US" -> ((getString LOCATION_ALREADY_EXISTS_AS) <> " ' " <> state.data.existsAs <> " '")
                   _     -> ((getString LOCATION_ALREADY) <> " ' " <> state.data.existsAs <> " ' " <>(getString EXISTS_AS) )

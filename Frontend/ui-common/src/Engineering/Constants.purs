@@ -17,6 +17,12 @@ module Constants where
 appConfig :: String
 appConfig = "appConfig"
 
+decodeAppConfig :: String
+decodeAppConfig = "decodeAppConfig"
+
+languageKey :: String
+languageKey = "languageKey"
+
 configuration_file :: String
 configuration_file = "v1-configuration"
 

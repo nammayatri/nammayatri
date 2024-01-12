@@ -1,7 +1,5 @@
-{ inputs, self, ... }:
+{ self, ... }:
 {
-  debug = inputs.debug.value;
-
   perSystem = { pkgs, ... }: {
     apps.trace.program = pkgs.writeShellApplication {
       name = "trace";

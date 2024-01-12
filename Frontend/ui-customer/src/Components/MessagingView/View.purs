@@ -44,6 +44,7 @@ import Styles.Colors as Color
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Mobility.Prelude (boolToVisibility)
+import Locale.Utils
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -129,7 +130,7 @@ chatHeaderView config push =
 
 headerNameView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerNameView config push =
-  let lang = getValueToLocalStore LANGUAGE_KEY
+  let lang = getLanguageLocale languageKey
   in
   linearLayout
   [ height WRAP_CONTENT

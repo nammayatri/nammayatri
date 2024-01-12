@@ -45,14 +45,18 @@ foreign import loadInWindow :: forall a. Fn2 String a Unit
 
 foreign import loadFileInDUI :: String -> String
 
-loadAppConfig :: String -> Foreign
+foreign import getAppConfigFromWindow :: Fn3 String (Maybe AppConfig) (AppConfig -> (Maybe AppConfig)) (Maybe AppConfig) 
+
+loadAppConfig :: String -> AppConfig
 loadAppConfig _ =
   let defaultConfig = unsafeToForeign DefaultConfig.config
       merchantConfig = getConfigFromFile ReExport.configuration_file
       
       mergedConfig = mergeObjects $ [ defaultConfig] <> merchantConfig
+      decodeAppConfig = decodeForeignObject mergedConfig DefaultConfig.config
       _ = runFn2 loadInWindow ReExport.appConfig mergedConfig
-  in mergedConfig
+      _ = runFn2 loadInWindow ReExport.decodeAppConfig mergedConfig
+  in decodeAppConfig
 
 getConfigFromFile :: String -> Array Foreign
 getConfigFromFile fileName = do
@@ -90,13 +94,12 @@ getAppConfigEff :: EffectFn1 String AppConfig
 getAppConfigEff = mkEffectFn1 \key -> pure $ getAppConfig key
 
 getAppConfig :: String -> AppConfig
-getAppConfig key = do
+getAppConfig key = do 
   let
-    mBconfig = runFn3 getFromWindow key Nothing Just
-    config = case mBconfig of
+    mBconfig = runFn3 getAppConfigFromWindow key Nothing Just
+  case mBconfig of
       Nothing -> loadAppConfig ""
       Just config -> config
-  decodeForeignObject config DefaultConfig.config
 
 getCurrency :: String -> String
 getCurrency key = (getAppConfig key).currency
