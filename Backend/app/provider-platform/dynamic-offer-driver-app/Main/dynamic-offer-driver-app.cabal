@@ -641,6 +641,7 @@ library
     , generic-lens
     , geohash ==1.0.1
     , hashmap
+    , haskell-cac
     , hspec
     , http-client
     , http-types
@@ -682,6 +683,8 @@ library
     , wai
     , wai-extra
     , warp
+  extra-libraries:
+      cac_client
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -756,6 +759,7 @@ executable dynamic-offer-driver-app-exe
     , generic-lens
     , geohash ==1.0.1
     , hashmap
+    , haskell-cac
     , hspec
     , http-client
     , http-types
@@ -792,6 +796,8 @@ executable dynamic-offer-driver-app-exe
     , wai
     , wai-extra
     , warp
+  extra-libraries:
+      cac_client
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
