@@ -2524,11 +2524,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1703588804,
-        "narHash": "sha256-0oOu6G+a9L+DmI94rNqyKEJwpsG/DCL18a68vqEMK90=",
+        "lastModified": 1705050525,
+        "narHash": "sha256-dJX4FmgeVYYZ5Qz3g5zEW7wCzByknD4pUrq7v3Fkl2k=",
         "owner": "rsrohitsingh682",
         "repo": "passetto",
-        "rev": "e31f28de94ed88b463954c2d9f5acdc5cba8a5a7",
+        "rev": "620d7a1b0dd08a76e06d166cd812efdb5315c75b",
         "type": "github"
       },
       "original": {
