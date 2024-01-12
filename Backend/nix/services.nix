@@ -9,40 +9,44 @@
           ./postgres-with-replica.nix
         ];
 
-        services.postgres-with-replica.db-primary = {
-          enable = true;
-          master.extraInitialDumps = [
-            ../dev/sql-seed/rider-app-seed.sql
-            ../dev/local-testing-data/rider-app.sql
-            ../dev/sql-seed/public-transport-rider-platform-seed.sql
-            ../dev/local-testing-data/public-transport-rider-platform.sql
-            ../dev/sql-seed/mock-registry-seed.sql
-            ../dev/local-testing-data/mock-registry.sql
-            ../dev/sql-seed/scheduler-example-seed.sql
-            ../dev/sql-seed/dynamic-offer-driver-app-seed.sql
-            ../dev/local-testing-data/dynamic-offer-driver-app.sql
-            ../dev/sql-seed/rider-dashboard-seed.sql
-            ../dev/local-testing-data/rider-dashboard.sql
-            ../dev/sql-seed/provider-dashboard-seed.sql
-            ../dev/local-testing-data/provider-dashboard.sql
-            ../dev/sql-seed/special-zone-seed.sql
-            ../dev/local-testing-data/special-zone.sql
-          ];
-          master.extraInitialScript = ''
-            CREATE USER atlas WITH PASSWORD 'atlas';
-          '';
-          master.port = 5434;
-          replica.port = 5435;
-        };
+        services = {
+          postgres-with-replica.db-primary = {
+            enable = true;
+            master = {
+              extraInitialDumps = [
+                ../dev/sql-seed/rider-app-seed.sql
+                ../dev/local-testing-data/rider-app.sql
+                ../dev/sql-seed/public-transport-rider-platform-seed.sql
+                ../dev/local-testing-data/public-transport-rider-platform.sql
+                ../dev/sql-seed/mock-registry-seed.sql
+                ../dev/local-testing-data/mock-registry.sql
+                ../dev/sql-seed/scheduler-example-seed.sql
+                ../dev/sql-seed/dynamic-offer-driver-app-seed.sql
+                ../dev/local-testing-data/dynamic-offer-driver-app.sql
+                ../dev/sql-seed/rider-dashboard-seed.sql
+                ../dev/local-testing-data/rider-dashboard.sql
+                ../dev/sql-seed/provider-dashboard-seed.sql
+                ../dev/local-testing-data/provider-dashboard.sql
+                ../dev/sql-seed/special-zone-seed.sql
+                ../dev/local-testing-data/special-zone.sql
+              ];
+              extraInitialScript = ''
+                CREATE USER atlas WITH PASSWORD 'atlas';
+              '';
+              port = 5434;
+            };
+            replica.port = 5435;
+          };
 
-        services.postgres-with-replica.location-db = {
-          enable = true;
-          master.extraInitialDumps = [
-            ../dev/sql-seed/driver-location-seed.sql
-            ../dev/local-testing-data/person-location.sql
-          ];
-          master.port = 5454;
-          replica.port = 5456;
+          postgres-with-replica.location-db = {
+            enable = true;
+            master.extraInitialDumps = [
+              ../dev/sql-seed/driver-location-seed.sql
+              ../dev/local-testing-data/person-location.sql
+            ];
+            master.port = 5454;
+            replica.port = 5456;
+          };
         };
 
         services.redis."redis".enable = true;
@@ -51,7 +55,10 @@
 
         services.zookeeper."zookeeper".enable = true;
 
-        services.apache-kafka."kafka".enable = true;
+        services.apache-kafka."kafka" = {
+          port = 29092;
+          enable = true;
+        };
 
         services.nginx."nginx".enable = true;
 

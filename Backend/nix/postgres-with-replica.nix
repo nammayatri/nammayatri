@@ -71,7 +71,8 @@ in
           # The master database
           "${name}" = {
             enable = true;
-            package = cfg.package;
+            inherit (cfg) package;
+            inherit (cfg.master) port;
             extensions = extensions: [
               extensions.postgis
             ];
@@ -79,8 +80,7 @@ in
             hbaConf = [
               { type = "host"; database = "all"; user = "repl_user"; address = "127.0.0.1/32"; method = "trust"; }
             ];
-            port = cfg.master.port;
-            initialScript.before = ''
+            initialScript. before = ''
               CREATE USER repl_user replication;
             '' + cfg.master.extraInitialScript;
             initialDumps = [
@@ -90,9 +90,9 @@ in
           # The replica database
           "${name}-replica" = {
             enable = true;
-            package = cfg.package;
+            inherit (cfg) package;
+            inherit (cfg.replica) port;
             depends_on."pg-basebackup-${name}".condition = "process_completed_successfully";
-            port = cfg.replica.port;
           };
         })
         enabled-services;
