@@ -21,6 +21,7 @@ import Control.Lens
 import Data.Aeson
 import qualified Data.Aeson as A
 import qualified Data.Text as T
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, view, (%~), (^?))
 import Kernel.External.Maps as Maps
@@ -141,3 +142,7 @@ castVariant Variant.TAXI_PLUS = "TAXI_PLUS"
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney fare = T.pack $ show $ OS.DecimalValue (toRational fare)
+
+castDPaymentType :: DMPM.PaymentType -> Text
+castDPaymentType DMPM.PREPAID = "ON_ORDER"
+castDPaymentType DMPM.POSTPAID = "ON_FULFILLMENT"

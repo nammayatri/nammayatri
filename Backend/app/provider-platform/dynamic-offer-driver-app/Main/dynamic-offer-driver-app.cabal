@@ -120,6 +120,7 @@ library
       Beckn.OnDemand.Utils.Callback
       Beckn.OnDemand.Utils.Common
       Beckn.OnDemand.Utils.Init
+      Beckn.OnDemand.Utils.OnInit
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.OnUpdate
       Beckn.OnDemand.Utils.Search

@@ -103,7 +103,7 @@ initV1Flow transporterId (SignatureAuthResult _ subscriber) req =
 --           void . handle (errHandler dInitRes.booking) $ do
 --             bap_url <- fromMaybeM (InvalidRequest "bap_uri not found") context.contextBapUri >>= parseBaseUrl
 --             Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 context bap_url internalEndPointHashMap $
---               pure $ ACL.mkOnInitMessage dInitRes
+--               pure $ ACL.mkOnInitMessageV2 dInitRes
 --       return ()
 --     pure Ack
 --   where
