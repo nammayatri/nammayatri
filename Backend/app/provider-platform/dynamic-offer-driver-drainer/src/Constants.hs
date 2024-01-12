@@ -20,7 +20,7 @@ ecRedisDBStream = "driver-db-sync-stream"
 
 --                                  |
 ecRedisDBStreamCounter :: [Char]
-ecRedisDBStreamCounter = "driver-db-sync-stream-counter"
+ecRedisDBStreamCounter = "driver-db-sync-stream-counter-"
 
 --                                  |
 ecRedisErrorStream :: [Char]

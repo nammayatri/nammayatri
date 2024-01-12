@@ -39,7 +39,7 @@ defaultDBSyncConfig =
       _streamReadCount = 1000 -- 1000
     }
 
-getThreadPerPodCount :: IO Int
+getThreadPerPodCount :: IO Integer
 getThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount
 
 isPushToKafka :: IO Bool

@@ -111,12 +111,15 @@ filterDeleteCommands :: (L.KVDBStreamEntryID, DBCommand, ByteString) -> Maybe (D
 filterDeleteCommands (id, Delete a b c d e, val) = Just (DeleteDBCommand id a b c d e, val)
 filterDeleteCommands _ = Nothing
 
-getStreamName :: Text -> Flow (Maybe Text)
-getStreamName streamName = do
-  countWithErr <- RQ.incrementCounter $ T.pack C.ecRedisDBStreamCounter
+getStreamName :: (Integer, Integer) -> Integer -> Text -> Flow (Maybe Text)
+getStreamName (startShard, endShard) threadNumber streamName = do
+  countWithErr <- RQ.incrementCounter $ T.pack (C.ecRedisDBStreamCounter <> show threadNumber)
   count <- case countWithErr of
-    Right count -> pure (count `mod` C.numberOfStreamsForKV)
-    Left _ -> L.runIO $ randomInteger 0 C.numberOfStreamsForKV
+    Right count -> do
+      let res = getShardValue (startShard, endShard) count
+      EL.logInfo (("SHARD_VALUE:" <> " || Thread No. -> " <> show threadNumber <> " || Picked-Shard -> " <> show res <> " || Shard-Range -> " <> show (startShard, endShard)) :: Text) (show res)
+      pure $ getShardValue (startShard, endShard) count
+    Left _ -> L.runIO $ randomInteger startShard endShard
   let dbStreamKey = streamName <> "{shard-" <> show count <> "}"
   let lockKeyName = dbStreamKey <> "_lock"
   resp <- RQ.setValueWithOptions lockKeyName "LOCKED" (L.Milliseconds 120000) L.SetIfNotExist
@@ -124,6 +127,9 @@ getStreamName streamName = do
     Right True -> pure $ Just dbStreamKey
     Right _ -> pure Nothing
     Left _ -> pure Nothing
+
+getShardValue :: (Integer, Integer) -> Integer -> Integer
+getShardValue (startShard, endShard) count = count `mod` (endShard - startShard) + startShard
 
 genSessionId :: IO C8.ByteString
 genSessionId = do

@@ -215,8 +215,8 @@ process dbStreamKey count = do
           pure cnt
         Right cnt -> pure cnt
 
-startDBSync :: Flow ()
-startDBSync = do
+startDBSync :: (Integer, Integer) -> Integer -> Flow ()
+startDBSync (startShard, endShard) threadNumber = do
   sessionId <- EL.runIO genSessionId
   EL.setLoggerContext "session-id" (DTE.decodeUtf8 sessionId)
   readinessFlag <- EL.runIO newEmptyMVar
@@ -261,7 +261,7 @@ startDBSync = do
         then publishDBSyncMetric (Event.DrainerStopStatus 1) >> EL.runIO ((delay =<< Env.getDrainerRetryDelay) $> history)
         else do
           void $ publishDBSyncMetric $ Event.DrainerStopStatus 0
-          dbStreamKey <- getStreamName $ T.pack dbSyncStream
+          dbStreamKey <- getStreamName (startShard, endShard) threadNumber $ T.pack dbSyncStream
           case dbStreamKey of
             Nothing -> pure history
             Just streamName -> do

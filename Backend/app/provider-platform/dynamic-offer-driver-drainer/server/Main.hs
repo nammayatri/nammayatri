@@ -13,6 +13,7 @@ import Environment
 import qualified Euler.Events.Network as NW
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Interpreters as R
+import qualified EulerHS.Language as L
 import EulerHS.Logger.Types
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -52,12 +53,14 @@ main = do
           dbSyncMetric <- Event.mkDBSyncMetric
           threadPerPodCount <- Env.getThreadPerPodCount
           let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer appCfg.dontEnableForDb
-          spawnDrainerThread threadPerPodCount flowRt environment
-          R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
+              totalShards = C.numberOfStreamsForKV
+              numberOfShardPerThread = totalShards `div` (threadPerPodCount + 1)
+          lastShards <- spawnDrainerThread threadPerPodCount flowRt environment numberOfShardPerThread (0, numberOfShardPerThread)
+          R.runFlow flowRt (runReaderT (DBSync.startDBSync (lastShards, totalShards) (threadPerPodCount + 1)) environment)
       )
 
-spawnDrainerThread :: Int -> R.FlowRuntime -> TDB.Env -> IO ()
-spawnDrainerThread 0 _ _ = pure ()
-spawnDrainerThread count flowRt env = do
-  threadId <- forkIO $ R.runFlow flowRt (runReaderT DBSync.startDBSync env)
-  spawnDrainerThread (count -1) flowRt env
+spawnDrainerThread :: Integer -> R.FlowRuntime -> TDB.Env -> Integer -> (Integer, Integer) -> IO Integer
+spawnDrainerThread 0 _ _ _ (startShardValue, _) = pure startShardValue
+spawnDrainerThread count flowRt env numberOfShardPerThread (startShardValue, lastShardValue) = do
+  threadId <- forkIO $ R.runFlow flowRt (runReaderT (DBSync.startDBSync (startShardValue, lastShardValue) count) env)
+  spawnDrainerThread (count -1) flowRt env numberOfShardPerThread (lastShardValue, lastShardValue + numberOfShardPerThread)
