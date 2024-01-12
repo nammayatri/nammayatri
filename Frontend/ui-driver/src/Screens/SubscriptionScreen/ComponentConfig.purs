@@ -52,6 +52,7 @@ import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
 import Data.Tuple as TPL
 import Control.Apply as CA
+import Locale.Utils
 
 clearDueButtonConfig :: ST.SubscriptionScreenState -> PrimaryButton.Config
 clearDueButtonConfig state = let
@@ -101,7 +102,7 @@ retryPaymentButtonConfig state =
         , width = WRAP_CONTENT
         , gravity = LEFT
         , height = WRAP_CONTENT
-        , textStyle = case getValueToLocalStore LANGUAGE_KEY of
+        , textStyle = case getLanguageLocale languageKey of
                       "KN_IN" -> Body3
                       _ -> Body4
         , weight = Mb.Just 1.0
@@ -109,7 +110,7 @@ retryPaymentButtonConfig state =
       , height = WRAP_CONTENT
       , gravity = CENTER
       , cornerRadius = 8.0
-      , padding = case getValueToLocalStore LANGUAGE_KEY of
+      , padding = case getLanguageLocale languageKey of
                       "KN_IN" -> Padding 10 10 10 10
                       _ -> Padding 10 8 10 10
       , margin = MarginLeft 0
@@ -153,7 +154,7 @@ checkStatusButtonConfig state =
         { imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_refresh_unfilled"
         , height = V 16
         , width = V 16
-        , margin = case getValueToLocalStore LANGUAGE_KEY of
+        , margin = case getLanguageLocale languageKey of
                       "KN_IN" -> (Margin 0 0 5 0)
                       _ -> (Margin 0 1 5 0)
         , animation = [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.refreshPaymentStatus)]
@@ -486,7 +487,7 @@ offerCardBannerConfig isPlanCard bannerProps=
   let 
     strArray = split (Pattern "-*$*-") bannerProps.offerBannerDeadline
     getLanguage len = do
-        case getValueToLocalStore LANGUAGE_KEY of
+        case getLanguageLocale languageKey of
             "KN_IN" | len > 1 -> 1
             "HI_IN" | len > 2 -> 2
             "TA_IN" | len > 3 -> 3
@@ -504,7 +505,7 @@ offerCardBannerConfig isPlanCard bannerProps=
         titleColor = Color.black800,
         actionText = getString OFFER_CARD_BANNER_DESC,
         actionTextColor = Color.black800,
-        imageUrl = case getValueToLocalStore LANGUAGE_KEY of
+        imageUrl = case getLanguageLocale languageKey of
                       "HI_IN" -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner_hi"
                       "BN_IN" -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner_bn"
                       _       -> HU.fetchImage HU.FF_ASSET "ny_ic_autopay_setup_banner",

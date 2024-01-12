@@ -123,6 +123,8 @@ import Types.ModifyScreenState (modifyScreenState, updateStage)
 import MerchantConfig.Types (AppConfig(..))
 import ConfigProvider
 import Timers (clearTimerWithId)
+import RemoteConfigs as RC
+import Locale.Utils
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -232,7 +234,7 @@ checkRideAndInitiate event = do
     where 
       checkAndDownloadMLModel :: FlowBT String Unit
       checkAndDownloadMLModel = do
-        let language = getValueToLocalStore LANGUAGE_KEY
+        let language = getLanguageLocale languageKey
         downloadedLanguages <- lift $ lift $ doAff $ makeAff \cb -> JB.listDownloadedTranslationModels (cb <<< Right) 1000 $> nonCanceler
         if (language /= "__failed" && not (languageExists downloadedLanguages language)) then do
           void $ liftFlowBT $ runEffectFn1 JB.downloadMLTranslationModel language
@@ -946,7 +948,7 @@ driverProfileFlow = do
       
     HELP_AND_SUPPORT_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_help"
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
@@ -1262,7 +1264,7 @@ goToLocationFlow = do
   case action of 
     EXIT_FROM_SCREEN -> homeScreenFlow
     AUTO_COMPLETE updatedState searchVal currentLat currentLon -> do
-      resp <- lift $ lift $ Remote.autoComplete searchVal currentLat currentLon (EHC.getMapsLanguageFormat (getValueToLocalStore LANGUAGE_KEY))
+      resp <- lift $ lift $ Remote.autoComplete searchVal currentLat currentLon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey))
       case resp of 
         Right (API.AutoCompleteResp autoCompleteResp) -> 
           modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState { data { predictions = 
@@ -1276,7 +1278,7 @@ goToLocationFlow = do
         Left _ -> pure unit
       goToLocationFlow
     GET_LOCATION_NAME state -> do
-      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReq state.data.saveLocationObject.position.lat state.data.saveLocationObject.position.lon (EHC.getMapsLanguageFormat (getValueToLocalStore LANGUAGE_KEY)))
+      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReq state.data.saveLocationObject.position.lat state.data.saveLocationObject.position.lon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
       case resp of
         Right (API.GetPlaceNameResp placeNameResp) ->
           case placeNameResp!!0 of 
@@ -1306,7 +1308,7 @@ goToLocationFlow = do
       goToLocationFlow
 
     GET_PLACE_NAME updatedState placeId -> do
-      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReqByPlaceId placeId (EHC.getMapsLanguageFormat (getValueToLocalStore LANGUAGE_KEY)))
+      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReqByPlaceId placeId (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
       case resp of
         Right (API.GetPlaceNameResp placeNameResp) ->
           case placeNameResp!!0 of 
@@ -1339,7 +1341,7 @@ goToLocationFlow = do
 
 selectLanguageFlow :: FlowBT String Unit
 selectLanguageFlow = do
-  let selectLang = getValueToLocalStore LANGUAGE_KEY
+  let selectLang = getLanguageLocale languageKey
   modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ selectedLanguage = if (selectLang == "__failed") then "EN_US" else selectLang}})
   action <- UI.selectLanguageScreen
   case action of
@@ -1378,7 +1380,7 @@ helpAndSupportFlow = do
       modifyScreenState $ RideSelectionScreenStateType (\rideHistoryScreen -> rideHistoryScreen { offsetValue = 0, selectedCategory = selectedCategory } )
       rideSelectionScreenFlow
     REPORT_ISSUE_CHAT_SCREEN selectedCategory -> do
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                        "HI_IN" -> "hi"
                        "KN_IN" -> "kn"
                        "TA_IN" -> "ta"
@@ -1512,7 +1514,7 @@ rideSelectionScreenFlow = do
       modifyScreenState $ RideSelectionScreenStateType (\rideHistoryScreen -> state{offsetValue = state.offsetValue + 8})
       rideSelectionScreenFlow
     SELECT_RIDE state -> do
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
@@ -1538,7 +1540,7 @@ issueReportChatScreenFlow = do
   flow <- UI.reportIssueChatScreen
   case flow of
     GO_TO_HELP_AND_SUPPORT -> do
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
@@ -1650,7 +1652,7 @@ tripDetailsScreenFlow = do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
       myRidesScreenFlow
     OPEN_HELP_AND_SUPPORT -> do
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
@@ -1803,7 +1805,7 @@ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
 onBoardingSubscriptionScreenFlow :: Int -> FlowBT String Unit
 onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
   setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
-  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}})
+  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}})
   action <- UI.onBoardingSubscriptionScreen
   case action of 
     REGISTERATION_ONBOARDING state -> do
@@ -1867,7 +1869,7 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showOffer = status == Online && state.props.driverStatusSet == Offline && getDriverInfoRes.autoPayStatus == Nothing }})
       homeScreenFlow
     GO_TO_HELP_AND_SUPPORT_SCREEN -> do
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
@@ -2228,7 +2230,7 @@ clearPendingDuesFlow showLoader = do
       let (CreateOrderRes orderResp) = clearduesResp.orderResp
           (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
           (PayPayload innerpayload) = sdk_payload.payload
-          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
+          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
           sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
       setValueToLocalStore DISABLE_WIDGET "true"
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
@@ -2281,7 +2283,7 @@ nyPaymentFlow planCardConfig fromScreen = do
       let (CreateOrderRes orderResp) = listResp.orderResp
           (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
           (PayPayload innerpayload) = sdk_payload.payload
-          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
+          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
           sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
       setValueToLocalStore DISABLE_WIDGET "true"
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
@@ -2422,7 +2424,7 @@ setPaymentStatus paymentStatus (PayPayload payload) = do
                   let currency = getCurrency Constants.appConfig
                   setValueToLocalStore SHOW_PAYMENT_MODAL "false"
                   modifyScreenState $ AcknowledgementScreenType (\a -> a { data {
-                    title = Just ( case getValueToLocalStore LANGUAGE_KEY of
+                    title = Just ( case getLanguageLocale languageKey of
                           "EN_US" -> "Payment of "<> currency <> payload.amount <>" Successful!"
                           "HI_IN" -> currency <> payload.amount <> " का भुगतान सफल!"
                           "BN_IN" -> currency <> payload.amount <> " পেমেন্ট সফল!"
@@ -2475,7 +2477,7 @@ ackScreenFlow = do
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   liftFlowBT $ runEffectFn1 initiatePP unit
-  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN"}})
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN"}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
   case uiAction of
@@ -2999,7 +3001,7 @@ chooseCityFlow = do
   let cityArray = map (\(API.CityRes item) -> (toUpper item.name)) (resp)
       filteredArray = filter (\item -> (any (_ == (toUpper item.cityName)) cityArray)) appConfig.cityConfig
   void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ appConfig.defaultLanguage}]
-  setValueToLocalStore LANGUAGE_KEY $ appConfig.defaultLanguage
+  void $ pure $ setLanguageLocale appConfig.defaultLanguage
   modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {merchantOperatingCityConfig = filteredArray , config = appConfig}})
   when (globalstate.globalProps.addTimestamp) $ do
     liftFlowBT $ setEventTimestamp "chooseCity"

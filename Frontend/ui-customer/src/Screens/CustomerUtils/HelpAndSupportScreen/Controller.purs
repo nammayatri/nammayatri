@@ -56,6 +56,7 @@ import ConfigProvider
 import Language.Strings( getString)
 import Components.IssueList as IssueList
 import Data.Function.Uncurried (runFn2)
+import Locale.Utils
 
 instance showAction :: Show Action where
     show _ = ""
@@ -358,7 +359,7 @@ getApiIssueList :: Array IssueReportCustomerListItem -> Array IssueInfo
 getApiIssueList issueList = (map (\(IssueReportCustomerListItem issue) -> {
    issueReportId : issue.issueReportId,
    status : issue.status,
-   category : if (getValueToLocalStore LANGUAGE_KEY == "EN_US")
+   category : if (getLanguageLocale languageKey == "EN_US")
                 then
                   joinWith " " (map (\catName ->
                     let { before, after } = splitAt 1 catName

@@ -1338,6 +1338,10 @@ export const setKeyInSharedPrefKeysImpl = function (key) {
   };
 };
 
+export const setKeyInSharedPref = function (key, value) {
+  return JBridge.setInSharedPrefs(key, value);
+};
+
 export const setEnvInNativeSharedPrefKeysImpl = function (key) {
   return function (value) {
     return JBridge.setInSharedPrefs(key, value);

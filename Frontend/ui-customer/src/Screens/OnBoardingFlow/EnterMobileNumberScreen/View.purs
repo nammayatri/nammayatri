@@ -51,6 +51,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
 import Timers
+import Locale.Utils
 
 screen :: ST.EnterMobileNumberScreenState -> Screen Action ST.EnterMobileNumberScreenState ScreenOutput
 screen initialState =
@@ -75,7 +76,7 @@ view
   :: forall w
   . (Action -> Effect Unit) -> ST.EnterMobileNumberScreenState -> PrestoDOM (Effect Unit) w
 view push state = let
-  lang = getValueToLocalStore LANGUAGE_KEY
+  lang = getLanguageLocale languageKey
    in
    linearLayout
    [  height MATCH_PARENT

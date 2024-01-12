@@ -64,6 +64,8 @@ import Styles.Colors as Color
 import Components.ErrorModal as ErrorModal
 import MerchantConfig.Utils as MU
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import ConfigProvider as CP
+import Locale.Utils
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -537,7 +539,7 @@ chatViewConfig state = let
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
     , mapsText = (getString MAPS)
-    , languageKey = (getValueToLocalStore LANGUAGE_KEY)
+    , languageKey = (getLanguageLocale languageKey)
     , grey700 = Color.grey700
     , blue600 = Color.blue600
     , blue900 = Color.blue900
@@ -719,7 +721,7 @@ makePaymentState state =
     title : getString GREAT_JOB,
     description : getDescription state,
     description2 : getString $ COMPLETE_PAYMENT_TO_CONTINUE "COMPLETE_PAYMENT_TO_CONTINUE",
-    okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
+    okButtontext : ( case getLanguageLocale languageKey of
                           "EN_US" -> "Pay ₹" <> payableAndGST <> " now"
                           "HI_IN" -> "अभी ₹" <> payableAndGST <>" का भुगतान करें"
                           "KN_IN" -> "ಈಗ ₹"<> payableAndGST <>" ಪಾವತಿಸಿ"
@@ -744,7 +746,7 @@ makePaymentState state =
   }
 
 getDescription :: ST.HomeScreenState -> String
-getDescription state =  case getValueToLocalStore LANGUAGE_KEY of
+getDescription state =  case getLanguageLocale languageKey of
                         "EN_US" -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b>" else " Rides</b>"))
                         "HI_IN" -> "आपने " <>  show state.data.paymentState.rideCount <> "सवारी पूरी कर ली हैं"
                         "BN_IN" -> "আপনি" <> show state.data.paymentState.rideCount <> "টি রাইড সম্পূর্ণ করেছেন"

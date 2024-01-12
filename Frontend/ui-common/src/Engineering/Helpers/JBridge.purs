@@ -156,6 +156,7 @@ foreign import askNotificationPermission :: Unit -> Effect Unit
 foreign import getKeyInSharedPrefKeys :: String -> String
 foreign import getKeyInNativeSharedPrefKeys :: String -> String
 foreign import setKeyInSharedPrefKeysImpl :: String -> String -> Effect Unit
+foreign import setKeyInSharedPref :: Fn2 String String Unit
 foreign import setEnvInNativeSharedPrefKeysImpl :: String -> String -> Effect Unit
 foreign import removeKeysInSharedPrefs :: String -> Unit
 foreign import removeKeysInNativeSharedPrefs :: String -> Unit

@@ -37,9 +37,10 @@ import Control.Monad.Except (runExcept)
 import Foreign.Generic (Foreign, decode, encode)
 import JBridge as JBridge
 import ConfigProvider
+import MerchantConfig.DefaultConfig as DC
 
 getLanguageFromLocalStore :: Unit -> String
-getLanguageFromLocalStore _ = JBridge.getKeyInSharedPrefKeys "LANGUAGE_KEY"
+getLanguageFromLocalStore _ = "EN_US"
 
 getFontType :: String ->  FontType
 getFontType dummy = 

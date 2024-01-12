@@ -58,7 +58,7 @@ import Types.App (defaultGlobalState)
 import Components.PopUpModal as PopUpModal
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
-
+import Locale.Utils
 
 screen :: ST.OnBoardingSubscriptionScreenState -> Screen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
 screen initialState =
@@ -121,7 +121,7 @@ view push state =
             ][
               commonTV push (getString $ CHOOSE_YOUR_PLAN "CHOOSE_YOUR_PLAN") Color.black800 FontStyle.subHeading1 LEFT 0 NoAction false
             , let date = getDateAfterNDays (fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) -1) in 
-              commonTV push ( case getValueToLocalStore LANGUAGE_KEY of 
+              commonTV push ( case getLanguageLocale languageKey of 
                                 "EN_US" -> (getString FREE_UNTIL <> date)
                                 _ -> (date <> getString FREE_UNTIL)
                             ) Color.black700 FontStyle.body3 LEFT 0 NoAction false
@@ -306,7 +306,7 @@ workFlowView push state =
       , height $ V 146
       , imageWithFallback $ fetchImage FF_ASSET "ic_subscription_flow"
       ]
-    , let lang = getValueToLocalStore LANGUAGE_KEY
+    , let lang = getLanguageLocale languageKey
           check = lang == "KN_IN" || lang == "TA_IN"
           font2 = if check then FontStyle.body16 else FontStyle.body3 in
       linearLayout
