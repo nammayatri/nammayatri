@@ -28,6 +28,7 @@ import JBridge (setCleverTapUserProp)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams)
 import Foreign (unsafeToForeign)
+import Locale.Utils
 
 instance showAction :: Show Action where
   show _ = ""
@@ -48,11 +49,11 @@ data ScreenOutput = GoBack
 data Action = BackPressed | MenuButtonAction MenuButton.Action | PrimaryButtonActionController PrimaryButtonController.Action | AfterRender   
 eval :: Action -> SelectLanguageScreenState -> Eval Action ScreenOutput SelectLanguageScreenState
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = do
-   _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.selectedLanguage
-   _ <- pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign state.props.selectedLanguage}]
-   let _ = unsafePerformEffect $ logEventWithParams state.data.logField "ny_driver_language_selection" "Language" state.props.selectedLanguage
-   exit GoBack
+  let _ = unsafePerformEffect $ logEventWithParams state.data.logField "ny_driver_language_selection" "Language" state.props.selectedLanguage
+      _ = setLanguageLocale state.props.selectedLanguage
+  _ <- pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign state.props.selectedLanguage}]
+  exit GoBack
 eval BackPressed state = exit GoBack
-eval AfterRender state = continue state {props {selectedLanguage = if getValueToLocalStore LANGUAGE_KEY == "__failed" then "EN_US" else getValueToLocalStore LANGUAGE_KEY}}
+eval AfterRender state = continue state {props {selectedLanguage = if getLanguageLocale languageKey == "__failed" then "EN_US" else getLanguageLocale languageKey}}
 eval (MenuButtonAction (MenuButton.OnSelection btnState)) state = continue state { props { selectedLanguage = btnState.text.value }}
 eval (PrimaryButtonActionController (PrimaryButtonController.NoAction)) state = continue state

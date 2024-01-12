@@ -28,7 +28,6 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Int(fromString)
 
 data KeyStore = USER_NAME
-                | LANGUAGE_KEY
                 | FCM_TOKEN
                 | REGISTERATION_TOKEN
                 | VERSION_NAME

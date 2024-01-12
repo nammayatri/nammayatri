@@ -53,6 +53,7 @@ import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Types.ModifyScreenState (modifyScreenState)
 import Foreign.Object (empty)
+import Locale.Utils
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -440,7 +441,7 @@ mkUpdateDriverInfoReq dummy
     , canDowngradeToHatchback: Nothing
     , canDowngradeToTaxi: Nothing
     , language:
-        Just case getValueToLocalNativeStore LANGUAGE_KEY of
+        Just case getLanguageLocale languageKey of
           "EN_US" -> "ENGLISH"
           "KN_IN" -> "KANNADA"
           "HI_IN" -> "HINDI"

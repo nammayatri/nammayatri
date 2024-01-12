@@ -1158,9 +1158,10 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages FunctionCall
-      continueWithCmd state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false}} [ do
-        pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
-      ]
+      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = COLLAPSED}} 
+      -- [ do
+      --   pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
+      -- ]
   else continueWithCmd state[ do
         pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
       ]

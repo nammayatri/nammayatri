@@ -110,6 +110,7 @@ import ConfigProvider
 import Mobility.Prelude
 import Timers
 import PrestoDOM.Core
+import Locale.Utils
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -410,7 +411,7 @@ view push state =
 
 getMapHeight :: HomeScreenState -> Length
 getMapHeight state = V (if state.data.currentSearchResultType == QUOTES then (((screenHeight unit)/ 4)*3) 
-                            else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then (((screenHeight unit)/ 10)*6) 
+                            else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then ((screenHeight unit) - (getInfoCardPeekHeight state)) + 50
                             else (((screenHeight unit)/ 15)*10))
 
 rideCompletedCardView ::  forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -451,6 +452,7 @@ rideInfoView push state =
   , width MATCH_PARENT
   , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.props.bottomSheetState == STATE_EXPANDED || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
   , clickable isClickable
+  , background $ if state.props.bottomSheetState == STATE_EXPANDED then Color.blackLessTrans else Color.transparent
   , orientation VERTICAL
   ][ (if disableSuggestions state then 
         PrestoAnim.animationSet[] 
@@ -2150,7 +2152,7 @@ rideTrackingView push state =
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     ][ bottomSheetLayout
-                      ( [ height WRAP_CONTENT
+                        [ height WRAP_CONTENT
                         , width MATCH_PARENT
                         , background Color.transparent
                         , sheetState state.props.sheetState 
@@ -2159,8 +2161,8 @@ rideTrackingView push state =
                         , peakHeight $ getInfoCardPeekHeight state
                         , halfExpandedRatio $ halfExpanded
                         , orientation VERTICAL
-                        ] <> if lowVisionDisability then 
-                            [onStateChanged push $ ScrollStateChanged] else [])
+                        , onStateChanged push $ ScrollStateChanged
+                        ]
                         [ linearLayout
                             [ height WRAP_CONTENT
                             , width MATCH_PARENT
@@ -2267,7 +2269,7 @@ dummyView state =
 
 messageView :: forall w. (Action -> Effect Unit) -> MessagingView.ChatComponent -> PrestoDOM ( Effect Unit) w
 messageView push message =
-  let value = getMessageFromKey message.message $ getValueToLocalStore LANGUAGE_KEY
+  let value = getMessageFromKey message.message $ getLanguageLocale languageKey
   in
   linearLayout
   [ width $ V (screenWidth unit - 140)
@@ -2400,7 +2402,7 @@ quickRepliesView push state =
 
 quickReplyItem :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Int -> PrestoDOM ( Effect Unit) w
 quickReplyItem push state item idx = 
-  let message = getMessageFromKey item $ getValueToLocalStore LANGUAGE_KEY
+  let message = getMessageFromKey item $ getLanguageLocale languageKey
       isLastItem = (idx == (length $ getChatSuggestions state) - 1)
   in
   linearLayout

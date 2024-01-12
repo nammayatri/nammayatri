@@ -49,6 +49,8 @@ import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Components.ErrorModal as ErrorModal
 import Mobility.Prelude
+import Locale.Utils
+
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -211,7 +213,7 @@ currentLanguageView state push =
           ] <> FontStyle.subHeading1 TypoGraphy
         ]
     , textView $ 
-      [ text $ getString CHANGE_LANGUAGE_STR <> if getValueToLocalStore LANGUAGE_KEY == "EN_US" && Mb.isJust state.data.locationSelected then " (" <> getChangeLanguageText state.data.locationSelected state.data.config <> ")" else ""
+      [ text $ getString CHANGE_LANGUAGE_STR <> if getLanguageLocale languageKey == "EN_US" && Mb.isJust state.data.locationSelected then " (" <> getChangeLanguageText state.data.locationSelected state.data.config <> ")" else ""
       , gravity CENTER
       , color Color.blue800
       , onClick push $ const $ ChangeStage SELECT_LANG

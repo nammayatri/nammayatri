@@ -50,6 +50,7 @@ import JBridge as JB
 import Data.Int as Int
 import Animation as Anim
 import ConfigProvider
+import Locale.Utils
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -747,7 +748,7 @@ getTitle :: Config -> String
 getTitle config = case config.startRideActive,  config.notifiedCustomer of
   false, _ -> (getString YOU_ARE_ON_A_RIDE)
   true, false  ->  (config.customerName <> " " <> (getString IS_WAITING_FOR_YOU) <> "...")
-  true, true -> case (getValueToLocalStore LANGUAGE_KEY) of
+  true, true -> case (getLanguageLocale languageKey) of
       "TA_IN" -> config.customerName <> (getString WAITING_FOR_CUSTOMER)
       "HI_IN" -> "आप" <> config.customerName <> "की प्रतीक्षा कर रहे हैं"
       _       -> (getString WAITING_FOR_CUSTOMER) <> config.customerName

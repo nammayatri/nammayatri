@@ -25,7 +25,6 @@ import Types.App (FlowBT)
 
 data KeyStore
   = USER_NAME_KEY
-  | LANGUAGE_KEY
   | FCM_TOKEN
   | REGISTERATION_TOKEN
   | VERSION_NAME

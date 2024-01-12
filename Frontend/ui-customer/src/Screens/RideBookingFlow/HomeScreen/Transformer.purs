@@ -55,6 +55,7 @@ import Engineering.Helpers.LogEvent
 import Control.Monad.Except.Trans (lift)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import ConfigProvider
+import Locale.Utils
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -239,7 +240,7 @@ getPlaceNameResp address placeId lat lon item = do
         pure $ makePlaceNameResp latitude longitude
       else do
         void $ liftFlowBT $ logEvent logField_ "ny_geocode_address_ll_fallback"
-        Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getValueToLocalStore LANGUAGE_KEY)
+        Remote.placeNameBT (Remote.makePlaceNameReqByPlaceId placeID $ getMapsLanguageFormat $ getLanguageLocale languageKey)
     
     checkLatLon :: FlowBT String GetPlaceNameResp
     checkLatLon = 

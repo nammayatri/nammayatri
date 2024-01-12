@@ -28,10 +28,11 @@ import Resources.Localizable.HI (getHI)
 import Resources.Localizable.KN (getKN)
 import Resources.Localizable.ML (getML)
 import Resources.Localizable.FR (getFR)
+import Locale.Utils
 
 getString :: STR -> String
 getString key = 
-  let language = getKeyInSharedPrefKeysConfig "LANGUAGE_KEY"
+  let language = getLanguageLocale "languageKey"
   in getStringFromConfigOrLocal language key
 
 getStringFromConfigOrLocal :: String -> STR -> String
