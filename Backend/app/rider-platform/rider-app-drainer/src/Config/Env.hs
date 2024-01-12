@@ -45,7 +45,7 @@ getMaxRetries = fromMaybe 3 . (>>= readMaybe) <$> SE.lookupEnv maxDbFailureRetri
 getDrainerExecutionDelay :: IO Int
 getDrainerExecutionDelay = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv drainerExecutionDelayEnvKey
 
-getThreadPerPodCount :: IO Int
+getThreadPerPodCount :: IO Integer
 getThreadPerPodCount = fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv threadPerPodCount
 
 isPushToKafka :: IO Bool

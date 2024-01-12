@@ -13,7 +13,7 @@ ecRedisDBStream :: [Char]
 ecRedisDBStream = "rider-db-sync-stream"
 
 ecRedisDBStreamCounter :: [Char]
-ecRedisDBStreamCounter = "rider-db-sync-stream-counter"
+ecRedisDBStreamCounter = "rider-db-sync-stream-counter-"
 
 ecRedisErrorStream :: [Char]
 ecRedisErrorStream = "rider-db-sync-error-stream"
