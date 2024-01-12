@@ -15,12 +15,15 @@
 module API.ProviderPlatform.DynamicOfferDriver
   ( API,
     APIV2,
+    CacAPI,
     handler,
     handlerV2,
+    handlerV3,
   )
 where
 
 import qualified API.ProviderPlatform.DynamicOfferDriver.Booking as Booking
+import qualified API.ProviderPlatform.DynamicOfferDriver.CacAuth as CacAuth
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver as Driver
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Coin as DriverCoin
 import qualified API.ProviderPlatform.DynamicOfferDriver.Driver.Registration as DriverRegistration
@@ -51,6 +54,10 @@ type APIV2 =
     :> Capture "merchantId" (ShortId DM.Merchant)
     :> Capture "city" City.City
     :> API'
+
+type CacAPI =
+  "driver-offer"
+    :> CacAuth.API
 
 type API' =
   Driver.API
@@ -109,3 +116,6 @@ handlerV2 merchantId city =
     :<|> Revenue.handler merchantId city
     :<|> Overlay.handler merchantId city
     :<|> Maps.handler merchantId city
+
+handlerV3 :: FlowServer CacAPI
+handlerV3 = CacAuth.handler

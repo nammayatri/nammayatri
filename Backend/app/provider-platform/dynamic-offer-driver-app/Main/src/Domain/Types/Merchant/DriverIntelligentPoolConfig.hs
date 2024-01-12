@@ -14,18 +14,19 @@
 
 module Domain.Types.Merchant.DriverIntelligentPoolConfig where
 
-import Data.Time (UTCTime)
+import Data.Aeson
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DTMM
 import EulerHS.Prelude hiding (id)
+import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 
 data DriverIntelligentPoolConfigD u = DriverIntelligentPoolConfig
   { merchantId :: Id Merchant,
-    merchantOperatingCityId :: Id MerchantOperatingCity,
+    merchantOperatingCityId :: Id DTMM.MerchantOperatingCity,
     actualPickupDistanceWeightage :: Int,
     availabilityTimeWeightage :: Int,
     availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
@@ -52,9 +53,14 @@ type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigD 'Safe
 
 instance FromJSON (DriverIntelligentPoolConfigD 'Unsafe)
 
+instance FromJSON (DriverIntelligentPoolConfigD 'Safe)
+
 instance ToJSON (DriverIntelligentPoolConfigD 'Unsafe)
 
+instance ToJSON (DriverIntelligentPoolConfigD 'Safe)
+
 data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance | RideFrequency
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data IntelligentScores = IntelligentScores
   { acceptanceRatio :: Maybe Double,
@@ -65,4 +71,4 @@ data IntelligentScores = IntelligentScores
     rideFrequency :: Maybe Double,
     rideRequestPopupDelayDuration :: Seconds
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, Read)

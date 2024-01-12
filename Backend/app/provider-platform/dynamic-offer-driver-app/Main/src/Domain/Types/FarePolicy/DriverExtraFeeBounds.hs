@@ -14,6 +14,7 @@
 
 module Domain.Types.FarePolicy.DriverExtraFeeBounds where
 
+import Data.Aeson as DA
 import qualified Data.List.NonEmpty as NE
 import Data.Ord
 import Kernel.Prelude
@@ -24,7 +25,7 @@ data DriverExtraFeeBounds = DriverExtraFeeBounds
     minFee :: Money,
     maxFee :: Money
   }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema, Read)
 
 findDriverExtraFeeBoundsByDistance :: Meters -> NonEmpty DriverExtraFeeBounds -> DriverExtraFeeBounds
 findDriverExtraFeeBoundsByDistance dist driverExtraFeeBoundsList = do

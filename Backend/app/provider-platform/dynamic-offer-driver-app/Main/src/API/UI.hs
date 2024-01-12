@@ -18,6 +18,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
@@ -91,6 +92,7 @@ type API =
            :<|> LmsModule.API
            :<|> SpecialLocation.API
            :<|> Reels.API
+           :<|> Cac.API
        )
 
 handler :: FlowServer API
@@ -128,3 +130,4 @@ handler =
     :<|> LmsModule.handler
     :<|> SpecialLocation.handler
     :<|> Reels.handler
+    :<|> Cac.handler

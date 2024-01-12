@@ -115,14 +115,14 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe LatLong -> m (),
-    getFarePolicyByEstOrQuoteId :: Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVeh.Variant -> Maybe DFareProduct.Area -> Text -> m DFP.FullFarePolicy,
+    getFarePolicyByEstOrQuoteId :: Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVeh.Variant -> Maybe DFareProduct.Area -> Text -> Maybe Text -> Maybe Text -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
     finalDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Bool -> m (),
     getInterpolatedPoints :: Id DP.Person -> m [LatLong],
     clearInterpolatedPoints :: Id DP.Person -> m (),
-    findConfig :: m (Maybe DTConf.TransporterConfig),
+    findConfig :: Maybe Text -> Maybe Text -> m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
     getDistanceBetweenPoints :: LatLong -> LatLong -> [LatLong] -> Meters -> m Meters,
     findPaymentMethodByIdAndMerchantId :: Id DMPM.MerchantPaymentMethod -> Id DMOC.MerchantOperatingCity -> m (Maybe DMPM.MerchantPaymentMethod),
@@ -273,7 +273,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
       toLocation <- booking.toLocation & fromMaybeM (InvalidRequest "Trip end location is required")
       pure $ (getCoordinates toLocation, Nothing)
 
-  goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId
+  goHomeConfig <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId")
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
 
   homeLocationReached' <-
@@ -303,7 +303,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
   whenWithLocationUpdatesLock driverId $ do
     now <- getCurrentTime
-    thresholdConfig <- findConfig >>= fromMaybeM (InternalError "TransportConfigNotFound")
+    thresholdConfig <- findConfig (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (InternalError "TransportConfigNotFound")
     let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix later with rentals
     tripEndPoints <- do
       res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId
@@ -390,7 +390,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
   tripEndTime <- getCurrentTime
-  farePolicy <- getFarePolicyByEstOrQuoteId booking.merchantOperatingCityId booking.tripCategory booking.vehicleVariant booking.area booking.quoteId
+  farePolicy <- getFarePolicyByEstOrQuoteId booking.merchantOperatingCityId booking.tripCategory booking.vehicleVariant booking.area booking.quoteId (Just booking.transactionId) (Just "transactionId")
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams

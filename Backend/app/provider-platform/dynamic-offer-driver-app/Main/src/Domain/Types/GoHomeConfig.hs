@@ -14,10 +14,13 @@
 
 module Domain.Types.GoHomeConfig where
 
+import Data.Aeson
+import Data.Text as Text
 import Data.Time (UTCTime)
 import Domain.Types.Merchant
 import Domain.Types.Merchant.MerchantOperatingCity
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Prelude as KP
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
 
@@ -46,3 +49,8 @@ data GoHomeConfig = GoHomeConfig
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+readWithInfo :: (Read a, Show a) => String -> a
+readWithInfo s = case KP.readMaybe s of
+  Just val -> val
+  Nothing -> error . Text.pack $ "Failed to parse: " ++ s

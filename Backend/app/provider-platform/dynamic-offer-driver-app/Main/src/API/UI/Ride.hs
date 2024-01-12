@@ -25,6 +25,8 @@ module API.UI.Ride
   )
 where
 
+import Data.Aeson as DA
+import Data.Text as Text
 import Data.Time (Day)
 import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Action.UI.Ride.CancelRide as RideCancel
@@ -153,9 +155,8 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) DRide.OTPRideR
   driverInfo <- QDI.findById (cast requestor.id) >>= fromMaybeM (PersonNotFound requestor.id.getId)
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   let rideOtp = specialZoneOtpCode
-  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId (Just driverInfo.driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   booking <- runInReplica $ QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now transporterConfig.specialZoneBookingOtpExpiry >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
-  -- booking <- QBooking.findBookingBySpecialZoneOTP requestor.merchantId rideOtp now >>= fromMaybeM (BookingNotFoundForSpecialZoneOtp rideOtp)
   ride <- DRide.otpRideCreate requestor rideOtp booking
   let driverReq = RideStart.DriverStartRideReq {rideOtp, requestor, ..}
   shandle <- RideStart.buildStartRideHandle merchantId merchantOpCityId

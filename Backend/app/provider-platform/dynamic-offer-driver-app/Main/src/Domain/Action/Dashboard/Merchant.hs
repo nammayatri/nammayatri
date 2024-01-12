@@ -185,7 +185,7 @@ merchantCommonConfig :: ShortId DM.Merchant -> Context.City -> Flow Common.Merch
 merchantCommonConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pure $ mkMerchantCommonConfigRes config
 
 mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
@@ -197,7 +197,7 @@ merchantCommonConfigUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- CQTC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{pickupLocThreshold = maybe config.pickupLocThreshold (.value) req.pickupLocThreshold,
                dropLocThreshold = maybe config.dropLocThreshold (.value) req.dropLocThreshold,
@@ -396,7 +396,7 @@ driverIntelligentPoolConfig :: ShortId DM.Merchant -> Context.City -> Flow Commo
 driverIntelligentPoolConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
+  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   pure $ mkDriverIntelligentPoolConfigRes config
 
 mkDriverIntelligentPoolConfigRes :: DDIPC.DriverIntelligentPoolConfig -> Common.DriverIntelligentPoolConfigRes
@@ -412,7 +412,7 @@ driverIntelligentPoolConfigUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateDriverIntelligentPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
+  config <- CQDIPC.findByMerchantOpCityId merchantOpCityId Nothing Nothing >>= fromMaybeM (DriverIntelligentPoolConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{availabilityTimeWeightage = maybe config.availabilityTimeWeightage (.value) req.availabilityTimeWeightage,
                availabilityTimeWindowOption = fromMaybe config.availabilityTimeWindowOption req.availabilityTimeWindowOption,
@@ -758,7 +758,7 @@ updateFPPerExtraKmRate _ _ farePolicyId startDistance req = do
 
 updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
 updateFarePolicy _ _ farePolicyId req = do
-  farePolicy <- CQFP.findById farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  farePolicy <- CQFP.findById Nothing Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
   updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
   CQFP.update' updatedFarePolicy
   CQFP.clearCacheById farePolicyId
@@ -806,7 +806,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newOperatingCity <- buildMerchantOperatingCity merchant.id baseOperatingCity
 
   -- intelligent pool config
-  intelligentPoolConfig <- CQDIPC.findByMerchantOpCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
+  intelligentPoolConfig <- CQDIPC.findByMerchantOpCityId baseOperatingCityId Nothing Nothing >>= fromMaybeM (InvalidRequest "Intelligent Pool Config not found")
   newIntelligentPoolConfig <- buildIntelligentPoolConfig newOperatingCity.id intelligentPoolConfig
 
   -- driver pool config
@@ -818,7 +818,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newFareProducts <- mapM (buildFareProduct newOperatingCity.id) fareProducts
 
   -- go home config
-  goHomeConfig <- CQGHC.findByMerchantOpCityId baseOperatingCityId
+  goHomeConfig <- CQGHC.findByMerchantOpCityId baseOperatingCityId Nothing Nothing
   newGoHomeConfig <- buildGoHomeConfig newOperatingCity.id goHomeConfig
 
   -- leader board configs
@@ -850,7 +850,7 @@ createMerchantOperatingCity merchantShortId city req = do
   newOnboardingDocumentConfigs <- mapM (buildNewOnboardingDocumentConfig newOperatingCity.id) onboardingDocumentConfigs
 
   -- transporter config
-  transporterConfig <- CQTC.findByMerchantOpCityId baseOperatingCityId >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+  transporterConfig <- CQTC.findByMerchantOpCityId baseOperatingCityId Nothing Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
   newTransporterConfig <- buildTransporterConfig newOperatingCity.id transporterConfig
 
   -- geometry

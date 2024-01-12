@@ -185,6 +185,20 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
       ]
 
+let cacConfig =
+        { host = "http://localhost:8080"
+        , interval = 10
+        , tenants = [ "dev", "test" ]
+        }
+      : { host : Text, interval : Natural, tenants : List Text }
+
+let superPositionConfig =
+        { host = "http://localhost:8080"
+        , interval = 10
+        , tenants = [ "dev", "test" ]
+        }
+      : { host : Text, interval : Natural, tenants : List Text }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -252,5 +266,7 @@ in  { esqDBCfg
     , isBecknSpecVersion2 = True
     , _version = "2.0.0"
     , hotSpotExpiry = +604800
+    , cacConfig
+    , superPositionConfig
     , collectRouteData = True
     }

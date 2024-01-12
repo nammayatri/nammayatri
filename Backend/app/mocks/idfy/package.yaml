@@ -1,3 +1,8 @@
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
 name: mock-idfy
 version: 0.1.0.0
 github: "nammayatri/nammayatri"

@@ -18,6 +18,7 @@ module Storage.Beam.FarePolicy.FarePolicyProgressiveDetails where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import qualified Database.Beam as B
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -44,3 +45,5 @@ type FarePolicyProgressiveDetails = FarePolicyProgressiveDetailsT Identity
 $(enableKVPG ''FarePolicyProgressiveDetailsT ['farePolicyId] [])
 
 $(mkTableInstances ''FarePolicyProgressiveDetailsT "fare_policy_progressive_details")
+
+$(mkCacParseInstance ''FarePolicyProgressiveDetailsT)

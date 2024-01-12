@@ -362,7 +362,7 @@ arrivedAtStop rideId pt = do
       stopLoc <- runInReplica $ QLoc.findById nextStopId >>= fromMaybeM (InvalidRequest $ "Stop location doesn't exist for ride " <> ride.id.getId)
       let curPt = LatLong stopLoc.lat stopLoc.lon
           distance = distanceBetweenInMeters pt curPt
-      transporterConfig <- QMTC.findByMerchantOpCityId booking.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      transporterConfig <- QMTC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       unless (distance < fromMaybe 500 transporterConfig.arrivedStopThreshold) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
       QBooking.updateStopArrival booking.id
       BP.sendStopArrivalUpdateToBAP booking ride driver vehicle
@@ -377,7 +377,9 @@ uploadOdometerReading ::
   Flow UploadOdometerResp
 uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
   contentType <- validateContentType
-  config <- QMTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  config <- QMTC.findByMerchantOpCityId merchantOpCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fileSize <- L.runIO $ withFile file ReadMode hFileSize
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)

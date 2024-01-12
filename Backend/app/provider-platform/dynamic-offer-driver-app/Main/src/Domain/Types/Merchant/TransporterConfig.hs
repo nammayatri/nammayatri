@@ -14,14 +14,16 @@
 
 module Domain.Types.Merchant.TransporterConfig where
 
-import Data.Time (NominalDiffTime, UTCTime)
+import Data.Aeson as A
+import Data.Text as Text
 import Domain.Types.Common
 import Domain.Types.Location (DummyLocationInfo)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Notification.FCM.Types (FCMConfig)
+import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Types (Language)
+import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id
 
@@ -29,7 +31,7 @@ data AadhaarImageResizeConfig = AadhaarImageResizeConfig
   { height :: Int,
     width :: Int
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, Read)
 
 data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm -- FIXME make datatype to [(Variant, Kilometers)]
   { sedan :: Kilometers,
@@ -39,7 +41,7 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm -- FIXME make datatype to [
     taxi :: Kilometers,
     taxiplus :: Kilometers
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, Read)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit
   { sms :: Int,
@@ -47,7 +49,7 @@ data DashboardMediaSendingLimit = DashboardMediaSendingLimit
     overlay :: Int,
     alert :: Int
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, Read)
 
 -- ProviderConfig?
 data TransporterConfigD u = TransporterConfig
@@ -175,5 +177,9 @@ data TransporterConfigD u = TransporterConfig
 type TransporterConfig = TransporterConfigD 'Safe
 
 instance FromJSON (TransporterConfigD 'Unsafe)
+
+instance FromJSON (TransporterConfigD 'Safe)
+
+instance ToJSON (TransporterConfigD 'Safe)
 
 instance ToJSON (TransporterConfigD 'Unsafe)

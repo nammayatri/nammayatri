@@ -58,6 +58,20 @@ import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import System.Environment (lookupEnv)
 import Tools.Metrics
 
+data CacConfig = CacConfig
+  { host :: String,
+    interval :: Natural,
+    tenants :: [String]
+  }
+  deriving (Generic, FromDhall)
+
+data SuperPositionConfig = SuperPositionConfig
+  { host :: String,
+    interval :: Natural,
+    tenants :: [String]
+  }
+  deriving (Generic, FromDhall)
+
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
@@ -128,7 +142,9 @@ data AppCfg = AppCfg
     incomingAPIResponseTimeout :: Int,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
-    _version :: Text
+    _version :: Text,
+    cacConfig :: CacConfig,
+    superPositionConfig :: SuperPositionConfig
   }
   deriving (Generic, FromDhall)
 
@@ -208,6 +224,8 @@ data AppEnv = AppEnv
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
     _version :: Text,
+    cacConfig :: CacConfig,
+    superPositionConfig :: SuperPositionConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools

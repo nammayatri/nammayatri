@@ -162,7 +162,7 @@ handler ValidatedDSearchReq {..} sReq = do
 
         return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration)
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration) -- estimate distance and durations by user
-  allFarePoliciesProduct <- (pure . combineFarePoliciesProducts) =<< ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation) `mapM` possibleTripOption.tripCategories)
+  allFarePoliciesProduct <- combineFarePoliciesProducts <$> ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation (Just sReq.transactionId) (Just "transactionId")) `mapM` possibleTripOption.tripCategories)
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) allFarePoliciesProduct.farePolicies
 
   (driverPool, selectedFarePolicies) <-
@@ -489,7 +489,7 @@ validateRequest merchantId sReq = do
       Nothing -> pure False
   let bapCity = nearestOperatingCity.city
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just bapCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just sReq.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity
   return ValidatedDSearchReq {..}

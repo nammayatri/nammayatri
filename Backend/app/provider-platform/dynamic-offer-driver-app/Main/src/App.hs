@@ -16,6 +16,8 @@ module App where
 
 import AWS.S3
 import qualified App.Server as App
+import qualified Client.Main as CM
+import qualified Control.Concurrent as CC
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -40,7 +42,7 @@ import Kernel.Types.Error
 import Kernel.Types.Flow
 import Kernel.Utils.App
 import Kernel.Utils.Common
-import Kernel.Utils.Dhall
+import Kernel.Utils.Dhall hiding (maybe)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Network.HTTP.Client as Http
@@ -55,8 +57,25 @@ import Network.Wai.Handler.Warp
   )
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
-import System.Environment (lookupEnv)
+import System.Environment (lookupEnv, setEnv)
 import "utils" Utils.Common.Events as UE
+
+createCAC :: AppCfg -> IO ()
+createCAC appCfg = do
+  cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  case cacStatus of
+    0 -> CM.startCACPolling appCfg.cacConfig.tenants
+    _ -> do
+      -- logError "CAC client failed to start"
+      threadDelay 1000000
+      createCAC appCfg
+  superPositionStatus <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  case superPositionStatus of
+    0 -> CM.runSuperPositionPolling appCfg.cacConfig.tenants
+    _ -> do
+      -- logError "CAC super position client failed to start"
+      threadDelay 1000000
+      createCAC appCfg
 
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
@@ -99,6 +118,13 @@ runDynamicOfferDriverApp' appCfg = do
           findById "kv_configs" >>= pure . decodeFromText' @Tables
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
+        if (length kvConfigs.useCAC > 0) || kvConfigs.useCACForFrontend
+          then do
+            liftIO $ setEnv "CAC_HOST" appCfg.cacConfig.host
+            liftIO $ setEnv "CAC_INTERVAL" (show appCfg.cacConfig.interval)
+            _ <- liftIO $ CC.forkIO $ createCAC appCfg
+            logInfo "Starting App using configs from CAC."
+          else logInfo "Starting App using configs from DB."
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
