@@ -132,7 +132,7 @@ buildRide driverId booking ghrId otp enableFrequentLocationUpdates = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
   now <- getCurrentTime
-  transporterConfig <- TC.findByMerchantOpCityId booking.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- TC.findByMerchantOpCityId booking.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   trackingUrl <- buildTrackingUrl guid
   return
     DRide.Ride

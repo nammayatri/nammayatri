@@ -6,6 +6,7 @@
 module Storage.Beam.DriverPoolConfig where
 
 import qualified Database.Beam as B
+import Domain.Types.UtilsTH
 import qualified Domain.Types.Vehicle.Variant
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -55,3 +56,4 @@ type DriverPoolConfig = DriverPoolConfigT Identity
 $(enableKVPG ''DriverPoolConfigT ['id] [])
 
 $(mkTableInstances ''DriverPoolConfigT "driver_pool_config")
+$(mkCacParseInstance ''DriverPoolConfigT)

@@ -51,7 +51,7 @@ runService configModifier = do
       )
       appCfg.kvConfigUpdateFrequency
     L.setOption KafkaConn appEnv.kafkaProducerTools
-    L.setOption Tables (KUC.Tables [] [])
+    L.setOption Tables (KUC.Tables [] [] [] False)
     migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
     let flowRt' = flowRt {R._httpClientManagers = HMS.singleton "default" (R._defaultHttpClientManager flowRt)}

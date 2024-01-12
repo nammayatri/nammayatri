@@ -255,7 +255,7 @@ processPayment ::
   [INV.Invoice] ->
   m ()
 processPayment _ driver orderId sendNotification (serviceName, subsConfig) invoices = do
-  transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let invoice = listToMaybe invoices
   let driverFeeIds = (.driverFeeId) <$> invoices
@@ -389,7 +389,7 @@ processNotification ::
 processNotification merchantOpCityId notification notificationStatus respCode respMessage driverFee driver fromWebhook = do
   let driverFeeId = driverFee.id
   unless (notification.status == Juspay.SUCCESS) $ do
-    transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+    transporterConfig <- SCT.findByMerchantOpCityId driver.merchantOperatingCityId (Just driver.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
     case notificationStatus of
       Juspay.NOTIFICATION_FAILURE -> do
         --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----

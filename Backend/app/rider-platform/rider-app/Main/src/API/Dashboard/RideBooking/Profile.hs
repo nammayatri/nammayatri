@@ -60,7 +60,7 @@ handler merchantId =
 callGetPersonDetails :: ShortId DM.Merchant -> Id DP.Person -> FlowHandler DProfile.ProfileRes
 callGetPersonDetails merchantId personId = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
-  AP.getPersonDetails (personId, m.id)
+  AP.getPersonDetails (personId, m.id) Nothing --CACTODO: this is a temporary implementation need to discuss and implement toss part if required or change response type all together for this api to stop sending cfg version forever.
 
 callUpdatePerson :: ShortId DM.Merchant -> Id DP.Person -> DProfile.UpdateProfileReq -> FlowHandler APISuccess
 callUpdatePerson merchantId personId req = do

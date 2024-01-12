@@ -139,9 +139,9 @@ castCreateTicket merchantId merchantOpCityId = TT.createTicket (cast merchantId)
 castUpdateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
-buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Common.MerchantConfig
-buildMerchantConfig merchantOpCityId = do
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id SP.Person -> m Common.MerchantConfig
+buildMerchantConfig merchantOpCityId personId = do
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just personId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   return
     Common.MerchantConfig
       { mediaFileSizeUpperLimit = transporterConfig.mediaFileSizeUpperLimit,
@@ -156,10 +156,10 @@ fetchMedia :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> T
 fetchMedia (driverId, merchantId, _) filePath = withFlowHandlerAPI $ Common.fetchMedia (cast driverId, cast merchantId) filePath
 
 createIssueReport :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
-createIssueReport (driverId, merchantId, merchantOpCityId) mbLanguage req = withFlowHandlerAPI $ Common.createIssueReport (cast driverId, cast merchantId, cast merchantOpCityId) mbLanguage req (buildMerchantConfig merchantOpCityId) driverIssueHandle Common.DRIVER
+createIssueReport (driverId, merchantId, merchantOpCityId) mbLanguage req = withFlowHandlerAPI $ Common.createIssueReport (cast driverId, cast merchantId, cast merchantOpCityId) mbLanguage req (buildMerchantConfig merchantOpCityId driverId) driverIssueHandle Common.DRIVER
 
 issueMediaUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
-issueMediaUpload (driverId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast driverId, cast merchantId) req (buildMerchantConfig merchantOpCityId)
+issueMediaUpload (driverId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast driverId, cast merchantId) req (buildMerchantConfig merchantOpCityId driverId)
 
 issueInfo :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueReport -> Maybe Language -> FlowHandler Common.IssueInfoRes
 issueInfo (driverId, merchantId, _) issueReportId language = withFlowHandlerAPI $ Common.issueInfo issueReportId (cast driverId, cast merchantId) language driverIssueHandle Common.DRIVER

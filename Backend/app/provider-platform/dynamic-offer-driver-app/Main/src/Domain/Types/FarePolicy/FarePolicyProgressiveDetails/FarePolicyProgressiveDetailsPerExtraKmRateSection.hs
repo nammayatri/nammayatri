@@ -14,6 +14,7 @@
 
 module Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection where
 
+import Data.Aeson as DA
 import Domain.Types.Common
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -29,6 +30,10 @@ type FPProgressiveDetailsPerExtraKmRateSection = FPProgressiveDetailsPerExtraKmR
 instance FromJSON (FPProgressiveDetailsPerExtraKmRateSectionD 'Unsafe)
 
 instance ToJSON (FPProgressiveDetailsPerExtraKmRateSectionD 'Unsafe)
+
+instance FromJSON (FPProgressiveDetailsPerExtraKmRateSectionD 'Safe)
+
+instance ToJSON (FPProgressiveDetailsPerExtraKmRateSectionD 'Safe)
 
 -----------------------------------------------------------------------------------------------------------------------------------------
 ------------------------------------------------APIEntity--------------------------------------------------------------------------------

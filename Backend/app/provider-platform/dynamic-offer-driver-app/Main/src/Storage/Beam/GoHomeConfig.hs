@@ -17,6 +17,7 @@
 module Storage.Beam.GoHomeConfig where
 
 import qualified Database.Beam as B
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common (Meters)
 import Tools.Beam.UtilsTH (enableKVPG, mkTableInstances)
@@ -54,3 +55,4 @@ type GoHomeConfig = GoHomeConfigT Identity
 $(enableKVPG ''GoHomeConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''GoHomeConfigT "go_home_config")
+$(mkCacParseInstance ''GoHomeConfigT)

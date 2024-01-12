@@ -277,7 +277,7 @@ planList (driverId, _, merchantOpCityId) serviceName _mbLimit _mbOffset = do
   driverInfo <- DI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverPlan <- B.runInReplica $ QDPlan.findByDriverIdWithServiceName driverId serviceName
   plans <- QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mDriverPlan) serviceName (Just False)
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getCurrentTime
   let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
   plansList <-
@@ -492,7 +492,7 @@ createMandateInvoiceAndOrder ::
   Maybe SPayment.DeepLinkData ->
   Flow (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
 createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData = do
-  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let allowAtMerchantLevel = isJust transporterConfig.driverFeeCalculationTime
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
@@ -619,7 +619,7 @@ convertPlanToPlanEntity :: Id SP.Person -> UTCTime -> Bool -> Plan -> Flow PlanE
 convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity plan@Plan {..} = do
   dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId serviceName
   pendingRegistrationDfee <- B.runInReplica $ QDF.findAllPendingRegistrationDriverFeeByDriverIdForServiceName driverId serviceName
-  transporterConfig_ <- QTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig_ <- QTC.findByMerchantOpCityId merchantOpCityId (Just driverId.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   offers <- SPayment.offerListCache merchantId merchantOpCityId plan.serviceName =<< makeOfferReq applicationDate plan.paymentMode transporterConfig_
   let allPendingAndOverDueDriverfee = dueDriverFees <> pendingRegistrationDfee
   invoicesForDfee <- QINV.findByDriverFeeIds (map (.id) allPendingAndOverDueDriverfee)

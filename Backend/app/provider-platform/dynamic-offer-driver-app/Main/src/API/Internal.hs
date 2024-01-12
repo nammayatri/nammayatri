@@ -6,6 +6,7 @@ where
 
 import qualified API.Internal.Auth as Auth
 import qualified API.Internal.BulkLocUpdate as BulkLocUpdate
+import qualified API.Internal.Cac as Cac
 import qualified API.Internal.CustomerCancellationDues as CancellationDues
 import qualified API.Internal.DriverInactiveFCM as DriverInactiveFCM
 import qualified API.Internal.DriverReferee as DriverReferee
@@ -22,6 +23,7 @@ type API =
            :<|> BulkLocUpdate.API
            :<|> CancellationDues.API
            :<|> DriverInactiveFCM.API
+           :<|> Cac.API
        )
 
 handler :: FlowServer API
@@ -32,3 +34,4 @@ handler =
     :<|> BulkLocUpdate.handler
     :<|> CancellationDues.handler
     :<|> DriverInactiveFCM.handler
+    :<|> Cac.handler

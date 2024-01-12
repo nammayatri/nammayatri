@@ -33,19 +33,26 @@ module Domain.Action.UI.Profile
 where
 
 import Control.Applicative ((<|>))
+import Data.Aeson as DA
+import qualified Data.Aeson.KeyMap as DAKM
+import Data.Digest.Pure.MD5 as MD5
 import qualified Data.HashMap.Strict as HM
 import Data.List (nubBy)
+import qualified Data.Text as T
 import Domain.Types.Booking.Type as DBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.Person.PersonDisability as PersonDisability
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
+import qualified Kernel.Beam.Types as KBT
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
+import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -57,6 +64,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import qualified Kernel.Utils.Text as TU
 import Kernel.Utils.Validation
+import SharedLogic.Cac
 import SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
@@ -70,7 +78,30 @@ import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPersonD
 import qualified Storage.Queries.Person.PersonDisability as PDisability
 import Tools.Error
 
-type ProfileRes = Person.PersonAPIEntity
+data ProfileRes = ProfileRes
+  { id :: Id Person.Person,
+    firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    email :: Maybe Text,
+    maskedMobileNumber :: Maybe Text,
+    maskedDeviceToken :: Maybe Text,
+    hasTakenRide :: Bool,
+    hasTakenValidRide :: Bool,
+    referralCode :: Maybe Text,
+    whatsappNotificationEnrollStatus :: Maybe Whatsapp.OptApiMethods,
+    language :: Maybe Maps.Language,
+    hasDisability :: Maybe Bool,
+    disability :: Maybe Text,
+    gender :: Person.Gender,
+    hasCompletedSafetySetup :: Bool,
+    hasCompletedMockSafetyDrill :: Maybe Bool,
+    bundleVersion :: Maybe Version,
+    clientVersion :: Maybe Version,
+    followsRide :: Bool,
+    frontendConfigHash :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data UpdateProfileReq = UpdateProfileReq
   { firstName :: Maybe Text,
@@ -132,14 +163,27 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPersonDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> m ProfileRes
-getPersonDetails (personId, _) = do
+getPersonDetails :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> m ProfileRes
+getPersonDetails (personId, _) mbToss = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
     _ -> return Nothing
   decPerson <- decrypt person
-  return $ Person.makePersonAPIEntity decPerson tag
+  systemConfigs <- L.getOption KBT.Tables
+  let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
+  frntndfgs <- if useCACConfig then getFrontendConfigs person mbToss else return $ Just DAKM.empty
+  let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
+  return $ makeProfileRes decPerson tag mbMd5Digest
+  where
+    makeProfileRes Person.Person {..} disability md5DigestHash =
+      ProfileRes
+        { maskedMobileNumber = maskText <$> mobileNumber,
+          maskedDeviceToken = maskText <$> deviceToken,
+          hasTakenRide = hasTakenValidRide,
+          frontendConfigHash = md5DigestHash,
+          ..
+        }
 
 updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id Person.Person -> UpdateProfileReq -> m APISuccess.APISuccess
 updatePerson personId req = do

@@ -65,6 +65,7 @@ library
       API.Dashboard.Tickets
       API.FRFS
       API.Internal
+      API.Internal.Cac
       API.Internal.Rating
       API.MetroBeckn
       API.MetroBeckn.OnSearch
@@ -160,10 +161,12 @@ library
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.Route
+      Domain.Action.Internal.Cac
       Domain.Action.Internal.Rating
       Domain.Action.UI.AadhaarVerification
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.Booking
+      Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
       Domain.Action.UI.Cancel
@@ -201,6 +204,7 @@ library
       Domain.Types.Booking.BookingLocation
       Domain.Types.Booking.Type
       Domain.Types.BookingCancellationReason
+      Domain.Types.CacType
       Domain.Types.CallbackRequest
       Domain.Types.CallStatus
       Domain.Types.CancellationReason
@@ -242,10 +246,12 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
+      Domain.Types.UtilsTH
       Domain.Types.VehicleVariant
       Domain.Types.WhiteListOrg
       Environment
       Lib.Mesh
+      SharedLogic.Cac
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
       SharedLogic.CallFRFSBPP
@@ -410,6 +416,7 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.UI.Cac
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Sos
@@ -564,9 +571,11 @@ library
     , extra
     , filepath
     , geohash ==1.0.1
+    , haskell-cac
     , http-media
     , http-types
     , lens
+    , lens-aeson
     , memory
     , mobility-core
     , openapi3
@@ -575,6 +584,7 @@ library
     , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
+    , pureMD5
     , random
     , raw-strings-qq
     , record-dot-preprocessor
@@ -681,6 +691,7 @@ executable rider-app-exe
     , http-media
     , http-types
     , lens
+    , lens-aeson
     , memory
     , mobility-core
     , openapi3
@@ -688,6 +699,7 @@ executable rider-app-exe
     , postgresql-simple
     , prometheus-client
     , prometheus-metrics-ghc
+    , pureMD5
     , random
     , raw-strings-qq
     , record-dot-preprocessor

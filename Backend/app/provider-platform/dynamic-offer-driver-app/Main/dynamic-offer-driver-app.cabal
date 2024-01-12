@@ -65,6 +65,7 @@ library
       API.Internal
       API.Internal.Auth
       API.Internal.BulkLocUpdate
+      API.Internal.Cac
       API.Internal.CustomerCancellationDues
       API.Internal.DriverInactiveFCM
       API.Internal.DriverReferee
@@ -156,10 +157,12 @@ library
       Domain.Action.Dashboard.Volunteer
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate
+      Domain.Action.Internal.Cac
       Domain.Action.Internal.CustomerCancellationDues
       Domain.Action.Internal.DriverInactiveFCM
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.FeedbackForm
+      Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
       Domain.Action.UI.CancellationReason
@@ -209,6 +212,8 @@ library
       Domain.Types.Booking.BookingLocation
       Domain.Types.BookingCancellationReason
       Domain.Types.BusinessEvent
+      Domain.Types.Cac
+      Domain.Types.CacType
       Domain.Types.CallStatus
       Domain.Types.CancellationCharges
       Domain.Types.City
@@ -287,6 +292,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.UtilsTH
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Domain.Types.WhiteListOrg
@@ -315,6 +321,7 @@ library
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
       SharedLogic.Beckn.Common
       SharedLogic.Booking
+      SharedLogic.Cac
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
       SharedLogic.DeleteDriver
@@ -385,6 +392,7 @@ library
       Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
       Storage.Beam.FarePolicy.RestrictedExtraFare
+      Storage.Beam.FarePolicyCACTypes
       Storage.Beam.FareProduct
       Storage.Beam.Feedback.Feedback
       Storage.Beam.Feedback.FeedbackBadge
@@ -588,6 +596,7 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      API.Action.UI.Cac
       API.Action.UI.LmsModule
       API.Action.UI.Reels
       API.Action.UI.SpecialLocation
@@ -747,10 +756,12 @@ library
     , extra
     , generic-lens
     , geohash ==1.0.1
+    , haskell-cac
     , hspec
     , http-client
     , http-types
     , lens
+    , lens-aeson
     , location-updates
     , mobility-core
     , openapi3
@@ -758,6 +769,7 @@ library
     , persistent
     , postgresql-simple
     , prometheus-client
+    , pureMD5
     , random
     , record-dot-preprocessor
     , record-hasfield
@@ -788,6 +800,8 @@ library
     , wai
     , wai-extra
     , warp
+  extra-libraries:
+      cac_client
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -861,15 +875,18 @@ executable dynamic-offer-driver-app-exe
     , extra
     , generic-lens
     , geohash ==1.0.1
+    , haskell-cac
     , hspec
     , http-client
     , http-types
     , lens
+    , lens-aeson
     , mobility-core
     , openapi3
     , persistent
     , postgresql-simple
     , prometheus-client
+    , pureMD5
     , random
     , record-dot-preprocessor
     , record-hasfield
@@ -897,6 +914,8 @@ executable dynamic-offer-driver-app-exe
     , wai
     , wai-extra
     , warp
+  extra-libraries:
+      cac_client
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

@@ -18,6 +18,7 @@ module Storage.Beam.Merchant.TransporterConfig where
 
 import qualified Data.Aeson as A
 import qualified Database.Beam as B
+import Domain.Types.UtilsTH
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -158,3 +159,4 @@ type TransporterConfig = TransporterConfigT Identity
 $(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
+$(mkCacParseInstance ''TransporterConfigT)

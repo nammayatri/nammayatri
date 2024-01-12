@@ -17,6 +17,7 @@
 module Storage.Beam.Merchant.DriverIntelligentPoolConfig where
 
 import qualified Database.Beam as B
+import Domain.Types.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -58,3 +59,4 @@ type DriverIntelligentPoolConfig = DriverIntelligentPoolConfigT Identity
 $(enableKVPG ''DriverIntelligentPoolConfigT ['merchantOperatingCityId] [])
 
 $(mkTableInstances ''DriverIntelligentPoolConfigT "driver_intelligent_pool_config")
+$(mkCacParseInstance ''DriverIntelligentPoolConfigT)

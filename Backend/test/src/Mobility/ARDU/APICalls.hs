@@ -45,7 +45,7 @@ data RideAPIs = RideAPIs
   }
 
 data DriverAPIs = DriverAPIs
-  { getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes,
+  { getDriverInfo :: Text -> Maybe Int -> ClientM DriverAPI.DriverInformationRes,
     getNearbySearchRequests :: RegToken -> ClientM DriverAPI.GetNearbySearchRequestsRes,
     offerQuote :: RegToken -> DriverAPI.DriverOfferReq -> ClientM APISuccess,
     respondQuote :: RegToken -> DriverAPI.DriverRespondReq -> ClientM APISuccess,

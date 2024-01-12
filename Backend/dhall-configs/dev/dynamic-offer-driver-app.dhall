@@ -226,6 +226,24 @@ let jobInfoMapx =
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
+let cacConfig =
+        { host = "http://localhost:8080"
+        , interval = 10
+        , tenants = [ "dev", "test" ]
+        }
+      : { host : Text, interval : Natural, tenants : List Text }
+
+let superPositionConfig =
+        { host = "http://localhost:8080"
+        , interval = 10
+        , tenants = [ "dev", "test" ]
+        }
+      : { host : Text, interval : Natural, tenants : List Text }
+
+let maxMessages
+    : Text
+    = "5000"
+
 let modelNamesMap =
       [ { mapKey = "MARUTI ALTO (Some random verioning)"
         , mapValue = "MARUTI ALTO"
@@ -313,4 +331,6 @@ in  { esqDBCfg
     , internalEndPointMap = common.internalEndPointMap
     , isBecknSpecVersion2 = True
     , _version = "2.0.0"
+    , cacConfig
+    , superPositionConfig
     }

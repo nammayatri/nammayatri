@@ -82,7 +82,7 @@ cancelRideImpl rideId bookingCReason = do
         driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
         searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
         searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-        transpConf <- QTC.findByMerchantOpCityId searchReq.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+        transpConf <- QTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just booking.transactionId) (Just "transactionId") >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
         let searchRepeatLimit = transpConf.searchRepeatLimit
         now <- getCurrentTime
         let isSearchTryValid = searchTry.validTill > now

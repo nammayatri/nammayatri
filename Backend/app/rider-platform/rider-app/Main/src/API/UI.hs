@@ -18,6 +18,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Sos as SosApi
@@ -93,6 +94,7 @@ type API =
            :<|> FollowRide.API
            :<|> SosApi.API
            :<|> FRFSTicketService.API
+           :<|> Cac.API
        )
 
 handler :: FlowServer API
@@ -132,3 +134,4 @@ handler =
     :<|> FollowRide.handler
     :<|> SosApi.handler
     :<|> FRFSTicketService.handler
+    :<|> Cac.handler
