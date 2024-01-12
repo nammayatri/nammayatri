@@ -38,6 +38,7 @@ import Components.PopUpModal.View as PopUpModal
 import Components.PopUpModal.Controller as PopUpModalConfig
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import ConfigProvider
+import Locale.Utils
 
 removeAlternateNumberConfig :: ST.DriverDetailsScreenState -> PopUpModalConfig.Config
 removeAlternateNumberConfig state = let
@@ -150,7 +151,7 @@ enterOtpState state = let
       margin = (Margin 0 0 0 8)
       },
       subHeadingConfig {
-        text = if((getValueToLocalStore LANGUAGE_KEY) == "EN_US") then (getString (OTP_SENT_TO) <> (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile))) else ( (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile)) <> (getString OTP_SENT_TO)),
+        text = if((getLanguageLocale languageKey) == "EN_US") then (getString (OTP_SENT_TO) <> (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile))) else ( (if (state.props.isEditAlternateMobile) then (fromMaybe "" state.data.driverEditAlternateMobile) else (fromMaybe "" state.data.driverAlternateMobile)) <> (getString OTP_SENT_TO)),
         color = Color.black800,
         margin = (Margin 0 0 0 8),
         visibility = (if not state.props.otpIncorrect then VISIBLE else GONE)

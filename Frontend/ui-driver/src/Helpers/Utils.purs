@@ -88,6 +88,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import ConfigProvider
 import Screens.Types as ST
 import MerchantConfig.Types as MCT
+import Locale.Utils
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -610,7 +611,7 @@ splitBasedOnLanguage str =
     fromMaybe "" (strArray DA.!! (getLanguage (DA.length strArray)))
     where 
         getLanguage len = do
-            case getValueToLocalStore LANGUAGE_KEY of
+            case getLanguageLocale languageKey of
                 "KN_IN" | len > 1 -> 1
                 "HI_IN" | len > 2 -> 2
                 "BN_IN" | len > 3 -> 3

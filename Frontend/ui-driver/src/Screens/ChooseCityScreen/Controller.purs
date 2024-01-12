@@ -21,6 +21,7 @@ import Screens (getScreen, ScreenName(..))
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Components.ErrorModal.Controller as ErrorModalController
+import Locale.Utils
 
 instance showAction :: Show Action where
   show _ = ""
@@ -80,7 +81,7 @@ eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
     else if state.props.currentStage == SELECT_CITY then do
       continue state{props{currentStage = DETECT_LOCATION}, data{ locationSelected = Just state.props.radioMenuFocusedCity}}
     else if state.props.currentStage == SELECT_LANG then do
-      _ <- pure $ setValueToLocalStore LANGUAGE_KEY state.props.radioMenuFocusedLang
+      let _ = setLanguageLocale state.props.radioMenuFocusedLang
       continue state {props{currentStage = DETECT_LOCATION, selectedLanguage =  state.props.radioMenuFocusedLang}}
     else do
       case state.data.locationSelected of 

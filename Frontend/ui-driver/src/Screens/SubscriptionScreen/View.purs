@@ -74,6 +74,7 @@ import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalStore, isOnFreeTrial)
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
+import Locale.Utils
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -1771,7 +1772,7 @@ textView' push action txt txtColor style padding' margin' =
 
 languageSpecificTranslation :: String -> String -> String
 languageSpecificTranslation str variable = 
-  case getValueToLocalStore LANGUAGE_KEY of
+  case getLanguageLocale languageKey of
     "EN_US" -> str <> " " <> variable
     _ -> variable <> " " <> str 
 
@@ -1841,7 +1842,7 @@ offerCardBannerView push useMargin visibility' isPlanCard offerBannerProps isFre
 
 lottieJsonAccordingToLang :: Boolean -> Boolean -> String
 lottieJsonAccordingToLang isOnFreeTrial isIntroductory = 
-  (HU.getAssetsBaseUrl FunctionCall) <> case getValueToLocalStore LANGUAGE_KEY of 
+  (HU.getAssetsBaseUrl FunctionCall) <> case getLanguageLocale languageKey of 
     "HI_IN" -> if isIntroductory then "lottie/ny_ic_subscription_info_hindi_03.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_hindi_01.json" 
                else "lottie/ny_ic_subscription_info_hindi_02.json"
