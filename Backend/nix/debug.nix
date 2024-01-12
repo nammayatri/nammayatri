@@ -17,7 +17,7 @@
       ];
       text = ''
         set -x
-        nix develop --override-input debug github:boolean-option/true ${self}#backend -c echo \
+        nix --no-eval-cache develop --override-input debug github:boolean-option/true ${self}#backend -c echo \
           2>&1 \
           | ts '[%H:%M:%S]' \
           | sed 's/^\([^ ]*\)/\x1b[31m\1\x1b[0m/'
