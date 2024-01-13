@@ -22,11 +22,13 @@ import Data.Aeson
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Types.Location as DL
+import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
 import Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Beckn.Gps as Gps
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import Tools.Error
@@ -182,3 +184,51 @@ parseAddress Spec.Location {..} = do
 
     isEmpty :: Maybe Text -> Bool
     isEmpty = maybe True (T.null . T.replace " " "")
+
+mkStops' :: DLoc.Location -> DLoc.Location -> Maybe Text -> Maybe [Spec.Stop]
+mkStops' origin destination mAuthorization =
+  let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
+      destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
+   in Just
+        [ Spec.Stop
+            { stopLocation =
+                Just $
+                  Spec.Location
+                    { locationAddress = Just $ mkAddress origin.address,
+                      locationAreaCode = origin.address.areaCode,
+                      locationCity = Just $ Spec.City Nothing origin.address.city,
+                      locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                      locationGps = A.decode $ A.encode originGps,
+                      locationState = Just $ Spec.State origin.address.state,
+                      locationId = Nothing
+                    },
+              stopType = Just "START",
+              stopAuthorization = mAuthorization >>= mkAuthorization
+            },
+          Spec.Stop
+            { stopLocation =
+                Just $
+                  Spec.Location
+                    { locationAddress = Just $ mkAddress destination.address,
+                      locationAreaCode = destination.address.areaCode,
+                      locationCity = Just $ Spec.City Nothing destination.address.city,
+                      locationCountry = Just $ Spec.Country Nothing destination.address.country,
+                      locationGps = A.decode $ A.encode destinationGps,
+                      locationState = Just $ Spec.State destination.address.state,
+                      locationId = Nothing
+                    },
+              stopType = Just "END",
+              stopAuthorization = Nothing
+            }
+        ]
+  where
+    mkAddress :: DLoc.LocationAddress -> Text
+    mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]
+
+    mkAuthorization :: Text -> Maybe Spec.Authorization
+    mkAuthorization auth =
+      Just $
+        Spec.Authorization
+          { authorizationToken = Just auth,
+            authorizationType = Just "OTP"
+          }
