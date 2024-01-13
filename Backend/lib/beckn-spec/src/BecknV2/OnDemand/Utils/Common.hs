@@ -13,14 +13,29 @@
 -}
 {-# LANGUAGE DeriveDataTypeable #-}
 
-module BecknV2.OnDemand.Utils.Common
-  ( allNothing,
-  )
-where
+module BecknV2.OnDemand.Utils.Common where
 
+import qualified BecknV2.OnDemand.Types as Spec
 import Data.Data (Data, gmapQ)
 import Data.Generics.Aliases (ext1Q)
 import EulerHS.Prelude
 
 allNothing :: (Data d) => d -> Bool
 allNothing = not . or . gmapQ (const True `ext1Q` isJust)
+
+type TagGroupCode = Text
+
+type TagCode = Text
+
+getTagV2 :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text
+getTagV2 tagGroupCode tagCode tagGroups = do
+  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just tagGroupCode) tagGroups
+  case tagGroup.tagGroupList of
+    Nothing -> Nothing
+    Just tagGroupList -> do
+      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just tagCode) tagGroupList
+      tag.tagValue
+  where
+    descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
+    descriptorCode (Just desc) = desc.descriptorCode
+    descriptorCode Nothing = Nothing

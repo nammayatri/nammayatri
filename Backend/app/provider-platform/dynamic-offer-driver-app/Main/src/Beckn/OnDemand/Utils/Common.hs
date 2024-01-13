@@ -21,9 +21,10 @@ import Control.Lens
 import Data.Aeson
 import qualified Data.Aeson as A
 import qualified Data.Text as T
+import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Vehicle.Variant as Variant
-import EulerHS.Prelude hiding (id, view, (%~), (^?))
+import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
 import Kernel.External.Maps as Maps
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -146,3 +147,38 @@ rationaliseMoney fare = T.pack $ show $ OS.DecimalValue (toRational fare)
 castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.PREPAID = "ON_ORDER"
 castDPaymentType DMPM.POSTPAID = "ON_FULFILLMENT"
+
+parseVehicleVariant :: Text -> Maybe Variant.Variant
+parseVehicleVariant = \case
+  "SEDAN" -> Just Variant.SEDAN
+  "SUV" -> Just Variant.SUV
+  "HATCHBACK" -> Just Variant.HATCHBACK
+  "AUTO_RICKSHAW" -> Just Variant.AUTO_RICKSHAW
+  "TAXI" -> Just Variant.TAXI
+  "TAXI_PLUS" -> Just Variant.TAXI_PLUS
+  _ -> Nothing
+
+parseAddress :: Spec.Location -> Maybe DL.LocationAddress
+parseAddress Spec.Location {..} = do
+  let areaCode = locationAreaCode
+  let city = locationCity >>= (.cityName)
+  let state = locationState >>= (.stateName)
+  let country = locationCountry >>= (.countryName)
+  let fullAddress = mkFullAddress city state country
+  Just $
+    DL.LocationAddress
+      { street = Nothing,
+        door = Nothing,
+        building = Nothing,
+        area = Nothing, -- TODO: Fetch this, discuss with ONDC
+        ..
+      }
+  where
+    mkFullAddress city state country = do
+      let strictFields = catMaybes $ filter (not . isEmpty) [locationAddress, city, state, country]
+      if null strictFields
+        then Nothing
+        else Just $ T.intercalate ", " strictFields
+
+    isEmpty :: Maybe Text -> Bool
+    isEmpty = maybe True (T.null . T.replace " " "")
