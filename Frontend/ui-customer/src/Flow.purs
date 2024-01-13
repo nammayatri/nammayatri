@@ -944,10 +944,6 @@ homeScreenFlow = do
 
       homeScreenFlow
     RETRY  -> homeScreenFlow
-    REALLOCATE_RIDE state -> do
-      if DS.null state.props.estimateId then
-        currentFlowStatus
-      else homeScreenFlow
     CHECK_SERVICEABILITY updatedState lat long-> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat long)
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
@@ -2382,7 +2378,6 @@ updateFlowStatus eventType = do
       homeScreenFlow
     _               -> do
       res <- lift $ lift $ Remote.notifyFlowEvent (Remote.makeNotifyFlowEventReq (show eventType))
-      hideLoaderFlow
       case res of
         Right _  -> homeScreenFlow
         Left err -> do
