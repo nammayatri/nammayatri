@@ -2524,16 +2524,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1705057915,
-        "narHash": "sha256-ZLGPxeY4rUdM4cRr6a1b9VsV0esxaq31kHNQ6ADqeWI=",
+        "lastModified": 1705131269,
+        "narHash": "sha256-SXMxOoeoZaW2ArzCmDPrtfebZ+Vdt/UdQvB+oK8rqpo=",
         "owner": "nammayatri",
         "repo": "passetto",
-        "rev": "b12a0a880a2fbdac0d047555fc28ebe72eaa4ad1",
+        "rev": "af7847a1d04977b6635bd26f92c3eb0e83d3130b",
         "type": "github"
       },
       "original": {
         "owner": "nammayatri",
-        "ref": "nixify",
+        "ref": "postgres-schemas",
         "repo": "passetto",
         "type": "github"
       }
@@ -2997,15 +2997,16 @@
     },
     "services-flake_2": {
       "locked": {
-        "lastModified": 1703776472,
-        "narHash": "sha256-eN1GGH9ErtAKMvVyp+GleJxaoTHfe3mTbtSiRxkmtbM=",
+        "lastModified": 1705070825,
+        "narHash": "sha256-XITUWkjF2lL4Cvs+KcLsznX9lEh8An9XPg+ffzfjIyM=",
         "owner": "juspay",
         "repo": "services-flake",
-        "rev": "2211042f3e04de6b105f8d70c0be6213a2127d88",
+        "rev": "4238ea5a004dc327bb661826822014b4c961ace8",
         "type": "github"
       },
       "original": {
         "owner": "juspay",
+        "ref": "postgres-schemas",
         "repo": "services-flake",
         "type": "github"
       }

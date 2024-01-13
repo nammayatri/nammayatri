@@ -55,10 +55,7 @@
         services.passetto = {
           enable = true;
           port = 8021;
-          extraDbSettings = {
-            initialDumps = [ ../dev/sql-seed/passetto-seed.sql ];
-            port = 5422;
-          };
+          extraDbSettings.port = 5422;
           # FIXME: https://github.com/juspay/passetto/issues/2
           package = lib.getBin
             (if pkgs.stdenv.isDarwin
