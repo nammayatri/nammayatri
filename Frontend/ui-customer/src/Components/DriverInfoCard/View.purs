@@ -40,7 +40,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout)
+import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -383,11 +383,13 @@ cancelRideLayout push state =
   ][ linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
-    , padding $ Padding 10 16 10 16
+    , padding $ Padding 10 14 10 16
     , accessibilityHint "Cancel Ride : Button"
     , accessibility ENABLE
-    , margin $ MarginBottom if os == "IOS" then 24 else 8
+    , margin $ if os == "IOS" then MarginVertical 0 24 else MarginVertical 2 8
     , onClick push $ const $ CancelRide state
+    , rippleColor Color.rippleShade
+    , cornerRadius 20.0
     ][ textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -455,6 +457,7 @@ contactView push state =
           , onClick push $ const $ MessageDriver
           , accessibilityHint "Chat and Call : Button"
           , accessibility ENABLE
+          , rippleColor Color.rippleShade
           ][ imageView
               [ imageWithFallback  $ if feature.enableChat then if state.props.unReadMessages then fetchImage FF_ASSET "ic_chat_badge_green" else fetchImage FF_ASSET "ic_call_msg" else fetchImage FF_COMMON_ASSET "ny_ic_call"
               , height $ V state.data.config.driverInfoConfig.callHeight

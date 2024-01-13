@@ -15,7 +15,7 @@
 
 module Components.LocationTagBar.View where
 
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..),PrestoDOM, accessibilityHint, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, background, imageWithFallback, singleLine, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..),PrestoDOM, accessibilityHint, color, cornerRadius, ellipsize, fontStyle, gravity, height, imageUrl, imageView, lineHeight, linearLayout, margin, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, background, imageWithFallback, singleLine, accessibility, rippleColor)
 import Components.LocationTagBar.Controller(Action(..))
 import Data.Array (mapWithIndex, filter, findIndex, (!!), null)
 import Effect (Effect)
@@ -55,6 +55,7 @@ view push state =
         , margin $ MarginRight if index == 2 then 0 else 8
         , onClick push $ const $ TagClick item (getSavedLocationByTag state item)
         , cornerRadius config.cornerRadius
+        , rippleColor Color.rippleShade
         ][ imageView
             [ width $ V 15
             , height $ V 17
