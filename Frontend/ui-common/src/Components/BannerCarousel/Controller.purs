@@ -34,6 +34,7 @@ data Action = OnClick Int
 data BannerType = AutoPay
   | Disability
   | Gender
+  | Remote String --TODO:: Temp added for just youtube links
 
 type CarouselConfig a = {
     item :: ListItem
@@ -52,6 +53,7 @@ type Config a = {
   isBanner :: Boolean,
   actionTextStyle :: Style,
   titleStyle :: Style,
+  showImageAsCTA :: Boolean,
   showActionArrow :: Boolean,
   alertText :: String,
   alertTextColor :: String,
@@ -63,7 +65,13 @@ type Config a = {
   titleTextVisibility :: Boolean,
   imagePadding :: Padding,
   action :: Maybe a,
-  "type" :: BannerType
+  "type" :: BannerType,
+  actionIconUrl :: String,
+  actionTextBackgroundColour :: String,
+  actionTextCornerRadius :: String,
+  actionIconVisibility :: Boolean,
+  actionImageUrl :: String,
+  actionImageVisibility :: Boolean
 }
 
 config :: forall a. a -> Config a
@@ -74,7 +82,7 @@ config action = {
     actionText : "",
     actionTextColor : Color.darkGreen,
     imageUrl : "ic_logo",
-    imageHeight : (V 95),
+    imageHeight : (V 105),
     imageWidth : (V 118),
     isBanner : true,
     actionTextStyle : ParagraphText,
@@ -90,7 +98,14 @@ config action = {
     titleTextVisibility : true,
     imagePadding : PaddingVertical 5 5,
     action: Just action,
-    "type" : Gender
+    "type" : Gender,
+    actionIconUrl : "",
+    actionTextBackgroundColour : "",
+    actionTextCornerRadius : "",
+    actionIconVisibility : false,
+    actionImageUrl : "",
+    showImageAsCTA : false,
+    actionImageVisibility : false
 }
 
 
@@ -106,7 +121,13 @@ type PropConfig = (
   actionText :: PropValue,
   actionTextColor :: PropValue,
   bannerImageUrl :: PropValue,
-  cornerRadiusMain :: PropValue
+  cornerRadiusMain :: PropValue,
+  actionIconUrl :: PropValue,
+  actionTextBackgroundColour :: PropValue,
+  actionTextCornerRadius :: PropValue,
+  actionIconVisibility :: PropValue,
+  actionImageUrl :: PropValue,
+  actionImageVisibility :: PropValue
 )
 
 
@@ -124,6 +145,12 @@ bannerTransformer = map (
   actionText : toPropValue item.actionText,
   actionTextColor : toPropValue item.actionTextColor,
   bannerImageUrl : toPropValue $ (fromMaybe "" ((split (Pattern ",") item.imageUrl) !! 0)),
-  cornerRadiusMain : toPropValue $ "32.0"
+  cornerRadiusMain : toPropValue $ "32.0",
+  actionIconUrl : toPropValue item.actionIconUrl,
+  actionTextBackgroundColour : toPropValue item.actionTextBackgroundColour,
+  actionTextCornerRadius : toPropValue item.actionTextCornerRadius,
+  actionIconVisibility : toPropValue $ if item.actionIconVisibility then "visible" else "gone",
+  actionImageUrl : toPropValue item.actionImageUrl,
+  actionImageVisibility : toPropValue $ if item.actionImageVisibility then "visible" else "gone"
   }
 )

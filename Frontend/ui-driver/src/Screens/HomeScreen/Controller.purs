@@ -42,7 +42,7 @@ import Data.Int (round, toNumber, fromString, ceil)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Number (fromString) as Number
-import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
+import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower, null)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4)
@@ -55,7 +55,7 @@ import Engineering.Helpers.Utils (saveObject)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<))
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
@@ -96,6 +96,8 @@ import Components.BannerCarousel as BannerCarousel
 import Styles.Colors as Color
 import PrestoDOM.Core
 import PrestoDOM.List
+import RemoteConfigs as RC
+import Locale.Utils
 
 instance showAction :: Show Action where
   show _ = ""
@@ -929,6 +931,9 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
           BannerCarousel.Gender -> pure (GenderBannerModal (Banner.OnClick))
           BannerCarousel.Disability -> pure (AccessibilityBannerAction (Banner.OnClick))
           BannerCarousel.AutoPay -> pure (AutoPayBanner (Banner.OnClick))
+          BannerCarousel.Remote link -> do
+            void $ openUrlInApp link
+            pure NoAction
       Nothing -> pure NoAction
   ] 
 
@@ -1226,3 +1231,13 @@ getBannerConfigs state =
     else [])
   <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else [])
   <> (if state.props.currentStage == ST.HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos then [accessbilityBannerConfig state BannerCarousal] else [])
+  <> getRemoteBannerConfigs
+  where 
+    getRemoteBannerConfigs :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+    getRemoteBannerConfigs = do 
+      let datas = RC.carouselConfigData (toLower $ getValueToLocalStore DRIVER_LOCATION) $ getLanguage $ getLanguageLocale languageKey
+      remoteConfigTransformer datas BannerCarousal
+    getLanguage :: String -> String
+    getLanguage lang = 
+      let language = toLower $ take 2 lang
+      in if not (null language) then "_" <> language else "en"

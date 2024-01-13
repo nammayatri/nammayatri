@@ -329,7 +329,8 @@ driverMapsHeaderView push state =
                     , statsModel push state
                     , if not state.props.rideActionModal && (state.props.driverStatusSet == Online || state.props.driverStatusSet == Silent)  then updateLocationAndLastUpdatedView state push else dummyTextView
                   ]
-              ] <> maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+                , offlineNavigationLinks push state
+              ] <> getCarouselView (DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent]) false  --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Online, ST.Silent] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
                 <> [gotoRecenterAndSupport state push]
             , linearLayout
               [ width MATCH_PARENT
@@ -337,19 +338,20 @@ driverMapsHeaderView push state =
               , orientation VERTICAL
               , background Color.transparent
               , gravity BOTTOM
-              ][  alternateNumberOrOTPView state push
-              ]
+              ] $ [] <> getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             ]
         ]
         , bottomNavBar push state
   ]
+  where
+    getCarouselView visible bottomMargin = maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] || visible then [] else [bannersCarousal item bottomMargin state push]) state.data.bannerData.bannerItem
 
-bannersCarousal :: forall w. ListItem -> HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-bannersCarousal view state push =
+bannersCarousal :: forall w. ListItem -> Boolean -> HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+bannersCarousal view bottomMargin state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin $ MarginTop 12
+  , margin if bottomMargin then MarginVertical 12 12 else MarginTop 12
   ][CarouselHolder.carouselView push $ getCarouselConfig view state]
 
 
@@ -360,7 +362,7 @@ getCarouselConfig view state = {
   , orientation : VERTICAL
   , currentPage : state.data.bannerData.currentPage
   , autoScroll : true
-  , autoScrollDelay : 3000.0
+  , autoScrollDelay : 5000.0
   , id : "bannerCarousel"
   , autoScrollAction : Just UpdateBanner
   , onPageSelected : Just BannerChanged

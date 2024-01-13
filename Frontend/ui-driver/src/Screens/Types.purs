@@ -867,7 +867,7 @@ type HomeScreenData =  {
   driverGotoState :: DriverGoToState,
   snappedOrigin :: Maybe Location,
   gender :: String,
-  subsRemoteConfig :: RC.SubsRemoteConfig,
+  subsRemoteConfig :: RC.RCSubscription,
   bannerData :: BannerCarousalData
 }
 
