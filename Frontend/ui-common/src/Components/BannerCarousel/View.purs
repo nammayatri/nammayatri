@@ -22,7 +22,7 @@ import Common.Types.App (LazyCheck(..))
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, root)
+import PrestoDOM (Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onClick, orientation, padding, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, root, backgroundColor)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Gravity(..), Corners(..))
 import Styles.Colors as Color
@@ -77,16 +77,36 @@ bannerView push config =
               , visibility if config.titleTextVisibility then VISIBLE else GONE
               ]
             <> (FontStyle.getFontStyle config.titleStyle LanguageStyle)
-        , linearLayout
-            [ height WRAP_CONTENT
+        , imageView
+          [ height $ V 40
+          , width $ V 120
+          , margin $ MarginTop 5
+          , imageUrlHolder "actionImageUrl"
+          , visibilityHolder "actionImageVisibility"
+          ]  
+          , linearLayout
+            [ height $ V 25
             , width WRAP_CONTENT
             , visibility GONE
             , visibilityHolder "actionTextVisibility"
+            , padding $ Padding 10 0 10 0
+            , margin $ MarginTop 5
+            , gravity CENTER_VERTICAL
+            , backgroundHolder "actionTextBackgroundColour"
+            , cornerRadiusHolder "actionTextCornerRadius"
             ]
-            [ textView
+            [ imageView
+                [ height $ V 10
+                , width $ V 15
+                , margin $ MarginRight 5
+                , imageUrlHolder "actionIconUrl"
+                , visibilityHolder "actionIconVisibility"
+                ]
+            , textView
                 $ [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   , gravity LEFT
+                  , textSize FontSize.a_8
                   , textHolder "actionText"
                   , colorHolder "actionTextColor"
                   , padding $ PaddingBottom 2
@@ -103,17 +123,16 @@ bannerView push config =
                   ]
                 <> (FontStyle.getFontStyle config.actionTextStyle LanguageStyle)
             ]
-        ]
+            ]
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , gravity CENTER_VERTICAL
-        , padding $ PaddingVertical 5 5
+        , padding $ Padding 0 5 5 5
         ]
         [ imageView
             [ height config.imageHeight
             , width config.imageWidth
-            , margin $ MarginRight 5
             , imageUrlHolder "bannerImageUrl"
             ]
         ]
