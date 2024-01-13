@@ -12,30 +12,40 @@
         services = {
           postgres-with-replica.db-primary = {
             enable = true;
-            master = {
-              extraInitialDumps = [
-                ../dev/sql-seed/rider-app-seed.sql
-                ../dev/local-testing-data/rider-app.sql
-                ../dev/sql-seed/public-transport-rider-platform-seed.sql
-                ../dev/local-testing-data/public-transport-rider-platform.sql
-                ../dev/sql-seed/mock-registry-seed.sql
-                ../dev/local-testing-data/mock-registry.sql
-                ../dev/sql-seed/scheduler-example-seed.sql
-                ../dev/sql-seed/dynamic-offer-driver-app-seed.sql
-                ../dev/local-testing-data/dynamic-offer-driver-app.sql
-                ../dev/sql-seed/rider-dashboard-seed.sql
-                ../dev/local-testing-data/rider-dashboard.sql
-                ../dev/sql-seed/provider-dashboard-seed.sql
-                ../dev/local-testing-data/provider-dashboard.sql
-                ../dev/sql-seed/special-zone-seed.sql
-                ../dev/local-testing-data/special-zone.sql
+            extraMasterDBSettings = {
+              extensions = extensions: [
+                extensions.postgis
               ];
-              extraInitialScript = ''
+              initialDatabases = [
+                {
+                  name = "atlas_dev";
+                  schemas = [
+                    ../dev/sql-seed/pre-init.sql
+                    ../dev/sql-seed/rider-app-seed.sql
+                    ../dev/local-testing-data/rider-app.sql
+                    ../dev/sql-seed/public-transport-rider-platform-seed.sql
+                    ../dev/local-testing-data/public-transport-rider-platform.sql
+                    ../dev/sql-seed/mock-registry-seed.sql
+                    ../dev/local-testing-data/mock-registry.sql
+                    ../dev/sql-seed/scheduler-example-seed.sql
+                    ../dev/sql-seed/dynamic-offer-driver-app-seed.sql
+                    ../dev/local-testing-data/dynamic-offer-driver-app.sql
+                    ../dev/sql-seed/rider-dashboard-seed.sql
+                    ../dev/local-testing-data/rider-dashboard.sql
+                    ../dev/sql-seed/provider-dashboard-seed.sql
+                    ../dev/local-testing-data/provider-dashboard.sql
+                    ../dev/sql-seed/special-zone-seed.sql
+                    ../dev/local-testing-data/special-zone.sql
+                  ];
+                }
+              ];
+              initialScript.before = ''
+                CREATE USER repl_user replication;
                 CREATE USER atlas WITH PASSWORD 'atlas';
               '';
               port = 5434;
             };
-            replica.port = 5435;
+            extraReplicaDBSettings.port = 5435;
           };
 
           redis."redis".enable = true;

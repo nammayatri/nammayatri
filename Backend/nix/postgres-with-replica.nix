@@ -8,38 +8,19 @@ in
       type = types.attrsOf (types.submodule {
         options = {
           enable = lib.mkEnableOption "Enable postgres-with-replica service";
-          package = lib.mkPackageOption pkgs "postgresql" { };
-          master = lib.mkOption {
-            type = types.submodule {
-              options = {
-                port = lib.mkOption {
-                  type = types.int;
-                  default = 5432;
-                  description = "Port of the master postgresql service";
-                };
-                extraInitialDumps = lib.mkOption {
-                  type = types.listOf types.path;
-                  default = [ ];
-                  description = "Extra initial dumps to append to the master";
-                };
-                extraInitialScript = lib.mkOption {
-                  type = types.str;
-                  default = "";
-                  description = "Extra initial script to append to the master's `initialScript.before`";
-                };
-              };
-            };
+          extraMasterDBSettings = lib.mkOption {
+            type = lib.types.deferredModule;
+            default = { };
+            description = ''
+              Extra master postgres database settings.
+            '';
           };
-          replica = lib.mkOption {
-            type = types.submodule {
-              options = {
-                port = lib.mkOption {
-                  type = types.int;
-                  default = 5433;
-                  description = "Port of the replica postgresql service";
-                };
-              };
-            };
+          extraReplicaDBSettings = lib.mkOption {
+            type = lib.types.deferredModule;
+            default = { };
+            description = ''
+              Extra replica postgres database settings.
+            '';
           };
         };
       });
@@ -52,13 +33,14 @@ in
         lib.nameValuePair "pg-basebackup-${name}" {
           # Run `pg_basebackup` to create a replica of the `${name}` postgres database
           # See here about `pg_basebackup`: https://www.postgresql.org/docs/current/app-pgbasebackup.html
-          command = pkgs.writeShellApplication {
+          command = with config.services; pkgs.writeShellApplication {
             name = "start-pg-basebackup";
-            runtimeInputs = with pkgs; [ cfg.package coreutils ];
+            # Question: we would expect master and replica to be using same `package`?
+            runtimeInputs = [ postgres."${name}".package pkgs.coreutils ];
             text = ''
-              MASTER_DATA_DIR=$(readlink -f ${config.services.postgres.${name}.dataDir})
-              REPLICA_DATA_DIR=$(readlink -f ${config.services.postgres."${name}-replica".dataDir})
-              pg_basebackup -h "$MASTER_DATA_DIR" -U repl_user --checkpoint=fast -D "$REPLICA_DATA_DIR"  -R --slot=some_name  -C --port=${builtins.toString cfg.master.port}
+              MASTER_DATA_DIR=$(readlink -f ${postgres.${name}.dataDir})
+              REPLICA_DATA_DIR=$(readlink -f ${postgres."${name}-replica".dataDir})
+              pg_basebackup -h "$MASTER_DATA_DIR" -U repl_user --checkpoint=fast -D "$REPLICA_DATA_DIR"  -R --slot=some_name  -C --port=${builtins.toString postgres.${name}.port}
             '';
           };
           depends_on."${name}".condition = "process_healthy";
@@ -70,28 +52,17 @@ in
         (name: cfg: {
           # The master database
           "${name}" = {
+            imports = [ cfg.extraMasterDBSettings ];
             enable = true;
-            inherit (cfg) package;
-            inherit (cfg.master) port;
-            extensions = extensions: [
-              extensions.postgis
-            ];
             listen_addresses = "*";
             hbaConf = [
               { type = "host"; database = "all"; user = "repl_user"; address = "127.0.0.1/32"; method = "trust"; }
             ];
-            initialScript. before = ''
-              CREATE USER repl_user replication;
-            '' + cfg.master.extraInitialScript;
-            initialDumps = [
-              ../dev/sql-seed/pre-init.sql
-            ] ++ cfg.master.extraInitialDumps;
           };
           # The replica database
           "${name}-replica" = {
+            imports = [ cfg.extraReplicaDBSettings ];
             enable = true;
-            inherit (cfg) package;
-            inherit (cfg.replica) port;
             depends_on."pg-basebackup-${name}".condition = "process_completed_successfully";
           };
         })
