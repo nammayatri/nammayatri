@@ -55,6 +55,7 @@
           zookeeper."zookeeper".enable = true;
 
           apache-kafka."kafka" = {
+            # TODO: kafka doesn't seem to start when run on non-default port, i.e 9092, need to fix this in upstream and write tests.
             port = 29092;
             enable = true;
           };
