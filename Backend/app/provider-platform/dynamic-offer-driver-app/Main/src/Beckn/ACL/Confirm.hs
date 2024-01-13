@@ -93,23 +93,17 @@ buildConfirmReqV2 req = do
   fulfillment <- req.confirmReqMessage.confirmReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
   customerPhoneNumber <- fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "Customer Phone not found")
   let customerMobileCountryCode = "+91" -- TODO: check how to get countrycode via ONDC
-  fromAddress <- fulfillment.fulfillmentStops >>= getStartLocation >>= (.stopLocation) >>= Utils.parseAddress & fromMaybeM (InvalidRequest "Start location not found")
+  fromAddress <- fulfillment.fulfillmentStops >>= Utils.getStartLocation >>= (.stopLocation) >>= Utils.parseAddress & fromMaybeM (InvalidRequest "Start location not found")
   let mbRiderName = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personName)
   vehicleVariant <- fulfillment.fulfillmentVehicle >>= (.vehicleCategory) >>= Utils.parseVehicleVariant & fromMaybeM (InvalidRequest "Invalid vehicle variant")
   let driverId = req.confirmReqMessage.confirmReqMessageOrder.orderProvider >>= (.providerId)
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag
-  toAddress <- fulfillment.fulfillmentStops >>= getDropLocation >>= (.stopLocation) >>= Utils.parseAddress & fromMaybeM (InvalidRequest "End location not found")
+  toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) >>= Utils.parseAddress & fromMaybeM (InvalidRequest "End location not found")
 
   return $
     DConfirm.DConfirmReq
       { ..
       }
-  where
-    getStartLocation stops = do
-      filter (\stop -> stop.stopType == Just "START") stops & listToMaybe
-
-    getDropLocation stops = do
-      filter (\stop -> stop.stopType == Just "END") stops & listToMaybe
 
 getNightSafetyCheckTag :: Maybe [Spec.TagGroup] -> Bool
 getNightSafetyCheckTag tagGroups' = do

@@ -18,6 +18,7 @@ module BecknV2.OnDemand.Utils.Common where
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Data (Data, gmapQ)
 import Data.Generics.Aliases (ext1Q)
+import Data.Maybe (listToMaybe)
 import EulerHS.Prelude
 
 allNothing :: (Data d) => d -> Bool
@@ -39,3 +40,11 @@ getTagV2 tagGroupCode tagCode tagGroups = do
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
     descriptorCode (Just desc) = desc.descriptorCode
     descriptorCode Nothing = Nothing
+
+getStartLocation :: [Spec.Stop] -> Maybe Spec.Stop
+getStartLocation stops =
+  filter (\stop -> stop.stopType == Just "START") stops & listToMaybe
+
+getDropLocation :: [Spec.Stop] -> Maybe Spec.Stop
+getDropLocation stops =
+  filter (\stop -> stop.stopType == Just "END") stops & listToMaybe
