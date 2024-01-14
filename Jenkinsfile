@@ -32,6 +32,13 @@ pipeline {
                             nixCI system: env.SYSTEM
                         }
                     }
+                    stage ('DevShell performance') {
+                        steps {
+                            sh ''
+                              time nix run .#trace
+                            ''
+                        }
+                    }
                     stage ('Docker image') {
                         when {
                             allOf {
