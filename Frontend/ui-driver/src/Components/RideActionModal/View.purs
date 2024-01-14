@@ -367,6 +367,122 @@ totalDistanceView push config =
         ] <> FontStyle.body11 TypoGraphy
     ]
 
+
+rentalDurationView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rentalDurationView push config =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , gravity START
+    , orientation VERTICAL
+    , weight 1.0
+    ][ textView $
+       [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text (getString DURATION)
+        , color Color.black650
+        , ellipsize true
+        , singleLine true
+        ] <> FontStyle.body1 TypoGraphy
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation HORIZONTAL
+        ] $ [  textView $
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , text if config.startRideActive then config.totalDuration else config.durationTravelled
+              , color Color.black900
+              , ellipsize true
+              , singleLine true
+              ] <> FontStyle.h3 TypoGraphy
+            ] <> if config.startRideActive then [] 
+                  else [  textView $
+                          [ height WRAP_CONTENT
+                          , width WRAP_CONTENT
+                          , text (" / " <> config.totalDuration)
+                          , color Color.black650
+                          , ellipsize true
+                          , singleLine true
+                          ] <> FontStyle.h3 TypoGraphy
+                        ]
+    ]
+  
+rentalRideDescView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rentalRideDescView config push = 
+  relativeLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , margin $ MarginTop 24
+  , afterRender push $ const NoAction
+  ][  linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation VERTICAL
+      ][  linearLayout
+          [ height WRAP_CONTENT
+          , margin (MarginLeft 25)
+          , width MATCH_PARENT
+          ][  textView $ 
+              [ text $ (getString START_TIME) <> ": " 
+              , height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , color Color.black700
+              ] <> FontStyle.body1 TypoGraphy
+            , textView $ 
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , color Color.black800
+              , text config.rideStartTime
+              ] <> FontStyle.body1 TypoGraphy
+          ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , margin (Margin 25 8 0 0)
+        ][  textView $ 
+            [ text $ (getString START_ODO_READING) <> ": "
+            , height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , color Color.black700
+            ] <> FontStyle.body1 TypoGraphy
+          , textView $ 
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , color Color.black800
+            , text $ config.startODOReading <> " Kms"
+            ] <> FontStyle.body1 TypoGraphy
+          ]
+      , stopView config push
+      ] 
+  , sourceDestinationImageView config
+  ]
+
+stopView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+stopView config push = 
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , margin $ MarginTop 24
+  ][ linearLayout
+      [height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , margin $ Margin 0 4 0 0
+      , cornerRadius 16.0
+      , padding $ Padding 24 3 16 5
+      , background "#F2F2F4"][
+        textView $ 
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text (getString PICKED_UP_AT)
+          , color Color.black600
+          ] <> FontStyle.body1 TypoGraphy
+      ]
+    , destAddressTextView config push
+
+  ]
+
 sourceAndDestinationView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 sourceAndDestinationView push config =
   relativeLayout
@@ -479,7 +595,7 @@ estimatedFareView push config =
     ][ textView $
        [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text (getString RIDE_FARE)
+        , text if config.rideProductType == ST.RENTAL then (getString RENTAL_FARE) else (getString RIDE_FARE)
         , color Color.black650
         , ellipsize true
         , singleLine true
@@ -596,26 +712,49 @@ rideInfoView push config =
     , cornerRadius 8.0
     , padding $ Padding 14 14 5 14
     , afterRender push $ const NoAction
-    ][  horizontalScrollView
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , scrollBarX false
-        , fillViewport true
-        ][ linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            ][ estimatedFareView push config
-            , separator true
-            , totalDistanceView push config
-            , separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
-            , waitTimeView push config
-            , linearLayout
-              [ weight 1.0
-              , height MATCH_PARENT
-              ][]
+    ] $ []
+      <> if config.rideProductType == ST.RENTAL then rentalRideInfoView push config else normalRideInfoView push config
+      <>
+      [  horizontalScrollView
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , scrollBarX false
+          , fillViewport true
+          ][ linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              ]
+              if config.rideProductType == ST.RENTAL then rentalRideInfoView push config else normalRideInfoView push config
             ]
-          ]
-    ]
+      ]
+
+rentalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w. Array (PrestoDOM (Effect Unit) w)
+rentalRideInfoView push config = 
+  [ estimatedFareView push config
+    , separator true
+    , rentalDurationView push config
+  ] 
+  <> 
+  if (config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered) then [
+    separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+  , waitTimeView push config
+  ] else [ totalDistanceView push config ]
+      
+
+normalRideInfoView :: (Action -> Effect Unit) -> Config -> forall w . Array (PrestoDOM (Effect Unit) w) 
+normalRideInfoView push config =
+  [
+    estimatedFareView push config
+    , separator true
+    , totalDistanceView push config
+    , separator $ config.waitTimeSeconds /= -1 && config.notifiedCustomer && config.waitTimeStatus == ST.PostTriggered
+    , waitTimeView push config
+    , separator true
+    , linearLayout
+      [ weight 1.0
+      , height MATCH_PARENT
+      ][]
+  ]
 
 separator :: forall w . Boolean -> PrestoDOM (Effect Unit) w
 separator visibility' =
@@ -766,6 +905,9 @@ separatorConfig =
 
 isSpecialRide :: Config -> Boolean
 isSpecialRide config = (Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)
+
+isRentalRide :: Config -> Boolean
+isRentalRide config = config.rideProductType == ST.RENTAL
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50

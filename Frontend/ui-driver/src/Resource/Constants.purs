@@ -96,3 +96,9 @@ waitTimeConstructor key = case key of
   "Triggered" -> ST.Triggered
   "PostTriggered" -> ST.PostTriggered
   _ -> ST.NoStatus
+
+rideProductTypeConstructor :: Maybe String -> ST.RideProductType
+rideProductTypeConstructor key = case key of
+  Just "RENTAL" -> ST.RENTAL
+  Just "INTERCITY" -> ST.INTERCITY
+  _ -> ST.NORMAL

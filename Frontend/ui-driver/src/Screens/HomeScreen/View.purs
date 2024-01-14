@@ -93,6 +93,7 @@ screen initialState =
   , name : "HomeScreen"
   , globalEvents : [
         ( \push -> do
+          _ <- JB.storeCallBackImageUpload push CallBackImageUpload
           _ <- pure $ JB.checkAndAskNotificationPermission false
           _ <- pure $ printLog "initial State" initialState
           _ <- HU.storeCallBackForNotification push Notification
@@ -235,7 +236,8 @@ view push state =
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
-      , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
+      , if state.props.enterOtpModal || state.props.endRideOtpModal then enterOtpModal push state else dummyTextView
+      , if state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal then enterOdometerReadingModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if ((state.props.isMockLocation && (MU.getMerchant FunctionCall == MU.NAMMAYATRI)) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
@@ -1189,6 +1191,10 @@ enterOtpModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Presto
 enterOtpModal push state =
   InAppKeyboardModal.view (push <<< InAppKeyboardModalAction) (enterOtpStateConfig state)
 
+enterOdometerReadingModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+enterOdometerReadingModal push state =
+  InAppKeyboardModal.view (push <<< InAppKeyboardModalOdometerAction) (enterOdometerReadingConfig state)
+  
 showOfflineStatus :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 showOfflineStatus push state =
   linearLayout

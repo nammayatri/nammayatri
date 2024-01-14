@@ -53,7 +53,12 @@ type Config = {
   gotoTag :: Boolean,
   waitTimeStatus :: ST.TimerStatus,
   waitTimeSeconds :: Int,
-  thresholdTime :: Int
+  thresholdTime :: Int,
+  rideProductType :: ST.RideProductType,
+  rideStartTime :: String,
+  startODOReading :: String,
+  totalDuration :: String,
+  durationTravelled :: String
   }
 
 type AddressConfig = {
@@ -87,5 +92,10 @@ config = {
   gotoTag : false,
   waitTimeStatus : ST.NoStatus,
   waitTimeSeconds : -1,
-  thresholdTime : 0
+  thresholdTime : 0,
+  rideProductType: ST.NORMAL,
+  rideStartTime : "06:00",
+  startODOReading : "0",
+  totalDuration : "0",
+  durationTravelled : "0"
 }

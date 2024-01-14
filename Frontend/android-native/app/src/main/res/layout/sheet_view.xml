@@ -107,6 +107,34 @@
                             </LinearLayout>
 
                             <LinearLayout
+                                android:id="@+id/rentalRideTypeTag"
+                                android:layout_width="wrap_content"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:layout_marginHorizontal="8dp"
+                                android:paddingHorizontal="8dp"
+                                android:background="@drawable/ic_rental_variant_tag"
+                                android:visibility="gone">
+                                <ImageView
+                                    android:id="@+id/rentalRideTypeImage"
+                                    android:layout_width="17dp"
+                                    android:layout_height="17dp"
+                                    android:src="@drawable/ic_car_unfilled"/>
+                                <TextView
+                                    android:id="@+id/rentalRideTypeText"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Rental"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="6dp"
+                                    android:elevation="1dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:lineHeight="20dp"
+                                    android:textColor="@color/white"/>
+                            </LinearLayout>
+
+                            <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:background="@drawable/ic_accessibility_tag"
                                 android:orientation="horizontal"
@@ -239,7 +267,38 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:gravity="right">
+                                    <LinearLayout
+                                        android:id="@+id/rentalDateTimeTag"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="vertical"
+                                        android:visibility="gone"
+                                        android:layout_marginTop="8dp"
+                                        >
 
+                                        <TextView
+                                            android:id="@+id/rentalStartDate"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_gravity="center_vertical"
+                                            android:alpha="0.5"
+                                            android:fontFamily="@font/plus_jakartasans_medium"
+                                            android:lineHeight="18dp"
+                                            android:text="Today"
+                                            android:textColor="@color/Black700"
+                                            android:textFontWeight="600"
+                                            android:textSize="14dp" />
+                                        <TextView
+                                            android:id="@+id/rentalStartTime"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:fontFamily="@font/plus_jakartasans_semibold"
+                                            android:lineHeight="28dp"
+                                            android:text="12:30 PM"
+                                            android:textColor="@color/Black800"
+                                            android:textFontWeight="600"
+                                            android:textSize="18dp" />
+                                    </LinearLayout>
                                 <com.google.android.material.card.MaterialCardView
                                     android:id="@+id/specialLocationTag"
                                     android:layout_width="wrap_content"
@@ -370,6 +429,46 @@
                                         android:textStyle="bold"
                                         android:visibility="gone"
                                         />
+                                    <LinearLayout
+                                        android:id="@+id/rentalDurationDistanceTag"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:gravity="center_vertical"
+                                        android:orientation="horizontal"
+                                        android:layout_marginTop="12dp"
+                                        android:visibility="gone"
+                                        >
+                                        <TextView
+                                            android:id="@+id/rentalRideDuration"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:background="@drawable/ic_roundcorner_overlay"
+                                            android:elevation="1dp"
+                                            android:fontFamily="@font/plus_jakartasans_semibold"
+                                            android:paddingHorizontal="8dp"
+                                            android:paddingVertical="6dp"
+                                            android:text="1 hr"
+                                            android:lineHeight="20dp"
+                                            android:textColor="#2C2F3A"
+                                            android:textSize="16dp" />
+
+                                        <TextView
+                                            android:id="@+id/rentalRideDistance"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:background="@drawable/ic_roundcorner_overlay"
+                                            android:elevation="1dp"
+                                            android:fontFamily="@font/plus_jakartasans_semibold"
+                                            android:paddingHorizontal="8dp"
+                                            android:paddingVertical="6dp"
+                                            android:layout_marginLeft="12dp"
+                                            android:text="10 Km"
+                                            android:lineHeight="20dp"
+                                            android:textColor="#2C2F3A"
+                                            android:textSize="16dp" />
+
+                                    </LinearLayout>
                                 </LinearLayout>
 
                                 <ImageView
@@ -455,10 +554,12 @@
                             </LinearLayout>
 
                             <LinearLayout
+                                android:id="@+id/locationDashedLine"
                                 android:layout_width="wrap_content"
                                 android:layout_height="match_parent"
                                 android:layout_marginTop="10dp"
-                                android:orientation="vertical">
+                                android:orientation="vertical"
+                                android:visibility="visible">
 
                                 <LinearLayout
                                     android:layout_width="wrap_content"

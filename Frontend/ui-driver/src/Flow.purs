@@ -1760,7 +1760,7 @@ currentRideFlow activeRideResp = do
           setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
           _ <- updateStage $ HomeScreenStage stage
           void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod, rideProductType = RC.rideProductTypeConstructor ride.rideProductType, rideStartTime = fromMaybe "00:00" ride.rideStartTime}}, props{ rentalBooking = ride.rideProductType == Just "RENTAL", silentPopUpView = false, goOfflineModal = false}})
         Nothing -> do
           setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
           _ <- updateStage $ HomeScreenStage HomeScreen
@@ -1951,7 +1951,7 @@ homeScreenFlow = do
         Right startRideResp -> do
           _ <- pure $ setValueToLocalNativeStore RIDE_ID id
           liftFlowBT $ logEvent logField_ "ny_driver_ride_start"
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false,enterOdometerReadingModal = if updatedState.props.rentalBooking then true else false}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"

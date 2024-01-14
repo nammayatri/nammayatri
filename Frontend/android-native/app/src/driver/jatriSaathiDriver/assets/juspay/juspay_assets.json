@@ -490,6 +490,7 @@
       "progress_loader" : true,
       "progressbar_clip" : true,
       "rectangle_9506" : true,
+      "rectangle_9506_rental" : true,
       "rotate_drawable" : true,
       "round_circle" : true,
       "round_corner_layout" : true,

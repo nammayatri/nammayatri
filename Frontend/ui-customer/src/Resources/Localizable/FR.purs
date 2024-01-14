@@ -138,6 +138,7 @@ getFR stringKey =
         TRIP_ID -> "ID de voyage"
         SAVE_PLACE -> "Save Place"
         RIDE_FARE -> "Tarif de conduite"
+        RENTAL_FARE -> "Tarif de location"
         ASK_FOR_PRICE -> "Demandez un prix"
         ASK_FOR_PRICE_INFO -> "Vous recevrez un tarif basé sur le prix de base <b>défini par le gouvernement</b>, avec des frais nominaux supplémentaires de <b>Rs.10</b> pour la distance de <b>prise en charge</b> parcourue par les conducteurs. Certains conducteurs peuvent demander des pourboires nominaux à leur discrétion pour couvrir des facteurs tels que le trafic, les chances de trajet de retour, etc."
         GET_ESTIMATE_FARE -> "Obtenir une estimation du tarif"

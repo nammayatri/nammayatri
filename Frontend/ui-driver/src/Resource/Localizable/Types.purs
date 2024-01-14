@@ -1120,3 +1120,16 @@ data STR = LETS_GET_STARTED
         | DOWNLOAD_NAMMA_YATRI String
         | ENTER_CODE
         | COMPLETE_REGISTRATION
+        | DURATION
+        | RENTAL_FARE
+        | START_TIME 
+        | START_ODO_READING
+        | RIDE_START
+        | RIDE_END 
+        | RIDE_STARTED_AT 
+        | RIDE_ENDED_AT
+        | ODOMETER_READING
+        | PICKED_UP_AT
+        | RIDE_TIME
+        | YOU_ARE_ON_A_RENTAL_RIDE
+        | ENTER_END_RIDE_OTP

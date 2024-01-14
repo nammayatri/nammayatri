@@ -138,3 +138,6 @@ homeScreen = do
     RefreshGoTo updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_GOTO updatedState)
+    FetchOdometerReading updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ CLEAR_PENDING_DUES)

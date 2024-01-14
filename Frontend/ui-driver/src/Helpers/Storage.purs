@@ -117,6 +117,8 @@ data KeyStore = USER_NAME
                 | TOTAL_WAITED
                 | REFERRAL_CODE_ADDED
                 | SAVED_GOTO_COUNT
+                | RIDE_START_ODOMETER
+                | RIDE_END_ODOMETER
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
