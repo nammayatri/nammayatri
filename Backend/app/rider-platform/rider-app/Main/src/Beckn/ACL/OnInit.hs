@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnInit (buildOnInitReq) where
+module Beckn.ACL.OnInit (buildOnInitReq, buildOnInitReqV2) where
 
 import Beckn.ACL.Common
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
@@ -66,12 +66,12 @@ handleError etr action =
       logTagError "on_init req" $ "on_init error: " <> show err
       pure Nothing
 
-_buildOnInitReqV2 ::
+buildOnInitReqV2 ::
   ( HasFlowEnv m r '["_version" ::: Text]
   ) =>
   Spec.OnInitReq ->
   m (Maybe DOnInit.OnInitReq)
-_buildOnInitReqV2 req = do
+buildOnInitReqV2 req = do
   ContextV2.validateContext Context.ON_INIT $ req.onInitReqContext
   handleErrorV2 req $ \_message ->
     case parsedData of
