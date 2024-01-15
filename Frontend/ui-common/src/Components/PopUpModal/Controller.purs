@@ -77,6 +77,12 @@ type Config = {
     timerId :: String
 }
 
+type LottieConfig = 
+  { id :: String
+  , lottieURL :: String
+  , autoDisableLoader :: Boolean
+  }
+
 type CoverVideoConfig = {
   visibility :: Visibility,
   height :: Length ,
@@ -123,7 +129,9 @@ type ButtonConfig = {
   height :: Length,
   image :: ImageConfig,
   showShimmer :: Boolean,
-  gravity :: Gravity
+  gravity :: Gravity,
+  enableLoader :: Boolean,
+  lottieConfig :: LottieConfig
 }
 
 type DismissPopupConfig =
@@ -258,6 +266,13 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableLoader : false
+    , lottieConfig : {
+        id :  "",
+        lottieURL: "",
+        autoDisableLoader: true
+    }
+  
   } 
   , option1 : {
       background : Color.white900
@@ -282,8 +297,14 @@ config = {
         , width : (V 0)
         , margin : (Margin 0 0 0 0)
         , padding : (Padding 0 0 0 0)
-    }
+      }
     , showShimmer : false
+    , enableLoader : false
+    , lottieConfig : {
+        id :  "",
+        lottieURL: "",
+        autoDisableLoader: true
+      } 
     }
   , option2 : {
       background : Color.black900
@@ -310,6 +331,12 @@ config = {
         , padding : (Padding 0 0 0 0)
     }
     , showShimmer : false
+    , enableLoader : false
+    , lottieConfig : {
+        id :  "",
+        lottieURL: "",
+        autoDisableLoader: true
+      }
     }
   , optionWithHtml : {
       background : Color.black900,

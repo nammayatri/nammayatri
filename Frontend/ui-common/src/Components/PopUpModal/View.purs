@@ -33,11 +33,12 @@ import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
-import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer)
+import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, toggleBtnLoader, getKeyInSharedPrefKeys, startLottieProcess, lottieAnimationConfig)
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Data.Function.Uncurried (runFn3)
 import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Timers
 import Debug
@@ -306,7 +307,9 @@ view push state =
                             ] <> (FontStyle.getFontStyle state.option1.textStyle LanguageStyle)
                         ]
                     ]
-                , linearLayout
+                ,   PrestoAnim.animationSet
+                    [ Anim.triggerOnAnimationEnd true] $
+                    linearLayout
                     [ if state.option1.visibility then width state.option2.width else weight 1.0
                     , height state.option2.height
                     , background state.option2.background
@@ -315,13 +318,20 @@ view push state =
                     , stroke ("1," <> state.option2.strokeColor)
                     , margin state.option2.margin
                     , gravity CENTER
+                    , id $ getNewIDWithTag state.option2.lottieConfig.id
                     , onClick
                         ( \action -> do
-                            _ <- push action
-                            clearTheTimer state
-                            pure unit
+                            _ <- pure $ toggleBtnLoader state.option2.lottieConfig.id true                            
+                            _ <- pure $ startLottieProcess lottieAnimationConfig{ rawJson = state.option2.lottieConfig.lottieURL, lottieId = getNewIDWithTag state.option2.lottieConfig.id}
+                            push action
                         )
                         (const OnButton2Click)
+                    , onAnimationEnd
+                            ( \action -> do
+                                _ <- pure $ if state.option2.lottieConfig.autoDisableLoader then (toggleBtnLoader state.option2.lottieConfig.id false) else unit
+                                push action
+                            )
+                            (const NoAction)
                     , padding state.option2.padding
                     , accessibility DISABLE
                     , orientation VERTICAL

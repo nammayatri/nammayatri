@@ -110,7 +110,13 @@ endRidePopUp state = let
     primaryText {text = (getString END_RIDE)},
     secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_END_THE_RIDE)},
     option1 {text =(getString GO_BACK)},
-    option2 {text = (getString END_RIDE)}
+    option2 {text = (getString END_RIDE),
+             enableLoader = true,
+             lottieConfig = {
+                id : "endRidePopupSecondaryButton",
+                lottieURL : (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_btn_loader.json",
+                autoDisableLoader : true 
+             }}
   }
 in popUpConfig'
 
