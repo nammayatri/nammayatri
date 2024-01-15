@@ -649,7 +649,7 @@ enterOdometerReadingConfig state = let
       },
       modalType = ST.ODOMETER,
       confirmBtnColor = if state.props.endRideOdometerReadingModal then Color.red else Color.darkMint,
-      isDismissable = false,
+      isDismissable = true,
       odometerReading{ kiloMeters = state.data.odometerReading.valueInkm, meters = state.data.odometerReading.valueInM},
       odometerConfig { updateKm = state.props.odometerConfig.updateKm , updateM = state.props.odometerConfig.updateM}
       }

@@ -713,7 +713,6 @@ rideInfoView push config =
     , padding $ Padding 14 14 5 14
     , afterRender push $ const NoAction
     ] $ []
-      <> if config.rideProductType == ST.RENTAL then rentalRideInfoView push config else normalRideInfoView push config
       <>
       [  horizontalScrollView
           [ width MATCH_PARENT

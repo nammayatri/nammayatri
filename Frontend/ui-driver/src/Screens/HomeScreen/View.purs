@@ -237,7 +237,7 @@ view push state =
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
       , if state.props.enterOtpModal || state.props.endRideOtpModal then enterOtpModal push state else dummyTextView
-      , if state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal then enterOdometerReadingModal push state else dummyTextView
+      , if state.props.rentalBooking && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal ) then enterOdometerReadingModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if ((state.props.isMockLocation && (MU.getMerchant FunctionCall == MU.NAMMAYATRI)) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView

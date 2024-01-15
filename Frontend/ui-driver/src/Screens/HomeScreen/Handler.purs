@@ -65,7 +65,7 @@ homeScreen = do
     StartRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 700 false false
-      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: updatedState.data.activeRide.id, otp : updatedState.props.rideOtp , lat : lat , lon : lon , ts :ts} updatedState) 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_START_RIDE {id: updatedState.data.activeRide.id, otp : updatedState.props.rideOtp , odometerReading : updatedState.props.odometerValue, lat : lat , lon : lon , ts :ts} updatedState) 
     StartZoneRide  updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  updatedState.data.activeRide.src_lat updatedState.data.activeRide.src_lon 1000 true false

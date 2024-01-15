@@ -483,7 +483,8 @@ eval (CallBackImageUpload image imageName imagePath) state = do
     _ <- pure $ setValueToLocalStore RIDE_START_ODOMETER image -- After it normal ride flow will start
     _ <- pure $ printLog "value of image base 64 taking time" image
     _ <- pure $ printLog "value of image base 64 from local store" (getValueToLocalStore RIDE_START_ODOMETER )
-    continue state{props{enterOdometerReadingModal = false , currentStage= ST.RideStarted}}
+    let newState = if state.props.endRideOdometerReadingModal then state{props{endRideOdometerImage =image, currentStage= ST.RideStarted}} else state{props{startRideOdometerImage =image, currentStage= ST.RideStarted}}
+    continue newState
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
@@ -577,7 +578,7 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state
     focusIndex = length rideOtp
     newState = state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex ,otpIncorrect = false} }
     exitAction = if state.props.endRideOtpModal then EndRide newState else if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
-  if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then updateAndExit newState exitAction
+  if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then ( if state.props.rentalBooking then continue (newState { props = newState.props {enterOdometerReadingModal =  newState.props.enterOtpModal, endRideOdometerReadingModal = newState.props.endRideOtpModal, enterOtpModal = false, endRideOtpModal = false }})  else updateAndExit newState exitAction)
   else continue newState
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickBack text)) state = do
   let
@@ -590,10 +591,20 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state 
   continue state { props = state.props { enterOtpFocusIndex = focusIndex, rideOtp = rideOtp, otpIncorrect = false } }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
   continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
-eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do continue state{props{enterOdometerReadingModal = state.props.enterOtpModal , enterOtpModal = false, endRideOtpModal = false, endRideOdometerReadingModal = state.props.endRideOtpModal}}
-    -- let exitState = if state.props.endRideOtpModal then EndRide newState else if state.props.zoneRideBooking then StartZoneRide state else StartRide state
-    -- exit exitState
-eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone text)) state = continueWithCmd state  [ pure UploadImage] -- make api call
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do 
+  let newState = state{props{enterOdometerReadingModal = state.props.enterOtpModal , enterOtpModal = false, endRideOtpModal = false, endRideOdometerReadingModal = state.props.endRideOtpModal}}
+  if state.props.rentalBooking then continue (newState { props = state.props {enterOdometerReadingModal =  state.props.enterOtpModal, endRideOdometerReadingModal = state.props.endRideOtpModal, enterOtpModal = false,endRideOtpModal = false }}) 
+  else if state.props.endRideOtpModal then updateAndExit newState $ EndRide newState else if state.props.zoneRideBooking then updateAndExit newState $ StartZoneRide state else updateAndExit newState $ StartRide newState
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.BackPressed)) state = do
+  continue $ state { props = state.props { enterOtpModal = state.props.enterOdometerReadingModal, enterOdometerReadingModal = false,endRideOtpModal = state.props.endRideOdometerReadingModal,endRideOdometerReadingModal = false} }
+
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone text)) state = do
+  let newState = state{props{enterOdometerReadingModal = false , enterOtpModal = false, endRideOtpModal = false, endRideOdometerReadingModal = false}}
+  let exitAction = if state.props.endRideOdometerReadingModal then EndRide newState else StartRide newState
+  if ((state.props.endRideOdometerReadingModal && state.props.endRideOdometerImage == "") || (state.props.enterOdometerReadingModal && state.props.startRideOdometerImage == "") ) then continueWithCmd state [pure UploadImage] else updateAndExit newState exitAction  -- make api call
+
 eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index)) state = do 
   let kmStrLen = length state.data.odometerReading.valueInkm 
       mStrLen = length state.data.odometerReading.valueInM 
@@ -616,7 +627,7 @@ eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
-  if state.data.activeRide.rideProductType == ST.RENTAL then continue state{props{endRideOtpModal = true}, data{route = []}}
+  if state.props.rentalBooking then continue state{props{endRideOtpModal = true,enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp="",odometerValue="0000•0"}, data{route = []}}
     else
     continue $ (state {props {endRidePopUp = true}, data {route = []}})
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
@@ -917,7 +928,7 @@ eval ClickAddAlternateButton state = do
 eval LinkAadhaarAC state = exit $ AadhaarVerificationFlow state
 
 eval ZoneOtpAction state = do
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
+  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, rentalBooking = false } }
 
 eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
 

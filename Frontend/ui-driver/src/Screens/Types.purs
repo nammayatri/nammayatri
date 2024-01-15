@@ -1053,7 +1053,9 @@ type HomeScreenProps =  {
   waitTimeStatus :: TimerStatus,
   isMockLocation :: Boolean,
   accountBlockedPopup :: Boolean,
-  tobeLogged :: Boolean
+  tobeLogged :: Boolean,
+  startRideOdometerImage :: String,
+  endRideOdometerImage :: String
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
