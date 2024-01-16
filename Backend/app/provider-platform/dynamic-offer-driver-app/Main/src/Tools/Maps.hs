@@ -113,9 +113,7 @@ getTripRoutes merchantId merchantOpCityId req = do
   runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getTripRoutes) merchantId merchantOpCityId req
 
 snapToRoad ::
-  ( ServiceFlow m r,
-    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
-    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters]
+  ( ServiceFlow m r
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
@@ -135,7 +133,8 @@ getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
 snapToRoadWithFallback ::
   ( ServiceFlow m r,
     HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
-    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters]
+    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["snapToRoadPostCheckThreshold" ::: HighPrecMeters]
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->

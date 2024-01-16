@@ -289,6 +289,7 @@ in  { esqDBCfg
     , kafkaProducerCfg
     , snapToRoadSnippetThreshold = +300
     , droppedPointsThreshold = +2000
+    , snapToRoadPostCheckThreshold = +500
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
     , enableRedisLatencyLogging = False
