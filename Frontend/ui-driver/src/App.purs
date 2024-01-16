@@ -424,7 +424,9 @@ data DRIVE_SAVED_LOCATION_OUTPUT = EXIT_FROM_SCREEN
                       
 data WELCOME_SCREEN_OUTPUT = GoToMobileNumberScreen
 
-data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen | REFRESH_SCREEN_CHOOSE_CITY ChooseCityScreenState
+data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen 
+                                  | REFRESH_SCREEN_CHOOSE_CITY ChooseCityScreenState
+                                  | DETECT_CITY Number Number ChooseCityScreenState
 
 data CHOOSE_LANG_SCREEN_OUTPUT = LOGIN_FLOW
 data DRIVER_REFERRAL_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS

@@ -150,6 +150,8 @@ data TransporterConfigD u = TransporterConfig
     numOfCancellationsAllowed :: Int,
     canAddCancellationFee :: Bool,
     allowDefaultPlanAllocation :: Bool,
+    specialDrivers :: [Text],
+    specialLocationTags :: [Text],
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     notificationRetryEligibleErrorCodes :: [Text],

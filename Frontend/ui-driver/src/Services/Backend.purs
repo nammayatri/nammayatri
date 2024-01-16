@@ -53,6 +53,7 @@ import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Types.ModifyScreenState (modifyScreenState)
 import Foreign.Object (empty)
+import Locale.Utils
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -198,7 +199,6 @@ makeTriggerOTPReq mobileNumber (LatLon lat lng _) = TriggerOTPReq
         mkOperatingCity operatingCity = 
             if DA.any (_ == operatingCity) [ "__failed", "--"] then Nothing
             else if operatingCity == "Puducherry" then Just "Pondicherry"
-            else if operatingCity == "Mysore" then Just "Bangalore" -- Temp fix TODO: Remove this once Mysore is added in backend
             else Just operatingCity
         mkLatLon :: String -> Maybe Number
         mkLatLon latlon = 
@@ -441,7 +441,7 @@ mkUpdateDriverInfoReq dummy
     , canDowngradeToHatchback: Nothing
     , canDowngradeToTaxi: Nothing
     , language:
-        Just case getValueToLocalNativeStore LANGUAGE_KEY of
+        Just case getLanguageLocale languageKey of
           "EN_US" -> "ENGLISH"
           "KN_IN" -> "KANNADA"
           "HI_IN" -> "HINDI"
@@ -1268,3 +1268,15 @@ referredDriversBT payload = do
     where 
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
+
+
+detectCity :: Number -> Number -> Flow GlobalState (Either ErrorResponse DetectCityResp)
+detectCity lat lon = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.detectCity "") unwrapResponse $ callAPI headers $ makeDetectCityReq
+  where
+    unwrapResponse x = x
+    makeDetectCityReq = DetectCityReq $ {
+        lat : lat,
+        lon : lon
+    }

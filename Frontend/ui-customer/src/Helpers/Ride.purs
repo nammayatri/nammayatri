@@ -38,7 +38,7 @@ import Screens.Types (Stage(..), SearchResultType(..), PopupType(..), FlowStatus
 import Engineering.Helpers.Commons (liftFlow, convertUTCtoISC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
-import Helpers.Utils (getCurrentDate)
+import Helpers.Utils (getCurrentDate, getCityNameFromCode)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
@@ -102,7 +102,7 @@ checkRideStatus rideAssigned = do
                 pure unit
       else if ((getValueToLocalStore RATING_SKIPPED) == "false") then do
         updateLocalStage HomeScreen
-        rideBookingListResponse <- lift $ lift $ Remote.rideBookingList "1" "0" "false"
+        rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "COMPLETED"
         case rideBookingListResponse of
           Right (RideBookingListRes listResp) -> do
             let (RideBookingRes resp) = fromMaybe HSD.dummyRideBooking $ head listResp.list
@@ -122,7 +122,7 @@ checkRideStatus rideAssigned = do
               pure unit
               else pure unit
             when (isNothing currRideListItem.rideRating) $ do
-              when (resp.status /= "CANCELLED" && length listResp.list > 0) $ do
+              when (length listResp.list > 0) $ do
                 let nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
@@ -174,7 +174,7 @@ checkRideStatus rideAssigned = do
   if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit
   where 
     updateCity :: FlowStatusData -> FlowBT String Unit
-    updateCity (FlowStatusData flowStatusData) = modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = flowStatusData.source.city}})
+    updateCity (FlowStatusData flowStatusData) = modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{city = getCityNameFromCode flowStatusData.source.city}})
         
 
 removeChatService :: String -> FlowBT String Unit

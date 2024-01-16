@@ -352,7 +352,6 @@ public class ChatService extends Service {
                         .setContentTitle(getString(R.string.chatting_is_enabled))
                         .setContentText(contentText)
                         .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap"))
-                        .setColor(rgb(252, 197, 45))
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);

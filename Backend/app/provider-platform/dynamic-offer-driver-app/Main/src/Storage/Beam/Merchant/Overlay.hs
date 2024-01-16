@@ -47,7 +47,8 @@ data OverlayT f = OverlayT
     contactSupportNumber :: B.C f (Maybe Text),
     toastMessage :: B.C f (Maybe Text),
     secondaryActions :: B.C f (Maybe [Text]),
-    socialMediaLinks :: B.C f (Maybe A.Value)
+    socialMediaLinks :: B.C f (Maybe A.Value),
+    showPushNotification :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

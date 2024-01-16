@@ -538,7 +538,8 @@ newtype RidesInfo = RidesInfo
       disabilityTag :: Maybe String,
       payerVpa :: Maybe String,
       autoPayStatus :: Maybe String,
-      driverGoHomeRequestId :: Maybe String
+      driverGoHomeRequestId :: Maybe String,
+      isFreeRide :: Maybe Boolean
   }
 
 newtype LocationInfo = LocationInfo
@@ -3271,3 +3272,32 @@ instance showReferredDriversReq :: Show ReferredDriversReq where show = genericS
 instance decodeReferredDriversReq :: Decode ReferredDriversReq where decode = defaultDecode
 instance encodeRReferredDriversReq :: Encode ReferredDriversReq where encode = defaultEncode
 instance standardReferredDriversReq :: StandardEncode ReferredDriversReq where standardEncode body = standardEncode {}
+
+
+newtype DetectCityReq = DetectCityReq {
+  lat :: Number,
+  lon :: Number
+}
+
+newtype DetectCityResp = DetectCityResp {
+  city :: Maybe String,
+  status :: ApiSuccessResult
+}
+
+instance makeDetectCityReq :: RestEndpoint DetectCityReq DetectCityResp where
+  makeRequest reqBody@(DetectCityReq req) headers = defaultMakeRequest POST (EP.detectCity "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericDetectCityReq :: Generic DetectCityReq _
+derive instance newtypeDetectCityReq :: Newtype DetectCityReq _
+instance standardDetectCityReq :: StandardEncode DetectCityReq where standardEncode (DetectCityReq id) = standardEncode id
+instance showDetectCityReq :: Show DetectCityReq where show = genericShow
+instance decodeDetectCityReq :: Decode DetectCityReq where decode = defaultDecode
+instance encodeDetectCityReq :: Encode DetectCityReq where encode = defaultEncode
+
+derive instance genericDetectCityResp :: Generic DetectCityResp _
+instance standardDetectCityResp :: StandardEncode DetectCityResp where standardEncode (DetectCityResp body) = standardEncode body
+instance showDetectCityResp :: Show DetectCityResp where show = genericShow
+instance decodeDetectCityResp :: Decode DetectCityResp where decode = defaultDecode
+instance encodeDetectCityResp  :: Encode DetectCityResp where encode = defaultEncode

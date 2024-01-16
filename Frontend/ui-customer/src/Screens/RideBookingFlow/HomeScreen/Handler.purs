@@ -104,7 +104,9 @@ homeScreen = do
     Retry updatedState -> do
         modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
         App.BackT $ App.NoBack <$> (pure $ RETRY)
-    GoToHome -> App.BackT $ App.NoBack <$> (pure $ HOME_SCREEN)
+    GoToHome state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → state)
+      App.BackT $ App.NoBack <$> (pure $ HOME_SCREEN)
     SubmitRating updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ SUBMIT_RATING updatedState)

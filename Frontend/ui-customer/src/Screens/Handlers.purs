@@ -36,6 +36,10 @@ import Screens.TripDetailsScreen.Handler (tripDetailsScreen) as UI
 import Screens.SuccessScreen.Handler (successScreen) as UI
 import Screens.EmergencyContactsScreen.Handler (emergencyContactsScreen) as UI
 import Screens.OnBoardingFlow.WelcomeScreen.Handler (welcomeScreen) as UI
-import Screens.TicketBookingScreen.Handler (ticketBookingScreen) as UI
+import Screens.TicketBookingFlow.TicketBooking.Handler (ticketBookingScreen) as UI
+import Screens.TicketBookingFlow.PlaceDetails.Handler (placeDetailsScreen) as UI
+import Screens.TicketBookingFlow.TicketStatus.Handler (ticketStatusScreen) as UI
+import Screens.TicketBookingFlow.TicketList.Handler (ticketListScreen) as UI
 import Screens.TicketInfoScreen.Handler (ticketInfoScreen) as UI
-import Screens.TicketingScreen.Handler (ticketingScreen) as UI
+import Screens.TicketBookingFlow.PlaceList.Handler (placeListScreen) as UI
+import Screens.RentalBookingFlow.RideScheduledScreen.View (rideScheduledScreen) as UI

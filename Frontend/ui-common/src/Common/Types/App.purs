@@ -411,3 +411,8 @@ type MarginConfig = {
   bottom :: Int,
   left :: Int
 }
+
+type CarouselHolderData = {
+  id :: Int
+, shouldPush :: Boolean
+}

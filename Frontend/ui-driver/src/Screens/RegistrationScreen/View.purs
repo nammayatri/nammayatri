@@ -71,9 +71,9 @@ view ::
   ST.RegistrationScreenState ->
   PrestoDOM (Effect Unit) w
 view push state =
-  let isShowSubscriptions = getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true"
+  let showSubscriptionsOption = (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS == "true") && state.data.config.bottomNavConfig.subscription.isVisible
       completedStatusCount = length $ filter (\val -> val == COMPLETED) [ state.data.drivingLicenseStatus, state.data.vehicleDetailsStatus, state.data.permissionsStatus ]
-      progressPercent = case isShowSubscriptions of
+      progressPercent = case showSubscriptionsOption of
         true -> completedStatusCount * 25 + if state.data.subscriptionStatus == IN_PROGRESS then 25 else 0
         false -> if completedStatusCount * 33 == 99 then 100 else completedStatusCount * 33
   in
@@ -126,7 +126,7 @@ view push state =
                         [ textView
                             $ [ width WRAP_CONTENT
                               , height WRAP_CONTENT
-                              , text $ getVarString START_EARNING_IN_FOUR_STEPS [ show $ length state.data.registerationSteps - if (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS /= "true") then 1 else 0 ]
+                              , text $ getVarString START_EARNING_IN_FOUR_STEPS [ show $ length state.data.registerationSteps - if showSubscriptionsOption then 0 else 1 ]
                               , weight 1.0
                               ]
                             <> FontStyle.body2 TypoGraphy
@@ -149,7 +149,9 @@ view push state =
                                   [ height $ V 5
                                   , weight 1.0
                                   , cornerRadius 2.0
-                                  , visibility if item.stage == ST.SUBSCRIPTION_PLAN && (getValueToLocalNativeStore SHOW_SUBSCRIPTIONS /= "true") then GONE else VISIBLE
+                                  , visibility case item.stage of
+                                      ST.SUBSCRIPTION_PLAN -> boolToVisibility showSubscriptionsOption
+                                      _ -> VISIBLE
                                   , background case getStatus item.stage state of
                                       ST.COMPLETED -> Color.green900
                                       ST.IN_PROGRESS -> Color.yellow900
@@ -173,7 +175,7 @@ view push state =
                   , color Color.black700
                   , background Color.yellowOpacity10
                   , cornerRadius 8.0
-                  , visibility if state.data.subscriptionStatus == IN_PROGRESS && not state.props.logoutModalView && (getValueToLocalStore SHOW_SUBSCRIPTIONS == "true") then VISIBLE else GONE
+                  , visibility if state.data.subscriptionStatus == IN_PROGRESS && not state.props.logoutModalView && showSubscriptionsOption then VISIBLE else GONE
                   ]
                 <> FontStyle.body1 TypoGraphy
             , messageView push state
@@ -198,7 +200,7 @@ view push state =
                 , width MATCH_PARENT
                 , margin $ Margin 16 0 16 16
                 , clickable false
-                , visibility $ boolToVisibility state.data.cityConfig.showDriverReferral
+                , visibility $ boolToVisibility $ state.data.cityConfig.showDriverReferral || state.data.config.enableDriverReferral
                 ][enterReferralCode push state]
             
             ]

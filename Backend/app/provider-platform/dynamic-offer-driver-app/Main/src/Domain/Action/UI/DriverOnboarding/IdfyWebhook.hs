@@ -146,6 +146,6 @@ scheduleRetryVerificationJob verificationReq = do
       }
   where
     calculateScheduleTime retryCount = do
-      let retryInterval = 60 * 60 * 1000 -- 1 hour
+      let retryInterval = 60 * 60 -- 1 hour
       let retryTime = retryInterval * (3 ^ retryCount)
       retryTime

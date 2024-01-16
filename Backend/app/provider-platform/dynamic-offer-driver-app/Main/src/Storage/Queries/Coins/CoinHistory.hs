@@ -101,12 +101,24 @@ getDriverCoinInfo (Id driverId) timeDiffFromUtc = do
     Nothing
 
 updateStatusOfCoins :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> CoinStatus -> m ()
-updateStatusOfCoins id coinsRemainingValue newStatus =
+updateStatusOfCoins id coinsRemainingValue newStatus = do
+  now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamDC.status newStatus,
-      Se.Set BeamDC.coinsUsed coinsRemainingValue
+      Se.Set BeamDC.coinsUsed coinsRemainingValue,
+      Se.Set BeamDC.updatedAt now
     ]
     [Se.Is BeamDC.id $ Se.Eq id]
+
+totalCoinEarnHistory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> Maybe Integer -> Maybe Integer -> m [CoinHistory]
+totalCoinEarnHistory (Id driverId) mbLimit mbOffset = do
+  let limitVal = maybe 10 fromInteger mbLimit
+      offsetVal = maybe 0 fromInteger mbOffset
+  findAllWithOptionsKV
+    [Se.Is BeamDC.driverId $ Se.Eq driverId]
+    (Se.Desc BeamDC.createdAt)
+    (Just limitVal)
+    (Just offsetVal)
 
 instance FromTType' BeamDC.CoinHistory CoinHistory where
   fromTType' BeamDC.CoinHistoryT {..} = do
@@ -120,9 +132,11 @@ instance FromTType' BeamDC.CoinHistory CoinHistory where
             merchantOptCityId = merchantOptCityId,
             coins = coins,
             createdAt = createdAt,
+            updatedAt = updatedAt,
             expirationAt = expirationAt,
             status = status,
-            coinsUsed = coinsUsed
+            coinsUsed = coinsUsed,
+            bulkUploadTitle = bulkUploadTitle
           }
 
 instance ToTType' BeamDC.CoinHistory CoinHistory where
@@ -131,11 +145,13 @@ instance ToTType' BeamDC.CoinHistory CoinHistory where
       { BeamDC.id = getId id,
         BeamDC.driverId = driverId,
         BeamDC.createdAt = createdAt,
+        BeamDC.updatedAt = updatedAt,
         BeamDC.eventFunction = eventFunction,
         BeamDC.merchantId = merchantId,
         BeamDC.merchantOptCityId = merchantOptCityId,
         BeamDC.coins = coins,
         BeamDC.expirationAt = expirationAt,
         BeamDC.status = status,
-        BeamDC.coinsUsed = coinsUsed
+        BeamDC.coinsUsed = coinsUsed,
+        BeamDC.bulkUploadTitle = bulkUploadTitle
       }

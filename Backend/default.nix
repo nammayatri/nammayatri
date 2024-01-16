@@ -1,12 +1,14 @@
 { inputs, ... }:
 {
   imports = [
+    ./nix/debug.nix
     ./nix/docker.nix
     ./nix/scripts.nix
     ./nix/run-mobility-stack.nix
     ./nix/arion-configuration.nix
     ./nix/services.nix
     ./nix/osrm.nix
+    ./load-test
   ];
   perSystem = { config, self', pkgs, lib, ... }: {
     pre-commit.settings.imports = [
@@ -17,6 +19,7 @@
       projectRoot = ./.;
       imports = [
         inputs.beckn-gateway.haskellFlakeProjectModules.output
+        # inputs.namma-dsl.haskellFlakeProjectModules.output
       ];
       autoWire = [ "packages" "checks" "apps" ];
       devShell.tools = _: {
@@ -32,8 +35,10 @@
         amazonka-ses.source = inputs.amazonka-git + /lib/services/amazonka-ses;
         streamly.source = "0.8.3";
         unicode-data.source = "0.3.1";
+        namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
       };
       settings = {
+        namma-dsl.libraryProfiling = false;
         location-updates.check = false;
         beckn-test.check = false;
         singletons-th.jailbreak = true;
@@ -77,8 +82,11 @@
     };
 
     devShells.backend = pkgs.mkShell {
-      name = "ny-backend";
+      name = builtins.traceVerbose "devShells.backend" "ny-backend";
       meta.description = "Backend development environment for nammayatri";
+      packages = with pkgs; [
+        redis # redis-cli is used in scripts.nix
+      ];
       # cf. https://haskell.flake.page/devshell#composing-devshells
       inputsFrom = [
         config.mission-control.devShell

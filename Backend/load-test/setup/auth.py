@@ -6,8 +6,8 @@ load_dotenv()
 
 def auth(base_url, arr, file_name, merchant_id):
     all_tokens = []
-    if not os.path.exists("./tokens"):
-        os.mkdir("./tokens")
+    if not os.path.exists("./Backend/load-test/tokens"):
+        os.mkdir("./Backend/load-test/tokens")
 
     for mobile_number in arr:
         auth_data = {
@@ -57,11 +57,11 @@ for i in range(1, int(NUM_DRIVERS)):
     mobile_numbers.append(mobile_number)
 
 base_url_driver = os.getenv('BASE_URL_DRIVER')
-output_file_name_driver = "./tokens/driverTokens.json"
+output_file_name_driver = "Backend/load-test/tokens/driverTokens.json"
 merchant_id_driver = "favorit0-0000-0000-0000-00000favorit"
 
 base_url_customer = os.getenv('BASE_URL_RIDER')
-output_file_name_customer = "./tokens/riderTokens.json"
+output_file_name_customer = "Backend/load-test/tokens/riderTokens.json"
 merchant_id_customer = "YATRI"
 
 auth(base_url_driver, mobile_numbers, output_file_name_driver, merchant_id_driver)

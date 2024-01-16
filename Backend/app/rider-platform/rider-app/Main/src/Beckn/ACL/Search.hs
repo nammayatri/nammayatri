@@ -98,7 +98,7 @@ buildSearchReq origin destination searchId _ distance duration customerLanguage 
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
-  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing merchant.defaultCity merchant.country False
+  context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing _city merchant.country False
   let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled
   let searchMessage = Search.SearchMessage intent
 

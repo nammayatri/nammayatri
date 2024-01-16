@@ -25,7 +25,6 @@ import Types.App (FlowBT)
 
 data KeyStore
   = USER_NAME_KEY
-  | LANGUAGE_KEY
   | FCM_TOKEN
   | REGISTERATION_TOKEN
   | VERSION_NAME
@@ -90,6 +89,8 @@ data KeyStore
   | LAST_KNOWN_LON
   | SOURCE_GEOHASHES
   | REALLOCATE_PRODUCT_ENABLED
+  | UPDATE_REPEAT_TRIPS
+  | CUSTOMER_LOCATION
 
 derive instance genericKeyStore :: Generic KeyStore _
 

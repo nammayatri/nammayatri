@@ -174,7 +174,9 @@ type SuggestedDestinationAndTripsConfig = {
   locationsToBeStored :: Int,
   tripsToBeStored :: Int,
   frequencyWeight :: Number,
-  tripDistanceThreshold :: Number
+  tripDistanceThreshold :: Number,
+  repeatRideTime :: Int,
+  autoScrollTime :: Int
 }
 
 type Language =  {
@@ -204,7 +206,9 @@ type EstimateAndQuoteConfig = {
   enableOnlyAuto :: Boolean,
   showNearByDrivers :: Boolean,
   enableBookingPreference :: Boolean, 
-  textColor :: String
+  textColor :: String,
+  showInfoIcon :: Boolean,
+  variantInfo :: VariantConfig
 }
 
 type CustomerTip = {
@@ -223,7 +227,8 @@ type Features = {
   enableReferral :: Boolean,
   enableSupport :: Boolean,
   enableShareApp:: Boolean,
-  enableReAllocation :: Boolean
+  enableReAllocation :: Boolean,
+  forceLogReferrerUrl :: Boolean
   }
 
 type RideCompletedCardConfig = {
@@ -276,7 +281,8 @@ type HomeScreen = {
   header :: HomeScreenHeader,
   bannerViewVisibility :: Boolean,
   whereToButton :: WhereToButton,
-  pickupLocationTextColor :: String
+  pickupLocationTextColor :: String,
+  isServiceablePopupFullScreen :: Boolean
 }
 
 type HomeScreenHeader = {
@@ -315,4 +321,18 @@ type LocationTagBarConfig = {
   cornerRadius :: Number
 , textColor :: String
 , stroke:: String
+}
+
+type VariantConfig = {
+  hatchback :: VariantInfo,
+  sedan :: VariantInfo,
+  suv :: VariantInfo,
+  autoRickshaw :: VariantInfo,
+  taxi :: VariantInfo,
+  taxiPlus :: VariantInfo
+}
+
+type VariantInfo = {
+  name :: String,
+  image :: String
 }

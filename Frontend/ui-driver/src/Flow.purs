@@ -31,11 +31,11 @@ import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
 import Data.Either (Either(..), either)
-import Data.Function.Uncurried (runFn1)
+import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust, isNothing)
+import Data.Maybe (Maybe(..), fromJust, fromMaybe, isJust, isNothing, maybe)
 import Data.Number (fromString) as Number
 import Data.Ord (compare)
 import Data.Semigroup ((<>))
@@ -45,7 +45,7 @@ import Data.String (length) as STR
 import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
-import Data.Tuple (Tuple(..), fst)
+import Data.Tuple (Tuple(..), fst, snd)
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff)
@@ -57,7 +57,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Suggestions as EHS
-import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?))
+import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), getCityFromCode)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import DecodeUtil (stringifyJSON)
@@ -70,6 +70,7 @@ import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapE
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
+import Mobility.Prelude (capitalize)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork)
@@ -121,7 +122,10 @@ import Helpers.Firebase
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import MerchantConfig.Types (AppConfig(..))
 import ConfigProvider
-import Timers (clearTimer)
+import Timers (clearTimerWithId)
+import RemoteConfigs as RC
+import Locale.Utils
+import Data.Array as DA
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -132,6 +136,7 @@ baseAppFlow baseFlow event = do
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
     void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
+    updateOperatingCity
     when baseFlow $ lift $ lift $ initUI
     _ <- pure $ saveSuggestions "SUGGESTIONS" (getSuggestions "")
     _ <- pure $ saveSuggestionDefs "SUGGESTIONS_DEFINITIONS" (suggestionsDefinitions "")
@@ -139,6 +144,13 @@ baseAppFlow baseFlow event = do
     if getValueToLocalStore SHOW_SUBSCRIPTIONS == "__failed" then setValueToLocalStore SHOW_SUBSCRIPTIONS "true" else pure unit
     initialFlow
     where
+    updateOperatingCity :: FlowBT String Unit
+    updateOperatingCity = do
+      let city = getValueToLocalStore DRIVER_LOCATION
+      if city /= "__failed" then do
+        void $ pure $ setValueToLocalStore DRIVER_LOCATION (capitalize (toLower city))
+        else pure unit
+        
     cacheAppParameters :: Int -> Boolean -> FlowBT String Unit
     cacheAppParameters versionCode baseFlow = do
       let bundle = getVersionByKey "app"
@@ -181,8 +193,11 @@ baseAppFlow baseFlow event = do
 
     initialFlow :: FlowBT String Unit
     initialFlow = do
-      let regToken = getValueToLocalStore REGISTERATION_TOKEN
       config <- getAppConfigFlowBT Constants.appConfig
+      let regToken = getValueToLocalStore REGISTERATION_TOKEN
+          driver_location = getValueToLocalStore DRIVER_LOCATION
+          mbCity = find (\city' -> city'.cityName == driver_location) config.cityConfig
+      maybe (pure unit) (\city -> setValueToLocalStore SHOW_SUBSCRIPTIONS (show city.showSubscriptions)) $ mbCity
       isLocationPermission <- lift $ lift $ liftFlow $ isLocationPermissionEnabled unit
       if isTokenValid regToken then do
         setValueToLocalNativeStore REGISTERATION_TOKEN regToken
@@ -220,7 +235,7 @@ checkRideAndInitiate event = do
     where 
       checkAndDownloadMLModel :: FlowBT String Unit
       checkAndDownloadMLModel = do
-        let language = getValueToLocalStore LANGUAGE_KEY
+        let language = getLanguageLocale languageKey
         downloadedLanguages <- lift $ lift $ doAff $ makeAff \cb -> JB.listDownloadedTranslationModels (cb <<< Right) 1000 $> nonCanceler
         if (language /= "__failed" && not (languageExists downloadedLanguages language)) then do
           void $ liftFlowBT $ runEffectFn1 JB.downloadMLTranslationModel language
@@ -339,6 +354,7 @@ getDriverInfoFlow event activeRideResp = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
   case getDriverInfoApiResp of
     Right (GetDriverInfoResp getDriverInfoResp) -> do
+      void $ pure $ setValueToLocalStore DRIVER_LOCATION <$> (capitalize <$> getCityFromCode <$> getDriverInfoResp.operatingCity)
       updateFirebaseToken getDriverInfoResp.maskedDeviceToken getUpdateToken
       liftFlowBT $ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)
       if getDriverInfoResp.enabled then do
@@ -400,6 +416,9 @@ handleDeepLinksFlow event activeRideResp = do
             "lang" -> do
               liftFlowBT hideSplash 
               selectLanguageFlow
+            "contest" -> do
+              liftFlowBT hideSplash
+              referralFlow
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
@@ -507,6 +526,8 @@ onBoardingFlow = do
       referDriverResponse <- lift $ lift $ Remote.referDriver $ makeReferDriverReq state.data.referralCode
       case referDriverResponse of
         Right (ReferDriverResp resp) -> do
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ref_code_submitted" $ [{key : "Referee Code", value : unsafeToForeign state.data.referralCode}]
+          void $ pure $ setCleverTapUserProp [{key : "Entered Referral Code", value : unsafeToForeign state.data.referralCode}]
           modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = true, referralCodeSubmitted = true, enterReferralCodeModal = false}})
           setValueToLocalStore REFERRAL_CODE_ADDED "true"
           onBoardingFlow
@@ -930,7 +951,7 @@ driverProfileFlow = do
       
     HELP_AND_SUPPORT_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_help"
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
@@ -1258,7 +1279,7 @@ goToLocationFlow = do
   case action of 
     EXIT_FROM_SCREEN -> homeScreenFlow
     AUTO_COMPLETE updatedState searchVal currentLat currentLon -> do
-      resp <- lift $ lift $ Remote.autoComplete searchVal currentLat currentLon (EHC.getMapsLanguageFormat (getValueToLocalStore LANGUAGE_KEY))
+      resp <- lift $ lift $ Remote.autoComplete searchVal currentLat currentLon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey))
       case resp of 
         Right (API.AutoCompleteResp autoCompleteResp) -> 
           modifyScreenState $ DriverSavedLocationScreenStateType (\_ -> updatedState { data { predictions = 
@@ -1272,7 +1293,7 @@ goToLocationFlow = do
         Left _ -> pure unit
       goToLocationFlow
     GET_LOCATION_NAME state -> do
-      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReq state.data.saveLocationObject.position.lat state.data.saveLocationObject.position.lon (EHC.getMapsLanguageFormat (getValueToLocalStore LANGUAGE_KEY)))
+      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReq state.data.saveLocationObject.position.lat state.data.saveLocationObject.position.lon (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
       case resp of
         Right (API.GetPlaceNameResp placeNameResp) ->
           case placeNameResp!!0 of 
@@ -1302,7 +1323,7 @@ goToLocationFlow = do
       goToLocationFlow
 
     GET_PLACE_NAME updatedState placeId -> do
-      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReqByPlaceId placeId (EHC.getMapsLanguageFormat (getValueToLocalStore LANGUAGE_KEY)))
+      resp <- lift $ lift $ Remote.placeName (Remote.makePlaceNameReqByPlaceId placeId (EHC.getMapsLanguageFormat (getLanguageLocale languageKey)))
       case resp of
         Right (API.GetPlaceNameResp placeNameResp) ->
           case placeNameResp!!0 of 
@@ -1335,7 +1356,7 @@ goToLocationFlow = do
 
 selectLanguageFlow :: FlowBT String Unit
 selectLanguageFlow = do
-  let selectLang = getValueToLocalStore LANGUAGE_KEY
+  let selectLang = getLanguageLocale languageKey
   modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ selectedLanguage = if (selectLang == "__failed") then "EN_US" else selectLang}})
   action <- UI.selectLanguageScreen
   case action of
@@ -1374,7 +1395,7 @@ helpAndSupportFlow = do
       modifyScreenState $ RideSelectionScreenStateType (\rideHistoryScreen -> rideHistoryScreen { offsetValue = 0, selectedCategory = selectedCategory } )
       rideSelectionScreenFlow
     REPORT_ISSUE_CHAT_SCREEN selectedCategory -> do
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                        "HI_IN" -> "hi"
                        "KN_IN" -> "kn"
                        "TA_IN" -> "ta"
@@ -1515,7 +1536,7 @@ rideSelectionScreenFlow = do
       modifyScreenState $ RideSelectionScreenStateType (\rideHistoryScreen -> state{offsetValue = state.offsetValue + 8})
       rideSelectionScreenFlow
     SELECT_RIDE state -> do
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
@@ -1548,7 +1569,7 @@ issueReportChatScreenFlow = do
   flow <- UI.reportIssueChatScreen
   case flow of
     GO_TO_HELP_AND_SUPPORT -> do
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
@@ -1671,7 +1692,7 @@ tripDetailsScreenFlow = do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
       myRidesScreenFlow
     OPEN_HELP_AND_SUPPORT -> do
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
@@ -1836,7 +1857,7 @@ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
 onBoardingSubscriptionScreenFlow :: Int -> FlowBT String Unit
 onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
   setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
-  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}})
+  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}})
   action <- UI.onBoardingSubscriptionScreen
   case action of 
     REGISTERATION_ONBOARDING state -> do
@@ -1900,7 +1921,7 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showOffer = status == Online && state.props.driverStatusSet == Offline && getDriverInfoRes.autoPayStatus == Nothing }})
       homeScreenFlow
     GO_TO_HELP_AND_SUPPORT_SCREEN -> do
-      let language = ( case getValueToLocalStore LANGUAGE_KEY of
+      let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
                          "KN_IN" -> "kn"
                          "TA_IN" -> "ta"
@@ -1942,7 +1963,7 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
-          void $ pure $ clearTimer updatedState.data.activeRide.waitTimerId
+          void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           currentRideFlow Nothing
         Left errorPayload -> do
           let errResp = errorPayload.response
@@ -1963,6 +1984,7 @@ homeScreenFlow = do
         Right startZoneRideResp -> do
           liftFlowBT $ logEvent logField_ "ny_driver_special_zone_ride_start"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
+          _ <- pure $ hideKeyboardOnNavigation true
           void $ lift $ lift $ toggleLoader false
           void $ updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
@@ -2046,8 +2068,14 @@ homeScreenFlow = do
               specialZoneText = specialZoneConfig.text
             }})
           let payerVpa = fromMaybe "" response.payerVpa
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {data { 
-            endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa }}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen 
+            { data { 
+                endRideData { finalAmount = fromMaybe response.estimatedBaseFare response.computedFare, riderName = fromMaybe "" response.riderName, rideId = response.id, tip = response.customerExtraFee, disability = response.disabilityTag, payerVpa = payerVpa }
+              },
+              props {
+                isFreeRide = fromMaybe false response.isFreeRide
+              }
+            })
         
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showRideCompleted = true}})
       _ <- updateStage $ HomeScreenStage RideCompleted
@@ -2060,9 +2088,9 @@ homeScreenFlow = do
                                                                                         {key : "Pickup", value : unsafeToForeign state.data.activeRide.source},
                                                                                         {key : "Estimated Ride Distance (meters)" , value : unsafeToForeign state.data.activeRide.distance}]
       API.DriverCancelRideResponse cancelRideResp <- Remote.cancelRide id (Remote.makeCancelRideReq info reason)
-      _ <- pure if state.data.driverGotoState.timerId /= "" then clearTimer state.data.driverGotoState.timerId else unit
+      _ <- pure if state.data.driverGotoState.timerId /= "" then clearTimerWithId state.data.driverGotoState.timerId else unit
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
-      void $ pure $ clearTimer state.data.activeRide.waitTimerId
+      void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
       _ <- pure $ removeAllPolylines ""
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
@@ -2083,7 +2111,7 @@ homeScreenFlow = do
           _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
           _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
-          void $ pure $ clearTimer state.data.activeRide.waitTimerId
+          void $ pure $ clearTimerWithId state.data.activeRide.waitTimerId
           (DriverActiveInactiveResp resp) <- Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
           removeChatService ""
           _ <- updateStage $ HomeScreenStage HomeScreen
@@ -2225,7 +2253,7 @@ homeScreenFlow = do
       case deactivateResp of
         Right _ -> do
           _ <- pure $ toast $ getString GOTO_LOC_IS_DISABLED
-          _ <- pure $ clearTimer state.data.driverGotoState.timerId
+          _ <- pure $ clearTimerWithId state.data.driverGotoState.timerId
           driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })
           modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp})
           updateDriverDataToStates
@@ -2256,7 +2284,7 @@ clearPendingDuesFlow showLoader = do
       let (CreateOrderRes orderResp) = clearduesResp.orderResp
           (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
           (PayPayload innerpayload) = sdk_payload.payload
-          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
+          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
           sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
       setValueToLocalStore DISABLE_WIDGET "true"
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
@@ -2309,7 +2337,7 @@ nyPaymentFlow planCardConfig fromScreen = do
       let (CreateOrderRes orderResp) = listResp.orderResp
           (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
           (PayPayload innerpayload) = sdk_payload.payload
-          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getValueToLocalStore LANGUAGE_KEY)) }
+          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
           sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
       setValueToLocalStore DISABLE_WIDGET "true"
       _ <- pure $ cleverTapCustomEvent "ny_driver_payment_page_opened"
@@ -2450,7 +2478,7 @@ setPaymentStatus paymentStatus (PayPayload payload) = do
                   let currency = getCurrency Constants.appConfig
                   setValueToLocalStore SHOW_PAYMENT_MODAL "false"
                   modifyScreenState $ AcknowledgementScreenType (\a -> a { data {
-                    title = Just ( case getValueToLocalStore LANGUAGE_KEY of
+                    title = Just ( case getLanguageLocale languageKey of
                           "EN_US" -> "Payment of "<> currency <> payload.amount <>" Successful!"
                           "HI_IN" -> currency <> payload.amount <> " का भुगतान सफल!"
                           "BN_IN" -> currency <> payload.amount <> " পেমেন্ট সফল!"
@@ -2503,7 +2531,7 @@ ackScreenFlow = do
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   liftFlowBT $ runEffectFn1 initiatePP unit
-  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getValueToLocalNativeStore LANGUAGE_KEY) == "TA_IN"}})
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN"}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
   case uiAction of
@@ -2857,6 +2885,7 @@ updateCleverTapUserProps (GetDriverInfoResp getDriverInfoResp)= do
 
   void $ traverse (setCleverTapUserData "gender") $ getDriverInfoResp.gender
   void $ traverse (setCleverTapUserData "Alternate Number") $ getDriverInfoResp.alternateNumber
+  void $ pure $ setCleverTapUserProp [{key : "Driver Referral Code", value : unsafeToForeign $ fromMaybe "" getDriverInfoResp.referralCode}]
 
   case getDriverInfoResp.numberOfRides of
     Just value -> void $ pure $ setCleverTapUserProp [{key : "total_driver_trips", value : unsafeToForeign value }]
@@ -2914,13 +2943,15 @@ checkDriverBlockingStatus (GetDriverInfoResp getDriverInfoResp) = do
 
 updateBannerAndPopupFlags :: FlowBT String Unit
 updateBannerAndPopupFlags = do
-  globalstate <- getState
-  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate false
+  (GlobalState allState) <- getState
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   appConfig <- getAppConfigFlowBT Constants.appConfig
   let
     autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
     pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
     subscriptionConfig = appConfig.subscriptionConfig
+    _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" true
+    subscriptionRemoteConfig = allState.homeScreen.data.subsRemoteConfig
     freeTrialDays = fromMaybe 0 getDriverInfoResp.freeTrialDaysLeft
     shouldShowPopup = getValueToLocalStore APP_SESSION_TRACK_COUNT == "true" 
                       && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" 
@@ -2929,14 +2960,15 @@ updateBannerAndPopupFlags = do
                       && appConfig.subscriptionConfig.enableSubscriptionPopups
                       && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true"
     autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
+    status = getDriverStatus ""
     autopayBannerType =
       if subscriptionConfig.enableSubscriptionPopups && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then 
         case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
           true, true, _ -> FREE_TRIAL_BANNER
           _, false, true -> do
-            if pendingTotalManualDues < subscriptionConfig.lowDuesLimit then LOW_DUES_BANNER
-            else if pendingTotalManualDues >= subscriptionConfig.lowDuesLimit && pendingTotalManualDues < subscriptionConfig.highDueWarningLimit then CLEAR_DUES_BANNER
-            else if pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit && pendingTotalManualDues < subscriptionConfig.maxDuesLimit then DUE_LIMIT_WARNING_BANNER
+            if pendingTotalManualDues < subscriptionRemoteConfig.low_dues_warning_limit then LOW_DUES_BANNER
+            else if pendingTotalManualDues >= subscriptionRemoteConfig.low_dues_warning_limit && pendingTotalManualDues < subscriptionRemoteConfig.high_due_warning_limit then CLEAR_DUES_BANNER
+            else if pendingTotalManualDues >= subscriptionRemoteConfig.high_due_warning_limit && pendingTotalManualDues < subscriptionRemoteConfig.max_dues_limit then DUE_LIMIT_WARNING_BANNER
             else NO_SUBSCRIPTION_BANNER
           true, _, _ -> if isNothing getDriverInfoResp.autoPayStatus then NO_SUBSCRIPTION_BANNER else SETUP_AUTOPAY_BANNER
           _, _, _ -> NO_SUBSCRIPTION_BANNER
@@ -2946,7 +2978,7 @@ updateBannerAndPopupFlags = do
       true, true , true -> case freeTrialDays of
         _ | freeTrialDays == 3 || freeTrialDays == 2 || freeTrialDays == 1 -> FREE_TRIAL_POPUP
         _ -> NO_SUBSCRIPTION_POPUP
-      false, _, true -> if pendingTotalManualDues >= subscriptionConfig.maxDuesLimit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
+      false, _, true -> if pendingTotalManualDues >= subscriptionRemoteConfig.max_dues_limit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
       _, _, _ -> NO_SUBSCRIPTION_POPUP
 
     shouldMoveDriverOffline = (withinTimeRange "12:00:00" "23:59:59" (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"))
@@ -2956,11 +2988,12 @@ updateBannerAndPopupFlags = do
         && shouldMoveDriverOffline
         && appConfig.subscriptionConfig.moveDriverToOfflineInHighDueDaily
         && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false"
-        && pendingTotalManualDues >= subscriptionConfig.highDueWarningLimit
+        && pendingTotalManualDues >= subscriptionRemoteConfig.high_due_warning_limit
         && getDriverInfoResp.mode /= Just "OFFLINE"
   when moveDriverToOffline $ do
       setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
       changeDriverStatus Offline
+  setValueToLocalStore DISABLE_WIDGET if status == Offline then "true" else "false"
   modifyScreenState
     $ HomeScreenStateType
         ( \homeScreen ->
@@ -3019,16 +3052,9 @@ runInternetCondition = do
 chooseCityFlow :: FlowBT String Unit
 chooseCityFlow = do
   liftFlowBT hideSplash
-  logField_ <- lift $ lift $ getLogFields
-  appConfig <- getAppConfigFlowBT Constants.appConfig
   (GlobalState globalstate) <- getState
+  logField_ <- lift $ lift $ getLogFields
   runInternetCondition
-  (API.GetCityRes resp) <- Remote.getMerchantOperatingCityListBT ""
-  let cityArray = map (\(API.CityRes item) -> (toUpper item.name)) (resp)
-      filteredArray = filter (\item -> (any (_ == (toUpper item.cityName)) cityArray)) appConfig.cityConfig
-  void $ pure $ setCleverTapUserProp [{key : "Preferred Language", value : unsafeToForeign $ appConfig.defaultLanguage}]
-  setValueToLocalStore LANGUAGE_KEY $ appConfig.defaultLanguage
-  modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { data {merchantOperatingCityConfig = filteredArray , config = appConfig}})
   when (globalstate.globalProps.addTimestamp) $ do
     liftFlowBT $ setEventTimestamp "chooseCity"
     logData <- liftFlowBT $ getTimeStampObject unit
@@ -3038,6 +3064,36 @@ chooseCityFlow = do
   case chooseCityScreen of
     GoToWelcomeScreen -> authenticationFlow ""
     REFRESH_SCREEN_CHOOSE_CITY _ -> chooseCityFlow
+    DETECT_CITY lat lon state -> do
+      if state.data.config.chooseCity.straightLineDistLogic then straightLineDist lat lon state else detectCityAPI lat lon state
+      chooseCityFlow
+  where 
+    closestCity :: (Tuple String Number) -> CityConfig -> Number -> Number -> (Tuple String Number)
+    closestCity (Tuple cityName distance) city driverLat driverLon = do
+      let distanceFromCity = getDistanceBwCordinates driverLat driverLon city.cityLat city.cityLong
+      if distanceFromCity < distance then (Tuple city.cityName distanceFromCity) else (Tuple cityName distance)
+    
+    straightLineDist :: Number -> Number -> ST.ChooseCityScreenState -> FlowBT String Unit
+    straightLineDist lat lon state = do
+      let distanceFromBangalore = getDistanceBwCordinates lat lon 12.9716 77.5946
+          initialAccumulator = Tuple "Bangalore" distanceFromBangalore
+          result = DA.foldl (\acc city -> closestCity acc city lat lon) initialAccumulator state.data.config.cityConfig
+          insideThreshold = (snd result) <= state.data.config.unserviceableThreshold
+      if insideThreshold && (not state.props.isMockLocation) then
+        modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just $ fst result }, props { locationUnserviceable = false, locationDetectionFailed = false }}
+      else
+        modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true }}
+    
+    detectCityAPI :: Number -> Number -> ST.ChooseCityScreenState -> FlowBT String Unit
+    detectCityAPI lat lon state = do
+      resp <- lift $ lift $ Remote.detectCity lat lon
+      case resp of
+        Right (API.DetectCityResp resp') -> case resp'.city of
+          Just city -> modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just city }, props { locationUnserviceable = false, locationDetectionFailed = false }}
+          Nothing -> modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true }}
+        Left _ -> do
+          liftFlowBT $ firebaseLogEvent "ny_driver_detect_city_fallback"
+          straightLineDist lat lon state
 
 welcomeScreenFlow :: FlowBT String Unit
 welcomeScreenFlow = do
@@ -3068,6 +3124,6 @@ referralFlow :: FlowBT String Unit
 referralFlow = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
   let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-  if cityConfig.showDriverReferral then driverReferralScreenFlow
+  if cityConfig.showDriverReferral || appConfig.enableDriverReferral then driverReferralScreenFlow
     else referralScreenFlow
 

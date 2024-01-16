@@ -197,6 +197,9 @@ data UserActionType
   | SEND_DUMMY_NOTIFICATION
   | CHANGE_OPERATING_CITY
   | SCHEDULER_TRIGGER
+  | DRIVER_COIN_BULK_UPLOAD
+  | DRIVER_COIN_HISTORY
+  | REMOVE_EXPIRED_HOTSPOTS
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 genSingletons [''UserActionType]

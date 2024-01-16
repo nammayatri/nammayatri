@@ -61,7 +61,7 @@ import Data.Either (Either(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Debug (spy)
-import Timers (countDown)
+import Timers (startTimer)
 
 screen :: ST.ReferralScreenState -> Screen Action ST.ReferralScreenState ScreenOutput
 screen initialState =
@@ -772,7 +772,7 @@ commonView push img title description state=
     , afterRender (\action -> do
                         if state.props.stage == ST.SuccessScreen then do
                           void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ lift $ lift $ doAff do
-                            liftEffect $ countDown state.props.seconds state.props.id push SuccessScreenExpireCountDwon
+                            liftEffect $ startTimer state.props.seconds state.props.id "1" push SuccessScreenExpireCountDwon
                         else pure unit
                         push action
                   ) (const SuccessScreenRenderAction)

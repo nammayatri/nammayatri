@@ -30,7 +30,7 @@ import Tools.Streaming.Kafka
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
-    migrationPath :: Maybe FilePath,
+    migrationPath :: [FilePath],
     autoMigrate :: Bool,
     port :: Int,
     bapId :: Text,

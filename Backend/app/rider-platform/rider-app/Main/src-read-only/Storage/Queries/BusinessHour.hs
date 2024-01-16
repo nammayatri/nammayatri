@@ -5,14 +5,15 @@ module Storage.Queries.BusinessHour where
 
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.BusinessHour as Beam
 
@@ -25,14 +26,14 @@ createMany = traverse_ createWithKV
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> m (Maybe (Domain.Types.BusinessHour.BusinessHour))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> m (Maybe (Domain.Types.BusinessHour.BusinessHour))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
@@ -48,7 +49,7 @@ updateByPrimaryKey Domain.Types.BusinessHour.BusinessHour {..} = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

@@ -3,4 +3,4 @@ nix_direnv_watch_file \
     Backend/cabal.project \
     Backend/*.nix \
     Backend/nix/*.nix
-use flake .#backend
+use flake .#backend --trace-verbose

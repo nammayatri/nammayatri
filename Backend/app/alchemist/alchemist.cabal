@@ -24,108 +24,12 @@ flag Local
   manual: True
   default: False
 
-library
-  exposed-modules:
-      Alchemist.App
-      Alchemist.DSL.Parser.API
-      Alchemist.DSL.Parser.Storage
-      Alchemist.DSL.Syntax.API
-      Alchemist.DSL.Syntax.Storage
-      Alchemist.Generator.Haskell
-      Alchemist.Generator.Haskell.ApiTypes
-      Alchemist.Generator.Haskell.BeamQueries
-      Alchemist.Generator.Haskell.BeamTable
-      Alchemist.Generator.Haskell.DomainHandler
-      Alchemist.Generator.Haskell.DomainType
-      Alchemist.Generator.Haskell.Servant
-      Alchemist.Generator.Purs
-      Alchemist.Generator.Purs.API
-      Alchemist.Generator.SQL
-      Alchemist.Generator.SQL.Table
-      Alchemist.GeneratorCore
-      Alchemist.Utils
-  other-modules:
-      Paths_alchemist
-  hs-source-dirs:
-      src
-  default-extensions:
-      ConstraintKinds
-      DataKinds
-      DefaultSignatures
-      DeriveAnyClass
-      DeriveFunctor
-      DeriveGeneric
-      DuplicateRecordFields
-      ExplicitNamespaces
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      LambdaCase
-      MultiParamTypeClasses
-      MultiWayIf
-      NamedFieldPuns
-      NoImplicitPrelude
-      OverloadedLabels
-      OverloadedStrings
-      PackageImports
-      PatternSynonyms
-      PolyKinds
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      TupleSections
-      TypeApplications
-      TypeFamilies
-      TypeOperators
-      ViewPatterns
-      BlockArguments
-      TypeSynonymInstances
-      UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
-  build-depends:
-      aeson
-    , base >=4.7 && <5
-    , beckn-spec
-    , bytestring
-    , casing
-    , directory
-    , esqueleto
-    , extra
-    , filepath
-    , lens
-    , lens-aeson
-    , mobility-core
-    , mtl
-    , parsec
-    , persistent
-    , persistent-postgresql
-    , raw-strings-qq
-    , record-dot-preprocessor
-    , record-hasfield
-    , regex-tdfa
-    , scientific
-    , servant-server
-    , split
-    , stringbuilder
-    , template-haskell
-    , text
-    , time
-    , unordered-containers
-    , vector
-    , yaml
-  default-language: Haskell2010
-  if flag(Local)
-    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
-  else
-    ghc-options: -O2 -j4
-
 executable alchemist-generator-exe
   main-is: Main.hs
   other-modules:
       Paths_alchemist
   hs-source-dirs:
-      spec
+      src
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -163,133 +67,21 @@ executable alchemist-generator-exe
   ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
-    , alchemist
     , base >=4.7 && <5
-    , beckn-spec
     , bytestring
     , casing
     , directory
-    , esqueleto
-    , extra
     , filepath
-    , lens
-    , lens-aeson
     , mobility-core
-    , mtl
-    , parsec
-    , persistent
-    , persistent-postgresql
-    , raw-strings-qq
+    , namma-dsl
     , record-dot-preprocessor
     , record-hasfield
-    , regex-tdfa
-    , scientific
-    , servant-server
-    , split
-    , stringbuilder
     , template-haskell
     , text
     , time
-    , unordered-containers
-    , vector
     , yaml
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -O2 -j4
-
-test-suite alchemist-tests
-  type: exitcode-stdio-1.0
-  main-is: Main.hs
-  other-modules:
-      Alchemist.App
-      Alchemist.DSL.Parser.API
-      Alchemist.DSL.Parser.Storage
-      Alchemist.DSL.Syntax.API
-      Alchemist.DSL.Syntax.Storage
-      Alchemist.Generator.Haskell
-      Alchemist.Generator.Haskell.ApiTypes
-      Alchemist.Generator.Haskell.BeamQueries
-      Alchemist.Generator.Haskell.BeamTable
-      Alchemist.Generator.Haskell.DomainHandler
-      Alchemist.Generator.Haskell.DomainType
-      Alchemist.Generator.Haskell.Servant
-      Alchemist.Generator.Purs
-      Alchemist.Generator.Purs.API
-      Alchemist.Generator.SQL
-      Alchemist.Generator.SQL.Table
-      Alchemist.GeneratorCore
-      Alchemist.Utils
-      Paths_alchemist
-  hs-source-dirs:
-      tests
-      src
-  default-extensions:
-      ConstraintKinds
-      DataKinds
-      DefaultSignatures
-      DeriveAnyClass
-      DeriveFunctor
-      DeriveGeneric
-      DuplicateRecordFields
-      ExplicitNamespaces
-      FlexibleContexts
-      FlexibleInstances
-      FunctionalDependencies
-      GADTs
-      LambdaCase
-      MultiParamTypeClasses
-      MultiWayIf
-      NamedFieldPuns
-      NoImplicitPrelude
-      OverloadedLabels
-      OverloadedStrings
-      PackageImports
-      PatternSynonyms
-      PolyKinds
-      RankNTypes
-      RecordWildCards
-      ScopedTypeVariables
-      TupleSections
-      TypeApplications
-      TypeFamilies
-      TypeOperators
-      ViewPatterns
-      BlockArguments
-      TypeSynonymInstances
-      UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie
-  build-depends:
-      aeson
-    , alchemist
-    , base >=4.7 && <5
-    , beckn-spec
-    , bytestring
-    , casing
-    , directory
-    , esqueleto
-    , extra
-    , filepath
-    , lens
-    , lens-aeson
-    , mobility-core
-    , mtl
-    , parsec
-    , persistent
-    , persistent-postgresql
-    , raw-strings-qq
-    , record-dot-preprocessor
-    , record-hasfield
-    , regex-tdfa
-    , scientific
-    , servant-server
-    , split
-    , stringbuilder
-    , template-haskell
-    , text
-    , time
-    , unordered-containers
-    , vector
-    , yaml
-  default-language: Haskell2010

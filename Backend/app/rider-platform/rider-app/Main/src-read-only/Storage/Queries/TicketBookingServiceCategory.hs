@@ -4,7 +4,7 @@
 module Storage.Queries.TicketBookingServiceCategory where
 
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.TicketBookingService
 import qualified Domain.Types.TicketBookingServiceCategory
 import Kernel.Beam.Functions
@@ -12,8 +12,9 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketBookingServiceCategory as Beam
 
@@ -26,14 +27,14 @@ createMany = traverse_ createWithKV
 findAllByTicketBookingServiceId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ([Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory])
 findAllByTicketBookingServiceId (Kernel.Types.Id.Id ticketBookingServiceId) = do
   findAllWithKV
-    [ Se.Is Beam.ticketBookingServiceId $ Se.Eq $ ticketBookingServiceId
+    [ Se.Is Beam.ticketBookingServiceId $ Se.Eq ticketBookingServiceId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory -> m (Maybe (Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
@@ -52,7 +53,7 @@ updateByPrimaryKey Domain.Types.TicketBookingServiceCategory.TicketBookingServic
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

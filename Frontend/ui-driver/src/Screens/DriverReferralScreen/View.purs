@@ -115,7 +115,7 @@ driverReferralCode push state =
     ][   imageView
             [ height $ V 28
             , width $ V 70
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ic_namma_yatri_logo"
+            , imageWithFallback $ fetchImage FF_ASSET "ic_namma_yatri_logo"
             ]
          , textView $
             [ width WRAP_CONTENT
@@ -177,7 +177,7 @@ referredDriversView push state =
     ][textView $
         [ width MATCH_PARENT
         , height WRAP_CONTENT
-        , text $ getString START_TAKING_RIDES_AND_REFER
+        , text $ getString $ START_TAKING_RIDES_AND_REFER "START_TAKING_RIDES_AND_REFER"
         , background Color.blue600
         , color Color.black800
         , cornerRadius 10.0
@@ -232,7 +232,7 @@ rideLeaderBoard push state =
         ][ imageView
             [ width $ V 97
             , height $ V 97
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_driver_leaderboard"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_driver_leaderboard"
             ]
           , linearLayout
             [weight 1.0][]
@@ -284,6 +284,7 @@ appQRCodeView push state =
     , height MATCH_PARENT
     , gravity CENTER
     , background Color.blackLessTrans
+    , onClick push $ const $ BackPressed
     ][
       linearLayout
         [ width MATCH_PARENT
@@ -298,7 +299,7 @@ appQRCodeView push state =
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
             , gravity CENTER
-            , text $ getString DOWNLOAD_NAMMA_YATRI
+            , text $ getString $ DOWNLOAD_NAMMA_YATRI "DOWNLOAD_NAMMA_YATRI"
             , margin $ MarginVertical 10 7
             , color Color.black800
             ] <> FontStyle.h2 TypoGraphy
@@ -306,7 +307,7 @@ appQRCodeView push state =
             [ width $ V 280
             , height $ V 280
             , gravity CENTER
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_driver_app_qr_code"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_driver_app_qr_code"
             ]
           , PrimaryButton.view (push <<< PrimaryButtonActionController state) (primaryButtonConfig state)
          ]
@@ -327,6 +328,6 @@ qrScreenView push state =
             [ height $ V 0
             , width $ V 0
             , id $ getNewIDWithTag "DriverReferralScreenLogo"
-            , imageWithFallback $ fetchImage FF_ASSET "ny_namma_yatri"
+            , imageWithFallback $ fetchImage FF_ASSET "ic_namma_yatri_logo"
             ]
     ]

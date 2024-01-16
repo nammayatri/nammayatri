@@ -19,15 +19,12 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.mlkit.common.model.RemoteModelManager;
 import com.google.mlkit.nl.translate.TranslateRemoteModel;
 import com.google.mlkit.nl.translate.Translation;
 import com.google.mlkit.nl.translate.Translator;
 import com.google.mlkit.nl.translate.TranslatorOptions;
+
 import org.json.JSONArray;
 
 import java.util.HashMap;
@@ -35,13 +32,12 @@ import java.util.Locale;
 import java.util.Map;
 
 import in.juspay.hyper.core.BridgeComponents;
-import in.juspay.hyper.core.JsCallback;
 
 
 public class TranslatorMLKit {
     private static Translator translator;
 
-    private Context context;
+    private final Context context;
 
     static final RemoteModelManager remoteModelManager = RemoteModelManager.getInstance();
 
@@ -98,9 +94,7 @@ public class TranslatorMLKit {
 
         scopedTranslator.downloadModelIfNeeded()
                 .addOnSuccessListener(
-                        v -> {
-                            firebaseLogEventWithParams("download_translation_model", "download_successful", "successful_translation", context);
-                        })
+                        v -> firebaseLogEventWithParams("download_translation_model", "download_successful", "successful_translation", context))
                 .addOnFailureListener(
                         e -> {
                             Log.d(LOG_TAG, "download failed");
@@ -118,7 +112,7 @@ public class TranslatorMLKit {
                         isDownloaded -> {
                             if (isDownloaded) {
                                 remoteModelManager.deleteDownloadedModel(deleteModel)
-                                        .addOnSuccessListener((OnSuccessListener) o -> {
+                                        .addOnSuccessListener(unused -> {
 
                                         })
                                         .addOnFailureListener(e -> {
@@ -127,12 +121,10 @@ public class TranslatorMLKit {
                             }
                         })
                 .addOnFailureListener(
-                        e -> {
-                            Log.d(LOG_TAG, "list downloaded models failed");
-                        });
+                        e -> Log.d(LOG_TAG, "list downloaded models failed"));
     }
 
-    public static void translateStringInTextView(String stringToTranslate, TextView textView) {
+    public void translateStringInTextView(String stringToTranslate, TextView textView) {
         if (translator != null) {
             translator.translate(stringToTranslate)
                     .addOnSuccessListener(
@@ -146,13 +138,11 @@ public class TranslatorMLKit {
                                 }
                             })
                     .addOnFailureListener(
-                            e -> {
-                                Log.d(LOG_TAG, "translation failed");
-                            });
+                            e -> Log.d(LOG_TAG, "translation failed"));
         }
     }
 
-    public static void translateStringWithCallback(String initialAddress, String callback, BridgeComponents bridgeComponents) {
+    public void translateStringWithCallback(String initialAddress, String callback, BridgeComponents bridgeComponents) {
         if (translator != null) {
             translator.translate(initialAddress)
                     .addOnSuccessListener(
@@ -179,7 +169,7 @@ public class TranslatorMLKit {
 
     }
 
-    public static void listDownloadedModels(String callback, BridgeComponents bridgeComponents) {
+    public void listDownloadedModels(String callback, BridgeComponents bridgeComponents) {
         remoteModelManager.getDownloadedModels(TranslateRemoteModel.class)
                 .addOnSuccessListener(
                         remoteModels -> {

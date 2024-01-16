@@ -17,7 +17,7 @@ module Domain.Types.LocationMapping where
 
 import Domain.Types.Location
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.Id
 import Tools.Beam.UtilsTH

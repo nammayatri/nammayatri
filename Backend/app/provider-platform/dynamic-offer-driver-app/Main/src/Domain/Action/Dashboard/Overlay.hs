@@ -56,7 +56,8 @@ data CreateOverlayReq = CreateOverlayReq
     contactSupportNumber :: Maybe Text,
     toastMessage :: Maybe Text,
     secondaryActions :: Maybe [Text],
-    socialMediaLinks :: Maybe [FCM.FCMMediaLink]
+    socialMediaLinks :: Maybe [FCM.FCMMediaLink],
+    showPushNotification :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -141,7 +142,8 @@ data OverlayItem = OverlayItem
     contactSupportNumber :: Maybe Text,
     toastMessage :: Maybe Text,
     secondaryActions :: Maybe [Text],
-    socialMediaLinks :: Maybe [FCM.FCMMediaLink]
+    socialMediaLinks :: Maybe [FCM.FCMMediaLink],
+    showPushNotification :: Maybe Bool
   }
   deriving (Generic, Show, Eq)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

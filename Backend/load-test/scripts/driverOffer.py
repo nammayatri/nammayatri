@@ -10,7 +10,7 @@ class DriverApp(HttpUser):
 
     host = os.getenv('BASE_URL_DRIVER')
     available_tokens = []
-    with open("./tokens/driverTokens.json", "r") as file:
+    with open("Backend/load-test/tokens/driverTokens.json", "r") as file:
         available_tokens = json.load(file)
 
     def on_start(cls):

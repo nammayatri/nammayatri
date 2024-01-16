@@ -9,7 +9,7 @@ To build or develop the project, you need to install the following.
 
 #### Nix
 
-[Nix](https://nixos.asia/en/nix) is central to building and developing the Namamayatri project. To prepare your system for a pleasant Nix-based development, follow these four steps:
+[Nix](https://nixos.asia/en/nix) is central to building and developing the [Namamayatri][nammayatri] project. To prepare your system for a pleasant [Nix-based development](https://nixos.asia/en/dev), follow these four steps:
 
 1. [Install **Nix**](https://nixos.asia/en/install)
 1. Run `nix run nixpkgs#nix-health github:nammayatri/nammayatri` and make sure that everything is green (✅)
@@ -17,7 +17,7 @@ To build or develop the project, you need to install the following.
     ```sh
     nix run nixpkgs#cachix use nammayatri
     ```
-    - For this command to succeed, you must have added yourself to the `trusted-users` list of `nix.conf`
+    - For this command to succeed, you should add yourself to the `trusted-users` list of `nix.conf` and then restart the Nix daemon using `sudo pkill nix-daemon`.
 1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
 
 [^hm]: Unless you are using NixOS in which case home-manager is not strictly needed.

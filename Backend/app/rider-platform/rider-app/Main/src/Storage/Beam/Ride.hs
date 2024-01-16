@@ -54,7 +54,8 @@ data RideT f = RideT
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     driverImage :: B.C f (Maybe Text),
-    safetyCheckStatus :: B.C f (Maybe Bool)
+    safetyCheckStatus :: B.C f (Maybe Bool),
+    isFreeRide :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

@@ -38,11 +38,11 @@ let esqLocationDBRepCfg =
 
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
-      , host = "xxxxx"
-      , port = 1234
+      , host = "localhost"
+      , port = 8123
       , password = sec.clickHousePassword
-      , database = "xxxx"
-      , tls = True
+      , database = "test_db"
+      , tls = False
       }
 
 let driverClickhouseCfg =
@@ -159,6 +159,8 @@ let kvConfigUpdateFrequency = +10
 
 let dontEnableForDb = [] : List Text
 
+let dontEnableForKafka = [] : List Text
+
 let appBackendBapInternal =
       { name = "APP_BACKEND"
       , url = "http://localhost:8013/"
@@ -248,10 +250,10 @@ in  { esqDBCfg
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
     , s3PublicConfig = common.s3PublicConfig
-    , migrationPath = Some
-        (   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
-          ? "dev/migrations/dynamic-offer-driver-app"
-        )
+    , migrationPath =
+      [   env:DYNAMIC_OFFER_DRIVER_APP_MIGRATION_PATH as Text
+        ? "dev/migrations/dynamic-offer-driver-app"
+      ]
     , autoMigrate = True
     , coreVersion = "0.9.4"
     , loggerConfig =
@@ -300,6 +302,7 @@ in  { esqDBCfg
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
     , dontEnableForDb
+    , dontEnableForKafka
     , maxMessages
     , modelNamesMap
     , incomingAPIResponseTimeout = +15

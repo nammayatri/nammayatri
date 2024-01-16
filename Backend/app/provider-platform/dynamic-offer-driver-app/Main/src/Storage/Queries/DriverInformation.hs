@@ -20,6 +20,7 @@ import qualified Database.Beam.Query ()
 import Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.DriverLocation as DriverLocation
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person as Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -46,6 +47,29 @@ getEnabledAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver 
 getEnabledAt driverId = do
   dInfo <- findById driverId
   return (dInfo >>= (.enabledAt))
+
+findAllDriverIdExceptProvided :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Merchant -> DMOC.MerchantOperatingCity -> [Id Driver] -> m [Id Driver]
+findAllDriverIdExceptProvided merchant opCity driverIdsToBeExcluded = do
+  dbConf <- getMasterBeamConfig
+  result <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.filter_'
+          ( \driverInfo ->
+              driverInfo.merchantId B.==?. B.val_ (Just $ getId merchant.id)
+                B.&&?. (driverInfo.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ driverInfo.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
+                B.&&?. driverInfo.verified B.==?. B.val_ True
+                B.&&?. driverInfo.enabled B.==?. B.val_ True
+                B.&&?. driverInfo.blocked B.==?. B.val_ False
+                B.&&?. B.sqlBool_ (B.not_ (driverInfo.driverId `B.in_` (B.val_ . getId <$> driverIdsToBeExcluded)))
+          )
+          do
+            B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
+  case result of
+    Right res' -> do
+      driverInfos <- catMaybes <$> mapM fromTType' res'
+      pure $ DriverInfo.driverId <$> driverInfos
+    Left _ -> pure []
 
 findAllByEnabledAtInWindow :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> Maybe UTCTime -> Maybe UTCTime -> m [DriverInformation]
 findAllByEnabledAtInWindow merchantId from to = do
@@ -99,38 +123,6 @@ fetchAllBlockedDriversWithSubscribedFalse merchantId = do
 fetchAllAvailableByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> m [DriverInformation]
 fetchAllAvailableByIds driversIds = findAllWithKV [Se.And [Se.Is BeamDI.driverId $ Se.In (getId <$> driversIds), Se.Is BeamDI.active $ Se.Eq True, Se.Is BeamDI.onRide $ Se.Eq False]]
 
--- findAllNotNotifiedWithDues :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> Int -> m [DriverInformation]
--- findAllNotNotifiedWithDues merchantId lastNotifiedLimit limit =
---   findAllWithOptionsDb
---     [ Se.And
---         [ Se.Is BeamDI.paymentPending $ Se.Eq True,
---           Se.Is BeamDI.merchantId $ Se.Eq merchantId,
---           Se.Or
---             [ Se.Is BeamDI.lastNotifiedForDueAt $ Se.Eq Nothing,
---               Se.Is BeamDI.lastNotifiedForDueAt $ Se.GreaterThanOrEq (Just lastNotifiedLimit)
---             ]
---         ]
---     ]
---     (Se.Desc BeamDI.createdAt)
---     (Just limit)
---     Nothing
-
--- findAllNotNotifiedWithDues :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> UTCTime -> Int -> m [DriverInformation]
--- findAllNotNotifiedWithDues merchantId lastNotifiedLimit limit =
---   findAllWithOptionsDb
---     [ Se.And
---         [ Se.Is BeamDI.paymentPending $ Se.Eq True,
---           Se.Is BeamDI.merchantId $ Se.Eq merchantId,
---           Se.Or
---             [ Se.Is BeamDI.lastNotifiedForDueAt $ Se.Eq Nothing,
---               Se.Is BeamDI.lastNotifiedForDueAt $ Se.GreaterThanOrEq (Just lastNotifiedLimit)
---             ]
---         ]
---     ]
---     (Se.Desc BeamDI.createdAt)
---     (Just limit)
---     Nothing
-
 updateActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe DriverMode -> m ()
 updateActivity (Id driverId) isActive mode = do
   now <- getCurrentTime
@@ -141,28 +133,15 @@ updateActivity (Id driverId) isActive mode = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateEnabledState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Bool -> m ()
-updateEnabledState (Id driverId) isEnabled = do
-  now <- getCurrentTime
-  enabledAt <- getEnabledAt (Id driverId)
-  updateOneWithKV
-    ( [ Se.Set BeamDI.enabled isEnabled,
-        Se.Set BeamDI.updatedAt now
-      ]
-        <> ([Se.Set BeamDI.lastEnabledOn (Just now) | isEnabled])
-        <> ([Se.Set BeamDI.enabledAt (Just now) | isEnabled && isNothing enabledAt])
-    )
-    [Se.Is BeamDI.driverId (Se.Eq driverId)]
-
-updateEnabledVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Bool -> Bool -> m ()
+updateEnabledVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Bool -> Maybe Bool -> m ()
 updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
   now <- getCurrentTime
   enabledAt <- getEnabledAt (Id driverId)
   updateOneWithKV
     ( [ Se.Set BeamDI.enabled isEnabled,
-        Se.Set BeamDI.verified isVerified,
         Se.Set BeamDI.updatedAt now
       ]
+        <> ([Se.Set BeamDI.verified (fromJust isVerified) | isJust isVerified])
         <> ([Se.Set BeamDI.lastEnabledOn (Just now) | isEnabled])
         <> ([Se.Set BeamDI.enabledAt (Just now) | isEnabled && isNothing enabledAt])
     )
@@ -202,20 +181,6 @@ updateBlockedState driverId isBlocked blockStateModifier = do
         <> ([Se.Set BeamDI.numOfLocks (numOfLocks' + 1) | isBlocked])
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
-
-verifyAndEnableDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
-verifyAndEnableDriver (Id driverId) = do
-  now <- getCurrentTime
-  enabledAt <- getEnabledAt (Id driverId)
-  updateOneWithKV
-    ( [ Se.Set BeamDI.enabled True,
-        Se.Set BeamDI.verified True,
-        Se.Set BeamDI.lastEnabledOn $ Just now,
-        Se.Set BeamDI.updatedAt now
-      ]
-        <> ([Se.Set BeamDI.enabledAt (Just now) | isNothing enabledAt])
-    )
-    [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
 updateOnRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
 updateOnRide (Id driverId) onRide = do

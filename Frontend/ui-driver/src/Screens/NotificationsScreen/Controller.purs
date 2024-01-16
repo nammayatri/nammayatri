@@ -48,6 +48,8 @@ import Types.App (defaultGlobalState)
 import Effect.Unsafe (unsafePerformEffect)
 import Data.Function.Uncurried (runFn3)
 import Common.Types.App(YoutubeData)
+import PrestoDOM.List as PrestoList
+import Common.Styles.Colors as Color
 
 instance showAction :: Show Action where
   show _ = ""
@@ -319,6 +321,7 @@ propValueTransformer notificationArray =
       ( \(MessageAPIEntityResponse notificationItem) ->
           let
             (MediaFileApiResponse media) = (fromMaybe dummyMedia ((notificationItem.mediaFiles) Array.!! 0))
+            videoThumbnail = getImageUrl $ media.url
           in
             { mediaUrl: toPropValue $ media.url
             , description: toPropValue $ notificationCardDesc notificationItem.description
@@ -340,21 +343,22 @@ propValueTransformer notificationArray =
             , imageUrl:
                 toPropValue
                   $ case media.fileType of
-                      VideoLink -> getImageUrl $ media.url
-                      PortraitVideoLink -> getImageUrl media.url
+                      VideoLink -> PrestoList.renderImageSource $ PrestoList.ImageUrl videoThumbnail "ny_ic_play_no_background"
+                      PortraitVideoLink -> PrestoList.renderImageSource $ PrestoList.ImageUrl videoThumbnail "ny_ic_play_no_background"
                       Video -> ""
                       ImageLink -> ""
                       Image -> ""
                       AudioLink -> "ny_ic_audio_file"
                       Audio -> "ny_ic_audio_file"
             , previewImage: toPropValue $ if media.fileType == Image then "visible" else "gone"
-            , imageVisibility : toPropValue $ if media.fileType /= Image then "visible" else "gone"
+            , imageVisibility : toPropValue $ if (media.fileType /= Image && media.fileType /= ImageLink) then "visible" else "gone"
             , previewImageTitle: toPropValue "Preview Image"
             , messageId: toPropValue notificationItem.messageId
-            , imageWithUrl : toPropValue media.url
+            , imageWithUrl : toPropValue $ PrestoList.renderImageSource $ PrestoList.ImageUrl media.url "ny_ic_play_no_background"
             , imageWithUrlVisibility : toPropValue $ if media.fileType == ImageLink then "visible" else "gone"
             , likeCount : toPropValue $ parseNumber $ notificationItem.likeCount
             , viewCount : toPropValue $ parseNumber $ notificationItem.viewCount
+            , backgroundHolder : toPropValue Color.white900
             }
       )
       notificationArray

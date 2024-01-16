@@ -45,7 +45,9 @@ type Config = {
   isPrimaryButtonSticky :: Boolean,
   bannerConfig :: Banner.Config,
   viewsByOrder :: Array RideCompletedElements,
-  enableContactSupport :: Boolean
+  enableContactSupport :: Boolean,
+  isFreeRide :: Boolean,
+  lottieQRAnim :: Boolean
 }
 
 data Theme = DARK | LIGHT
@@ -64,6 +66,7 @@ instance eqRideCompletedElements :: Eq RideCompletedElements where eq = genericE
 config :: Config 
 config = {
   isDriver : true,
+  isFreeRide : false,
   topCard : {
     title : "",
     titleColor : Color.grey900,
@@ -150,7 +153,8 @@ config = {
   isPrimaryButtonSticky : false,
   bannerConfig : Banner.config,
   viewsByOrder : [],
-  enableContactSupport : true
+  enableContactSupport : true,
+  lottieQRAnim : false
 }
 
 type CustomerIssueCard = {

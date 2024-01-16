@@ -42,7 +42,7 @@ import Data.Int (round, toNumber, fromString, ceil)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Number (fromString) as Number
-import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower)
+import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower, null)
 import Effect (Effect)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4)
@@ -55,7 +55,7 @@ import Engineering.Helpers.Utils (saveObject)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<))
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
@@ -70,8 +70,8 @@ import Helpers.Utils as HU
 import JBridge as JB
 import Effect.Uncurried (runEffectFn4)
 import Constants 
-import Data.Function.Uncurried (runFn1)
-import Screens.HomeScreen.ComponentConfig (rideActionModalConfig)
+import Data.Function.Uncurried (runFn1, runFn2)
+import Screens.HomeScreen.ComponentConfig
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Resources.Constants (zoomLevel)
 import Control.Monad.Except (runExceptT)
@@ -92,6 +92,12 @@ import Engineering.Helpers.Commons as EHC
 import Data.String as DS
 import Services.Config as SC
 import Timers as TF
+import Components.BannerCarousel as BannerCarousel
+import Styles.Colors as Color
+import PrestoDOM.Core
+import PrestoDOM.List
+import RemoteConfigs as RC
+import Locale.Utils
 
 instance showAction :: Show Action where
   show _ = ""
@@ -344,6 +350,11 @@ data Action = NoAction
             | AddNewLocation
             | AddGotoAC
             | LinkAadhaarAC
+            | BannerCarousal BannerCarousel.Action
+            | SetBannerItem ListItem
+            | UpdateBanner
+            | BannerChanged String
+            | BannerStateChanged String
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -369,6 +380,29 @@ eval (AccountBlockedAC PopUpModal.OnButton2Click) state = continue state { props
 eval (AccountBlockedAC PopUpModal.OnButton1Click) state = do 
   void $ pure $ showDialer (SC.getSupportNumber "") false 
   continue state
+  
+eval UpdateBanner state = do
+  if state.data.bannerData.bannerScrollState == "1" then continue state
+  else do
+    let nextBanner = state.data.bannerData.currentBanner + 1
+        updatedIdx = if nextBanner >= Array.length (getBannerConfigs state) then 0 else nextBanner
+        newState = state{data {bannerData{currentBanner = updatedIdx, currentPage = updatedIdx}}}
+    continue newState
+
+eval (BannerChanged item) state = do
+  let currentBanner = fromString item
+  case currentBanner of
+    Just idx -> do 
+        let newState = state{data {bannerData{currentBanner = idx}}}
+        if state.data.bannerData.currentPage /= idx then void $ pure $ unsafePerformEffect $ processEvent "RestartAutoScroll" unit -- To stop and stop the new autosroll
+          else pure unit
+        continue newState
+    Nothing  -> continue state
+
+eval (BannerStateChanged item) state = do
+  let newState = state{data {bannerData{bannerScrollState = item}}}
+  continue newState
+
 
 eval (GotoRequestPopupAction (PopUpModal.OnButton1Click)) state = 
   case state.data.driverGotoState.goToPopUpType of
@@ -384,7 +418,7 @@ eval (EnableGotoTimerAC PrimaryButtonController.OnClick)state = updateAndExit st
 eval AddGotoAC state = exit $ ExitGotoLocation state false
 
 eval (UpdateGoHomeTimer timerID timeInMinutes sec ) state = if sec <= 0 then do
-  void $ pure $ TF.clearTimer timerID
+  void $ pure $ TF.clearTimerWithId timerID
   void $ pure $ HU.setPopupType ST.VALIDITY_EXPIRED
   continue state { data { driverGotoState { goToPopUpType = ST.VALIDITY_EXPIRED}}}
   else continue state { data { driverGotoState { timerInMinutes = timeInMinutes <> " " <>(getString MIN_LEFT), timerId = timerID} } }
@@ -411,7 +445,7 @@ eval BackPressed state = do
     continue state{props{currentStage = ST.RideAccepted}}
   else if state.props.cancelRideModalShow then continue state { data { cancelRideModal {activeIndex = Nothing, selectedReasonCode = "", selectedReasonDescription = ""}} ,props{ cancelRideModalShow = false, cancelConfirmationPopup = false}}
   else if state.props.cancelConfirmationPopup then do
-    _ <- pure $ TF.clearTimer state.data.cancelRideConfirmationPopUp.timerID
+    _ <- pure $ TF.clearTimerWithId state.data.cancelRideConfirmationPopUp.timerID
     continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
   else if state.props.showBonusInfo then continue state { props { showBonusInfo = false } }
   else if state.data.paymentState.showRateCard then continue state { data { paymentState{ showRateCard = false } } }
@@ -442,10 +476,13 @@ eval (KeyboardCallback keyBoardState) state = do
                     "onKeyboardOpen" -> true
                     "onKeyboardClose" -> false
                     _ -> false 
-  if state.props.currentStage == ST.ChatWithCustomer && isOpen then
-    void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true 
-  else pure unit
-  continue state
+  if state.props.currentStage == ST.ChatWithCustomer && isOpen then do
+    void $ pure $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
+    continue state
+  else if state.props.enterOtpModal && not isOpen then
+    continue state{ props{ rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false } }
+  else
+    continue state
 
 eval (Notification notificationType) state = do
   _ <- pure $ printLog "notificationType" notificationType
@@ -570,10 +607,13 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state 
   let rideOtp = take index state.props.rideOtp
   continue state { props = state.props { enterOtpFocusIndex = focusIndex, rideOtp = rideOtp, otpIncorrect = false } }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
+  void $ pure $ hideKeyboardOnNavigation true
   continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
-eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
-    let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
+    let updatedState = state{ props{ rideOtp = otp } }
+        exitState = if state.props.zoneRideBooking then StartZoneRide updatedState else StartRide updatedState
     exit exitState
+
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
@@ -748,14 +788,14 @@ eval (CancelRideModalAction (SelectListModal.Button2 PrimaryButtonController.OnC
 
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton2Click)) state = do
-  _ <- pure $ TF.clearTimer state.data.cancelRideConfirmationPopUp.timerID
+  _ <- pure $ TF.clearTimerWithId state.data.cancelRideConfirmationPopUp.timerID
   continue state {props{cancelConfirmationPopup = false}, data{cancelRideConfirmationPopUp{timerID = "" , continueEnabled=false, enableTimer=false}}}
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.OnButton1Click)) state = continue state {props {cancelRideModalShow = true, cancelConfirmationPopup = false},data {cancelRideConfirmationPopUp{enableTimer = false}, cancelRideModal {activeIndex=Nothing, selectedReasonCode="", selectionOptions = cancellationReasons "" }}}
 
 eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds status timerID)) state = do
-  if status == "EXPIRED" && seconds == 0 then do
-    _ <- pure $ TF.clearTimer timerID
+  if status == "EXPIRED" then do
+    _ <- pure $ TF.clearTimerWithId timerID
     continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
     else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = seconds, timerID = timerID, continueEnabled = false}}}
 
@@ -843,14 +883,15 @@ eval (SwitchDriverStatus status) state =
           pure NoAction
           ]
   else if state.props.driverStatusSet == status then continue state
-    else
+    else do
+      let maxDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
+          lowDue = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.max_dues_limit
+          showPopup = state.data.config.subscriptionConfig.enableSubscriptionPopups && (maxDue || lowDue)
+          popup = if maxDue then ST.GO_ONLINE_BLOCKER else ST.SOFT_NUDGE_POPUP
+          checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
       case status of
-        ST.Online -> if state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.lowDuesLimit then continue state { props{ subscriptionPopupType = ST.SOFT_NUDGE_POPUP }} else exit (DriverAvailabilityStatus state status)
-        ST.Silent -> exit (DriverAvailabilityStatus state status)
-        ST.Offline ->
-          do
-            let checkIfLastWasSilent = state.props.driverStatusSet == ST.Silent
-            continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
+        ST.Offline -> continue state { props { goOfflineModal = checkIfLastWasSilent, silentPopUpView = not checkIfLastWasSilent }}
+        _ -> if showPopup then continue state { props{ subscriptionPopupType = popup }} else exit (DriverAvailabilityStatus state status)
 
 eval (PopUpModalSilentAction (PopUpModal.OnButton1Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Offline)
 eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAvailabilityStatus state{props{silentPopUpView = false}} ST.Silent)
@@ -880,6 +921,22 @@ eval ZoneOtpAction state = do
 
 eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
 
+eval (BannerCarousal (BannerCarousel.OnClick index)) state =
+  continueWithCmd state [do
+    let banners = getBannerConfigs state
+    case Array.index banners index of
+      Just config -> do
+        let _ = runFn2 EHC.updatePushInIdMap "bannerCarousel" false
+        case config.type of
+          BannerCarousel.Gender -> pure (GenderBannerModal (Banner.OnClick))
+          BannerCarousel.Disability -> pure (AccessibilityBannerAction (Banner.OnClick))
+          BannerCarousel.AutoPay -> pure (AutoPayBanner (Banner.OnClick))
+          BannerCarousel.Remote link -> do
+            void $ openUrlInApp link
+            pure NoAction
+      Nothing -> pure NoAction
+  ] 
+
 eval (GenderBannerModal (Banner.OnClick)) state = do
   _ <- pure $ firebaseLogEvent "ny_driver_gender_banner_click"
   exit $ GotoEditGenderScreen
@@ -902,8 +959,6 @@ eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
-
-eval (GenderBannerModal (Banner.OnClick)) state = exit $ GotoEditGenderScreen
 
 eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment then
                                                   continue state else continue state {data { paymentState {paymentStatusBanner = false}}}
@@ -951,7 +1006,7 @@ eval (PaymentStatusAction status) state =
   
 eval (RideCompletedAC (RideCompletedCard.UpiQrRendered id)) state = do
   continueWithCmd state [ do
-                    runEffectFn4 generateQR ("upi://pay?pa=" <> state.data.endRideData.payerVpa) id 200 0
+                    runEffectFn4 generateQR ("upi://pay?pa=" <> state.data.endRideData.payerVpa <> "&am=" <> (show $ state.data.endRideData.finalAmount)) id 200 0
                     pure $ NoAction
                 ]
 
@@ -981,6 +1036,8 @@ eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{s
 eval (PaymentBannerAC (Banner.OnClick)) state = do
   _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
   continue state
+
+eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
 
 eval _ state = continue state
 
@@ -1165,3 +1222,22 @@ getPreviousVersion merchant =
     YATRI -> "2.3.0"
     YATRISATHI -> "0.1.8"
     _ -> "100.100.100"
+
+
+getBannerConfigs :: ST.HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+getBannerConfigs state = 
+  (if state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER 
+    then [autpPayBannerCarousel state BannerCarousal] 
+    else [])
+  <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else [])
+  <> (if state.props.currentStage == ST.HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos then [accessbilityBannerConfig state BannerCarousal] else [])
+  <> getRemoteBannerConfigs
+  where 
+    getRemoteBannerConfigs :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+    getRemoteBannerConfigs = do 
+      let datas = RC.carouselConfigData (toLower $ getValueToLocalStore DRIVER_LOCATION) $ getLanguage $ getLanguageLocale languageKey
+      remoteConfigTransformer datas BannerCarousal
+    getLanguage :: String -> String
+    getLanguage lang = 
+      let language = toLower $ take 2 lang
+      in if not (null language) then "_" <> language else "en"

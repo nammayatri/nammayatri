@@ -1099,7 +1099,7 @@ getTA stringKey =
         DISMISS -> "நிராகரி"
         DRIVER_REFERRAL_CODE -> "ஓட்டுனர் பரிந்துரை குறியீடு"
         APP_QR_CODE -> "செயலியின் QR குறியீடு"
-        START_TAKING_RIDES_AND_REFER -> "நம்ம யாத்ரி டிரைவர் செயலியில் பதிவு செய்ய சவாரி செய்து ஓட்டுநர்களைப் பரிந்துரைக்கவும்"
+        START_TAKING_RIDES_AND_REFER _ -> "நம்ம யாத்ரி டிரைவர் செயலியில் பதிவு செய்ய சவாரி செய்து ஓட்டுநர்களைப் பரிந்துரைக்கவும்"
         REFERRED_DRIVERS -> "பரிந்துரைக்கப்பட்ட ஓட்டுனர்கள்"
         RIDE_LEADERBOARD -> "சவாரி லீடர்போர்டு"
         YOUR_RANK -> "உங்கள் தரவரிசை"
@@ -1107,7 +1107,7 @@ getTA stringKey =
         ENTER_REFERRAL_CODE -> "பரிந்துரை குறியீட்டை உள்ளிடவும்"
         HAVE_A_REFERRAL_CODE -> "பரிந்துரை குறியீடு உள்ளதா?"
         COMPLETE_STEPS_TO_APPLY_REFERRAL -> "பரிந்துரை குறியீட்டைப் பயன்படுத்த மேலே உள்ள படிகளை முடிக்கவும்"
-        DOWNLOAD_NAMMA_YATRI -> "நம்ம யாத்ரி பதிவிறக்கம்"
+        DOWNLOAD_NAMMA_YATRI _-> "நம்ம யாத்ரி பதிவிறக்கம்"
         ENTER_CODE -> "குறியீட்டை உள்ளிடவும்"
         COMPLETE_REGISTRATION -> "முழுமையான பதிவு"
 

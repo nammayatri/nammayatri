@@ -93,3 +93,14 @@ updatePerson2faForMerchant personId merchantId secretKey = do
     where_ $
       tbl ^. MerchantAccessPersonId ==. val (toKey personId)
         &&. tbl ^. MerchantAccessMerchantId ==. val (toKey merchantId)
+
+findAllUserAccountForMerchant ::
+  (Transactionable m) =>
+  Id DMerchant.Merchant ->
+  m [DAccess.MerchantAccess]
+findAllUserAccountForMerchant merchantId = findAll $ do
+  merchantAccess <- from $ table @MerchantAccessT
+  where_ $
+    merchantAccess ^. MerchantAccessMerchantId ==. val (toKey merchantId)
+  groupBy (merchantAccess ^. MerchantAccessPersonId)
+  return merchantAccess

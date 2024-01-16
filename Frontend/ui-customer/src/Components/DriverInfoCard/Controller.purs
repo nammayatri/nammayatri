@@ -18,7 +18,7 @@ module Components.DriverInfoCard.Controller where
 import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage, ZoneType(..), SheetState(..), SearchResultType)
+import Screens.Types(Stage, ZoneType(..), SheetState(..), SearchResultType, City(..))
 import Data.Maybe(Maybe)
 import MerchantConfig.Types
 
@@ -49,7 +49,7 @@ type DriverInfoCardProps =
     isSpecialZone :: Boolean,
     estimatedTime :: String,
     zoneType :: ZoneType,
-    merchantCity :: Maybe String
+    merchantCity :: City
   }
 
 type DriverInfoCardData =

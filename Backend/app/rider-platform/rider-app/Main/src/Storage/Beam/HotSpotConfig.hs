@@ -22,10 +22,8 @@ import Tools.Beam.UtilsTH
 
 data HotSpotConfigT f = HotSpotConfigT
   { id :: B.C f Text,
-    hotSpotGeoHashPrecision :: B.C f Int,
     blockRadius :: B.C f Int,
     minFrequencyOfHotSpot :: B.C f Int,
-    nearbyGeohashPrecision :: B.C f Int,
     weightOfManualPickup :: B.C f Int,
     weightOfManualSaved :: B.C f Int,
     weightOfAutoPickup :: B.C f Int,
@@ -34,7 +32,14 @@ data HotSpotConfigT f = HotSpotConfigT
     weightOfTripEnd :: B.C f Int,
     weightOfSpecialLocation :: B.C f Int,
     shouldTakeHotSpot :: B.C f Bool,
-    maxNumHotSpotsToShow :: B.C f Int
+    maxNumHotSpotsToShow :: B.C f Int,
+    shouldSaveSearchHotSpot :: B.C f Bool,
+    hotSpotRadius :: B.C f Double,
+    precisionToSetGeohash :: B.C f Int,
+    precisionToGetGeohash :: B.C f Int,
+    precisionToFilterGeohash :: B.C f Int,
+    maxGeoHashToFilter :: B.C f Int,
+    hotSpotExpiry :: B.C f Int
   }
   deriving (Generic, B.Beamable)
 
@@ -50,10 +55,8 @@ defaultHotSpotConfig :: HotSpotConfig
 defaultHotSpotConfig =
   HotSpotConfigT
     { id = "",
-      hotSpotGeoHashPrecision = 0,
       blockRadius = 0,
       minFrequencyOfHotSpot = 0,
-      nearbyGeohashPrecision = 0,
       weightOfManualPickup = 0,
       weightOfManualSaved = 0,
       weightOfAutoPickup = 0,
@@ -62,7 +65,14 @@ defaultHotSpotConfig =
       weightOfTripEnd = 0,
       weightOfSpecialLocation = 0,
       shouldTakeHotSpot = False,
-      maxNumHotSpotsToShow = 0
+      maxNumHotSpotsToShow = 0,
+      shouldSaveSearchHotSpot = False,
+      hotSpotRadius = 0,
+      precisionToSetGeohash = 0,
+      precisionToGetGeohash = 0,
+      precisionToFilterGeohash = 0,
+      maxGeoHashToFilter = 0,
+      hotSpotExpiry = 0
     }
 
 $(enableKVPG ''HotSpotConfigT ['id] [])

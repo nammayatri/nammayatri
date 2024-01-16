@@ -351,6 +351,7 @@ createIssueReport (personId, merchantId, merchantOpCityId) mbLanguage Common.Iss
             personId,
             driverId = if identifier == CUSTOMER then Nothing else Just personId,
             rideId = cast <$> rideId,
+            merchantOperatingCityId = Just $ cast merchantOpCityId,
             optionId = cast <$> optionId,
             categoryId = cast categoryId,
             mediaFiles = cast <$> mediaFiles,

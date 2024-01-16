@@ -20,7 +20,8 @@ config =
     isMaskedName : true
   }
   , rideCompletedCardConfig : {
-      showSavedCommission : false
+      showSavedCommission : false,
+      lottieQRAnim : false
     }
   , subscriptionConfig : {
     enableBlocking : false,
@@ -59,6 +60,7 @@ config =
     showFeeBreakup : true
   },
   showPaymentDetails : true,
+  enableDriverReferral: false,
   rideActionModelConfig : {
     showVehicleVariant : true
   }
@@ -257,11 +259,17 @@ config =
       enable : false,
       url : ""
     }
-  , logFunctionCalls : true
+  , logFunctionCalls : false
   , rideRequest : {
       negotiationUnit : {
         cab : "20",
         auto : "10"
       }
+  }
+  , inAppKeyboardModalConfig : {
+      enableDeviceKeyboard : true
+    }
+  , chooseCity : {
+      straightLineDistLogic : false
   }
 }

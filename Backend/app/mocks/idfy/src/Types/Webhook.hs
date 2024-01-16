@@ -14,6 +14,7 @@
 
 module Types.Webhook where
 
+import qualified Data.Aeson as A
 import EulerHS.Prelude
 import Kernel.External.Verification.Interface.Idfy
 import Kernel.Randomizer
@@ -48,7 +49,7 @@ buildSuccessRC IdfyRequest {..} request_id now = do
             vehicle_class = Just "3WT_CAB",
             vehicle_financier = Nothing,
             noc_valid_upto = Just "noc_valid_upto",
-            seating_capacity = Just "seating_capacity",
+            seating_capacity = Just $ A.String "seating_capacity",
             variant = Just "variant",
             npermit_upto = Just "npermit_upto",
             manufacturer_model = Just "manufacturer_model",

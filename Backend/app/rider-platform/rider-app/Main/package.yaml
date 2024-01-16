@@ -108,7 +108,6 @@ dependencies:
   - casing
   - postgresql-simple
   - random
-  - alchemist
   - raw-strings-qq
   - directory
   - filepath

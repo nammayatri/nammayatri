@@ -4,15 +4,16 @@
 module Storage.Queries.ServiceCategory where
 
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceCategory
 import qualified Domain.Types.ServicePeopleCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.ServiceCategory as Beam
 
@@ -25,14 +26,14 @@ createMany = traverse_ createWithKV
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe (Domain.Types.ServiceCategory.ServiceCategory))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
-    [ Se.Is Beam.id $ Se.Eq $ id
+    [ Se.Is Beam.id $ Se.Eq id
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> m (Maybe (Domain.Types.ServiceCategory.ServiceCategory))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
@@ -51,7 +52,7 @@ updateByPrimaryKey Domain.Types.ServiceCategory.ServiceCategory {..} = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

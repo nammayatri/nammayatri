@@ -18,12 +18,7 @@ module Domain.Action.UI.Driver
     GetHomeLocationsRes (..),
     AddHomeLocationReq (..),
     UpdateHomeLocationReq,
-    ListDriverRes (..),
     DriverEntityRes (..),
-    OnboardDriverReq (..),
-    OnboardDriverRes (..),
-    CreatePerson (..),
-    CreateVehicle (..),
     UpdateDriverReq (..),
     UpdateDriverRes,
     GetNearbySearchRequestsRes (..),
@@ -51,9 +46,6 @@ module Domain.Action.UI.Driver
     getHomeLocations,
     deleteHomeLocation,
     setActivity,
-    listDriver,
-    changeDriverEnableState,
-    createDriver,
     deleteDriver,
     updateDriver,
     getNearbySearchRequests,
@@ -112,8 +104,7 @@ import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.TransporterConfig
-import qualified Domain.Types.MetaData as MD
-import Domain.Types.Person (Person, PersonAPIEntity)
+import Domain.Types.Person (Person)
 import qualified Domain.Types.Person as SP
 import Domain.Types.Plan as Plan
 import qualified Domain.Types.SearchRequest as DSR
@@ -121,8 +112,6 @@ import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchTry as DST
 import Domain.Types.Vehicle (VehicleAPIEntity)
 import qualified Domain.Types.Vehicle as SV
-import qualified Domain.Types.Vehicle as Veh
-import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified GHC.List as GHCL
@@ -134,11 +123,8 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
-import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import qualified Kernel.External.SMS.MyValueFirst.Flow as SF
-import qualified Kernel.External.SMS.MyValueFirst.Types as SMS
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Serviceability (rideServiceable)
@@ -186,7 +172,6 @@ import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDG
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDriverInformation
-import qualified Storage.Queries.DriverOnboarding.DriverLicense as QDL
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -207,7 +192,6 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Auth as Auth
 import Tools.Error
 import Tools.Event
-import Tools.Metrics
 import qualified Tools.Notifications as Notify
 import Tools.SMS as Sms hiding (Success)
 import Tools.Verification
@@ -254,10 +238,6 @@ data DriverInformationRes = DriverInformationRes
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-newtype ListDriverRes = ListDriverRes
-  {list :: [DriverEntityRes]}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
 data DriverEntityRes = DriverEntityRes
   { id :: Id Person,
     firstName :: Text,
@@ -292,64 +272,6 @@ data DriverEntityRes = DriverEntityRes
     blockStateModifier :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
--- Create Person request and response
-data OnboardDriverReq = OnboardDriverReq
-  { person :: CreatePerson,
-    vehicle :: CreateVehicle,
-    metaData :: MetaDataReq
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-validateOnboardDriverReq :: Validate OnboardDriverReq
-validateOnboardDriverReq OnboardDriverReq {..} =
-  sequenceA_
-    [ validateObject "person" person validateCreatePerson,
-      validateObject "vehicle" vehicle validateCreateVehicle
-    ]
-
-data CreatePerson = CreatePerson
-  { firstName :: Text,
-    middleName :: Maybe Text,
-    lastName :: Maybe Text,
-    mobileNumber :: Text,
-    mobileCountryCode :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
-
-validateCreatePerson :: Validate CreatePerson
-validateCreatePerson CreatePerson {..} =
-  sequenceA_
-    [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
-      validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
-      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name,
-      validateField "mobileNumber" mobileNumber P.mobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
-    ]
-
-data CreateVehicle = CreateVehicle
-  { category :: Veh.Category,
-    model :: Text,
-    variant :: Variant.Variant,
-    color :: Text,
-    registrationNo :: Text,
-    capacity :: Int
-  }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
-
-validateCreateVehicle :: Validate CreateVehicle
-validateCreateVehicle CreateVehicle {..} =
-  sequenceA_
-    [ validateField "registrationNo" registrationNo $
-        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit),
-      validateField "model" model $
-        NotEmpty `And` star P.latinOrSpace,
-      validateField "color" color $ NotEmpty `And` P.name
-    ]
-
-newtype OnboardDriverRes = OnboardDriverRes
-  {driver :: PersonAPIEntity}
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data UpdateDriverReq = UpdateDriverReq
   { firstName :: Maybe Text,
@@ -506,109 +428,6 @@ data GetCityResp = GetCityResp
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-createDriver ::
-  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    EsqDBFlow m r,
-    EncFlow m r,
-    CacheFlow m r
-  ) =>
-  SP.Person ->
-  OnboardDriverReq ->
-  m OnboardDriverRes
-createDriver admin req = do
-  let merchantId = admin.merchantId
-  runRequestValidation validateOnboardDriverReq req
-  let personEntity = req.person
-  mobileNumberHash <- getDbHash personEntity.mobileNumber
-  duplicateCheck
-    (QVehicle.findByRegistrationNo req.vehicle.registrationNo)
-    "Vehicle with this registration number already exists."
-  duplicateCheck
-    (QPerson.findByMobileNumberAndMerchant personEntity.mobileCountryCode mobileNumberHash merchantId)
-    "Person with this mobile number already exists"
-  person <- buildDriver req.person merchantId admin.merchantOperatingCityId
-  vehicle <- buildVehicle req.vehicle person.id merchantId
-  metaData <- buildMetaData req.metaData person.id
-  void $ QPerson.create person
-  createDriverDetails person.id admin merchantId
-  void $ QVehicle.create vehicle
-  void $ QMeta.create metaData
-  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
-  org <-
-    CQM.findById merchantId
-      >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  decPerson <- decrypt person
-  let mobNum = personEntity.mobileNumber
-      mobCounCode = personEntity.mobileCountryCode
-  smsCfg <- asks (.smsCfg)
-  message <-
-    MessageBuilder.buildWelcomeToPlatformMessage person.merchantOperatingCityId $
-      MessageBuilder.WelcomeToPlatformMessageReq
-        { orgName = org.name
-        }
-  sendInviteSms smsCfg (mobCounCode <> mobNum) message
-    >>= SF.checkSmsResult
-  let personAPIEntity = SP.makePersonAPIEntity decPerson
-  return $ OnboardDriverRes personAPIEntity
-  where
-    duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
-
-createDriverDetails ::
-  ( HasCacheConfig r,
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    EsqDBFlow m r,
-    EncFlow m r,
-    Redis.HedisFlow m r,
-    CoreMetrics m
-  ) =>
-  Id SP.Person ->
-  SP.Person ->
-  Id DM.Merchant ->
-  m ()
-createDriverDetails personId admin merchantId = do
-  now <- getCurrentTime
-  transporterConfig <- CQTC.findByMerchantOpCityId admin.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound admin.merchantOperatingCityId.getId)
-  mbDriverLicense <- runInReplica $ QDL.findByDriverId personId
-  let driverInfo =
-        DriverInfo.DriverInformation
-          { driverId = personId,
-            adminId = Just admin.id,
-            merchantId = Just merchantId,
-            active = False,
-            onRide = False,
-            enabled = True,
-            blocked = False,
-            numOfLocks = 0,
-            verified = False,
-            subscribed = True,
-            paymentPending = False,
-            aadhaarVerified = False,
-            referralCode = Nothing,
-            referredByDriverId = Nothing,
-            totalReferred = Just 0,
-            canDowngradeToSedan = transporterConfig.canDowngradeToSedan,
-            canDowngradeToHatchback = transporterConfig.canDowngradeToHatchback,
-            canDowngradeToTaxi = transporterConfig.canDowngradeToTaxi,
-            mode = Just DriverInfo.OFFLINE,
-            blockedReason = Nothing,
-            blockExpiryTime = Nothing,
-            autoPayStatus = Nothing,
-            compAadhaarImagePath = Nothing,
-            availableUpiApps = Nothing,
-            payerVpa = Nothing,
-            blockStateModifier = Nothing,
-            lastEnabledOn = Just now,
-            enabledAt = Just now,
-            driverDob = (.driverDob) =<< mbDriverLicense,
-            createdAt = now,
-            updatedAt = now
-          }
-  void $ QDriverStats.createInitialDriverStats driverId
-  QDriverInformation.create driverInfo
-  pure ()
-  where
-    driverId = cast personId
-
 getInformation ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -764,13 +583,6 @@ deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   QDHL.deleteById driverHomeLocationId
   return APISuccess.Success
 
-listDriver :: (EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m)) => SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> m ListDriverRes
-listDriver admin mbSearchString mbLimit mbOffset = do
-  mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personList <- QDriverInformation.findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset admin.merchantId
-  respPersonList <- traverse buildDriverEntityRes personList
-  return $ ListDriverRes respPersonList
-
 buildDriverEntityRes :: (EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, HasField "s3Env" r (S3.S3Env m), EsqDBFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
   transporterConfig <- CQTC.findByMerchantOpCityId person.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
@@ -822,30 +634,6 @@ buildDriverEntityRes (person, driverInfo) = do
         freeTrialDaysLeft = freeTrialDaysLeft,
         maskedDeviceToken = maskedDeviceToken
       }
-
-changeDriverEnableState ::
-  ( EsqDBFlow m r,
-    CacheFlow m r
-  ) =>
-  SP.Person ->
-  Id SP.Person ->
-  Bool ->
-  m APISuccess
-changeDriverEnableState admin personId isEnabled = do
-  person <-
-    QPerson.findById personId
-      >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (person.merchantId == admin.merchantId) $ throwError Unauthorized
-  void $ QDriverInformation.updateEnabledState driverId isEnabled
-  unless isEnabled $ void (QDriverInformation.updateActivity driverId False (Just DriverInfo.OFFLINE))
-  unless isEnabled $ do
-    Notify.notifyDriver person.merchantOperatingCityId FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
-  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> changeDriverEnableState : ") (show (driverId, isEnabled))
-  return Success
-  where
-    driverId = cast personId
-    notificationTitle = "Account is disabled."
-    notificationMessage = "Your account has been disabled. Contact support for more info."
 
 deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess
 deleteDriver admin driverId = do
@@ -949,110 +737,6 @@ updateMetaData (personId, _, _) req = do
   void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   QMeta.updateMetaData personId req.device req.deviceOS req.deviceDateTime req.appPermissions
   return Success
-
-sendInviteSms ::
-  ( MonadFlow m,
-    CoreMetrics m
-  ) =>
-  SmsConfig ->
-  Text ->
-  Text ->
-  m SMS.SubmitSmsRes
-sendInviteSms smsCfg phoneNumber message = do
-  let url = smsCfg.url
-  let smsCred = smsCfg.credConfig
-  let sender = smsCfg.sender
-  SF.submitSms
-    url
-    SMS.SubmitSms
-      { SMS.username = smsCred.username,
-        SMS.password = smsCred.password,
-        SMS.from = sender,
-        SMS.to = phoneNumber,
-        SMS.text = message
-      }
-
-buildDriver :: (EncFlow m r) => CreatePerson -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m SP.Person
-buildDriver req merchantId merchantOpCityId = do
-  pid <- generateGUID
-  now <- getCurrentTime
-  mobileNumber <- Just <$> encrypt req.mobileNumber
-  return
-    SP.Person
-      { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-        SP.id = pid,
-        SP.firstName = req.firstName,
-        SP.middleName = req.middleName,
-        SP.lastName = req.lastName,
-        SP.role = SP.DRIVER,
-        SP.gender = SP.UNKNOWN,
-        SP.hometown = Nothing,
-        SP.languagesSpoken = Nothing,
-        SP.email = Nothing,
-        SP.passwordHash = Nothing,
-        SP.identifier = Nothing,
-        SP.identifierType = SP.MOBILENUMBER,
-        SP.unencryptedMobileNumber = Just req.mobileNumber,
-        SP.mobileNumber = mobileNumber,
-        SP.mobileCountryCode = Just req.mobileCountryCode,
-        SP.isNew = True,
-        SP.onboardedFromDashboard = False,
-        SP.rating = Nothing,
-        SP.deviceToken = Nothing,
-        SP.language = Nothing,
-        SP.merchantId = merchantId,
-        SP.merchantOperatingCityId = merchantOpCityId,
-        SP.description = Nothing,
-        SP.createdAt = now,
-        SP.updatedAt = now,
-        SP.clientVersion = Nothing,
-        SP.whatsappNotificationEnrollStatus = Nothing,
-        SP.bundleVersion = Nothing,
-        SP.alternateMobileNumber = Nothing,
-        SP.unencryptedAlternateMobileNumber = Nothing,
-        SP.faceImageId = Nothing,
-        SP.totalEarnedCoins = 0,
-        SP.usedCoins = 0,
-        SP.registrationLat = Nothing,
-        SP.registrationLon = Nothing
-      }
-
-buildVehicle :: MonadFlow m => CreateVehicle -> Id SP.Person -> Id DM.Merchant -> m SV.Vehicle
-buildVehicle req personId merchantId = do
-  now <- getCurrentTime
-  return $
-    SV.Vehicle
-      { SV.driverId = personId,
-        SV.capacity = Just req.capacity,
-        SV.category = Just req.category,
-        SV.make = Nothing,
-        SV.model = req.model,
-        SV.size = Nothing,
-        SV.merchantId = merchantId,
-        SV.variant = req.variant,
-        SV.color = req.color,
-        SV.vehicleName = Nothing,
-        SV.energyType = Nothing,
-        SV.registrationNo = req.registrationNo,
-        SV.registrationCategory = Nothing,
-        SV.vehicleClass = "3WT",
-        SV.createdAt = now,
-        SV.updatedAt = now
-      }
-
-buildMetaData :: MonadFlow m => MetaDataReq -> Id SP.Person -> m MD.MetaData
-buildMetaData req personId = do
-  now <- getCurrentTime
-  return $
-    MD.MetaData
-      { MD.driverId = personId,
-        MD.device = req.device,
-        MD.deviceOS = req.deviceOS,
-        MD.deviceDateTime = req.deviceDateTime,
-        MD.appPermissions = req.appPermissions,
-        MD.createdAt = now,
-        MD.updatedAt = now
-      }
 
 makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> m DriverInformationRes
 makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues = do

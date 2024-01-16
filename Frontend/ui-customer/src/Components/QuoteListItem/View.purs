@@ -19,7 +19,7 @@ import Common.Types.App
 
 import Animation (translateInXForwardAnim)
 import Common.Types.App (LazyCheck(..))
-import Components.QuoteListItem.Controller (Action(..), QuoteListItemState)
+import Components.QuoteListItem.Controller (Action(..))
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
@@ -44,6 +44,8 @@ import Types.App (defaultGlobalState)
 import Timers
 import Debug
 import Engineering.Helpers.Commons (liftFlow)
+import Screens.Types (QuoteListItemState(..), City(..))
+import Locale.Utils
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -125,7 +127,7 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback $ fetchImage FF_ASSET $ if state.city == Just "std:040" then "ny_ic_black_yellow_auto_quote_list" else "ny_ic_auto_quote_list"
+        , imageWithFallback $ fetchImage FF_ASSET $ if state.city == Hyderabad then "ny_ic_black_yellow_auto_quote_list" else "ny_ic_auto_quote_list"
         , weight 1.0
         ]
       ]
@@ -180,7 +182,7 @@ timerView state push =
   ][  textView (
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
-      , text $ case (getValueToLocalStore LANGUAGE_KEY) of
+      , text $ case (getLanguageLocale languageKey) of
             "EN_US" -> (getString EXPIRES_IN ) <>" : " <> state.timer <> "s"
             "FR_FR" -> (getString EXPIRES_IN ) <>" : " <> state.timer <> "s"
             _ -> state.timer <> "s " <> (getString EXPIRES_IN )
@@ -268,7 +270,7 @@ autoAcceptingView state push =
             , weight 1.0
             , gravity CENTER_VERTICAL
             , color Color.black900
-            , text $ case (getValueToLocalStore LANGUAGE_KEY) of
+            , text $ case (getLanguageLocale languageKey) of
                 "EN_US" -> (getString AUTO_ACCEPTING_SELECTED_RIDE) <> " : " <> state.timer <> "s"
                 _ -> state.timer <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE)
             ] <> FontStyle.tags LanguageStyle)

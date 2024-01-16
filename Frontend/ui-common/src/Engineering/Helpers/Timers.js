@@ -4,37 +4,37 @@ const JBridge = window.JBridge;
 
 const activeTimers = {};
 
-function instantGetTimer (fn , delay) {
-  fn();
-  window.timerId = setInterval( fn, delay );
-  return window.timerId;
-}
-  
-export const countDownImpl = function (countDownTime, id, cb, action) {
-  if (activeTimers[id] != undefined) {
-    clearInterval(parseInt(activeTimers[id]));
-  }
-  const callback = callbackMapper.map(function () {
-    let countDownCounter = countDownTime;
-    activeTimers[id] = instantGetTimer(function () {
-      if (activeTimers[id] != undefined) {
-        countDownCounter -= 1;
-        if (countDownCounter <= 0) {
-          clearInterval(parseInt(activeTimers[id]));
-          cb(action(0)("EXPIRED")(id))();
-        } else {
-          cb(action(countDownCounter)("INPROGRESS")(id))();
-        }
-      }
-    }, 1000);
-  });
-  window.callUICallback(callback);
+function instantGetTimer(fn, id, delay) {
+  const timerId = setInterval(fn, delay, id);
+  return timerId;
 }
 
-export const clearTimer = function (a)
-{
-  clearInterval(parseInt(activeTimers[a]));
-};
+export const countDownImpl = function (countDownTime, id, cb, action) {
+  if (activeTimers[id] != undefined) {
+    clearInterval(activeTimers[id].id);
+  }
+  const handler = function (keyId) {
+    const timer = activeTimers[keyId];
+    if (timer) {
+      timer.time = timer.time -= 1;
+      if (timer.time <= 0) {
+        clearInterval(timer.id);
+        activeTimers[keyId] = undefined;
+        delete activeTimers[keyId];
+        cb(action(0)("EXPIRED")(keyId))();
+      } else {
+        cb(action(timer.time)("INPROGRESS")(keyId))();
+      }
+    }
+  }
+  const timerId = instantGetTimer(handler, id, 1000);
+  const timer = {
+    time: countDownTime,
+    id: timerId
+  }
+  activeTimers[id] = timer;
+  handler(id);
+}
 
 export const clearTimerWithId = function (id) {
   if (window.__OS == "IOS") {
@@ -49,17 +49,18 @@ export const clearTimerWithId = function (id) {
         window.JBridge.clearCountUpTimer();
       }
     }
-  }
-  else {
-    clearInterval(parseInt(activeTimers[id]));
+  } else {
+    if (activeTimers[id] != undefined) {
+      clearInterval(activeTimers[id].id);
+      activeTimers[id] = undefined;
+      delete activeTimers[id];
+    }
   }
 }
 
 function getTwoDigitsNumber(number) {
   return number >= 10 ? number : "0" + number.toString();
 }
-
-const driverWaitingTimerId = null;
 
 export const waitingCountdownTimerV2Impl = function (startingTime, interval, timerId, cb, action) {
   if (window.__OS == "IOS") {
@@ -82,23 +83,26 @@ export const waitingCountdownTimerV2Impl = function (startingTime, interval, tim
       JBridge.startCountUpTimer(startingTime.toString(), callbackIOS);
     }
   } else {
-    const callback = callbackMapper.map(function () {
-      let sec = startingTime;
-
-      function convertInMinutesFromat() {
-        sec++;
-        const minutes = getTwoDigitsNumber(Math.floor(sec / 60));
-        const seconds = getTwoDigitsNumber(sec - minutes * 60);
+    if (activeTimers[timerId] != undefined) {
+      clearInterval(activeTimers[timerId].id);
+    }
+    const handler = function (keyId) {
+      const timer = activeTimers[keyId];
+      if (timer) {
+        timer.time = timer.time + 1;
+        const minutes = getTwoDigitsNumber(Math.floor(timer.time / 60));
+        const seconds = getTwoDigitsNumber(timer.time - minutes * 60);
         const timeInMinutesFormat = minutes + " : " + seconds;
-        cb(action(driverWaitingTimerId)(timeInMinutesFormat)(sec))();
+        cb(action(keyId)(timeInMinutesFormat)(timer.time))();
       }
-      if (activeTimers[driverWaitingTimerId]) clearInterval(activeTimers[driverWaitingTimerId]);
-      activeTimers[driverWaitingTimerId] = setInterval(
-        convertInMinutesFromat,
-        1000
-      );
-    });
-    window.callUICallback(callback);
+    }
+    const timerID = instantGetTimer(handler, timerId, 1000);
+    const timer = {
+      time: startingTime,
+      id: timerID
+    }
+    activeTimers[timerId] = timer;
+    handler(timerId);
   }
 }
 
@@ -114,11 +118,5 @@ export const startTimerWithTimeV2Impl = function (time, cdTimerId, interval, cb,
       cb(action(seconds)(timerStatus)(timerID))();
     });
     return JBridge.startCountDownTimerWithTime(time, interval, cdTimerId, callback);
-  } 
-}
-  
-export const clearAllTimers = function(unit) {
-  while(activeTimers.length > 0){
-    clearInterval(parseInt(activeTimers.pop()));
   }
 }

@@ -49,8 +49,9 @@ mkFulfillment ::
   Maybe Text ->
   Maybe Tags.TagGroups ->
   Bool ->
+  Bool ->
   m RideFulfillment.FulfillmentInfo
-mkFulfillment mbDriver ride booking mbVehicle mbImage tags isDriverBirthDay = do
+mkFulfillment mbDriver ride booking mbVehicle mbImage tags isDriverBirthDay isFreeRide = do
   agent <-
     forM mbDriver $ \driver -> do
       let agentTags =
@@ -61,7 +62,8 @@ mkFulfillment mbDriver ride booking mbVehicle mbImage tags isDriverBirthDay = do
                   list =
                     [ Tags.Tag (Just False) (Just "registered_at") (Just "Registered At") (Just $ show driver.createdAt),
                       Tags.Tag (Just False) (Just "rating") (Just "rating") (show <$> driver.rating),
-                      Tags.Tag (Just False) (Just "is_driver_birthday") (Just "Is Driver BirthDay") (Just $ show isDriverBirthDay)
+                      Tags.Tag (Just False) (Just "is_driver_birthday") (Just "Is Driver BirthDay") (Just $ show isDriverBirthDay),
+                      Tags.Tag (Just False) (Just "is_free_ride") (Just "Is Free Ride") (Just $ show isFreeRide)
                     ]
                 }
             ]

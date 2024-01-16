@@ -1,6 +1,6 @@
 module Screens.DriverReferralScreen.Controller where
 
-import JBridge (minimizeApp, firebaseLogEvent, hideKeyboardOnNavigation, cleverTapCustomEvent, metaLogEvent, shareImageMessage)
+import JBridge (minimizeApp, firebaseLogEvent, hideKeyboardOnNavigation, cleverTapCustomEvent, metaLogEvent, shareImageMessage, setCleverTapUserProp)
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, pure, ($))
 import PrestoDOM (Eval, continue, exit)
@@ -22,6 +22,7 @@ import Engineering.Helpers.Commons (getNewIDWithTag)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
+import Foreign (unsafeToForeign)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -68,13 +69,19 @@ data ScreenOutput = GoToHomeScreen DriverReferralScreenState
 
 eval :: Action -> DriverReferralScreenState -> Eval Action ScreenOutput DriverReferralScreenState
 
-eval BackPressed state = exit $ GoBack
+eval BackPressed state = 
+  if state.props.showDriverReferralQRCode then 
+    continue state{props{showDriverReferralQRCode = false}}
+  else exit $ GoBack
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
 
-eval ShowQRCode state = continue state {props {showDriverReferralQRCode = true}}
+eval ShowQRCode state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_app_qr_code_click"
+  continue state {props {showDriverReferralQRCode = true}}
 
 eval ShareOptions state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_share_referral_code_click"
   let message = "👋 Hey,\n\nMy " <> state.data.config.appData.name <> " Referral Code is " <> (state.data.referralCode) <> ".\n\nScan the QR code and download " <> state.data.config.appData.name <> " app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
   void $ pure $ shareImageMessage message (shareImageMessageConfig state)
   continue state
@@ -101,7 +108,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       exit $ SubscriptionScreen state
     _ -> continue state
 
-eval (ReferredDriversAPIResponseAction val) state = continue state {data {referredDrivers = show val}, props {showNewDriverReferralText = val < 1}}
+eval (ReferredDriversAPIResponseAction val) state = do
+  void $ pure $ setCleverTapUserProp [{key : "Referral Count", value : unsafeToForeign val}]
+  continue state {data {referredDrivers = show val}, props {showNewDriverReferralText = val < 1}}
 
 eval _ state = continue state
 

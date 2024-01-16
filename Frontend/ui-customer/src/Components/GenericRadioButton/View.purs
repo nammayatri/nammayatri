@@ -9,7 +9,7 @@ import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
 import Font.Style (getFontStyle)
 import Prelude (Unit, const, ($), (/), (<>))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, editText, gravity, height, hint, hintColor, id, linearLayout, margin, multiLineEditText, onChange, onClick, orientation, padding, pattern, singleLine, stroke, text, textView, visibility, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, editText, gravity, height, hint, hintColor, id, linearLayout, margin, multiLineEditText, onChange, onClick, orientation, padding, pattern, singleLine, stroke, text, textView, visibility, width, accessibilityHint)
 import Styles.Colors as Color
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
@@ -32,6 +32,7 @@ view push config =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity LEFT
+      , accessibilityHint $ ("Radio button " <> config.buttonTextConfig.text) <> if config.isSelected then "selected" else ""
       ]
       [ radioButtonView buttonConfig config.isSelected
       , textView

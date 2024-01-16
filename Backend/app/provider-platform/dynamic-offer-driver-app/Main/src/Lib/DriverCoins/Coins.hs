@@ -19,6 +19,9 @@ module Lib.DriverCoins.Coins
     setCoinAccumulationByDriverIdKey,
     getCoinsByDriverId,
     getExpirationSeconds,
+    checkHasTakenValidRide,
+    incrementValidRideCount,
+    updateDriverCoins,
   )
 where
 
@@ -29,6 +32,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
+import qualified Kernel.Beam.Functions as B
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
@@ -39,6 +44,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as DCQ
 import qualified Storage.Queries.Person as Person
+import qualified Tools.Notifications as Notify
 
 type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
 
@@ -69,7 +75,7 @@ updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
 
 updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> Seconds -> m ()
 updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
-  driver <- Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   void $ Person.updateTotalEarnedCoins driverId (finalCoinsValue + driver.totalEarnedCoins)
   updateCoinsByDriverId driverId finalCoinsValue timeDiffFromUtc
 
@@ -109,13 +115,13 @@ handleRating driverId merchantId merchantOpCityId ratingValue chargeableDistance
     _ -> pure 0
 
 handleEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Meters -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> m Int
-handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ eventFunction mbexpirationTime numCoins transporterConfig = do
+handleEndRide driverId merchantId merchantOpCityId isDisabled chargeableDistance_ eventFunction mbexpirationTime numCoins _ = do
   logDebug $ "Driver Coins Handle EndRide Event Triggered - " <> show eventFunction
   validRideTaken <- checkHasTakenValidRide (Just chargeableDistance_)
   case eventFunction of
     DCT.RideCompleted -> do
-      expirationPeriod <- getExpirationSeconds transporterConfig.timeDiffFromUtc
-      when validRideTaken $ incrementValidRideCount driverId expirationPeriod 1
+      -- expirationPeriod <- getExpirationSeconds transporterConfig.timeDiffFromUtc
+      -- when validRideTaken $ incrementValidRideCount driverId expirationPeriod 1
       runActionWhenValidConditions
         [ pure validRideTaken
         ]
@@ -176,7 +182,6 @@ updateEventAndGetCoinsvalue :: EventFlow m r => Id DP.Person -> Id DM.Merchant -
 updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins = do
   now <- getCurrentTime
   uuid <- generateGUIDText
-  -- Extract the integer value from maybeExpirationTime and then make it start of that day
   let expiryTime = fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
       status_ = if numCoins > 0 then Remaining else Used
   let driverCoinEvent =
@@ -189,10 +194,17 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
             coins = numCoins,
             status = status_,
             createdAt = now,
+            updatedAt = now,
             expirationAt = expiryTime,
-            coinsUsed = 0
+            coinsUsed = 0,
+            bulkUploadTitle = Nothing
           }
   CHistory.updateCoinEvent driverCoinEvent
+  when (numCoins > 0) $ do
+    driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+    let coinTitle = "Coins earned!"
+        coinMessage = "You have earned " <> show numCoins <> " coins. Check them out."
+    Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS coinTitle coinMessage driverId driver.deviceToken
   pure numCoins
 
 checkHasTakenValidRide :: (MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) => Maybe Meters -> m Bool

@@ -5,7 +5,7 @@ module Domain.Types.TicketService where
 
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
@@ -21,7 +21,7 @@ data TicketService = TicketService
     service :: Kernel.Prelude.Text,
     shortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity),
+    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

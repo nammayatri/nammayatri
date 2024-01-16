@@ -20,6 +20,7 @@ import Common.Types.Config
 import Common.Types.App (LazyCheck(..), PolylineAnimationConfig)
 import Common.Types.App as CommonTypes
 import Components.Banner as Banner
+import Components.BannerCarousel as BannerCarousel
 import Components.ChatView as ChatView
 import Components.ErrorModal (primaryButtonConfig)
 import Components.GoToLocationModal as GoToLocationModal
@@ -64,6 +65,9 @@ import Styles.Colors as Color
 import Components.ErrorModal as ErrorModal
 import MerchantConfig.Utils as MU
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import ConfigProvider as CP
+import Locale.Utils
+import RemoteConfigs as RemoteConfig
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -160,10 +164,10 @@ statsModelConfig state =
   in config'
 
 -------------------------------------genderBannerConfig------------------------------------
-genderBannerConfig :: ST.HomeScreenState -> Banner.Config
-genderBannerConfig state =
+genderBannerConfig :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config  (BannerCarousel.Action -> a)
+genderBannerConfig _ action =
   let
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config
       {
         backgroundColor = Color.green600,
@@ -172,15 +176,59 @@ genderBannerConfig state =
         actionText = (getString UPDATE_NOW),
         actionTextColor = Color.white900,
         imageUrl = fetchImage FF_ASSET "ny_ic_driver_gender_banner",
-        isBanner = true
+        "type" = BannerCarousel.Gender
       }
   in config'
 
+remoteConfigTransformer :: forall a. Array RemoteConfig.RCCarousel -> (BannerCarousel.Action -> a) -> Array (BannerCarousel.Config (BannerCarousel.Action -> a))
+remoteConfigTransformer remoteConfig action = 
+  map (\(RemoteConfig.RCCarousel config) -> 
+    let
+      config' = BannerCarousel.config action
+      config'' = config'{
+        backgroundColor = config.banner_color,
+        title = config.text,
+        titleColor = config.text_color,
+        actionText = config.cta_text,
+        actionTextColor = config.cta_text_color,
+        imageUrl = config.banner_image,
+        "type" = BannerCarousel.Remote config.cta_link,
+        actionIconUrl = config.cta_icon,
+        actionIconVisibility = not $ DS.null config.cta_text,
+        actionTextBackgroundColour = config.cta_background_color,
+        actionTextCornerRadius = config.cta_corner_radius,
+        actionImageUrl = config.cta_image_url,
+        showImageAsCTA = not $ DS.null config.cta_image_url,
+        actionImageVisibility = not $ DS.null config.cta_image_url,
+        actionTextVisibility = DS.null config.cta_image_url 
+      }
+    in config'') remoteConfig
 
-accessbilityBannerConfig :: ST.HomeScreenState -> Banner.Config
-accessbilityBannerConfig state = 
+autpPayBannerCarousel :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config (BannerCarousel.Action -> a)
+autpPayBannerCarousel state action =
+  let config = BannerCarousel.config action
+      bannerConfig = autopayBannerConfig state false
+  in config {
+     backgroundColor = bannerConfig.backgroundColor,
+        title = bannerConfig.title,
+        titleColor = bannerConfig.titleColor,
+        actionText = bannerConfig.actionText,
+        actionTextColor =bannerConfig.actionTextColor,
+        imageUrl = bannerConfig.imageUrl,
+        isBanner = bannerConfig.isBanner,
+        imageHeight = bannerConfig.imageHeight,
+        imageWidth = bannerConfig.imageWidth,
+        actionTextStyle = bannerConfig.actionTextStyle,
+        titleStyle = bannerConfig.titleStyle,
+        "type" = BannerCarousel.AutoPay,
+        imagePadding = bannerConfig.imagePadding
+  }
+
+
+accessbilityBannerConfig :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config  (BannerCarousel.Action -> a)
+accessbilityBannerConfig _ action = 
   let 
-    config = Banner.config
+    config = BannerCarousel.config action
     config' = config  
       {
         backgroundColor = Color.lightPurple,
@@ -190,8 +238,8 @@ accessbilityBannerConfig state =
         actionTextColor = Color.purple,
         imageUrl = fetchImage FF_ASSET "ny_ic_purple_badge",
         isBanner = true,
-        stroke = "1,"<>Color.fadedPurple,
-        margin = Margin 0 0 0 0
+        margin = Margin 0 0 0 0,
+        "type" = BannerCarousel.Disability
       }
   in config'
 
@@ -336,7 +384,7 @@ paymentPendingPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 paymentPendingPopupConfig state =
   let popupType = state.props.subscriptionPopupType
       dues = if state.data.paymentState.totalPendingManualDues /= 0.0 then "( ₹" <> HU.getFixedTwoDecimals state.data.paymentState.totalPendingManualDues <> ") " else ""
-      isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.config.subscriptionConfig.highDueWarningLimit
+      isHighDues = state.data.paymentState.totalPendingManualDues >= state.data.subsRemoteConfig.high_due_warning_limit
   in
   PopUpModal.config {
     gravity = CENTER,
@@ -537,7 +585,7 @@ chatViewConfig state = let
     , suggestionHeader = (getString START_YOUR_CHAT_USING_THESE_QUICK_CHAT_SUGGESTIONS)
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
     , mapsText = (getString MAPS)
-    , languageKey = (getValueToLocalStore LANGUAGE_KEY)
+    , languageKey = (getLanguageLocale languageKey)
     , grey700 = Color.grey700
     , blue600 = Color.blue600
     , blue900 = Color.blue900
@@ -589,7 +637,8 @@ silentModeConfig state = let
 
 
 enterOtpStateConfig :: ST.HomeScreenState -> InAppKeyboardModal.InAppKeyboardModalState
-enterOtpStateConfig state = let
+enterOtpStateConfig state = 
+  let appConfig = CP.getAppConfig CP.appConfig
       config' = InAppKeyboardModal.config
       inAppModalConfig' = config'{
       otpIncorrect = if (state.props.otpAttemptsExceeded) then false else (state.props.otpIncorrect),
@@ -614,7 +663,8 @@ enterOtpStateConfig state = let
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
       },
-      modalType = ST.OTP
+      modalType = ST.OTP,
+      enableDeviceKeyboard = appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard
       }
       in inAppModalConfig'
 
@@ -719,7 +769,7 @@ makePaymentState state =
     title : getString GREAT_JOB,
     description : getDescription state,
     description2 : getString $ COMPLETE_PAYMENT_TO_CONTINUE "COMPLETE_PAYMENT_TO_CONTINUE",
-    okButtontext : ( case getValueToLocalStore LANGUAGE_KEY of
+    okButtontext : ( case getLanguageLocale languageKey of
                           "EN_US" -> "Pay ₹" <> payableAndGST <> " now"
                           "HI_IN" -> "अभी ₹" <> payableAndGST <>" का भुगतान करें"
                           "KN_IN" -> "ಈಗ ₹"<> payableAndGST <>" ಪಾವತಿಸಿ"
@@ -744,7 +794,7 @@ makePaymentState state =
   }
 
 getDescription :: ST.HomeScreenState -> String
-getDescription state =  case getValueToLocalStore LANGUAGE_KEY of
+getDescription state =  case getLanguageLocale languageKey of
                         "EN_US" -> (("You have completed <b>"<> (show state.data.paymentState.rideCount)) <> (if state.data.paymentState.rideCount == 1 then " Ride</b>" else " Rides</b>"))
                         "HI_IN" -> "आपने " <>  show state.data.paymentState.rideCount <> "सवारी पूरी कर ली हैं"
                         "BN_IN" -> "আপনি" <> show state.data.paymentState.rideCount <> "টি রাইড সম্পূর্ণ করেছেন"
@@ -776,23 +826,6 @@ rateCardState state =
   in
     rateCardConfig'
 
-paymentStatusConfig :: ST.HomeScreenState -> Banner.Config
-paymentStatusConfig state = 
-  let 
-    config = Banner.config
-    config' = config
-      { 
-        backgroundColor = state.data.paymentState.bannerBG,
-        title = state.data.paymentState.bannerTitle,
-        titleColor = state.data.paymentState.bannerTitleColor,
-        actionText = state.data.paymentState.banneActionText,
-        actionTextColor = state.data.paymentState.actionTextColor,
-        imageUrl = state.data.paymentState.bannerImage,
-        isBanner = true
-      }
-  in config'
-
-
 getChargesBreakup :: Array PaymentBreakUp -> Array CommonTypes.FareList
 getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹" <>  (show item.amount),
   key : case item.component of
@@ -801,7 +834,7 @@ getChargesBreakup paymentBreakUpArr = map (\(PaymentBreakUp item) -> {val : "₹
         _ -> item.component
     } ) paymentBreakUpArr
 
-autopayBannerConfig :: ST.HomeScreenState -> Boolean -> Banner.Config
+autopayBannerConfig :: ST.HomeScreenState -> Boolean -> Banner.Config -- Make sure to update the mapping in carousel config also.
 autopayBannerConfig state configureImage =
   let
     config = Banner.config
@@ -816,9 +849,9 @@ autopayBannerConfig state configureImage =
                         _ -> Color.green600,
         title = case bannerType of
                   FREE_TRIAL_BANNER -> getString SETUP_AUTOPAY_BEFORE_THE_TRAIL_PERIOD_EXPIRES 
-                  SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_NOW_TO_GET_SPECIAL_DISCOUNTS
+                  SETUP_AUTOPAY_BANNER -> getString SETUP_AUTOPAY_FOR_EASY_PAYMENTS
                   _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> getVarString CLEAR_DUES_BANNER_TITLE [dues]
-                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [HU.getFixedTwoDecimals state.data.config.subscriptionConfig.maxDuesLimit]
+                  DUE_LIMIT_WARNING_BANNER -> getVarString DUE_LIMIT_WARNING_BANNER_TITLE [HU.getFixedTwoDecimals state.data.subsRemoteConfig.max_dues_limit]
                   _ -> "",
         titleColor = case bannerType of
                         DUE_LIMIT_WARNING_BANNER -> Color.red
@@ -833,11 +866,10 @@ autopayBannerConfig state configureImage =
                             _ -> Color.white900,
         imageUrl = fetchImage FF_ASSET $ case bannerType of
                       FREE_TRIAL_BANNER -> "ic_free_trial_period" 
-                      SETUP_AUTOPAY_BANNER -> "ny_ic_autopay_setup_banner"
+                      SETUP_AUTOPAY_BANNER -> "ny_ic_driver_offer"
                       _ | bannerType == CLEAR_DUES_BANNER || bannerType == LOW_DUES_BANNER -> "ny_ic_clear_dues"
                       DUE_LIMIT_WARNING_BANNER -> "ny_ic_due_limit_warning"
                       _ -> "",
-        isBanner = bannerType /= NO_SUBSCRIPTION_BANNER && not state.props.rideActionModal,
         imageHeight = if configureImage then (V 75) else (V 105),
         imageWidth = if configureImage then (V 98) else (V 118),
         actionTextStyle = if configureImage then FontStyle.Body3 else FontStyle.ParagraphText,
@@ -1072,6 +1104,7 @@ getRideCompletedConfig state = let
   autoPayBanner = state.props.autoPayBanner
   autoPayStatus = state.data.paymentState.autoPayStatus
   payerVpa = state.data.endRideData.payerVpa
+  bannerConfig = autopayBannerConfig state false
   disability = state.data.endRideData.disability /= Nothing
   showDriverBottomCard = state.data.config.rideCompletedCardConfig.showSavedCommission || isJust state.data.endRideData.tip
   viewOrderConfig = [ {condition : autoPayBanner == DUE_LIMIT_WARNING_BANNER, elementView :  RideCompletedCard.BANNER },
@@ -1083,6 +1116,7 @@ getRideCompletedConfig state = let
                     ]
   pspIcon = (Const.getPspIcon payerVpa)
   config' = config{
+    isFreeRide = state.props.isFreeRide,
     primaryButtonConfig {
       width = MATCH_PARENT,
       margin = MarginTop 0,
@@ -1094,6 +1128,7 @@ getRideCompletedConfig state = let
       title = getString COLLECT_VIA_UPI_QR_OR_CASH,
       finalAmount = state.data.endRideData.finalAmount,
       initalAmount = state.data.endRideData.finalAmount,
+      fareUpdatedVisiblity = state.props.isFreeRide,
       gradient =  ["#F5F8FF","#E2EAFF"],
       infoPill {
         text = getString COLLECT_VIA_CASE_UPI,
@@ -1105,7 +1140,7 @@ getRideCompletedConfig state = let
         stroke = "1," <> Color.peacoat,
         alpha = 0.8,
         fontStyle = Body1,
-        visible = GONE
+        visible = if state.props.isFreeRide then VISIBLE else GONE
       },
       topPill{
         visible = disability,
@@ -1166,8 +1201,9 @@ getRideCompletedConfig state = let
     accessibility = DISABLE,
     theme = LIGHT,
     isPrimaryButtonSticky = true,
-    bannerConfig = autopayBannerConfig state false,
-    viewsByOrder = map (_.elementView) (DA.filter (_.condition) viewOrderConfig)
+    bannerConfig = bannerConfig{isBanner = autoPayBanner /= NO_SUBSCRIPTION_BANNER},
+    viewsByOrder = map (_.elementView) (DA.filter (_.condition) viewOrderConfig),
+    lottieQRAnim = state.data.config.rideCompletedCardConfig.lottieQRAnim
   }
   in config'
 

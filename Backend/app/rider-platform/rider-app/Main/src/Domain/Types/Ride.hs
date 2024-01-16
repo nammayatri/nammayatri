@@ -19,7 +19,7 @@ import Data.Aeson
 import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -71,6 +71,7 @@ data Ride = Ride
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
     allowedEditLocationAttempts :: Maybe Int,
+    isFreeRide :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     safetyCheckStatus :: Maybe Bool
@@ -97,6 +98,7 @@ data RideAPIEntity = RideAPIEntity
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
     rideRating :: Maybe Int,
+    isFreeRide :: Maybe Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     bppRideId :: Id BPPRide

@@ -125,6 +125,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import qualified SharedLogic.DriverFee as SLDriverFee
+import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -222,13 +223,25 @@ getLicenseStatus :: Int -> Int -> Maybe DriverLicense -> Maybe IV.IdfyVerificati
 getLicenseStatus onboardingTryLimit currentTries mbLicense mbLicReq =
   case mbLicense of
     Just driverLicense -> St.mapStatus driverLicense.verificationStatus
-    Nothing -> St.verificationStatus onboardingTryLimit currentTries mbLicReq
+    Nothing -> verificationState onboardingTryLimit currentTries mbLicReq
 
 getRegCertStatus :: Int -> Int -> Maybe (DriverRCAssociation, VehicleRegistrationCertificate) -> Maybe IV.IdfyVerification -> St.ResponseStatus
 getRegCertStatus onboardingTryLimit currentTries mbRegCert mbVehRegReq =
   case mbRegCert of
     Just (_assoc, vehicleRC) -> St.mapStatus vehicleRC.verificationStatus
-    Nothing -> St.verificationStatus onboardingTryLimit currentTries mbVehRegReq
+    Nothing -> verificationState onboardingTryLimit currentTries mbVehRegReq
+
+verificationState :: Int -> Int -> Maybe IV.IdfyVerification -> ResponseStatus
+verificationState onboardingTryLimit imagesNum verificationReq =
+  case verificationReq of
+    Just req -> do
+      if req.status == "pending"
+        then PENDING
+        else FAILED
+    Nothing -> do
+      if imagesNum > onboardingTryLimit
+        then LIMIT_EXCEED
+        else NO_DOC_AVAILABLE
 
 ---------
 
@@ -363,7 +376,7 @@ enableDriver merchantShortId opCity reqDriverId = do
   when (isNothing mVehicle && null linkedRCs) $
     throwError (InvalidRequest "Can't enable driver if no vehicle or no RCs are linked to them")
 
-  QDriverInfo.updateEnabledState driverId True
+  enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId driverId False
   logTagInfo "dashboard -> enableDriver : " (show personId)
   fork "sending dashboard sms - onboarding" $ do
     Sms.sendDashboardSms merchant.id merchantOpCityId Sms.ONBOARDING Nothing personId Nothing 0
@@ -383,7 +396,7 @@ disableDriver merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  QDriverInfo.updateEnabledState driverId False
+  QDriverInfo.updateEnabledVerifiedState driverId False Nothing
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -548,7 +561,7 @@ mobileIndianCode :: Text
 mobileIndianCode = "+91"
 
 driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> Flow Common.DriverInfoRes
-driverInfo merchantShortId _ mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId mbFleet = do
+driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId mbFleet = do
   when mbFleet $ do
     when (isNothing mbVehicleNumber) $ throwError $ InvalidRequest "Fleet Owner can only search with vehicle Number"
     vehicleInfo <- RCQuery.findLastVehicleRCFleet' (fromMaybe " " mbVehicleNumber) fleetOwnerId
@@ -556,26 +569,27 @@ driverInfo merchantShortId _ mbMobileNumber mbMobileCountryCode mbVehicleNumber 
   when (isJust mbMobileCountryCode && isNothing mbMobileNumber) $
     throwError $ InvalidRequest "\"mobileCountryCode\" can be used only with \"mobileNumber\""
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   driverWithRidesCount <- case (mbMobileNumber, mbVehicleNumber, mbDlNumber, mbRcNumber) of
     (Just mobileNumber, Nothing, Nothing, Nothing) -> do
       mobileNumberDbHash <- getDbHash mobileNumber
       let mobileCountryCode = fromMaybe mobileIndianCode mbMobileCountryCode
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
+        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity (Just (mobileNumberDbHash, mobileCountryCode)) Nothing Nothing Nothing
           >>= fromMaybeM (PersonDoesNotExist $ mobileCountryCode <> mobileNumber)
     (Nothing, Just vehicleNumber, Nothing, Nothing) -> do
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing (Just vehicleNumber) Nothing Nothing
+        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing (Just vehicleNumber) Nothing Nothing
           >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
     (Nothing, Nothing, Just driverLicenseNumber, Nothing) -> do
       dlNumberHash <- getDbHash driverLicenseNumber
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing (Just dlNumberHash) Nothing
+        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing (Just dlNumberHash) Nothing
           >>= fromMaybeM (InvalidRequest "License does not exist.")
     (Nothing, Nothing, Nothing, Just rcNumber) -> do
       rcNumberHash <- getDbHash rcNumber
       B.runInReplica $
-        QPerson.fetchDriverInfoWithRidesCount merchant.id Nothing Nothing Nothing (Just rcNumberHash)
+        QPerson.fetchDriverInfoWithRidesCount merchant merchantOpCity Nothing Nothing Nothing (Just rcNumberHash)
           >>= fromMaybeM (InvalidRequest "Registration certificate does not exist.")
     _ -> throwError $ InvalidRequest "Exactly one of query parameters \"mobileNumber\", \"vehicleNumber\", \"dlNumber\", \"rcNumber\" is required"
   let driverId = driverWithRidesCount.person.id
@@ -692,7 +706,7 @@ unlinkVehicle merchantShortId opCity reqDriverId = do
 
   DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
-  QDriverInfo.updateEnabledVerifiedState driverId False False
+  QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -963,7 +977,7 @@ fleetUnlinkVehicle merchantShortId fleetOwnerId reqDriverId vehicleNo = do
   unless (merchant.id == driver.merchantId) $ throwError (PersonDoesNotExist personId.getId)
   DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
-  QDriverInfo.updateEnabledVerifiedState driverId False False
+  QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
   rc <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (RCNotFound vehicleNo)
   _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo "fleet -> unlinkVehicle : " (show personId)
@@ -1100,7 +1114,7 @@ unlinkDL merchantShortId opCity driverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   QDriverLicense.deleteByDriverId personId
-  QDriverInfo.updateEnabledVerifiedState driverId_ False False
+  QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success
 
@@ -1117,7 +1131,7 @@ unlinkAadhaar merchantShortId opCity driverId = do
 
   AV.deleteByDriverId personId
   QDriverInfo.updateAadhaarVerifiedState driverId_ False
-  unless (transporterConfig.aadhaarVerificationRequired) $ QDriverInfo.updateEnabledVerifiedState driverId_ False False
+  unless (transporterConfig.aadhaarVerificationRequired) $ QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
 
@@ -1144,7 +1158,7 @@ endRCAssociation merchantShortId opCity reqDriverId = do
       void $ DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
-  QDriverInfo.updateEnabledVerifiedState driverId False False
+  QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
 
@@ -1558,7 +1572,7 @@ sendSmsToDriver merchantShortId opCity driverId volunteerId _req@SendSmsReq {..}
         overlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdf merchantOpCityId oKey (fromMaybe ENGLISH driver.language) Nothing >>= fromMaybeM (OverlayKeyNotFound oKey)
         let okButtonText = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.okButtonText
         let description = T.replace (templateText "dueAmount") (show manualDues) <$> overlay.description
-        TN.sendOverlay merchantOpCityId driver.id driver.deviceToken overlay.title description overlay.imageUrl okButtonText overlay.cancelButtonText overlay.actions overlay.link overlay.endPoint overlay.method overlay.reqBody overlay.delay overlay.contactSupportNumber overlay.toastMessage overlay.secondaryActions overlay.socialMediaLinks
+        TN.sendOverlay merchantOpCityId driver.id driver.deviceToken $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
       ALERT -> do
         _mId <- fromMaybeM (InvalidRequest "Message Id field is required for channel : ALERT") messageId -- whenJust messageId $ \_mId -> do
         topicName <- asks (.broadcastMessageTopic)

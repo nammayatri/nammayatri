@@ -18,7 +18,7 @@ module Components.QuoteListModel.Controller where
 import Components.PrimaryButton as PrimaryButtonController
 import Components.QuoteListItem as QuoteListItemController
 import Data.Maybe (Maybe)
-import Screens.Types (TipViewProps)
+import Screens.Types (TipViewProps, QuoteListItemState(..))
 import MerchantConfig.Types (AppConfig)
 
 data Action = GoBack
@@ -35,7 +35,7 @@ data Action = GoBack
 type QuoteListModelState = {
      source :: String
   , destination :: String
-  , quoteListModel :: Array QuoteListItemController.QuoteListItemState
+  , quoteListModel :: Array QuoteListItemState
   , selectedQuote :: Maybe String
   , autoSelecting :: Boolean
   , searchExpire :: Int

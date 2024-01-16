@@ -83,3 +83,8 @@ export const loadFileInDUI = function (fileName) {
     return "";
   }
 }
+
+
+export const getAppConfigFromWindow= function (key, nothing, just) {
+  return window[key] ? just(window[key]) : nothing;
+}

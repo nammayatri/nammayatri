@@ -37,10 +37,12 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
+import PrestoDOM.List (ListItem)
 import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..))
 import Styles.Types (FontSize)
 import Common.Types.Config
+import RemoteConfigs as RC
 
 type EditTextInLabelState =
  {
@@ -864,7 +866,16 @@ type HomeScreenData =  {
   peekHeight :: Int,
   driverGotoState :: DriverGoToState,
   snappedOrigin :: Maybe Location,
-  gender :: String
+  gender :: String,
+  subsRemoteConfig :: RC.RCSubscription,
+  bannerData :: BannerCarousalData
+}
+
+type BannerCarousalData = {
+  bannerItem :: Maybe ListItem,
+  currentBanner :: Int,
+  bannerScrollState :: String,
+  currentPage :: Int
 }
 
 type DriverGoToState = {
@@ -993,6 +1004,7 @@ type ActiveRide = {
 }
 
 type HomeScreenProps =  {
+  isFreeRide :: Boolean,
   statusOnline :: Boolean,
   goOfflineModal :: Boolean,
   screenName :: String,
@@ -1571,6 +1583,7 @@ type NotificationCardPropState = {
   messageId :: PropValue,
   imageWithUrl :: PropValue,
   imageWithUrlVisibility :: PropValue,
+  backgroundHolder :: PropValue,
   likeCount :: PropValue,
   viewCount :: PropValue
 }
@@ -2090,7 +2103,6 @@ type ChooseCityScreenState = {
 type ChooseCityScreenData = {
   config :: AppConfig,
   locationSelected :: Maybe String,
-  locationDetectionFailed :: Boolean,
   merchantOperatingCityConfig :: Array CityConfig,
   logField :: Object Foreign
 }
@@ -2102,7 +2114,10 @@ type ChooseCityScreenProps = {
   radioMenuFocusedLang :: String,
   radioMenuFocusedCity :: String,
   locationUnserviceable :: Boolean,
-  isMockLocation :: Boolean
+  locationDetectionFailed :: Boolean,
+  isMockLocation :: Boolean,
+  lat :: Number,
+  lon :: Number
 }
 
 data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DETECT_LOCATION

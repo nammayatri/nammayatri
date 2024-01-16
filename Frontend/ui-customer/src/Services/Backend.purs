@@ -40,8 +40,8 @@ import Log (printLog)
 import ModifyScreenState (modifyScreenState)
 import Prelude (Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
-import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
-import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, PeopleCategoriesRespData)
+import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS) 
+import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, City(..), PeopleCategoriesRespData)
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker (trackApiCallFlow, trackExceptionFlow)
@@ -52,6 +52,7 @@ import Types.EndPoint as EP
 import Foreign.Object (empty)
 import Data.String as DS
 import ConfigProvider as CP
+import Locale.Utils
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -118,7 +119,6 @@ withAPIResultBT url f errorHandler flow = do
     _ <- pure $ printLog "withAPIResultBT url" url
     case resp of
         Right res -> do
-            _ <- pure $ printLog "success resp" res
             pure res
         Left err -> do
             _ <- pure $ toggleBtnLoader "" false
@@ -460,11 +460,16 @@ rideBookingBT bookingId = do
 
 rideBookingList limit offset onlyActive = do
         headers <- getHeaders "" true
-        withAPIResult (EP.rideBookingList limit offset onlyActive)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive)
+        withAPIResult (EP.rideBookingList limit offset onlyActive Nothing)  unwrapResponse $ callAPI headers (RideBookingListReq limit offset onlyActive Nothing)
     where
         unwrapResponse (x) = x
 
 
+rideBookingListWithStatus limit offset status = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.rideBookingList limit offset "false" (Just status))  unwrapResponse $ callAPI headers (RideBookingListReq limit offset "false" (Just status))
+    where
+        unwrapResponse (x) = x
 
 getProfileBT :: String -> FlowBT String GetProfileRes
 getProfileBT _  = do
@@ -491,7 +496,7 @@ mkUpdateProfileRequest _ =
         , email : Nothing
         , referralCode : Nothing
         , gender : Nothing
-        , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
+        , language : Just case getLanguageLocale languageKey of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
@@ -515,7 +520,7 @@ editProfileRequest firstName middleName lastName emailID gender hasDisability di
         , email : emailID
         , referralCode : Nothing
         , gender : gender
-        , language : Just case getValueToLocalNativeStore LANGUAGE_KEY of
+        , language : Just case getLanguageLocale languageKey of
             "EN_US" -> "ENGLISH"
             "KN_IN" -> "KANNADA"
             "HI_IN" -> "HINDI"
@@ -730,27 +735,25 @@ type Markers = {
 data TrackingType = RIDE_TRACKING | DRIVER_TRACKING
 
 
-getRouteMarkers :: String -> Maybe String -> TrackingType -> Markers
+getRouteMarkers :: String -> City -> TrackingType -> Markers
 getRouteMarkers variant city trackingType = 
   { srcMarker : mkSrcMarker ,
     destMarker : mkDestMarker 
   }
   where 
     mkSrcMarker :: String 
-    mkSrcMarker =
-        maybe (getMarker variant) (getCitySpecificMarker ) city
+    mkSrcMarker = getCitySpecificMarker city
     
-    getCitySpecificMarker :: String -> String 
-    getCitySpecificMarker cityCode = 
-        if cityCode == "std:040" 
-            then "ny_ic_black_yellow_auto" 
-            else getMarker variant
+    getCitySpecificMarker :: City -> String
+    getCitySpecificMarker city = case city of
+        Hyderabad -> "ny_ic_black_yellow_auto"
+        _         -> getMarkerVariant variant
 
-    getMarker :: String -> String
-    getMarker variant = 
-        if variant == "AUTO_RICKSHAW" 
-            then "ic_auto_nav_on_map" 
-            else "ny_ic_vehicle_nav_on_map"
+    getMarkerVariant :: String -> String
+    getMarkerVariant variant =
+        case variant of
+            "AUTO_RICKSHAW" -> "ic_auto_nav_on_map"
+            _               -> "ny_ic_vehicle_nav_on_map"
     
     mkDestMarker :: String
     mkDestMarker = 

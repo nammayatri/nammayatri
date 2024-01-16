@@ -36,11 +36,12 @@ import Language.Types (STR(..))
 import Prelude (Unit, show, bind, const, map, pure, unit, not, void, ($), (&&), (+), (/), (/=), (<<<), (<>), (==), (||), discard)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Accessiblity(..), PrestoDOM, Visibility(..), afterRender, accessibilityHint ,alignParentBottom, background, clickable, color, cornerRadius, ellipsize, fontStyle, gravity, height, id, imageUrl, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textSize, textView, visibility, weight, width, accessibility)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.Types (Stage(..))
+import Screens.Types (Stage(..), QuoteListItemState(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Storage (isLocalStageOn)
 import Styles.Colors as Color
 import Data.String (replaceAll, Pattern(..), Replacement(..))
+import Locale.Utils
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -390,7 +391,7 @@ selectRideAndConfirmView state push =
     , text case getValueToLocalStore AUTO_SELECTING of
        "CANCELLED_AUTO_ASSIGN" -> "Select a Ride"
        "false"                 -> "Select a Ride"
-       _                       -> case (getValueToLocalStore LANGUAGE_KEY) of
+       _                       -> case (getLanguageLocale languageKey) of
                                     _ -> "Confirming selected ride in" <> " : " <> (fromMaybe dummyQuoteList ((filter (\item -> item.id == (fromMaybe "" state.selectedQuote)) state.quoteListModel) !! 0)).timer <> "s"
                                     -- _ -> "state.timer" <> "s " <> (getString AUTO_ACCEPTING_SELECTED_RIDE) TODO :: NEED TO UPDATE LANGUAGE
     ] <> FontStyle.subHeading2 TypoGraphy)]
@@ -667,7 +668,7 @@ getPrice state =
 
 
 
-dummyQuoteList :: QuoteListItem.QuoteListItemState
+dummyQuoteList :: QuoteListItemState
 dummyQuoteList = QuoteListItem.config{
    seconds = 15
   , id = ""  

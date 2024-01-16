@@ -79,6 +79,7 @@ data OnUpdateReq
         driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
         isDriverBirthDay :: Bool,
+        isFreeRide :: Bool,
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
@@ -142,6 +143,7 @@ data ValidatedOnUpdateReq
         driverRating :: Maybe Centesimal,
         driverRegisteredAt :: UTCTime,
         isDriverBirthDay :: Bool,
+        isFreeRide :: Bool,
         otp :: Text,
         vehicleNumber :: Text,
         vehicleColor :: Text,
@@ -319,10 +321,12 @@ onUpdate ValidatedRideAssignedReq {..} = do
             rideEndTime = Nothing,
             rideRating = Nothing,
             safetyCheckStatus = Nothing,
+            isFreeRide = Just isFreeRide,
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
-  frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) TripStart
+  fork "ride start geohash frequencyUpdater" $ do
+    frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) (Just booking.fromLocation.address) TripStart
   rideStartTime <- getCurrentTime
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
@@ -335,7 +339,8 @@ onUpdate ValidatedRideStartedReq {..} = do
   QPFS.clearCache booking.riderId
   Notify.notifyOnRideStarted booking ride
 onUpdate ValidatedRideCompletedReq {..} = do
-  frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) TripEnd
+  fork "ride end geohash frequencyUpdater" $ do
+    frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) (Just booking.fromLocation.address) TripEnd
   SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs

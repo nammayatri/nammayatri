@@ -28,9 +28,9 @@ module Tools.Maps
 where
 
 import Domain.Types.Merchant
-import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity (..))
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
+import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import Domain.Types.Person (Person)
 import Kernel.External.Maps as Reexport hiding
   ( autoComplete,

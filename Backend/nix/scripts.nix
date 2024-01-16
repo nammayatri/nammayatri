@@ -61,6 +61,8 @@ _:
           set -x
           cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
           rm -f ./*.log # Clean up the log files
+          redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+          redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
           nix run .#run-mobility-stack-nix -- "$@"
         '';
       };
@@ -84,6 +86,8 @@ _:
             cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
             rm -f ./*.log # Clean up the log files
             cabal build ${lib.concatStringsSep " " cabalTargets}
+            redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+            redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
             nix run .#run-mobility-stack-dev -- "$@"
           '';
       };
@@ -104,39 +108,14 @@ _:
         '';
       };
 
-      run-load-test = {
+      run-load-test-dev = {
         category = "Backend";
         description = ''
-          Run load tests using Locust
+          Run load tests
         '';
         exec = ''
-          cd ./Backend/load-test
-
-          python3 ./setup/auth.py
-
-          python3 ./setup/locationUpdateService.py &
-          LOC_UPDATE_PID=$!
-          sleep 4
-
-          python3 ./services/shareOTP.py &
-          SHARE_OTP_PID=$!
-          sleep 4
-
-          locust --headless --run-time 2m --users 50  --only-summary --html ./output/riderApp.html --csv ./output/riderApp.csv -f ./scripts/riderApp.py  &
-          LOCUST_RIDER_PID=$!
-
-          locust --headless --run-time 2m --users 50 --only-summary  --html ./output/driverOffer.html --csv ./output/driverOffer.csv -f ./scripts/driverOffer.py &
-          LOCUST_DRIVER_PID=$!
-
-          wait $LOCUST_RIDER_PID $LOCUST_DRIVER_PID
-
-          cleanup() {
-              echo "Cleaning up..."
-              kill $LOC_UPDATE_PID $SHARE_OTP_PID $LOCUST_RIDER_PID $LOCUST_DRIVER_PID
-              exit 0
-          }
-          trap cleanup EXIT
-          wait
+          set -x
+          nix run .#load-test-dev -- -p=0 "$@"
         '';
       };
     };

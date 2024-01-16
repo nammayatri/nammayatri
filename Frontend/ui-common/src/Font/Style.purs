@@ -37,9 +37,10 @@ import Control.Monad.Except (runExcept)
 import Foreign.Generic (Foreign, decode, encode)
 import JBridge as JBridge
 import ConfigProvider
+import MerchantConfig.DefaultConfig as DC
 
 getLanguageFromLocalStore :: Unit -> String
-getLanguageFromLocalStore _ = JBridge.getKeyInSharedPrefKeys "LANGUAGE_KEY"
+getLanguageFromLocalStore _ = "EN_US"
 
 getFontType :: String ->  FontType
 getFontType dummy = 
@@ -335,6 +336,11 @@ body18 ::  LazyCheck ->  forall properties. (Array (Prop properties))
 body18 typography = [
   textSize FontSize.a_8 
 ]  <> if (getFontType "") == Assets then [fontStyle $ semiBold LanguageStyle] else [fontWeight $ FontWeight 600]
+
+body22 ::  LazyCheck -> forall properties. (Array (Prop properties))
+body22 typography = [
+  textSize FontSize.a_14
+]  <> if getFontType "" == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700] 
 
 h0 :: LazyCheck -> forall properties. (Array (Prop properties))
 h0 typography = [

@@ -788,7 +788,6 @@ public class LocationUpdateService extends Service {
                         .setContentTitle("Updating")
                         .setContentText(getString(R.string.your_location_is_being_updated))
                         .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
-                        .setColor(rgb(252, 198, 44))
                         .setPriority(NotificationCompat.PRIORITY_MIN)
                         .setOngoing(true)
                         .setContentIntent(pendingIntent);
@@ -807,7 +806,6 @@ public class LocationUpdateService extends Service {
         mBuilder.setLargeIcon(BitmapFactory.decodeResource(getResources(), Utils.getResIdentifier(context, "ic_launcher", "drawable")));
         mBuilder.setContentTitle(getString(R.string.we_made_you_offline))
                 .setSmallIcon(Utils.getResIdentifier(context, (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ny_ic_launcher", "drawable"))
-                .setColor(rgb(252, 195, 44))
                 .setContentText(getString(R.string.location_is_turned_off_permission_is_disabled))
                 .setAutoCancel(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX);

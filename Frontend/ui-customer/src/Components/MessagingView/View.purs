@@ -34,7 +34,7 @@ import JBridge (scrollToEnd, getLayoutBounds)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, show, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, negate, (+), (<=), discard, void, (>=), (<), when)
-import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gravity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), LetterSpacing(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, editText, ellipsize, fontStyle, gravity, halfExpandedRatio, height, hint, hintColor, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, maxLines, onAnimationEnd, onChange, onClick, onStateChanged, orientation, padding, pattern, peakHeight, relativeLayout, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, visibility, weight, width, nestedScrollView, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, disableKeyboardAvoidance, letterSpacing)
+import PrestoDOM (Accessiblity(..), BottomSheetState(..), Gravity(..), JustifyContent(..), FlexDirection(..), FlexWrap(..), AlignItems(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), LetterSpacing(..), accessibility, accessibilityHint, adjustViewWithKeyboard, afterRender, alignParentBottom, background, bottomShift, clickable, color, cornerRadius, editText, ellipsize, fontStyle, gravity, halfExpandedRatio, height, hint, hintColor, horizontalScrollView, id, imageView, imageWithFallback, linearLayout, margin, maxLines, onAnimationEnd, onChange, onClick, onStateChanged, orientation, padding, pattern, peakHeight, relativeLayout, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, topShift, visibility, weight, width, nestedScrollView, flexBoxLayout, justifyContent, flexDirection, flexWrap, alignItems, disableKeyboardAvoidance, letterSpacing, rippleColor)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Events (afterRender)
@@ -44,6 +44,7 @@ import Styles.Colors as Color
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Mobility.Prelude (boolToVisibility)
+import Locale.Utils
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
@@ -114,6 +115,8 @@ chatHeaderView config push =
           , height $ V 24
           , width $ V 24
           , accessibility DISABLE
+          , rippleColor Color.rippleShade
+          , cornerRadius 24.0
           ]
         ]
       , headerNameView config push
@@ -129,7 +132,7 @@ chatHeaderView config push =
 
 headerNameView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerNameView config push =
-  let lang = getValueToLocalStore LANGUAGE_KEY
+  let lang = getLanguageLocale languageKey
   in
   linearLayout
   [ height WRAP_CONTENT
@@ -239,6 +242,7 @@ headerActionView config push =
      , onClick push $ const $ Call
      , accessibilityHint "Call Driver : Button"
      , accessibility ENABLE
+     , rippleColor Color.rippleShade
      ][ imageView
         [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_call"
         , height $ V 16
@@ -382,6 +386,7 @@ suggestionsView config push =
         , width WRAP_CONTENT
         , gravity LEFT
         , accessibility DISABLE
+        , rippleColor Color.rippleShade
         ] (mapWithIndex (\index item -> quickMessageView config item index push)(config.chatSuggestionsList))
       ]
   ]
@@ -401,6 +406,7 @@ quickMessageView config message idx push =
   , accessibilityHint $ (getMessageFromKey message "EN_US") <> " : Button : Select to send message to driver"
   , margin $ MarginLeft if idx == 0 then 0 else 8
   , padding $ Padding 16 6 16 6
+  , rippleColor Color.rippleShade
   ][ textView $
      [ text $ value
      , accessibility DISABLE

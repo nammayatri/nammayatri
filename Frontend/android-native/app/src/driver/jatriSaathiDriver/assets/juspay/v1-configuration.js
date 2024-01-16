@@ -33,8 +33,17 @@ window.getMerchantConfig = function () {
       "HOW_IT_WORKS",
       "GET_SPECIAL_OFFERS",
       "PAYMENT_PENDING_ALERT_DESC",
-      "NO_OPEN_MARKET_RIDES"
+      "NO_OPEN_MARKET_RIDES",
+      "DOWNLOAD_NAMMA_YATRI",
+      "START_TAKING_RIDES_AND_REFER",
     ],
+    "leaderBoard": {
+      "isMaskedName": false
+    },
+    "gotoConfig" : {
+      "maxGotoLocations" : 5,
+      "enableGoto" : true
+    },
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -89,7 +98,9 @@ window.getMerchantConfig = function () {
       "HOW_IT_WORKS" : "How Autopay works?",
       "GET_SPECIAL_OFFERS" : "Guaranteed fixed price until\nJan 1, 2025",
       "PAYMENT_PENDING_ALERT_DESC" : "To continue taking rides on Yatri Sathi, clear your payment dues",
-      "NO_OPEN_MARKET_RIDES" : "0 open market rides"
+      "NO_OPEN_MARKET_RIDES" : "0 open market rides",
+      "DOWNLOAD_NAMMA_YATRI" : "Download Yatri Sathi",
+      "START_TAKING_RIDES_AND_REFER" : "Start taking rides and referring drivers to sign up on Yatri Sathi Driver App",
     },
     "hindiStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -115,7 +126,9 @@ window.getMerchantConfig = function () {
       "HOW_IT_WORKS" : "ऑटोपे कैसे काम करता है?",
       "GET_SPECIAL_OFFERS" : "1 जनवरी, 2025 तक निश्चित मूल्य की गारंटी",
       "PAYMENT_PENDING_ALERT_DESC" : "यात्री साथी पर यात्रा जारी रखने के लिए, अपनी शेष राशि चुकाएं",
-      "NO_OPEN_MARKET_RIDES" : "0 ओपन मार्केट राइड"
+      "NO_OPEN_MARKET_RIDES" : "0 ओपन मार्केट राइड",
+      "DOWNLOAD_NAMMA_YATRI" : "यात्री साथी डाउनलोड करें",
+      "START_TAKING_RIDES_AND_REFER" : "यात्री साथी ड्राइवर ऐप पर साइन अप करने के लिए सवारी लेना और ड्राइवरों को रेफर करना शुरू करें",
     },
     "bengaliStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -141,7 +154,9 @@ window.getMerchantConfig = function () {
       "HOW_IT_WORKS" : "স্বতঃপে কিভাবে কাজ করে?",
       "GET_SPECIAL_OFFERS" : "জানুয়ারি 1, 2025 পর্যন্ত গ্যারান্টিযুক্ত নির্দিষ্ট মূল্য",
       "PAYMENT_PENDING_ALERT_DESC" : "যাত্রী সাথীতে যাত্রা চালিয়ে যেতে, আপনার পেমেন্ট বকেয়া পরিশোধ করুন",
-      "NO_OPEN_MARKET_RIDES" : "0 ওপেন মার্কেট রাইডস"
+      "NO_OPEN_MARKET_RIDES" : "0 ওপেন মার্কেট রাইডস",
+      "DOWNLOAD_NAMMA_YATRI" : "যাত্রী সাথী ডাউনলোড করুন",
+      "START_TAKING_RIDES_AND_REFER" : "যাত্রী সাথী ড্রাইভার অ্যাপে সাইন আপ করতে রাইড করা এবং ড্রাইভারদের রেফার করা শুরু করুন",
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -171,8 +186,8 @@ window.getMerchantConfig = function () {
         "offerBannerDeadline" : "Jan 1-31-*$*-ಜನವರಿ 1-31-*$*-1-31 जनवरी-*$*-ஜனவரி 1-31-*$*-জানুয়ারী 1-31",
         "offerBannerPlans" : ["25ade579-fd9c-4288-a015-337af085e66c"],
       },
-      "lowDuesLimit" : 15.0,
-      "highDueWarningLimit" : 75.0,
+      "lowDuesLimit" : 150.0,
+      "highDueWarningLimit" : 250.0,
       "gradientConfig" : [{"id" : "c1a27b2c-8287-4d79-a5d9-99e1a0026203", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "5eed42c1-2388-4a86-b68b-d9da2f674091", colors : ["#29FF4D35", "#29FFE588"]},{"id" : "b6d61915-65bb-4ca9-bbb7-a90be735a722", colors : ["#29FF4D35", "#29FFE588"]}],
       "enableSubscriptionSupportPopup" : true,
       "myPlanYoutubeLink" : "https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y2bykEuDAtHzgcubXOYqgU-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Zl0IIQcZa7ZJrSjWPLfxpA-*$*-https://www.youtube.com/playlist?list=PLvMgI4c44A9Y8NLs_8TXc7biX-JkobrGB",
@@ -197,6 +212,7 @@ window.getMerchantConfig = function () {
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "termsLink" : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4"
+    , "enableDriverReferral": true
     , "privacyLink" : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E"
     , "feature" : {
       "enableBonus" : false
@@ -215,6 +231,7 @@ window.getMerchantConfig = function () {
       "autoPay" : false
     }
     , "referral": {
+      "type": "LeaderBoard",
       "link" : "https://nammayatri.in/link/rider/kTZ1"
     }
     , "enableMockLocation" : false

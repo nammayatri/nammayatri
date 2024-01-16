@@ -25,7 +25,7 @@ import Control.Monad
 import Domain.Action.UI.HotSpot
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Action.UI.Serviceability as Serviceability
-import Domain.Types.HotSpot
+import Domain.Types.HotSpot hiding (updatedAt)
 import Domain.Types.HotSpotConfig
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
@@ -98,9 +98,9 @@ hotSpotUpdate ::
   m ()
 hotSpotUpdate merchantId mbFavourite req = case mbFavourite of
   Just SavedReqLocation {..} ->
-    frequencyUpdator merchantId req.origin.gps (bool NonManualSaved ManualSaved (isMoved == Just True))
+    frequencyUpdator merchantId req.origin.gps (Just req.origin.address) (bool NonManualSaved ManualSaved (isMoved == Just True))
   Nothing ->
-    frequencyUpdator merchantId req.origin.gps (bool NonManualPickup ManualPickup (req.isSourceManuallyMoved == Just True))
+    frequencyUpdator merchantId req.origin.gps (Just req.origin.address) (bool NonManualPickup ManualPickup (req.isSourceManuallyMoved == Just True))
 
 updateForSpecialLocation ::
   ( EsqDBFlow m r,
@@ -114,11 +114,11 @@ updateForSpecialLocation ::
 updateForSpecialLocation merchantId req = do
   case req.isSpecialLocation of
     Just isSpecialLocation -> do
-      when isSpecialLocation $ frequencyUpdator merchantId req.origin.gps SpecialLocation
+      when isSpecialLocation $ frequencyUpdator merchantId req.origin.gps (Just req.origin.address) SpecialLocation
     Nothing -> do
       specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong req.origin.gps
       case specialLocationBody of
-        Just _ -> frequencyUpdator merchantId req.origin.gps SpecialLocation
+        Just _ -> frequencyUpdator merchantId req.origin.gps (Just req.origin.address) SpecialLocation
         Nothing -> return ()
 
 oneWaySearch ::
@@ -147,15 +147,16 @@ oneWaySearch personId req bundleVersion clientVersion device = do
   mbFavourite <- CSavedLocation.findByLatLonAndRiderId personId req.origin.gps
   HotSpotConfig {..} <- QHotSpotConfig.findConfigByMerchantId merchant.id >>= fromMaybeM (InternalError "config not found for merchant")
 
-  when shouldTakeHotSpot do
-    _ <- hotSpotUpdate person.merchantId mbFavourite req
-    updateForSpecialLocation person.merchantId req
-
   let sourceLatLong = req.origin.gps
   let destinationLatLong = req.destination.gps
-
   originCity <- validateServiceability sourceLatLong destinationLatLong person <&> fromMaybe merchant.defaultCity <$> (.city)
   -- merchant operating city of search-request-origin-location
+
+  when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
+    fork "ride search geohash frequencyUpdater" $ do
+      _ <- hotSpotUpdate person.merchantId mbFavourite req
+      updateForSpecialLocation person.merchantId req
+
   merchantOperatingCity <-
     CQMOC.findByMerchantIdAndCity merchant.id originCity
       >>= fromMaybeM

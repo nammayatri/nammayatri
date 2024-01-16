@@ -45,6 +45,7 @@ library
       API.Dashboard.Management
       API.Dashboard.Management.Booking
       API.Dashboard.Management.Driver
+      API.Dashboard.Management.Driver.Coin
       API.Dashboard.Management.Driver.Common
       API.Dashboard.Management.Driver.GoHome
       API.Dashboard.Management.Driver.Referral
@@ -129,6 +130,7 @@ library
       Domain.Action.Beckn.Update
       Domain.Action.Dashboard.Booking
       Domain.Action.Dashboard.Driver
+      Domain.Action.Dashboard.Driver.Coin
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Driver.Registration
       Domain.Action.Dashboard.DriverReferral
@@ -210,6 +212,7 @@ library
       Domain.Types.DriverOnboarding.DriverLicense
       Domain.Types.DriverOnboarding.DriverRCAssociation
       Domain.Types.DriverOnboarding.Error
+      Domain.Types.DriverOnboarding.ErrorMessagesTranslations
       Domain.Types.DriverOnboarding.IdfyVerification
       Domain.Types.DriverOnboarding.Image
       Domain.Types.DriverOnboarding.OperatingCity
@@ -354,6 +357,7 @@ library
       Storage.Beam.DriverOnboarding.AadhaarVerification
       Storage.Beam.DriverOnboarding.DriverLicense
       Storage.Beam.DriverOnboarding.DriverRCAssociation
+      Storage.Beam.DriverOnboarding.ErrorMessagesTranslations
       Storage.Beam.DriverOnboarding.IdfyVerification
       Storage.Beam.DriverOnboarding.Image
       Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate
@@ -450,6 +454,7 @@ library
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.RegistryMapFallback
+      Storage.Clickhouse.DriverEdaKafka
       Storage.Queries.BapMetadata
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
@@ -475,6 +480,7 @@ library
       Storage.Queries.DriverOnboarding.AadhaarVerification
       Storage.Queries.DriverOnboarding.DriverLicense
       Storage.Queries.DriverOnboarding.DriverRCAssociation
+      Storage.Queries.DriverOnboarding.ErrorMessagesTranslations
       Storage.Queries.DriverOnboarding.IdfyVerification
       Storage.Queries.DriverOnboarding.Image
       Storage.Queries.DriverOnboarding.Status

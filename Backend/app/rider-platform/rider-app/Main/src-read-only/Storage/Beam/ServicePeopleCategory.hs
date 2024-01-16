@@ -6,7 +6,7 @@ module Storage.Beam.ServicePeopleCategory where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServicePeopleCategory
 import Kernel.External.Encryption
 import Kernel.Prelude

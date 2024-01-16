@@ -34,7 +34,10 @@ type AppConfigDriver a =
     engilshInNative :: String,
     banners :: BannerConfig,
     referral :: ReferralConfig,
-    rideRequest :: RideRequestConfig
+    enableDriverReferral :: Boolean,
+    rideRequest :: RideRequestConfig,
+    inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
+    chooseCity :: ChooseCityScreenConfig
     | a
   } 
 
@@ -111,7 +114,8 @@ type RideActionModelConfig = {
 }
 
 type RideCompletedCardConfig = {
-  showSavedCommission :: Boolean
+  showSavedCommission :: Boolean,
+  lottieQRAnim :: Boolean
 }
 
 type ProfileConfig = {
@@ -195,4 +199,11 @@ type RideRequestConfig = {
 type NegotiationUnit = {
   auto :: String,
   cab :: String
+}
+
+type InAppKeyboardModalConfig = {
+  enableDeviceKeyboard :: Boolean
+}
+type ChooseCityScreenConfig = {
+  straightLineDistLogic :: Boolean
 }

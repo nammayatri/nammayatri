@@ -37,7 +37,7 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, background, color, gravity, height, id, imageUrl, imageView, layoutGravity, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentBottom, background, color, gravity, height, id, imageUrl, imageView, layoutGravity, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, onRefresh, onScroll, onScrollStateChange, orientation, padding, relativeLayout, scrollBarY, swipeRefreshLayout, text, textSize, textView, visibility, weight, width, imageWithFallback)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Elements.Keyed as Keyed
 import PrestoDOM.Events (globalOnScroll)
@@ -51,6 +51,7 @@ import Styles.Colors as Color
 import Components.BottomNavBar.View as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Screens as ScreenNames
+import Helpers.Utils(fetchImage, FetchImageFrom(..))
 
 
 screen :: NotificationsScreenState -> PrestoList.ListItem -> Screen Action NotificationsScreenState ScreenOutput
@@ -249,25 +250,25 @@ headerLayout state push =
         , height MATCH_PARENT
         , orientation HORIZONTAL
         , layoutGravity "center_vertical"
-        , padding $ Padding 5 16 5 16
+        , gravity CENTER_VERTICAL
         ]
         [ imageView
-            [ width $ V 30
-            , height $ V 30
-            , imageUrl "ny_ic_chevron_left"
+            [ width $ V 55
+            , height $ V 55
+            , imageWithFallback $ fetchImage FF_ASSET $ "ny_ic_chevron_left"
             , gravity CENTER_VERTICAL
             , onClick push $ const BackPressed
-            , padding $ Padding 2 2 2 2
-            , margin $ MarginLeft 5
+            , padding $ Padding 10 13 10 13
             ]
         , textView
             $ [ width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ getString ALL_MESSAGES
-              , margin $ MarginLeft 20
+              , margin $ MarginLeft 10
               , weight 1.0
               , gravity CENTER_VERTICAL
               , color Color.black900
+              , padding $ PaddingBottom 3
               ]
             <> FontStyle.h3 TypoGraphy
         ]
@@ -334,4 +335,5 @@ shimmerData i =
   , imageWithUrlVisibility : toPropValue ""
   , likeCount : toPropValue 0
   , viewCount : toPropValue 0
+  , backgroundHolder : toPropValue ""
   }

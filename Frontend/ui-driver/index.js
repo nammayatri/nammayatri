@@ -60,7 +60,7 @@ loadConfig();
 window.isObject = function (object) {
   return (typeof object == "object");
 }
-window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange"];
+window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "RestartAutoScroll"];
 
 setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 
@@ -228,16 +228,35 @@ window.onMerchantEvent = function (_event, payload) {
 }
 
 window.callUICallback = function () {
-  const args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null, arguments));
+  const getCurrTime = () => (new Date()).getTime()
+  const args = (arguments.length === 1 ? [arguments[0]] : Array.apply(null,
+    arguments));
   const fName = args[0]
   const functionArgs = args.slice(1)
+  let currTime;
+  let timeDiff;
 
-  try {
-    window.__PROXY_FN[fName].call(null, ...functionArgs);
-  } catch (err) {
-    console.error(err)
+  if (window.__THROTTELED_ACTIONS && window.__THROTTELED_ACTIONS.indexOf(fName) == -1) {
+    window.__PROXY_FN[fName].apply(null, functionArgs);
+  } else if (window.__LAST_FN_CALLED && (fName == window.__LAST_FN_CALLED.fName)) {
+    currTime = getCurrTime();
+    timeDiff = currTime - window.__LAST_FN_CALLED.timeStamp;
+
+    if (timeDiff >= 100) {
+      window.__PROXY_FN[fName].apply(null, functionArgs);
+      window.__LAST_FN_CALLED.timeStamp = currTime;
+    } else {
+      console.warn("function throtteled", fName);
+      console.warn("time diff", timeDiff);
+    }
+  } else {
+    window.__PROXY_FN[fName].apply(null, functionArgs);
+    window.__LAST_FN_CALLED = {
+      timeStamp: (new Date()).getTime(),
+      fName: fName
+    }
   }
-}
+};
 
 window.onResumeListeners = [];
 

@@ -73,7 +73,8 @@ castPersonById driverId = do
           firstName = Just person.firstName,
           lastName = person.lastName,
           middleName = person.middleName,
-          mobileNumber = person.mobileNumber
+          mobileNumber = person.mobileNumber,
+          merchantOperatingCityId = cast person.merchantOperatingCityId
         }
 
 castRideById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Ride -> m (Maybe Common.Ride)

@@ -224,6 +224,7 @@ getFaresList fares baseDistance =
                       "FIXED_GOVERNMENT_RATE" -> getEN GOVERNMENT_CHAGRES
                       "PLATFORM_FEE" -> getEN PLATFORM_FEE
                       "SGST" -> getEN PLATFORM_GST
+                      "CUSTOMER_CANCELLATION_DUES" -> getEN CUSTOMER_CANCELLATION_DUES
                       _ -> getEN BASE_FARES
           }
     )
@@ -264,26 +265,22 @@ getKmMeter distance = if (distance < 1000) then toStringJSON distance <> " m" el
 -- Info ::
 -- Vehicle Variants for yatri sathi are SEDAN_TAXI (SEDAN , SUV, HATCHBACK) and NON_AC_TAXI (TAXI)
 fetchVehicleVariant :: String -> Maybe ST.VehicleVariant
-fetchVehicleVariant variant = case variant of 
-                                "SUV" -> Just ST.SUV
-                                "SEDAN" -> Just ST.SEDAN
-                                "HATCHBACK" -> Just ST.HATCHBACK
-                                "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
-                                "TAXI" -> Just ST.TAXI 
-                                "TAXI_PLUS" -> Just ST.TAXI_PLUS
-                                _ -> Nothing
+fetchVehicleVariant variant = 
+  case variant of 
+    "SUV"           -> Just ST.SUV
+    "SEDAN"         -> Just ST.SEDAN
+    "HATCHBACK"     -> Just ST.HATCHBACK
+    "AUTO_RICKSHAW" -> Just ST.AUTO_RICKSHAW
+    "TAXI"          -> Just ST.TAXI 
+    "TAXI_PLUS"     -> Just ST.TAXI_PLUS
+    _               -> Nothing
 
 getVehicleCapacity :: String -> String 
-getVehicleCapacity variant = case getMerchant FunctionCall of
-  YATRISATHI -> case fetchVehicleVariant variant of
-          Just ST.TAXI -> getString ECONOMICAL <> " · " <>  "4 " <> getString PEOPLE
-          Just ST.SUV  -> getString SPACIOUS <> " · " <> "6 " <> getString PEOPLE
-          _            -> getString COMFY <> " · " <> "4 " <> getString PEOPLE
-  YATRI -> case fetchVehicleVariant variant of
-          Just ST.SUV -> "6 " <> (getString SEATS)
-          Just ST.AUTO_RICKSHAW -> "3 " <> (getString SEATS)
-          _ -> "4 " <> (getString SEATS)
-  _ ->    ""
+getVehicleCapacity variant = 
+  case fetchVehicleVariant variant of
+    Just ST.SUV -> "6" 
+    Just ST.AUTO_RICKSHAW -> "3"
+    _ -> "4" 
 
 getDisabilityType :: String -> Array ST.DisabilityT -> ST.DisabilityT 
 getDisabilityType disType disList = (fromMaybe dummyDisabilityList (head (filter(\item -> item.tag == disType) disList)))

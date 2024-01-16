@@ -158,9 +158,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     private PreviewView previewView;
     private ImageCapture imageCapture;
     private Button bCapture;
-    private TranslatorMLKit translator;
+    private final TranslatorMLKit translator;
     public static Runnable cameraPermissionCallback;
-    public static Boolean considerCameraOption = true;
 
     public MobilityDriverBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -184,25 +183,34 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @JavascriptInterface
     public void deleteTranslatorModel(String model) {
-        if(translator!=null) translator.deleteDownloadedModel(model);
+        ExecutorManager.runOnBackgroundThread(() -> {
+            if(translator!=null) translator.deleteDownloadedModel(model);
+        });
     }
 
     @JavascriptInterface
     public void listDownloadedTranslationModels(String callback) {
-        if(translator!=null) translator.listDownloadedModels(callback, bridgeComponents);
+        ExecutorManager.runOnBackgroundThread(() -> {
+            if(translator!=null) translator.listDownloadedModels(callback, bridgeComponents);
+        });
     }
 
     @JavascriptInterface
     public void triggerDownloadForML(String language) {
-        if(translator!=null) translator.triggerDownloadForLang(language);
+        ExecutorManager.runOnBackgroundThread(() -> {
+            if(translator!=null) translator.triggerDownloadForLang(language);
+        });
+
     }
 
     @JavascriptInterface
     public void translateString(String callback, String toTranslate)
     {
-        String lang = getKeysInSharedPref("LANGUAGE_KEY");
-        TranslatorMLKit translator = new TranslatorMLKit("en", lang, bridgeComponents.getContext());
-        translator.translateStringWithCallback(toTranslate, callback, bridgeComponents);
+        ExecutorManager.runOnBackgroundThread(() -> {
+            String lang = getKeysInSharedPref("LANGUAGE_KEY");
+            TranslatorMLKit translator = new TranslatorMLKit("en", lang, bridgeComponents.getContext());
+            translator.translateStringWithCallback(toTranslate, callback, bridgeComponents);
+        });
     }
 
     @JavascriptInterface
@@ -308,23 +316,25 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //region Location
     @JavascriptInterface
     public void startLocationPollingAPI() {
-        if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
-            Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
-            locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-            WorkManager mWorkManager;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                bridgeComponents.getContext().getApplicationContext().startForegroundService(locationUpdateService);
-            } else {
-                bridgeComponents.getContext().startService(locationUpdateService);
+        ExecutorManager.runOnBackgroundThread(() -> {
+            if (isClassAvailable("in.juspay.mobility.app.LocationUpdateService")) {
+                Intent locationUpdateService = new Intent(bridgeComponents.getContext(), LocationUpdateService.class);
+                locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+                WorkManager mWorkManager;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    bridgeComponents.getContext().getApplicationContext().startForegroundService(locationUpdateService);
+                } else {
+                    bridgeComponents.getContext().startService(locationUpdateService);
+                }
+                mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
+                Constraints constraints = new Constraints.Builder()
+                        .setRequiresDeviceIdle(true)
+                        .build();
+                PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 15, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(R.string.location_update)).setConstraints(constraints).build();
+                mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
+                Log.i(LOCATION, "Start Location Polling");
             }
-            mWorkManager = WorkManager.getInstance(bridgeComponents.getContext());
-            Constraints constraints = new Constraints.Builder()
-                    .setRequiresDeviceIdle(true)
-                    .build();
-            PeriodicWorkRequest mWorkRequest = new PeriodicWorkRequest.Builder(LocationUpdateWorker.class, 15, TimeUnit.MINUTES).addTag(bridgeComponents.getContext().getString(R.string.location_update)).setConstraints(constraints).build();
-            mWorkManager.enqueueUniquePeriodicWork(bridgeComponents.getContext().getString(R.string.location_update), ExistingPeriodicWorkPolicy.UPDATE, mWorkRequest);
-            Log.i(LOCATION, "Start Location Polling");
-        }
+        });
     }
 
     @JavascriptInterface
@@ -341,12 +351,14 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     //region Media Utils
     @JavascriptInterface
     public void pauseMediaPlayer() {
-        if (DefaultMediaPlayerControl.mediaPlayer.isPlaying()) {
-            DefaultMediaPlayerControl.mediaPlayer.pause();
-        }
-        for (MediaPlayerView audioPlayer : audioPlayers) {
-            audioPlayer.onPause(audioPlayer.getPlayer());
-        }
+        ExecutorManager.runOnBackgroundThread(() -> {
+            if (DefaultMediaPlayerControl.mediaPlayer.isPlaying()) {
+                DefaultMediaPlayerControl.mediaPlayer.pause();
+            }
+            for (MediaPlayerView audioPlayer : audioPlayers) {
+                audioPlayer.onPause(audioPlayer.getPlayer());
+            }
+        });
     }
 
     @JavascriptInterface
@@ -1143,7 +1155,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     private void requestCameraPermission(Runnable callback) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if (bridgeComponents.getActivity() != null){
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CAMERA}, IMAGE_PERMISSION_REQ_CODE_PROFILE);
             cameraPermissionCallback = callback;
         }
@@ -1156,22 +1168,24 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
     @SuppressLint("RestrictedApi")
     private void startCameraX(ProcessCameraProvider cameraProvider) {
-        cameraProvider.unbindAll();
-        CameraSelector cameraSelector = new CameraSelector.Builder()
+        if (bridgeComponents.getActivity() != null) {
+            cameraProvider.unbindAll();
+            CameraSelector cameraSelector = new CameraSelector.Builder()
 //                .requireLensFacing(CameraSelector.LENS_FACING_BACK)
-                .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
-                .build();
-        Preview preview = new Preview.Builder()
-                .build();
-        preview.setSurfaceProvider(previewView.getSurfaceProvider());
-        imageCapture = new ImageCapture.Builder()
-                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .build();
-        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build();
+                    .requireLensFacing(CameraSelector.LENS_FACING_FRONT)
+                    .build();
+            Preview preview = new Preview.Builder()
+                    .build();
+            preview.setSurfaceProvider(previewView.getSurfaceProvider());
+            imageCapture = new ImageCapture.Builder()
+                    .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                    .build();
+            ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build();
 //        imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(bridgeComponents.getActivity()), bridgeComponents.getActivity()::analyze);
-        cameraProvider.bindToLifecycle((LifecycleOwner) bridgeComponents.getActivity(), cameraSelector, preview, imageCapture);
+            cameraProvider.bindToLifecycle((LifecycleOwner) bridgeComponents.getActivity(), cameraSelector, preview, imageCapture);
+        }
     }
 
 
@@ -1219,7 +1233,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
             return;
         imageCapture.takePicture(
                 new ImageCapture.OutputFileOptions.Builder(bridgeComponents.getContext().getContentResolver(), MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues).build(),
-                ContextCompat.getMainExecutor(bridgeComponents.getActivity()),
+                ContextCompat.getMainExecutor(bridgeComponents.getContext()),
                 new ImageCapture.OnImageSavedCallback() {
                     @Override
                     public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
@@ -1235,11 +1249,8 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     private boolean isCameraPermissionGranted() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            int cameraPermission = ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CAMERA);
-            return cameraPermission == PackageManager.PERMISSION_GRANTED;
-        }
-        return true;
+        int cameraPermission = ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CAMERA);
+        return cameraPermission == PackageManager.PERMISSION_GRANTED;
     }
     //endregion
 }

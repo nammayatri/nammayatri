@@ -1782,6 +1782,7 @@ public class MobilityCommonBridge extends HyperBridge {
         return info.versionCode;
     }
 
+    @Deprecated
     @JavascriptInterface
     public void toggleLoader(final boolean visible) {
         ExecutorManager.runOnMainThread(() -> {
@@ -2237,7 +2238,6 @@ public class MobilityCommonBridge extends HyperBridge {
             NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, CHANNEL_ID);
             mBuilder.setContentTitle(toastMessage)
                     .setSmallIcon(bridgeComponents.getContext().getResources().getIdentifier((Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "ic_launcher_small_icon" : "ic_launcher", (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ? "drawable" : "mipmap", bridgeComponents.getContext().getPackageName()))
-                    .setColor(rgb(250, 197, 44))
                     .setContentText(notificationContent)
                     .setAutoCancel(true)
                     .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION))

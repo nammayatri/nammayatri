@@ -49,6 +49,8 @@ import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Components.ErrorModal as ErrorModal
 import Mobility.Prelude
+import Locale.Utils
+
 screen :: ChooseCityScreenState -> Screen Action ChooseCityScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -64,7 +66,7 @@ screen initialState =
 
     isLocationPermissionEnabled <- JB.isLocationPermissionEnabled unit
     when isLocationPermissionEnabled $
-      JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 2000 true
+      JB.getCurrentPositionWithTimeout push CurrentLocationCallBack 3500 true
 
     pure $ pure unit)]
   , eval:
@@ -146,7 +148,7 @@ currentLocationView state push =
   ][  imageView
       [ height $ V 220
       , width $ V 220
-      , imageWithFallback $ fetchImage FF_ASSET (getLocationMapImage state.data.locationSelected state.data.config)
+      , imageWithFallback $ fetchImage FF_ASSET $ getLocationMapImage state
       ]
     , textView $
       [ text $ getString LOCATION_UNSERVICEABLE
@@ -156,7 +158,7 @@ currentLocationView state push =
       , visibility $ boolToVisibility state.props.locationUnserviceable
       ] <> FontStyle.h2 TypoGraphy
     , textView $
-      [ text $ getString case state.data.locationDetectionFailed, Mb.isNothing state.data.locationSelected, state.props.locationUnserviceable of
+      [ text $ getString case state.props.locationDetectionFailed, Mb.isNothing state.data.locationSelected, state.props.locationUnserviceable of
                             _ , _ , true -> WE_ARE_NOT_LIVE_IN_YOUR_AREA
                             false, true, _ -> DETECTING_LOCATION
                             true, true, _ -> UNABLE_TO_DETECT_YOUR_LOCATION
@@ -211,7 +213,7 @@ currentLanguageView state push =
           ] <> FontStyle.subHeading1 TypoGraphy
         ]
     , textView $ 
-      [ text $ getString CHANGE_LANGUAGE_STR <> if getValueToLocalStore LANGUAGE_KEY == "EN_US" && Mb.isJust state.data.locationSelected then " (" <> getChangeLanguageText state.data.locationSelected state.data.config <> ")" else ""
+      [ text $ getString CHANGE_LANGUAGE_STR <> if getLanguageLocale languageKey == "EN_US" && Mb.isJust state.data.locationSelected then " (" <> getChangeLanguageText state.data.locationSelected state.data.config <> ")" else ""
       , gravity CENTER
       , color Color.blue800
       , onClick push $ const $ ChangeStage SELECT_LANG

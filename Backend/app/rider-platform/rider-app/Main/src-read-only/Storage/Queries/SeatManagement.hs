@@ -5,15 +5,16 @@ module Storage.Queries.SeatManagement where
 
 import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SeatManagement
 import qualified Domain.Types.ServiceCategory
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.SeatManagement as Beam
 
@@ -27,8 +28,8 @@ findByTicketServiceCategoryIdAndDate :: (MonadFlow m, CacheFlow m r, EsqDBFlow m
 findByTicketServiceCategoryIdAndDate (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq $ ticketServiceCategoryId,
-          Se.Is Beam.date $ Se.Eq $ date
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
+          Se.Is Beam.date $ Se.Eq date
         ]
     ]
 
@@ -40,8 +41,8 @@ updateBlockedSeats blocked (Kernel.Types.Id.Id ticketServiceCategoryId) date = d
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq $ ticketServiceCategoryId,
-          Se.Is Beam.date $ Se.Eq $ date
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
+          Se.Is Beam.date $ Se.Eq date
         ]
     ]
 
@@ -53,8 +54,8 @@ updateBookedSeats booked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq $ ticketServiceCategoryId,
-          Se.Is Beam.date $ Se.Eq $ date
+        [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
+          Se.Is Beam.date $ Se.Eq date
         ]
     ]
 
@@ -62,7 +63,7 @@ findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ id
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
@@ -80,7 +81,7 @@ updateByPrimaryKey Domain.Types.SeatManagement.SeatManagement {..} = do
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.And
-        [ Se.Is Beam.id $ Se.Eq $ (Kernel.Types.Id.getId id)
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 

@@ -34,6 +34,7 @@ data DriverCoinsFunctionType
   | PurpleRideCompleted
   | LeaderBoardTopFiveHundred
   | TrainingCompleted
+  | BulkUploadFunction
   deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
 
 data DriverCoinsEventType
@@ -44,6 +45,7 @@ data DriverCoinsEventType
   | CustomerToDriverReferral
   | LeaderBoard
   | Training
+  | BulkUploadEvent
   deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
 
 $(mkBeamInstancesForEnum ''DriverCoinsEventType)

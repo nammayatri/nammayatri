@@ -25,7 +25,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Ride as DRide
 import Environment
 import qualified Kernel.Beam.Functions as B

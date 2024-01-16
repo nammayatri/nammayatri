@@ -40,6 +40,7 @@ library
       API.Dashboard.Booking
       API.Dashboard.Customer
       API.Dashboard.Exotel
+      API.Dashboard.HotSpot
       API.Dashboard.Issue
       API.Dashboard.IssueList
       API.Dashboard.Merchant
@@ -194,7 +195,6 @@ library
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.MerchantMessage
-      Domain.Types.Merchant.MerchantOperatingCity
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
@@ -262,7 +262,6 @@ library
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.MerchantMessage
-      Storage.Beam.Merchant.MerchantOperatingCity
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
@@ -330,7 +329,6 @@ library
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.MerchantMessage
-      Storage.Queries.Merchant.MerchantOperatingCity
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
@@ -377,6 +375,7 @@ library
       API.Action.UI.TicketService
       API.Types.UI.TicketService
       Domain.Types.BusinessHour
+      Domain.Types.MerchantOperatingCity
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
@@ -388,6 +387,7 @@ library
       Domain.Types.TicketPlace
       Domain.Types.TicketService
       Storage.Beam.BusinessHour
+      Storage.Beam.MerchantOperatingCity
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
@@ -399,6 +399,7 @@ library
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
       Storage.Queries.BusinessHour
+      Storage.Queries.MerchantOperatingCity
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
@@ -451,7 +452,6 @@ library
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
-    , alchemist
     , amazonka
     , amazonka-core
     , amazonka-ses
@@ -564,7 +564,6 @@ executable rider-app-exe
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
-    , alchemist
     , amazonka
     , amazonka-core
     , amazonka-ses

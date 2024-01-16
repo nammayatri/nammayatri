@@ -1138,14 +1138,14 @@ instance decodeCancelRequest :: Decode CancelRequest where decode = defaultDecod
 instance encodeCancelRequest  :: Encode CancelRequest where encode = defaultEncode
 -------------------------------------------------------------------------------RideBookingList API Types ------------------------------------------------------------
 
-data RideBookingListReq = RideBookingListReq String String String
+data RideBookingListReq = RideBookingListReq String String String (Maybe String)
 
 newtype RideBookingListRes = RideBookingListRes {
   list :: Array RideBookingRes
 }
 
 derive instance genericRideBookingListReq:: Generic RideBookingListReq _
-instance standardRideBookingListReq :: StandardEncode RideBookingListReq where standardEncode (RideBookingListReq offset limit onlyActive) = standardEncode offset
+instance standardRideBookingListReq :: StandardEncode RideBookingListReq where standardEncode (RideBookingListReq offset limit onlyActive _) = standardEncode {}
 instance showRideBookingListReq :: Show RideBookingListReq where show = genericShow
 instance decodeRideBookingListReq :: Decode RideBookingListReq where decode = defaultDecode
 instance encodeRideBookingListReq :: Encode RideBookingListReq where encode = defaultEncode
@@ -1159,7 +1159,7 @@ instance encodeRideBookingListRes :: Encode RideBookingListRes where encode = de
 
 
 instance makeRideBookingListReq :: RestEndpoint RideBookingListReq RideBookingListRes where
- makeRequest reqBody@(RideBookingListReq limit offset onlyActive ) headers = defaultMakeRequest GET (EP.rideBookingList limit offset onlyActive) headers reqBody Nothing
+ makeRequest reqBody@(RideBookingListReq limit offset onlyActive status) headers = defaultMakeRequest GET (EP.rideBookingList limit offset onlyActive status) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 
@@ -2423,15 +2423,12 @@ instance encodeTicketPlaceReq  :: Encode TicketPlaceReq where encode = defaultEn
 derive instance genericTicketBookingRequest :: Generic TicketBookingRequest _
 instance standardEncodeTicketBookingRequest :: StandardEncode TicketBookingRequest where standardEncode (TicketBookingRequest id body) = standardEncode body
 instance showTicketBookingRequest :: Show TicketBookingRequest where show = genericShow
-instance decodeTicketBookingRequest :: Decode TicketBookingRequest where decode = defaultDecode
 instance encodeTicketBookingRequest  :: Encode TicketBookingRequest where encode = defaultEncode
 
 derive instance genericTicketPlaceResponse :: Generic TicketPlaceResponse _
 derive instance newtypeTicketPlaceResponse :: Newtype TicketPlaceResponse _
-instance standardEncodeTicketPlaceResponse :: StandardEncode TicketPlaceResponse where standardEncode (TicketPlaceResponse body) = standardEncode body
 instance showTicketPlaceResponse :: Show TicketPlaceResponse where show = genericShow
 instance decodeTicketPlaceResponse :: Decode TicketPlaceResponse where decode = defaultDecode
-instance encodeTicketPlaceResponse  :: Encode TicketPlaceResponse where encode = defaultEncode
 
 derive instance genericPlaceType :: Generic PlaceType _
 instance standardEncodePlaceType :: StandardEncode PlaceType where standardEncode _ = standardEncode {}

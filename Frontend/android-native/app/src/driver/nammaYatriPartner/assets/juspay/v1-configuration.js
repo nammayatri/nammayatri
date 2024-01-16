@@ -178,7 +178,7 @@ window.getMerchantConfig = function () {
     , "cityConfig" : [
       {
         "cityName" : "Bangalore",
-        "mapImage" : "ny_ic_bengalore_map",
+        "mapImage" : "ny_ic_bangalore_map",
         "cityCode" : "std:080",
         "showSubscriptions" : true,
         "cityLat" : 12.971599,
@@ -259,6 +259,18 @@ window.getMerchantConfig = function () {
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
         "uploadRCandDL" : true
+      },
+      {
+        "cityName" : "Tumakuru",
+        "mapImage" : "ny_ic_tumakuru_map",
+        "cityCode" : "std:0816",
+        "showSubscriptions" : false,
+        "cityLat" : 15.32383804957557,
+        "cityLong" : 75.88071672412116,
+        "supportNumber" : "",
+        "languageKey" : "KN_IN",
+        "showDriverReferral" : false,
+        "uploadRCandDL" : true
       }
   ]
   , "dashboard" : {
@@ -267,6 +279,9 @@ window.getMerchantConfig = function () {
     }
   , "profile" : {
     "showBookingOption" : false
+  }
+  , "rideCompletedCardConfig" : {
+      "lottieQRAnim" : true
   }
   })
 }
