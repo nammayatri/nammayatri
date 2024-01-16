@@ -28,8 +28,9 @@ import Servant hiding (throwError)
 
 type API =
   "coins"
-    :> Common.BulkUploadCoinsAPI
-      :<|> Common.CoinHistoryAPI
+    :> ( Common.BulkUploadCoinsAPI
+           :<|> Common.CoinHistoryAPI
+       )
 
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantShortId opCity =

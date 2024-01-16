@@ -33,8 +33,9 @@ import "lib-dashboard" Tools.Auth.Merchant
 
 type API =
   "coins"
-    :> DriverBulkUploadCoinsAPI
-      :<|> DriverCoinHistoryAPI
+    :> ( DriverBulkUploadCoinsAPI
+           :<|> DriverCoinHistoryAPI
+       )
 
 type DriverBulkUploadCoinsAPI = ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'DRIVERS 'DRIVER_COIN_BULK_UPLOAD :> Common.BulkUploadCoinsAPI
 
