@@ -44,6 +44,12 @@ query_drain_latency =
     .& lbl @"action" @Text
     .& build
 
+rider_process_latency :: PromRep 'Histogram "rider_process_latency" '[ '("process_name", Text)]
+rider_process_latency =
+  histogram #rider_process_latency
+    .& lbl @"process_name" @Text
+    .& build
+
 drainer_query_executes :: PromRep 'Counter "drainer_query_executes" '[ '("action", Text)]
 drainer_query_executes =
   counter #drainer_query_executes
