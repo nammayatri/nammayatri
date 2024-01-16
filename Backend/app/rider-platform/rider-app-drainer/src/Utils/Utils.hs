@@ -91,6 +91,11 @@ publishDBSyncMetric metric = do
   environment <- ask
   L.runIO $ pubDBSyncMetric (_counterHandles environment) metric
 
+publishProcessLatency :: Text -> Double -> Flow ()
+publishProcessLatency processName latency = do
+  L.logInfo (("LATENCY: " :: Text) <> processName) (show latency)
+  void $ publishDBSyncMetric $ ProcessLatency processName latency
+
 publishDrainLatency :: Text -> L.KVDBStreamEntryID -> Flow ()
 publishDrainLatency action (L.KVDBStreamEntryID id _) = do
   time <- L.getCurrentDateInMillis
