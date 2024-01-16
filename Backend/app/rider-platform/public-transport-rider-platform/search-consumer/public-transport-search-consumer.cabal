@@ -80,7 +80,6 @@ library
     , containers
     , esqueleto
     , euler-hs
-    , hashmap
     , mobility-core
     , persistent
     , persistent-postgresql
@@ -92,6 +91,7 @@ library
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -146,7 +146,6 @@ executable public-transport-search-consumer-exe
     , containers
     , esqueleto
     , euler-hs
-    , hashmap
     , mobility-core
     , persistent
     , persistent-postgresql
@@ -159,6 +158,7 @@ executable public-transport-search-consumer-exe
     , template-haskell
     , text
     , time
+    , unordered-containers
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

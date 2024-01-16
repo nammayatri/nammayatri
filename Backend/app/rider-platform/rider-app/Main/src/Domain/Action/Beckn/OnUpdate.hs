@@ -27,7 +27,7 @@ module Domain.Action.Beckn.OnUpdate
   )
 where
 
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.HotSpot
 import qualified Domain.Types.Booking as SRB
@@ -265,7 +265,7 @@ onUpdate ::
     HasLongDurationRetryCfg r c,
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>

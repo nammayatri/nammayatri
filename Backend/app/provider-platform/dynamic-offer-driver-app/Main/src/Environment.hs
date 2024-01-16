@@ -17,7 +17,8 @@ module Environment where
 
 import AWS.S3
 import qualified Data.HashMap as HM
-import qualified Data.Map as M
+import qualified Data.HashMap.Strict as HMS
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import EulerHS.Prelude
 import Kernel.External.Encryption (EncTools)
@@ -203,7 +204,7 @@ data AppEnv = AppEnv
     maxMessages :: Text,
     modelNamesHashMap :: HM.Map Text Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
+    internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl
   }
   deriving (Generic)
 
@@ -242,7 +243,7 @@ buildAppEnv cfg@AppCfg {..} = do
       driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
-  let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
   return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

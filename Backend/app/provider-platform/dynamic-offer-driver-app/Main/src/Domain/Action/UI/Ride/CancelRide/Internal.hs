@@ -15,7 +15,7 @@
 
 module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -80,7 +80,7 @@ cancelRideImpl ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "schedulerType" r SchedulerType,
     LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id DRide.Ride ->
   SBCR.BookingCancellationReason ->
@@ -175,7 +175,7 @@ repeatSearch ::
     CacheFlow m r,
     LT.HasLocationService m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   DMerc.Merchant ->
   DFP.FullFarePolicy ->

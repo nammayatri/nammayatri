@@ -21,10 +21,7 @@ let mockGoogleCfg =
       }
 
 let internalEndPointMap =
-      [ { mapKey = "http://localhost:8016/v2"
-        , mapValue = "http://localhost:8016/v2"
-        }
-      , { mapKey = "http://localhost:8015/v1"
+      [ { mapKey = "http://localhost:8015/v1"
         , mapValue = "http://localhost:8015/v1"
         }
       ]

@@ -16,7 +16,7 @@ module API.Handler where
 
 import qualified API.Types as API
 import qualified Data.ByteString as BS
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import Environment
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
@@ -41,7 +41,7 @@ trigger urlText body = withFlowHandlerBecknAPI' $ do
 callBAP ::
   ( MonadFlow m,
     HasFlowEnv m r '["selfId" ::: Text],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     CoreMetrics m
   ) =>
   BaseUrl ->

@@ -75,7 +75,6 @@ library
     , bytestring
     , containers
     , euler-hs
-    , hashmap
     , mobility-core
     , record-dot-preprocessor
     , record-hasfield
@@ -137,7 +136,6 @@ executable mock-rider-platform-exe
     , bytestring
     , containers
     , euler-hs
-    , hashmap
     , mobility-core
     , mock-rider-platform
     , record-dot-preprocessor
