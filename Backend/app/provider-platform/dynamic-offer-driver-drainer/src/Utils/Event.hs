@@ -50,6 +50,12 @@ driver_drainer_query_executes =
     .& lbl @"action" @Text
     .& build
 
+driver_process_latency :: PromRep 'Histogram "driver_process_latency" '[ '("process_name", Text)]
+driver_process_latency =
+  histogram #driver_process_latency
+    .& lbl @"process_name" @Text
+    .& build
+
 driver_drainer_stop_status :: PromRep 'Gauge "driver_drainer_stop_status" '[]
 driver_drainer_stop_status =
   gauge #driver_drainer_stop_status

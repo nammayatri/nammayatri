@@ -35,3 +35,4 @@ data DBSyncMetric
   | DrainerStopStatus Status
   | KafkaUpdateMissing
   | KafkaPushFailure
+  | ProcessLatency Text Latency

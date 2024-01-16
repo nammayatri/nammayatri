@@ -22,6 +22,7 @@ mkDBSyncMetric = do
       DrainerStopStatus status -> setGauge (metrics </> #driver_drainer_stop_status) status
       KafkaUpdateMissing -> inc (metrics </> #driver_kafka_update_missing)
       KafkaPushFailure -> inc (metrics </> #driver_kafka_push_failure)
+      ProcessLatency processName latency -> observe (metrics </> #driver_process_latency) latency processName
   where
     collectionDBSyncMetric =
       driver_peek_db_command_error
@@ -34,4 +35,5 @@ mkDBSyncMetric = do
         .> driver_drainer_stop_status
         .> driver_kafka_update_missing
         .> driver_kafka_push_failure
+        .> driver_process_latency
         .> MNil
