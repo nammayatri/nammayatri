@@ -1495,7 +1495,7 @@ tripDetailsScreenFlow fromMyRides = do
       void $ Remote.sendIssueBT (Remote.makeSendIssueReq  (Just config.appData.supportMail) (Just updatedState.data.selectedItem.rideId) "LOSTANDFOUND" "LOST AND FOUND" $ Just false)
       tripDetailsScreenFlow updatedState.props.fromMyRides
     GET_CATEGORIES_LIST updatedState -> do 
-      let language = fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+      let language = fetchLanguage $ getLanguageLocale languageKey
           categoryOrder = ["LOST_AND_FOUND", "DRIVER_RELATED", "RIDE_RELATED", "APP_RELATED"]
           compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
@@ -1504,7 +1504,7 @@ tripDetailsScreenFlow fromMyRides = do
       modifyScreenState $ TripDetailsScreenStateType (\helpAndSupportScreen -> updatedState { data {categories = categories' } } )
       tripDetailsScreenFlow updatedState.props.fromMyRides
     GO_TO_ISSUE_CHAT_SCREEN updatedState selectedCategory -> do
-      let language = fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+      let language = fetchLanguage $ getLanguageLocale languageKey
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
       let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> optionObj.option}) getOptionsRes.options
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
@@ -1542,7 +1542,7 @@ helpAndSupportScreenFlow :: FlowBT String Unit
 helpAndSupportScreenFlow = do
   config <- pure $ getAppConfig Constants.appConfig
   modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen{data{config = config}})
-  let language = fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+  let language = fetchLanguage $ getLanguageLocale languageKey
       categoryOrder = ["LOST_AND_FOUND", "DRIVER_RELATED", "RIDE_RELATED", "APP_RELATED"]
       compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
   (GetCategoriesRes response) <- Remote.getCategoriesBT language
@@ -1576,7 +1576,7 @@ helpAndSupportScreenFlow = do
       modifyScreenState $ RideSelectionScreenStateType (\rideHistoryScreen -> rideHistoryScreen { data {offsetValue = 0}, selectedCategory = selectedCategory } )
       rideSelectionScreenFlow
     ISSUE_CHAT_SCREEN selectedCategory -> do      
-      let language = fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+      let language = fetchLanguage $ getLanguageLocale languageKey
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language selectedCategory.categoryId "" ""
       let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> optionObj.option}) getOptionsRes.options
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))getOptionsRes.messages
@@ -1589,7 +1589,7 @@ helpAndSupportScreenFlow = do
       modifyScreenState $ ReportIssueChatScreenStateType (\updatedState ->  updatedState { data { chats = chats', categoryName = categoryName, categoryId = selectedCategory.categoryId, options = options', chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'} }})
       issueReportChatScreenFlow
     OPEN_OLD_ISSUE_CHAT_SCREEN selectedIssue -> do
-      let language =  fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+      let language =  fetchLanguage $ getLanguageLocale languageKey
       (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language selectedIssue.issueReportId
       let options' = mapWithIndex (\index (Option optionObj) -> optionObj{ option = (show (index + 1)) <> ". " <> optionObj.option}) issueInfoRes.options
           messages' = mapWithIndex (\_ (ChatDetail currMessage) -> 
@@ -1610,7 +1610,7 @@ issueReportChatScreenFlow = do
     SELECT_ISSUE_OPTION updatedState -> do
       let selectedOptionId = fromMaybe "" $ map (\option -> option.issueOptionId) updatedState.data.selectedOption
           selectedOptionLabel = fromMaybe "" $ map (\option -> option.label) updatedState.data.selectedOption
-          language = fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+          language = fetchLanguage $ getLanguageLocale languageKey
           isResolved = selectedOptionLabel == "MARK_RESOLVED"
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId $ fromMaybe "" updatedState.data.issueId
       when isResolved do
@@ -1632,7 +1632,7 @@ issueReportChatScreenFlow = do
     GO_TO_RIDE_SELECTION_SCREEN updatedState -> rideSelectionScreenFlow
     SUBMIT_ISSUE updatedState -> do
       let selectedOptionId = (map (\option -> option.issueOptionId) updatedState.data.selectedOption)
-          language = fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+          language = fetchLanguage $ getLanguageLocale languageKey
           mediaFiles' = case updatedState.data.uploadedAudioId of
                           Just audioId -> Arr.cons audioId updatedState.data.uploadedImagesIds
                           _            -> updatedState.data.uploadedImagesIds
@@ -1643,7 +1643,7 @@ issueReportChatScreenFlow = do
                                                 rideId : updatedState.data.tripId, 
                                                 chats : updatedState.data.chats}
       (PostIssueRes postIssueRes) <- Remote.postIssueBT language postIssueReqBody
-      void $ pure $ toast $ getString YOUR_ISSUE_HAS_BEEN_REPORTED
+      void $ pure $ toast $ getString STR.YOUR_ISSUE_HAS_BEEN_REPORTED
       (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language postIssueRes.issueReportId
       void $ pure $ hideKeyboardOnNavigation true
       let showDescription = STR.length (trim issueInfoRes.description) > 0
@@ -1661,11 +1661,11 @@ issueReportChatScreenFlow = do
         Just ride -> do
                       void $ pure $ spy "RIDE_ID" ride.rideId
                       void $ pure $ spy "SHORT_ID" ride.shortRideId
-                      void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+                      void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
                       resp <- Remote.callDriverBT ride.rideId
-                      pure $ toast $ getString REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON
+                      pure $ toast $ getString STR.REQUEST_RECEIVED_WE_WILL_CALL_YOU_BACK_SOON
 
-                      let language = fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+                      let language = fetchLanguage $ getLanguageLocale languageKey
                       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId (fromMaybe "" updatedState.data.issueId)
                       let getOptionsRes' = mapWithIndex (\index (Option optObj) -> optObj{ option = (show (index + 1)) <> ". " <> optObj.option}) getOptionsRes.options
                           messages' = mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) getOptionsRes.messages
@@ -1676,14 +1676,14 @@ issueReportChatScreenFlow = do
                       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {chats = (updatedState.data.chats <> chats'), options = getOptionsRes', chatConfig = updatedState.data.chatConfig{messages = (updatedState.data.chatConfig.messages <> messages')} }, props {showSubmitComp = ((null getOptionsRes'))}})
                       issueReportChatScreenFlow
         _           -> do
-                      pure $ toast $ getString PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER
+                      pure $ toast $ getString STR.PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER
                       (GlobalState globalState) <- getState
                       if updatedState.data.entryPoint == ST.TripDetailsScreenEntry then tripDetailsScreenFlow globalState.tripDetailsScreen.props.fromMyRides
                       else helpAndSupportScreenFlow
     CALL_SUPPORT_MODAL updatedState -> do
       let selectedOptionId = fromMaybe "" (map (\option -> option.issueOptionId) updatedState.data.selectedOption)
       void $ pure $ showDialer (getSupportNumber "") false
-      let language = fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+      let language = fetchLanguage $ getLanguageLocale languageKey
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId (fromMaybe "" updatedState.data.issueId)
       let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj {option =  (show (index + 1)) <> ". " <> optionObj.option}) getOptionsRes.options
           messages' = mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) getOptionsRes.messages
@@ -1696,7 +1696,7 @@ issueReportChatScreenFlow = do
       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {chats = (updatedState.data.chats <> chats'), options = getOptionsRes', chatConfig = updatedState.data.chatConfig{messages = (updatedState.data.chatConfig.messages <> messages')} }, props {showSubmitComp = ((null getOptionsRes'))}})
       issueReportChatScreenFlow
     REOPEN_ISSUE updatedState -> do
-      let language = fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+      let language = fetchLanguage $ getLanguageLocale languageKey
           updateIssueReqBody = UpdateIssueReqBody {status : "REOPENED"}
           selectedOptionId = fromMaybe "" (map (\option -> option.issueOptionId) updatedState.data.selectedOption)
       (GetOptionsRes _) <- Remote.getOptionsBT language updatedState.data.categoryId selectedOptionId (fromMaybe "" updatedState.data.issueId)
@@ -1719,7 +1719,7 @@ rideSelectionScreenFlow = do
       modifyScreenState $ RideSelectionScreenStateType (\_ -> state{data{offsetValue = state.data.offsetValue + 8}})
       rideSelectionScreenFlow
     SELECT_RIDE state -> do
-      let language = fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+      let language = fetchLanguage $ getLanguageLocale languageKey
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language state.selectedCategory.categoryId "" ""
       let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> optionObj.option }) getOptionsRes.options
           messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages

@@ -57,6 +57,7 @@ import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Mobility.Prelude (boolToVisibility)
+import Locale.Utils
 
 screen :: ST.HelpAndSupportScreenState -> Screen Action ST.HelpAndSupportScreenState ScreenOutput
 screen initialState =
@@ -75,7 +76,7 @@ screen initialState =
       ( \push -> do
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
           when initialState.data.config.feature.enableSelfServe do
-            let language = EHU.fetchLanguage $ getValueToLocalStore LANGUAGE_KEY
+            let language = EHU.fetchLanguage $ getLanguageLocale languageKey
             (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
             lift $ lift $ doAff do liftEffect $ push $ FetchIssueListApiCall issueListResponse.issues
         pure $ pure unit
