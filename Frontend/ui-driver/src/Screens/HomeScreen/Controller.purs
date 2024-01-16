@@ -1233,7 +1233,6 @@ getBannerConfigs state =
   (if state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER 
     then [autpPayBannerCarousel state BannerCarousal] 
     else [])
-  <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else [])
   <> (if state.props.currentStage == ST.HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos then [accessbilityBannerConfig state BannerCarousal] else [])
   <> getRemoteBannerConfigs
   where 
