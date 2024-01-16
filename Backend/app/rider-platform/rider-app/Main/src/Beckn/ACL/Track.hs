@@ -20,6 +20,8 @@ module Beckn.ACL.Track
 where
 
 import qualified Beckn.Types.Core.Taxi.Track as Track
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
@@ -61,3 +63,23 @@ buildTrackReq res = do
 
 mkTrackMessage :: TrackBuildReq -> Track.TrackMessage
 mkTrackMessage res = Track.TrackMessage res.bppBookingId.getId
+
+_buildTrackReqV2 ::
+  ( MonadFlow m,
+    HedisFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  TrackBuildReq ->
+  m (Spec.TrackReq)
+_buildTrackReqV2 res = do
+  messageId <- generateGUID
+  Redis.setExp (key messageId) res.bppRideId 1800 --30 mins
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <- ContextV2.buildContextV2 Context.TRACK Context.MOBILITY messageId (Just res.transactionId) res.merchant.bapId bapUrl (Just res.bppId) (Just res.bppUrl) res.merchant.defaultCity res.merchant.country
+  pure $ Spec.TrackReq context $ _mkTrackMessageV2 res
+  where
+    key messageId = "Track:bppRideId:" <> messageId
+
+_mkTrackMessageV2 :: TrackBuildReq -> Spec.TrackReqMessage
+_mkTrackMessageV2 res = Spec.TrackReqMessage res.bppBookingId.getId
