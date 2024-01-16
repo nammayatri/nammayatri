@@ -123,7 +123,6 @@ import Types.ModifyScreenState (modifyScreenState, updateStage)
 import MerchantConfig.Types (AppConfig(..))
 import ConfigProvider
 import Timers (clearTimerWithId)
-import RemoteConfigs as RC
 import Locale.Utils
 
 
