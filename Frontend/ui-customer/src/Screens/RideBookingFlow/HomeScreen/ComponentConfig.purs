@@ -747,7 +747,7 @@ rateCardConfig state =
                       MU.YATRI -> getVehicleTitle state.data.rateCard.vehicleVariant
                       _ -> ""
         , fareList = case MU.getMerchant FunctionCall of
-                      MU.NAMMAYATRI -> nyRateCardList state
+                      MU.NAMMAYATRI -> if state.props.city == Delhi then nyRateCardListForDelhi state else nyRateCardList state
                       MU.YATRI -> yatriRateCardList state.data.rateCard.vehicleVariant state
                       _ -> []
 
@@ -826,8 +826,17 @@ getVehicleTitle vehicle =
 
 nyRateCardList :: ST.HomeScreenState -> Array FareList
 nyRateCardList state =
-  ([{key : ((getString MIN_FARE_UPTO) <> "2km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
+  ([{key : ((getString MIN_FARE_UPTO) <> "2 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.baseFare))},
     {key : ((getString RATE_ABOVE_MIN_FARE) <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹" <> HU.toStringJSON (state.data.rateCard.extraFare) <> "/ km")},
+    {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
+    ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
+    [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
+
+nyRateCardListForDelhi :: ST.HomeScreenState -> Array FareList
+nyRateCardListForDelhi state = 
+  ([{key : ((getString MIN_FARE_UPTO) <> "1.5 km" <> if state.data.rateCard.nightCharges then " 🌙" else ""), val : ("₹30")},
+    { key : "1.5 km - 5 km" , val : "₹15 / km"},
+    { key : if (getLanguageLocale languageKey) == "EN_US" then (getString MORE_THAN) <> " 5 km" else "5 " <> (getString MORE_THAN) ,val : "₹11 / km"},
     {key : (getString $ DRIVER_PICKUP_CHARGES "DRIVER_PICKUP_CHARGES"), val : ("₹" <> HU.toStringJSON (state.data.rateCard.pickUpCharges))}
     ]) <> (if (MU.getMerchant FunctionCall) == MU.NAMMAYATRI && (state.data.rateCard.additionalFare > 0) then
     [{key : (getString DRIVER_ADDITIONS), val : (getString PERCENTAGE_OF_NOMINAL_FARE)}] else [])
