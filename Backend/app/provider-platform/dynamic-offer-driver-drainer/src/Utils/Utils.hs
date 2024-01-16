@@ -93,6 +93,11 @@ publishDrainLatency action (L.KVDBStreamEntryID id _) = do
   L.logInfo (("LATENCY: " :: Text) <> action) (show latency)
   void $ publishDBSyncMetric $ QueryDrainLatency action latency
 
+publishProcessLatency :: Text -> Double -> Flow ()
+publishProcessLatency processName latency = do
+  L.logInfo (("LATENCY: " :: Text) <> processName) (show latency)
+  void $ publishDBSyncMetric $ ProcessLatency processName latency
+
 decodeToText :: ByteString -> Text
 decodeToText = DTE.decodeUtf8With DTE.lenientDecode
 
