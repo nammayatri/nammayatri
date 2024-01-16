@@ -63,7 +63,7 @@ tfOrder res =
   Spec.Order
     { orderId = Just res.bookingId.getId,
       orderStatus = Just $ mapToBecknBookingStatusV2 res.bookingStatus,
-      orderFulfillments = Just [tfFulfillment res],
+      orderFulfillments = tfFulfillment res,
       orderBilling = Nothing,
       orderCancellationTerms = Nothing,
       orderItems = Nothing,
@@ -72,26 +72,19 @@ tfOrder res =
       orderQuote = Nothing
     }
   where
-    tfFulfillment res =
-      res.mbRide <&> \ride ->
-        Spec.Fulfillment
-          { fulfillmentId = Just ride.id.getId,
-            fulfillmentType = Just $ mapToBecknRideStatusV2 ride.status,
-            fulfillmentState = Nothing,
-            fulfillmentAgent = Nothing,
-            fulfillmentCustomer = Nothing,
-            fulfillmentStops = Nothing,
-            fulfillmentTags = Nothing,
-            fulfillmentVehicle = Nothing
-          }
-
-tfStateDescriptor :: DRide.Ride -> Spec.Descriptor
-tfStateDescriptor ride =
-  Spec.Descriptor
-    { descriptorCode = Just "ride_status",
-      descriptorName = Just,
-      descriptorShortDesc = Nothing
-    }
+    tfFulfillment resp =
+      resp.mbRide <&> \ride ->
+        [ Spec.Fulfillment
+            { fulfillmentId = Just ride.id.getId,
+              fulfillmentType = Just $ mapToBecknRideStatusV2 ride.status,
+              fulfillmentState = Nothing,
+              fulfillmentAgent = Nothing,
+              fulfillmentCustomer = Nothing,
+              fulfillmentStops = Nothing,
+              fulfillmentTags = Nothing,
+              fulfillmentVehicle = Nothing
+            }
+        ]
 
 mapToBecknBookingStatusV2 :: DBooking.BookingStatus -> Text
 mapToBecknBookingStatusV2 DBooking.NEW = "NEW_BOOKING"

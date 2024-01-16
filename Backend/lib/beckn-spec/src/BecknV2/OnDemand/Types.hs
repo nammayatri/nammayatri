@@ -50,6 +50,8 @@ module BecknV2.OnDemand.Types
     OnSelectReq (..),
     OnSelectReqMessage (..),
     OnStatusReq (..),
+    OnTrackReq (..),
+    OnTrackReqMessage (..),
     OnUpdateReq (..),
     Order (..),
     Payment (..),
@@ -68,6 +70,9 @@ module BecknV2.OnDemand.Types
     Stop (..),
     Tag (..),
     TagGroup (..),
+    TrackReq (..),
+    TrackReqMessage (..),
+    Tracking (..),
     Vehicle (..),
   )
 where
@@ -1071,6 +1076,60 @@ optionsOnStatusReq =
         ("onStatusReqMessage", "message")
       ]
 
+data OnTrackReq = OnTrackReq
+  { -- |
+    onTrackReqContext :: Context,
+    -- |
+    onTrackReqError :: Maybe Error,
+    -- |
+    onTrackReqMessage :: Maybe OnTrackReqMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON OnTrackReq where
+  parseJSON = genericParseJSON optionsOnTrackReq
+
+instance ToJSON OnTrackReq where
+  toJSON = genericToJSON optionsOnTrackReq
+
+optionsOnTrackReq :: Options
+optionsOnTrackReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("onTrackReqContext", "context"),
+        ("onTrackReqError", "error"),
+        ("onTrackReqMessage", "message")
+      ]
+
+-- |
+-- |
+data OnTrackReqMessage = OnTrackReqMessage
+  { -- |
+    onTrackReqMessageTracking :: Tracking
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON OnTrackReqMessage where
+  parseJSON = genericParseJSON optionsOnTrackReqMessage
+
+instance ToJSON OnTrackReqMessage where
+  toJSON = genericToJSON optionsOnTrackReqMessage
+
+optionsOnTrackReqMessage :: Options
+optionsOnTrackReqMessage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("onTrackReqMessageTracking", "tracking")
+      ]
+
 -- |
 -- |
 data OnUpdateReq = OnUpdateReq
@@ -1638,6 +1697,84 @@ optionsTagGroup =
       [ ("tagGroupDescriptor", "descriptor"),
         ("tagGroupDisplay", "display"),
         ("tagGroupList", "list")
+      ]
+
+data TrackReq = TrackReq
+  { -- |
+    trackReqContext :: Context,
+    -- |
+    trackReqMessage :: TrackReqMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON TrackReq where
+  parseJSON = genericParseJSON optionsTrackReq
+
+instance ToJSON TrackReq where
+  toJSON = genericToJSON optionsTrackReq
+
+optionsTrackReq :: Options
+optionsTrackReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("trackReqContext", "context"),
+        ("trackReqMessage", "message")
+      ]
+
+-- |
+-- |
+data TrackReqMessage = TrackReqMessage
+  { -- |
+    trackReqMessageOrderId :: Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON TrackReqMessage where
+  parseJSON = genericParseJSON optionsTrackReqMessage
+
+instance ToJSON TrackReqMessage where
+  toJSON = genericToJSON optionsTrackReqMessage
+
+optionsTrackReqMessage :: Options
+optionsTrackReqMessage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("trackReqMessageOrderId", "order_id")
+      ]
+
+-- | Contains tracking information that can be used by the BAP to track the fulfillment of an order in real-time. which is useful for knowing the location of time sensitive deliveries.
+data Tracking = Tracking
+  { -- | This value indicates if the tracking is currently active or not. If this value is `active`, then the BAP can begin tracking the order. If this value is `inactive`, the tracking URL is considered to be expired and the BAP should stop tracking the order.
+    trackingStatus :: Maybe Text,
+    -- | A URL to the tracking endpoint. This can be a link to a tracking webpage, a webhook URL created by the BAP where BPP can push the tracking data, or a GET url creaed by the BPP which the BAP can poll to get the tracking data. It can also be a websocket URL where the BPP can push real-time tracking data.
+    trackingUrl :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Tracking where
+  parseJSON = genericParseJSON optionsTracking
+
+instance ToJSON Tracking where
+  toJSON = genericToJSON optionsTracking
+
+optionsTracking :: Options
+optionsTracking =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("trackingStatus", "status"),
+        ("trackingUrl", "url")
       ]
 
 -- | Describes a vehicle is a device that is designed or used to transport people or cargo over land, water, air, or through space.&lt;br&gt;This has properties like category, capacity, make, model, size,variant,color,energy_type,registration
