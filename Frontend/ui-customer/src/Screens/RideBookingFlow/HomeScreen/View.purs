@@ -1632,7 +1632,7 @@ bookingPreferencesView push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , visibility if state.data.config.estimateAndQuoteConfig.enableBookingPreference  && not state.props.isRepeatRide then VISIBLE else GONE
+  , visibility $ boolToVisibility $ state.data.config.estimateAndQuoteConfig.enableBookingPreference  && not state.props.isRepeatRide && state.props.city /= Kochi 
   ][ linearLayout
       [ width MATCH_PARENT
       , height $ V 1
