@@ -321,7 +321,7 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   { batchSplitSize :: Int,
     batchSplitDelay :: Seconds
   }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
