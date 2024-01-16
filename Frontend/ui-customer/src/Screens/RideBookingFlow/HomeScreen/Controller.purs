@@ -2221,7 +2221,9 @@ eval (SearchLocationModelActionController (SearchLocationModelController.UpdateC
 
 eval (UpdateCurrentLocation lat lng) state = updateCurrentLocation state lat lng
 
-eval (CurrentLocation lat lng) state = 
+eval (CurrentLocation lat lng) state = do
+  void $ pure $ setValueToLocalStore LAST_KNOWN_LAT lat
+  void $ pure $ setValueToLocalStore LAST_KNOWN_LON lng
   exit $ UpdatedState state { props { sourceLat = fromMaybe 0.0 (NUM.fromString lat), sourceLong = fromMaybe 0.0 (NUM.fromString lng) } } false
 
 eval (RateCardAction RateCard.Close) state = continue state { props { showRateCard = false } , data{rateCard{onFirstPage = false,currentRateCardType = DefaultRateCard}}}
@@ -2482,14 +2484,6 @@ showPersonMarker state marker location = do
   _ <- addMarker (getCurrentLocationMarker (getValueToLocalStore VERSION_NAME)) location.lat location.lng 160 0.5 0.9
   _ <- pure $ printLog "Location :: " location
   animateCamera location.lat location.lng zoomLevel "ZOOM"
-
-getCurrentCustomerLocation :: forall t44 t51. Applicative t51 => (Action -> Effect Unit) -> t44 -> Effect (t51 Unit)
-getCurrentCustomerLocation push state = do
-  location <- getCurrentLatLong
-  push $ UpdateSource location.lat location.lng (getString CURRENT_LOCATION)
-  void $ pure $ setValueToLocalStore LAST_KNOWN_LAT (show location.lat)
-  void $ pure $ setValueToLocalStore LAST_KNOWN_LON (show location.lng)
-  pure (pure unit)
 
 cancelReasons :: String -> Array OptionButtonList
 cancelReasons dummy =

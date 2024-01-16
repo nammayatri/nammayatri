@@ -1,6 +1,6 @@
-import { callbackMapper } from 'presto-ui';
+import { callbackMapper } from "presto-ui";
 
-var timerIdForTimeout;
+let timerIdForTimeout;
 const btnLoaderState = new Map();
 const {
   JBridge
@@ -918,9 +918,9 @@ export const clearFocus = function (id){
 
 
 export const removeMediaPlayer = function (id) {
-    if (window.JBridge.removeMediaPlayer){
-      JBridge.removeMediaPlayer();
-    }
+  if (window.JBridge.removeMediaPlayer){
+    JBridge.removeMediaPlayer();
+  }
 };
 
 // Deprecated 5-Jan-2024 - Remove this function once it is not begin used.
@@ -940,25 +940,25 @@ export const uploadMultiPartData = function (path, url, fileType) {
 }
 
 export const startAudioRecording = function (id) {
-    if (window.JBridge.startAudioRecording){
-      if (window.__OS == "IOS") {
-        return JBridge.startAudioRecording() == "0" ? false : true;
-     } else {
-        return JBridge.startAudioRecording();
-     }
+  if (window.JBridge.startAudioRecording){
+    if (window.__OS == "IOS") {
+      return JBridge.startAudioRecording() == "0" ? false : true;
+    } else {
+      return JBridge.startAudioRecording();
     }
+  }
 };
 
 export const stopAudioRecording = function (id) {
-    if (window.JBridge.stopAudioRecording){
-      return JBridge.stopAudioRecording();
-    }
+  if (window.JBridge.stopAudioRecording){
+    return JBridge.stopAudioRecording();
+  }
 }
 
 export const saveAudioFile = function (source) {
-    if (window.JBridge.saveAudioFile){
-      return JBridge.saveAudioFile(source);
-    }
+  if (window.JBridge.saveAudioFile){
+    return JBridge.saveAudioFile(source);
+  }
 }
 
 
@@ -1068,7 +1068,7 @@ export const getCurrentLatLong = function () {
     } else { // fallBack for previous release
       return {
         "lat": parsedData.lat,
-        "lng": parsedData.long
+        "lng": parsedData.lng
       }
     }
   }
@@ -1517,14 +1517,14 @@ export const storeCallBackImageUpload = function (cb) {
 }
 
 export const storeCallBackUploadMultiPartData = function (cb, action) {
-    try {
-      var callback = callbackMapper.map(function (fileType, fileId) {
-          cb(action (fileType)(fileId))();
-      });
-      window.JBridge.storeCallBackUploadMultiPartData(callback);
-    }catch (error){
-      console.log("Error occurred in storeCallBackUploadMultiPartData ------", error);
-    }
+  try {
+    const callback = callbackMapper.map(function (fileType, fileId) {
+      cb(action (fileType)(fileId))();
+    });
+    window.JBridge.storeCallBackUploadMultiPartData(callback);
+  }catch (error){
+    console.log("Error occurred in storeCallBackUploadMultiPartData ------", error);
+  }
 }
 
 export const storeCallBackOverlayPermission = function (cb) {
