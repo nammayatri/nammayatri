@@ -55,13 +55,20 @@
           zookeeper."zookeeper".enable = true;
 
           apache-kafka."kafka" = {
-            # TODO: kafka doesn't seem to start when run on non-default port, i.e 9092, need to fix this in upstream and write tests.
-            port = 29092;
             enable = true;
+            port = 29092;
+            settings = {
+              # Since the available brokers are only 1
+              "offsets.topic.replication.factor" = 1;
+              "zookeeper.connect" = [ "localhost:2181" ];
+            };
           };
+
 
           nginx."nginx".enable = true;
         };
+        # kafka should start only after zookeeper is healthy
+        settings.processes.kafka.depends_on."zookeeper".condition = "process_healthy";
 
         services.passetto = {
           enable = true;

@@ -33,7 +33,7 @@
 
     location-tracking-service.url = "github:nammayatri/location-tracking-service/86def9d54734c0bfd45375ca97ece0a461254745";
     passetto = {
-      url = "github:nammayatri/passetto/postgres-schemas";
+      url = "github:nammayatri/passetto/nixify";
       inputs = {
         nixpkgs.follows = "common/nixpkgs";
         flake-parts.follows = "common/flake-parts";
@@ -43,7 +43,7 @@
       };
     };
     # Question: move this to common?
-    services-flake.url = "github:juspay/services-flake/postgres-schemas";
+    services-flake.url = "github:juspay/services-flake";
 
     # We cannot use southern-zone-latest here, because the sha256 will change
     # over time.  NOTE: This file is not permanent, find the available one at
