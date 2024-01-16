@@ -16,10 +16,16 @@ module SharedLogic.DriverPool.Config where
 
 import Client.Main as CM
 import Data.Aeson as DA
+-- import Domain.Types.Merchant.DriverPoolConfig as DPC
+
+-- import Data.Aeson.Key
+-- import qualified Data.Time.Clock as DTC
+-- import qualified Data.ByteString.Lazy.Char8 as BL
+-- import qualified Data.Text.Encoding as DTE
+import Data.Aeson.Types as DAT
 import Data.HashMap.Strict as HashMap
 import Data.Text as Text
 import Domain.Types.Merchant.DriverPoolConfig
-import Domain.Types.Merchant.DriverPoolConfig as DPC
 import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
@@ -41,37 +47,20 @@ getDriverPoolConfig ::
   Maybe Variant.Variant ->
   Meters ->
   m DriverPoolConfig
-getDriverPoolConfig _ mbvt dist = do
-  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (Text.pack ("favorit0-0000-0000-0000-00000favorit"))), (pack "tripDistance", DA.String (Text.pack (show dist)))] ++ (bool [] [(pack "variant", DA.String (Text.pack (show $ fromJust mbvt)))] (isJust mbvt)))
+getDriverPoolConfig merchantOpCityId mbvt dist = do
+  dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "tripDistance", DA.String (Text.pack (show dist)))] ++ (bool [] [(pack "variant", DA.String (Text.pack (show $ fromJust mbvt)))] (isJust mbvt)))
+  logDebug $ "the context value is " <> show dpcCond
   contextValue <- liftIO $ CM.evalCtx "test" dpcCond
-  logDebug $ "the fetched context value is " <> show contextValue
-  --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
-  return $ buildDpcType (fromJust contextValue)
+  case contextValue of
+    Left err -> error $ (pack "error in fetching the context value ") <> (pack err)
+    Right contextValue' -> do
+      logDebug $ "the fetched context value is " <> show contextValue'
+      --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
+      let valueHere = buildDpcType contextValue'
+      logDebug $ "the build context value is1 " <> show valueHere
+      return valueHere
   where
     buildDpcType cv =
-      DPC.DriverPoolConfig
-        { id = (read . show) $ fromJust (HashMap.lookup "id" cv),
-          merchantId = (read . show) $ fromJust (HashMap.lookup "merchantId" cv),
-          merchantOperatingCityId = (read . show) $ fromJust (HashMap.lookup "merchantOperatingCityId" cv),
-          minRadiusOfSearch = (read . show) $ fromJust (HashMap.lookup "minRadiusOfSearch" cv),
-          maxRadiusOfSearch = (read . show) $ fromJust (HashMap.lookup "maxRadiusOfSearch" cv),
-          radiusStepSize = (read . show) $ fromJust (HashMap.lookup "radiusStepSize" cv),
-          driverPositionInfoExpiry = (read . show) $ fromJust (HashMap.lookup "driverPositionInfoExpiry" cv),
-          actualDistanceThreshold = (read . show) $ fromJust (HashMap.lookup "actualDistanceThreshold" cv),
-          maxDriverQuotesRequired = (read . show) $ fromJust (HashMap.lookup "maxDriverQuotesRequired" cv),
-          driverQuoteLimit = (read . show) $ fromJust (HashMap.lookup "driverQuoteLimit" cv),
-          driverRequestCountLimit = (read . show) $ fromJust (HashMap.lookup "driverRequestCountLimit" cv),
-          driverBatchSize = (read . show) $ fromJust (HashMap.lookup "driverBatchSize" cv),
-          distanceBasedBatchSplit = (read . show) $ fromJust (HashMap.lookup "distanceBasedBatchSplit" cv),
-          maxNumberOfBatches = (read . show) $ fromJust (HashMap.lookup "maxNumberOfBatches" cv),
-          maxParallelSearchRequests = (read . show) $ fromJust (HashMap.lookup "maxParallelSearchRequests" cv),
-          poolSortingType = (read . show) $ fromJust (HashMap.lookup "poolSortingType" cv),
-          singleBatchProcessTime = (read . show) $ fromJust (HashMap.lookup "singleBatchProcessTime" cv),
-          tripDistance = (read . show) $ fromJust (HashMap.lookup "tripDistance" cv),
-          radiusShrinkValueForDriversOnRide = (read . show) $ fromJust (HashMap.lookup "radiusShrinkValueForDriversOnRide" cv),
-          driverToDestinationDistanceThreshold = (read . show) $ fromJust (HashMap.lookup "driverToDestinationDistanceThreshold" cv),
-          driverToDestinationDuration = (read . show) $ fromJust (HashMap.lookup "driverToDestinationDuration" cv),
-          createdAt = (read . show) $ fromJust (HashMap.lookup "createdAt" cv),
-          updatedAt = (read . show) $ fromJust (HashMap.lookup "updatedAt" cv),
-          vehicleVariant = (read . show) $ fromJust (HashMap.lookup "vehicleVariant" cv)
-        }
+      case (DAT.parse jsonToDriverPoolConfig cv) of
+        Success dpc -> dpc
+        Error err -> error $ (pack "error in parsing the context value ") <> (pack err)
