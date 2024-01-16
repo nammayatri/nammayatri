@@ -14,8 +14,8 @@
 
 module Environment where
 
-import qualified Data.HashMap as HM
-import qualified Data.Map as M
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Common
@@ -64,7 +64,7 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     kafkaConsumerEnv :: KafkaConsumerEnv,
     version :: DeploymentVersion,
-    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl
   }
   deriving (Generic)
 

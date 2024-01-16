@@ -18,7 +18,7 @@ import qualified Beckn.Spec.API.Confirm as Confirm
 import qualified Beckn.Spec.API.Status as Status
 import Beckn.Spec.Confirm
 import qualified Beckn.Spec.Status as Status
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import qualified EulerHS.Types as ET
 import GHC.Records.Extra
 import Kernel.Prelude
@@ -35,7 +35,7 @@ confirm ::
     MonadReader r m,
     CoreMetrics m,
     HasField "selfId" r Text,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   BecknReq ConfirmMessage ->
@@ -48,7 +48,7 @@ status ::
     MonadReader r m,
     CoreMetrics m,
     HasField "selfId" r Text,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   BecknReq Status.StatusMessage ->
@@ -62,7 +62,7 @@ callBecknAPIWithSignature ::
     SanitizedUrl api,
     IsBecknAPI api req res,
     HasField "selfId" r Text,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Text ->
   Proxy api ->

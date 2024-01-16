@@ -14,8 +14,8 @@
 
 module Environment where
 
-import qualified Data.HashMap as HM
-import qualified Data.Map as M
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis
@@ -97,7 +97,7 @@ data AppEnv = AppEnv
     version :: DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl
   }
   deriving (Generic)
 

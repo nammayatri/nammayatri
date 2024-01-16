@@ -14,7 +14,7 @@
 
 module SharedLogic.CallBAPInternal where
 
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import Domain.Types.Ride as DRide
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
@@ -59,7 +59,7 @@ feedbackApi = Proxy
 feedback ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Text ->
   BaseUrl ->
