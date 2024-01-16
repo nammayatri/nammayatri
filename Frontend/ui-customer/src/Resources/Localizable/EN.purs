@@ -673,7 +673,7 @@ getEN stringKey =
         BOOK_AND_MOVE -> "Book and move,"
         ANYWHERE_IN_THE_CITY -> "anywhere in the city"
         CHECKOUT_OUR_LIVE_STATS -> "Checkout our Live Stats"
-        MOST_LOVED_APP _ -> "Bengaluru's most ❤️ Auto app"
+        MOST_LOVED_APP _ -> "Most ❤️ Auto app"
         PICKUP_ -> "Pickup: "
         PAST_SEARCHES -> "Past Searches"
         SEARCH_RESULTS -> "Search Results"
