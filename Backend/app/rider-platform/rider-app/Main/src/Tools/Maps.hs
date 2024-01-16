@@ -104,9 +104,7 @@ getTripRoutes personId merchantId mbMOCId req = do
   runWithServiceConfig (Maps.getRoutes merchant.isAvoidToll) (.getTripRoutes) merchantId mOCId req
 
 snapToRoad ::
-  ( ServiceFlow m r,
-    HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
-    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters]
+  ( ServiceFlow m r
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
