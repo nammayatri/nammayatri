@@ -835,6 +835,7 @@ sosView push state =
   , cornerRadius if os == "IOS" then 20.0 else 32.0
   , clickable true
   , onClick push $ const OpenEmergencyHelp
+  , rippleColor Color.rippleShade
   ][ imageView 
     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
     , width $ V 50
@@ -1172,6 +1173,7 @@ homeScreenTopIconView push state =
                 , clickable if state.props.currentStage == SearchLocationModel then false else true
                 , visibility if (any (_ == state.props.currentStage) [RideCompleted]) then GONE else VISIBLE
                 , onClick push $ const OpenSettings
+                , rippleColor Color.rippleShade
                 ]
                 [ imageView
                     [ imageWithFallback $ fetchImage FF_ASSET $ if state.data.config.dashboard.enable && (checkVersion "LazyCheck") then "ic_menu_notify" else "ny_ic_hamburger"
@@ -1336,6 +1338,7 @@ topLeftIconView state push =
           , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
           , accessibilityHint if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "Back : Button" else "Menu : Button"
           , accessibility ENABLE
+          , rippleColor Color.rippleShade
           ]
           [ imageView
               [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then fetchImage FF_COMMON_ASSET "ny_ic_chevron_left" else if state.data.config.dashboard.enable && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ic_menu_notify" else fetchImage FF_ASSET "ny_ic_hamburger"
@@ -2469,6 +2472,7 @@ trackRideView push state =
     , cornerRadius if os == "IOS" then 20.0 else 32.0
     , padding $ PaddingHorizontal 12 12
     , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+    , rippleColor Color.rippleShade
     , visibility $ boolToVisibility $ state.props.currentStage == RideStarted
     , clickable true
     , onClick push $ const $ StartLocationTracking "GOOGLE_MAP"
@@ -2712,6 +2716,7 @@ rideInfoActionView push state =
       , accessibility ENABLE
       , onClick push $ const ShareRide
       , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+      , rippleColor Color.rippleShade
       ][ imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share_icon"
         , height $ V 16
@@ -3490,6 +3495,7 @@ whereToButtonView push state  =
           , accessibilityHint "Menu Button"
           , visibility $ boolToVisibility state.props.isHomescreenExpanded
           , onClick push $ const OpenSettings
+          , rippleColor Color.rippleShade
           ][ imageView
             [ height $ V 20
             , width $ if state.props.isHomescreenExpanded then V 20 else V 0

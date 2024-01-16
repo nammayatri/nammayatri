@@ -672,7 +672,7 @@ getML stringKey =
         BOOK_AND_MOVE -> "ബുക്ക് ചെയ്യുക മാറുക"
         ANYWHERE_IN_THE_CITY -> "നഗരത്തിലെത്തിയാൽ എല്ലാവർക്കും സൗകര്യമായി"
         CHECKOUT_OUR_LIVE_STATS -> "ഞങ്ങളുടെ ലൈവ് സ്റ്റാറ്റിസ്റ്റികൾ ചെക്കൗട്ട് ചെയ്യുക"
-        MOST_LOVED_APP _ -> "ബെംഗളൂരുവിലെ ഏറ്റവും ❤️ ഓട്ടോ ആപ്പ്"
+        MOST_LOVED_APP _ -> "সর্বাধিক ❤️ অটো অ্যাপ"
         PICKUP_ -> "പുരോഗമിക്കുക-> "
         PAST_SEARCHES -> "പഴയ തിരയലുകൾ"
         SEARCH_RESULTS -> "തിരയൽ ഫലങ്ങൾ"
