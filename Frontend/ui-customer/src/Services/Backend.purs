@@ -742,7 +742,7 @@ getRouteMarkers variant city trackingType =
     getCitySpecificMarker :: String -> String 
     getCitySpecificMarker cityCode = 
         if cityCode == "std:040" 
-            then "ny_ic_black_yellow_auto" 
+            then "ic_auto_nav_on_map" 
             else getMarker variant
 
     getMarker :: String -> String
