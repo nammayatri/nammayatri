@@ -38,6 +38,8 @@ import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnSelect as OnSelect
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
@@ -79,8 +81,6 @@ import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
--- import qualified BecknV2.OnDemand.Types as Spec
-
 callOnSelect ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
@@ -105,30 +105,29 @@ callOnSelect transporter searchRequest searchTry content = do
   logDebug $ "on_select request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV1 bapUri internalEndPointHashMap (BecknCallbackReq context $ Right content)
 
--- _callOnSelectV2 ::
---   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
---     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
---     CoreMetrics m,
---     HasHttpClientOptions r c,
---     HasShortDurationRetryCfg r c
---   ) =>
---   DM.Merchant ->
---   DSR.SearchRequest ->
---   DST.SearchTry ->
---   -- OnSelect.OnSelectMessageV2 ->
---   Spec.OnSelectReqMessage ->
---   m ()
--- _callOnSelectV2 transporter searchRequest searchTry content = do
---   let bapId = searchRequest.bapId
---       bapUri = searchRequest.bapUri
---   let bppSubscriberId = getShortId $ transporter.subscriberId
---       authKey = getHttpManagerKey bppSubscriberId
---   bppUri <- buildBppUrl (transporter.id)
---   internalEndPointHashMap <- asks (.internalEndPointHashMap)
---   let msgId = searchTry.estimateId.getId
---   context <- buildTaxiContextV2 Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry)
---   logDebug $ "on_selectV2 request bpp: " <> show content
---   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (BecknCallbackReqV2 context $ Right content)
+callOnSelectV2 ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    CoreMetrics m,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c
+  ) =>
+  DM.Merchant ->
+  DSR.SearchRequest ->
+  DST.SearchTry ->
+  Spec.OnSelectReqMessage ->
+  m ()
+callOnSelectV2 transporter searchRequest searchTry content = do
+  let bapId = searchRequest.bapId
+      bapUri = searchRequest.bapUri
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
+  bppUri <- buildBppUrl (transporter.id)
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  let msgId = searchTry.estimateId.getId
+  context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry)
+  logDebug $ "on_selectV2 request bpp: " <> show content
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
 
 callOnUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -420,11 +419,10 @@ sendDriverOffer ::
   m ()
 sendDriverOffer transporter searchReq searchTry driverQuote = do
   logDebug $ "on_select ttl request driver: " <> show driverQuote.validTill
-  _isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
-  -- if isBecknSpecVersion2
-  --   then callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage) -- shrey00 : implement mkOnSelectMessageV2 -- shrey00 : implement callOnSelectV2
-  --   else callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage)
-  callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage)
+  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+  if isBecknSpecVersion2
+    then callOnSelectV2 transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessageV2) -- shrey00 : implement mkOnSelectMessageV2 -- shrey00 : implement callOnSelectV2
+    else callOnSelect transporter searchReq searchTry =<< (buildOnSelectReq transporter searchReq driverQuote <&> ACL.mkOnSelectMessage)
   where
     buildOnSelectReq ::
       (MonadTime m, HasPrettyLogger m r) =>
