@@ -2960,6 +2960,7 @@ updateBannerAndPopupFlags = do
                       && appConfig.subscriptionConfig.enableSubscriptionPopups
                       && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true"
     autoPayStatus = getAutopayStatus getDriverInfoResp.autoPayStatus
+    status = getDriverStatus ""
     autopayBannerType =
       if subscriptionConfig.enableSubscriptionPopups && getValueToLocalStore SHOW_SUBSCRIPTIONS == "true" then 
         case autoPayNotActive, isOnFreeTrial FunctionCall, (pendingTotalManualDues /= 0.0) of
@@ -2992,6 +2993,7 @@ updateBannerAndPopupFlags = do
   when moveDriverToOffline $ do
       setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
       changeDriverStatus Offline
+  setValueToLocalStore DISABLE_WIDGET if status == Offline then "true" else "false"
   modifyScreenState
     $ HomeScreenStateType
         ( \homeScreen ->
