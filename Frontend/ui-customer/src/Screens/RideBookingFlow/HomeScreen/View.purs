@@ -449,7 +449,6 @@ rideInfoView push state =
   , width MATCH_PARENT
   , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.props.bottomSheetState == STATE_EXPANDED || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
   , clickable isClickable
-  , background $ if state.props.bottomSheetState == STATE_EXPANDED then Color.blackLessTrans else Color.transparent
   , orientation VERTICAL
   ][ (if disableSuggestions state then 
         PrestoAnim.animationSet[] 
@@ -2152,7 +2151,7 @@ rideTrackingView push state =
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     ][ bottomSheetLayout
-                        [ height WRAP_CONTENT
+                        ([ height WRAP_CONTENT
                         , width MATCH_PARENT
                         , background Color.transparent
                         , sheetState state.props.sheetState 
@@ -2161,8 +2160,8 @@ rideTrackingView push state =
                         , peakHeight $ getInfoCardPeekHeight state
                         , halfExpandedRatio $ halfExpanded
                         , orientation VERTICAL
-                        , onStateChanged push $ ScrollStateChanged
-                        ]
+                        ] <> if lowVisionDisability then 
+                            [onStateChanged push $ ScrollStateChanged] else [])
                         [ linearLayout
                             [ height WRAP_CONTENT
                             , width MATCH_PARENT
@@ -3361,6 +3360,7 @@ homeScreenViewV2 push state =
                           , margin $ MarginTop 32 
                           , padding $ PaddingTop 30 
                           , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
+                          , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.grey700]) else (Linear 180.0 [Color.white900 , Color.grey700])
                           ][ scrollView
                               [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
                               , width MATCH_PARENT
@@ -3400,7 +3400,6 @@ footerView push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.grey700]) else (Linear 180.0 [Color.white900 , Color.grey700])
     , padding $ Padding 24 5 24 30
     , gravity CENTER
     , accessibilityHint $  getString BOOK_AND_MOVE <>  getString ANYWHERE_IN_THE_CITY
