@@ -43,14 +43,16 @@ onSelect ::
   FlowHandler AckResponse
 onSelect _ reqBS = withFlowHandlerBecknAPI do
   req <- decodeReq reqBS
-  mbDOnSelectReq <- case req of
+  (mbDOnSelectReq, messageId) <- case req of
     Right reqV2 -> do
       transactionId <- Utils.getTransactionId reqV2.onSelectReqContext
-      Utils.withTransactionIdLogTag transactionId $ ACL.buildOnSelectReqV2 reqV2
-    Left reqV1 -> withTransactionIdLogTag reqV1 $ ACL.buildOnSelectReq reqV1
-  messageId <- case req of
-    Right reqV2 -> Utils.getMessageIdText reqV2.onSelectReqContext
-    Left reqV1 -> pure $ reqV1.context.message_id
+      mbDOnSelectReq <- Utils.withTransactionIdLogTag transactionId $ ACL.buildOnSelectReqV2 reqV2
+      messageId <- Utils.getMessageIdText reqV2.onSelectReqContext
+      pure (mbDOnSelectReq, messageId)
+    Left reqV1 -> do
+      mbDOnSelectReq <- withTransactionIdLogTag reqV1 $ ACL.buildOnSelectReq reqV1
+      let messageId = reqV1.context.message_id
+      pure (mbDOnSelectReq, messageId)
   whenJust mbDOnSelectReq $ \onSelectReq ->
     Redis.whenWithLockRedis (onSelectLockKey messageId) 60 $ do
       validatedOnSelectReq <- DOnSelect.validateRequest onSelectReq

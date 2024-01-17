@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnConfirm (buildOnConfirmReq) where
+module Beckn.ACL.OnConfirm (buildOnConfirmReq, buildOnConfirmReqV2) where
 
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
@@ -56,12 +56,12 @@ handleError etr action =
       logTagError "on_confirm req" $ "on_confirm error: " <> show err
       pure Nothing
 
-_buildOnConfirmReqV2 ::
+buildOnConfirmReqV2 ::
   ( HasFlowEnv m r '["_version" ::: Text]
   ) =>
   Spec.OnConfirmReq ->
   m (Maybe DOnConfirm.OnConfirmReq)
-_buildOnConfirmReqV2 req = do
+buildOnConfirmReqV2 req = do
   ContextV2.validateContext Context.ON_CONFIRM req.onConfirmReqContext
   handleErrorV2 req $ \message -> do
     case parseData message of

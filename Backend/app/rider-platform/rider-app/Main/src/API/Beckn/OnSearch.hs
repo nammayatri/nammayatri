@@ -58,14 +58,6 @@ onSearch _ _ reqBS = withFlowHandlerBecknAPI do
       let messageId = reqV1.context.message_id
       pure (mbDOnSearchReq, messageId)
 
-  -- mbDOnSearchReq <- case req of
-  --   Right reqV2 -> do
-  --     transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
-  --     Utils.withTransactionIdLogTag transactionId $ TaxiACL.buildOnSearchReqV2 reqV2
-  --   Left reqV1 -> withTransactionIdLogTag reqV1 $ TaxiACL.buildOnSearchReq reqV1
-  -- messageId <- case req of
-  --   Right reqV2 -> Utils.getMessageIdText reqV2.onSearchReqContext
-  --   Left reqV1 -> pure $ reqV1.context.message_id
   whenJust mbDOnSearchReq $ \request -> do
     Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
       validatedRequest <- DOnSearch.validateRequest request
