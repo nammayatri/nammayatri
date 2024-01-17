@@ -82,7 +82,6 @@ view push config =
       , orientation VERTICAL
       , background Color.white900
       , alignParentBottom "true,-1"
-      , clickable false
       -- , margin $ MarginTop 8
       , padding $ Padding 16 (if config.showPreferences then 16 else 0) 16 16
       , shadow $ Shadow 0.1 0.1 7.0 24.0 Color.greyBackDarkColor 0.5 
@@ -137,7 +136,6 @@ bookingPreferencesView push config =
   , height WRAP_CONTENT
   , orientation VERTICAL
   , visibility $ boolToVisibility config.bookingPreferenceEnabled 
-  , clickable false
   ]
   [ linearLayout
     [ width MATCH_PARENT
@@ -153,6 +151,7 @@ bookingPreferencesView push config =
       , gravity CENTER_HORIZONTAL
       , onClick push $ const PreferencesDropDown
       , accessibility DISABLE
+      , clickable true
       ]
       [ textView $
         [ height $ V 24
@@ -182,7 +181,6 @@ bookingPreferencesView push config =
         , height WRAP_CONTENT
         , orientation VERTICAL
         , visibility $ boolToVisibility config.showPreferences 
-        , clickable false
         ]
         [ showMenuButtonView push (getString AUTO_ASSIGN_DRIVER) (HU.fetchImage HU.FF_ASSET "ny_ic_faster_lightning") true config globalConfig
         , showMenuButtonView push (getString CHOOSE_BETWEEN_MULTIPLE_DRIVERS) (HU.fetchImage HU.FF_ASSET "ny_ic_info") false config globalConfig

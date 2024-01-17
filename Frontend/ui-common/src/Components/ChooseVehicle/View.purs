@@ -43,7 +43,7 @@ view push config =
           ]
         , linearLayout
           [ weight 1.0
-          , height MATCH_PARENT
+          , height WRAP_CONTENT
           , orientation VERTICAL
           , padding $ PaddingLeft 8
           ][ vehicleDetailsView push config
@@ -127,8 +127,8 @@ capacityView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect
 capacityView push config = 
   linearLayout
     [ width WRAP_CONTENT
-    , weight 1.0
-    , margin $ MarginTop 5
+    , height WRAP_CONTENT
+    , padding $ PaddingTop 5
     ][ vehicleInfoView "ic_user_filled" config.capacity]
 
 vehicleInfoView :: forall w. String -> String -> PrestoDOM (Effect Unit) w
