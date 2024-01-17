@@ -67,3 +67,4 @@ updateCTEventData response = do
   void $ liftFlowBT $ setCleverTapUserData "Identity" $ getValueToLocalStore CUSTOMER_ID
   void $ liftFlowBT $ setCleverTapUserData "Phone" $ "+91" <> getValueToLocalStore MOBILE_NUMBER
   void $ liftFlowBT $ traverse (setCleverTapUserData "email") $ response ^. _email
+  void $ pure $ setCleverTapUserProp [{key : "Mobile Number", value : unsafeToForeign $ getValueToLocalStore COUNTRY_CODE <> getValueToLocalStore MOBILE_NUMBER}]
