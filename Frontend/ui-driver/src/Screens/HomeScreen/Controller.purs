@@ -338,7 +338,7 @@ data Action = NoAction
             | GotoCancellationPreventionAction PopUpModal.Action 
             | GotoLocInRangeAction PopUpModal.Action
             | EnableGotoTimerAC PrimaryButtonController.Action
-            | UpdateGoHomeTimer String String Int
+            | UpdateGoHomeTimer Int String String
             | AddLocation PrimaryButtonController.Action
             | ConfirmDisableGoto PopUpModal.Action
             | UpdateOriginDist Number Number
@@ -418,11 +418,14 @@ eval (EnableGotoTimerAC PrimaryButtonController.OnClick)state = updateAndExit st
 
 eval AddGotoAC state = exit $ ExitGotoLocation state false
 
-eval (UpdateGoHomeTimer timerID timeInMinutes sec ) state = if sec <= 0 then do
-  void $ pure $ TF.clearTimerWithId timerID
-  void $ pure $ HU.setPopupType ST.VALIDITY_EXPIRED
-  continue state { data { driverGotoState { goToPopUpType = ST.VALIDITY_EXPIRED}}}
-  else continue state { data { driverGotoState { timerInMinutes = timeInMinutes <> " " <>(getString MIN_LEFT), timerId = timerID} } }
+eval (UpdateGoHomeTimer seconds status timerID) state = do
+  if status == "EXPIRED" then do 
+    void $ pure $ TF.clearTimerWithId timerID
+    void $ pure $ HU.setPopupType ST.VALIDITY_EXPIRED
+    continue state { data { driverGotoState { goToPopUpType = ST.VALIDITY_EXPIRED, timerId = "" }}}
+    else do
+      let timeInMinutes = seconds/60 + 1
+      continue state { data { driverGotoState { timerInMinutes = show timeInMinutes <> " " <>(getString MIN_LEFT), timerId = timerID} } }
 
 eval (CancelBackAC PrimaryButtonController.OnClick) state = continue state { data { driverGotoState { showGoto = false}}}
 

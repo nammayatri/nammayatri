@@ -126,7 +126,6 @@ foreign import currentPosition  :: String -> Effect Unit
 foreign import getPeriod :: String -> Period
 foreign import clampNumber :: Number -> Number -> Int -> Int
 foreign import getPopupObject :: forall f a. Fn3 (f -> Maybe f) (Maybe f) String (Maybe PromotionPopupConfig)
-foreign import countDownInMinutes :: forall action. EffectFn3 Int (action -> Effect Unit) (String -> String -> Int -> action) Unit
 foreign import istToUtcDate :: String -> String
 
 foreign import preFetch :: Effect (Array RenewFile)

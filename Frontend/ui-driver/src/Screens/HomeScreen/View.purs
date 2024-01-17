@@ -82,7 +82,7 @@ import Styles.Colors as Color
 import Types.App (GlobalState, defaultGlobalState)
 import Constants (defaultDensity)
 import Components.ErrorModal as ErrorModal
-import Timers (clearTimerWithId, waitingCountdownTimerV2)
+import Timers
 import Components.BannerCarousel as BannerCarousel
 import CarouselHolder as CarouselHolder
 import PrestoDOM.List
@@ -116,7 +116,7 @@ screen initialState =
           else pure unit
           
           void if (DA.any (_ == localStage)["RideRequested", "HomeScreen", "__failed"]) && initialState.data.driverGotoState.isGotoEnabled then 
-            runEffectFn3 HU.countDownInMinutes (EHC.getExpiryTime (HU.istToUtcDate initialState.data.driverGotoState.gotoValidTill) false) push UpdateGoHomeTimer 
+            void $ startTimer (EHC.getExpiryTime (HU.istToUtcDate initialState.data.driverGotoState.gotoValidTill) false) "goToHomeTimerId" "10" push UpdateGoHomeTimer 
             else if (initialState.data.driverGotoState.timerId /= "") then pure $ clearTimerWithId initialState.data.driverGotoState.timerId
             else pure unit
           when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
