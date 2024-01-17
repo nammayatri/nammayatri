@@ -25,6 +25,7 @@ import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Aeson as A
 import qualified Data.Text as T
@@ -101,9 +102,10 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
         if isBecknSpecVersion2
           then do
             context <- ContextV2.buildContextV2 Context.SEARCH Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
-            logTagInfo "SearchV2 API Flow" "Sending OnSearch"
-            onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
-            void $ Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 context callbackUrl internalEndPointHashMap $ do onSearchReq
+            void $
+              Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
+                logTagInfo "SearchV2 API Flow" "Sending OnSearch"
+                ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
           else do
             context <- buildTaxiContext Context.SEARCH msgId txnId bapId bapUri bppId bppUri city country False
             logTagInfo "Search API Flow" "Sending OnSearch"
@@ -126,3 +128,18 @@ decodeReq reqBS =
       case A.eitherDecodeStrict reqBS of
         Right reqV1 -> pure $ Left reqV1
         Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS
+
+errHandler :: Spec.Context -> BecknAPIError -> Spec.OnSearchReq
+errHandler context (BecknAPIError err) =
+  Spec.OnSearchReq
+    { onSearchReqContext = context,
+      onSearchReqError = Just err',
+      onSearchReqMessage = Nothing
+    }
+  where
+    err' =
+      Spec.Error
+        { errorCode = Just err.code,
+          errorMessage = err.message >>= \m -> Just $ encodeToText err._type <> " " <> m,
+          errorPaths = err.path
+        }

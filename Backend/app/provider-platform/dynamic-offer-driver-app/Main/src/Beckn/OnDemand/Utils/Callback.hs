@@ -16,17 +16,16 @@
 
 module Beckn.OnDemand.Utils.Callback where
 
--- import Kernel.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
-
-import BecknV2.OnDemand.Utils.Callback
-import Control.Lens.Operators ((?~))
+import qualified Data.HashMap as HM
 import Domain.Types.Merchant as DM
-import EulerHS.Prelude
+import EulerHS.Prelude hiding ((.~))
 import qualified EulerHS.Types as ET
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.SignatureAuth
-import SharedLogic.CallBAP (buildBppUrl)
+import Servant.Client
 
 withCallback ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions],
@@ -35,20 +34,60 @@ withCallback ::
     EsqDBFlow m r
   ) =>
   DM.Merchant ->
-  WithBecknCallbackMig api callback_success m
+  WithBecknCallback api callback_success m
 withCallback = withCallback' withShortRetry
 
 withCallback' ::
   (m () -> m ()) ->
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBFlow m r, CacheFlow m r) =>
   DM.Merchant ->
-  WithBecknCallbackMig api callback_success m
-withCallback' doWithCallback transporter action api context cbUrl internalEndPointHashMap f = do
+  WithBecknCallback api callback_success m
+withCallback' doWithCallback transporter action api cbUrl internalEndPointHashMap fromError f = do
   let bppSubscriberId = getShortId $ transporter.subscriberId
       authKey = getHttpManagerKey bppSubscriberId
-  bppUri <- buildBppUrl (transporter.id)
-  let context' =
-        context
-          & #contextBppUri ?~ show bppUri
-          & #contextBppId ?~ show bppSubscriberId
-  withBecknCallbackMig doWithCallback (Just $ ET.ManagerSelector authKey) action api context' cbUrl internalEndPointHashMap f
+  withBecknCallback doWithCallback (Just $ ET.ManagerSelector authKey) action api cbUrl internalEndPointHashMap fromError f
+
+type Action = Text
+
+type WithBecknCallback api callback_result m =
+  ( MonadFlow m,
+    SanitizedUrl api,
+    CoreMetrics m,
+    HasClient ET.EulerClient api,
+    Client ET.EulerClient api
+      ~ (callback_result -> ET.EulerClient AckResponse)
+  ) =>
+  Action ->
+  Proxy api ->
+  BaseUrl ->
+  HM.Map BaseUrl BaseUrl ->
+  (BecknAPIError -> callback_result) ->
+  m callback_result ->
+  m AckResponse
+
+withBecknCallback ::
+  (m () -> m ()) ->
+  Maybe ET.ManagerSelector ->
+  WithBecknCallback api callback_result m
+withBecknCallback doWithCallback auth action api cbUrl internalEndPointHashMap fromError cbHandler = do
+  forkBecknCallback
+    fromError
+    (doWithCallback . void . callBecknAPI auth Nothing action api cbUrl internalEndPointHashMap)
+    action
+    cbHandler
+  return Ack
+
+forkBecknCallback ::
+  (Forkable m, MonadCatch m, Log m) =>
+  (BecknAPIError -> result) ->
+  (result -> m ()) ->
+  Text ->
+  m result ->
+  m ()
+forkBecknCallback fromError doWithResult actionName action =
+  fork actionName $
+    try action >>= \case
+      Right success -> doWithResult success
+      Left err -> do
+        logError $ "Error executing callback action " <> actionName <> ": " <> show err
+        doWithResult $ fromError (someExceptionToBecknApiError err)
