@@ -23,6 +23,8 @@ module BecknV2.OnDemand.Types
     Agent (..),
     Authorization (..),
     Billing (..),
+    CancelReq (..),
+    CancelReqMessage (..),
     CancellationTerm (..),
     Catalog (..),
     City (..),
@@ -36,6 +38,7 @@ module BecknV2.OnDemand.Types
     Domain (..),
     Error (..),
     Fee (..),
+    FeedbackForm (..),
     Fulfillment (..),
     FulfillmentState (..),
     Image (..),
@@ -61,6 +64,9 @@ module BecknV2.OnDemand.Types
     Provider (..),
     Quotation (..),
     QuotationBreakupInner (..),
+    Rating (..),
+    RatingReq (..),
+    RatingReqMessage (..),
     SearchReq (..),
     SearchReqMessage (..),
     SelectReq (..),
@@ -246,6 +252,63 @@ optionsBilling =
   where
     table =
       [ ("billingPhone", "phone")
+      ]
+
+data CancelReq = CancelReq
+  { -- |
+    cancelReqContext :: Context,
+    -- |
+    cancelReqMessage :: CancelReqMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON CancelReq where
+  parseJSON = genericParseJSON optionsCancelReq
+
+instance ToJSON CancelReq where
+  toJSON = genericToJSON optionsCancelReq
+
+optionsCancelReq :: Options
+optionsCancelReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("cancelReqContext", "context"),
+        ("cancelReqMessage", "message")
+      ]
+
+-- |
+-- |
+data CancelReqMessage = CancelReqMessage
+  { -- |
+    cancelReqMessageCancellationReasonId :: Maybe Text,
+    -- |
+    cancelReqMessageDescriptor :: Maybe Descriptor,
+    -- |
+    cancelReqMessageOrderId :: Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON CancelReqMessage where
+  parseJSON = genericParseJSON optionsCancelReqMessage
+
+instance ToJSON CancelReqMessage where
+  toJSON = genericToJSON optionsCancelReqMessage
+
+optionsCancelReqMessage :: Options
+optionsCancelReqMessage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("cancelReqMessageCancellationReasonId", "cancellation_reason_id"),
+        ("cancelReqMessageDescriptor", "descriptor"),
+        ("cancelReqMessageOrderId", "order_id")
       ]
 
 -- | Describes the cancellation terms of an item or an order. This can be referenced at an item or order level. Item-level cancellation terms can override the terms at the order level.
@@ -1451,6 +1514,113 @@ optionsQuotationBreakupInner =
     table =
       [ ("quotationBreakupInnerPrice", "price"),
         ("quotationBreakupInnerTitle", "title")
+      ]
+
+-- | Describes the rating of an entity
+data Rating = Rating
+  { -- | Text of the object being rated
+    ratingId :: Maybe Text,
+    -- | Category of the entity being rated
+    ratingRatingCategory :: Maybe Text,
+    -- | Rating value given to the object. This can be a single value or can also contain an inequality operator like gt, gte, lt, lte. This can also contain an inequality expression containing logical operators like && and ||.
+    ratingValue :: Maybe Text,
+    ratingFeedbackForm :: Maybe [FeedbackForm]
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Rating where
+  parseJSON = genericParseJSON optionsRating
+
+instance ToJSON Rating where
+  toJSON = genericToJSON optionsRating
+
+optionsRating :: Options
+optionsRating =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("ratingId", "id"),
+        ("ratingRatingCategory", "rating_category"),
+        ("ratingValue", "value")
+      ]
+
+data FeedbackForm = FeedbackForm
+  { feedbackFormQuestion :: Text,
+    feedbackFormAnswer :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON FeedbackForm where
+  parseJSON = genericParseJSON optionsFeedbackForm
+
+instance ToJSON FeedbackForm where
+  toJSON = genericToJSON optionsFeedbackForm
+
+optionsFeedbackForm :: Options
+optionsFeedbackForm =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("feedbackFormQuestion", "question"),
+        ("feedbackFormAnswer", "answer")
+      ]
+
+-- |
+data RatingReq = RatingReq
+  { -- |
+    ratingReqContext :: Context,
+    -- |
+    ratingReqMessage :: RatingReqMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON RatingReq where
+  parseJSON = genericParseJSON optionsRatingReq
+
+instance ToJSON RatingReq where
+  toJSON = genericToJSON optionsRatingReq
+
+optionsRatingReq :: Options
+optionsRatingReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("ratingReqContext", "context"),
+        ("ratingReqMessage", "message")
+      ]
+
+-- |
+-- |
+data RatingReqMessage = RatingReqMessage
+  { -- |
+    ratingReqMessageRatings :: Maybe [Rating]
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON RatingReqMessage where
+  parseJSON = genericParseJSON optionsRatingReqMessage
+
+instance ToJSON RatingReqMessage where
+  toJSON = genericToJSON optionsRatingReqMessage
+
+optionsRatingReqMessage :: Options
+optionsRatingReqMessage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("ratingReqMessageRatings", "ratings")
       ]
 
 -- |

@@ -76,8 +76,8 @@ tfOrder res =
       resp.mbRide <&> \ride ->
         [ Spec.Fulfillment
             { fulfillmentId = Just ride.id.getId,
-              fulfillmentType = Just $ mapToBecknRideStatusV2 ride.status,
-              fulfillmentState = Nothing,
+              fulfillmentType = Nothing,
+              fulfillmentState = Just $ tfFulfillmentState ride,
               fulfillmentAgent = Nothing,
               fulfillmentCustomer = Nothing,
               fulfillmentStops = Nothing,
@@ -85,6 +85,20 @@ tfOrder res =
               fulfillmentVehicle = Nothing
             }
         ]
+
+tfFulfillmentState :: DRide.Ride -> Spec.FulfillmentState
+tfFulfillmentState ride =
+  Spec.FulfillmentState
+    { fulfillmentStateDescriptor = Just $ tfFulfillmentStateDescriptor ride
+    }
+
+tfFulfillmentStateDescriptor :: DRide.Ride -> Spec.Descriptor
+tfFulfillmentStateDescriptor ride =
+  Spec.Descriptor
+    { descriptorCode = Just "RideStatus",
+      descriptorName = Just "Ride Status",
+      descriptorShortDesc = Just $ mapToBecknRideStatusV2 ride.status
+    }
 
 mapToBecknBookingStatusV2 :: DBooking.BookingStatus -> Text
 mapToBecknBookingStatusV2 DBooking.NEW = "NEW_BOOKING"
