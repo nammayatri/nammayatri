@@ -32,6 +32,7 @@ import Environment
 import Kernel.Beam.Functions
 import qualified Kernel.External.Verification.Idfy.WebhookHandler as Idfy
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
+import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Beckn.Context as Context
@@ -63,6 +64,7 @@ oldIdfyWebhookHandler secret val = do
         Verification.IdfyConfig idfyCfg -> do
           Idfy.webhookHandler idfyCfg onVerify secret val
         Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.GovtDataConfig -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookHandler ::
@@ -86,6 +88,7 @@ idfyWebhookHandler merchantShortId secret val = do
         Verification.IdfyConfig idfyCfg -> do
           Idfy.webhookHandler idfyCfg onVerify secret val
         Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.GovtDataConfig -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 idfyWebhookV2Handler ::
@@ -110,6 +113,7 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
         Verification.IdfyConfig idfyCfg -> do
           Idfy.webhookHandler idfyCfg onVerify secret val
         Verification.FaceVerificationConfig _ -> throwError $ InternalError "Incorrect service config for Idfy"
+        Verification.GovtDataConfig -> throwError $ InternalError "Incorrect service config for Idfy"
     _ -> throwError $ InternalError "Unknown Service Config"
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
@@ -122,16 +126,16 @@ onVerify resp respDump = do
       scheduleRetryVerificationJob verificationReq
       return Ack
     else do
-      ack_ <- maybe (pure Ack) (verifyDocument verificationReq) resp.result
       person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+      ack_ <- maybe (pure Ack) (verifyDocument person verificationReq) resp.result
       -- running statusHandler to enable Driver
       void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) verificationReq.multipleRC
       return ack_
   where
     getResultStatus mbResult = mbResult >>= (\rslt -> (rslt.extraction_output >>= (.status)) <|> (rslt.source_output >>= (.status)))
-    verifyDocument verificationReq rslt
+    verifyDocument person verificationReq rslt
       | isJust rslt.extraction_output =
-        maybe (pure Ack) (RC.onVerifyRC verificationReq) rslt.extraction_output
+        maybe (pure Ack) (RC.onVerifyRC person (Just verificationReq)) (castToVerificationRes <$> rslt.extraction_output)
       | isJust rslt.source_output =
         maybe (pure Ack) (DL.onVerifyDL verificationReq) rslt.source_output
       | otherwise = pure Ack
@@ -149,3 +153,26 @@ scheduleRetryVerificationJob verificationReq = do
       let retryInterval = 60 * 60 -- 1 hour
       let retryTime = retryInterval * (3 ^ retryCount)
       retryTime
+
+castToVerificationRes :: Idfy.RCVerificationOutput -> VT.RCVerificationResponse
+castToVerificationRes output =
+  VT.RCVerificationResponse
+    { registrationDate = output.registration_date,
+      registrationNumber = output.registration_number,
+      fitnessUpto = output.fitness_upto,
+      insuranceValidity = output.insurance_validity,
+      vehicleClass = output.vehicle_class,
+      vehicleCategory = output.vehicle_category,
+      seatingCapacity = output.seating_capacity,
+      manufacturer = output.manufacturer,
+      permitValidityFrom = output.permit_validity_from,
+      permitValidityUpto = output.permit_validity_upto,
+      pucValidityUpto = output.puc_validity_upto,
+      manufacturerModel = output.manufacturer_model,
+      mYManufacturing = output.m_y_manufacturing,
+      colour = output.colour,
+      color = output.color,
+      fuelType = output.fuel_type,
+      bodyType = output.body_type,
+      status = output.status
+    }

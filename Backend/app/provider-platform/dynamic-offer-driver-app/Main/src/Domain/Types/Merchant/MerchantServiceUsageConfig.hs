@@ -52,7 +52,8 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     getExophone :: CallService,
     sendSearchRequestToDriver :: [NotificationService],
     updatedAt :: UTCTime,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    verificationProvidersPriorityList :: [VerificationService]
   }
   deriving (Generic)
 

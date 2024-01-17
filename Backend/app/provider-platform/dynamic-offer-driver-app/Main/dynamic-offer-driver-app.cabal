@@ -401,6 +401,7 @@ library
       Storage.Beam.FleetDriverAssociation
       Storage.Beam.Geometry
       Storage.Beam.GoHomeConfig
+      Storage.Beam.GovtDataRC
       Storage.Beam.Invoice
       Storage.Beam.IssueManagement
       Storage.Beam.KioskLocation
