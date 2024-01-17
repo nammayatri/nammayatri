@@ -1233,6 +1233,7 @@ getBannerConfigs state =
   (if state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER 
     then [autpPayBannerCarousel state BannerCarousal] 
     else [])
+  -- <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else []) NOTE::- Deprecated the complete profile banner for now
   <> (if state.props.currentStage == ST.HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos then [accessbilityBannerConfig state BannerCarousal] else [])
   <> getRemoteBannerConfigs
   where 
@@ -1243,4 +1244,4 @@ getBannerConfigs state =
     getLanguage :: String -> String
     getLanguage lang = 
       let language = toLower $ take 2 lang
-      in if not (null language) then "_" <> language else "en"
+      in if not (null language) then "_" <> language else "_en"
