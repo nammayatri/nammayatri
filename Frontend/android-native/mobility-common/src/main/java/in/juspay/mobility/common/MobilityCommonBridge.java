@@ -2004,7 +2004,9 @@ public class MobilityCommonBridge extends HyperBridge {
                     float speed = Float.parseFloat(jsonObject.getString("speed"));
                     String rawJson = jsonObject.getString("rawJson");
 
-                    animationView = bridgeComponents.getActivity().findViewById(lottieId);
+                LottieAnimationView animationView = bridgeComponents.getActivity().findViewById(lottieId);
+                
+                if (animationView != null) {
                     animationView.addAnimatorListener(new Animator.AnimatorListener() {
                         @Override
                         public void onAnimationEnd(Animator animation) {
@@ -2032,12 +2034,15 @@ public class MobilityCommonBridge extends HyperBridge {
                     animationView.setMinAndMaxProgress(minProgress, maxProgress);
                     animationView.setScaleType(getScaleTypes(scaleType));
                     animationView.playAnimation();
-                } catch (Exception e) {
-                    Log.d(UTILS, "exception in startLottieProcess", e);
+                } else {
+                    Log.e(UTILS, "LottieAnimationView not found with ID: " + lottieId);
                 }
-            });
-        }
+            } catch (Exception e) {
+                Log.e(UTILS, "Exception in startLottieProcess", e);
+            }
+        });
     }
+}
 
     @SuppressLint("DiscouragedApi")
     private String getJsonFromResources(String rawJson) throws IOException {
