@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.library'
+    id 'com.google.protobuf'
 }
 
 android {
@@ -42,6 +43,26 @@ android {
 }
 
 def cameraxVersion = "1.1.0-alpha05"
+
+protobuf {
+    protoc { artifact = 'com.google.protobuf:protoc:3.21.7' }
+    plugins {
+        grpc { artifact = 'io.grpc:protoc-gen-grpc-java:1.61.0' }
+    }
+
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                java { option 'lite' }
+            }
+            task.plugins {
+                grpc {
+                    option 'lite'
+                }
+            }
+        }
+    }
+}
 
 dependencies {
     implementation project(':mobility-common')
@@ -89,4 +110,9 @@ dependencies {
     implementation "androidx.camera:camera-camera2:${cameraxVersion}"
     implementation "androidx.camera:camera-lifecycle:${cameraxVersion}"
 
+    // GRPC Dependencies
+    implementation 'io.grpc:grpc-okhttp:1.61.0' // CURRENT_GRPC_VERSION
+    implementation 'io.grpc:grpc-protobuf-lite:1.61.0' // CURRENT_GRPC_VERSION
+    implementation 'io.grpc:grpc-stub:1.61.0' // CURRENT_GRPC_VERSION
+    implementation 'org.apache.tomcat:annotations-api:6.0.53'
 }
