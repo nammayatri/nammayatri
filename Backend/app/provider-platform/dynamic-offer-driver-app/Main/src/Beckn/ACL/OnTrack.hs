@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnTrack (mkOnTrackMessage) where
+module Beckn.ACL.OnTrack (mkOnTrackMessage, mkOnTrackMessageV2) where
 
 import qualified Beckn.Types.Core.Taxi.OnTrack as OnTrack
 import qualified BecknV2.OnDemand.Types as Spec
@@ -29,8 +29,8 @@ mkOnTrackMessage res = do
           }
     }
 
-_mkOnTrackMessageV2 :: DTrack.DTrackRes -> Spec.OnTrackReqMessage
-_mkOnTrackMessageV2 res = do
+mkOnTrackMessageV2 :: DTrack.DTrackRes -> Spec.OnTrackReqMessage
+mkOnTrackMessageV2 res = do
   Spec.OnTrackReqMessage
     { onTrackReqMessageTracking =
         Spec.Tracking

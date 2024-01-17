@@ -43,12 +43,12 @@ buildStatusReq subscriber req = do
       { ..
       }
 
-_buildStatusReq ::
+buildStatusReqV2 ::
   (HasFlowEnv m r '["_version" ::: Text]) =>
   Subscriber.Subscriber ->
   Spec.StatusReq ->
   m DStatus.DStatusReq
-_buildStatusReq subscriber req = do
+buildStatusReqV2 subscriber req = do
   ContextV2.validateContext Context.STATUS req.statusReqContext
   unless (Just subscriber.subscriber_id == req.statusReqContext.contextBapId) $
     throwError (InvalidRequest "Invalid bap_id")
