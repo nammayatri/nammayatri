@@ -33,7 +33,7 @@ import Servant hiding (Summary)
 data BookingEndpoint
   = StuckBookingsCancelEndpoint
   | MultipleBookingSyncEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "BookingEndpoint"
 

@@ -20,6 +20,7 @@ import Data.Singletons.TH
 import Domain.Types.Merchant
 import Domain.Types.Role as DRole
 import Domain.Types.ServerName as DSN
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
@@ -29,7 +30,9 @@ import Kernel.Types.Id
 data UserAccessType
   = USER_FULL_ACCESS
   | USER_NO_ACCESS
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
+
+$(mkBeamInstancesForEnum ''UserAccessType)
 
 data UserActionType
   = DOCUMENTS_INFO
@@ -200,14 +203,18 @@ data UserActionType
   | DRIVER_COIN_BULK_UPLOAD
   | DRIVER_COIN_HISTORY
   | REMOVE_EXPIRED_HOTSPOTS
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
+
+$(mkBeamInstancesForEnum ''UserActionType)
 
 genSingletons [''UserActionType]
 
 -------- Required access levels for helper api --------
 
 data ApiEntity = CUSTOMERS | DRIVERS | RIDES | MONITORING | MERCHANT | MESSAGE | REFERRAL | ISSUE | VOLUNTEER | SPECIAL_ZONES | SUBSCRIPTION | FLEET | OVERLAY
-  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema, Eq, Ord)
+
+$(mkBeamInstancesForEnum ''ApiEntity)
 
 genSingletons [''ApiEntity]
 

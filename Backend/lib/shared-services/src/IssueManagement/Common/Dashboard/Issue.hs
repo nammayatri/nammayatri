@@ -28,7 +28,7 @@ data IssueEndpoint
   = IssueUpdateEndpoint
   | IssueAddCommentEndpoint
   | TicketStatusCallBackEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "IssueEndpoint"
 

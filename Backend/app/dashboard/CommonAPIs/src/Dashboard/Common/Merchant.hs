@@ -59,7 +59,7 @@ data MerchantEndpoint
   | CreateFPDriverExtraFeeEndpoint
   | UpdateFPDriverExtraFeeEndpoint
   | SchedulerTriggerAPIEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "MerchantEndpoint"
 
@@ -71,7 +71,7 @@ data ExophoneReq = ExophoneReq
     backupPhone :: Text,
     callService :: CallService
   }
-  deriving stock (Show, Generic)
+  deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 validateExophoneReq :: Validate ExophoneReq
