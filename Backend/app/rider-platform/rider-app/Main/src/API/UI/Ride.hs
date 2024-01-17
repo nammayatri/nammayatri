@@ -27,6 +27,7 @@ import qualified Domain.Types.Person as SPerson
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -42,6 +43,16 @@ type API =
                   :<|> "status"
                   :> TokenAuth
                   :> Get '[JSON] DRide.GetRideStatusResp
+                  :<|> TokenAuth
+                  :> "add"
+                  :> "stop"
+                  :> ReqBody '[JSON] DRide.StopReq
+                  :> Post '[JSON] APISuccess
+                  :<|> TokenAuth
+                  :> "edit"
+                  :> "stop"
+                  :> ReqBody '[JSON] DRide.StopReq
+                  :> Post '[JSON] APISuccess
               )
        )
 
@@ -49,9 +60,17 @@ handler :: FlowServer API
 handler rideId =
   getDriverLoc rideId
     :<|> getRideStatus rideId
+    :<|> addStop rideId
+    :<|> editStop rideId
 
 getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetDriverLocResp
 getDriverLoc rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getDriverLoc rideId personId
 
 getRideStatus :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DRide.GetRideStatusResp
 getRideStatus rideId (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.getRideStatus rideId personId
+
+addStop :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.StopReq -> FlowHandler APISuccess
+addStop rideId (personId, merchantId) addStopReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.addStop (personId, merchantId) rideId addStopReq
+
+editStop :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.StopReq -> FlowHandler APISuccess
+editStop rideId (personId, merchantId) editStopReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DRide.editStop (personId, merchantId) rideId editStopReq

@@ -118,7 +118,7 @@ cancelRideImpl rideId bookingCReason = do
         case searchReq.searchRequestDetails of
           DSR.SearchReqDetailsOnDemand DSR.SearchRequestDetailsOnDemand {..} -> do
             blockListedDriverList <- addDriverToSearchCancelledList searchReq.id ride
-            driverPoolCfg <- getDriverPoolConfig ride.merchantOperatingCityId (Just searchTry.vehicleVariant) estimatedDistance
+            driverPoolCfg <- getDriverPoolConfig ride.merchantOperatingCityId (Just searchTry.vehicleVariant) estimatedDistance DSR.ON_DEMAND
             logDebug $ "BlockListed Drivers-" <> show blockListedDriverList
             driverPool <- calculateDriverPool DP.Estimate driverPoolCfg (Just searchTry.vehicleVariant) searchTry.tag fromLocation merchant.id True Nothing
             let newDriverPool = filter (\dpr -> cast dpr.driverId `notElem` blockListedDriverList) driverPool

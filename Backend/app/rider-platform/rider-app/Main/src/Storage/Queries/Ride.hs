@@ -81,6 +81,15 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateStopArrival :: MonadFlow m => Id Ride -> m ()
+updateStopArrival rideId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.nextStopLocId Nothing,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateTrackingUrl :: MonadFlow m => Id Ride -> BaseUrl -> m ()
 updateTrackingUrl rideId url = do
   now <- getCurrentTime
@@ -118,6 +127,15 @@ updateMultiple rideId ride = do
       Se.Set BeamR.odometerStartReading ride.odometerStartReading,
       Se.Set BeamR.odometerEndReading ride.odometerEndReading,
       Se.Set BeamR.endRideOtp ride.endRideOtp,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updateNextStop :: MonadFlow m => Id Ride -> Maybe Text -> m ()
+updateNextStop rideId nextStopLocId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.nextStopLocId nextStopLocId,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
@@ -399,6 +417,7 @@ instance FromTType' BeamR.Ride Ride where
             rideStartTime = rideStartTime,
             rideEndTime = rideEndTime,
             rideRating = rideRating,
+            nextStopLocId = Id <$> nextStopLocId,
             createdAt = createdAt,
             updatedAt = updatedAt,
             driverMobileCountryCode = driverMobileCountryCode,
@@ -436,6 +455,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.rideRating = rideRating,
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
+        BeamR.nextStopLocId = getId <$> nextStopLocId,
         BeamR.driverMobileCountryCode = driverMobileCountryCode,
         BeamR.driverImage = driverImage,
         BeamR.odometerStartReading = odometerStartReading,

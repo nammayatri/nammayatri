@@ -22,6 +22,7 @@ module Domain.Action.UI.Ride
     arrivedAtPickup,
     otpRideCreate,
     getOdometerReadingImage,
+    arrivedAtStop,
   )
 where
 
@@ -72,6 +73,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
+import Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -243,6 +245,29 @@ arrivedAtPickup rideId req = do
   where
     isValidRideStatus status = status == DRide.NEW
 
+arrivedAtStop :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtStop rideId pt = do
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress")
+  unless (isJust ride.nextStopLocId) $ throwError (InvalidRequest $ "Can't find stop to be reached for ride " <> ride.id.getId)
+  case ride.rideDetails of
+    DRide.DetailsOnDemand _ -> throwError $ InvalidRequest "Stops are not present in on demand rides"
+    DRide.DetailsRental _ -> do
+      case ride.nextStopLocId of
+        Nothing -> throwError $ InvalidRequest ("No stop present to be reached for ride " <> ride.id.getId)
+        Just nextStopId -> do
+          stopLoc <- runInReplica $ QLoc.findById nextStopId >>= fromMaybeM (InvalidRequest $ "Stop location doesn't exist for ride " <> ride.id.getId)
+          let curPt = LatLong stopLoc.lat stopLoc.lon
+              distance = distanceBetweenInMeters pt curPt
+          driverReachedDistance <- asks (.driverReachedDistance)
+          unless (distance < driverReachedDistance) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
+          booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+          QRide.updateStopArrival rideId
+          BP.sendStopArrivalUpdateToBAP booking ride
+          pure Success
+  where
+    isValidRideStatus status = status == DRide.INPROGRESS
+
 otpRideCreate :: DP.Person -> Text -> DRB.Booking -> Flow DriverRideRes
 otpRideCreate driver otpCode booking = do
   transporter <-
@@ -351,6 +376,7 @@ otpRideCreate driver otpCode booking = do
             tripEndPos = Nothing,
             fareParametersId = Nothing,
             distanceCalculationFailed = Nothing,
+            nextStopLocId = Nothing,
             createdAt = now,
             updatedAt = now,
             rideDetails = rideDetails

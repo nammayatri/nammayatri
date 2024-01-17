@@ -21,3 +21,5 @@ ALTER TABLE atlas_app.search_request ADD COLUMN tag character varying(36) defaul
 
 ALTER TABLE atlas_app.ride ADD COLUMN odometer_start_reading double precision;
 ALTER TABLE atlas_app.ride ADD COLUMN odometer_end_reading double precision;
+
+ALTER TABLE atlas_app.ride ADD COLUMN next_stop_loc_id character(36);

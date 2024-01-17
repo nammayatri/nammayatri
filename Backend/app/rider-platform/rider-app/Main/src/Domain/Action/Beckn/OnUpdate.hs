@@ -35,7 +35,6 @@ import Domain.Types.HotSpot
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
-import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
@@ -122,6 +121,9 @@ data OnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         message :: Text
       }
+  | StopArrivedReq
+      { bppRideId :: Id SRide.BPPRide
+      }
 
 data ValidatedOnUpdateReq
   = ValidatedRideAssignedReq
@@ -196,6 +198,10 @@ data ValidatedOnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         message :: Text,
         booking :: SRB.Booking,
+        ride :: SRide.Ride
+      }
+  | ValidatedStopArrivedReq
+      { booking :: SRB.Booking,
         ride :: SRide.Ride
       }
 
@@ -299,6 +305,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             endRideOtp = Nothing,
             createdAt = now,
             updatedAt = now,
+            nextStopLocId = Nothing, -- update toLocation in rentals and modify this condition
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
@@ -427,6 +434,9 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   QPFS.clearCache searchReq.riderId
   -- notify customer
   Notify.notifyOnEstimatedReallocated booking estimate.id
+onUpdate ValidatedStopArrivedReq {..} = do
+  QRide.updateStopArrival ride.id
+  Notify.notifyOnStopReached booking ride
 
 validateRequest ::
   ( CacheFlow m r,
@@ -498,6 +508,16 @@ validateRequest EstimateRepetitionReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   estimate <- QEstimate.findByBPPEstimateId bppEstimateId >>= fromMaybeM (EstimateDoesNotExist bppEstimateId.getId)
   return $ ValidatedEstimateRepetitionReq {..}
+validateRequest StopArrivedReq {..} = do
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> ride.bookingId.getId)
+  unless (ride.status == SRide.INPROGRESS) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress")
+  unless (isJust ride.nextStopLocId) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
+  case booking.bookingDetails of
+    SRB.OneWayDetails _ -> throwError $ InvalidRequest "Stops are not present in on demand rides"
+    SRB.DriverOfferDetails _ -> throwError $ InvalidRequest "Stops are not present in on demand rides"
+    SRB.OneWaySpecialZoneDetails _ -> throwError $ InvalidRequest "Stops are not present in on demand rides"
+    SRB.RentalDetails _ _ -> return $ ValidatedStopArrivedReq {..}
 
 mkBookingCancellationReason ::
   Id SRB.Booking ->

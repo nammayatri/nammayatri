@@ -98,6 +98,7 @@ data Ride = Ride
     fareParametersId :: Maybe (Id DFare.FareParameters),
     distanceCalculationFailed :: Maybe Bool,
     pickupDropOutsideOfThreshold :: Maybe Bool,
+    nextStopLocId :: Maybe (Id DL.Location), -- can be used for onDemand too later
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

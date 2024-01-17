@@ -18,6 +18,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
+import qualified Domain.Types.Ride as DRide
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRD
@@ -62,10 +63,15 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   -- searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId (Just searchTry.vehicleVariant) jobData.estimatedRideDistance
+  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId (Just searchTry.vehicleVariant) jobData.estimatedRideDistance (DSR.getSearchRequestTag searchReq)
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
   (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds goHomeCfg
   return res
+
+tagToRideType :: DSR.SearchRequestTag -> DRide.RideType
+tagToRideType srt = case srt of
+  DSR.ON_DEMAND -> DRide.ON_DEMAND
+  DSR.RENTAL -> DRide.RENTAL
 
 sendSearchRequestToDrivers' ::
   ( EncFlow m r,
@@ -94,10 +100,12 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
     handle searchDetails pickupLoc =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
+          getPoolBatchNum = I.getPoolBatchNum searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq pickupLoc searchTry.id searchTry.vehicleVariant,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTime,
+          getRescheduleTimeRental = I.getRescheduleTimeRental,
           setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTime,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTime,
           metrics =

@@ -65,6 +65,8 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.DriverQuote as DQ
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
@@ -263,7 +265,15 @@ rideInfo merchantShortId reqRideId = do
   let (odometerStartReading', odometerEndReading') = case ride.rideDetails of
         DRide.DetailsRental DRide.RideDetailsRental {odometerStartReading, odometerEndReading} -> (odometerStartReading, odometerEndReading)
         DRide.DetailsOnDemand _ -> (Nothing, Nothing)
-
+  maxOrder <- QLM.maxOrderByEntity reqRideId.getId
+  (nextStopLoc, lastStopLoc) <- case ride.nextStopLocId of
+    Nothing -> do
+      lastLoc <- mkLocationFromLocationMapping reqRideId maxOrder
+      return (Nothing, lastLoc)
+    Just nextStopId -> do
+      nextLoc <- QL.findById nextStopId
+      lastLoc <- mkLocationFromLocationMapping reqRideId (maxOrder - 1)
+      return (nextLoc, lastLoc)
   pure
     Common.RideInfoRes
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
@@ -306,8 +316,25 @@ rideInfo merchantShortId reqRideId = do
         distanceCalculationFailed = ride.distanceCalculationFailed,
         vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant,
         odometerStartReading = odometerStartReading',
-        odometerEndReading = odometerEndReading'
+        odometerEndReading = odometerEndReading',
+        nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
+        lastStopLocation = mkLocationAPIEntity <$> lastStopLoc
       }
+
+mkLocationFromLocationMapping ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]
+  ) =>
+  Id Common.Ride ->
+  Int ->
+  m (Maybe DLoc.Location)
+mkLocationFromLocationMapping reqRideId order = do
+  locMap <- listToMaybe <$> QLM.findByEntityIdOrderAndVersion reqRideId.getId order "LATEST"
+  case locMap of
+    Nothing -> pure Nothing
+    Just locMap_ -> QL.findById locMap_.locationId
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
 mkLocationAPIEntity DLoc.Location {..} = do

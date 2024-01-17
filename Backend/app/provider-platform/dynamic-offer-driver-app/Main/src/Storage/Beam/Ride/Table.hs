@@ -57,7 +57,8 @@ data RideT f = RideT
     odometerStartReadingImageId :: B.C f (Maybe Text),
     odometerEndReadingImageId :: B.C f (Maybe Text),
     endRideOtp :: B.C f (Maybe Text),
-    rideType :: B.C f Domain.RideType
+    rideType :: B.C f Domain.RideType,
+    nextStopLocId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

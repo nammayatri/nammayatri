@@ -48,6 +48,7 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DODC
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
+import Domain.Types.SearchRequest (SearchRequestTag (..))
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified Kernel.External.Maps as Maps
@@ -207,8 +208,14 @@ driverPoolConfig merchantShortId opCity mbTripDistance = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   configs <- case mbTripDistance of
-    Nothing -> CQDPC.findAllByMerchantOpCityId merchantOpCityId
-    Just tripDistance -> maybeToList <$> CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance
+    Nothing -> do
+      onDemandPools <- CQDPC.findAllByMerchantOpCityId merchantOpCityId ON_DEMAND
+      rentalPools <- CQDPC.findAllByMerchantOpCityId merchantOpCityId RENTAL
+      pure $ onDemandPools <> rentalPools
+    Just tripDistance -> do
+      onDemandPools <- CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId ON_DEMAND tripDistance
+      rentalPools <- CQDPC.findByMerchantOpCityIdAndTripDistance merchantOpCityId RENTAL tripDistance
+      pure $ maybeToList onDemandPools <> maybeToList rentalPools
   pure $ mkDriverPoolConfigRes <$> configs
 
 mkDriverPoolConfigRes :: DDPC.DriverPoolConfig -> Common.DriverPoolConfigItem
@@ -235,7 +242,8 @@ driverPoolConfigUpdate merchantShortId opCity tripDistance variant req = do
   runRequestValidation Common.validateDriverPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance (castVehicleVariant <$> variant) >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
+  -- TODO: Add support for rental pool updates later
+  config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId ON_DEMAND tripDistance (castVehicleVariant <$> variant) >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
   let updConfig =
         config{minRadiusOfSearch = maybe config.minRadiusOfSearch (.value) req.minRadiusOfSearch,
                maxRadiusOfSearch = maybe config.maxRadiusOfSearch (.value) req.maxRadiusOfSearch,
@@ -267,6 +275,7 @@ castBatchSplitByPickupDistance :: Common.BatchSplitByPickupDistance -> DriverPoo
 castBatchSplitByPickupDistance Common.BatchSplitByPickupDistance {..} = DriverPool.BatchSplitByPickupDistance {..}
 
 ---------------------------------------------------------------------
+-- TODO: Add support for rental pool creation later
 driverPoolConfigCreate ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -278,7 +287,7 @@ driverPoolConfigCreate merchantShortId opCity tripDistance variant req = do
   runRequestValidation Common.validateDriverPoolConfigCreateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance (castVehicleVariant <$> variant)
+  mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId ON_DEMAND tripDistance (castVehicleVariant <$> variant)
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchantOpCityId.getId tripDistance)
   newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance variant req
   _ <- CQDPC.create newConfig
@@ -308,6 +317,8 @@ buildDriverPoolConfig merchantId merchantOpCityId tripDistance vehicleVariant Co
         updatedAt = now,
         createdAt = now,
         vehicleVariant = castVehicleVariant <$> vehicleVariant,
+        searchRequestTag = castSearchRequestTag searchRequestTag,
+        allocateRentalRideTimeDiff = [], -- Handle rentals later
         ..
       }
 
@@ -453,6 +464,11 @@ castVehicleVariant = \case
   Common.AUTO_RICKSHAW -> DVeh.AUTO_RICKSHAW
   Common.TAXI -> DVeh.TAXI
   Common.TAXI_PLUS -> DVeh.TAXI_PLUS
+
+castSearchRequestTag :: Common.SearchRequestTag -> SearchRequestTag
+castSearchRequestTag = \case
+  Common.ON_DEMAND -> ON_DEMAND
+  Common.RENTAL -> RENTAL
 
 castVehicleClassCheckType :: Common.VehicleClassCheckType -> DODC.VehicleClassCheckType
 castVehicleClassCheckType = \case

@@ -17,14 +17,18 @@ module Beckn.Types.Core.Taxi.Update.UpdateEvent
   )
 where
 
+import Beckn.Types.Core.Taxi.Update.UpdateEvent.AddStopEvent
+import Beckn.Types.Core.Taxi.Update.UpdateEvent.EditStopEvent
 import Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent
 import Data.OpenApi
 import EulerHS.Prelude
 import qualified Kernel.Utils.JSON as J
 import qualified Kernel.Utils.Schema as S
 
-newtype UpdateEvent
+data UpdateEvent
   = PaymentCompleted PaymentCompletedEvent
+  | AddStop AddStopEvent
+  | EditStop EditStopEvent
   deriving (Generic, Show)
 
 instance ToJSON UpdateEvent where

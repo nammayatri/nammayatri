@@ -32,6 +32,12 @@ create = createWithKV
 countOrders :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m Int
 countOrders entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] <&> length
 
+maxOrderByEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
+maxOrderByEntity entityId = do
+  lms <- findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId]
+  let orders = map order lms
+  pure $ maximum orders
+
 findByEntityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [LocationMapping] --TODO : SORT BY ORDER
 findByEntityId entityId = findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId]
 
@@ -45,6 +51,7 @@ updatePastMappingVersions entityId order = do
   mappings <- findAllByEntityIdAndOrder entityId order
   traverse_ incrementVersion mappings
 
+-- This function is not correct, need to correct it later
 incrementVersion :: MonadFlow m => LocationMapping -> m ()
 incrementVersion mapping = do
   newVersion <- getNewVersion mapping
@@ -62,7 +69,7 @@ getNewVersion mapping =
 
 updateVersion :: MonadFlow m => Text -> Int -> Text -> m ()
 updateVersion entityId order version =
-  updateOneWithKV
+  updateWithKV
     [Se.Set BeamLM.version version]
     [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]
 

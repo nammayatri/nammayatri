@@ -299,7 +299,7 @@ handler merchant sReq' =
     listVehicleVariantHelper farePolicy = catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicy
 
     buildEstimates onDemandSearchRequest farePolicies result fromLocation toLocation specialLocationTag area routeInfo merchantOpCityId = do
-      driverPoolCfg <- getDriverPoolConfig merchantOpCityId Nothing result.distance
+      driverPoolCfg <- getDriverPoolConfig merchantOpCityId Nothing result.distance DSR.ON_DEMAND
       estimateInfos <- buildEstimatesInfos onDemandSearchRequest fromLocation toLocation driverPoolCfg result farePolicies specialLocationTag area routeInfo merchantOpCityId
       return (Nothing, Just estimateInfos)
 

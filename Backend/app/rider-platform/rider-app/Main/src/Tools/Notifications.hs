@@ -536,3 +536,34 @@ notifyOnNewMessage booking message = do
           [ message
           ]
   notifyPersonWithMutableContent person.merchantId merchantOperatingCityId notificationData
+
+notifyOnStopReached ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  SRide.Ride ->
+  m ()
+notifyOnStopReached booking ride = do
+  let personId = booking.riderId
+      rideId = ride.id
+      driverName = ride.driverName
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
+  let notificationData =
+        Notification.NotificationReq
+          { category = Notification.STOP_REACHED,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product rideId.getId (),
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+          }
+      title = T.pack "Stop Reached!"
+      body =
+        unwords
+          [ driverName,
+            "has reached the stop. You may add another stop!"
+          ]
+  notifyPerson person.merchantId merchantOperatingCityId notificationData

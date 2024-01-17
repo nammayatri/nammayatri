@@ -177,6 +177,11 @@ parseEvent transactionId (OnUpdate.EstimateRepetition erEvent) = do
         bppRideId = Id erEvent.fulfillment.id,
         cancellationSource = castCancellationSource cancellationReason
       }
+parseEvent _ (OnUpdate.StopArrived saEvent) = do
+  return $
+    DOnUpdate.StopArrivedReq
+      { bppRideId = Id saEvent.fulfillment.id
+      }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
 castCancellationSource = \case

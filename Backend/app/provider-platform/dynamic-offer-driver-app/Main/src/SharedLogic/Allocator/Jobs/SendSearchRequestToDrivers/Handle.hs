@@ -22,6 +22,7 @@ where
 
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Person (Driver)
+import Domain.Types.SearchRequest
 import Kernel.Prelude
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
@@ -38,10 +39,12 @@ data MetricsHandle m = MetricsHandle
 
 data Handle m = Handle
   { isBatchNumExceedLimit :: m Bool,
+    getPoolBatchNum :: m Int,
     isReceivedMaxDriverQuotes :: m Bool,
     getNextDriverPoolBatch :: GoHomeConfig -> m DriverPoolWithActualDistResultWithFlags,
     sendSearchRequestToDrivers :: [DriverPoolWithActualDistResult] -> [Id Driver] -> GoHomeConfig -> m (),
     getRescheduleTime :: m UTCTime,
+    getRescheduleTimeRental :: NominalDiffTime -> UTCTime -> m UTCTime,
     metrics :: MetricsHandle m,
     setBatchDurationLock :: m (Maybe UTCTime),
     createRescheduleTime :: UTCTime -> m UTCTime,
@@ -49,7 +52,7 @@ data Handle m = Handle
     cancelSearchTry :: m ()
   }
 
-handler :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
+handler :: (HandleMonad m, MonadTime m) => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
 handler h@Handle {..} goHomeCfg = do
   logInfo "Starting job execution"
   metrics.incrementTaskCounter
@@ -67,11 +70,21 @@ handler h@Handle {..} goHomeCfg = do
             return (Complete, False)
           else processRequestSending h goHomeCfg
 
-processRequestSending :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
+processRequestSending :: (HandleMonad m, MonadTime m) => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
 processRequestSending Handle {..} goHomeCfg = do
   mLastProcTime <- setBatchDurationLock
+  currentBatchNum <- getPoolBatchNum
+  driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
   case mLastProcTime of
-    Just lastProcTime -> ReSchedule <$> createRescheduleTime lastProcTime <&> (,False)
+    Just lastProcTime -> case driverPoolWithFlags.searchRequestTag of
+      ON_DEMAND -> ReSchedule <$> createRescheduleTime lastProcTime <&> (,False)
+      RENTAL -> do
+        case driverPoolWithFlags.allocateRentalRideTimeDiff !? currentBatchNum of
+          Just timeDiff -> ReSchedule <$> getRescheduleTimeRental (intToNominalDiffTime timeDiff) lastProcTime <&> (,False)
+          Nothing -> do
+            logInfo "No rental driver available"
+            cancelSearchTry
+            return (Complete, False)
     Nothing -> do
       isBatchNumExceedLimit' <- isBatchNumExceedLimit
       if isBatchNumExceedLimit'
@@ -81,7 +94,6 @@ processRequestSending Handle {..} goHomeCfg = do
           cancelSearchTry
           return (Complete, False)
         else do
-          driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
           if null driverPoolWithFlags.driverPoolWithActualDistResult
             then do
               metrics.incrementFailedTaskCounter
@@ -90,4 +102,27 @@ processRequestSending Handle {..} goHomeCfg = do
               return (Complete, driverPoolWithFlags.isGoHomeBatch)
             else do
               sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
-              ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.isGoHomeBatch)
+              now <- getCurrentTime
+              case driverPoolWithFlags.searchRequestTag of
+                ON_DEMAND -> ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.isGoHomeBatch)
+                RENTAL -> do
+                  case driverPoolWithFlags.allocateRentalRideTimeDiff !? currentBatchNum of
+                    Just timeDiff -> ReSchedule <$> getRescheduleTimeRental (intToNominalDiffTime timeDiff) now <&> (,False)
+                    Nothing -> do
+                      logInfo "No rental driver available"
+                      cancelSearchTry
+                      return (Complete, False)
+  where
+    (!?) :: [Int] -> Int -> Maybe Int -- TODO: Can be taken to Kernel if used frequently
+    xs !? n
+      | n < 0 = Nothing
+      | n >= length xs = Nothing
+      | otherwise =
+        foldr
+          ( \x r k -> case k of
+              0 -> Just x
+              _ -> r (k -1)
+          )
+          (const Nothing)
+          xs
+          n

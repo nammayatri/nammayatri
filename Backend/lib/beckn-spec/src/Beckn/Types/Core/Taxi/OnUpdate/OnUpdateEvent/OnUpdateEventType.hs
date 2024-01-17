@@ -25,4 +25,5 @@ data OnUpdateEventType
   | DRIVER_ARRIVED
   | ESTIMATE_REPETITION
   | NEW_MESSAGE
+  | STOP_ARRIVED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

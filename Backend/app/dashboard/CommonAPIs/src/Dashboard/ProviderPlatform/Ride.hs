@@ -256,7 +256,9 @@ data RideInfoRes = RideInfoRes
     distanceCalculationFailed :: Maybe Bool,
     vehicleVariant :: Maybe Variant,
     odometerStartReading :: Maybe Centesimal,
-    odometerEndReading :: Maybe Centesimal
+    odometerEndReading :: Maybe Centesimal,
+    nextStopLocation :: Maybe LocationAPIEntity,
+    lastStopLocation :: Maybe LocationAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

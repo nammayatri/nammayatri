@@ -322,6 +322,10 @@ data BatchSplitByPickupDistance = BatchSplitByPickupDistance
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data SearchRequestTag = ON_DEMAND | RENTAL
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
 data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
   { minRadiusOfSearch :: Meters,
     maxRadiusOfSearch :: Meters,
@@ -340,7 +344,8 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     singleBatchProcessTimeRental :: Seconds,
     radiusShrinkValueForDriversOnRide :: Meters,
     driverToDestinationDistanceThreshold :: Meters,
-    driverToDestinationDuration :: Seconds
+    driverToDestinationDuration :: Seconds,
+    searchRequestTag :: SearchRequestTag
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

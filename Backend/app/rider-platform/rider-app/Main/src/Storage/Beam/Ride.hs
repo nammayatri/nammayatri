@@ -54,6 +54,7 @@ data RideT f = RideT
     createdAt :: B.C f UTCTime,
     odometerStartReading :: B.C f (Maybe Centesimal),
     odometerEndReading :: B.C f (Maybe Centesimal),
+    nextStopLocId :: B.C f (Maybe Text),
     updatedAt :: B.C f UTCTime,
     driverImage :: B.C f (Maybe Text)
   }

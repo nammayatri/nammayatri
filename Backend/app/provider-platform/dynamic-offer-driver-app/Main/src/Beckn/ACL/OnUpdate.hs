@@ -30,6 +30,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.StopArrivedEvent as StopArrivedOU
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Estimate as DEst
@@ -92,6 +93,10 @@ data OnUpdateBuildReq
         vehicle :: SVeh.Vehicle,
         booking :: DRB.Booking,
         message :: Text
+      }
+  | StopArrivedBuildReq
+      { ride :: DRide.Ride,
+        booking :: DRB.Booking
       }
 
 mkFullfillment ::
@@ -361,6 +366,18 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
                 fulfillment
               },
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
+      }
+buildOnUpdateMessage StopArrivedBuildReq {..} = do
+  fulfillment <- mkFullfillment Nothing ride booking Nothing Nothing Nothing
+  return $
+    OnUpdate.OnUpdateMessage
+      { order =
+          OnUpdate.StopArrived $
+            StopArrivedOU.StopArrivedEvent
+              { id = booking.id.getId,
+                ..
+              },
+        update_target = "order.fufillment.state.code"
       }
 buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
   let tagGroups =

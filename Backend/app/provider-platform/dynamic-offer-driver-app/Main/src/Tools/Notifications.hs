@@ -14,6 +14,8 @@
 
 module Tools.Notifications where
 
+import qualified Beckn.Types.Core.Taxi.Common.Location as Common
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -21,6 +23,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Message.Message as Message
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import EulerHS.Prelude
@@ -628,3 +631,41 @@ sendOverlay merchantOpCityId personId mbDeviceToken mbTitle description imageUrl
         }
     title = FCMNotificationTitle $ fromMaybe "Title" mbTitle -- if nothing then anyways fcmShowNotification is false
     body = FCMNotificationBody $ fromMaybe "Description" description
+
+data StopReq = StopReq
+  { rideId :: Id DRide.Ride,
+    stop :: Maybe Common.Location,
+    isEdit :: Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+notifyStopModification ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  StopReq ->
+  m ()
+notifyStopModification merchantOpCityId personId mbDeviceToken entityData = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = if entityData.isEdit then FCM.EDIT_STOP else FCM.ADD_STOP
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = entityData.rideId.getId,
+          fcmEntityData = Just entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing
+        }
+    title = FCMNotificationTitle (if entityData.isEdit then "Stop Edited" else "Stop Added")
+    body =
+      FCMNotificationBody $
+        unwords
+          [ if entityData.isEdit then "Customer edited stop!" else "Customer added a stop!"
+          ]

@@ -224,6 +224,24 @@ updateStatus rideId status = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateNextStop :: MonadFlow m => Id Ride -> Maybe Text -> m ()
+updateNextStop rideId nextStopLocId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.nextStopLocId nextStopLocId,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updateStopArrival :: MonadFlow m => Id Ride -> m ()
+updateStopArrival rideId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.nextStopLocId Nothing,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateEndRideOtp :: MonadFlow m => Id Ride -> Text -> m ()
 updateEndRideOtp rideId endRideOtp = do
   now <- getCurrentTime
@@ -781,6 +799,7 @@ instance FromTType' BeamR.Ride Ride where
             tripEndPos = LatLong <$> tripEndLat <*> tripEndLon,
             fareParametersId = Id <$> fareParametersId,
             trackingUrl = tUrl,
+            nextStopLocId = Id <$> nextStopLocId,
             ..
           }
 
@@ -810,6 +829,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.tripStartLon = lon <$> tripStartPos,
         BeamR.tripEndLon = lon <$> tripEndPos,
         BeamR.fareParametersId = getId <$> fareParametersId,
+        BeamR.nextStopLocId = getId <$> nextStopLocId,
         ..
       }
     where

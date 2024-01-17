@@ -1312,7 +1312,7 @@ respondQuote (driverId, _, merchantOpCityId) req = do
       logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
       pure $ not $ null activeQuotes
     getQuoteLimit merchantId dist vehicleVariant = do
-      driverPoolCfg <- DP.getDriverPoolConfig merchantId (Just vehicleVariant) dist
+      driverPoolCfg <- DP.getDriverPoolConfig merchantId (Just vehicleVariant) dist DSR.ON_DEMAND
       pure $ fromIntegral driverPoolCfg.driverQuoteLimit
     sendRemoveRideRequestNotification driverSearchReqs merchantOpCityId_ driverQuote = do
       for_ driverSearchReqs $ \driverReq -> do
@@ -1433,6 +1433,9 @@ respondQuote (driverId, _, merchantOpCityId) req = do
             distanceCalculationFailed = Nothing,
             createdAt = now,
             updatedAt = now,
+            nextStopLocId = case booking.bookingDetails of
+              DB.DetailsOnDemand _ -> Nothing
+              DB.DetailsRental details -> (.id) <$> details.rentalToLocation,
             rideDetails =
               DRide.DetailsRental
                 DRide.RideDetailsRental

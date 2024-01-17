@@ -19,7 +19,7 @@ import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.DriverPoolConfig
-import Domain.Types.SearchRequest (SearchRequest)
+import Domain.Types.SearchRequest (SearchRequest, SearchRequestTag (..))
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
 import qualified Kernel.Beam.Functions as B
@@ -60,7 +60,7 @@ allocateRentalRide Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   booking <- QB.findById jobData.bookingId >>= fromMaybeM (BookingNotFound jobData.bookingId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig booking.merchantOperatingCityId (Just booking.vehicleVariant) booking.estimatedDistance
+  driverPoolConfig <- getDriverPoolConfig booking.merchantOperatingCityId (Just booking.vehicleVariant) booking.estimatedDistance RENTAL
   goHomeCfg <- CQGHC.findByMerchantOpCityId booking.merchantOperatingCityId
   (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchant Nothing goHomeCfg
   return res
@@ -92,10 +92,12 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry searchReq booking merchan
     handle searchDetails =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
+          getPoolBatchNum = I.getPoolBatchNum searchTry.id,
           isReceivedMaxDriverQuotes = pure $ booking.status /= DB.CONFIRMED,
           getNextDriverPoolBatch = I.getNextDriverPoolBatch driverPoolConfig searchReq booking.fromLocation searchTry.id booking.vehicleVariant,
           sendSearchRequestToDrivers = I.sendSearchRequestToDrivers searchReq searchDetails driverExtraFeeBounds driverPoolConfig,
           getRescheduleTime = I.getRescheduleTime driverPoolConfig.singleBatchProcessTimeRental,
+          getRescheduleTimeRental = I.getRescheduleTimeRental,
           setBatchDurationLock = I.setBatchDurationLock searchTry.id driverPoolConfig.singleBatchProcessTimeRental,
           createRescheduleTime = I.createRescheduleTime driverPoolConfig.singleBatchProcessTimeRental,
           metrics =

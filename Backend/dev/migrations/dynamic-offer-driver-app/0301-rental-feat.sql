@@ -80,10 +80,77 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_start_reading_image_
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN odometer_end_reading_image_id CHARACTER VARYING(255);
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN single_batch_process_time_rental bigint DEFAULT 60;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allocate_rental_ride_time_diff bigint DEFAULT 900;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allocate_rental_ride_time_diff bigint DEFAULT 1800;
 
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN search_request_tag character varying(36) default 'ON_DEMAND';
 ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN booking_id character(36);
 
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN tag character varying(36) default 'ON_DEMAND';
 ALTER TABLE atlas_driver_offer_bpp.search_try ALTER COLUMN estimate_id DROP NOT NULL;
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN next_stop_loc_id character(36);
+
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN search_request_tag character varying(36) NOT NULL default 'ON_DEMAND';
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN allocate_rental_ride_time_diff bigint[] DEFAULT '{}'; -- 1200, 300
+
+INSERT INTO atlas_driver_offer_bpp.driver_pool_config (
+    id,
+    merchant_id,
+    merchant_operating_city_id,
+    min_radius_of_search,
+    max_radius_of_search,
+    radius_step_size,
+    driver_position_info_expiry,
+    actual_distance_threshold,
+    max_driver_quotes_required,
+    driver_quote_limit,
+    driver_request_count_limit,
+    driver_batch_size,
+    distance_based_batch_split,
+    max_number_of_batches,
+    max_parallel_search_requests,
+    pool_sorting_type,
+    single_batch_process_time,
+    single_batch_process_time_rental,
+    trip_distance,
+    radius_shrink_value_for_drivers_on_ride,
+    driver_to_destination_distance_threshold,
+    driver_to_destination_duration,
+    created_at,
+    updated_at,
+    vehicle_variant,
+    search_request_tag,
+    allocate_rental_ride_time_diff
+)
+SELECT
+    atlas_driver_offer_bpp.uuid_generate_v4() as id,
+    merchant_id,
+    merchant_operating_city_id,
+    min_radius_of_search,
+    max_radius_of_search,
+    radius_step_size,
+    driver_position_info_expiry,
+    actual_distance_threshold,
+    max_driver_quotes_required,
+    driver_quote_limit,
+    driver_request_count_limit,
+    driver_batch_size,
+    distance_based_batch_split,
+    max_number_of_batches,
+    max_parallel_search_requests,
+    pool_sorting_type,
+    single_batch_process_time,
+    single_batch_process_time_rental,
+    trip_distance,
+    radius_shrink_value_for_drivers_on_ride,
+    driver_to_destination_distance_threshold,
+    driver_to_destination_duration,
+    created_at,
+    updated_at,
+    vehicle_variant,
+    'RENTAL' as search_request_tag,
+    '{1200,300}' as allocate_rental_ride_time_diff
+FROM
+    atlas_driver_offer_bpp.driver_pool_config
+WHERE
+    merchant_operating_city_id = '745b475b-0e5a-2633-d1a5-7e8de8f1403d'; -- Kolkata

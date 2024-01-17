@@ -32,6 +32,7 @@ import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores)
 import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import Domain.Types.Person (Driver)
+import Domain.Types.SearchRequest
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps as Maps
@@ -114,5 +115,7 @@ instance HasCoordinates DriverPoolWithActualDistResult where
 data DriverPoolWithActualDistResultWithFlags = DriverPoolWithActualDistResultWithFlags
   { driverPoolWithActualDistResult :: [DriverPoolWithActualDistResult],
     isGoHomeBatch :: Bool,
+    searchRequestTag :: SearchRequestTag,
+    allocateRentalRideTimeDiff :: [Int],
     prevBatchDrivers :: [Id Driver]
   }

@@ -18,6 +18,7 @@ import Data.Time (UTCTime)
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.SearchRequest (SearchRequestTag)
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common
@@ -49,7 +50,9 @@ data DriverPoolConfigD u = DriverPoolConfig
     driverToDestinationDuration :: Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    vehicleVariant :: Maybe DVeh.Variant
+    vehicleVariant :: Maybe DVeh.Variant,
+    searchRequestTag :: SearchRequestTag,
+    allocateRentalRideTimeDiff :: [Int]
   }
   deriving (Generic, Show)
 

@@ -27,6 +27,7 @@ import Data.Coerce (coerce)
 import Domain.Types.Common
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.SearchRequest (SearchRequestTag)
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -37,17 +38,17 @@ import qualified Storage.Queries.Merchant.DriverPoolConfig as Queries
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DriverPoolConfig -> m ()
 create = Queries.create
 
-findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m [DriverPoolConfig]
-findAllByMerchantOpCityId id =
+findAllByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> SearchRequestTag -> m [DriverPoolConfig]
+findAllByMerchantOpCityId id rt =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return $ fmap (coerce @(DriverPoolConfigD 'Unsafe) @DriverPoolConfig) a
-    Nothing -> cacheDriverPoolConfigs id /=<< Queries.findAllByMerchantOpCityId id
+    Nothing -> cacheDriverPoolConfigs id /=<< Queries.findAllByMerchantOpCityId id rt
 
-findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
-findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantOpCityId merchantOpCityId
+findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> SearchRequestTag -> Meters -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistance merchantOpCityId rt tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantOpCityId merchantOpCityId rt
 
-findByMerchantOpCityIdAndTripDistanceAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe DVeh.Variant -> m (Maybe DriverPoolConfig)
-findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == variant) <$> findAllByMerchantOpCityId merchantOpCityId
+findByMerchantOpCityIdAndTripDistanceAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> SearchRequestTag -> Meters -> Maybe DVeh.Variant -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId rt tripDistance variant = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == variant) <$> findAllByMerchantOpCityId merchantOpCityId rt
 
 cacheDriverPoolConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DriverPoolConfig] -> m ()
 cacheDriverPoolConfigs merchantOpCityId cfg = do

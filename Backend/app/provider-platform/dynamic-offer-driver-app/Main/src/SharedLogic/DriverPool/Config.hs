@@ -16,6 +16,7 @@ module SharedLogic.DriverPool.Config where
 
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.SearchRequest (SearchRequestTag)
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -37,12 +38,13 @@ getDriverPoolConfig ::
   Id MerchantOperatingCity ->
   Maybe Variant.Variant ->
   Meters ->
+  SearchRequestTag ->
   m DriverPoolConfig
-getDriverPoolConfig merchantOpCityId Nothing dist = do
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
+getDriverPoolConfig merchantOpCityId Nothing dist rt = do
+  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId rt
   getDefaultDriverPoolConfig configs dist
-getDriverPoolConfig merchantOpCityId (Just vehicle) dist = do
-  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
+getDriverPoolConfig merchantOpCityId (Just vehicle) dist rt = do
+  configs <- CDP.findAllByMerchantOpCityId merchantOpCityId rt
   let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) dist) configs
   case configs of
     [] -> throwError $ InvalidRequest "DriverPoolConfig not found"

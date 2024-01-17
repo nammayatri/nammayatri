@@ -93,7 +93,9 @@ prepareDriverPoolBatch driverPoolCfg searchReq pickupLoc searchTryId vehicleVari
       DriverPoolWithActualDistResultWithFlags
         { driverPoolWithActualDistResult = fst poolBatchWithFlags,
           isGoHomeBatch = snd poolBatchWithFlags,
-          prevBatchDrivers = prevBatchDrivers
+          prevBatchDrivers = prevBatchDrivers,
+          searchRequestTag = driverPoolCfg.searchRequestTag,
+          allocateRentalRideTimeDiff = driverPoolCfg.allocateRentalRideTimeDiff
         }
     getPreviousBatchesDrivers = do
       batches <- previouslyAttemptedDrivers searchTryId
@@ -453,7 +455,7 @@ getPoolBatchNum searchTryId = do
   case res of
     Just i -> return i
     Nothing -> do
-      let expTime = 600
+      let expTime = 3600
       Redis.withCrossAppRedis $ Redis.setExp (poolBatchNumKey searchTryId) (0 :: Integer) expTime
       return 0
 
@@ -473,7 +475,7 @@ getPoolRadiusStep searchReqId = do
   case res of
     Just i -> return i
     Nothing -> do
-      let expTime = 600
+      let expTime = 3600
       Redis.withCrossAppRedis $ Redis.setExp (poolRadiusStepKey searchReqId) (0 :: Integer) expTime
       return 0
 

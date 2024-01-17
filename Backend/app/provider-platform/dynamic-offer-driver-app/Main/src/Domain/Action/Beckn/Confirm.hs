@@ -323,6 +323,7 @@ handler transporter req validateRes = do
                     uiDistanceCalculationWithAccuracy = Nothing,
                     uiDistanceCalculationWithoutAccuracy = Nothing
                   },
+            nextStopLocId = Nothing,
             createdAt = now,
             updatedAt = now
           }

@@ -17,6 +17,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal
     isReceivedMaxDriverQuotes,
     setBatchDurationLock,
     createRescheduleTime,
+    getRescheduleTimeRental,
     isSearchTryValid,
     cancelSearchTry,
     module Reexport,
@@ -92,6 +93,14 @@ createRescheduleTime ::
   m UTCTime
 createRescheduleTime singleBatchProcessTime lastProcTime = do
   return $ fromIntegral singleBatchProcessTime `addUTCTime` lastProcTime
+
+getRescheduleTimeRental ::
+  Monad m =>
+  NominalDiffTime ->
+  UTCTime ->
+  m UTCTime
+getRescheduleTimeRental lastProcTime delay = do
+  return $ lastProcTime `addUTCTime` delay
 
 cancelSearchTry :: (CacheFlow m r, EsqDBFlow m r) => Id DST.SearchTry -> m ()
 -- cancelSearchTry searchTryId = Esq.runTransaction $ QST.updateStatus searchTryId DST.CANCELLED

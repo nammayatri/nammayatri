@@ -73,6 +73,7 @@ data Ride = Ride
     rideRating :: Maybe Int,
     odometerStartReading :: Maybe Centesimal,
     odometerEndReading :: Maybe Centesimal,
+    nextStopLocId :: Maybe (Id DL.Location),
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

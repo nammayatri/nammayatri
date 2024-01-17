@@ -94,6 +94,12 @@ type API =
                     :> "odometerReadingImage"
                     :> QueryParam "start" Bool
                     :> Get '[JSON] DRide.OdometerReadingRes
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "arrived"
+                    :> "stop"
+                    :> ReqBody '[JSON] LatLong
+                    :> Post '[JSON] APISuccess
                 )
          )
 
@@ -132,6 +138,7 @@ handler =
              :<|> endRide
              :<|> cancelRide
              :<|> getOdometerReadingImage
+             :<|> arrivedAtStop
          )
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
@@ -184,3 +191,6 @@ arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPicku
 
 getOdometerReadingImage :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> Maybe Bool -> FlowHandler DRide.OdometerReadingRes
 getOdometerReadingImage (_, _, _) rideId isStartRide = withFlowHandlerAPI $ do DRide.getOdometerReadingImage rideId isStartRide
+
+arrivedAtStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+arrivedAtStop (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtStop rideId req

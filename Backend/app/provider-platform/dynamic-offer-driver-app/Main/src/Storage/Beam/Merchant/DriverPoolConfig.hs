@@ -12,10 +12,12 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Merchant.DriverPoolConfig where
 
 import qualified Database.Beam as B
+import Domain.Types.SearchRequest (SearchRequestTag)
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
@@ -47,7 +49,9 @@ data DriverPoolConfigT f = DriverPoolConfigT
     driverToDestinationDuration :: B.C f Seconds,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    vehicleVariant :: B.C f (Maybe DVeh.Variant)
+    vehicleVariant :: B.C f (Maybe DVeh.Variant),
+    searchRequestTag :: B.C f SearchRequestTag,
+    allocateRentalRideTimeDiff :: B.C f [Int]
   }
   deriving (Generic, B.Beamable)
 

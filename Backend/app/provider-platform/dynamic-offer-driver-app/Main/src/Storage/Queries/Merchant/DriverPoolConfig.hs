@@ -22,6 +22,7 @@ where
 
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
+import Domain.Types.SearchRequest (SearchRequestTag)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -32,8 +33,8 @@ import qualified Storage.Beam.Merchant.DriverPoolConfig as BeamDPC
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverPoolConfig -> m ()
 create = createWithKV
 
-findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> m [DriverPoolConfig]
-findAllByMerchantOpCityId (Id merchantOperatingCityId) = findAllWithOptionsKV [Se.Is BeamDPC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId] (Se.Desc BeamDPC.tripDistance) Nothing Nothing
+findAllByMerchantOpCityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SearchRequestTag -> m [DriverPoolConfig]
+findAllByMerchantOpCityId (Id merchantOperatingCityId) rt = findAllWithOptionsKV [Se.And [Se.Is BeamDPC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId, Se.Is BeamDPC.searchRequestTag $ Se.Eq rt]] (Se.Desc BeamDPC.tripDistance) Nothing Nothing
 
 findByMerchantIdAndTripDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantIdAndTripDistance (Id merchantOperatingCityId) tripDistance = findOneWithKV [Se.And [Se.Is BeamDPC.merchantOperatingCityId $ Se.Eq merchantOperatingCityId, Se.Is BeamDPC.tripDistance $ Se.Eq tripDistance]]
@@ -88,7 +89,9 @@ instance FromTType' BeamDPC.DriverPoolConfig DriverPoolConfig where
             driverToDestinationDuration = driverToDestinationDuration,
             createdAt = createdAt,
             updatedAt = updatedAt,
-            vehicleVariant = vehicleVariant
+            vehicleVariant = vehicleVariant,
+            searchRequestTag = searchRequestTag,
+            allocateRentalRideTimeDiff = allocateRentalRideTimeDiff
           }
 
 instance ToTType' BeamDPC.DriverPoolConfig DriverPoolConfig where
@@ -117,6 +120,8 @@ instance ToTType' BeamDPC.DriverPoolConfig DriverPoolConfig where
         BeamDPC.driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
         BeamDPC.driverToDestinationDuration = driverToDestinationDuration,
         BeamDPC.vehicleVariant = vehicleVariant,
+        BeamDPC.searchRequestTag = searchRequestTag,
+        BeamDPC.allocateRentalRideTimeDiff = allocateRentalRideTimeDiff,
         BeamDPC.createdAt = createdAt,
         BeamDPC.updatedAt = updatedAt
       }
