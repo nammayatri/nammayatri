@@ -33,7 +33,7 @@ data CustomerEndpoint
   | BlockCustomerEndpoint
   | UnblockCustomerEndpoint
   | CustomerCancellationDuesSyncEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "CustomerEndpoint"
 

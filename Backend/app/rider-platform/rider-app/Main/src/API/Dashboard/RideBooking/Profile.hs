@@ -31,7 +31,7 @@ import SharedLogic.Merchant
 import Storage.Beam.SystemConfigs ()
 
 data ProfileEndPoint = UpdatePersonEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "ProfileEndPoint"
 

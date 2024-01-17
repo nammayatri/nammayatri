@@ -63,7 +63,7 @@ data DriverEndpoint
   | SendMessageToDriverViaDashboardEndPoint
   | SendDummyNotificationToDriverViaDashboardEndPoint
   | ChangeOperatingCityEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverEndpoint"
 
