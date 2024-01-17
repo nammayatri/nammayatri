@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Person where
 
@@ -20,12 +21,14 @@ import Database.Esqueleto.PostgreSQL
 import Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Role as Role
+import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Beam.Person as BeamP
 import Storage.Tabular.MerchantAccess as Access
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Role as Role
@@ -174,3 +177,29 @@ updatePersonMobile personId encMobileNumber = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
+
+instance FromTType' BeamP.Person Person.Person where
+  fromTType' BeamP.PersonT {..} = do
+    return $
+      Just
+        Person.Person
+          { id = Id id,
+            roleId = Id roleId,
+            email = case (emailEncrypted, emailHash) of
+              (Just email, Just hash) -> Just $ EncryptedHashed (Encrypted email) hash
+              _ -> Nothing,
+            mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
+            ..
+          }
+
+instance ToTType' BeamP.Person Person.Person where
+  toTType' Person.Person {..} =
+    BeamP.PersonT
+      { id = getId id,
+        roleId = getId roleId,
+        emailEncrypted = email <&> (unEncrypted . (.encrypted)),
+        emailHash = email <&> (.hash),
+        mobileNumberEncrypted = mobileNumber & unEncrypted . (.encrypted),
+        mobileNumberHash = mobileNumber.hash,
+        ..
+      }
