@@ -22,7 +22,7 @@
     };
 
     haskell-cac = {
-      url = "path:/Users/akhilesh.b/Desktop/haskell_cac_client";
+      url = "github:piyushKumar-1/haskell_cac_client/Testing";
       inputs = {
         common.follows = "common";
       };
