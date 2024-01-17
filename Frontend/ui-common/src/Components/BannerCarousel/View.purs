@@ -127,12 +127,12 @@ bannerView push config =
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , gravity CENTER_VERTICAL
-        , padding $ Padding 0 5 5 5
+        , padding $ Padding 0 5 0 5
         ]
         [ imageView
             [ height config.imageHeight
             , width config.imageWidth
+            , gravity RIGHT
             , imageUrlHolder "bannerImageUrl"
             ]
         ]
