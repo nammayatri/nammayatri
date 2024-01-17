@@ -35,6 +35,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
 import Data.Either (Either(..), either, isRight)
 import Data.Function.Uncurried (runFn1, runFn2)
+import Data.Function (on)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
 import Data.Lens ((^.))
@@ -3048,9 +3049,15 @@ chooseCityFlow = do
     detectCityAPI lat lon state = do
       resp <- lift $ lift $ Remote.detectCity lat lon
       case resp of
-        Right (API.DetectCityResp resp') -> case resp'.city of
-          Just city -> modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just city }, props { locationUnserviceable = false, locationDetectionFailed = false }}
-          Nothing -> modifyScreenState $ ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true }}
+        Right (API.DetectCityResp resp') -> do
+          let unserviceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { props { locationUnserviceable = true },  data { locationSelected = Nothing }}
+              compareStrings = on (==) (toLower <<< trim)
+          case resp'.city of
+            Just city -> do
+              let cityInList = any (\cityOb -> compareStrings cityOb.cityName city) state.data.config.cityConfig
+                  locationServiceableState = ChooseCityScreenStateType \chooseCityScreenState -> chooseCityScreenState { data { locationSelected = Just city }, props { locationUnserviceable = false, locationDetectionFailed = false }}
+              modifyScreenState if cityInList then locationServiceableState else unserviceableState
+            Nothing -> modifyScreenState unserviceableState
         Left _ -> do
           liftFlowBT $ firebaseLogEvent "ny_driver_detect_city_fallback"
           straightLineDist lat lon state
