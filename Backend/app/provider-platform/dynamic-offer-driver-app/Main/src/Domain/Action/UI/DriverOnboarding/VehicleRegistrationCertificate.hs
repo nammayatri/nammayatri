@@ -38,7 +38,7 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
-import Data.Text as T hiding (find, length, map, null, zip)
+import Data.Text as T hiding (elem, find, length, map, null, zip)
 import qualified Data.Time as DT
 import qualified Data.Time.Calendar.OrdinalDate as TO
 import qualified Domain.Types.DriverOnboarding.DriverRCAssociation as Domain
@@ -53,7 +53,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Vehicle as Vehicle
 import Environment
 import Kernel.External.Encryption
-import qualified Kernel.External.Verification.Interface.Idfy as Idfy
+import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude hiding (find)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -203,10 +203,15 @@ verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegi
           then Domain.Success
           else Domain.Skipped
   verifyRes <-
-    Verification.verifyRCAsync person.merchantId merchantOpCityId $
-      Verification.VerifyRCAsyncReq {rcNumber = rcNumber, driverId = person.id.getId}
-  idfyVerificationEntity <- mkIdfyVerificationEntity verifyRes.requestId now imageExtractionValidation encryptedRC
-  IVQuery.create idfyVerificationEntity
+    Verification.verifyRC person.merchantId
+      merchantOpCityId
+      Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId}
+  case verifyRes of
+    Verification.AsyncResp res -> do
+      idfyVerificationEntity <- mkIdfyVerificationEntity res.requestId now imageExtractionValidation encryptedRC
+      IVQuery.create idfyVerificationEntity
+    Verification.SyncResp res -> do
+      void $ onVerifyRC person Nothing res
   where
     mkIdfyVerificationEntity requestId now imageExtractionValidation encryptedRC = do
       id <- generateGUID
@@ -231,30 +236,28 @@ verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegi
             updatedAt = now
           }
 
-onVerifyRC :: Domain.IdfyVerification -> Idfy.RCVerificationOutput -> Flow AckResponse
-onVerifyRC verificationReq output = do
-  person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
-  if verificationReq.imageExtractionValidation == Domain.Skipped
-    && compareRegistrationDates output.registration_date verificationReq.issueDateOnDoc
-    then IVQuery.updateExtractValidationStatus verificationReq.requestId Domain.Failed >> return Ack
+onVerifyRC :: Person.Person -> Maybe Domain.IdfyVerification -> VT.RCVerificationResponse -> Flow AckResponse
+onVerifyRC person mbVerificationReq output = do
+  if maybe False (\req -> req.imageExtractionValidation == Domain.Skipped && compareRegistrationDates output.registrationDate req.issueDateOnDoc) mbVerificationReq
+    then IVQuery.updateExtractValidationStatus (maybe "" (.requestId) mbVerificationReq) Domain.Failed >> return Ack
     else do
       now <- getCurrentTime
       id <- generateGUID
       rCConfigs <- SCO.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId ODC.RC >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantOperatingCityId.getId (show ODC.RC))
       rCInsuranceConfigs <- SCO.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId ODC.RCInsurance >>= fromMaybeM (OnboardingDocumentConfigNotFound person.merchantOperatingCityId.getId (show ODC.RCInsurance))
-      mEncryptedRC <- encrypt `mapM` output.registration_number
+      mEncryptedRC <- encrypt `mapM` output.registrationNumber
       modelNamesHashMap <- asks (.modelNamesHashMap)
-      let mbFitnessEpiry = convertTextToUTC output.fitness_upto <|> Just (DT.UTCTime (TO.fromOrdinalDate 1900 1) 0)
-      fleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) output.registration_number
-      let mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id verificationReq.documentImageId1 now verificationReq.dashboardPassedVehicleVariant fleetOwnerId modelNamesHashMap <$> mEncryptedRC <*> mbFitnessEpiry
+      let mbFitnessEpiry = convertTextToUTC output.fitnessUpto <|> convertTextToUTC output.permitValidityUpto <|> Just (DT.UTCTime (TO.fromOrdinalDate 1900 1) 0)
+      fleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) output.registrationNumber
+      let mVehicleRC = createRC rCConfigs rCInsuranceConfigs output id (maybe "" (.documentImageId1) mbVerificationReq) now ((.dashboardPassedVehicleVariant) =<< mbVerificationReq) fleetOwnerId modelNamesHashMap <$> mEncryptedRC <*> mbFitnessEpiry
       case mVehicleRC of
         Just vehicleRC -> do
           RCQuery.upsert vehicleRC
           -- linking to driver
-          rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" output.registration_number))
+          rc <- RCQuery.findByRCAndExpiry vehicleRC.certificateNumber vehicleRC.fitnessExpiry >>= fromMaybeM (RCNotFound (fromMaybe "" output.registrationNumber))
           driverRCAssoc <- Domain.makeRCAssociation person.id rc.id (convertTextToUTC (Just "2099-12-12"))
           DAQuery.create driverRCAssoc
-          whenJust output.registration_number $ \num -> Redis.del $ makeFleetOwnerKey num
+          whenJust output.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
           return Ack
         _ -> return Ack
 
@@ -395,7 +398,7 @@ getAllLinkedRCs (driverId, _, _) = do
 createRC ::
   ODC.OnboardingDocumentConfig ->
   ODC.OnboardingDocumentConfig ->
-  Idfy.RCVerificationOutput ->
+  VT.RCVerificationResponse ->
   Id Domain.VehicleRegistrationCertificate ->
   Id Image.Image ->
   UTCTime ->
@@ -406,26 +409,26 @@ createRC ::
   UTCTime ->
   Domain.VehicleRegistrationCertificate
 createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwnerId modelNamesHashMap edl expiry = do
-  let insuranceValidity = convertTextToUTC output.insurance_validity
-  let vehicleClass = output.vehicle_class
-  let vehicleCategory = output.vehicle_category
-  let vehicleCapacity = (readMaybe . T.unpack) =<< readFromJson =<< output.seating_capacity
+  let insuranceValidity = convertTextToUTC output.insuranceValidity
+  let vehicleClass = output.vehicleClass
+  let vehicleCategory = output.vehicleCategory
+  let vehicleCapacity = (readMaybe . T.unpack) =<< readFromJson =<< output.seatingCapacity
   let manufacturer = (readMaybe . T.unpack) =<< output.manufacturer
-  let (verificationStatus, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass vehicleCategory now vehicleCapacity manufacturer
+  let (verificationStatus, variant) = validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity vehicleClass vehicleCategory now vehicleCapacity manufacturer output.bodyType
   Domain.VehicleRegistrationCertificate
     { id,
       documentImageId = imageId,
       certificateNumber = edl,
       fitnessExpiry = expiry,
-      permitExpiry = convertTextToUTC output.permit_validity_upto,
-      pucExpiry = convertTextToUTC output.puc_validity_upto,
+      permitExpiry = convertTextToUTC output.permitValidityUpto,
+      pucExpiry = convertTextToUTC output.pucValidityUpto,
       vehicleClass,
       vehicleVariant = variant,
-      vehicleManufacturer = output.manufacturer <|> output.manufacturer_model,
+      vehicleManufacturer = output.manufacturer <|> output.manufacturerModel,
       vehicleCapacity,
-      vehicleModel = updateModel =<< (output.manufacturer_model <|> output.m_y_manufacturing),
+      vehicleModel = updateModel =<< (output.manufacturerModel <|> output.mYManufacturing),
       vehicleColor = output.color <|> output.colour,
-      vehicleEnergyType = output.fuel_type,
+      vehicleEnergyType = output.fuelType,
       insuranceValidity,
       verificationStatus,
       fleetOwnerId = mbFleetOwnerId,
@@ -436,11 +439,11 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwn
   where
     updateModel modelFromIdfy = Just . fromMaybe "" $ HM.lookup modelFromIdfy modelNamesHashMap
     readFromJson (A.String val) = Just val
-    readFromJson (A.Number val) = Just $ show val
+    readFromJson (A.Number val) = Just $ T.pack $ show (floor val :: Int)
     readFromJson _ = Nothing
 
-validateRCStatus :: Maybe Vehicle.Variant -> ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> Maybe Text -> UTCTime -> Maybe Int -> Maybe Text -> (Domain.VerificationStatus, Maybe Vehicle.Variant)
-validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity cov vehicleCategory now capacity manufacturer = do
+validateRCStatus :: Maybe Vehicle.Variant -> ODC.OnboardingDocumentConfig -> ODC.OnboardingDocumentConfig -> UTCTime -> Maybe UTCTime -> Maybe Text -> Maybe Text -> UTCTime -> Maybe Int -> Maybe Text -> Maybe Text -> (Domain.VerificationStatus, Maybe Vehicle.Variant)
+validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity cov vehicleCategory now capacity manufacturer bodyType = do
   case mbVariant of
     Just variant -> (Domain.VALID, Just variant)
     Nothing -> do
@@ -448,7 +451,7 @@ validateRCStatus mbVariant rcconfigs rcInsurenceConfigs expiry insuranceValidity
         ODC.RCValidClasses [] -> (Domain.INVALID, Nothing)
         ODC.RCValidClasses vehicleClassVariantMap -> do
           let validCOVsCheck = rcconfigs.vehicleClassCheckType
-          let (isCOVValid, variant) = maybe (False, Nothing) (isValidCOVRC vehicleCategory capacity manufacturer vehicleClassVariantMap validCOVsCheck) (cov <|> vehicleCategory)
+          let (isCOVValid, variant) = maybe (False, Nothing) (isValidCOVRC vehicleCategory capacity manufacturer bodyType vehicleClassVariantMap validCOVsCheck) (cov <|> vehicleCategory)
           let validInsurance = (not rcInsurenceConfigs.checkExpiry) || maybe False (now <) insuranceValidity
           if ((not rcconfigs.checkExpiry) || now < expiry) && isCOVValid && validInsurance then (Domain.VALID, variant) else (Domain.INVALID, variant)
         _ -> (Domain.INVALID, Nothing)
@@ -458,8 +461,8 @@ convertTextToUTC a = do
   a_ <- a
   DT.parseTimeM True DT.defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
-isValidCOVRC :: Maybe Text -> Maybe Int -> Maybe Text -> [ODC.VehicleClassVariantMap] -> ODC.VehicleClassCheckType -> Text -> (Bool, Maybe Vehicle.Variant)
-isValidCOVRC mVehicleCategory capacity manufacturer vehicleClassVariantMap validCOVsCheck cov = do
+isValidCOVRC :: Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> [ODC.VehicleClassVariantMap] -> ODC.VehicleClassCheckType -> Text -> (Bool, Maybe Vehicle.Variant)
+isValidCOVRC mVehicleCategory capacity manufacturer bodyType vehicleClassVariantMap validCOVsCheck cov = do
   let vehicleClassVariant = DL.find checkIfMatch vehicleClassVariantMap
   case vehicleClassVariant of
     Just obj -> (True, Just obj.vehicleVariant)
@@ -470,7 +473,8 @@ isValidCOVRC mVehicleCategory capacity manufacturer vehicleClassVariantMap valid
       let categoryMatched = maybe False (classCheckFunction validCOVsCheck (T.toUpper obj.vehicleClass) . T.toUpper) mVehicleCategory
       let capacityMatched = capacityCheckFunction obj.vehicleCapacity capacity
       let manufacturerMatched = manufacturerCheckFunction obj.manufacturer manufacturer
-      (classMatched || categoryMatched) && capacityMatched && manufacturerMatched
+      let bodyTypeMatched = bodyTypeCheckFunction obj.bodyType bodyType
+      (classMatched || categoryMatched) && capacityMatched && manufacturerMatched && bodyTypeMatched
 
 -- capacityCheckFunction validCapacity rcCapacity
 capacityCheckFunction :: Maybe Int -> Maybe Int -> Bool
@@ -484,6 +488,12 @@ manufacturerCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpp
 manufacturerCheckFunction Nothing (Just _) = True
 manufacturerCheckFunction Nothing Nothing = True
 manufacturerCheckFunction _ _ = False
+
+bodyTypeCheckFunction :: Maybe Text -> Maybe Text -> Bool
+bodyTypeCheckFunction (Just a) (Just b) = T.isInfixOf (T.toUpper a) (T.toUpper b)
+bodyTypeCheckFunction Nothing (Just _) = True
+bodyTypeCheckFunction Nothing Nothing = True
+bodyTypeCheckFunction _ _ = False
 
 classCheckFunction :: ODC.VehicleClassCheckType -> Text -> Text -> Bool
 classCheckFunction validCOVsCheck =

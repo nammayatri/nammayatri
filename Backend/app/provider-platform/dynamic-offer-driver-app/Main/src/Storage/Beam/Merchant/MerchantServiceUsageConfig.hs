@@ -52,7 +52,8 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     issueTicketService :: B.C f IssueTicketService,
     getExophone :: B.C f CallService,
     updatedAt :: B.C f UTCTime,
-    createdAt :: B.C f UTCTime
+    createdAt :: B.C f UTCTime,
+    verificationProvidersPriorityList :: B.C f [VerificationService]
   }
   deriving (Generic, B.Beamable)
 

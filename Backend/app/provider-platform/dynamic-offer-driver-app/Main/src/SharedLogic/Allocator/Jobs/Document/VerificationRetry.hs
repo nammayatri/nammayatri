@@ -56,9 +56,12 @@ retryDocumentVerificationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       case verificationReq.docType of
         Image.VehicleRegistrationCertificate -> do
           verifyRes <-
-            Verification.verifyRCAsync person.merchantId person.merchantOperatingCityId $
-              Verification.VerifyRCAsyncReq {rcNumber = documentNumber, driverId = person.id.getId}
-          mkNewVerificationEntity verificationReq verifyRes.requestId
+            Verification.verifyRC person.merchantId person.merchantOperatingCityId
+              Verification.VerifyRCReq {rcNumber = documentNumber, driverId = person.id.getId}
+          case verifyRes of
+            Verification.AsyncResp Verification.VerifyAsyncResp {..} -> do
+              mkNewVerificationEntity verificationReq requestId
+            _ -> pure ()
         Image.DriverLicense -> do
           whenJust verificationReq.driverDateOfBirth $ \dob -> do
             verifyRes <-
