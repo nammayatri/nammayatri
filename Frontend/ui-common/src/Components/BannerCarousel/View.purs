@@ -98,7 +98,6 @@ bannerView push config =
             [ imageView
                 [ height $ V 10
                 , width $ V 15
-                , margin $ MarginRight 5
                 , imageUrlHolder "actionIconUrl"
                 , visibilityHolder "actionIconVisibility"
                 ]
