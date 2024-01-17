@@ -1365,14 +1365,18 @@
         ]
       },
       "locked": {
-        "lastModified": 1705408069,
-        "narHash": "sha256-8SPQbTQHJ8iULq7YHL4QXHC4Yw1hEuu4hJGZypd6B/Y=",
-        "path": "/Users/akhilesh.b/Desktop/haskell_cac_client",
-        "type": "path"
+        "lastModified": 1705490304,
+        "narHash": "sha256-Jr7HkAdyS13qzwFdNDzCX2YUGYi7NbAAHRzlX/EFOdY=",
+        "owner": "piyushKumar-1",
+        "repo": "haskell_cac_client",
+        "rev": "bd6ce84f92d4534bd5f0ea6aedf8b13e3d15c4ba",
+        "type": "github"
       },
       "original": {
-        "path": "/Users/akhilesh.b/Desktop/haskell_cac_client",
-        "type": "path"
+        "owner": "piyushKumar-1",
+        "ref": "Testing",
+        "repo": "haskell_cac_client",
+        "type": "github"
       }
     },
     "haskell-flake": {
