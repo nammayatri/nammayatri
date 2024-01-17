@@ -11,13 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Transaction where
 
 import Domain.Types.ServerName as DSN
 import Domain.Types.Transaction as DT
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
+import Kernel.Types.Id
+import qualified Storage.Beam.Transaction as BeamT
 import Storage.Tabular.Transaction
 
 create :: Transaction -> SqlDB ()
@@ -33,3 +37,27 @@ fetchLastTransaction endpoint serverName = do
     orderBy [desc $ transaction ^. TransactionCreatedAt]
     limit 1
     return transaction
+
+instance FromTType' BeamT.Transaction DT.Transaction where
+  fromTType' BeamT.TransactionT {..} = do
+    pure $
+      Just
+        DT.Transaction
+          { id = Id id,
+            requestorId = Id <$> requestorId,
+            merchantId = Id <$> merchantId,
+            commonDriverId = Id <$> commonDriverId,
+            commonRideId = Id <$> commonRideId,
+            ..
+          }
+
+instance ToTType' BeamT.Transaction DT.Transaction where
+  toTType' DT.Transaction {..} =
+    BeamT.TransactionT
+      { id = getId id,
+        requestorId = getId <$> requestorId,
+        merchantId = getId <$> merchantId,
+        commonDriverId = getId <$> commonDriverId,
+        commonRideId = getId <$> commonRideId,
+        ..
+      }

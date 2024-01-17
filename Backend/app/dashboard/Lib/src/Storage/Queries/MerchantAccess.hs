@@ -11,16 +11,19 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.MerchantAccess where
 
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
+import qualified Storage.Beam.MerchantAccess as BeamMA
 import Storage.Tabular.Merchant
 import Storage.Tabular.MerchantAccess
 
@@ -104,3 +107,25 @@ findAllUserAccountForMerchant merchantId = findAll $ do
     merchantAccess ^. MerchantAccessMerchantId ==. val (toKey merchantId)
   groupBy (merchantAccess ^. MerchantAccessPersonId)
   return merchantAccess
+
+instance FromTType' BeamMA.MerchantAccess DAccess.MerchantAccess where
+  fromTType' BeamMA.MerchantAccessT {..} = do
+    return $
+      Just
+        DAccess.MerchantAccess
+          { id = Id id,
+            merchantId = Id merchantId,
+            personId = Id personId,
+            merchantShortId = ShortId merchantShortId,
+            ..
+          }
+
+instance ToTType' BeamMA.MerchantAccess DAccess.MerchantAccess where
+  toTType' DAccess.MerchantAccess {..} =
+    BeamMA.MerchantAccessT
+      { id = getId id,
+        merchantId = getId merchantId,
+        personId = getId personId,
+        merchantShortId = getShortId merchantShortId,
+        ..
+      }

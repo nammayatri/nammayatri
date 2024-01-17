@@ -11,13 +11,16 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Role where
 
 import Domain.Types.Role as Role
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.Role as BeamR
 import Storage.Tabular.Role
 
 create :: Role -> SqlDB ()
@@ -87,3 +90,19 @@ findAllWithLimitOffset mbLimit mbOffset mbSearchString = do
       let likeSearchStr = (%) ++. val searchStr ++. (%)
       role ^. RoleName
         `ilike` likeSearchStr
+
+instance FromTType' BeamR.Role Role.Role where
+  fromTType' BeamR.RoleT {..} = do
+    return $
+      Just
+        Role.Role
+          { id = Id id,
+            ..
+          }
+
+instance ToTType' BeamR.Role Role.Role where
+  toTType' Role.Role {..} =
+    BeamR.RoleT
+      { id = getId id,
+        ..
+      }

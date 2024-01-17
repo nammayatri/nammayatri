@@ -11,13 +11,17 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.Merchant where
 
-import Domain.Types.Merchant as DOrg
+import Domain.Types.Merchant as Domain
+import Kernel.Beam.Functions
+import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import qualified Storage.Beam.Merchant as BeamM
 import Storage.Tabular.Merchant
 
 create :: Merchant -> SqlDB ()
@@ -42,3 +46,26 @@ findAllMerchants ::
 findAllMerchants = do
   Esq.findAll $ do
     from $ table @MerchantT
+
+instance FromTType' BeamM.Merchant Domain.Merchant where
+  fromTType' BeamM.MerchantT {..} = do
+    pure $
+      Just
+        Domain.Merchant
+          { id = Id id,
+            shortId = ShortId shortId,
+            email = case (emailEncrypted, emailHash) of
+              (Just email, Just hash) -> Just $ EncryptedHashed (Encrypted email) hash
+              _ -> Nothing,
+            ..
+          }
+
+instance ToTType' BeamM.Merchant Domain.Merchant where
+  toTType' Domain.Merchant {..} =
+    BeamM.MerchantT
+      { id = getId id,
+        shortId = getShortId shortId,
+        emailEncrypted = email <&> (unEncrypted . (.encrypted)),
+        emailHash = email <&> (.hash),
+        ..
+      }

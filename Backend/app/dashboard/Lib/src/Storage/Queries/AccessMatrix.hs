@@ -11,15 +11,18 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.AccessMatrix where
 
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Role as DRole
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Beam.AccessMatrix as BeamAM
 import Storage.Tabular.AccessMatrix
 
 create :: DMatrix.AccessMatrixItem -> SqlDB ()
@@ -73,3 +76,21 @@ updateUserAccessType accessMatrixItemId userActionType userAccessType = do
         AccessMatrixUpdatedAt =. val now
       ]
     where_ $ tbl ^. AccessMatrixTId ==. val (toKey accessMatrixItemId)
+
+instance FromTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
+  fromTType' BeamAM.AccessMatrixT {..} = do
+    return $
+      Just
+        DMatrix.AccessMatrixItem
+          { id = Id id,
+            roleId = Id roleId,
+            ..
+          }
+
+instance ToTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
+  toTType' DMatrix.AccessMatrixItem {..} =
+    BeamAM.AccessMatrixT
+      { id = getId id,
+        roleId = getId roleId,
+        ..
+      }
