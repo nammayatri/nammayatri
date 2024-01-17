@@ -13,9 +13,9 @@
 -}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Queries.DriverOnboarding.ErrorMessagesTranslations where
+module Storage.Queries.Translations where
 
-import Domain.Types.DriverOnboarding.ErrorMessagesTranslations
+import Domain.Types.Translations
 import Kernel.Beam.Functions
 import Kernel.External.Types
 import Kernel.Prelude
@@ -23,35 +23,35 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
-import qualified Storage.Beam.DriverOnboarding.ErrorMessagesTranslations as BeamEMT
+import qualified Storage.Beam.Translations as BeamEMT
 
-findByErrorAndLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Language -> m (Maybe ErrorMessagesTranslations)
-findByErrorAndLanguage errorType language = do
-  maybeTranslation <- findOneWithKV [Se.And [Se.Is BeamEMT.errorType $ Se.Eq errorType, Se.Is BeamEMT.language $ Se.Eq language]]
+findByErrorAndLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Language -> m (Maybe Translations)
+findByErrorAndLanguage messageKey language = do
+  maybeTranslation <- findOneWithKV [Se.And [Se.Is BeamEMT.messageKey $ Se.Eq messageKey, Se.Is BeamEMT.language $ Se.Eq language]]
   case maybeTranslation of
     Just translation -> return (Just translation)
-    Nothing -> findOneWithKV [Se.And [Se.Is BeamEMT.errorType $ Se.Eq errorType, Se.Is BeamEMT.language $ Se.Eq ENGLISH]]
+    Nothing -> findOneWithKV [Se.And [Se.Is BeamEMT.messageKey $ Se.Eq messageKey, Se.Is BeamEMT.language $ Se.Eq ENGLISH]]
 
-instance FromTType' BeamEMT.ErrorMessagesTranslations ErrorMessagesTranslations where
-  fromTType' BeamEMT.ErrorMessagesTranslationsT {..} = do
+instance FromTType' BeamEMT.Translations Translations where
+  fromTType' BeamEMT.TranslationsT {..} = do
     pure $
       Just
-        ErrorMessagesTranslations
+        Translations
           { id = Id id,
-            errorType = errorType,
+            messageKey = messageKey,
             language = language,
-            errorMessage = errorMessage,
+            message = message,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
 
-instance ToTType' BeamEMT.ErrorMessagesTranslations ErrorMessagesTranslations where
-  toTType' ErrorMessagesTranslations {..} = do
-    BeamEMT.ErrorMessagesTranslationsT
+instance ToTType' BeamEMT.Translations Translations where
+  toTType' Translations {..} = do
+    BeamEMT.TranslationsT
       { BeamEMT.id = id.getId,
-        BeamEMT.errorType = errorType,
+        BeamEMT.messageKey = messageKey,
         BeamEMT.language = language,
-        BeamEMT.errorMessage = errorMessage,
+        BeamEMT.message = message,
         BeamEMT.createdAt = createdAt,
         BeamEMT.updatedAt = updatedAt
       }
