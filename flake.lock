@@ -1359,17 +1359,16 @@
           "common"
         ],
         "nixpkgs": [
-          "haskell-cac",
           "common",
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1705490304,
-        "narHash": "sha256-Jr7HkAdyS13qzwFdNDzCX2YUGYi7NbAAHRzlX/EFOdY=",
+        "lastModified": 1705503124,
+        "narHash": "sha256-kQaQtLILvFc5IfqbXXiUywZ1OTknzdiOge75JkH7+pU=",
         "owner": "piyushKumar-1",
         "repo": "haskell_cac_client",
-        "rev": "bd6ce84f92d4534bd5f0ea6aedf8b13e3d15c4ba",
+        "rev": "4749671ee674b4480fb7023fcc1afdbb9385dd10",
         "type": "github"
       },
       "original": {
