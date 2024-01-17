@@ -15,31 +15,31 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.DriverOnboarding.ErrorMessagesTranslations where
+module Storage.Beam.Translations where
 
 import qualified Database.Beam as B
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Tools.Beam.UtilsTH
 
-data ErrorMessagesTranslationsT f = ErrorMessagesTranslationsT
+data TranslationsT f = TranslationsT
   { id :: B.C f Text,
-    errorType :: B.C f Text,
+    messageKey :: B.C f Text,
     language :: B.C f Language,
-    errorMessage :: B.C f Text,
+    message :: B.C f Text,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table ErrorMessagesTranslationsT where
-  data PrimaryKey ErrorMessagesTranslationsT f
+instance B.Table TranslationsT where
+  data PrimaryKey TranslationsT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type ErrorMessagesTranslations = ErrorMessagesTranslationsT Identity
+type Translations = TranslationsT Identity
 
-$(enableKVPG ''ErrorMessagesTranslationsT ['id] [['errorType], ['language]])
+$(enableKVPG ''TranslationsT ['id] [['messageKey], ['language]])
 
-$(mkTableInstances ''ErrorMessagesTranslationsT "error_messages_translations")
+$(mkTableInstances ''TranslationsT "translations")

@@ -49,11 +49,11 @@ import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverOnboarding.AadhaarVerification as SAV
 import qualified Storage.Queries.DriverOnboarding.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DRAQuery
-import qualified Storage.Queries.DriverOnboarding.ErrorMessagesTranslations as EMTQuery
 import qualified Storage.Queries.DriverOnboarding.IdfyVerification as IVQuery
 import qualified Storage.Queries.DriverOnboarding.Image as IQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import Storage.Queries.Person as Person
+import qualified Storage.Queries.Translations as MTQuery
 
 -- PENDING means "pending verification"
 -- FAILED is used when verification is failed
@@ -232,7 +232,7 @@ data VerificationMessage
 
 toVerificationMessage :: VerificationMessage -> Language -> Flow Text
 toVerificationMessage msg lang = do
-  errorTranslations <- EMTQuery.findByErrorAndLanguage (T.pack (show msg)) lang
+  errorTranslations <- MTQuery.findByErrorAndLanguage (T.pack (show msg)) lang
   case errorTranslations of
-    Just errorTranslation -> return $ errorTranslation.errorMessage
+    Just errorTranslation -> return $ errorTranslation.message
     Nothing -> return "Something went wrong"
