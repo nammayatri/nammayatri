@@ -62,11 +62,11 @@ buildStatusReq DStatusReq {..} = do
         { order_id = bppBookingId.getId
         }
 
-_buildStatusReq ::
+buildStatusReqV2 ::
   (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DStatusReq ->
   m (Spec.StatusReq)
-_buildStatusReq DStatusReq {..} = do
+buildStatusReqV2 DStatusReq {..} = do
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)

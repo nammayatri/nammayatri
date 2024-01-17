@@ -71,10 +71,20 @@ onInit _ reqBS = withFlowHandlerBecknAPI $ do
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = do
         dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-        void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
+        isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+        if isBecknSpecVersion2
+          then do
+            void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+          else do
+            void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = do
         dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-        void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
+        isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+        if isBecknSpecVersion2
+          then do
+            void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+          else do
+            void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
       | otherwise = throwM exc
 
     cancelReq =

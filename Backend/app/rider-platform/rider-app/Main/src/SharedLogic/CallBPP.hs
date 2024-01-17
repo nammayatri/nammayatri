@@ -165,7 +165,20 @@ cancel ::
   m CancelRes
 cancel providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "cancel" API.cancelAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "cancel" API.cancelAPIV1 providerUrl internalEndPointHashMap req
+
+cancelV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  CancelReqV2 ->
+  m CancelRes
+cancelV2 providerUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.cancelReqContext.contextBapId
+  callBecknAPIWithSignature bapId "cancel" API.cancelAPIV2 providerUrl internalEndPointHashMap req
 
 update ::
   ( MonadFlow m,
@@ -197,7 +210,8 @@ callTrack ::
     CoreMetrics m,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["isBecknSpecVersion2" ::: Bool]
   ) =>
   DB.Booking ->
   DRide.Ride ->
@@ -208,7 +222,7 @@ callTrack booking ride = do
   let merchantOperatingCityId = booking.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  let trackBUildReq =
+  let trackBuildReq =
         TrackACL.TrackBuildReq
           { bppId = booking.providerId,
             bppUrl = booking.providerUrl,
@@ -216,7 +230,12 @@ callTrack booking ride = do
             bppRideId = ride.bppRideId,
             ..
           }
-  void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPI booking.providerUrl internalEndPointHashMap =<< TrackACL.buildTrackReq trackBUildReq
+  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+  if isBecknSpecVersion2
+    then do
+      void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPIV2 booking.providerUrl internalEndPointHashMap =<< TrackACL.buildTrackReqV2 trackBuildReq
+    else do
+      void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPIV1 booking.providerUrl internalEndPointHashMap =<< TrackACL.buildTrackReq trackBuildReq
 
 data GetLocationRes = GetLocationRes
   { currPoint :: MapSearch.LatLong,
@@ -259,7 +278,20 @@ callStatus ::
   m StatusRes
 callStatus providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "status" API.statusAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "status" API.statusAPIV1 providerUrl internalEndPointHashMap req
+
+callStatusV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  StatusReqV2 ->
+  m StatusRes
+callStatusV2 providerUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.statusReqContext.contextBapId
+  callBecknAPIWithSignature bapId "status" API.statusAPIV2 providerUrl internalEndPointHashMap req
 
 callBecknAPIWithSignature ::
   ( MonadFlow m,

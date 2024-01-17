@@ -259,6 +259,7 @@ onUpdate ::
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["isBecknSpecVersion2" ::: Bool],
     HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>
