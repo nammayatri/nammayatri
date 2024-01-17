@@ -32,7 +32,7 @@ export const countDownImpl = function (countDownTime, id, interval, cb, action) 
   const timer = {
     time: countDownTime,
     id: timerId,
-    timerInterval: interval
+    timerInterval: parseInt(interval)
   }
   activeTimers[id] = timer;
   handler(id);
@@ -102,7 +102,7 @@ export const waitingCountdownTimerV2Impl = function (startingTime, interval, tim
     const timer = {
       time: startingTime,
       id: timerID,
-      timerInterval: interval
+      timerInterval: parseInt(interval)
     }
     activeTimers[timerId] = timer;
     handler(timerId);
