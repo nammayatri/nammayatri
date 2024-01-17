@@ -12,17 +12,17 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Types.DriverOnboarding.ErrorMessagesTranslations where
+module Domain.Types.Translations where
 
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Id
 
-data ErrorMessagesTranslations = ErrorMessagesTranslations
-  { id :: Id ErrorMessagesTranslations,
-    errorType :: Text,
+data Translations = Translations
+  { id :: Id Translations,
+    messageKey :: Text,
     language :: Language,
-    errorMessage :: Text,
+    message :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

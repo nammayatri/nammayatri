@@ -26,7 +26,6 @@ import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
-import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -41,7 +40,6 @@ import Storage.Queries.Coins.CoinHistory as CHistory
 import Storage.Queries.Coins.PurchaseHistory as PHistory
 import Storage.Queries.Person as Person
 import Tools.Error
-import qualified Tools.Notifications as Notify
 
 bulkUploadCoinsHandler :: ShortId DM.Merchant -> Context.City -> Common.BulkUploadCoinsReq -> Flow APISuccess
 bulkUploadCoinsHandler merchantShortId opCity Common.BulkUploadCoinsReq {..} = do
@@ -98,10 +96,7 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
                 bulkUploadTitle = Just bulkUploadTitle
               }
       CHistory.updateCoinEvent driverCoinEvent
-      driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      let coinTitle = "Coins earned!"
-          coinMessage = "You have earned " <> show coinsValue <> " coins. Check them out."
-      Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS coinTitle coinMessage driverId driver.deviceToken
+      Coins.sendCoinsNotification merchantOpCityId driverId coinsValue
       pure ()
 
 coinHistoryHandler :: ShortId DM.Merchant -> Context.City -> Id SP.Person -> Maybe Integer -> Maybe Integer -> Flow Common.CoinHistoryRes
