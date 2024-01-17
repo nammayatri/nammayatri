@@ -18,6 +18,7 @@
       url = "github:piyushKumar-1/haskell_cac_client/Testing";
       inputs = {
         common.follows = "common";
+        nixpkgs.follows = "common/nixpkgs";
       };
     };
 
