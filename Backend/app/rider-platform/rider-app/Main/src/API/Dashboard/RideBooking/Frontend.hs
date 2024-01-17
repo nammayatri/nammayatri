@@ -27,7 +27,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 
 data RideNotifyEventEndPoint = NotifyEventEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "RideNotifyEventEndPoint"
 
