@@ -325,11 +325,6 @@ paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentTy
   , visibility if ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE) then VISIBLE else GONE -- Condition will be updated when dues are introduced to YS flow.
   ][  commonTV push (getString if isAutoPayPending then AUTOPAY_SETUP_PENDING_STR else PAYMENT_PENDING) Color.black800 (FontStyle.h2 TypoGraphy) 0 LEFT true
     , commonTV push (getString AUTOPAY_PENDING_DESC_STR) Color.black800 (FontStyle.tags TypoGraphy) 0 LEFT true
-    , textView $
-      [ text $ getString OFFERS_NOT_APPLICABLE
-      , color Color.red
-      , visibility if isAutoPayPending && not HU.isDateGreaterThan state.props.offerBannerProps.offerBannerValidTill && (any (_ == state.data.myPlanData.planEntity.id) state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans) then VISIBLE else GONE
-      ] <> if state.props.isSelectedLangTamil then FontStyle.body16 TypoGraphy else FontStyle.tags TypoGraphy
     , linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
@@ -1021,12 +1016,6 @@ managePlanBodyView push state =
         ](map(
              (\item -> planCardView push item (item.id == state.props.managePlanProps.selectedPlanItem.id) true SelectPlan state.props.isSelectedLangTamil (state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY) false false (Just state.props.offerBannerProps) false state.data.config.subscriptionConfig.offerBannerConfig.offerBannerPlans)
              ) state.data.managePlanData.alternatePlans)
-      , textView $ [
-        text (getString OFFERS_APPLICABLE_ON_DAILY_UNLIMITED)
-        , color Color.black600
-        , margin $ MarginBottom 16
-        , visibility if showOfferApplicable state then VISIBLE else GONE
-      ] <> if state.props.isSelectedLangTamil then FontStyle.body17 TypoGraphy else FontStyle.body9 TypoGraphy
       , PrimaryButton.view (push <<< SwitchPlan) (switchPlanButtonConfig state)
      ]
    ]
@@ -1784,12 +1773,6 @@ getAutoPayStatusPillData autoPayStatus =
     _ | autoPayStatus `elem` [CANCELLED_PSP, RESUME_PENDING] ->  {color: Color.red, status : getString CANCELLED_  }
     _ | autoPayStatus `elem` [PENDING, MANDATE_FAILED] -> {color: Color.orange900, status : getString PENDING_STR }
     _ -> {color: Color.orange900, status : getString PENDING_STR }
-
-showOfferApplicable :: SubscriptionScreenState -> Boolean
-showOfferApplicable state = 
-  let currentPlanOffers = length $ filter (not _.addedFromUI) state.data.managePlanData.currentPlan.offers
-      selectedPlanOffers = length $ filter (not _.addedFromUI) state.props.managePlanProps.selectedPlanItem.offers
-  in state.props.managePlanProps.selectedPlanItem.id /= state.data.managePlanData.currentPlan.id && selectedPlanOffers < currentPlanOffers
 
 commonImageView :: String -> Int -> Int -> Margin -> Padding -> forall w . PrestoDOM (Effect Unit) w
 commonImageView imageName imageHeight imageWidth imageViewMargin imageViewPadding =
