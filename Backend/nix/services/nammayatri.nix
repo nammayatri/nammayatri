@@ -18,7 +18,7 @@ in
 
   config =
     let
-      pcLib = import ny.inputs.process-compose-flake.lib { inherit lib; };
+      pcLib = import ny.inputs.common.inputs.process-compose-flake.lib { inherit lib; };
       cfg = config.services.nammayatri;
       # The cabal executables we want to run as part of the nammayatri service
       # group.
