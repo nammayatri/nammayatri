@@ -26,8 +26,6 @@ import qualified Domain.Types.ServerName as DTServer
 import qualified EulerHS.Language as L
 import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as DB
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.City as City
@@ -38,6 +36,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as MA
 import qualified Storage.Queries.MerchantAccess as QAccess
@@ -107,7 +106,7 @@ data FleetRegisterReq = FleetRegisterReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 login ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
@@ -124,7 +123,7 @@ login LoginReq {..} = do
   generateLoginRes person merchant otp city'
 
 switchMerchant ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
@@ -140,7 +139,7 @@ switchMerchant authToken SwitchMerchantReq {..} = do
   generateLoginRes person merchant otp merchant.defaultOperatingCity
 
 switchMerchantAndCity ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
@@ -156,7 +155,7 @@ switchMerchantAndCity authToken SwitchMerchantAndCityReq {..} = do
   generateLoginRes person merchant otp city
 
 generateLoginRes ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     EncFlow m r
@@ -198,7 +197,7 @@ handle2FA secretKey otp = case (secretKey, otp) of
   (Nothing, _) -> pure (False, "Secret key not found for 2FA")
 
 enable2fa ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
@@ -212,13 +211,13 @@ enable2fa Enable2FAReq {..} = do
   let city' = fromMaybe merchant.defaultOperatingCity city
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city' >>= fromMaybeM AccessDenied
   key <- L.runIO Utils.generateSecretKey
-  Esq.runTransaction $
-    MA.updatePerson2faForMerchant person.id merchant.id key
+  -- Esq.runTransaction $
+  MA.updatePerson2faForMerchant person.id merchant.id key
   let qrCodeUri = Utils.generateAuthenticatorURI key email merchant.shortId
   pure $ Enable2FARes qrCodeUri
 
 generateToken ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
@@ -234,13 +233,13 @@ generateToken personId merchantId city = do
       regToken <- buildRegistrationToken personId merchantId city
       -- this function uses tokens from db, so should be called before transaction
       Auth.cleanCachedTokensByMerchantIdAndCity personId merchantId city
-      DB.runTransaction $ do
-        QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
-        QR.create regToken
+      -- DB.runTransaction $ do
+      QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
+      QR.create regToken
       pure $ regToken.token
 
 logout ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
@@ -251,11 +250,11 @@ logout tokenInfo = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
-  DB.runTransaction (QR.deleteAllByPersonIdAndMerchantIdAndCity person.id tokenInfo.merchantId tokenInfo.city)
+  (QR.deleteAllByPersonIdAndMerchantIdAndCity person.id tokenInfo.merchantId tokenInfo.city)
   pure $ LogoutRes "Logged out successfully"
 
 logoutAllMerchants ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
@@ -266,7 +265,7 @@ logoutAllMerchants tokenInfo = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokens personId
-  DB.runTransaction (QR.deleteAllByPersonId person.id)
+  (QR.deleteAllByPersonId person.id)
   pure $ LogoutRes "Logged out successfully from all servers"
 
 buildRegistrationToken :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> City.City -> m DR.RegistrationToken
@@ -285,7 +284,7 @@ buildRegistrationToken personId merchantId city = do
       }
 
 registerFleetOwner ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
@@ -302,9 +301,9 @@ registerFleetOwner req = do
   merchantServerAccessCheck merchant
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
-  Esq.runTransaction $ do
-    QP.create fleetOwner
-    QAccess.create merchantAccess
+  -- Esq.runTransaction $ do
+  QP.create fleetOwner
+  QAccess.create merchantAccess
   return Success
 
 buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DRole.Role -> m PT.Person
