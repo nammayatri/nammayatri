@@ -27,7 +27,7 @@ import ModifyScreenState (modifyScreenState)
 import Types.App (FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), ScreenType(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Common.Types.App (LazyCheck(..))
-import Screens.HelpAndSupportScreen.Controller (isEmailPresent)
+import Screens.HelpAndSupportScreen.Transformer (isEmailPresent)
 
 helpAndSupportScreen :: FlowBT String HELP_AND_SUPPORT_SCREEN_OUTPUT
 helpAndSupportScreen = do

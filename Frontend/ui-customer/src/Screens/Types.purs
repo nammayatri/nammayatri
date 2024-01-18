@@ -521,6 +521,7 @@ type HelpAndSuportScreenProps =
   , isCallConfirmation :: Boolean
   , showDeleteAccountView :: Boolean
   , btnActive :: Boolean
+  , needIssueListApiCall :: Boolean
   }
 -- ################################################ MyRidesScreenState ##################################################
 data AnimationState

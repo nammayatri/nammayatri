@@ -49,7 +49,8 @@ import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), afterRender, alignParentRight, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, width, imageWithFallback, weight, layoutGravity, clickable, alignParentBottom, scrollView, adjustViewWithKeyboard, lineHeight, singleLine, alpha, accessibility, accessibilityHint)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval, reportsList, topicsList)
+import Screens.HelpAndSupportScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.HelpAndSupportScreen.Transformer 
 import Screens.Types as ST
 import Services.API (RideBookingListRes(..), FetchIssueListResp(..), FetchIssueListReq(..))
 import Services.Backend as Remote
@@ -66,19 +67,14 @@ screen initialState =
   , view
   , name : "HelpAndSupportScreen"
   , globalEvents : [
-      (\push -> do
-              if (initialState.data.source == "") then
-                launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ getPastRides RideBookingListAPIResponseAction push initialState
-              else
-                pure unit
-              pure $ pure unit
-      ),
       ( \push -> do
         void $ launchAff_ $ void $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
-          when initialState.data.config.feature.enableSelfServe do
+          if initialState.data.config.feature.enableSelfServe && initialState.props.needIssueListApiCall then do
             let language = EHU.fetchLanguage $ getLanguageLocale languageKey
             (FetchIssueListResp issueListResponse) <- Remote.fetchIssueListBT language
             lift $ lift $ doAff do liftEffect $ push $ FetchIssueListApiCall issueListResponse.issues
+          else pure unit
+          when (initialState.data.source == "") $ lift $ lift $  getPastRides RideBookingListAPIResponseAction push initialState
         pure $ pure unit
       )
   ]
@@ -462,7 +458,7 @@ getPastRides :: forall action.( RideBookingListRes -> String -> action) -> (acti
 getPastRides action push state = do
   void $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   void $ EHU.toggleLoader true
-  (rideBookingListResponse) <- Remote.rideBookingList "8" "0" "false"
+  (rideBookingListResponse) <- Remote.rideBookingListWithStatus "1" "0" "COMPLETED"
   void $ EHU.toggleLoader false
   case rideBookingListResponse of
       Right (RideBookingListRes  listResp) -> doAff do liftEffect $ push $ action (RideBookingListRes listResp) "success"
