@@ -73,6 +73,7 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> valueToMaybe configJSON
       Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> valueToMaybe configJSON
       Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> valueToMaybe configJSON
+      Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> valueToMaybe configJSON
       Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
       Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
     pure $
@@ -116,6 +117,7 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
         Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
           Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
           Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
+          Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)
         Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
           AadhaarVerification.GridlineConfig cfg -> (Domain.AadhaarVerificationService AadhaarVerification.Gridline, toJSON cfg)
         Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of

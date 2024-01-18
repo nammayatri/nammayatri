@@ -23,6 +23,8 @@ import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerific
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Notification as Notification
+import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -71,6 +73,10 @@ getServiceNameConfigJSON = \case
     Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
+  Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
+    Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
+    Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
+    Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)
 
 $(enableKVPG ''MerchantServiceConfigT ['serviceName, 'merchantId] [])
 

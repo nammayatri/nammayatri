@@ -153,6 +153,7 @@ getServiceName msc = case msc.serviceConfig of
   NotificationServiceConfig notificationCfg -> case notificationCfg of
     Notification.FCMConfig _ -> NotificationService Notification.FCM
     Notification.PayTMConfig _ -> NotificationService Notification.PayTM
+    Notification.GRPCConfig _ -> NotificationService Notification.GRPC
   PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> PaymentService Payment.Juspay
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of

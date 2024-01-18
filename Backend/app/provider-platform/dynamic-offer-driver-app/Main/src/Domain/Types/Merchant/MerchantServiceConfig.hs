@@ -25,6 +25,8 @@ import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
+import qualified Kernel.External.Notification as Notification
+import Kernel.External.Notification.Interface.Types
 import Kernel.External.Payment.Interface as Payment
 import Kernel.External.SMS as Sms
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
@@ -46,6 +48,7 @@ data ServiceName
   | CallService Call.CallService
   | PaymentService Payment.PaymentService
   | IssueTicketService Ticket.IssueTicketService
+  | NotificationService Notification.NotificationService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -60,6 +63,7 @@ instance Show ServiceName where
   show (CallService s) = "Call_" <> show s
   show (PaymentService s) = "Payment_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
+  show (NotificationService s) = "Notification_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -98,6 +102,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Ticket_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (NotificationService v1, r2)
+                 | r1 <- stripPrefix "Notification_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -112,6 +120,7 @@ data ServiceConfigD (s :: UsageSafety)
   | CallServiceConfig !CallServiceConfig
   | PaymentServiceConfig !PaymentServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
+  | NotificationServiceConfig !NotificationServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -157,6 +166,10 @@ getServiceName osc = case osc.serviceConfig of
     Payment.JuspayConfig _ -> PaymentService Payment.Juspay
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
+  NotificationServiceConfig notificationCfg -> case notificationCfg of
+    Notification.FCMConfig _ -> NotificationService Notification.FCM
+    Notification.PayTMConfig _ -> NotificationService Notification.PayTM
+    Notification.GRPCConfig _ -> NotificationService Notification.GRPC
 
 buildMerchantServiceConfig ::
   MonadTime m =>
