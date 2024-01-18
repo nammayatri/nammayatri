@@ -20,8 +20,9 @@ module Beckn.ACL.OnUpdate
 where
 
 import qualified Beckn.ACL.Common as Common
-import qualified Beckn.OnDemand.Transformer.RideAssigned as TFRA
+import qualified Beckn.OnDemand.Transformer.OnUpdate as TFOU
 import qualified Beckn.OnDemand.Utils.Common as BUtils
+import qualified Beckn.OnDemand.Utils.OnUpdate as Utils
 import qualified Beckn.Types.Core.Taxi.Common.FulfillmentInfo as RideFulfillment
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
@@ -36,7 +37,6 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent a
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent as SafetyAlertDU
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.OnUpdate as Reexport
@@ -142,7 +142,7 @@ buildOnUpdateMessage (RideAssignedBuildReq DRideAssignedReq {..}) = do
         -- JAYPAL, TODO check where to place update_target
         update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
-buildOnUpdateMessage RideStartedBuildReq {..} = do
+buildOnUpdateMessage (RideStartedBuildReq DRideStartedReq {..}) = do
   fulfillment <- mkFullfillment (Just driver) ride booking (Just vehicle) Nothing Nothing
   return $
     OnUpdate.OnUpdateMessage
@@ -154,7 +154,7 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
               },
         update_target = "order.fufillment.state.code"
       }
-buildOnUpdateMessage req@RideCompletedBuildReq {} = do
+buildOnUpdateMessage (RideCompletedBuildReq req@DRideCompletedReq {}) = do
   chargeableDistance :: HighPrecMeters <-
     realToFrac <$> req.ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present.")
@@ -237,19 +237,19 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             || breakup.title == "NIGHT_SHIFT_CHARGE"
             || breakup.title == "EXTRA_TIME_FARE"
             || breakup.title == "CUSTOMER_CANCELLATION_DUES"
-buildOnUpdateMessage BookingCancelledBuildReq {..} = do
+buildOnUpdateMessage (BookingCancelledBuildReq DBookingCancelledReq {..}) = do
   return $
     OnUpdate.OnUpdateMessage
       { order =
           OnUpdate.BookingCancelled $
             BookingCancelledOU.BookingCancelledEvent
               { id = booking.id.getId,
-                state = "CANCELLED",
-                cancellation_reason = castCancellationSource cancellationSource
+                state = "CANCELLED"
+                -- cancellation_reason = castCancellationSource cancellationSource -- TODO :: Handle this event using on_cancel. JAYPAL
               },
         update_target = "state,fufillment.state.code"
       }
-buildOnUpdateMessage DriverArrivedBuildReq {..} = do
+buildOnUpdateMessage (DriverArrivedBuildReq DDriverArrivedReq {..}) = do
   let tagGroups =
         [ Tags.TagGroup
             { display = False,
@@ -269,13 +269,13 @@ buildOnUpdateMessage DriverArrivedBuildReq {..} = do
               },
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
       }
-buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
+buildOnUpdateMessage (EstimateRepetitionBuildReq DEstimateRepetitionReq {..}) = do
   let tagGroups =
         [ Tags.TagGroup
             { display = False,
               code = "previous_cancellation_reasons",
               name = "Previous Cancellation Reasons",
-              list = [Tags.Tag (Just False) (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ castCancellationSource cancellationSource)]
+              list = [Tags.Tag (Just False) (Just "cancellation_reason") (Just "Chargeable Distance") (Just . show $ Utils.castCancellationSource cancellationSource)]
             }
         ]
   fulfillment <- mkFullfillment Nothing ride booking Nothing Nothing (Just $ Tags.TG tagGroups)
@@ -291,7 +291,7 @@ buildOnUpdateMessage EstimateRepetitionBuildReq {..} = do
               },
         update_target = "order.fufillment.state.code, order.tags"
       }
-buildOnUpdateMessage NewMessageBuildReq {..} = do
+buildOnUpdateMessage (NewMessageBuildReq DNewMessageReq {..}) = do
   let tagGroups =
         [ Tags.TagGroup
             { display = False,
@@ -311,7 +311,7 @@ buildOnUpdateMessage NewMessageBuildReq {..} = do
                 fulfillment = fulfillment
               }
       }
-buildOnUpdateMessage SafetyAlertBuildReq {..} = do
+buildOnUpdateMessage (SafetyAlertBuildReq DSafetyAlertReq {..}) = do
   return $
     OnUpdate.OnUpdateMessage
       { order =
@@ -324,14 +324,6 @@ buildOnUpdateMessage SafetyAlertBuildReq {..} = do
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
       }
 
-castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource
-castCancellationSource = \case
-  SBCR.ByUser -> BookingCancelledOU.ByUser
-  SBCR.ByDriver -> BookingCancelledOU.ByDriver
-  SBCR.ByMerchant -> BookingCancelledOU.ByMerchant
-  SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
-  SBCR.ByApplication -> BookingCancelledOU.ByApplication
-
 buildOnUpdateMessageV2 ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -339,15 +331,23 @@ buildOnUpdateMessageV2 ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Context.Country ->
   OnUpdateBuildReq ->
   m Spec.OnUpdateReq
-buildOnUpdateMessageV2 merchant (RideAssignedBuildReq req) = do
+buildOnUpdateMessageV2 merchant mbBapCity mbBapCountry req = do
   msgId <- generateGUID
   let bppId = getShortId $ merchant.subscriberId
-      city = fromMaybe merchant.city req.booking.bapCity
-      country = fromMaybe merchant.country req.booking.bapCountry
+      city = fromMaybe merchant.city mbBapCity
+      country = fromMaybe merchant.country mbBapCountry
   bppUri <- BUtils.mkBppUri merchant.id.getId
-  driverNumber <- SP.getPersonNumber req.driver >>= fromMaybeM (InternalError "Driver mobile number is not present in RideAssignedBuildReq.")
-  TFRA.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country req driverNumber
-buildOnUpdateMessageV2 _ _ =
-  throwError $ InternalError "buildOnUpdateMessageV2: Not implemented for this OnUpdateBuildReq." -- JAYPAL
+  TFOU.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country req
+
+-- buildOnUpdateMessageV2 merchant mbBapCity mbBapCountry (RideAssignedBuildReq req) = do
+--   msgId <- generateGUID
+--   let bppId = getShortId $ merchant.subscriberId
+--       city = fromMaybe merchant.city mbBapCity
+--       country = fromMaybe merchant.country mbBapCountry
+--   bppUri <- BUtils.mkBppUri merchant.id.getId
+--   driverNumber <- SP.getPersonNumber req.driver >>= fromMaybeM (InternalError "Driver mobile number is not present in RideAssignedBuildReq.")
+--   TFRA.buildOnUpdateReqV2 Context.ON_UPDATE Context.MOBILITY msgId bppId bppUri city country req driverNumber

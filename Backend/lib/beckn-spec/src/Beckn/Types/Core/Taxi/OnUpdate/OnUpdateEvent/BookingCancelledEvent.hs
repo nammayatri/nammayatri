@@ -29,8 +29,8 @@ import Kernel.Prelude
 data BookingCancelledEvent = BookingCancelledEvent
   { id :: Text,
     -- update_target :: Text,
-    state :: Text,
-    cancellation_reason :: CancellationSource
+    state :: Text
+    -- cancellation_reason :: CancellationSource
   }
   deriving (Generic, Show)
 
@@ -40,7 +40,7 @@ instance ToJSON BookingCancelledEvent where
       "id" .= id
         -- <> "update_target" .= update_target
         <> "state" .= state
-        <> "cancellation_reason" .= cancellation_reason
+        -- <> "cancellation_reason" .= cancellation_reason
         <> "fulfillment" .= (("state" .= ("descriptor" .= (("code" .= RIDE_BOOKING_CANCELLED <> "name" .= A.String "Ride Cancelled") :: A.Object) :: A.Object)) :: A.Object)
 
 -- <> "fulfillment" .= (("state" .= (("code" .= RIDE_BOOKING_CANCELLED) :: A.Object)) :: A.Object)
@@ -53,12 +53,13 @@ instance FromJSON BookingCancelledEvent where
       <$> obj .: "id"
       -- <*> obj .: "update_target"
       <*> obj .: "state"
-      <*> obj .: "cancellation_reason"
+
+-- <*> obj .: "cancellation_reason"
 
 instance ToSchema BookingCancelledEvent where
   declareNamedSchema _ = do
     txt <- declareSchemaRef (Proxy :: Proxy Text)
-    cancellationSource <- declareSchemaRef (Proxy :: Proxy CancellationSource)
+    -- cancellationSource <- declareSchemaRef (Proxy :: Proxy CancellationSource)
     update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     let st =
           mempty
@@ -89,13 +90,13 @@ instance ToSchema BookingCancelledEvent where
               [ ("id", txt),
                 -- ("update_target", txt),
                 ("state", txt),
-                ("cancellation_reason", cancellationSource),
+                -- ("cancellation_reason", cancellationSource),
                 ("fulfillment", Inline fulfillment)
               ]
           & required
             L..~ [ "id",
                    --  "update_target",
                    "state",
-                   "cancellation_reason",
+                   --  "cancellation_reason",
                    "fulfillment"
                  ]

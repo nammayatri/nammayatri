@@ -14,14 +14,23 @@
 
 module Beckn.OnDemand.Utils.OnUpdate where
 
+import qualified Beckn.ACL.Common as Common
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import qualified Data.List as List
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, (%~))
 import qualified Kernel.Types.Beckn.Gps as Gps
+import Kernel.Types.Common
+import Kernel.Utils.Common
+import Tools.Error
 
 mkStops :: DBooking.Booking -> Text -> Maybe [Spec.Stop]
 mkStops booking rideOtp =
@@ -71,6 +80,12 @@ mkFulfillmentType :: DBooking.BookingType -> Text
 mkFulfillmentType = \case
   DBooking.NormalBooking -> "RIDE"
   DBooking.SpecialZoneBooking -> "RIDE_OTP"
+
+mkRideCompletedPaymentType :: Maybe DMPM.PaymentMethodInfo -> Text
+mkRideCompletedPaymentType = show . maybe OnUpdate.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType))
+
+showPaymentCollectedBy :: Maybe DMPM.PaymentMethodInfo -> Text
+showPaymentCollectedBy = show . maybe OnUpdate.BPP (Common.castDPaymentCollector . (.collectedBy))
 
 showVariant :: DVeh.Variant -> Maybe Text
 showVariant = A.decode . A.encode
@@ -123,3 +138,193 @@ mkRideAssignedPersonTags driver =
               tagDisplay = Just False,
               tagValue = show <$> driver.rating
             }
+
+mkRideDistanceDetailsTags :: MonadFlow m => DRide.Ride -> m (Maybe [Spec.TagGroup])
+mkRideDistanceDetailsTags ride = do
+  chargeableDistance :: HighPrecMeters <-
+    realToFrac <$> ride.chargeableDistance
+      & fromMaybeM (InternalError "Ride chargeable distance is not present in OnUpdateBuildReq ride.")
+  let traveledDistance :: HighPrecMeters = ride.traveledDistance
+  pure $
+    Just
+      [ Spec.TagGroup
+          { tagGroupDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "ride_distance_details",
+                    descriptorName = Just "Ride Distance Details",
+                    descriptorShortDesc = Nothing
+                  },
+            tagGroupDisplay = Just False,
+            tagGroupList =
+              Just $
+                chargeableDistanceSingleton chargeableDistance
+                  ++ traveledDistanceSingleton traveledDistance
+          }
+      ]
+  where
+    chargeableDistanceSingleton chargeableDistance =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "chargeable_distance",
+                    descriptorName = Just "Chargeable Distance",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just $ show chargeableDistance
+          }
+
+    traveledDistanceSingleton traveledDistance =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "traveled_distance",
+                    descriptorName = Just "Traveled Distance",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just $ show traveledDistance
+          }
+
+mkDriverArrivedInfoTags :: Maybe UTCTime -> Maybe [Spec.TagGroup]
+mkDriverArrivedInfoTags arrivalTime =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "driver_arrived_info",
+                  descriptorName = Just "Driver Arrived Info",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just $
+              arrivalTimeSingleton
+        }
+    ]
+  where
+    arrivalTimeSingleton
+      | isNothing arrivalTime = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "arrival_time",
+                      descriptorName = Just "Chargeable Distance",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = show <$> arrivalTime
+            }
+
+mkPreviousCancellationReasonsTags :: SBCR.CancellationSource -> Maybe [Spec.TagGroup]
+mkPreviousCancellationReasonsTags cancellationSource =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "previous_cancellation_reasons",
+                  descriptorName = Just "Previous Cancellation Reasons",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just $
+              cancellationSourceSingleton
+        }
+    ]
+  where
+    cancellationSourceSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "cancellation_reason",
+                    descriptorName = Just "Chargeable Distance",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just . show $ castCancellationSource cancellationSource
+          }
+
+castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource
+castCancellationSource = \case
+  SBCR.ByUser -> BookingCancelledOU.ByUser
+  SBCR.ByDriver -> BookingCancelledOU.ByDriver
+  SBCR.ByMerchant -> BookingCancelledOU.ByMerchant
+  SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
+  SBCR.ByApplication -> BookingCancelledOU.ByApplication
+
+mkNewMessageTags :: Text -> Maybe [Spec.TagGroup]
+mkNewMessageTags message =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "driver_new_message",
+                  descriptorName = Just "Driver New Message",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just $
+              messageSingleton
+        }
+    ]
+  where
+    messageSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "message",
+                    descriptorName = Just "New Message",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just message
+          }
+
+mkSafetyAlertTags :: Text -> Text -> Maybe [Spec.TagGroup]
+mkSafetyAlertTags reason code =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "safety_alert",
+                  descriptorName = Just "Safety Alert",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just $
+              safetyAlertTriggerSingleton
+        }
+    ]
+  where
+    safetyAlertTriggerSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just code,
+                    descriptorName = Just "Safety Alert Trigger",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just reason
+          }

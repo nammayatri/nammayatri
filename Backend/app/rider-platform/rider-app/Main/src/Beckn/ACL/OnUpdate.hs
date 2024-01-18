@@ -120,14 +120,14 @@ parseEvent _ (OnUpdate.BookingCancelled tcEvent) = do
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id $ tcEvent.id,
-        cancellationSource = castCancellationSource tcEvent.cancellation_reason
+        cancellationSource = SBCR.ByUser -- castCancellationSource tcEvent.cancellation_reason -- TODO :: Handle this event using on_cancel. JAYPAL
       }
 parseEvent _ (OnUpdate.BookingReallocation rbrEvent) = do
   return $
     DOnUpdate.BookingReallocationReq
       { bppBookingId = Id $ rbrEvent.id,
         bppRideId = Id rbrEvent.fulfillment.id,
-        reallocationSource = castCancellationSource rbrEvent.reallocation_reason
+        reallocationSource = SBCR.ByUser -- castCancellationSource rbrEvent.reallocation_reason -- TODO :: Handle this event using on_cancel. JAYPAL
       }
 parseEvent _ (OnUpdate.DriverArrived daEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in DriverArrived Event.") daEvent.fulfillment.tags
