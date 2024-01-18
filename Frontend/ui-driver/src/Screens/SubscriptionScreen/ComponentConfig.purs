@@ -280,8 +280,6 @@ popupModalConfig state = let
                 then getString YOUR_PAYMENT_WAS_UNSUCCESSFUL 
              else if state.props.popUpState == Mb.Just SupportPopup
                 then getString NEED_HELP_JOINING_THE_PLAN
-             else if state.data.managePlanData.currentPlan.title == getString DAILY_PER_RIDE 
-                then getString DAILY_UNLIMITED_OFFER_NOT_AVAILABLE 
              else ""
       , color = Color.black700
       , margin = Margin 16 4 16 0
