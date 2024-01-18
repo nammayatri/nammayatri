@@ -1,121 +1,212 @@
-types:
-  FRFSSearch:
-    tableName: frfs_search
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  ShortId: Kernel.Types.Id
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  FRFSSearch: Domain.Types.FRFSSearch
+  FRFSQuote: Domain.Types.FRFSQuote
+  FRFSTrip: Domain.Types.FRFSTrip
+  FRFSTicketBooking: Domain.Types.FRFSTicketBooking
+  FRFSTicket: Domain.Types.FRFSTicket
+  FRFSTicketBookingPayment: Domain.Types.FRFSTicketBookingPayment
+  Station: Domain.Types.Station
+  # Text: Domain.Types.FRFSSearch
+  FRFSQuoteType: Domain.Types.FRFSQuote
+  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
+  FRFSTicketStatus: Domain.Types.FRFSTicket
+  # Gps: Kernel.Types.Common
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
 
-    fields:
-      id: Id FRFSSearch
-      from: Id Station
-      to: Id Station
-      quantity: Int
-      vehicleType: VehicleType
+FRFSSearch:
+  tableName: frfs_search
 
-    types:
-      VehicleType:
-        enum: "METRO,BUS"
+  fields:
+    id: Id FRFSSearch
+    from: Id Station
+    to: Id Station
+    quantity: Int
+    vehicleType: Text
 
-  Station:
-    tableName: station
+  # types:
+  #   VehicleType:
+  #     enum: "METRO"
+  #     derive: HttpInstance
 
-    fields:
-      id: Id Station
-      merchantOperatingCityId: Id MerchantOperatingCity
-      vehicleType: VehicleType
-      name: Text
-      code: Text
-      gps: Gps
-      address: Maybe Text
+  queries:
+    getTicketPlaces:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
 
-  FRFSQuote:
-    tableName: frfs_quote
+Station:
+  tableName: station
 
-    fields:
-      id: Id FRFSQuote
-      bppItemId: Text
-      searchId: Id FRFSSearch
-      type: FRFSQuoteType
-      from: Id Station
-      to: Id Station
-      quantity: Int
-      vehicleType: VehicleType
-      bppSubscriberId: Text
-      providerId: Text
-      providerName: Text
-      providerDescription: Maybe Text
-      price: HighPrecMoney
-      validTill: UTCTime
+  fields:
+    id: Id Station
+    vehicleType: Text
+    name: Text
+    code: Text
+    lat: Maybe Double
+    lon: Maybe Double
+    address: Maybe Text
 
-    types:
-      FRFSQuoteType:
-        enum: "SingleJourney, ReturnJourney, Pass"
+  queries:
+    getTicketPlaces:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByStationCode:
+      kvFunction: findOneWithKV
+      where: code
 
-  FRFSTrip:
-    tableName: frfs_trip
+FRFSQuote:
+  tableName: frfs_quote
 
-    fields:
-      id: Id FRFSTrip
-      bppFulfillmentId: Text
-      quoteId: Id FRFSQuote
-      stationCode: Text
-      stationType: StationType
-      sequence: Int
+  fields:
+    id: Id FRFSQuote
+    bppItemId: Text
+    searchId: Id FRFSSearch
+    _type: FRFSQuoteType
+    from: Id Station
+    to: Id Station
+    quantity: Int
+    vehicleType: Text
+    bppSubscriberId: Text
+    providerId: Text
+    providerName: Text
+    providerDescription: Maybe Text
+    price: HighPrecMoney
+    validTill: UTCTime
 
-    types:
-      StationType:
-        enum: "START, END, TRANSIT, INTERMEDIATE"
+  types:
+    FRFSQuoteType:
+      enum: "SingleJourney, ReturnJourney, Pass"
 
-  FRFSTicketBooking:
-    tableName: frfs_ticket_booking
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findBySearchId:
+      kvFunction: findOneWithKV
+      where: searchId
 
-    fields:
-      id: Id FRFSTicketBooking
-      bppOrderId: Maybe Text
-      quoteId: Id FRFSQuote
-      status: FRFSBookingStatus
+FRFSTrip:
+  tableName: frfs_trip
 
-      bppItemId: Text
-      type: FRFSQuoteType
-      from: Id Station
-      to: Id Station
-      quantity: Int
-      vehicleType: VehicleType
-      bppSubscriberId: Text
-      providerId: Text
-      providerName: Text
-      providerDescription: Maybe Text
-      price: HighPrecMoney
-      validTill: UTCTime
+  fields:
+    id: Id FRFSTrip
+    bppFulfillmentId: Text
+    quoteId: Id FRFSQuote
+    stationCode: Text
+    stationType: StationType
+    stopSequence: Int
 
-    types:
-      FRFSBookingStatus:
-        enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED"
-  # Make use of FareBreakup to store the fare breakup of a ticket
+  types:
+    StationType:
+      enum: "START, END, TRANSIT, INTERMEDIATE"
 
-  # Get transaction_id from Payment Transaction table
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByQuoteId:
+      kvFunction: findOneWithKV
+      where: quoteId
 
-  FRFSTicket:
-    tableName: frfs_ticket
+FRFSTicketBooking:
+  tableName: frfs_ticket_booking
 
-    fields:
-      id: Id FRFSTicket
-      frfsTicketBookingId: Id FRFSTicketBooking
-      status: FRFSTicketStatus
-      qrData: Text
-      validTill: UTCTime
-      ticketNumber: Text
+  fields:
+    id: Id FRFSTicketBooking
+    bppOrderId: Maybe Text
+    quoteId: Id FRFSQuote
+    status: FRFSTicketBookingStatus
 
-    types:
-      FRFSTicketStatus:
-        enum: "ACTIVE, EXPIRED, USED"
+    bppItemId: Text
+    _type: FRFSQuoteType
+    from: Id Station
+    to: Id Station
+    quantity: Int
+    vehicleType: Text
+    bppSubscriberId: Text
+    providerId: Text
+    providerName: Text
+    providerDescription: Maybe Text
+    price: HighPrecMoney
+    validTill: UTCTime
 
-  FRFSTicketBookingPayment:
-    tableName: frfs_ticket_booking_payment
+  types:
+    FRFSTicketBookingStatus:
+      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED"
 
-    fields:
-      id: Id FRFSTicketBookingPayment
-      frfsTicketBookingId: Id FRFSTicketBooking
-      paymentOrderId: Id PaymentOrder
-      status: FRFSTicketBookingPaymentStatus
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByQuoteId:
+      kvFunction: findOneWithKV
+      where: quoteId
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: status
+# Make use of FareBreakup to store the fare breakup of a ticket
 
-    types:
-      FRFSTicketBookingPaymentStatus:
-        enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING"
+# Get transaction_id from Payment Transaction table
+
+FRFSTicket:
+  tableName: frfs_ticket
+
+  fields:
+    id: Id FRFSTicket
+    frfsTicketBookingId: Id FRFSTicketBooking
+    status: FRFSTicketStatus
+    qrData: Text
+    validTill: UTCTime
+    ticketNumber: Text
+
+  types:
+    FRFSTicketStatus:
+      enum: "ACTIVE, EXPIRED, USED"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByStatus:
+      kvFunction: findOneWithKV
+      where: status
+    findByTicketBookingId:
+      kvFunction: findOneWithKV
+      where: frfsTicketBookingId
+
+FRFSTicketBookingPayment:
+  tableName: frfs_ticket_booking_payment
+
+  fields:
+    id: Id FRFSTicketBookingPayment
+    frfsTicketBookingId: Id FRFSTicketBooking
+    paymentOrderId: Id PaymentOrder
+    status: FRFSTicketBookingPaymentStatus
+
+  types:
+    FRFSTicketBookingPaymentStatus:
+      enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllTicketBookingId:
+      kvFunction: findAllWithKV
+      where: frfsTicketBookingId
+    findByPaymentOrderId:
+      kvFunction: findOneWithKV
+      where: paymentOrderId
+    findAllByStatus:
+      kvFunction: findAllWithKV
+      where: status
