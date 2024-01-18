@@ -42,6 +42,7 @@ tfFulfillmentVehicle uiConfirm = do
 
 tfOrder :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> Data.Text.Text -> Maybe Data.Text.Text -> Maybe Data.Text.Text -> m (BecknV2.OnDemand.Types.Order)
 tfOrder uiConfirm fulfillmentType mbBppFullfillmentId mbDriverId = do
+  let orderCancellation_ = Nothing
   let orderCancellationTerms_ = Nothing
   let orderId_ = Nothing
   let orderPayments_ = Beckn.OnDemand.Utils.Init.mkPayment uiConfirm.paymentMethodInfo & Just
@@ -51,7 +52,7 @@ tfOrder uiConfirm fulfillmentType mbBppFullfillmentId mbDriverId = do
   orderItems_ <- Data.List.singleton <$> tfOrderItems uiConfirm mbBppFullfillmentId <&> Just
   orderProvider_ <- tfOrderProvider mbDriverId <&> Just
   orderQuote_ <- tfOrderQuote uiConfirm <&> Just
-  pure $ BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_}
+  pure $ BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellation = orderCancellation_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_}
 
 tfOrderBilling :: (Kernel.Types.App.MonadFlow m) => SharedLogic.Confirm.DConfirmRes -> m (BecknV2.OnDemand.Types.Billing)
 tfOrderBilling uiConfirm = do
