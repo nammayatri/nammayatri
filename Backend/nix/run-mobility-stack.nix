@@ -13,9 +13,9 @@
 
         external = {
           settings.processes = {
-            beckn-gateway.command = lib.getExe perSystem.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
-            mock-registry.command = lib.getExe perSystem.config.haskellProjects.default.outputs.finalPackages.mock-registry;
-            location-tracking-service.command = lib.getExe inputs'.location-tracking-service.packages.default;
+            beckn-gateway.command = perSystem.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
+            mock-registry.command = perSystem.config.haskellProjects.default.outputs.finalPackages.mock-registry;
+            location-tracking-service.command = inputs'.location-tracking-service.packages.default;
           };
         };
       in

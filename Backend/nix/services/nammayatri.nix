@@ -1,4 +1,4 @@
-# Add a process-compose based package for running the entire backend stack.
+# process-compose module for running the nammayatri stack
 ny:
 { config, pkgs, lib, ... }:
 let
@@ -88,12 +88,12 @@ in
                 cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
                 rm -f ./*.log # Clean up the log files
 
-                ${if config.services.nammayatri.useCabal then ''
+                ${if cfg.useCabal then ''
                     cabal build ${builtins.concatStringsSep " " (builtins.trace cabalTargets cabalTargets)}
                   '' else ""}
 
-                #redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
-                #redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+                redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
               '';
             };
           };
