@@ -46,6 +46,7 @@ type API =
     :> ( IssueCategoryListAPI
            :<|> IssueListAPI
            :<|> IssueInfoAPI
+           :<|> IssueInfoAPIV2
            :<|> IssueUpdateAPI
            :<|> IssueAddCommentAPI
            :<|> IssueFetchMediaAPI
@@ -63,6 +64,10 @@ type IssueListAPI =
 type IssueInfoAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'ISSUE 'ISSUE_INFO
     :> Common.IssueInfoAPI
+
+type IssueInfoAPIV2 =
+  ApiAuth 'APP_BACKEND_MANAGEMENT 'ISSUE 'ISSUE_INFO
+    :> Common.IssueInfoAPIV2
 
 type IssueUpdateAPI =
   ApiAuth 'APP_BACKEND_MANAGEMENT 'ISSUE 'ISSUE_UPDATE
@@ -85,6 +90,7 @@ handler merchantId city =
   issueCategoryList merchantId city
     :<|> issueList merchantId city
     :<|> issueInfo merchantId city
+    :<|> issueInfoV2 merchantId city
     :<|> issueUpdate merchantId city
     :<|> issueAddComment merchantId city
     :<|> issueFetchMedia merchantId city
@@ -114,29 +120,11 @@ issueInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueReport 
 issueInfo merchantShortId opCity apiTokenInfo issueReportId_ = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   addAuthorDetails =<< Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueInfo) issueReportId_
-  where
-    mkAuthorDetail :: Common.IssueReportCommentItem -> Flow Common.IssueReportCommentItem
-    mkAuthorDetail Common.IssueReportCommentItem {..} = do
-      author <- Esq.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
-      let authorDetail_ =
-            Common.AuthorDetail
-              { authorId = cast author.id,
-                firstName = Just author.firstName,
-                lastName = Just author.lastName
-              }
-      pure $
-        Common.IssueReportCommentItem
-          { authorDetail = authorDetail_,
-            ..
-          }
-    addAuthorDetails :: Common.IssueInfoRes -> Flow Common.IssueInfoRes
-    addAuthorDetails Common.IssueInfoRes {..} = do
-      comments_ <- mapM mkAuthorDetail comments
-      pure $
-        Common.IssueInfoRes
-          { comments = comments_,
-            ..
-          }
+
+issueInfoV2 :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe (Id IssueReport) -> Maybe (ShortId IssueReport) -> FlowHandler Common.IssueInfoRes
+issueInfoV2 merchantShortId opCity apiTokenInfo mbIssueReportId mbIssueReportShortId = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  addAuthorDetails =<< Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.issueInfoV2) mbIssueReportId mbIssueReportShortId
 
 issueUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id IssueReport -> Common.IssueUpdateReq -> FlowHandler APISuccess
 issueUpdate merchantShortId opCity apiTokenInfo issueReportId req = withFlowHandlerAPI' $ do
@@ -174,3 +162,27 @@ ticketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAP
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.TicketStatusCallBackEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callRiderAppOperations checkedMerchantId opCity (.issuesV2.ticketStatusCallBack_) req
+
+addAuthorDetails :: Common.IssueInfoRes -> Flow Common.IssueInfoRes
+addAuthorDetails Common.IssueInfoRes {..} = do
+  comments_ <- mapM mkAuthorDetail comments
+  pure $
+    Common.IssueInfoRes
+      { comments = comments_,
+        ..
+      }
+  where
+    mkAuthorDetail :: Common.IssueReportCommentItem -> Flow Common.IssueReportCommentItem
+    mkAuthorDetail Common.IssueReportCommentItem {..} = do
+      author <- Esq.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
+      let authorDetail_ =
+            Common.AuthorDetail
+              { authorId = cast author.id,
+                firstName = Just author.firstName,
+                lastName = Just author.lastName
+              }
+      pure $
+        Common.IssueReportCommentItem
+          { authorDetail = authorDetail_,
+            ..
+          }

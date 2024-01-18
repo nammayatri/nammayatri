@@ -158,7 +158,8 @@ data TransporterConfigD u = TransporterConfig
     notificationRetryCountThreshold :: Int,
     notificationRetryTimeGap :: NominalDiffTime,
     driverAutoPayExecutionTimeFallBack :: NominalDiffTime,
-    orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime
+    orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime,
+    kaptureDisposition :: Text
   }
   deriving (Generic, Show)
 

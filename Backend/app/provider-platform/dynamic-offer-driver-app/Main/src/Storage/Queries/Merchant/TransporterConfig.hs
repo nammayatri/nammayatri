@@ -261,5 +261,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
         BeamTC.specialDrivers = specialDrivers,
-        BeamTC.specialLocationTags = specialLocationTags
+        BeamTC.specialLocationTags = specialLocationTags,
+        BeamTC.kaptureDisposition = kaptureDisposition
       }

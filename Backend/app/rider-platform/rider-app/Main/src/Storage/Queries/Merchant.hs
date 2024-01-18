@@ -99,7 +99,8 @@ instance FromTType' BeamM.Merchant Merchant where
             editPickupDistanceThreshold = editPickupDistanceThreshold,
             driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
             numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
-            publicMediaFileUrlPattern = publicMediaFileUrlPattern
+            publicMediaFileUrlPattern = publicMediaFileUrlPattern,
+            kaptureDisposition = kaptureDisposition
           }
 
 instance ToTType' BeamM.Merchant Merchant where
@@ -140,5 +141,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.editPickupDistanceThreshold = editPickupDistanceThreshold,
         BeamM.driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
         BeamM.numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
-        BeamM.publicMediaFileUrlPattern = publicMediaFileUrlPattern
+        BeamM.publicMediaFileUrlPattern = publicMediaFileUrlPattern,
+        BeamM.kaptureDisposition = kaptureDisposition
       }
