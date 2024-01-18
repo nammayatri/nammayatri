@@ -7,7 +7,7 @@
           inputs.services-flake.processComposeModules.default
           inputs.passetto.processComposeModules.default
           ./services/postgres-with-replica.nix
-          (import ./services/external-services.nix {inherit self' inputs inputs'; })
+          (import ./services/external-services.nix { inherit self' inputs inputs'; })
         ];
       };
     };

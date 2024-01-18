@@ -50,15 +50,15 @@ in
           depends_on."${name}".condition = "process_healthy";
         };
       replica-settings = name: cfg:
-      lib.nameValuePair "${name}-replica-init" {
+        lib.nameValuePair "${name}-replica-init" {
           depends_on."pg-basebackup-${name}".condition = "process_completed_successfully";
 
         };
     in
     {
       settings.processes =
-       lib.mapAttrs' pg-basebackup-process enabled-services //
-       lib.mapAttrs' replica-settings enabled-services;
+        lib.mapAttrs' pg-basebackup-process enabled-services //
+        lib.mapAttrs' replica-settings enabled-services;
       services.postgres = lib.concatMapAttrs
         (name: cfg: {
           # The master database
