@@ -169,7 +169,7 @@ addMessage merchantShortId opCity Common.AddMessageRequest {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   message <- mkMessage merchant merchantOpCityId
-  _ <- MQuery.create message
+  _ <- MQuery.createMessage message
   return $ Common.AddMessageResponse {messageId = cast $ message.id}
   where
     mkMessage merchant merchantOpCityId = do
