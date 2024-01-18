@@ -308,4 +308,110 @@ config =
   , textColor : "#454545"
   , stroke: "1,#E5E7EB"
   }
+  , cityConfig : {
+      banglore : {
+                    cityName : "Bangalore",
+                    selectMultipleQuote : true,
+                    cityCode : "std:080",
+                    d2cReferral : true,
+                    customerTip : true,
+                    supportNumber : "+918069724848",
+                    customerTipArray : "",
+                    customerTipArrayWithValues : [0,10, 20, 30],
+                    searchText: ["Search for a location", "Search for a location", "Search for a location", "Search for a location"],
+                    searchTextDuration : 30, -- in seconds,
+                    reallocation : true
+                    },
+      hyderabad : {
+                    cityName : "Hyderabad",
+                    selectMultipleQuote : true,
+                    cityCode : "std:040",
+                    d2cReferral : true,
+                    customerTip : true,
+                    supportNumber : "+918069724848",
+                    customerTipArray : "",
+                    customerTipArrayWithValues : [0,10, 20, 30],
+                    searchText: ["Search for a location", "Search for a location", "Search for a location", "Search for a location"],
+                    searchTextDuration : 30, -- in seconds,
+                    reallocation : true
+                   },
+      mysore : {
+                  cityName : "Mysore",
+                  selectMultipleQuote : true,
+                  cityCode : "std:0821",
+                  d2cReferral : true,
+                  customerTip : true,
+                  supportNumber : "+918069724848",
+                  customerTipArray : "",
+                  customerTipArrayWithValues : [0,10, 20, 30],
+                  searchText: ["Search for a location", "Search for a location", "Search for a location", "Search for a location"],
+                  searchTextDuration : 30, -- in seconds,
+                  reallocation : true
+                  },
+      delhi : {
+                  cityName : "Delhi",
+                  selectMultipleQuote : true,
+                  cityCode : "std:011",
+                  d2cReferral : true,
+                  customerTip : true,
+                  supportNumber : "+918069724848",
+                  customerTipArray : "",
+                  customerTipArrayWithValues : [0,10, 20, 30],
+                  searchText: ["Search for a location", "Search for a location", "Search for a location", "Search for a location"],
+                  searchTextDuration : 30, -- in seconds,
+                  reallocation : true
+                  },
+      chennai : {
+                  cityName : "Chennai",
+                  selectMultipleQuote : true,
+                  cityCode : "std:044",
+                  d2cReferral : true,
+                  customerTip : true,
+                  supportNumber : "+918069724848",
+                  customerTipArray : "",
+                  customerTipArrayWithValues : [0,10, 20, 30],
+                  searchText: ["Search for a location", "Search for a location", "Search for a location", "Search for a location"],
+                  searchTextDuration : 30, -- in seconds,
+                  reallocation : true
+                  },
+      coimbatore : {
+                  cityName : "Coimbatore",
+                  selectMultipleQuote : true,
+                  cityCode : "std:0422",
+                  d2cReferral : true,
+                  customerTip : true,
+                  supportNumber : "+918069724848",
+                  customerTipArray : "",
+                  customerTipArrayWithValues : [0,10, 20, 30],
+                  searchText: ["Search for a location", "Search for a location", "Search for a location", "Search for a location"],
+                  searchTextDuration : 30, -- in seconds,
+                  reallocation : true
+                  },
+      puducherry : {
+                  cityName : "Puducherry",
+                  selectMultipleQuote : true,
+                  cityCode : "std:0413",
+                  d2cReferral : true,
+                  customerTip : true,
+                  supportNumber : "+918069724848",
+                  customerTipArray : "",
+                  customerTipArrayWithValues : [0,10, 20, 30],
+                  searchText: ["Search for a location", "Search for a location", "Search for a location", "Search for a location"],
+                  searchTextDuration : 30, -- in seconds,
+                  reallocation : true
+                          },
+      tumakuru : {
+                cityName : "Tumakuru",
+                selectMultipleQuote : true,
+                cityCode : "std:0816",
+                d2cReferral : true,
+                customerTip : true,
+                supportNumber : "+918069724848",
+                customerTipArray : "",
+                customerTipArrayWithValues : [0,10, 20, 30],
+                searchText: ["Search for a location", "Search for a location", "Search for a location", "Search for a location"],
+                searchTextDuration : 30, -- in seconds,
+                reallocation : true
+                  }
+                }
 }

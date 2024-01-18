@@ -65,8 +65,35 @@ type AppConfigCustomer a =
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
+  , cityConfig :: City 
   | a
   }
+
+type City = 
+  {
+      banglore  :: CityConfig
+    , hyderabad :: CityConfig
+    , mysore    :: CityConfig
+    , delhi     :: CityConfig
+    , chennai   :: CityConfig
+    , coimbatore :: CityConfig
+    , puducherry :: CityConfig
+    , tumakuru   :: CityConfig
+    }
+
+type CityConfig = {
+  cityName            :: String,
+  selectMultipleQuote :: Boolean,
+  cityCode            :: String,
+  d2cReferral         :: Boolean,
+  customerTip         :: Boolean,
+  supportNumber       :: String,
+  customerTipArray    :: String,
+  customerTipArrayWithValues :: Array Int,
+  searchText                 :: Array String,
+  searchTextDuration         :: Int, -- in seconds,
+  reallocation               :: Boolean
+}
 
 type GeoCoderConfig = {
   enableLLtoAddress :: Boolean,
