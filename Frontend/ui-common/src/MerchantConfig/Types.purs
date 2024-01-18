@@ -92,8 +92,15 @@ type CityConfig = {
   cityLong :: Number,
   supportNumber :: String,
   languageKey :: String,
+  uploadRCandDL :: Boolean,
+  referralConfig :: ReferralConfig
+}
+
+type ReferralConfig = {
+  showCustomerReferral :: Boolean,
   showDriverReferral :: Boolean,
-  uploadRCandDL :: Boolean
+  showKnowMore :: Boolean,
+  referralVideoLink :: String
 }
 
 type DashboardConfig = {

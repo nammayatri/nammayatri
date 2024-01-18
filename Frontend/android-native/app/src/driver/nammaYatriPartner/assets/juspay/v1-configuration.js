@@ -174,6 +174,7 @@ window.getMerchantConfig = function () {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
       , "name" : "Namma Yatri"
     }
+    , "customerAppLink": "https://play.google.com/store/apps/details?id=in.juspay.nammayatri"
     , "enableMockLocation" : false
     , "cityConfig" : [
       {
@@ -185,8 +186,13 @@ window.getMerchantConfig = function () {
         "cityLong" : 77.594566,
         "supportNumber" : "",
         "languageKey" : "KN_IN",
-        "showDriverReferral" : false,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "referralConfig":{
+          "showCustomerReferral" : true,
+          "showDriverReferral" : false,
+          "showKnowMore" : false,
+          "referralVideoLink" : ""
+        }
       },
       {
         "cityName" : "Hyderabad",
@@ -197,8 +203,13 @@ window.getMerchantConfig = function () {
         "cityLong" : 78.499827,
         "supportNumber" : "+918069724900",
         "languageKey" : "TE_IN",
-        "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "referralConfig":{
+          "showCustomerReferral" : true,
+          "showDriverReferral" : true,
+          "showKnowMore" : false,
+          "referralVideoLink" : "https://www.youtube.com/watch?v=V0Wn--yoU9c"
+        }
       },
       {
         "cityName" : "Mysore",
@@ -209,8 +220,13 @@ window.getMerchantConfig = function () {
         "cityLong" : 76.639381,
         "supportNumber" : "",
         "languageKey" : "KN_IN",
-        "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "referralConfig":{
+          "showCustomerReferral" : true,
+          "showDriverReferral" : false,
+          "showKnowMore" : false,
+          "referralVideoLink" : ""
+        }
       },
       {
         "cityName" : "Delhi",
@@ -221,8 +237,13 @@ window.getMerchantConfig = function () {
         "cityLong" : 77.207795,
         "supportNumber" : "+918069724848",
         "languageKey" : "HI_IN",
-        "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "referralConfig":{
+          "showCustomerReferral" : true,
+          "showDriverReferral" : true,
+          "showKnowMore" : true,
+          "referralVideoLink" : "https://www.youtube.com/watch?v=V0Wn--yoU9c"
+        }
       },
       {
         "cityName" : "Chennai",
@@ -233,8 +254,13 @@ window.getMerchantConfig = function () {
         "cityLong" : 80.237617,
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
-        "showDriverReferral" : true,
-        "uploadRCandDL" : false
+        "uploadRCandDL" : false,
+        "referralConfig":{
+          "showCustomerReferral" : true,
+          "showDriverReferral" : true,
+          "showKnowMore" : false,
+          "referralVideoLink" : ""
+        }
       },
       {
         "cityName" : "Coimbatore",
@@ -245,8 +271,13 @@ window.getMerchantConfig = function () {
         "cityLong" : 76.966429,
         "supportNumber" : "",
         "languageKey" : "TA_IN",
-        "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "referralConfig":{
+          "showCustomerReferral" : true,
+          "showDriverReferral" : true,
+          "showKnowMore" : false,
+          "referralVideoLink" : ""
+        }
       },
       {
         "cityName" : "Puducherry",
@@ -257,8 +288,13 @@ window.getMerchantConfig = function () {
         "cityLong" : 79.808292,
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
-        "showDriverReferral" : true,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "referralConfig":{
+          "showCustomerReferral" : true,
+          "showDriverReferral" : true,
+          "showKnowMore" : false,
+          "referralVideoLink" : ""
+        }
       },
       {
         "cityName" : "Tumakuru",
@@ -269,8 +305,13 @@ window.getMerchantConfig = function () {
         "cityLong" : 75.88071672412116,
         "supportNumber" : "",
         "languageKey" : "KN_IN",
-        "showDriverReferral" : false,
-        "uploadRCandDL" : true
+        "uploadRCandDL" : true,
+        "referralConfig":{
+          "showCustomerReferral" : true,
+          "showDriverReferral" : true,
+          "showKnowMore" : false,
+          "referralVideoLink" : ""
+        }
       }
   ]
   , "dashboard" : {

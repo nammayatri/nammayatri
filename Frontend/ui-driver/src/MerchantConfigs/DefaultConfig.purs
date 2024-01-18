@@ -61,6 +61,7 @@ config =
   },
   showPaymentDetails : true,
   enableDriverReferral: false,
+  customerAppLink: "",
   rideActionModelConfig : {
     showVehicleVariant : true
   }
@@ -122,8 +123,13 @@ config =
               cityLong : 77.594566,
               supportNumber : "",
               languageKey : "KN_IN",
-              showDriverReferral : false,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              referralConfig : {
+                showCustomerReferral : false,
+                showDriverReferral : false,
+                showKnowMore : false,
+                referralVideoLink : ""
+              }
             },
             {
               cityName : "Hyderabad",
@@ -134,8 +140,13 @@ config =
               cityLong : 78.491684,
               supportNumber : "+918069724900",
               languageKey : "TE_IN",
-              showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              referralConfig : {
+                showCustomerReferral : false,
+                showDriverReferral : true,
+                showKnowMore : false,
+                referralVideoLink : ""
+              }
             },
             {
               cityName : "Mysore",
@@ -146,8 +157,13 @@ config =
               cityLong : 76.639381,
               supportNumber : "",
               languageKey : "KN_IN",
-              showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              referralConfig : {
+                showCustomerReferral : false,
+                showDriverReferral : true,
+                showKnowMore : false,
+                referralVideoLink : ""
+              }
             },
             {
               cityName : "Delhi",
@@ -158,8 +174,13 @@ config =
               cityLong : 77.216721,
               supportNumber : "+918069724848",
               languageKey : "HI_IN",
-              showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              referralConfig : {
+                showCustomerReferral : false,
+                showDriverReferral : true,
+                showKnowMore : false,
+                referralVideoLink : ""
+              }
             },
             {
               cityName : "Chennai",
@@ -170,8 +191,13 @@ config =
               cityLong : 80.237617,
               supportNumber : "08069724899",
               languageKey : "TA_IN",
-              showDriverReferral : true,
-              uploadRCandDL : false
+              uploadRCandDL : false,
+              referralConfig : {
+                showCustomerReferral : false,
+                showDriverReferral : true,
+                showKnowMore : false,
+                referralVideoLink : ""
+              }
             },
             {
               cityName : "Coimbatore",
@@ -182,8 +208,13 @@ config =
               cityLong : 76.961632,
               supportNumber : "",
               languageKey : "TA_IN",
-              showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              referralConfig : {
+                showCustomerReferral : false,
+                showDriverReferral : true,
+                showKnowMore : false,
+                referralVideoLink : ""
+              }
             },
             {
               cityName : "Puducherry",
@@ -194,8 +225,13 @@ config =
               cityLong : 79.808292,
               supportNumber : "08069724899",
               languageKey : "TA_IN",
-              showDriverReferral : true,
-              uploadRCandDL : true
+              uploadRCandDL : true,
+              referralConfig : {
+                showCustomerReferral : false,
+                showDriverReferral : true,
+                showKnowMore : false,
+                referralVideoLink : ""
+              }
             }--, For future use
             -- {
             --   cityName : "Madurai",

@@ -37,7 +37,8 @@ type AppConfigDriver a =
     enableDriverReferral :: Boolean,
     rideRequest :: RideRequestConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
-    chooseCity :: ChooseCityScreenConfig
+    chooseCity :: ChooseCityScreenConfig,
+    customerAppLink :: String
     | a
   } 
 

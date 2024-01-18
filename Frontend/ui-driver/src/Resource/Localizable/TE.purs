@@ -1111,4 +1111,12 @@ getTE stringKey =
         ENTER_CODE -> "కోడ్ వ్రాయండి"
         COMPLETE_REGISTRATION -> "నమోదును పూర్తి చెయ్యండి"
         CANT_FIND_OPTION -> "ఎంపికను కనుగొనలేకపోయాము"
-        
+        REFER_AND_EARN -> "సూచించండి మరియు సంపాదించండి"
+        REFER -> "సూచించండి "
+        EARN_CASH -> "నగదు సంపాదించండి"
+        SHARE -> "షేర్ చేయండి"
+        REFERRED_CUSTOMERS_INFO -> "మీరు సూచించిన మొదటి రైడ్‌ని విజయవంతంగా పూర్తి చేసిన కస్టమర్‌లు"
+        REFERRED_DRIVERS_INFO -> "మీ రెఫరల్ కోడ్‌తో నమ్మ యాత్రలో ఎక్కిన డ్రైవర్లు"
+        GOT_IT_TEXT -> "దొరికింది"
+        CUSTOMER_TEXT -> "కస్టమర్"
+        DRIVER_TEXT -> "డ్రైవర్"

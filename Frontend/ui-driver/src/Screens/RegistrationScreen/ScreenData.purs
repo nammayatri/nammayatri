@@ -79,6 +79,11 @@ dummyCityConfig = {
                     cityLong : 0.0,
                     supportNumber : "",
                     languageKey : "",
-                    showDriverReferral : false,
-                    uploadRCandDL : true
+                    uploadRCandDL : true,
+                    referralConfig : {
+                      showCustomerReferral : false,
+                      showDriverReferral : false,
+                      showKnowMore : false,
+                      referralVideoLink : ""  
+                    }
                   }

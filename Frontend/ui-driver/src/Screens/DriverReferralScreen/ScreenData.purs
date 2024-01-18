@@ -17,9 +17,11 @@
 module Screens.DriverReferralScreen.ScreenData where
 
 
-import Screens.Types (DriverReferralScreenState)
+import Screens.Types (DriverReferralScreenState, ReferredUserType(..), UserReferralType(..))
 import Foreign.Object (empty)
 import ConfigProvider
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Screens.RegistrationScreen.ScreenData (dummyCityConfig)
 
 initData :: DriverReferralScreenState
 initData = {
@@ -27,9 +29,14 @@ initData = {
          , config : getAppConfig appConfig
          , referredDrivers : "--"
          , referralCode : ""
+         , referredCustomers : ""
+         , activatedCustomers : ""
+         , cityConfig : dummyCityConfig
         },
     props : {
       showDriverReferralQRCode : false,
-      showNewDriverReferralText : true
+      showNewDriverReferralText : true,
+      referralInfo : NO_POPUP,
+      currentReferralItem : Just CUSTOMER_REFERRAL
     }
 }

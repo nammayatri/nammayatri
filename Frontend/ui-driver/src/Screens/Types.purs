@@ -2168,9 +2168,26 @@ type DriverReferralScreenData = {
   , config :: AppConfig
   , referredDrivers :: String
   , referralCode :: String
+  , referredCustomers :: String
+  , activatedCustomers :: String
+  , cityConfig :: CityConfig
 }
 
 type DriverReferralScreenProps = {
   showDriverReferralQRCode :: Boolean
 , showNewDriverReferralText :: Boolean
+, referralInfo :: ReferredUserType
+, currentReferralItem :: Maybe UserReferralType
 }
+
+data ReferredUserType = CUSTOMER | DRIVER | NO_POPUP
+
+derive instance genericReferredUserType :: Generic ReferredUserType _
+instance showReferredUserType :: Show ReferredUserType where show = genericShow
+instance eqReferredUserType :: Eq ReferredUserType where eq = genericEq
+
+data UserReferralType = CUSTOMER_REFERRAL | DRIVER_REFERRAL
+
+derive instance genericUserReferralType :: Generic UserReferralType _
+instance showUserReferralType :: Show UserReferralType where show = genericShow
+instance eqUserReferralType :: Eq UserReferralType where eq = genericEq

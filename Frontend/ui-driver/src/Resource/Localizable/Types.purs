@@ -1121,3 +1121,12 @@ data STR = LETS_GET_STARTED
         | ENTER_CODE
         | COMPLETE_REGISTRATION
         | CANT_FIND_OPTION
+        | REFER_AND_EARN
+        | REFER
+        | EARN_CASH
+        | SHARE
+        | REFERRED_CUSTOMERS_INFO
+        | REFERRED_DRIVERS_INFO
+        | GOT_IT_TEXT
+        | CUSTOMER_TEXT
+        | DRIVER_TEXT
