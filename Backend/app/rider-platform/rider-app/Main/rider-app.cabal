@@ -144,6 +144,7 @@ library
       Domain.Action.UI.Disability
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
+      Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
       Domain.Action.UI.HotSpot
       Domain.Action.UI.Maps
@@ -372,14 +373,23 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.UI.FRFSTicketService
       API.Action.UI.TicketService
+      API.Types.UI.FRFSTicketService
       API.Types.UI.TicketService
       Domain.Types.BusinessHour
+      Domain.Types.FRFSQuote
+      Domain.Types.FRFSSearch
+      Domain.Types.FRFSTicket
+      Domain.Types.FRFSTicketBooking
+      Domain.Types.FRFSTicketBookingPayment
+      Domain.Types.FRFSTrip
       Domain.Types.MerchantOperatingCity
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
       Domain.Types.SpecialOccasion
+      Domain.Types.Station
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
       Domain.Types.TicketBookingService
@@ -387,11 +397,18 @@ library
       Domain.Types.TicketPlace
       Domain.Types.TicketService
       Storage.Beam.BusinessHour
+      Storage.Beam.FRFSQuote
+      Storage.Beam.FRFSSearch
+      Storage.Beam.FRFSTicket
+      Storage.Beam.FRFSTicketBooking
+      Storage.Beam.FRFSTicketBookingPayment
+      Storage.Beam.FRFSTrip
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
       Storage.Beam.SpecialOccasion
+      Storage.Beam.Station
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
       Storage.Beam.TicketBookingService
@@ -399,11 +416,18 @@ library
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
       Storage.Queries.BusinessHour
+      Storage.Queries.FRFSQuote
+      Storage.Queries.FRFSSearch
+      Storage.Queries.FRFSTicket
+      Storage.Queries.FRFSTicketBooking
+      Storage.Queries.FRFSTicketBookingPayment
+      Storage.Queries.FRFSTrip
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
       Storage.Queries.SpecialOccasion
+      Storage.Queries.Station
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory
       Storage.Queries.TicketBookingService
