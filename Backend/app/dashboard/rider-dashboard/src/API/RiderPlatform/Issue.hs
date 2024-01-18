@@ -26,8 +26,8 @@ import qualified IssueManagement.Common as DIssue
 import qualified IssueManagement.Common.Dashboard.Issue as Common
 import IssueManagement.Domain.Types.Issue.IssueCategory
 import IssueManagement.Domain.Types.Issue.IssueReport
+import Kernel.Beam.Functions as B
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Error (PersonError (..))
@@ -117,7 +117,7 @@ issueInfo merchantShortId opCity apiTokenInfo issueReportId_ = withFlowHandlerAP
   where
     mkAuthorDetail :: Common.IssueReportCommentItem -> Flow Common.IssueReportCommentItem
     mkAuthorDetail Common.IssueReportCommentItem {..} = do
-      author <- Esq.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
+      author <- B.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
       let authorDetail_ =
             Common.AuthorDetail
               { authorId = cast author.id,
