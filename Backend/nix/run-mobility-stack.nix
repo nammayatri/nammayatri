@@ -4,40 +4,11 @@
   perSystem = perSystem@{ inputs', self', pkgs, lib, ... }: {
     process-compose =
       let
-        pcLib = import inputs.process-compose-flake.lib { inherit lib; };
         common = { config, ... }: {
           imports = [
-            (import ./services/nammayatri.nix perSystem.config)
+            (import ./services/nammayatri.nix { inherit (perSystem) config; inherit inputs; })
           ];
           services.nammayatri.enable = true;
-          initCommand =
-            let
-              # The cabal target of all Haskell processes.
-              cabalTargets =
-                lib.filter (x: x != null)
-                  (builtins.map
-                    (p:
-                      pcLib.lookupEnv "CABAL_TARGET" (p.environment or null))
-                    (lib.attrValues config.settings.processes));
-            in
-            pkgs.writeShellApplication {
-              name = "run-mobility-stack-init";
-              runtimeInputs = with pkgs; [
-                redis
-              ];
-              text = ''
-                set -x
-                cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
-                rm -f ./*.log # Clean up the log files
-
-                ${if config.services.nammayatri.useCabal then ''
-                    cabal build ${builtins.concatStringsSep " " (builtins.trace cabalTargets cabalTargets)}
-                  '' else ""}
-
-                #redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
-                #redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
-              '';
-            };
         };
 
         external = {

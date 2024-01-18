@@ -1,6 +1,6 @@
 # Add a process-compose based package for running the entire backend stack.
-nammayatriConfig:
-{ config, lib, ... }:
+ny:
+{ config, pkgs, lib, ... }:
 let
   inherit (lib) types;
 in
@@ -18,88 +18,98 @@ in
 
   config =
     let
+      pcLib = import ny.inputs.process-compose-flake.lib { inherit lib; };
       cfg = config.services.nammayatri;
+      # The cabal executables we want to run as part of the nammayatri service
+      # group.
+      cabalExecutables = [
+        "driver-offer-allocator-exe"
+        "dynamic-offer-driver-app-exe"
+        "dynamic-offer-driver-drainer-exe"
+        "rider-app-drainer-exe"
+        "image-api-helper-exe"
+        "kafka-consumers-exe"
+        "mock-fcm-exe"
+        "mock-google-exe"
+        "mock-idfy-exe"
+        "mock-sms-exe"
+        "provider-dashboard-exe"
+        "producer-exe"
+        "public-transport-rider-platform-exe"
+        "public-transport-search-consumer-exe"
+        "rider-app-exe"
+        "rider-dashboard-exe"
+        "scheduler-example-app-exe"
+        # "scheduler-example-scheduler-exe"
+        "search-result-aggregator-exe"
+        "special-zone-exe"
+      ];
+      # Which Haskell package contains the given cabal executable?
       cabalTargetForExe = lib.listToAttrs (lib.flatten (lib.mapAttrsToList
         (name: info: map (exe: lib.nameValuePair exe "${name}:exe:${exe}") (lib.attrNames info.exes))
-        nammayatriConfig.haskellProjects.default.outputs.packages));
-      # A process-compose process representing the local Haskell package app.
-      haskellApp = { name, ... }: {
-        log_location = "${name}.log";
-        environment = lib.optionalAttrs cfg.useCabal {
-          CABAL_TARGET = cabalTargetForExe.${name};
-        };
-        command =
-          if cfg.useCabal
-          then "set -x; cabal run ${cabalTargetForExe.${name}}"
-          else nammayatriConfig.apps.${name}.program;
+        ny.config.haskellProjects.default.outputs.packages));
+      cabalProcesses = {
+        processes = lib.foldl'
+          (acc: name: acc // {
+            "${name}" = {
+              log_location = "${name}.log";
+              command =
+                if cfg.useCabal
+                then "set -x; cabal run ${cabalTargetForExe.${name}}"
+                else ny.config.apps.${name}.program;
+              environment = {
+                CABAL_TARGET = cabalTargetForExe.${name};
+              };
+              depends_on."nammayatri-init".condition = "process_completed_successfully";
+            };
+          })
+          { }
+          cabalExecutables;
       };
+      initProcess =
+        let
+          # The cabal target of all Haskell processes.
+          cabalTargets =
+            lib.filter (x: x != null)
+              (builtins.map
+                (p:
+                  pcLib.lookupEnv "CABAL_TARGET" (p.environment or null))
+                (lib.attrValues config.settings.processes));
+        in
+        {
+          processes.nammayatri-init = {
+            command = pkgs.writeShellApplication {
+              name = "run-mobility-stack-init";
+              runtimeInputs = with pkgs; [
+                redis
+              ];
+              text = ''
+                set -x
+                cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
+                rm -f ./*.log # Clean up the log files
+
+                ${if config.services.nammayatri.useCabal then ''
+                    cabal build ${builtins.concatStringsSep " " (builtins.trace cabalTargets cabalTargets)}
+                  '' else ""}
+
+                #redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+                #redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
+              '';
+            };
+          };
+        };
     in
     {
       settings = {
+        imports = [
+          initProcess
+          cabalProcesses
+        ];
         processes = {
-          # Local Haskell processes
-          driver-offer-allocator-exe = {
-            imports = [ haskellApp ];
-          };
-          dynamic-offer-driver-app-exe = {
-            imports = [ haskellApp ];
-          };
-          dynamic-offer-driver-drainer-exe = {
-            imports = [ haskellApp ];
-          };
-          rider-app-drainer-exe = {
-            imports = [ haskellApp ];
-          };
-          image-api-helper-exe = {
-            imports = [ haskellApp ];
-          };
           kafka-consumers-exe = {
-            imports = [ haskellApp ];
             environment = {
               CONSUMER_TYPE = "AVAILABILITY_TIME";
             };
-          };
-          mock-fcm-exe = {
-            imports = [ haskellApp ];
-          };
-          mock-google-exe = {
-            imports = [ haskellApp ];
-          };
-          mock-idfy-exe = {
-            imports = [ haskellApp ];
-          };
-          mock-sms-exe = {
-            imports = [ haskellApp ];
-          };
-          provider-dashboard-exe = {
-            imports = [ haskellApp ];
-          };
-          producer-exe = {
-            imports = [ haskellApp ];
-          };
-          public-transport-rider-platform-exe = {
-            imports = [ haskellApp ];
-          };
-          public-transport-search-consumer-exe = {
-            imports = [ haskellApp ];
-          };
-          rider-app-exe = {
-            imports = [ haskellApp ];
-          };
-          rider-dashboard-exe = {
-            imports = [ haskellApp ];
-          };
-          scheduler-example-app-exe = {
-            imports = [ haskellApp ];
-          };
-          # scheduler-example-scheduler-exe = {
-          #   imports = [ haskellApp ];
-          # };
-          search-result-aggregator-exe = {
-            imports = [ haskellApp ];
-          };
-          special-zone-exe = {
-            imports = [ haskellApp ];
           };
         };
       };

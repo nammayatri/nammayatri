@@ -58,11 +58,6 @@ _:
           NOTE: This is slower, due to doing full nix build.
         '';
         exec = ''
-          set -x
-          cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
-          rm -f ./*.log # Clean up the log files
-          redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
-          redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
           nix run .#run-mobility-stack-nix -- "$@"
         '';
       };
@@ -72,24 +67,9 @@ _:
         description = ''
           Run the nammayatri backend components via "cabal run".
         '';
-        exec =
-          let
-            cabalTargets =
-              lib.pipe config.process-compose.run-mobility-stack-dev.settings.processes [
-                (lib.mapAttrsToList
-                  (_: lib.attrByPath [ "cabalTarget" ] null))
-                (lib.filter (v: v != null))
-              ];
-          in
-          ''
-            set -x
-            cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
-            rm -f ./*.log # Clean up the log files
-            # cabal build ${lib.concatStringsSep " " cabalTargets}
-            redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
-            redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
-            nix run .#run-mobility-stack-dev -- "$@"
-          '';
+        exec = ''
+          nix run .#run-mobility-stack-dev -- "$@"
+        '';
       };
 
       backend-new-service = {
