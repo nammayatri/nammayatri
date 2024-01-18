@@ -31,7 +31,7 @@ in
         command =
           if cfg.useCabal
           then "set -x; cabal run ${cabalTargetForExe.${name}}"
-          else nammayatriConfig.${name}.program;
+          else nammayatriConfig.apps.${name}.program;
       };
     in
     {
