@@ -277,6 +277,21 @@ parseBookingCancelledEvent order = do
         cancellationSource = castCancellationSourceV2 cancellationSource
       }
 
+parseEstimateRepetitionEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseEstimateRepetitionEvent transactionId order = do
+  bppEstimateId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideAssigned Event.")
+  cancellationSource <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "cancellationSource is not present in RideAssigned Event.")
+  return $
+    DOnUpdate.EstimateRepetitionReq
+      { searchRequestId = Id transactionId,
+        bppEstimateId = Id bppEstimateId,
+        bppBookingId = Id bppBookingId,
+        bppRideId = Id bppRideId,
+        cancellationSource = castCancellationSourceV2 cancellationSource
+      }
+
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
 castCancellationSource = \case
   OnUpdate.ByUser -> SBCR.ByUser
