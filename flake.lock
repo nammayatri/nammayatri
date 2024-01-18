@@ -302,19 +302,17 @@
         "nixpkgs-21_11": "nixpkgs-21_11",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
         "process-compose": "process-compose",
-        "process-compose-flake": [
-          "process-compose-flake"
-        ],
+        "process-compose-flake": "process-compose-flake",
         "rust-overlay": "rust-overlay",
         "systems": "systems_2",
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1705209227,
-        "narHash": "sha256-qYfpsTuDYDk9BftPJVwV79XMw4zO1o8g2dFVPYxBAU4=",
+        "lastModified": 1705593808,
+        "narHash": "sha256-673FUPxp2COQCEirDNuhD26buSKU5iZ1/H0WXixsNxQ=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "08951c9abc2aec72f3a10178a8b71172f08670d1",
+        "rev": "734de42d7270a6177b8c5ebba3d51194976e9554",
         "type": "github"
       },
       "original": {
@@ -1497,7 +1495,7 @@
         "flake-parts": "flake-parts_2",
         "nixpkgs": "nixpkgs_8",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_2",
-        "process-compose-flake": "process-compose-flake",
+        "process-compose-flake": "process-compose-flake_2",
         "rust-overlay": "rust-overlay_3",
         "services-flake": "services-flake",
         "systems": "systems_6",
@@ -2842,11 +2840,11 @@
     },
     "process-compose-flake": {
       "locked": {
-        "lastModified": 1689870193,
-        "narHash": "sha256-qZgtMtMoPKtH1u/9BiWB8B+pVYLcuZwBdnKB7bRZExQ=",
+        "lastModified": 1705593784,
+        "narHash": "sha256-DbrS+M+wavpGzD1Q1t0Ph94UYDUq93gpup8EUpnWLVg=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "0e2aab0ba17c098838813979251a4363b26b0875",
+        "rev": "9ab9f5113f6109d6cd530690a62a66602c0f3878",
         "type": "github"
       },
       "original": {
@@ -2857,16 +2855,15 @@
     },
     "process-compose-flake_2": {
       "locked": {
-        "lastModified": 1705591532,
-        "narHash": "sha256-hO2GgtA+TZHMfMq01/x5tKDLAHrFfGZWeE0KbfYZ0MM=",
+        "lastModified": 1689870193,
+        "narHash": "sha256-qZgtMtMoPKtH1u/9BiWB8B+pVYLcuZwBdnKB7bRZExQ=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "42cae4dbf82b056fac419f82018d10467a077cc3",
+        "rev": "0e2aab0ba17c098838813979251a4363b26b0875",
         "type": "github"
       },
       "original": {
         "owner": "Platonic-Systems",
-        "ref": "initCommand",
         "repo": "process-compose-flake",
         "type": "github"
       }
@@ -2969,7 +2966,6 @@
           "nixpkgs"
         ],
         "osrm-pbf": "osrm-pbf",
-        "process-compose-flake": "process-compose-flake_2",
         "shared-kernel": "shared-kernel"
       }
     },
