@@ -23,7 +23,7 @@ module SharedLogic.CallBAP
     sendNewMessageToBAP,
     sendDriverOffer,
     callOnConfirm,
-    -- callOnConfirmV2,
+    callOnConfirmV2,
     buildBppUrl,
     sendAlertToBAP,
   )
@@ -32,6 +32,7 @@ where
 import qualified AWS.S3 as S3
 import qualified Beckn.ACL.OnSelect as ACL
 import qualified Beckn.ACL.OnUpdate as ACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
@@ -202,30 +203,31 @@ callOnConfirm transporter contextFromConfirm content = do
   context_ <- buildTaxiContext Context.ON_CONFIRM msgId contextFromConfirm.transaction_id bapId bapUri (Just bppSubscriberId) (Just bppUri) city country False
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV1 bapUri internalEndPointHashMap (BecknCallbackReq context_ $ Right content)
 
--- callOnConfirmV2 ::
---   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
---     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
---     HasHttpClientOptions r c,
---     HasShortDurationRetryCfg r c,
---     CoreMetrics m
---   ) =>
---   DM.Merchant ->
---   BaseUrl ->
---   Text ->
---   Text ->
---   Context.City ->
---   Context.Country ->
---   Maybe Text ->
---   -- OnConfirm.OnConfirmMessageV2 ->
---   Spec.ConfirmReqMessage ->
---   m ()
--- callOnConfirmV2 transporter bapUri bapId msgId city country txnId content = do
---   let bppSubscriberId = getShortId $ transporter.subscriberId
---       authKey = getHttpManagerKey bppSubscriberId
---   bppUri <- buildBppUrl transporter.id
---   internalEndPointHashMap <- asks (.internalEndPointHashMap)
---   context_ <- buildTaxiContextV2 Context.ON_CONFIRM msgId txnId bapId bapUri (Just bppSubscriberId) (Just bppUri) city country
---   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (BecknCallbackReqV2 context_ $ Right content)
+callOnConfirmV2 ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    CoreMetrics m
+  ) =>
+  DM.Merchant ->
+  Spec.Context ->
+  -- OnConfirm.OnConfirmMessageV2 ->
+  Spec.ConfirmReqMessage ->
+  m ()
+callOnConfirmV2 transporter context content = do
+  let bppSubscriberId = getShortId $ transporter.subscriberId
+      authKey = getHttpManagerKey bppSubscriberId
+  bapUri <- Utils.getContextBapUri context
+  bapId <- Utils.getContextBapId context
+  msgId <- Utils.getMessageId context
+  city <- Utils.getContextCity context
+  country <- Utils.getContextCountry context
+  bppUri <- buildBppUrl transporter.id
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  txnId <- Utils.getTransactionId context
+  context_ <- ContextV2.buildContextV2 Context.ON_CONFIRM Context.MOBILITY msgId (Just txnId) bapId bapUri (Just bppSubscriberId) (Just bppUri) city country
+  void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_CONFIRM) API.onConfirmAPIV2 bapUri internalEndPointHashMap (Spec.OnConfirmReq {onConfirmReqContext = context_, onConfirmReqError = Nothing, onConfirmReqMessage = Just content})
 
 buildBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl]

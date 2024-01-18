@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.OnConfirm (buildOnConfirmMessage) where
+module Beckn.ACL.OnConfirm (buildOnConfirmMessage, buildOnConfirmMessageV2) where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -225,8 +225,8 @@ mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType rid
       agent = Nothing
     }
 
-_buildOnConfirmMessageV2 :: MonadFlow m => DConfirm.DConfirmRes -> m Spec.ConfirmReqMessage
-_buildOnConfirmMessageV2 res = do
+buildOnConfirmMessageV2 :: MonadFlow m => DConfirm.DConfirmRes -> m Spec.ConfirmReqMessage
+buildOnConfirmMessageV2 res = do
   order <- tfOrder res
   return $
     Spec.ConfirmReqMessage
