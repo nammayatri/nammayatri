@@ -16,6 +16,7 @@ module API.Dashboard.Roles where
 
 import "lib-dashboard" API.Dashboard.Roles (API)
 import qualified "lib-dashboard" Domain.Action.Dashboard.Roles as DRoles
+import qualified Domain.Action.Roles as DRoles
 import "lib-dashboard" Domain.Types.Role as DRole
 import "lib-dashboard" Environment
 import Kernel.Prelude
