@@ -33,8 +33,11 @@ findAllWithOptions mbLimit mbOffset mbStatus mbCategoryId mbAssignee =
 findById :: BeamFlow m r => Id IssueReport -> m (Maybe IssueReport)
 findById (Id issueReportId) = findOneWithKV [And [Is BeamIR.id $ Eq issueReportId, Is BeamIR.deleted $ Eq False]]
 
+findByShortId :: BeamFlow m r => ShortId IssueReport -> m (Maybe IssueReport)
+findByShortId (ShortId issueReportShortId) = findOneWithKV [And [Is BeamIR.shortId $ Eq $ Just issueReportShortId, Is BeamIR.deleted $ Eq False]]
+
 findAllByPerson :: BeamFlow m r => Id Person -> m [IssueReport]
-findAllByPerson (Id personId) = findAllWithKV [And [Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]]
+findAllByPerson (Id personId) = findAllWithOptionsKV [And [Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]] (Desc BeamIR.updatedAt) Nothing Nothing
 
 safeToDelete :: BeamFlow m r => Id IssueReport -> Id Person -> m (Maybe IssueReport)
 safeToDelete (Id issueReportId) (Id personId) = findOneWithKV [And [Is BeamIR.id $ Eq issueReportId, Is BeamIR.personId $ Eq personId, Is BeamIR.deleted $ Eq False]]
@@ -100,6 +103,7 @@ instance FromTType' BeamIR.IssueReport IssueReport where
       Just
         IssueReport
           { id = Id id,
+            shortId = ShortId <$> shortId,
             personId = Id personId,
             driverId = Id <$> driverId,
             rideId = Id <$> rideId,
@@ -121,6 +125,7 @@ instance ToTType' BeamIR.IssueReport IssueReport where
   toTType' IssueReport {..} = do
     BeamIR.IssueReportT
       { BeamIR.id = getId id,
+        BeamIR.shortId = getShortId <$> shortId,
         BeamIR.personId = getId personId,
         BeamIR.driverId = getId <$> driverId,
         BeamIR.rideId = getId <$> rideId,

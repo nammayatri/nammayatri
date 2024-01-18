@@ -4,6 +4,7 @@ import qualified AWS.S3 as S3
 import qualified Data.Text as T hiding (count, map)
 import IssueManagement.Common
 import qualified IssueManagement.Common.Dashboard.Issue as Common
+import qualified IssueManagement.Domain.Action.UI.Issue as UIR
 import qualified IssueManagement.Domain.Types.Issue.Comment as DC
 import qualified IssueManagement.Domain.Types.Issue.IssueCategory as DIC
 import qualified IssueManagement.Domain.Types.Issue.IssueReport as DIR
@@ -110,6 +111,7 @@ issueList merchantShortId opCity mbLimit mbOffset mbStatus mbCategoryId mbAssign
       pure $
         Common.IssueReportListItem
           { issueReportId = cast issueReport.id,
+            issueReportShortId = issueReport.shortId,
             personId = cast issueReport.personId,
             rideId = cast <$> issueReport.rideId,
             deleted = issueReport.deleted,
@@ -126,12 +128,17 @@ issueInfo ::
   ) =>
   ShortId Merchant ->
   Context.City ->
-  Id DIR.IssueReport ->
+  Maybe (Id DIR.IssueReport) ->
+  Maybe (ShortId DIR.IssueReport) ->
   ServiceHandle m ->
   Identifier ->
   m Common.IssueInfoRes
-issueInfo merchantShortId opCity issueReportId issueHandle identifier = do
-  issueReport <- B.runInReplica $ QIR.findById issueReportId >>= fromMaybeM (IssueReportDoNotExist issueReportId.getId)
+issueInfo merchantShortId opCity mbIssueReportId mbIssueReportShortId issueHandle identifier = do
+  issueReport <- case mbIssueReportId of
+    Just iReportId -> B.runInReplica $ QIR.findById iReportId >>= fromMaybeM (IssueReportDoNotExist iReportId.getId)
+    Nothing -> case mbIssueReportShortId of
+      Just iReportShortId -> B.runInReplica $ QIR.findByShortId iReportShortId >>= fromMaybeM (IssueReportDoNotExist iReportShortId.getShortId)
+      Nothing -> throwError (InvalidRequest "Either issueReportId or issueReportShortId is required")
   person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonDoesNotExist issueReport.personId.getId)
   checkMerchantCityAccess merchantShortId opCity issueReport (Just person) issueHandle
   mkIssueInfoRes person issueReport
@@ -139,16 +146,21 @@ issueInfo merchantShortId opCity issueReportId issueHandle identifier = do
     mkIssueInfoRes :: (Esq.EsqDBReplicaFlow m r, EncFlow m r, BeamFlow m r) => Person -> DIR.IssueReport -> m Common.IssueInfoRes
     mkIssueInfoRes person issueReport = do
       personDetail <- Just <$> mkPersonDetail person
-      mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReportId identifier
+      mediaFiles <- CQMF.findAllInForIssueReportId issueReport.mediaFiles issueReport.id identifier
       comments <- B.runInReplica (QC.findAllByIssueReportId issueReport.id)
       category <- CQIC.findById issueReport.categoryId identifier >>= fromMaybeM (IssueCategoryNotFound issueReport.categoryId.getId)
       option <- mapM (\optionId -> CQIO.findById optionId identifier >>= fromMaybeM (IssueOptionNotFound optionId.getId)) issueReport.optionId
+      issueChats <- case identifier of
+        DRIVER -> return Nothing
+        CUSTOMER -> Just <$> UIR.mkIssueChats issueReport ENGLISH identifier
       pure $
         Common.IssueInfoRes
           { issueReportId = cast issueReport.id,
+            issueReportShortId = issueReport.shortId,
             personDetail,
             rideId = cast <$> issueReport.rideId,
             category = category.category,
+            chats = issueChats,
             option = option <&> (.option),
             mediaFiles = mediaFiles,
             comments = mkIssueReportComment <$> comments,

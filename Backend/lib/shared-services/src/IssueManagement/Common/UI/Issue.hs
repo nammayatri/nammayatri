@@ -35,12 +35,14 @@ data IssueReportReq = IssueReportReq
     optionId :: Maybe (Id IssueOption),
     categoryId :: Id IssueCategory,
     description :: Text,
-    chats :: Maybe [Chat]
+    chats :: Maybe [Chat],
+    createTicket :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToSchema, Show)
 
 data IssueReportRes = IssueReportRes
   { issueReportId :: Id IssueReport,
+    issueReportShortId :: Maybe (ShortId IssueReport),
     messages :: [Message]
   }
   deriving stock (Eq, Show, Generic)
@@ -60,6 +62,7 @@ newtype IssueReportListRes = IssueReportListRes
 
 data IssueReportListItem = IssueReportListItem
   { issueReportId :: Id IssueReport,
+    issueReportShortId :: Maybe (ShortId IssueReport),
     status :: IssueStatus,
     category :: Text,
     createdAt :: UTCTime
@@ -75,6 +78,7 @@ type IssueInfoAPI =
 
 data IssueInfoRes = IssueInfoRes
   { issueReportId :: Id IssueReport,
+    issueReportShortId :: Maybe (ShortId IssueReport),
     categoryLabel :: Text,
     option :: Maybe Text,
     assignee :: Maybe Text,
@@ -98,17 +102,6 @@ data MediaFile_ = MediaFile_
 
 data FileType = Audio | Image
   deriving stock (Eq, Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data ChatDetail = ChatDetail
-  { timestamp :: UTCTime,
-    content :: Maybe Text,
-    id :: Text,
-    chatType :: MessageType,
-    sender :: Sender,
-    label :: Maybe Text
-  }
-  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 -------------------------------------------------------------------------
@@ -143,11 +136,6 @@ newtype IssueMediaUploadRes = IssueMediaUploadRes
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data IssueMediaUploadConfig = IssueMediaUploadConfig
-  { mediaFileSizeUpperLimit :: Int,
-    mediaFileUrlPattern :: Text
-  }
 
 -------------------------------------------------------------------------
 

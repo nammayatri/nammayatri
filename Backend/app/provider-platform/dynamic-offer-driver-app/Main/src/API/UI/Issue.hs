@@ -25,7 +25,6 @@ import Servant
 import SharedLogic.External.LocationTrackingService.Types
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
-import Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
@@ -57,8 +56,8 @@ driverIssueHandle =
     { findPersonById = castPersonById,
       findRideById = castRideById,
       getRideInfo = castRideInfo,
-      findMerchant = castMerchantById,
-      createTicket = castTicket
+      createTicket = castCreateTicket,
+      updateTicket = castUpdateTicket
     }
 
 castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
@@ -82,7 +81,8 @@ castRideById rideId = do
   ride <- runInReplica $ QR.findById (cast rideId)
   return $ fmap castRide ride
   where
-    castRide ride = Common.Ride (cast ride.id) (ShortId $ show ride.shortId) ride.createdAt
+    castRide ride =
+      Common.Ride (cast ride.id) (ShortId $ show ride.shortId) ride.createdAt
 
 castRideInfo ::
   ( EncFlow m r,
@@ -133,36 +133,33 @@ castRideInfo merchantId merchantOpCityId rideId = do
           area = Nothing
         }
 
-castTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
-castTicket merchantId merchantOpCityId = TT.createTicket (cast merchantId) (cast merchantOpCityId)
+castCreateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.CreateTicketReq -> m TIT.CreateTicketResp
+castCreateTicket merchantId merchantOpCityId = TT.createTicket (cast merchantId) (cast merchantOpCityId)
 
-castMerchantById :: (CacheFlow m r, EsqDBFlow m r) => Id Common.Merchant -> m (Maybe Common.Merchant)
-castMerchantById merchantId = do
-  merchant <- CQM.findById (cast merchantId)
-  return $ fmap castMerchant merchant
-  where
-    castMerchant merchant = Common.Merchant (ShortId $ show merchant.shortId)
+castUpdateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
+castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
-buildIssueMediaUploadConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Common.IssueMediaUploadConfig
-buildIssueMediaUploadConfig merchantOpCityId = do
+buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Common.MerchantConfig
+buildMerchantConfig merchantOpCityId = do
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   return
-    Common.IssueMediaUploadConfig
+    Common.MerchantConfig
       { mediaFileSizeUpperLimit = transporterConfig.mediaFileSizeUpperLimit,
-        mediaFileUrlPattern = transporterConfig.mediaFileUrlPattern
+        mediaFileUrlPattern = transporterConfig.mediaFileUrlPattern,
+        kaptureDisposition = transporterConfig.kaptureDisposition
       }
 
 issueReportDriverList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> FlowHandler Common.IssueReportListRes
-issueReportDriverList (driverId, merchantId, _) language = withFlowHandlerAPI $ Common.issueReportList (cast driverId, cast merchantId) language driverIssueHandle Common.DRIVER
+issueReportDriverList (driverId, merchantId, merchantOpCityId) language = withFlowHandlerAPI $ Common.issueReportList (cast driverId, cast merchantId, cast merchantOpCityId) language driverIssueHandle Common.DRIVER
 
 fetchMedia :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler Text
 fetchMedia (driverId, merchantId, _) filePath = withFlowHandlerAPI $ Common.fetchMedia (cast driverId, cast merchantId) filePath
 
 createIssueReport :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
-createIssueReport (driverId, merchantId, merchantOpCityId) mbLanguage req = withFlowHandlerAPI $ Common.createIssueReport (cast driverId, cast merchantId, cast merchantOpCityId) mbLanguage req driverIssueHandle Common.DRIVER
+createIssueReport (driverId, merchantId, merchantOpCityId) mbLanguage req = withFlowHandlerAPI $ Common.createIssueReport (cast driverId, cast merchantId, cast merchantOpCityId) mbLanguage req (buildMerchantConfig merchantOpCityId) driverIssueHandle Common.DRIVER
 
 issueMediaUpload :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
-issueMediaUpload (driverId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast driverId, cast merchantId) req (buildIssueMediaUploadConfig merchantOpCityId)
+issueMediaUpload (driverId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast driverId, cast merchantId) req (buildMerchantConfig merchantOpCityId)
 
 issueInfo :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueReport -> Maybe Language -> FlowHandler Common.IssueInfoRes
 issueInfo (driverId, merchantId, _) issueReportId language = withFlowHandlerAPI $ Common.issueInfo issueReportId (cast driverId, cast merchantId) language driverIssueHandle Common.DRIVER
@@ -180,4 +177,4 @@ getIssueOption :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) 
 getIssueOption (driverId, merchantId, _) issueCategoryId issueOptionId issueReportId language = withFlowHandlerAPI $ Common.getIssueOption (cast driverId, cast merchantId) issueCategoryId issueOptionId issueReportId language driverIssueHandle Common.DRIVER
 
 updateIssueStatus :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id Domain.IssueReport -> Maybe Language -> Common.IssueStatusUpdateReq -> FlowHandler Common.IssueStatusUpdateRes
-updateIssueStatus (driverId, merchantId, _) issueReportId language req = withFlowHandlerAPI $ Common.updateIssueStatus (cast driverId, cast merchantId) issueReportId language req driverIssueHandle Common.DRIVER
+updateIssueStatus (driverId, merchantId, merchantOpCityId) issueReportId language req = withFlowHandlerAPI $ Common.updateIssueStatus (cast driverId, cast merchantId, cast merchantOpCityId) issueReportId language req driverIssueHandle Common.DRIVER
