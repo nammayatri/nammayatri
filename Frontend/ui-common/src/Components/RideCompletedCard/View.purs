@@ -460,7 +460,7 @@ driverUpiQrCodeView config push =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  ][ if config.lottieQRAnim then lottieQRView config push else dummyTextView
+  ][ if config.lottieQRAnim.visible then lottieQRView config push else dummyTextView
   , linearLayout 
     [
       height WRAP_CONTENT
@@ -717,5 +717,5 @@ lottieQRView config push =
       , height WRAP_CONTENT
       , padding $ PaddingTop 5
       , width MATCH_PARENT
-      , onAnimationEnd (\_-> void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = "end_ride_qr_anim.json", lottieId = (EHC.getNewIDWithTag "QRLottie"), speed = 1.0 , scaleType = "CENTER_CROP"})(const UpiQrRendered)
+      , onAnimationEnd (\_-> void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = config.lottieQRAnim.url , lottieId = (EHC.getNewIDWithTag "QRLottie"), speed = 1.0 , scaleType = "CENTER_CROP"})(const UpiQrRendered)
       ]
