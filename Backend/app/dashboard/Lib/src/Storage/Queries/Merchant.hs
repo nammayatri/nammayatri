@@ -19,33 +19,28 @@ import Domain.Types.Merchant as Domain
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (Encrypted (..), EncryptedHashed (..))
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Sequelize as Se
+import Storage.Beam.BeamFlow
 import qualified Storage.Beam.Merchant as BeamM
-import Storage.Tabular.Merchant
 
-create :: Merchant -> SqlDB ()
-create = Esq.create
+create :: BeamFlow m r => Merchant -> m ()
+create = createWithKV
 
 findById ::
-  Transactionable m =>
+  BeamFlow m r =>
   Id Merchant ->
   m (Maybe Merchant)
-findById = Esq.findById
+findById merchantId = findOneWithKV [Se.Is BeamM.id $ Se.Eq $ getId merchantId]
 
-findByShortId :: Transactionable m => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: BeamFlow m r => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId = do
-  findOne $ do
-    merchant <- from $ table @MerchantT
-    where_ $ merchant ^. MerchantShortId ==. val (getShortId shortId)
-    return merchant
+  findOneWithKV [Se.Is BeamM.shortId $ Se.Eq $ getShortId shortId]
 
 findAllMerchants ::
-  Transactionable m =>
+  BeamFlow m r =>
   m [Merchant]
-findAllMerchants = do
-  Esq.findAll $ do
-    from $ table @MerchantT
+findAllMerchants = findAllWithKV [Se.Is BeamM.id $ Se.Not $ Se.Eq ""]
 
 instance FromTType' BeamM.Merchant Domain.Merchant where
   fromTType' BeamM.MerchantT {..} = do

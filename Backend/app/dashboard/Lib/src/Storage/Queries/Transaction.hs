@@ -19,24 +19,24 @@ import Domain.Types.ServerName as DSN
 import Domain.Types.Transaction as DT
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
+import Sequelize as Se
+import Storage.Beam.BeamFlow
 import qualified Storage.Beam.Transaction as BeamT
-import Storage.Tabular.Transaction
 
-create :: Transaction -> SqlDB ()
-create = Esq.create
+create :: BeamFlow m r => Transaction -> m ()
+create = createWithKV
 
-fetchLastTransaction :: Transactionable m => DT.Endpoint -> DSN.ServerName -> m (Maybe DT.Transaction)
-fetchLastTransaction endpoint serverName = do
-  findOne $ do
-    transaction <- from $ table @TransactionT
-    where_ $
-      transaction ^. TransactionEndpoint ==. val endpoint
-        &&. transaction ^. TransactionServerName ==. val (Just serverName)
-    orderBy [desc $ transaction ^. TransactionCreatedAt]
-    limit 1
-    return transaction
+fetchLastTransaction :: BeamFlow m r => DT.Endpoint -> DSN.ServerName -> m (Maybe DT.Transaction)
+fetchLastTransaction endpoint serverName =
+  findAllWithOptionsKV
+    [ Se.Is BeamT.endpoint $ Se.Eq endpoint,
+      Se.Is BeamT.serverName $ Se.Eq $ Just serverName
+    ]
+    (Se.Desc BeamT.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
 
 instance FromTType' BeamT.Transaction DT.Transaction where
   fromTType' BeamT.TransactionT {..} = do

@@ -28,62 +28,50 @@ import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Sequelize as Se
+import Storage.Beam.BeamFlow
 import qualified Storage.Beam.Person as BeamP
 import Storage.Tabular.MerchantAccess as Access
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Role as Role
 
-create :: Person -> SqlDB ()
-create = Esq.create
+create :: BeamFlow m r => Person -> m ()
+create = createWithKV
 
 findById ::
-  Transactionable m =>
+  BeamFlow m r =>
   Id Person ->
   m (Maybe Person)
-findById = Esq.findById
+findById personId = findOneWithKV [Se.Is BeamP.id $ Se.Eq $ getId personId]
 
 findByEmail ::
-  (Transactionable m, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   Text ->
   m (Maybe Person)
 findByEmail email = do
   emailDbHash <- getDbHash (T.toLower email)
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonEmailHash ==. val (Just emailDbHash)
-    return person
+  findOneWithKV [Se.Is BeamP.emailHash $ Se.Eq $ Just emailDbHash]
 
 findByEmailAndPassword ::
-  (Transactionable m, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Person)
 findByEmailAndPassword email password = do
   emailDbHash <- getDbHash (T.toLower email)
   passwordDbHash <- getDbHash password
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonEmailHash ==. val (Just emailDbHash)
-        &&. person ^. PersonPasswordHash ==. val (Just passwordDbHash)
-    return person
+  findOneWithKV [Se.And [Se.Is BeamP.emailHash $ Se.Eq $ Just emailDbHash, Se.Is BeamP.passwordHash $ Se.Eq $ Just passwordDbHash]]
 
 findByMobileNumber ::
-  (Transactionable m, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Person)
 findByMobileNumber mobileNumber mobileCountryCode = do
   mobileDbHash <- getDbHash mobileNumber
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonMobileNumberHash ==. val mobileDbHash
-        &&. person ^. PersonMobileCountryCode ==. val mobileCountryCode
-    return person
+  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq $ mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq $ mobileCountryCode]]
 
--- TODO add filtering by role
+-- TODO add filtering by role ---todo to be done in beam queries
 findAllWithLimitOffset ::
   Transactionable m =>
   Maybe Text ->
@@ -132,51 +120,47 @@ findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset personI
     fromMaybeList :: [(Person, Role, Maybe [Text], Maybe [City.City])] -> [(Person, Role, [ShortId Merchant.Merchant], [City.City])]
     fromMaybeList = map (\(person, role, mbMerchantShortIds, mbMerchantOperatingCityIds) -> (person, role, ShortId <$> fromMaybe [] mbMerchantShortIds, fromMaybe [] mbMerchantOperatingCityIds))
 
-updatePersonRole :: Id Person -> Id Role -> SqlDB ()
+updatePersonRole :: BeamFlow m r => Id Person -> Id Role -> m ()
 updatePersonRole personId roleId = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonRoleId =. val (toKey roleId),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateWithKV
+    [ Se.Set BeamP.roleId $ getId roleId,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
 
-updatePersonPassword :: Id Person -> DbHash -> SqlDB ()
+updatePersonPassword :: BeamFlow m r => Id Person -> DbHash -> m ()
 updatePersonPassword personId newPasswordHash = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonPasswordHash =. val (Just newPasswordHash),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateWithKV
+    [ Se.Set BeamP.passwordHash $ Just newPasswordHash,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
 
-updatePersonEmail :: Id Person -> EncryptedHashed Text -> SqlDB ()
+updatePersonEmail :: BeamFlow m r => Id Person -> EncryptedHashed Text -> m ()
 updatePersonEmail personId encEmail = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonEmailEncrypted =. val (Just (unEncrypted encEmail.encrypted)),
-        PersonEmailHash =. val (Just encEmail.hash),
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateWithKV
+    [ Se.Set BeamP.emailEncrypted $ Just (unEncrypted encEmail.encrypted),
+      Se.Set BeamP.emailHash $ Just encEmail.hash,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
 
-updatePersonMobile :: Id Person -> EncryptedHashed Text -> SqlDB ()
+updatePersonMobile :: BeamFlow m r => Id Person -> EncryptedHashed Text -> m ()
 updatePersonMobile personId encMobileNumber = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonMobileNumberEncrypted =. val (unEncrypted encMobileNumber.encrypted),
-        PersonMobileNumberHash =. val encMobileNumber.hash,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+  updateWithKV
+    [ Se.Set BeamP.mobileNumberEncrypted $ unEncrypted encMobileNumber.encrypted,
+      Se.Set BeamP.mobileNumberHash $ encMobileNumber.hash,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
 
 instance FromTType' BeamP.Person Person.Person where
   fromTType' BeamP.PersonT {..} = do
