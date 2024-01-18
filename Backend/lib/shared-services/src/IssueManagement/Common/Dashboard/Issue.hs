@@ -72,6 +72,7 @@ data IssueReportListResponse = IssueReportListResponse
 
 data IssueReportListItem = IssueReportListItem
   { issueReportId :: Id IssueReport,
+    issueReportShortId :: Maybe (ShortId IssueReport),
     personId :: Id Person,
     rideId :: Maybe (Id Ride),
     deleted :: Bool,
@@ -91,10 +92,18 @@ type IssueInfoAPI =
     :> "info"
     :> Get '[JSON] IssueInfoRes
 
+type IssueInfoAPIV2 =
+  "info"
+    :> QueryParam "issueId" (Id IssueReport)
+    :> QueryParam "issueShortId" (ShortId IssueReport)
+    :> Get '[JSON] IssueInfoRes
+
 data IssueInfoRes = IssueInfoRes
   { issueReportId :: Id IssueReport,
+    issueReportShortId :: Maybe (ShortId IssueReport),
     personDetail :: Maybe PersonDetail,
     rideId :: Maybe (Id Ride),
+    chats :: Maybe [ChatDetail],
     comments :: [IssueReportCommentItem],
     category :: Text,
     mediaFiles :: [MediaFile],
