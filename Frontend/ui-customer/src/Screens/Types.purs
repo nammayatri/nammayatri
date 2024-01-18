@@ -41,6 +41,7 @@ import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
+import Screens(ScreenName)
 
 type Contacts = {
   name :: String,
@@ -1509,7 +1510,6 @@ type SaveFavouriteCardState =
   , tag :: String
   , tagExists :: Boolean
   , selectedItem :: LocationListItemState
-  , tagData :: Array String
   , isBtnActive :: Boolean
   }
 
@@ -1866,3 +1866,75 @@ data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | REPORTED_ISSUES_MODAL | RE
 
 derive instance genericIssueModalType :: Generic IssueModalType _
 instance eqIssueModalType :: Eq IssueModalType where eq = genericEq
+
+--- ######################################### Search Location Screen State ####################################################
+
+
+type SearchLocationScreenState = 
+  { data :: SearchLocationScreenData ,
+    props :: SearchLocationScreenProps,
+    appConfig :: AppConfig
+  }
+
+type SearchLocationScreenData = 
+  {
+    srcLoc :: Maybe LocationInfo,
+    destLoc :: Maybe LocationInfo,
+    currentLoc :: Maybe LocationInfo,
+    locationList :: Array LocationListItemState,
+    fromScreen :: String,
+    saveFavouriteCard :: SaveFavouriteCardState,
+    mapLoc :: LocationInfo,
+    defaultGate :: String,
+    nearByGates :: Array Location,
+    specialZoneCoordinates :: String,
+    confirmLocCategory :: String
+  }
+
+type SearchLocationScreenProps = 
+  { searchLocStage :: SearchLocationStage
+  , focussedTextField :: Maybe SearchLocationTextField
+  , actionType :: SearchLocationActionType
+  , showSaveFavCard :: Boolean
+  , areBothLocMandatory :: Boolean
+  , canSelectFromFav :: Boolean
+  , showLoader :: Boolean
+  , canClearText :: Boolean 
+  , locUnserviceable :: Boolean
+  , isAutoComplete :: Boolean  }
+
+data SearchLocationActionType = AddingStopAction 
+                              | SearchLocationAction
+
+derive instance genericSearchLocationActionType :: Generic SearchLocationActionType _
+instance eqSearchLocationActionType :: Eq SearchLocationActionType where eq = genericEq
+
+data SearchLocationTextField =  SearchLocPickup
+                              | SearchLocDrop
+
+derive instance genericSearchLocationTextField :: Generic SearchLocationTextField _
+instance showSearchLocationTextField :: Show SearchLocationTextField where show = genericShow
+instance eqSearchLocationTextField :: Eq SearchLocationTextField where eq = genericEq
+
+data SearchLocationStage =  ConfirmLocationStage 
+                          | PredictionsStage 
+                          | LocateOnMapStage
+                          | AllFavouritesStage
+
+derive instance genericSearchLocationStage :: Generic SearchLocationStage _
+instance eqSearchLocationStage :: Eq SearchLocationStage where eq = genericEq
+
+type GlobalProps = 
+  { savedLocations :: Array LocationListItemState
+  , recentSearches :: Array LocationListItemState
+  , cachedSearches :: Array LocationListItemState
+  }
+
+type LocationInfo = 
+  { lat :: Maybe Number ,
+    lon :: Maybe Number ,
+    placeId :: Maybe String ,
+    address :: String ,
+    addressComponents :: Address ,
+    city :: Maybe City
+  }

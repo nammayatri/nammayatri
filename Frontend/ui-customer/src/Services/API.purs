@@ -1615,7 +1615,8 @@ newtype ServiceabilityRes = ServiceabilityRes
 newtype ServiceabilityResDestination = ServiceabilityResDestination
   { serviceable :: Boolean,
     geoJson :: Maybe String,
-    specialLocation :: Maybe SpecialLocation
+    specialLocation :: Maybe SpecialLocation,
+    city :: Maybe String
   }
 newtype SpecialLocation = SpecialLocation
   {
