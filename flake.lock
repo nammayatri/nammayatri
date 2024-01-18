@@ -302,7 +302,9 @@
         "nixpkgs-21_11": "nixpkgs-21_11",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix",
         "process-compose": "process-compose",
-        "process-compose-flake": "process-compose-flake",
+        "process-compose-flake": [
+          "process-compose-flake"
+        ],
         "rust-overlay": "rust-overlay",
         "systems": "systems_2",
         "treefmt-nix": "treefmt-nix"
@@ -1495,7 +1497,7 @@
         "flake-parts": "flake-parts_2",
         "nixpkgs": "nixpkgs_8",
         "pre-commit-hooks-nix": "pre-commit-hooks-nix_2",
-        "process-compose-flake": "process-compose-flake_2",
+        "process-compose-flake": "process-compose-flake",
         "rust-overlay": "rust-overlay_3",
         "services-flake": "services-flake",
         "systems": "systems_6",
@@ -2840,11 +2842,11 @@
     },
     "process-compose-flake": {
       "locked": {
-        "lastModified": 1704892628,
-        "narHash": "sha256-wZJkMW/RFYdChz54ArfY2GypEjTW9KE+T4wGjar5h9E=",
+        "lastModified": 1689870193,
+        "narHash": "sha256-qZgtMtMoPKtH1u/9BiWB8B+pVYLcuZwBdnKB7bRZExQ=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "9066f059e36e55550bff3044786b46903bf5a819",
+        "rev": "0e2aab0ba17c098838813979251a4363b26b0875",
         "type": "github"
       },
       "original": {
@@ -2855,15 +2857,16 @@
     },
     "process-compose-flake_2": {
       "locked": {
-        "lastModified": 1689870193,
-        "narHash": "sha256-qZgtMtMoPKtH1u/9BiWB8B+pVYLcuZwBdnKB7bRZExQ=",
+        "lastModified": 1705587575,
+        "narHash": "sha256-EW4Gk5vqaxOkmV3FX29UjymX1uA1jdxSjjveO8O3Jjk=",
         "owner": "Platonic-Systems",
         "repo": "process-compose-flake",
-        "rev": "0e2aab0ba17c098838813979251a4363b26b0875",
+        "rev": "0cd7bc7fe80c5ef4bafdbb2e85c36d5e2b582e0c",
         "type": "github"
       },
       "original": {
         "owner": "Platonic-Systems",
+        "ref": "initCommand",
         "repo": "process-compose-flake",
         "type": "github"
       }
@@ -2966,6 +2969,7 @@
           "nixpkgs"
         ],
         "osrm-pbf": "osrm-pbf",
+        "process-compose-flake": "process-compose-flake_2",
         "shared-kernel": "shared-kernel"
       }
     },
