@@ -1203,7 +1203,10 @@ getRideCompletedConfig state = let
     isPrimaryButtonSticky = true,
     bannerConfig = bannerConfig{isBanner = autoPayBanner /= NO_SUBSCRIPTION_BANNER},
     viewsByOrder = map (_.elementView) (DA.filter (_.condition) viewOrderConfig),
-    lottieQRAnim = state.data.config.rideCompletedCardConfig.lottieQRAnim
+    lottieQRAnim {
+      visible = state.data.config.rideCompletedCardConfig.lottieQRAnim,
+      url = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/end_ride_qr_anim.json"
+    }
   }
   in config'
 
