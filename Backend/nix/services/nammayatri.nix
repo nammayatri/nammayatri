@@ -49,8 +49,6 @@ in
         "public-transport-search-consumer-exe"
         "rider-app-exe"
         "rider-dashboard-exe"
-        "scheduler-example-app-exe"
-        # "scheduler-example-scheduler-exe"
         "search-result-aggregator-exe"
         "special-zone-exe"
       ];
