@@ -439,8 +439,8 @@ export const scanQrCode = function (requestCode) {
 export const timePicker = function (cb) {
   return function (action) {
     return function () {
-      const callback = callbackMapper.map(function (hour, min) {
-        cb(action(hour)(min))();
+      const callback = callbackMapper.map(function (resp, hour, min) {
+        cb(action(resp)(hour)(min))();
       });
       return window.JBridge.timePicker(callback);
     };
@@ -2316,3 +2316,17 @@ export const displayBase64Image = (configObj) => {
     }
   }
 } 
+
+export const datePickerImpl = function (cb , action, delay){
+  const callback = callbackMapper.map(function (str, year, month, date) {
+    cb(action(str)(year)(month)(date))();
+  })
+  window.JBridge.datePicker(callback, "");
+}
+
+export const timePickerImpl = function (cb , action, delay){
+  const callback = callbackMapper.map(function (hour, min, str) {
+    cb(action(hour)(min)(str))();
+  })
+  window.JBridge.timePicker(callback);
+}

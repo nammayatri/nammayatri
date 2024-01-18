@@ -426,6 +426,9 @@
       "widget_close_gradient" : true,
       "ny_ic_ride_scheduled" : true,
       "ny_ic_alarm" : true,
-      "ny_ic_plus_circle": true
+      "ny_ic_plus_circle": true,
+      "ny_ic_blue_circle": true,
+      "ny_ic_clock_unfilled": true,
+      "ny_ic_chevron_down_unfilled": true
    }
 }

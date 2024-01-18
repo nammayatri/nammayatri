@@ -26,7 +26,7 @@ view push config =
   , background if isActiveIndex then Color.blue600 else Color.white900
   , cornerRadius 6.0
   , id $ EHC.getNewIDWithTag config.id
-  , stroke $ if isActiveIndex then "2," <> Color.blue800 else "1," <> Color.white900
+  , stroke $ if isActiveIndex && config.showStroke then "2," <> Color.blue800 else "1," <> Color.white900
   , margin $ config.layoutMargin
   , padding $ Padding 8 16 12 16
   , clickable config.isEnabled

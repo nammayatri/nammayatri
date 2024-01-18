@@ -2910,3 +2910,10 @@ rideScheduledFlow = do
   case action of
     RideScheduledScreenOutput.GoToHomeScreen -> homeScreenFlow
     _ -> pure unit
+
+rentalScreenFlow :: FlowBT String Unit
+rentalScreenFlow = do
+  (GlobalState currentState) <- getState
+  action <- lift $ lift $ runScreen $ UI.rentalScreen currentState.rentalScreen 
+  case action of
+    _ -> pure unit

@@ -38,8 +38,8 @@ import Engineering.Helpers.Commons (screenHeight, screenWidth, parseFloat)
 import Effect.Uncurried
 import Data.Maybe (Maybe(..))
 -- import LoaderOverlay.Handler as UI
--- import Effect.Aff (launchAff)
--- import Effect.Class (liftEffect)
+import Effect.Aff (Aff, makeAff, nonCanceler, launchAff)
+import Effect.Class (liftEffect)
 -- import PrestoDOM.Core(terminateUI)
 import Presto.Core.Types.Language.Flow
 import Engineering.Helpers.Commons (screenHeight, screenWidth, os)
@@ -263,6 +263,8 @@ foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Uni
 foreign import getLocationNameV2 :: Fn2 Number Number String
 foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitude :: Number }
 foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
+foreign import datePickerImpl :: forall action. EffectFn3 (action -> Effect Unit) (String -> Int -> Int -> Int -> action) Int Unit
+foreign import timePickerImpl :: forall action. EffectFn2 (action -> Effect Unit) ( Int -> Int -> String -> action) Unit
 
 foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
 
@@ -407,6 +409,12 @@ setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeysImpl key val)
 
 setEnvInNativeSharedPrefKeys :: forall st. String -> String -> Flow st Unit
 setEnvInNativeSharedPrefKeys key val = liftFlow (setEnvInNativeSharedPrefKeysImpl key val)
+
+datePickerWithTimeout :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> Int -> action) -> Int -> Effect Unit
+datePickerWithTimeout = runEffectFn3 datePickerImpl
+
+timePickerWithTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> Effect Unit
+timePickerWithTimeout = runEffectFn2 timePickerImpl
 
 -- onEventWithCB :: Foreign -> Flow GlobalState (Either String String)
 -- onEventWithCB obj = doAff do
@@ -565,3 +573,17 @@ displayBase64ImageConfig = {
   , scaleType : "CENTER_CROP"
   , inSampleSize : 1
 }
+
+data DatePicker = DatePicker String Int Int Int
+
+data TimePicker = TimePicker Int Int String
+
+showDatePicker ∷ forall action. (action → Effect Unit) → (String → Int → Int → Int → String → Int → Int → action) → Aff Unit
+showDatePicker push action = do
+  datePicker <- makeAff \cb -> datePickerWithTimeout (cb <<< Right) DatePicker 30000 $> nonCanceler
+  let (DatePicker dateResp year month day) = datePicker
+  if(dateResp == "SELECTED") then do
+    timePicker <- makeAff \cb -> timePickerWithTimeout (cb <<< Right) TimePicker $> nonCanceler
+    let (TimePicker hour minute timeResp) = timePicker
+    liftEffect $ push $ action dateResp year month day timeResp hour minute
+  else liftEffect $ push $ action dateResp year month day "" 0 0
