@@ -141,7 +141,7 @@ createSosDetails personId merchantId req = do
   ticketId <- do
     if riderConfig.enableSupportForSafety
       then do
-        ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo))
+        ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo merchantConfig.kaptureDisposition))
         case ticketResponse of
           Right ticketResponse' -> return (Just ticketResponse'.ticketId)
           Left _ -> return Nothing
@@ -223,7 +223,7 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
       let rideInfo = buildRideInfo ride person phoneNumber
           trackLink = merchantConfig.trackingShortUrlPattern <> ride.shortId.getShortId
       when riderConfig.enableSupportForSafety $
-        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo))
+        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo merchantConfig.kaptureDisposition))
       createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
   where
     validateContentType = do
@@ -268,11 +268,12 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
             createdAt = now
           }
 
-mkTicket :: Person.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> Ticket.CreateTicketReq
-mkTicket person phoneNumber mediaLinks info = do
+mkTicket :: Person.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> Text -> Ticket.CreateTicketReq
+mkTicket person phoneNumber mediaLinks info disposition = do
   Ticket.CreateTicketReq
     { category = "Code Red",
       subCategory = Just "SOS Alert (follow-back)",
+      disposition,
       issueId = Nothing,
       issueDescription = "SOS called",
       mediaFiles = Just mediaLinks,
