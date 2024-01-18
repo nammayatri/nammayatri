@@ -118,6 +118,7 @@ buildSelectReqMessage res = do
 tfOrder :: (MonadFlow m) => DSelect.DSelectRes -> m Spec.Order
 tfOrder res = do
   let orderBilling = Nothing
+      orderCancellation = Nothing
       orderCancellationTerms = Nothing
       orderId = Nothing
       orderPayments = Nothing

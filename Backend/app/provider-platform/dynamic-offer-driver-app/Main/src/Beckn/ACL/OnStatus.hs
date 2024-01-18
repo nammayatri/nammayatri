@@ -65,6 +65,7 @@ tfOrder res =
       orderStatus = Just $ mapToBecknBookingStatusV2 res.bookingStatus,
       orderFulfillments = tfFulfillment res,
       orderBilling = Nothing,
+      orderCancellation = Nothing,
       orderCancellationTerms = Nothing,
       orderItems = Nothing,
       orderPayments = Nothing,

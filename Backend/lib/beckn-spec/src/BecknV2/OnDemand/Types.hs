@@ -25,6 +25,7 @@ module BecknV2.OnDemand.Types
     Billing (..),
     CancelReq (..),
     CancelReqMessage (..),
+    Cancellation (..),
     CancellationTerm (..),
     Catalog (..),
     City (..),
@@ -56,6 +57,7 @@ module BecknV2.OnDemand.Types
     OnTrackReq (..),
     OnTrackReqMessage (..),
     OnUpdateReq (..),
+    Option (..),
     Order (..),
     Payment (..),
     PaymentParams (..),
@@ -254,6 +256,7 @@ optionsBilling =
       [ ("billingPhone", "phone")
       ]
 
+-- |
 data CancelReq = CancelReq
   { -- |
     cancelReqContext :: Context,
@@ -309,6 +312,30 @@ optionsCancelReqMessage =
       [ ("cancelReqMessageCancellationReasonId", "cancellation_reason_id"),
         ("cancelReqMessageDescriptor", "descriptor"),
         ("cancelReqMessageOrderId", "order_id")
+      ]
+
+-- | Describes a cancellation event
+newtype Cancellation = Cancellation
+  { -- |
+    cancellationCancelledBy :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Cancellation where
+  parseJSON = genericParseJSON optionsCancellation
+
+instance ToJSON Cancellation where
+  toJSON = genericToJSON optionsCancellation
+
+optionsCancellation :: Options
+optionsCancellation =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("cancellationCancelledBy", "cancelled_by")
       ]
 
 -- | Describes the cancellation terms of an item or an order. This can be referenced at an item or order level. Item-level cancellation terms can override the terms at the order level.
@@ -1139,6 +1166,8 @@ optionsOnStatusReq =
         ("onStatusReqMessage", "message")
       ]
 
+-- |
+-- |
 data OnTrackReq = OnTrackReq
   { -- |
     onTrackReqContext :: Context,
@@ -1194,7 +1223,6 @@ optionsOnTrackReqMessage =
       ]
 
 -- |
--- |
 data OnUpdateReq = OnUpdateReq
   { -- |
     onUpdateReqContext :: Context,
@@ -1225,10 +1253,36 @@ optionsOnUpdateReq =
       ]
 
 -- |
+-- | Describes a selectable option
+data Option = Option
+  { -- |
+    optionId :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Option where
+  parseJSON = genericParseJSON optionsOption
+
+instance ToJSON Option where
+  toJSON = genericToJSON optionsOption
+
+optionsOption :: Options
+optionsOption =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("optionId", "id")
+      ]
+
 -- | Describes a legal purchase order. It contains the complete details of the legal contract created between the buyer and the seller.
 data Order = Order
   { -- |
     orderBilling :: Maybe Billing,
+    -- |
+    orderCancellation :: Maybe Cancellation,
     -- | Cancellation terms of this item
     orderCancellationTerms :: Maybe [CancellationTerm],
     -- | The fulfillments involved in completing this order
@@ -1263,6 +1317,7 @@ optionsOrder =
   where
     table =
       [ ("orderBilling", "billing"),
+        ("orderCancellation", "cancellation"),
         ("orderCancellationTerms", "cancellation_terms"),
         ("orderFulfillments", "fulfillments"),
         ("orderId", "id"),
@@ -1869,6 +1924,7 @@ optionsTagGroup =
         ("tagGroupList", "list")
       ]
 
+-- |
 data TrackReq = TrackReq
   { -- |
     trackReqContext :: Context,

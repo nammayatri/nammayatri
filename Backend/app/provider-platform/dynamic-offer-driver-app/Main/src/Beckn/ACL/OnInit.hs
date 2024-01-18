@@ -181,6 +181,7 @@ tfOrder :: DInit.InitRes -> Spec.Order
 tfOrder res =
   Spec.Order
     { orderBilling = Nothing,
+      orderCancellation = Nothing,
       orderCancellationTerms = Nothing,
       orderFulfillments = tfFulfillments res,
       orderId = Just res.booking.id.getId,

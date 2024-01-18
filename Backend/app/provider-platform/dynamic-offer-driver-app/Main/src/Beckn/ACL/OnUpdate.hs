@@ -244,8 +244,8 @@ buildOnUpdateMessage (BookingCancelledBuildReq DBookingCancelledReq {..}) = do
           OnUpdate.BookingCancelled $
             BookingCancelledOU.BookingCancelledEvent
               { id = booking.id.getId,
-                state = "CANCELLED"
-                -- cancellation_reason = castCancellationSource cancellationSource -- TODO :: Handle this event using on_cancel. JAYPAL
+                state = "CANCELLED",
+                cancellation_reason = Utils.castCancellationSource cancellationSource
               },
         update_target = "state,fufillment.state.code"
       }

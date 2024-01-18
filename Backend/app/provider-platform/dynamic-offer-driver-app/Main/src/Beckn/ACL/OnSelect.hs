@@ -88,6 +88,7 @@ mkOnSelectMessageV2 req@DOnSelectReq {..} = do
           orderPayments = Just [mkPaymentV2],
           orderProvider = Just $ mkProviderV2 driverQuote,
           orderBilling = Nothing,
+          orderCancellation = Nothing,
           orderCancellationTerms = Nothing,
           orderId = Nothing,
           orderStatus = Nothing

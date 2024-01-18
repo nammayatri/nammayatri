@@ -69,27 +69,27 @@ buildOnUpdateImageV2 mbImage = do
     then Nothing
     else Just returnData
 
-buildOnUpdateMessageV2 :: () => Domain.Types.OnUpdate.DRideAssignedReq -> Data.Text.Text -> (Maybe BecknV2.OnDemand.Types.ConfirmReqMessage)
-buildOnUpdateMessageV2 req driverNumber = do
-  let confirmReqMessageOrder_ = buildOnUpdateOrderV2 req driverNumber
-  let returnData = BecknV2.OnDemand.Types.ConfirmReqMessage {confirmReqMessageOrder = confirmReqMessageOrder_}
-  let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
-  if allNothing
-    then Nothing
-    else Just returnData
+-- buildOnUpdateMessageV2 :: () => Domain.Types.OnUpdate.DRideAssignedReq -> Data.Text.Text -> (Maybe BecknV2.OnDemand.Types.ConfirmReqMessage)
+-- buildOnUpdateMessageV2 req driverNumber = do
+--   let confirmReqMessageOrder_ = buildOnUpdateOrderV2 req driverNumber
+--   let returnData = BecknV2.OnDemand.Types.ConfirmReqMessage {confirmReqMessageOrder = confirmReqMessageOrder_}
+--   let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
+--   if allNothing
+--     then Nothing
+--     else Just returnData
 
-buildOnUpdateOrderV2 :: () => Domain.Types.OnUpdate.DRideAssignedReq -> Data.Text.Text -> (BecknV2.OnDemand.Types.Order)
-buildOnUpdateOrderV2 req driverNumber = do
-  let orderBilling_ = Nothing
-  let orderCancellationTerms_ = Nothing
-  let orderFulfillments_ = Data.List.singleton <$> (buildOnUpdateFulfillmentV2 (Just req.driver) req.ride req.booking (Just req.vehicle) req.image driverNumber)
-  let orderId_ = Just req.booking.id.getId
-  let orderItems_ = Nothing
-  let orderPayments_ = Nothing
-  let orderProvider_ = Nothing
-  let orderQuote_ = Nothing
-  let orderStatus_ = Just "ACTIVE"
-  BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_}
+-- buildOnUpdateOrderV2 :: () => Domain.Types.OnUpdate.DRideAssignedReq -> Data.Text.Text -> (BecknV2.OnDemand.Types.Order)
+-- buildOnUpdateOrderV2 req driverNumber = do
+--   let orderBilling_ = Nothing
+--   let orderCancellationTerms_ = Nothing
+--   let orderFulfillments_ = Data.List.singleton <$> (buildOnUpdateFulfillmentV2 (Just req.driver) req.ride req.booking (Just req.vehicle) req.image driverNumber)
+--   let orderId_ = Just req.booking.id.getId
+--   let orderItems_ = Nothing
+--   let orderPayments_ = Nothing
+--   let orderProvider_ = Nothing
+--   let orderQuote_ = Nothing
+--   let orderStatus_ = Just "ACTIVE"
+--   BecknV2.OnDemand.Types.Order {orderBilling = orderBilling_, orderCancellationTerms = orderCancellationTerms_, orderFulfillments = orderFulfillments_, orderId = orderId_, orderItems = orderItems_, orderPayments = orderPayments_, orderProvider = orderProvider_, orderQuote = orderQuote_, orderStatus = orderStatus_}
 
 buildOnUpdatePersonV2 :: () => Maybe Domain.Types.Person.Person -> Maybe Data.Text.Text -> (Maybe BecknV2.OnDemand.Types.Person)
 buildOnUpdatePersonV2 mbDriver mbImage = do
@@ -103,12 +103,12 @@ buildOnUpdatePersonV2 mbDriver mbImage = do
     then Nothing
     else Just returnData
 
-buildOnUpdateReqV2 :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Data.Text.Text -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Beckn.Context.Country -> Domain.Types.OnUpdate.DRideAssignedReq -> Data.Text.Text -> m (BecknV2.OnDemand.Types.OnUpdateReq)
-buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country req driverNumber = do
-  let onUpdateReqError_ = Nothing
-  let onUpdateReqMessage_ = buildOnUpdateMessageV2 req driverNumber
-  onUpdateReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain messageId (Just req.booking.transactionId) req.booking.bapId req.booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-  pure $ BecknV2.OnDemand.Types.OnUpdateReq {onUpdateReqContext = onUpdateReqContext_, onUpdateReqError = onUpdateReqError_, onUpdateReqMessage = onUpdateReqMessage_}
+-- buildOnUpdateReqV2 :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Data.Text.Text -> Data.Text.Text -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Beckn.Context.Country -> Domain.Types.OnUpdate.DRideAssignedReq -> Data.Text.Text -> m (BecknV2.OnDemand.Types.OnUpdateReq)
+-- buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country req driverNumber = do
+--   let onUpdateReqError_ = Nothing
+--   let onUpdateReqMessage_ = buildOnUpdateMessageV2 req driverNumber
+--   onUpdateReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain messageId (Just req.booking.transactionId) req.booking.bapId req.booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
+--   pure $ BecknV2.OnDemand.Types.OnUpdateReq {onUpdateReqContext = onUpdateReqContext_, onUpdateReqError = onUpdateReqError_, onUpdateReqMessage = onUpdateReqMessage_}
 
 buildOnUpdateVehicleV2 :: () => Domain.Types.Vehicle.Vehicle -> (Maybe BecknV2.OnDemand.Types.Vehicle)
 buildOnUpdateVehicleV2 vehicle = do

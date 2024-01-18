@@ -147,14 +147,14 @@ parseEvent _ (OnUpdate.BookingCancelled tcEvent) = do
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id $ tcEvent.id,
-        cancellationSource = SBCR.ByUser -- castCancellationSource tcEvent.cancellation_reason -- TODO :: Handle this event using on_cancel. JAYPAL
+        cancellationSource = castCancellationSource tcEvent.cancellation_reason
       }
 parseEvent _ (OnUpdate.BookingReallocation rbrEvent) = do
   return $
     DOnUpdate.BookingReallocationReq
       { bppBookingId = Id $ rbrEvent.id,
         bppRideId = Id rbrEvent.fulfillment.id,
-        reallocationSource = SBCR.ByUser -- castCancellationSource rbrEvent.reallocation_reason -- TODO :: Handle this event using on_cancel. JAYPAL
+        reallocationSource = castCancellationSource rbrEvent.reallocation_reason
       }
 parseEvent _ (OnUpdate.DriverArrived daEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in DriverArrived Event.") daEvent.fulfillment.tags
@@ -254,6 +254,64 @@ parseRideAssignedEvent order = do
         vehicleModel = vehicle.vehicleModel
       }
 
+parseRideStartedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseRideStartedEvent order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideStarted Event.")
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideStarted Event.")
+  pure $
+    DOnUpdate.RideStartedReq
+      { bppBookingId = Id bppBookingId,
+        bppRideId = Id bppRideId
+      }
+
+parseRideCompletedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseRideCompletedEvent order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideCompleted Event.")
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideCompleted Event.")
+  fare <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) & fromMaybeM (InvalidRequest "price_value is not present in RideCompleted Event.")
+  totalFare <- order.orderQuote >>= (.quotationPrice) >>= (.priceComputedValue) & fromMaybeM (InvalidRequest "price_computed_value is not present in RideCompleted Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment tags is not present in RideCompleted Event.")
+  chargeableDistance :: HighPrecMeters <-
+    fromMaybeM (InvalidRequest "chargeable_distance is not present in RideCompleted Event.") $
+      readMaybe . T.unpack
+        =<< Utils.getTagV2 "ride_distance_details" "chargeable_distance" tagsGroups
+  traveledDistance :: HighPrecMeters <-
+    fromMaybeM (InvalidRequest "traveled_distance is not present in RideCompleted Event.") $
+      readMaybe . T.unpack
+        =<< Utils.getTagV2 "ride_distance_details" "traveled_distance" tagsGroups
+  fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
+  fareBreakups <- map mkOnUpdateFareBreakup fareBreakups'
+  pure $
+    DOnUpdate.RideCompletedReq
+      { bppBookingId = Id bppBookingId,
+        bppRideId = Id bppRideId,
+        fare = roundToIntegral fare,
+        totalFare = roundToIntegral totalFare,
+        chargeableDistance = chargeableDistance,
+        traveledDistance = traveledDistance,
+        fareBreakups = fareBreakups,
+        paymentUrl = Nothing
+      }
+  where
+    mkOnUpdateFareBreakup breakup = do
+      val <- breakup.quotationBreakupInnerPrice >>= (.priceValue) & fromMaybeM (InvalidRequest "breakup_price_value is not present in RideCompleted Event.")
+      title <- breakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "breakup_title is not present in RideCompleted Event.")
+      pure $
+        DOnUpdate.OnUpdateFareBreakup
+          { amount = realToFrac val,
+            description = title
+          }
+
+parseBookingCancelledEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseBookingCancelledEvent order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
+  cancellationSource <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "cancellationSource is not present in RideAssigned Event.")
+  return $
+    DOnUpdate.BookingCancelledReq
+      { bppBookingId = Id bppBookingId,
+        cancellationSource = castCancellationSourceV2 cancellationSource
+      }
+
 parseDriverArrivedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
 parseDriverArrivedEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
@@ -265,16 +323,6 @@ parseDriverArrivedEvent order = do
       { bppBookingId = Id bppBookingId,
         bppRideId = Id bppRideId,
         arrivalTime = arrival_time
-      }
-
-parseBookingCancelledEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
-parseBookingCancelledEvent order = do
-  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
-  cancellationSource <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "cancellationSource is not present in RideAssigned Event.")
-  return $
-    DOnUpdate.BookingCancelledReq
-      { bppBookingId = Id bppBookingId,
-        cancellationSource = castCancellationSourceV2 cancellationSource
       }
 
 parseEstimateRepetitionEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq

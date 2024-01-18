@@ -239,6 +239,7 @@ tfOrder res = do
   return $
     Spec.Order
       { orderBilling = Nothing,
+        orderCancellation = Nothing,
         orderCancellationTerms = Nothing,
         orderFulfillments = fulfillments,
         orderId = Just res.booking.id.getId,

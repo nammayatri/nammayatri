@@ -98,7 +98,7 @@ data OnUpdateReq
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
-        cancellationSource :: SBCR.CancellationSource -- TODO :: Handle this event using on_cancel. JAYPAL
+        cancellationSource :: SBCR.CancellationSource
       }
   | BookingReallocationReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -164,14 +164,14 @@ data ValidatedOnUpdateReq
       }
   | ValidatedBookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
-        cancellationSource :: SBCR.CancellationSource, -- TODO :: Handle this event using on_cancel. JAYPAL
+        cancellationSource :: SBCR.CancellationSource,
         booking :: SRB.Booking,
         mbRide :: Maybe SRide.Ride
       }
   | ValidatedBookingReallocationReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
-        reallocationSource :: SBCR.CancellationSource, -- TODO :: Handle this event using on_cancel. JAYPAL
+        reallocationSource :: SBCR.CancellationSource,
         booking :: SRB.Booking,
         ride :: SRide.Ride
       }
@@ -187,7 +187,7 @@ data ValidatedOnUpdateReq
         bppEstimateId :: Id DEstimate.BPPEstimate,
         bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
-        cancellationSource :: SBCR.CancellationSource, -- TODO :: Handle this event using on_cancel. JAYPAL
+        cancellationSource :: SBCR.CancellationSource,
         booking :: SRB.Booking,
         ride :: SRide.Ride,
         searchReq :: DSR.SearchRequest,
@@ -387,7 +387,7 @@ onUpdate ValidatedRideCompletedReq {..} = do
           }
 onUpdate ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
-  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) booking.merchantId
+  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource booking.merchantId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   case cancellationSource of
     SBCR.ByUser -> SMC.updateCustomerFraudCounters booking.riderId merchantConfigs
@@ -414,7 +414,7 @@ onUpdate ValidatedBookingCancelledReq {..} = do
   Notify.notifyOnBookingCancelled booking cancellationSource
 onUpdate ValidatedBookingReallocationReq {..} = do
   mbRide <- QRide.findActiveByRBId booking.id
-  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) booking.merchantId
+  let bookingCancellationReason = mkBookingCancellationReason booking.id (mbRide <&> (.id)) reallocationSource booking.merchantId
   _ <- QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
   _ <- QRide.updateStatus ride.id SRide.CANCELLED
   QBCR.upsert bookingCancellationReason
@@ -427,7 +427,7 @@ onUpdate ValidatedDriverArrivedReq {..} = do
 onUpdate ValidatedNewMessageReq {..} = do
   Notify.notifyOnNewMessage booking message
 onUpdate ValidatedEstimateRepetitionReq {..} = do
-  let bookingCancellationReason = mkBookingCancellationReason booking.id (Just ride.id) booking.merchantId
+  let bookingCancellationReason = mkBookingCancellationReason booking.id (Just ride.id) cancellationSource booking.merchantId
   logTagInfo ("EstimateId-" <> getId estimate.id) "Estimate repetition."
 
   _ <- QEstimate.updateStatus estimate.id DEstimate.DRIVER_QUOTE_REQUESTED
@@ -521,16 +521,16 @@ validateRequest SafetyAlertReq {..} = do
 mkBookingCancellationReason ::
   Id SRB.Booking ->
   Maybe (Id SRide.Ride) ->
-  -- SBCR.CancellationSource ->
+  SBCR.CancellationSource ->
   Id DMerchant.Merchant ->
   SBCR.BookingCancellationReason
-mkBookingCancellationReason bookingId mbRideId merchantId =
+mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
   -- cancellationSource merchantId =
   SBCR.BookingCancellationReason
     { bookingId = bookingId,
       rideId = mbRideId,
       merchantId = Just merchantId,
-      source = SBCR.ByUser, -- TODO :: Handle this event using on_cancel. JAYPAL
+      source = cancellationSource,
       reasonCode = Nothing,
       reasonStage = Nothing,
       additionalInfo = Nothing,
