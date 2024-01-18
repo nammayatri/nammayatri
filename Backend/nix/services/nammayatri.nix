@@ -44,30 +44,40 @@ in
         "search-result-aggregator-exe"
         "special-zone-exe"
       ];
-      # Which Haskell package contains the given cabal executable?
-      cabalTargetForExe = lib.listToAttrs (lib.flatten (lib.mapAttrsToList
-        (name: info: map (exe: lib.nameValuePair exe "${name}:exe:${exe}") (lib.attrNames info.exes))
-        ny.config.haskellProjects.default.outputs.packages));
-      cabalProcesses = {
+
+      haskellProcessFor = name:
+        if cfg.useCabal
+        then
+          let
+            # Which Haskell package contains the given cabal executable?
+            cabalTargetForExe = lib.listToAttrs (lib.flatten (lib.mapAttrsToList
+              (name: info: map (exe: lib.nameValuePair exe "${name}:exe:${exe}") (lib.attrNames info.exes))
+              ny.config.haskellProjects.default.outputs.packages));
+          in
+          {
+            command =
+              "set -x; cabal run ${cabalTargetForExe.${name}}";
+            environment = {
+              CABAL_TARGET = cabalTargetForExe.${name};
+            };
+          }
+        else {
+          command = ny.config.apps.${name}.program;
+        };
+      haskellProcesses = {
         processes = lib.listToAttrs (builtins.map
           (name: {
             inherit name;
             value = {
+              imports = [ (haskellProcessFor name) ];
               log_location = "${name}.log";
               working_dir = "Backend";
-              command =
-                if cfg.useCabal
-                then "set -x; cabal run ${cabalTargetForExe.${name}}"
-                else ny.config.apps.${name}.program;
-              environment = {
-                CABAL_TARGET = cabalTargetForExe.${name};
-              };
               depends_on."nammayatri-init".condition = "process_completed_successfully";
             };
           })
           cabalExecutables);
       };
-      initProcess =
+      initProcesses =
         let
           # The cabal target of all Haskell processes.
           cabalTargets =
@@ -78,24 +88,26 @@ in
                 (lib.attrValues config.settings.processes));
         in
         {
-          processes.nammayatri-init = {
-            working_dir = "Backend";
-            command = pkgs.writeShellApplication {
-              name = "run-mobility-stack-init";
-              runtimeInputs = with pkgs; [
-                redis
-              ];
-              text = ''
-                set -x
-                rm -f ./*.log # Clean up the log files
+          processes = {
+            nammayatri-init = {
+              working_dir = "Backend";
+              command = pkgs.writeShellApplication {
+                name = "run-mobility-stack-init";
+                runtimeInputs = with pkgs; [
+                  redis
+                ];
+                text = ''
+                  set -x
+                  rm -f ./*.log # Clean up the log files
 
-                ${if cfg.useCabal then ''
-                    cabal build ${builtins.concatStringsSep " " cabalTargets}
-                  '' else ""}
+                  ${if cfg.useCabal then ''
+                      cabal build ${builtins.concatStringsSep " " cabalTargets}
+                    '' else ""}
 
-                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
-                redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
-              '';
+                  redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+                  redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
+                '';
+              };
             };
           };
         };
@@ -103,8 +115,8 @@ in
     {
       settings = {
         imports = [
-          initProcess
-          cabalProcesses
+          initProcesses
+          haskellProcesses
         ];
         processes = {
           kafka-consumers-exe = {
