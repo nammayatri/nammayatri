@@ -212,12 +212,11 @@ parseEventV2 transactionId order = do
       & fromMaybeM (InvalidRequest "Event type is not present in OnUpdateReq.")
 
   case eventType of
-    "RIDE_COMPLETED" -> parseRideCompletedEvent order
-    "RIDE_STARTED" -> parseRideStartedEvent order
     "RIDE_ASSIGNED" -> parseRideAssignedEvent order
-    "RIDE_BOOKING_CANCELLED" -> parseBookingCancelledEvent order
-    "RIDE_BOOKING_REALLOCATION" -> parseBookingReallocationEvent order
     "DRIVER_ARRIVED" -> parseDriverArrivedEvent order
+    "RIDE_STARTED" -> parseRideStartedEvent order
+    "RIDE_COMPLETED" -> parseRideCompletedEvent order
+    "RIDE_BOOKING_CANCELLED" -> parseBookingCancelledEvent order
     "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
     "NEW_MESSAGE" -> parseNewMessageEvent order
     "SAFETY_ALERT" -> parseSafetyAlertEvent order
@@ -227,20 +226,55 @@ parseRideAssignedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
 parseRideAssignedEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideAssigned Event.")
+  stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideAssigned Event.")
+  start <- Utils.firstStop stops & fromMaybeM (InvalidRequest "start is not present in RideAssigned Event.")
+  otp <- start.stopAuthorization >>= (.authorizationToken) & fromMaybeM (InvalidRequest "authorization_token is not present in RideAssigned Event.")
+  driverName <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & fromMaybeM (InvalidRequest "driverName is not present in RideAssigned Event.")
+  driverMobileNumber <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "driverMobileNumber is not present in RideAssigned Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags) & fromMaybeM (InvalidRequest "personTags is not present in RideAssigned Event.")
+  let rating :: Maybe HighPrecMeters = readMaybe . T.unpack =<< getTagV2 "driver_details" "rating" tagsGroup
+  registeredAt :: UTCTime <- fromMaybeM (InvalidRequest "registered_at is not present.") $ readMaybe . T.unpack =<< getTagV2 "driver_details" "registered_at" tagsGroup
+  driverImage <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personImage) >>= (.imageUrl)
+  vehicle <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) & fromMaybeM (InvalidRequest "Vehicle is not present in RideAssigned Event.")
+  vehicleNumber <- vehicle.vehicleRegistration & fromMaybeM (InvalidRequest "vehicleNumber is not present in RideAssigned Event.")
+
   return
     DOnUpdate.RideAssignedReq
       { bppBookingId = Id bppBookingId,
         bppRideId = Id bppRideId,
-        otp = authorization.token,
-        driverName = agentPerson.name,
-        driverMobileNumber = agentPhone,
+        otp = otp,
+        driverName = driverName,
+        driverMobileNumber = driverMobileNumber,
         driverMobileCountryCode = Just "+91", -----------TODO needs to be added in agent Tags------------
         driverRating = realToFrac <$> rating,
-        driverImage = agentPerson.image >>= (.url),
+        driverImage = driverImage,
         driverRegisteredAt = registeredAt,
-        vehicleNumber = vehicle.registration,
-        vehicleColor = vehicle.color,
-        vehicleModel = vehicle.model
+        vehicleNumber = vehicleNumber,
+        vehicleColor = vehicle.vehicleColor,
+        vehicleModel = vehicle.vehicleModel
+      }
+
+parseDriverArrivedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseDriverArrivedEvent order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideAssigned Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags) & fromMaybeM (InvalidRequest "personTags is not present in RideAssigned Event.")
+  let arrival_time = readMaybe . T.unpack =<< getTagV2 "driver_arrived_info" "arrival_time" tagsGroup
+  return $
+    DOnUpdate.DriverArrivedReq
+      { bppBookingId = Id bppBookingId,
+        bppRideId = Id bppRideId,
+        arrivalTime = arrival_time
+      }
+
+parseBookingCancelledEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseBookingCancelledEvent order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
+  cancellationSource <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "cancellationSource is not present in RideAssigned Event.")
+  return $
+    DOnUpdate.BookingCancelledReq
+      { bppBookingId = Id bppBookingId,
+        cancellationSource = castCancellationSourceV2 cancellationSource
       }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
@@ -250,3 +284,12 @@ castCancellationSource = \case
   OnUpdate.ByMerchant -> SBCR.ByMerchant
   OnUpdate.ByAllocator -> SBCR.ByAllocator
   OnUpdate.ByApplication -> SBCR.ByApplication
+
+castCancellationSourceV2 :: Text -> SBCR.CancellationSource
+castCancellationSourceV2 = \case
+  "ByUser" -> SBCR.ByUser
+  "ByDriver" -> SBCR.ByDriver
+  "ByMerchant" -> SBCR.ByMerchant
+  "ByAllocator" -> SBCR.ByAllocator
+  "ByApplication" -> SBCR.ByApplication
+  _ -> SBCR.ByUser
