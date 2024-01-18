@@ -18,12 +18,10 @@ module Storage.Queries.Role where
 import Domain.Types.Role as Role
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Sequelize as Se
 import Storage.Beam.BeamFlow
 import qualified Storage.Beam.Role as BeamR
-import Storage.Tabular.Role
 
 -- create :: Role -> SqlDB ()
 -- create = Esq.create
@@ -88,30 +86,6 @@ findAllByLimitOffset mbLimit mbOffset = do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
   findAllWithOptionsKV [Se.Is BeamR.id $ Se.Not $ Se.Eq ""] (Se.Desc BeamR.name) (Just limitVal) (Just offsetVal)
-
--- TODO :: Beam Query for this
-findAllWithLimitOffset ::
-  Transactionable m =>
-  Maybe Integer ->
-  Maybe Integer ->
-  Maybe Text ->
-  m [Role]
-findAllWithLimitOffset mbLimit mbOffset mbSearchString = do
-  let limitVal = fromIntegral $ fromMaybe 10 mbLimit
-      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
-  Esq.findAll $ do
-    role <- from $ table @RoleT
-    where_ $
-      Esq.whenJust_ mbSearchString (filterBySearchString role)
-    orderBy [asc $ role ^. RoleName]
-    limit limitVal
-    offset offsetVal
-    pure role
-  where
-    filterBySearchString role searchStr = do
-      let likeSearchStr = (%) ++. val searchStr ++. (%)
-      role ^. RoleName
-        `ilike` likeSearchStr
 
 instance FromTType' BeamR.Role Role.Role where
   fromTType' BeamR.RoleT {..} = do

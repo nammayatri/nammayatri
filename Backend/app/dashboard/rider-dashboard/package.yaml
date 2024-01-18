@@ -79,6 +79,7 @@ dependencies:
   - servant-openapi3
   - dashboard-helper-api
   - unordered-containers
+  - beam-core
 
 ghc-options:
   - -Wall

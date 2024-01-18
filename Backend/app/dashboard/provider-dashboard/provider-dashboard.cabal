@@ -53,13 +53,16 @@ library
       API.ProviderPlatform.DynamicOfferDriver.Volunteer
       API.SpecialZone
       App
+      Domain.Action.Roles
       ProviderPlatformClient.DynamicOfferDriver.Exotel
       ProviderPlatformClient.DynamicOfferDriver.Fleet
       ProviderPlatformClient.DynamicOfferDriver.Operations
       ProviderPlatformClient.DynamicOfferDriver.RideBooking
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
+      Storage.Beam.Common
       Storage.Beam.CommonInstances
+      Storage.Queries.Role
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:
@@ -102,6 +105,7 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
     , beckn-spec
     , bytestring
     , containers
@@ -178,6 +182,7 @@ executable provider-dashboard-exe
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
     , beckn-spec
     , bytestring
     , containers
