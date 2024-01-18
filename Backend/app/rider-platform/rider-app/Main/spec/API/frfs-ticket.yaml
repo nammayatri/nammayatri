@@ -1,0 +1,83 @@
+types:
+  FRFSSearchReq:
+    from: Id Station
+    to: Id Station
+    quantity: Int
+
+  FRFSSearchRes:
+    searchId: Id FRFSSearch
+
+  FRFSQuote:
+    quoteId: Id FRFSQuote
+    type: FRFSQuoteType
+    vehicleType: VehicleType
+    price: HighPrecMoney
+    validTill: UTCTime
+
+  FRFSBookingStatusRes:
+    bookingId: Id FRFSTicketBooking
+    status: FRFSBookingStatus
+    type: FRFSQuoteType
+    from: Id Station
+    to: Id Station
+    quantity: Int
+    vehicleType: VehicleType
+    price: HighPrecMoney
+    validTill: UTCTime
+    ticket: [FRFSTicket]
+    payment: Maybe FRFSBookingPayment
+
+  FRFSBookingPayment:
+    status: FRFSBookingPaymentStatus
+
+  FRFSBookingPaymentStatus:
+    enum: "PENDING, SUCCESS, FAILURE, REFUNDED"
+
+apis:
+  # GET metro stops for the merchant city
+  - GET:
+      endpoint: /frfs/stations
+      query:
+        vehicleType: VehicleType
+      response:
+        type: "[Station]"
+
+  # Initiate search for metro tickets
+  - POST:
+      endpoint: /frfs/search
+      query:
+        vehicleType: VehicleType
+      request:
+        type: FRFSSearchReq
+      response:
+        type: FRFSSearchRes
+
+  # Get quotes for metro tickets
+  - GET:
+      endpoint: /frfs/search/{searchId}/quote
+      response:
+        type: "[FRFSQuote]"
+
+  # Confirm quote for metro tickets (return PP sdk params)
+  - POST:
+      endpoint: /frfs/quote/{quoteId}/confirm
+      response:
+        type: FRFSBookingStatusRes
+
+  # Retry payment
+  - POST:
+      endpoint: /frfs/quote/{quoteId}/payment/retry
+      response:
+        type: FRFSBookingStatusRes
+
+  # Get booking status
+  - GET:
+      endpoint: /frfs/booking/{bookingId}/status
+      response:
+        type: FRFSBookingStatusRes
+
+  # List metro tickets
+  - GET:
+      endpoint: /frfs/booking/list
+      response:
+        type: "[FRFSTicketBooking]"

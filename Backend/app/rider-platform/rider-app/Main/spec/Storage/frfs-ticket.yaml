@@ -1,0 +1,121 @@
+types:
+  FRFSSearch:
+    tableName: frfs_search
+
+    fields:
+      id: Id FRFSSearch
+      from: Id Station
+      to: Id Station
+      quantity: Int
+      vehicleType: VehicleType
+
+    types:
+      VehicleType:
+        enum: "METRO,BUS"
+
+  Station:
+    tableName: station
+
+    fields:
+      id: Id Station
+      merchantOperatingCityId: Id MerchantOperatingCity
+      vehicleType: VehicleType
+      name: Text
+      code: Text
+      gps: Gps
+      address: Maybe Text
+
+  FRFSQuote:
+    tableName: frfs_quote
+
+    fields:
+      id: Id FRFSQuote
+      bppItemId: Text
+      searchId: Id FRFSSearch
+      type: FRFSQuoteType
+      from: Id Station
+      to: Id Station
+      quantity: Int
+      vehicleType: VehicleType
+      bppSubscriberId: Text
+      providerId: Text
+      providerName: Text
+      providerDescription: Maybe Text
+      price: HighPrecMoney
+      validTill: UTCTime
+
+    types:
+      FRFSQuoteType:
+        enum: "SingleJourney, ReturnJourney, Pass"
+
+  FRFSTrip:
+    tableName: frfs_trip
+
+    fields:
+      id: Id FRFSTrip
+      bppFulfillmentId: Text
+      quoteId: Id FRFSQuote
+      stationCode: Text
+      stationType: StationType
+      sequence: Int
+
+    types:
+      StationType:
+        enum: "START, END, TRANSIT, INTERMEDIATE"
+
+  FRFSTicketBooking:
+    tableName: frfs_ticket_booking
+
+    fields:
+      id: Id FRFSTicketBooking
+      bppOrderId: Maybe Text
+      quoteId: Id FRFSQuote
+      status: FRFSBookingStatus
+
+      bppItemId: Text
+      type: FRFSQuoteType
+      from: Id Station
+      to: Id Station
+      quantity: Int
+      vehicleType: VehicleType
+      bppSubscriberId: Text
+      providerId: Text
+      providerName: Text
+      providerDescription: Maybe Text
+      price: HighPrecMoney
+      validTill: UTCTime
+
+    types:
+      FRFSBookingStatus:
+        enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED"
+  # Make use of FareBreakup to store the fare breakup of a ticket
+
+  # Get transaction_id from Payment Transaction table
+
+  FRFSTicket:
+    tableName: frfs_ticket
+
+    fields:
+      id: Id FRFSTicket
+      frfsTicketBookingId: Id FRFSTicketBooking
+      status: FRFSTicketStatus
+      qrData: Text
+      validTill: UTCTime
+      ticketNumber: Text
+
+    types:
+      FRFSTicketStatus:
+        enum: "ACTIVE, EXPIRED, USED"
+
+  FRFSTicketBookingPayment:
+    tableName: frfs_ticket_booking_payment
+
+    fields:
+      id: Id FRFSTicketBookingPayment
+      frfsTicketBookingId: Id FRFSTicketBooking
+      paymentOrderId: Id PaymentOrder
+      status: FRFSTicketBookingPaymentStatus
+
+    types:
+      FRFSTicketBookingPaymentStatus:
+        enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING"
