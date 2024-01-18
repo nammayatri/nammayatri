@@ -47,6 +47,8 @@ in
               fi
             '';
           };
+
+          namespace = "${name}-replica";
           depends_on."${name}".condition = "process_healthy";
         };
       replica-settings = name: cfg:
