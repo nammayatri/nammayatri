@@ -66,6 +66,7 @@ getServiceNameConfigJSON = \case
   Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
     Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
     Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
+    Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig cfg -> (Domain.AadhaarVerificationService AadhaarVerification.Gridline, toJSON cfg)
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of

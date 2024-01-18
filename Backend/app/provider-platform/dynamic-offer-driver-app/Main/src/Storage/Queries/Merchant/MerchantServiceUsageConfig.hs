@@ -84,5 +84,6 @@ instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig
         BeamMSUC.issueTicketService = issueTicketService,
         BeamMSUC.getExophone = getExophone,
         BeamMSUC.updatedAt = updatedAt,
-        BeamMSUC.createdAt = createdAt
+        BeamMSUC.createdAt = createdAt,
+        BeamMSUC.sendSearchRequestToDriver = sendSearchRequestToDriver
       }

@@ -15,7 +15,6 @@
 module Tools.Notifications where
 
 import Data.Aeson (object)
-import Data.Default.Class
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -51,7 +50,6 @@ instance ToJSON EmptyDynamicParam where
 
 notifyPerson ::
   ( ServiceFlow m r,
-    Default a,
     ToJSON a,
     ToJSON b
   ) =>
@@ -63,7 +61,6 @@ notifyPerson = runWithServiceConfig Notification.notifyPerson (.notifyPerson)
 
 notifyPersonWithMutableContent ::
   ( ServiceFlow m r,
-    Default a,
     ToJSON a,
     ToJSON b
   ) =>
@@ -108,7 +105,8 @@ notifyOnDriverOfferIncoming estimateId quotes person = do
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,
-            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing
           }
       title = "New driver offers incoming!"
       body =
@@ -144,7 +142,8 @@ notifyOnRideAssigned booking ride = do
             body = body,
             title = title,
             dynamicParams = RideAssignedParam driverName,
-            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing
           }
       title = T.pack "Driver assigned!"
       body =
@@ -180,7 +179,8 @@ notifyOnRideStarted booking ride = do
             body = body,
             title = title,
             dynamicParams = RideStartedParam driverName,
-            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing
           }
       title = T.pack "Trip started!"
       body =
@@ -218,7 +218,8 @@ notifyOnRideCompleted booking ride = do
             body = body,
             title = title,
             dynamicParams = RideCompleteParam driverName $ show (fromMaybe booking.estimatedFare totalFare),
-            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing
           }
       title = T.pack "Trip finished!"
       body =
@@ -250,7 +251,8 @@ notifyOnExpiration searchReq = do
                 body = body,
                 title = title,
                 dynamicParams = EmptyDynamicParam,
-                auth = Notification.Auth p.id.getId p.deviceToken p.notificationToken
+                auth = Notification.Auth p.id.getId p.deviceToken p.notificationToken,
+                ttl = Nothing
               }
           title = T.pack "Ride expired!"
           body =
@@ -280,7 +282,8 @@ notifyOnRegistration regToken person mbDeviceToken = do
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,
-            auth = Notification.Auth person.id.getId mbDeviceToken person.notificationToken
+            auth = Notification.Auth person.id.getId mbDeviceToken person.notificationToken,
+            ttl = Nothing
           }
       title = T.pack "Registration Completed!"
       body =
@@ -315,7 +318,8 @@ notifyOnBookingCancelled booking cancellationSource = do
           body = getCancellationText orgName,
           title = title,
           dynamicParams = RideCancelParam $ showTimeIst (booking.startTime),
-          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+          ttl = Nothing
         }
     title = T.pack "Ride cancelled!"
     subCategory = case cancellationSource of
@@ -377,7 +381,8 @@ notifyOnBookingReallocated booking = do
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,
-          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+          ttl = Nothing
         }
     title = T.pack "Ride cancelled! We are allocating another driver"
     body =
@@ -407,7 +412,8 @@ notifyOnEstimatedReallocated booking estimateId = do
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,
-          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+          ttl = Nothing
         }
     title = T.pack "Ride cancelled and being reallocated!"
     body =
@@ -444,7 +450,8 @@ notifyOnQuoteReceived quote = do
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,
-          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+          ttl = Nothing
         }
 
 notifyDriverOnTheWay ::
@@ -464,7 +471,8 @@ notifyDriverOnTheWay personId = do
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,
-            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing
           }
       title = T.pack "Driver On The Way!"
       body =
@@ -498,7 +506,8 @@ notifyDriverHasReached personId otp vehicleNumber = do
             body = body,
             title = title,
             dynamicParams = DriverReachedParam vehicleNumber otp,
-            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing
           }
       title = T.pack "Driver Has Reached!"
       body =
@@ -528,7 +537,8 @@ notifyOnNewMessage booking message = do
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,
-            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing
           }
       title = T.pack "Driver"
       body =
@@ -554,7 +564,8 @@ notifySafetyAlert booking reason = do
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,
-            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing
           }
       title = T.pack "SafetyAlert"
       body =
@@ -581,7 +592,8 @@ notifyDriverBirthDay personId driverName = do
             body = body,
             title = title,
             dynamicParams = EmptyDynamicParam,
-            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
+            auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+            ttl = Nothing
           }
       title = T.pack "Driver's Birthday!"
       body =
