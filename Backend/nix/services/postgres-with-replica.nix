@@ -40,14 +40,25 @@ in
             text = ''
               MASTER_DATA_DIR=$(readlink -f ${postgres.${name}.dataDir})
               REPLICA_DATA_DIR=$(readlink -f ${postgres."${name}-replica".dataDir})
-              pg_basebackup -h "$MASTER_DATA_DIR" -U repl_user --checkpoint=fast -D "$REPLICA_DATA_DIR"  -R --slot=some_name  -C --port=${builtins.toString postgres.${name}.port}
+              if [ ! -d "$REPLICA_DATA_DIR" ]; then
+                pg_basebackup -h "$MASTER_DATA_DIR" -U repl_user --checkpoint=fast -D "$REPLICA_DATA_DIR"  -R --slot=some_name  -C --port=${builtins.toString postgres.${name}.port}
+              else
+                echo "Replica datadir already exists, not doing anything."
+              fi
             '';
           };
           depends_on."${name}".condition = "process_healthy";
         };
+      replica-settings = name: cfg:
+      lib.nameValuePair "${name}-replica-init" {
+          depends_on."pg-basebackup-${name}".condition = "process_completed_successfully";
+
+        };
     in
     {
-      settings.processes = lib.mapAttrs' pg-basebackup-process enabled-services;
+      settings.processes =
+       lib.mapAttrs' pg-basebackup-process enabled-services //
+       lib.mapAttrs' replica-settings enabled-services;
       services.postgres = lib.concatMapAttrs
         (name: cfg: {
           # The master database
@@ -63,7 +74,6 @@ in
           "${name}-replica" = {
             imports = [ cfg.extraReplicaDBSettings ];
             enable = true;
-            depends_on."pg-basebackup-${name}".condition = "process_completed_successfully";
           };
         })
         enabled-services;
