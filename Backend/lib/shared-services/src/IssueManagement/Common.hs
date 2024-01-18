@@ -125,7 +125,7 @@ data RideInfoRes = RideInfoRes
     bookingStatus :: Maybe BookingStatus
   }
 
-data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED
+data IssueStatus = OPEN | PENDING_INTERNAL | PENDING_EXTERNAL | RESOLVED | CLOSED | REOPENED | NOT_APPLICABLE
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON, ToParamSchema)
 
 $(mkBeamInstancesForEnum ''IssueStatus)
@@ -165,3 +165,20 @@ instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [Chat] w
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be [Chat]
 
 instance FromBackendRow Postgres [Chat]
+
+data ChatDetail = ChatDetail
+  { timestamp :: UTCTime,
+    content :: Maybe Text,
+    id :: Text,
+    chatType :: MessageType,
+    sender :: Sender,
+    label :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MerchantConfig = MerchantConfig
+  { mediaFileSizeUpperLimit :: Int,
+    mediaFileUrlPattern :: Text,
+    kaptureDisposition :: Text
+  }

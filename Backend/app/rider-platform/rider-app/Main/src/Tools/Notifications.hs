@@ -409,7 +409,7 @@ notifyOnEstimatedReallocated booking estimateId = do
           dynamicParams = EmptyDynamicParam,
           auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
         }
-    title = T.pack "Ride cancelled and being reallocated!"
+    title = T.pack "Searching for a New Driver!"
     body =
       unwords
         [ "The driver had cancelled the ride for",
