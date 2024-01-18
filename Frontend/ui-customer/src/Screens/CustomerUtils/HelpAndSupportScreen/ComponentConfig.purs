@@ -36,7 +36,7 @@ import Data.String as DS
 import Components.PrimaryButton as PrimaryButton
 import Storage (getValueToLocalStore, KeyStore(..))
 import Helpers.Utils (validateEmail)
-import Screens.HelpAndSupportScreen.Controller (isEmailPresent)
+import Screens.HelpAndSupportScreen.Transformer (isEmailPresent)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), isParentView, showTitle)
 
 sourceToDestinationConfig :: ST.HelpAndSupportScreenState -> SourceToDestination.Config
