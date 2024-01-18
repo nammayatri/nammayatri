@@ -18,7 +18,7 @@ module API
   )
 where
 
-import qualified "lib-dashboard" API.Dashboard as Dashboard
+import qualified API.Dashboard as Dashboard
 import qualified API.RiderPlatform as BAP
 import qualified Data.ByteString as BS
 import Data.OpenApi

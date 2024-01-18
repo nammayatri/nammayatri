@@ -30,6 +30,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth hiding (DRIVER_OFFER_BPP)
 import "lib-dashboard" Tools.Auth.Merchant
 
