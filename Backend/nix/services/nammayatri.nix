@@ -54,6 +54,7 @@ in
             inherit name;
             value = {
               log_location = "${name}.log";
+              working_dir = "Backend";
               command =
                 if cfg.useCabal
                 then "set -x; cabal run ${cabalTargetForExe.${name}}"
@@ -78,6 +79,7 @@ in
         in
         {
           processes.nammayatri-init = {
+            working_dir = "Backend";
             command = pkgs.writeShellApplication {
               name = "run-mobility-stack-init";
               runtimeInputs = with pkgs; [
@@ -85,7 +87,6 @@ in
               ];
               text = ''
                 set -x
-                cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
                 rm -f ./*.log # Clean up the log files
 
                 ${if cfg.useCabal then ''
