@@ -1544,17 +1544,15 @@ contactUsScreenFlow = do
 
 helpAndSupportScreenFlow :: FlowBT String Unit
 helpAndSupportScreenFlow = do
-  config <- pure $ getAppConfig Constants.appConfig
-  modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen{data{config = config}})
-  let language = fetchLanguage $ getLanguageLocale languageKey
-      categoryOrder = ["LOST_AND_FOUND", "DRIVER_RELATED", "RIDE_RELATED", "APP_RELATED"]
-      compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
-  (GetCategoriesRes response) <- Remote.getCategoriesBT language
-  let unsortedCatagory = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : catObj.label, categoryImageUrl : catObj.logoUrl}) response.categories
-      categories' = sortBy compareByOrder unsortedCatagory
-  modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {config = config, categories = categories' } } )
-  modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatScreen -> reportIssueChatScreen { data { entryPoint = ST.HelpAndSupportScreenEntry }})
   (GlobalState globalState) <- getState
+  let helpAndSupportScreenState = globalState.helpAndSupportScreen
+  if null helpAndSupportScreenState.data.categories then do 
+    let language = fetchLanguage $ getLanguageLocale languageKey 
+    (GetCategoriesRes response) <- Remote.getCategoriesBT language
+    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : catObj.label, categoryImageUrl : catObj.logoUrl}) response.categories
+    modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {categories = categories' } } )
+  else pure unit
+  modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatScreen -> reportIssueChatScreen { data { entryPoint = ST.HelpAndSupportScreenEntry }})
   flow <- UI.helpAndSupportScreen
   case flow of
     GO_TO_HOME_FROM_HELP -> homeScreenFlow
@@ -1658,6 +1656,7 @@ issueReportChatScreenFlow = do
                               mediaMessages', 
                               mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 1 + index))) postIssueRes.messages]
       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {issueId = Just postIssueRes.issueReportId, chatConfig { messages = messages'},  messageToBeSent = "" , uploadedAudioId = Nothing, uploadedImagesIds = [] }, props { showSubmitComp = false } })
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen {props {needIssueListApiCall = true}})
       issueReportChatScreenFlow
     CALL_DRIVER_MODAL updatedState -> do
       let selectedOptionId = fromMaybe "" $ map (\option -> option.issueOptionId) updatedState.data.selectedOption
@@ -1707,6 +1706,7 @@ issueReportChatScreenFlow = do
       (UpdateIssueRes updateIssueRes) <- Remote.updateIssue (fromMaybe "" updatedState.data.issueId) language updateIssueReqBody
       let messages' = mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) updateIssueRes.messages
       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {showStillHaveIssue = false, chatConfig = updatedState.data.chatConfig{messages = updatedState.data.chatConfig.messages<> messages'} }, props {isResolved = false}})
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen {props {needIssueListApiCall = true}})
       issueReportChatScreenFlow
     GO_TO_TRIP_DETAILS_SCREEN updatedState -> do 
       (GlobalState globalState) <-  getState
@@ -1796,6 +1796,7 @@ selectLanguageScreenFlow = do
                                 resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest FunctionCall)
                                 modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData) 
                                 modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data{categories = []}})
+                                modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen {data {categories = []}, props {needIssueListApiCall = true}})
                                 homeScreenFlow
     GO_TO_HOME_SCREEN     -> homeScreenFlow
 
