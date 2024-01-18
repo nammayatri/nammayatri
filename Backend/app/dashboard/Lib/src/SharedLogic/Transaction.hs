@@ -25,11 +25,11 @@ import qualified "dashboard-helper-api" Dashboard.Common as Common
 import qualified Data.Text as Text
 import qualified Domain.Types.Transaction as DT
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (encodeToText, throwError)
+import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Transaction as QT
 import Tools.Auth
 import qualified Tools.Error as E
@@ -79,7 +79,7 @@ buildTransaction endpoint serverName apiTokenInfo commonDriverId commonRideId re
 --
 -- If client call fails, then write error code to transaction.
 withTransactionStoring ::
-  ( Esq.EsqDBFlow m r,
+  ( BeamFlow m r,
     MonadCatch m
   ) =>
   DT.Transaction ->
@@ -93,7 +93,7 @@ withTransactionStoring =
 -- If client call successed, then write response to transaction, with secrets hiding
 -- Else write error code to transaction.
 withResponseTransactionStoring ::
-  ( Esq.EsqDBFlow m r,
+  ( BeamFlow m r,
     MonadCatch m,
     Common.HideSecrets response
   ) =>
@@ -104,7 +104,7 @@ withResponseTransactionStoring =
   withResponseTransactionStoring' (Just . Common.hideSecrets)
 
 withResponseTransactionStoring' ::
-  ( Esq.EsqDBFlow m r,
+  ( BeamFlow m r,
     MonadCatch m,
     ToJSON transactionResponse
   ) =>
@@ -114,12 +114,12 @@ withResponseTransactionStoring' ::
   m response
 withResponseTransactionStoring' responseModifier transaction clientCall = handle errorHandler $ do
   response <- clientCall
-  Esq.runTransaction $
-    QT.create $ transaction{response = encodeToText <$> responseModifier response}
+  -- Esq.runTransaction $
+  QT.create $ transaction{response = encodeToText <$> responseModifier response}
   pure response
   where
     -- This code do not handle ExternalAPICallError, only E.Error
     errorHandler (err :: E.Error) = do
-      Esq.runTransaction $
-        QT.create transaction{responseError = Just $ show err}
+      -- Esq.runTransaction $
+      QT.create transaction{responseError = Just $ show err}
       throwError err
