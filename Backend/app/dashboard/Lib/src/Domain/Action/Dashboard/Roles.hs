@@ -25,6 +25,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth
@@ -50,7 +51,7 @@ data ListRoleRes = ListRoleRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createRole ::
-  EsqDBFlow m r =>
+  BeamFlow m r =>
   TokenInfo ->
   CreateRoleReq ->
   m DRole.RoleAPIEntity
@@ -58,8 +59,8 @@ createRole _ req = do
   mbExistingRole <- QRole.findByName req.name
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   role <- buildRole req
-  Esq.runTransaction $
-    QRole.create role
+  -- Esq.runTransaction $
+  QRole.create role
   pure $ DRole.mkRoleAPIEntity role
 
 buildRole ::
@@ -80,7 +81,7 @@ buildRole req = do
       }
 
 assignAccessLevel ::
-  EsqDBFlow m r =>
+  BeamFlow m r =>
   TokenInfo ->
   Id DRole.Role ->
   AssignAccessLevelReq ->
@@ -90,12 +91,12 @@ assignAccessLevel _ roleId req = do
   mbAccessMatrixItem <- QMatrix.findByRoleIdAndEntityAndActionType roleId req.apiEntity req.userActionType
   case mbAccessMatrixItem of
     Just accessMatrixItem -> do
-      Esq.runTransaction $ do
-        QMatrix.updateUserAccessType accessMatrixItem.id req.userActionType req.userAccessType
+      -- Esq.runTransaction $ do
+      QMatrix.updateUserAccessType accessMatrixItem.id req.userActionType req.userAccessType
     Nothing -> do
       accessMatrixItem <- buildAccessMatrixItem roleId req
-      Esq.runTransaction $ do
-        QMatrix.create accessMatrixItem
+      -- Esq.runTransaction $ do
+      void $ QMatrix.create accessMatrixItem
   pure Success
 
 buildAccessMatrixItem ::

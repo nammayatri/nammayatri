@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
+import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QAccessMatrix
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QPerson
@@ -93,7 +94,7 @@ instance
         userActionType = fromSing (sing @uat)
       }
 
-verifyAccessLevel :: EsqDBFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
+verifyAccessLevel :: BeamFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m (Id DP.Person)
 verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.apiEntity requiredApiAccessLevel.userActionType
@@ -107,7 +108,7 @@ checkUserAccess DMatrix.USER_FULL_ACCESS = True
 checkUserAccess DMatrix.USER_NO_ACCESS = False
 
 verifyServer ::
-  EsqDBFlow m r =>
+  BeamFlow m r =>
   DSN.ServerName ->
   Id DM.Merchant ->
   m DM.Merchant

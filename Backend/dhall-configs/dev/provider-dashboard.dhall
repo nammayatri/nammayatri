@@ -78,6 +78,8 @@ let specialZone =
       , token = sec.specialZoneToken
       }
 
+let cacheConfig = { configsExpTime = +86400 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -112,4 +114,5 @@ in  { esqDBCfg
     , slackToken = sec.slackToken
     , slackChannel = "CXXXXXXXXXF"
     , internalEndPointMap = common.internalEndPointMap
+    , cacheConfig
     }

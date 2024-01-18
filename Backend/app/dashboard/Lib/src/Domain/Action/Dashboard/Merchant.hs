@@ -21,12 +21,12 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.ServerName as DTServer
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QMerchantAccess
 import Tools.Auth
@@ -47,7 +47,7 @@ data CreateMerchantReq = CreateMerchantReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createMerchant ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   CreateMerchantReq ->
   m DMerchant.MerchantAPIEntity
@@ -57,12 +57,12 @@ createMerchant _ req = do
   whenJust mbExistingMerchant $ \_ -> throwError (MerchantAlreadyExist req.shortId)
   merchant <- buildMerchant req
   decMerchant <- decrypt merchant
-  Esq.runNoTransaction $
-    QMerchant.create merchant
+  -- Esq.runNoTransaction $
+  QMerchant.create merchant
   pure $ DMerchant.mkMerchantAPIEntity decMerchant
 
 buildMerchant ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   CreateMerchantReq ->
   m DMerchant.Merchant
 buildMerchant req = do
@@ -87,7 +87,7 @@ buildMerchant req = do
       }
 
 listMerchants ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   m [DMerchant.MerchantAPIEntity]
 listMerchants _ = do
@@ -97,7 +97,7 @@ listMerchants _ = do
     pure $ DMerchant.mkMerchantAPIEntity decMerchant
 
 createUserForMerchant ::
-  (EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["merchantUserAccountNumber" ::: Int]) =>
+  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]], HasFlowEnv m r '["merchantUserAccountNumber" ::: Int]) =>
   TokenInfo ->
   DPerson.CreatePersonReq ->
   m DPerson.CreatePersonRes

@@ -11,9 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.BeamFlow where
 
+import Data.Text as T
 import Kernel.Beam.Lib.UtilsTH as Reexport
 import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
@@ -29,11 +31,32 @@ type BeamFlow m r =
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasSchemaName BeamAM.AccessMatrix,
-    HasSchemaName BeamM.Merchant,
-    HasSchemaName BeamMA.MerchantAccess,
-    HasSchemaName BeamP.Person,
-    HasSchemaName BeamRT.RegistrationToken,
-    HasSchemaName BeamR.Role,
-    HasSchemaName BeamT.Transaction
+    HasSchemaName BeamAM.AccessMatrixT,
+    HasSchemaName BeamM.MerchantT,
+    HasSchemaName BeamMA.MerchantAccessT,
+    HasSchemaName BeamP.PersonT,
+    HasSchemaName BeamRT.RegistrationTokenT,
+    HasSchemaName BeamR.RoleT,
+    HasSchemaName BeamT.TransactionT
   )
+
+instance HasSchemaName BeamAM.AccessMatrixT where
+  schemaName _ = T.pack "compilable_schema_name"
+
+instance HasSchemaName BeamM.MerchantT where
+  schemaName _ = T.pack "compilable_schema_name"
+
+instance HasSchemaName BeamMA.MerchantAccessT where
+  schemaName _ = T.pack "compilable_schema_name"
+
+instance HasSchemaName BeamP.PersonT where
+  schemaName _ = T.pack "compilable_schema_name"
+
+instance HasSchemaName BeamRT.RegistrationTokenT where
+  schemaName _ = T.pack "compilable_schema_name"
+
+instance HasSchemaName BeamR.RoleT where
+  schemaName _ = T.pack "compilable_schema_name"
+
+instance HasSchemaName BeamT.TransactionT where
+  schemaName _ = T.pack "compilable_schema_name"

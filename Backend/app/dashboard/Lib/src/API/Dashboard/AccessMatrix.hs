@@ -14,13 +14,13 @@
 
 module API.Dashboard.AccessMatrix where
 
-import qualified Domain.Action.Dashboard.AccessMatrix as DAccessMatrix
+-- import qualified Domain.Action.Dashboard.AccessMatrix as DAccessMatrix
 import Domain.Types.AccessMatrix as DMatrix
 import Domain.Types.Role as DRole
-import Environment
+-- import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
-import Kernel.Utils.Common
+-- import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 
@@ -39,20 +39,22 @@ type API =
              :> Get '[JSON] [DMatrix.MerchantCityList]
        )
 
-handler :: FlowServer API
-handler =
-  getAccessMatrix
-    :<|> getAccessMatrixByRole
-    :<|> getMerchantWithCityList
+-- Note : Handle is moved to rider and provider dashboard
 
-getAccessMatrix :: TokenInfo -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
-getAccessMatrix tokenInfo mbLimit =
-  withFlowHandlerAPI' . DAccessMatrix.getAccessMatrix tokenInfo mbLimit
+-- handler :: FlowServer API
+-- handler =
+--   getAccessMatrix
+--     :<|> getAccessMatrixByRole
+--     :<|> getMerchantWithCityList
 
-getAccessMatrixByRole :: TokenInfo -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
-getAccessMatrixByRole tokenInfo =
-  withFlowHandlerAPI' . DAccessMatrix.getAccessMatrixByRole tokenInfo
+-- getAccessMatrix :: TokenInfo -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
+-- getAccessMatrix tokenInfo mbLimit =
+--   withFlowHandlerAPI' . DAccessMatrix.getAccessMatrix tokenInfo mbLimit
 
-getMerchantWithCityList :: FlowHandler [DMatrix.MerchantCityList]
-getMerchantWithCityList =
-  withFlowHandlerAPI' DAccessMatrix.getMerchantWithCityList
+-- getAccessMatrixByRole :: TokenInfo -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
+-- getAccessMatrixByRole tokenInfo =
+--   withFlowHandlerAPI' . DAccessMatrix.getAccessMatrixByRole tokenInfo
+
+-- getMerchantWithCityList :: FlowHandler [DMatrix.MerchantCityList]
+-- getMerchantWithCityList =
+--   withFlowHandlerAPI' DAccessMatrix.getMerchantWithCityList
