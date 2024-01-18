@@ -25,6 +25,7 @@ import Prelude (bind, pure, ($), (<$>), discard)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.ReportIssueChatScreen.Controller (ScreenOutput(..))
 import Screens.ReportIssueChatScreen.View (screen)
+import Screens.ReportIssueChatScreen.ScreenData
 
 reportIssueChatScreen :: FlowBT String REPORT_ISSUE_CHAT_SCREEN_OUTPUT
 reportIssueChatScreen = do
@@ -47,11 +48,11 @@ reportIssueChatScreen = do
         modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
         App.BackT $ App.NoBack <$> (pure $ REOPEN_ISSUE updatedState)
       GoToRideSelectionScreen updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState)
+        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData)
         App.BackT $  App.NoBack <$> (pure $ GO_TO_RIDE_SELECTION_SCREEN updatedState)
       GotoTripDetailsScreen updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
+        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
         App.BackT $ App.NoBack <$> (pure $ GO_TO_TRIP_DETAILS_SCREEN updatedState)
       GoToHelpAndSupportScreen updatedState -> do 
-        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> updatedState )
+        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
         App.BackT $ App.NoBack <$> (pure $ GO_TO_HELP_AND_SUPPORT_SCREEN updatedState)
