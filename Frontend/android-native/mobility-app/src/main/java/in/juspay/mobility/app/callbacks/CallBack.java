@@ -7,6 +7,8 @@ public interface CallBack {
 
     void driverCallBack(String notificationType);
 
+    void addStopCallBack(String newStopLocation);
+    
     void imageUploadCallBack(String encImage, String filename, String filePath);
 
     void chatCallBack(String message, String sentBy, String time, String len);

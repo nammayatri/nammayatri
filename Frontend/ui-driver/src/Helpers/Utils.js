@@ -190,6 +190,22 @@ export const storeCallBackForNotification = function (cb) {
   }
 }
 
+export const storeCallBackForAddRideStop = function (cb) {
+  return function (action) {
+    return function () {
+      try {
+        const callback = callbackMapper.map(function (addStopLocation) {
+          cb(action(addStopLocation))();
+        });
+        window.JBridge.storeCallBackForAddRideStop(callback);
+      }
+      catch (error){
+        console.log("Error occurred in storeCallBackForAddRideStop ------", error);
+      }
+    }
+  }
+}
+
 export const getcurrentdate = function (string) {
   let today = new Date();
   const dd = String(today.getDate()).padStart(2, "0");

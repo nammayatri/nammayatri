@@ -17,6 +17,7 @@ module Screens.HomeScreen.Controller where
 
 import Helpers.Utils
 import Screens.SubscriptionScreen.Controller
+import Control.Monad.Except (runExcept)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Common.Styles.Colors as Color
 import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..), LazyCheck(..)) as Common
@@ -48,7 +49,8 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo)
+import Foreign.Generic (class Decode, ForeignError, decode, decodeJSON, encode)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, uploadFile)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (saveObject)
@@ -92,6 +94,7 @@ import Engineering.Helpers.Commons as EHC
 import Data.String as DS
 import Services.Config as SC
 import Timers as TF
+import Services.API (LocationInfo(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -128,7 +131,7 @@ instance loggableAction :: Loggable Action where
       -- InAppKeyboardModal.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_backpressed"
       -- InAppKeyboardModal.OnClickDone text -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_done"
       -- _ -> pure unit
-
+    InAppKeyboardModalOdometerAction act -> pure unit
     CountDown seconds -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "count_down"
     PopUpModalAction act -> pure unit --case act of
       -- PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_end_ride" "go_back_onclick"
@@ -211,6 +214,7 @@ instance loggableAction :: Loggable Action where
     RequestInfoCardAction act -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "request_info_card"
     _ -> pure unit
     WaitTimerCallback id min sec -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "wait_timer_callBack" 
+    RentalRideTimerCallback id min sec -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "rental_ride_timer_callBack"
     MakePaymentModalAC act -> pure unit
     RateCardAC act -> pure unit
     PaymentBannerAC act -> pure unit
@@ -219,6 +223,9 @@ instance loggableAction :: Loggable Action where
     OfferPopupAC _ -> pure unit
     RCDeactivatedAC _ -> pure unit
     FreeTrialEndingAC _ -> pure unit
+    UploadImage -> pure unit
+    CallBackImageUpload _ _ _ -> pure unit
+    CallBackForAddNewStop _ -> pure unit
     _ -> pure unit
 
 
@@ -253,6 +260,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | DisableGoto ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
+                    | FetchOdometerReading ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -266,6 +274,7 @@ data Action = NoAction
             | BottomNavBarAction BottomNavBar.Action
             | RideActionModalAction RideActionModal.Action
             | InAppKeyboardModalAction InAppKeyboardModal.Action
+            | InAppKeyboardModalOdometerAction InAppKeyboardModal.Action
             | CountDown Int
             | CurrentLocation String String
             | ActiveRideAPIResponseAction (Array RidesInfo)
@@ -307,6 +316,7 @@ data Action = NoAction
             | GotoKnowMoreAction PopUpModal.Action
             | OnClickChangeAction GoToLocationModal.Action 
             | WaitTimerCallback String String Int
+            | RentalRideTimerCallback String String Int
             | MakePaymentModalAC MakePaymentModal.Action
             | RateCardAC RateCard.Action
             | PaymentStatusAction Common.APIPaymentStatus
@@ -344,6 +354,9 @@ data Action = NoAction
             | AddNewLocation
             | AddGotoAC
             | LinkAadhaarAC
+            | CallBackImageUpload String String String
+            | UploadImage
+            | CallBackForAddNewStop String
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -466,6 +479,31 @@ eval (ShowMap key lat lon) state = continueWithCmd state [ do
   id <- checkPermissionAndUpdateDriverMarker state
   pure AfterRender
   ]
+
+eval (UploadImage) state = continueWithCmd state [do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "UPLOAD odometer reading"
+  _ <- liftEffect $ uploadFile false
+  pure NoAction]
+
+
+eval (CallBackImageUpload image imageName imagePath) state = do
+    _ <- pure $ setValueToLocalStore RIDE_START_ODOMETER image -- After it normal ride flow will start
+    _ <- pure $ printLog "value of image base 64 taking time" image
+    _ <- pure $ printLog "value of image base 64 from local store" (getValueToLocalStore RIDE_START_ODOMETER )
+    let newState = if state.props.rentalRideInfo.endOdometerReadingModal then state{props{  currentStage= ST.RideStarted}, data{activeRide{rentalRideData {endOdometerImage =image}}}} else state{props{ currentStage= ST.RideStarted},data{activeRide{rentalRideData{ startOdometerImage =image}}}}
+    continue newState
+
+eval (CallBackForAddNewStop newStop) state = do
+  _ <- pure $ printLog "value of new stop location " newStop
+  case runExcept (decodeJSON newStop :: _ LocationInfo) of
+    Right (obj :: LocationInfo)  -> do
+      let newState = state { data { activeRide { destination = decodeAddress obj true , dest_lat = (obj ^. _lat), dest_lon = (obj ^. _lon)}}, props{showDottedRoute = false}}
+      _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
+      updateAndExit newState $ Refresh newState
+    Left err -> do
+      continue state
+
+  
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
     "Rides" -> exit $ GoToRidesScreen state
@@ -557,8 +595,11 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state
     rideOtp = if (index + 1) > (length state.props.rideOtp) then ( take 4 (state.props.rideOtp <> key)) else (take index (state.props.rideOtp)) <> key <> (take 4 (drop (index+1) state.props.rideOtp))
     focusIndex = length rideOtp
     newState = state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex ,otpIncorrect = false} }
-    exitAction = if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
-  if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then updateAndExit newState exitAction
+    exitAction = if state.props.rentalRideInfo.endRideOtpModal then EndRide newState else if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
+  if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then 
+    ( if isRentalBooking state 
+        then continue (newState { props = newState.props {  enterOtpModal = false, rentalRideInfo = newState.props.rentalRideInfo { startOdometerReadingModal =  newState.props.enterOtpModal, endOdometerReadingModal = newState.props.rentalRideInfo.endRideOtpModal, endRideOtpModal = false} }})  
+      else updateAndExit newState exitAction)
   else continue newState
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickBack text)) state = do
   let
@@ -570,15 +611,83 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state 
   let rideOtp = take index state.props.rideOtp
   continue state { props = state.props { enterOtpFocusIndex = focusIndex, rideOtp = rideOtp, otpIncorrect = false } }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
-  continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
-eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do
-    let exitState = if state.props.zoneRideBooking then StartZoneRide state else StartRide state
-    exit exitState
+  continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, rentalRideInfo = state.props.rentalRideInfo { endRideOtpModal = false }} }
+eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone text)) state = do 
+  let newState = state{props{rentalRideInfo{startOdometerReadingModal = state.props.enterOtpModal , endRideOtpModal = false, endOdometerReadingModal = state.props.rentalRideInfo.endRideOtpModal}, enterOtpModal = false}}
+  if isRentalBooking state then continue (newState { props = state.props { enterOtpModal = false, rentalRideInfo = state.props.rentalRideInfo {startOdometerReadingModal =  state.props.enterOtpModal, endOdometerReadingModal = state.props.rentalRideInfo.endRideOtpModal, endRideOtpModal = false }}}) 
+  else if state.props.rentalRideInfo.endRideOtpModal then updateAndExit newState $ EndRide newState else if state.props.zoneRideBooking then updateAndExit newState $ StartZoneRide state else updateAndExit newState $ StartRide newState
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.BackPressed)) state = do
+  continue $ state { props = state.props { enterOtpModal = state.props.rentalRideInfo.startOdometerReadingModal, rentalRideInfo = state.props.rentalRideInfo {startOdometerReadingModal = false,endRideOtpModal = state.props.rentalRideInfo.endOdometerReadingModal,endOdometerReadingModal = false}} }
+
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone text)) state = do
+  let newState = state{props{enterOtpModal = false, rentalRideInfo = state.props.rentalRideInfo {startOdometerReadingModal = false ,  endRideOtpModal = false, endOdometerReadingModal = false}}}
+  let exitAction = if state.props.rentalRideInfo.endOdometerReadingModal then EndRide newState else StartRide newState
+  if ((state.props.rentalRideInfo.endOdometerReadingModal && state.data.activeRide.rentalRideData.endOdometerImage == "") || (state.props.rentalRideInfo.startOdometerReadingModal && state.data.activeRide.rentalRideData.startOdometerImage == "") ) then continueWithCmd state [pure UploadImage] else updateAndExit newState exitAction  -- make api call
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index)) state = do 
+  let kmStrLen = length $ if state.props.rentalRideInfo.startOdometerReadingModal then  state.data.activeRide.rentalRideData.startOdometerReading.valueInkm else state.data.activeRide.rentalRideData.endOdometerReading.valueInkm
+      mStrLen = length $ if state.props.rentalRideInfo.startOdometerReadingModal then  state.data.activeRide.rentalRideData.startOdometerReading.valueInM else state.data.activeRide.rentalRideData.endOdometerReading.valueInM
+  if(state.props.rentalRideInfo.odometerConfig.updateKm && kmStrLen >= 6  || state.props.rentalRideInfo.odometerConfig.updateM && mStrLen >= 3) then continue state
+    else  
+      if state.props.rentalRideInfo.startOdometerReadingModal 
+        then continue state{ data { activeRide{ rentalRideData { startOdometerReading = state.data.activeRide.rentalRideData.startOdometerReading{
+          valueInkm = 
+          if state.props.rentalRideInfo.odometerConfig.updateKm 
+            then state.data.activeRide.rentalRideData.startOdometerReading.valueInkm <> key 
+          else state.data.activeRide.rentalRideData.startOdometerReading.valueInkm
+          , valueInM = (
+            if (not state.props.rentalRideInfo.odometerConfig.updateKm) 
+              then (state.data.activeRide.rentalRideData.startOdometerReading.valueInM <> key) 
+            else (state.data.activeRide.rentalRideData.startOdometerReading.valueInM ))}}}}}
+      else
+        continue state{ data { activeRide { rentalRideData { endOdometerReading = state.data.activeRide.rentalRideData.endOdometerReading{
+          valueInkm = 
+          if state.props.rentalRideInfo.odometerConfig.updateKm 
+            then state.data.activeRide.rentalRideData.endOdometerReading.valueInkm <> key 
+          else state.data.activeRide.rentalRideData.endOdometerReading.valueInkm
+          , valueInM = (
+            if (not state.props.rentalRideInfo.odometerConfig.updateKm) 
+              then (state.data.activeRide.rentalRideData.endOdometerReading.valueInM <> key) 
+            else (state.data.activeRide.rentalRideData.endOdometerReading.valueInM ))}}}}}
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnTextViewClick str)) state = 
+  continue state{props{rentalRideInfo{odometerConfig {updateKm = (str == "Km") , updateM = (str == "m")}}}}
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickBack _)) state = do 
+  if (state.props.rentalRideInfo.startOdometerReadingModal) then
+    let valueInKm = state.data.activeRide.rentalRideData.startOdometerReading.valueInkm
+        valueInM = state.data.activeRide.rentalRideData.startOdometerReading.valueInM
+    in
+    if (state.props.rentalRideInfo.odometerConfig.updateKm) then 
+      continue state{data{activeRide{rentalRideData{startOdometerReading{valueInkm = (if length valueInKm > 0 then (take (length valueInKm - 1) valueInKm) else "")}}}}}
+    else if (state.props.rentalRideInfo.odometerConfig.updateM) then 
+      continue state{data{activeRide{rentalRideData{startOdometerReading{valueInM = (if length valueInM > 0 then (take (length valueInM - 1) valueInM) else "")}}}}}
+    else continue state
+  else 
+    let valueInKm = state.data.activeRide.rentalRideData.endOdometerReading.valueInkm
+        valueInM = state.data.activeRide.rentalRideData.endOdometerReading.valueInM
+    in
+    if (state.props.rentalRideInfo.odometerConfig.updateKm) then 
+      continue state{data{activeRide{rentalRideData{endOdometerReading{valueInkm = (if length valueInKm > 0 then (take (length valueInKm - 1) valueInKm) else "")}}}}}
+    else if (state.props.rentalRideInfo.odometerConfig.updateM) then 
+      continue state{data{activeRide{rentalRideData{endOdometerReading{valueInM = (if length valueInM > 0 then (take (length valueInM - 1) valueInM) else "")}}}}}
+    else continue state
+
+
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
+  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
-  continue $ (state {props {endRidePopUp = true}, data {route = []}})
+  if isRentalBooking state 
+    then continue state{props{enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp="", rentalRideInfo = state.props.rentalRideInfo { endRideOtpModal = true}}, data{route = [], activeRide { rentalRideData = {startOdometerReading = {valueInkm="",valueInM=""}}}}}
+  else
+    continue $ (state {props {endRidePopUp = true}, data {route = []}})
+
+eval (RideActionModalAction (RideActionModal.ArrivedAtStop)) state = do
+  continue state {props = state.props{ arrivedAtStop = true }}
+
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   let lat = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lat else state.data.activeRide.dest_lat
@@ -877,7 +986,7 @@ eval ClickAddAlternateButton state = do
 eval LinkAadhaarAC state = exit $ AadhaarVerificationFlow state
 
 eval ZoneOtpAction state = do
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false } }
+  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, rideProductType = false } }
 
 eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
 
@@ -979,6 +1088,12 @@ eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
+eval (RentalRideTimerCallback id min sec) state = do
+  case id of
+    "rentalRideStartTimerId" -> continue state
+    "rentalRideDurationId" -> continue state
+    _ -> continue state
+
 eval (PaymentBannerAC (Banner.OnClick)) state = do
   _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false
   continue state
@@ -1025,6 +1140,27 @@ constructLatLong lat lon =
   , place : ""
   }
 
+rentalRideDetails :: ST.HomeScreenState -> RidesInfo -> ST.RentalRideData
+rentalRideDetails state (RidesInfo ride) = 
+  {
+    rentalStartTime : "",
+    startOdometerReading :  {
+      valueInkm: fromMaybe "" $ (maybe [""] (DS.split (DS.Pattern ".")) ride.startOdometerReading) Array.!! 0,
+      valueInM: fromMaybe "" $ (maybe [""] (DS.split (DS.Pattern ".")) ride.startOdometerReading) Array.!! 1
+    }::ST.OdometerReading,
+    endOdometerReading : {
+      valueInkm: fromMaybe "" $ (maybe [""] (DS.split (DS.Pattern ".")) ride.endOdometerReading) Array.!! 0,
+      valueInM: fromMaybe "" $ (maybe [""] (DS.split (DS.Pattern ".")) ride.endOdometerReading) Array.!! 1
+    }::ST.OdometerReading,
+    startOdometerImage : fromMaybe "" ride.startOdometerImage,
+    endOdometerImage : fromMaybe "" ride.endOdometerImage,
+    rentalDuration : fromMaybe "" ride.rentalDuration,
+    rentalDistance : fromMaybe "" ride.rentalDistance,
+    actualDistance : fromMaybe "" ride.rentalActualDistance,
+    actualDuration : fromMaybe "" ride.rentalActualDuration
+  }
+
+
 activeRideDetail :: ST.HomeScreenState -> RidesInfo -> ST.ActiveRide
 activeRideDetail state (RidesInfo ride) = 
   let waitTimeSeconds = DS.split (DS.Pattern "<$>") (getValueToLocalStore TOTAL_WAITED)
@@ -1066,7 +1202,8 @@ activeRideDetail state (RidesInfo ride) =
               Just "LOCOMOTOR_DISABILITY" -> Just ST.LOCOMOTOR_DISABILITY
               Just "OTHER" -> Just ST.OTHER_DISABILITY
               Just _ -> Just ST.OTHER_DISABILITY
-              Nothing -> Nothing
+              Nothing -> Nothing,
+  rentalRideData: rentalRideDetails state (RidesInfo ride)
 }
 
 cancellationReasons :: String -> Array Common.OptionButtonList
@@ -1166,3 +1303,6 @@ getPreviousVersion merchant =
     YATRI -> "2.3.0"
     YATRISATHI -> "0.1.8"
     _ -> "100.100.100"
+
+isRentalBooking :: ST.HomeScreenState -> Boolean
+isRentalBooking state = state.props.rideProductType == ST.RENTAL

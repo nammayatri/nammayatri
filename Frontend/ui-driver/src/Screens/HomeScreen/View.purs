@@ -93,6 +93,8 @@ screen initialState =
   , name : "HomeScreen"
   , globalEvents : [
         ( \push -> do
+          _ <- JB.storeCallBackImageUpload push CallBackImageUpload
+          _ <- HU.storeCallBackForAddRideStop push CallBackForAddNewStop
           _ <- pure $ JB.checkAndAskNotificationPermission false
           _ <- pure $ printLog "initial State" initialState
           _ <- HU.storeCallBackForNotification push Notification
@@ -136,6 +138,10 @@ screen initialState =
                                     id = fromMaybe "" (waitTime DA.!! 0)
                                     isTimerValid = id == initialState.data.activeRide.id
                                     startingTime = (HU.differenceBetweenTwoUTC (HU.getCurrentUTC "") (fromMaybe "" (waitTime DA.!! 1)))
+                                if (initialState.data.activeRide.rideProductType == show ST.RENTAL) then do
+                                  void $ waitingCountdownTimerV2 startingTime "1" "rentalRideStartTimerId" push RentalRideTimerCallback
+                                else pure unit
+                                
                                 if (getValueToLocalStore WAITING_TIME_STATUS == show ST.Triggered) then do
                                   void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.PostTriggered)
                                   void $ waitingCountdownTimerV2 startingTime "1" "countUpTimerId" push WaitTimerCallback
@@ -182,6 +188,9 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- push RemoveChat
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
+                                if (initialState.data.activeRide.rideProductType == show ST.RENTAL) then do
+                                  void $ waitingCountdownTimerV2 startingTime "1" "rentalRideDurationId" push RentalRideTimerCallback
+                                else pure unit
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
@@ -235,7 +244,8 @@ view push state =
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
-      , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
+      , if state.props.enterOtpModal || state.props.rentalRideInfo.endRideOtpModal then enterOtpModal push state else dummyTextView
+      , if isRentalBooking state && ( state.props.rentalRideInfo.startOdometerReadingModal || state.props.endOdometerReadingModal ) then startOdometerReadingModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if ((state.props.isMockLocation && (MU.getMerchant FunctionCall == MU.NAMMAYATRI)) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
@@ -1189,6 +1199,10 @@ enterOtpModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Presto
 enterOtpModal push state =
   InAppKeyboardModal.view (push <<< InAppKeyboardModalAction) (enterOtpStateConfig state)
 
+startOdometerReadingModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+startOdometerReadingModal push state =
+  InAppKeyboardModal.view (push <<< InAppKeyboardModalOdometerAction) (enterOdometerReadingConfig state)
+  
 showOfflineStatus :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 showOfflineStatus push state =
   linearLayout

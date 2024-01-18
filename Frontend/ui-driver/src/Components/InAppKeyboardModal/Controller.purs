@@ -33,6 +33,7 @@ data Action = OnSelection String Int
             | BackPressed
             | OnClickResendOtp
             | OnClickTextCross
+            | OnTextViewClick String 
 
 ----------------------------------------------- InAppKeyboardModalState ---------------------------------------------
 type InAppKeyboardModalState = {
@@ -49,6 +50,20 @@ type InAppKeyboardModalState = {
     , isValidAlternateNumber :: Boolean
     , showResendOtpButton :: Boolean
     , textBoxConfig :: TextBoxConfig
+    , confirmBtnColor :: String
+    , isDismissable :: Boolean
+    , odometerReading :: OdometerReading
+    , odometerConfig :: OdometerConfig
+}
+
+type OdometerReading = {
+  meters :: String,
+  kiloMeters :: String
+}
+
+type OdometerConfig = {
+  updateKm :: Boolean,
+  updateM :: Boolean
 }
 
 type TextBoxConfig = {
@@ -98,6 +113,23 @@ type ButtonConfig =
 type Keys = {
   keys :: Array String
 }
+
+type SingleElementTextBoxConfig = {
+  height :: Length,
+  width :: Length,
+  margin :: Margin,
+  numberOfBoxes :: Int
+  }
+
+
+type InputFieldConfig = 
+  { isAdjustable :: Boolean,
+    textVal :: String ,
+    letterSpacing :: Number,
+    width :: Length,
+    isActive :: Boolean,
+    unitVal :: String
+  }
 
 config :: InAppKeyboardModalState
 config = {
@@ -201,4 +233,14 @@ config = {
       width : V 48,
       height : V 56
   }
+  , isDismissable : true
+  , confirmBtnColor : Color.darkMint
+  , odometerReading : {
+     meters : "",
+     kiloMeters : ""
+    }
+  , odometerConfig : {
+      updateKm : true,
+      updateM : false
+    }
   }

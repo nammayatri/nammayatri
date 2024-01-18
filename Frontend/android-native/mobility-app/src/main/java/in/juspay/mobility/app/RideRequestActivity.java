@@ -126,7 +126,12 @@ public class RideRequestActivity extends AppCompatActivity {
                     rideRequestBundle.getString("requestedVehicleVariant"),
                     rideRequestBundle.getBoolean("disabilityTag"),
                     rideRequestBundle.getBoolean("isTranslated"),
-                    rideRequestBundle.getBoolean("gotoTag")
+                    rideRequestBundle.getBoolean("gotoTag"),
+                    rideRequestBundle.getString("rideProductType"),
+                    rideRequestBundle.getString("rentalRideDuration"),
+                    rideRequestBundle.getString("rentalRideDistance"),
+                    rideRequestBundle.getString("rentalStartTime"),
+                    rideRequestBundle.getString("rentalStartDate")
             );
 
             sheetArrayList.add(sheetModel);
@@ -222,6 +227,7 @@ public class RideRequestActivity extends AppCompatActivity {
 
             holder.pickUpDistance.setText(model.getPickUpDistance()+" km ");
             holder.baseFare.setText(String.valueOf(model.getBaseFare() + model.getUpdatedAmount()));
+            
             holder.distanceToBeCovered.setText(model.getDistanceToBeCovered() + " km");
 
             if( service.equals("yatrisathiprovider") ){

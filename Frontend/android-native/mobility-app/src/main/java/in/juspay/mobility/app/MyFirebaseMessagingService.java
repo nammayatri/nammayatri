@@ -126,6 +126,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         JSONObject payload = new JSONObject();
         JSONObject notification_payload = new JSONObject();
         JSONObject entity_payload = new JSONObject();
+        
         try {
             if (remoteMessage.getData().size() > 0) {
                 Bundle extras = new Bundle();
@@ -189,6 +190,21 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     String key = getString(R.string.service);
                     String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
                     switch (notificationType) {
+                        case NotificationTypes.NEW_STOP_ADDED:
+                            if (remoteMessage.getData().containsKey("driver_notification_payload")) {
+                                String driverNotification = remoteMessage.getData().get("driver_notification_payload");
+                                if (driverNotification != null){
+                                    JSONObject driverNotificationJsonObject = new JSONObject(driverNotification);
+                                    if(driverNotificationJsonObject.has("reqBody") && !driverNotificationJsonObject.isNull("reqBody")){
+                                        sharedPref.edit().putString(getString(R.string.NEW_ADD_STOP),driverNotificationJsonObject.getString("reqBody")).apply();
+                                        showOverlayMessage(driverNotificationJsonObject);
+                                        if (driverNotificationJsonObject.has("showPushNotification") && !driverNotificationJsonObject.isNull("showPushNotification") ? driverNotificationJsonObject.getBoolean("showPushNotification") : false) {
+                                            NotificationUtils.showNotification(this, title, body, payload, null);
+                                        }
+                                    }
+                                }
+                            }
+                            break;
                         case NotificationTypes.DRIVER_NOTIFY:
                             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
                                 String driverNotification = remoteMessage.getData().get("driver_notification_payload");
@@ -586,6 +602,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     }
 
     private static class NotificationTypes {
+        private static final String NEW_STOP_ADDED = "NEW_STOP_ADDED";
         private static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
         private static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
         private static final String CLEARED_FARE = "CLEARED_FARE";

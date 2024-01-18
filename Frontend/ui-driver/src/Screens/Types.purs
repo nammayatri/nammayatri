@@ -408,6 +408,7 @@ type DriverProfileScreenProps = {
   alternateNumberView :: Boolean,
   removeAlternateNumber :: Boolean,
   enterOtpModal :: Boolean,
+  enterOdometerFocusIndex :: Int,
   enterOtpFocusIndex :: Int,
   otpIncorrect :: Boolean,
   otpAttemptsExceeded :: Boolean,
@@ -737,7 +738,7 @@ type DriverDetailsScreenState = {
   props :: DriverDetailsScreenStateProps
 }
 
-data KeyboardModalType = MOBILE__NUMBER | OTP | NONE
+data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE
 
 derive instance genericKeyboardModalType :: Generic KeyboardModalType _
 instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
@@ -989,7 +990,8 @@ type ActiveRide = {
   specialLocationTag :: Maybe String,
   requestedVehicleVariant :: Maybe String,
   disabilityTag :: Maybe DisabilityType,
-  waitTimeSeconds :: Int
+  waitTimeSeconds :: Int,
+  rentalRideData :: RentalRideData
 }
 
 type HomeScreenProps =  {
@@ -1041,8 +1043,47 @@ type HomeScreenProps =  {
   waitTimeStatus :: TimerStatus,
   isMockLocation :: Boolean,
   accountBlockedPopup :: Boolean,
-  tobeLogged :: Boolean
+  tobeLogged :: Boolean,
+  rentalRideInfo :: RentalRideProps,
+  rideProductType :: RideProductType
  }
+
+type RentalRideData = {
+  rentalStartTime :: String,
+  startOdometerReading :: OdometerReading,
+  endOdometerReading :: OdometerReading,
+  startOdometerImage :: String,
+  endOdometerImage :: String,
+  rentalDuration :: String,
+  rentalDistance :: String,
+  actualDistance :: String,
+  actualDuration :: String
+}
+
+type RentalRideProps = {
+  odometerConfig :: OdometerConfig,
+  endRideOtpModal :: Boolean,
+  endRideOtp :: String,
+  startOdometerReadingModal :: Boolean,
+  endOdometerReadingModal :: Boolean,
+  rentalRideStatus :: RentalRideStatus
+}
+
+data RentalRideStatus = AT_STOP | AT_END_STOP | IN_RIDE | START_STOP | YET_TO_START
+
+derive instance genericRentalRideStatus :: Generic RentalRideStatus _
+instance eqRentalRideStatus :: Eq RentalRideStatus where eq = genericEq
+instance showRentalRideStatus :: Show RentalRideStatus where show = genericShow
+instance encodeRideRideStatus :: Encode RentalRideStatus where encode = defaultEnumEncode
+instance decodeRideRideStatus :: Decode RentalRideStatus where decode = defaultEnumDecode 
+
+data RideProductType = RENTAL | INTERCITY | NORMAL
+
+derive instance genericRideProductType :: Generic RideProductType _
+instance eqRideProductType :: Eq RideProductType where eq = genericEq 
+instance showRideProductType :: Show RideProductType where show = genericShow
+instance encodeRideProductType :: Encode RideProductType where encode = defaultEnumEncode
+instance decodeRideProductType :: Decode RideProductType where decode = defaultEnumDecode
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
 
@@ -2139,4 +2180,14 @@ type DriverReferralScreenData = {
 type DriverReferralScreenProps = {
   showDriverReferralQRCode :: Boolean
 , showNewDriverReferralText :: Boolean
+}
+
+type OdometerConfig = {
+  updateKm :: Boolean,
+  updateM :: Boolean
+}
+
+type OdometerReading = {
+  valueInM :: String,
+  valueInkm :: String
 }
