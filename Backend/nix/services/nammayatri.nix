@@ -64,6 +64,7 @@ in
         else {
           command = ny.config.apps.${name}.program;
         };
+
       haskellProcesses = {
         processes = lib.listToAttrs (builtins.map
           (name: {
@@ -77,40 +78,49 @@ in
           })
           cabalExecutables);
       };
-      initProcesses =
-        let
-          # The cabal target of all Haskell processes.
-          cabalTargets =
-            lib.filter (x: x != null)
-              (builtins.map
-                (p:
-                  pcLib.lookupEnv "CABAL_TARGET" (p.environment or null))
-                (lib.attrValues config.settings.processes));
-        in
-        {
-          processes = {
-            nammayatri-init = {
-              working_dir = "Backend";
-              command = pkgs.writeShellApplication {
-                name = "run-mobility-stack-init";
-                runtimeInputs = with pkgs; [
-                  redis
-                ];
-                text = ''
+
+      initProcesses = {
+        processes = {
+          nammayatri-init = {
+            working_dir = "Backend";
+            depends_on."cabal-build".condition = "process_completed_successfully";
+            command = pkgs.writeShellApplication {
+              name = "run-mobility-stack-init";
+              runtimeInputs = with pkgs; [
+                redis
+              ];
+              text = ''
+                set -x
+                rm -f ./*.log # Clean up the log files
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+                redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
+              '';
+            };
+          };
+
+          cabal-build = {
+            working_dir = "Backend";
+            disabled = !cfg.useCabal;
+            command = pkgs.writeShellApplication {
+              name = "cabal-build";
+              text =
+                let
+                  # The cabal target of all Haskell processes.
+                  cabalTargets =
+                    lib.filter (x: x != null)
+                      (builtins.map
+                        (p:
+                          pcLib.lookupEnv "CABAL_TARGET" (p.environment or null))
+                        (lib.attrValues config.settings.processes));
+                in
+                ''
                   set -x
-                  rm -f ./*.log # Clean up the log files
-
-                  ${if cfg.useCabal then ''
-                      cabal build ${builtins.concatStringsSep " " cabalTargets}
-                    '' else ""}
-
-                  redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
-                  redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
+                  cabal build ${builtins.concatStringsSep " " cabalTargets}
                 '';
-              };
             };
           };
         };
+      };
     in
     {
       settings = {
