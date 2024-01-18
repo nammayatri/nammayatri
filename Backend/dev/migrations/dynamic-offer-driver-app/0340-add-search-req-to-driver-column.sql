@@ -1,5 +1,5 @@
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN send_search_request_to_driver text[];
-UPDATE atlas_driver_offer_bpp.merchant_service_usage_config SET sms_providers_priority_list='{"FCM", "GRPC"}';
+UPDATE atlas_driver_offer_bpp.merchant_service_usage_config SET send_search_request_to_driver='{"FCM", "GRPC"}';
 
 
 WITH MerchantNotificationServiceConfigs AS (

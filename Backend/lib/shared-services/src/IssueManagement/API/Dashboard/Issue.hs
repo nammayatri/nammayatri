@@ -9,6 +9,7 @@ type DashboardIssueAPI =
     :> ( Common.IssueCategoryListAPI
            :<|> Common.IssueListAPI
            :<|> Common.IssueInfoAPI
+           :<|> Common.IssueInfoAPIV2
            :<|> Common.IssueUpdateByUserAPI
            :<|> Common.IssueAddCommentByUserAPI
            :<|> Common.IssueFetchMediaAPI
@@ -20,6 +21,7 @@ type DashboardIssueAPIV2 =
     :> ( Common.IssueCategoryListAPI
            :<|> Common.IssueListAPI
            :<|> Common.IssueInfoAPI
+           :<|> Common.IssueInfoAPIV2
            :<|> Common.IssueUpdateByUserAPI
            :<|> Common.IssueAddCommentByUserAPI
            :<|> Common.IssueFetchMediaAPI

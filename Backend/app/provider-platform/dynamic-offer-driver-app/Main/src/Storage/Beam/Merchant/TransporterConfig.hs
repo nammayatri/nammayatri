@@ -134,7 +134,8 @@ data TransporterConfigT f = TransporterConfigT
     notificationRetryCountThreshold :: B.C f Int,
     notificationRetryTimeGap :: B.C f Seconds,
     driverAutoPayExecutionTimeFallBack :: B.C f Seconds,
-    orderAndNotificationStatusCheckFallBackTime :: B.C f Seconds
+    orderAndNotificationStatusCheckFallBackTime :: B.C f Seconds,
+    kaptureDisposition :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
