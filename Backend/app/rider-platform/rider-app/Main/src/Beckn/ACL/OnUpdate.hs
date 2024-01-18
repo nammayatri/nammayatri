@@ -340,6 +340,32 @@ parseEstimateRepetitionEvent transactionId order = do
         cancellationSource = castCancellationSourceV2 cancellationSource
       }
 
+parseNewMessageEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseNewMessageEvent order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideAssigned Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillmentTags is not present in RideAssigned Event.")
+  let message = readMaybe . T.unpack =<< getTagV2 "driver_new_message" "message" tagsGroup
+  return $
+    DOnUpdate.NewMessageReq
+      { bppBookingId = Id bppBookingId,
+        bppRideId = Id bppRideId,
+        message = message
+      }
+
+parseSafetyAlertEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseSafetyAlertEvent order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideAssigned Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillmentTags is not present in RideAssigned Event.")
+  let reason = readMaybe . T.unpack =<< getTagV2 "safety_alert" "reason" tagsGroups
+  return $
+    DOnUpdate.SafetyAlertReq
+      { bppBookingId = Id bppBookingId,
+        bppRideId = Id bppRideId,
+        reason = reason
+      }
+
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
 castCancellationSource = \case
   OnUpdate.ByUser -> SBCR.ByUser
