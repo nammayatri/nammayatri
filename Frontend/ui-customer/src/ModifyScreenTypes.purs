@@ -51,9 +51,15 @@ modifyScreenState st =
     TicketInfoScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {ticketInfoScreen = a state.ticketInfoScreen})
     AppConfigType a->  modifyState (\(GlobalState state) -> GlobalState $ state { appConfig = a state.appConfig })
     RideScheduledScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideScheduledScreen = a state.rideScheduledScreen})
-
+    SearchLocationScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {searchLocationScreen = a state.searchLocationScreen})
+    GlobalPropsType a -> modifyState (\(GlobalState state) -> GlobalState $ state {globalProps = a state.globalProps})
     RideSelectionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSelectionScreen = a state.rideSelectionScreen})
     ReportIssueChatScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {reportIssueChatScreen = a state.reportIssueChatScreen})
+    MetroTicketDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketDetailsScreen = a state.metroTicketDetailsScreen})
+    MetroMyTicketsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroMyTicketsScreen = a state.metroMyTicketsScreen})
+    TicketStatusScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {ticketStatusScreen = a state.ticketStatusScreen})
+    MetroTicketBookingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketBookingScreen = a state.metroTicketBookingScreen})
+    MetroTicketStatusScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketStatusScreen = a state.metroTicketStatusScreen})
 
 updateRideDetails :: MyRidesScreenState -> FlowBT String Unit
 updateRideDetails state = do 

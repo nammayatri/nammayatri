@@ -1615,7 +1615,8 @@ newtype ServiceabilityRes = ServiceabilityRes
 newtype ServiceabilityResDestination = ServiceabilityResDestination
   { serviceable :: Boolean,
     geoJson :: Maybe String,
-    specialLocation :: Maybe SpecialLocation
+    specialLocation :: Maybe SpecialLocation,
+    city :: Maybe String
   }
 newtype SpecialLocation = SpecialLocation
   {
@@ -2708,3 +2709,322 @@ instance standardEncodeUpdateIssueRes :: StandardEncode UpdateIssueRes where sta
 instance decodeUpdateIssueRes         :: Decode UpdateIssueRes where decode = defaultDecode
 instance encodeUpdateIssueRes         :: Encode UpdateIssueRes where encode = defaultEncode
 
+--------------------------------------------------- GetMetroStation ----------------------------------------------------
+data GetMetroStationReq = GetMetroStationReq 
+
+newtype GetMetroStationResponse = GetMetroStationResponse (Array GetMetroStationResp)
+
+newtype GetMetroStationResp = GetMetroStationResp { 
+     name :: String
+  ,  code :: String
+  ,  lat :: Maybe Number
+  ,  lon :: Maybe Number
+  ,  address :: Maybe String
+  ,  stationType :: Maybe StationType --StationType
+  ,  color :: Maybe String
+}
+
+derive instance genericGetMetroStationResponse :: Generic GetMetroStationResponse _
+derive instance newtypeGetMetroStationResponse :: Newtype GetMetroStationResponse _
+instance showGetMetroStationResponse :: Show GetMetroStationResponse where show = genericShow
+instance decodeGetMetroStationResponse :: Decode GetMetroStationResponse where decode = defaultDecode
+
+data StationType = START | END | TRANSIT | INTERMEDIATE
+
+instance makeGetMetroStationReq :: RestEndpoint GetMetroStationReq GetMetroStationResponse where
+    makeRequest reqBody headers = defaultMakeRequest GET (EP.getMetroStations "") headers reqBody Nothing
+    decodeResponse    = decodeJSON
+    encodeRequest = standardEncode
+
+derive instance genericGetMetroStationReq :: Generic GetMetroStationReq _
+instance showGetMetroStationReq     :: Show GetMetroStationReq where show     = genericShow
+instance standardGetMetroStationReq :: StandardEncode GetMetroStationReq where standardEncode (GetMetroStationReq ) = standardEncode {}
+instance decodeGetMetroStationReq   :: Decode GetMetroStationReq where decode = defaultDecode
+instance encodeGetMetroStationReq   :: Encode GetMetroStationReq where encode = defaultEncode
+
+derive instance genericGetMetroStationResp :: Generic GetMetroStationResp _
+instance showGetMetroStationResp        :: Show GetMetroStationResp where show     = genericShow
+instance standardEncodeGetMetroStationResp :: StandardEncode GetMetroStationResp where standardEncode (GetMetroStationResp res) = standardEncode res
+instance decodeGetMetroStationResp         :: Decode GetMetroStationResp where decode = defaultDecode
+instance encodeGetMetroStationResp         :: Encode GetMetroStationResp where encode = defaultEncode
+
+derive instance genericStationType :: Generic StationType _
+instance showStationType :: Show StationType where show = genericShow
+instance decodeStationType :: Decode StationType where decode = defaultDecode
+instance encodeStationType :: Encode StationType where encode = defaultEncode
+instance eqStationType :: Eq StationType where eq = genericEq
+instance standardEncodeStationType :: StandardEncode StationType
+  where
+  standardEncode START = standardEncode $ show START
+  standardEncode END = standardEncode $ show END
+  standardEncode TRANSIT = standardEncode $ show TRANSIT
+  standardEncode INTERMEDIATE = standardEncode $ show INTERMEDIATE
+
+--------------------------------------------------- searchMetro ----------------------------------------------------
+
+newtype SearchMetroReq = SearchMetroReq {
+  fromStationCode :: String
+  ,  toStationCode :: String
+  ,  quantity :: Int
+}
+
+newtype SearchMetroResp = SearchMetroResp {
+  searchId :: String
+}
+
+instance makeSearchMetroReq :: RestEndpoint SearchMetroReq SearchMetroResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.searchMetro "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericSearchMetroReq :: Generic SearchMetroReq _
+derive instance newtypeSearchMetroReq :: Newtype SearchMetroReq _
+instance standardEncodeSearchMetroReq :: StandardEncode SearchMetroReq where standardEncode (SearchMetroReq payload) = standardEncode payload
+instance showSearchMetroReq :: Show SearchMetroReq where show = genericShow
+instance decodeSearchMetroReq :: Decode SearchMetroReq where decode = defaultDecode
+instance encodeSearchMetroReq :: Encode SearchMetroReq where encode = defaultEncode
+
+
+derive instance genericSearchMetroResp :: Generic SearchMetroResp _
+derive instance newtypeSearchMetroResp :: Newtype SearchMetroResp _
+instance standardEncodeSearchMetroResp :: StandardEncode SearchMetroResp where standardEncode (SearchMetroResp id) = standardEncode id
+instance showSearchMetroResp :: Show SearchMetroResp where show = genericShow
+instance decodeSearchMetroResp :: Decode SearchMetroResp where decode = defaultDecode
+instance encodeSearchMetroResp :: Encode SearchMetroResp where encode = defaultEncode
+
+--------------------------------------------------- getMetroQuote ----------------------------------------------------
+
+data GetMetroQuotesReq = GetMetroQuotesReq String
+
+data FRFSQuoteType = SingleJourney | ReturnJourney | Pass
+
+data FRFSVehicleType = Metro_ | Bus
+newtype GetMetroQuotesRes = GetMetroQuotesRes (Array MetroQuote)
+
+newtype FRFSStationAPI = FRFSStationAPI {
+  code :: String
+  , name :: String
+  , lat :: Maybe Number
+  , lon :: Maybe Number
+  , address :: Maybe String
+  , stationType :: Maybe String --StationType
+  , sequenceNum :: Maybe Int
+  , color :: Maybe String
+}
+
+newtype MetroQuote = MetroQuote {
+  quoteId :: String
+  , _type :: String--FRFSQuoteType
+  , vehicleType :: String--FRFSVehicleType
+  , quantity :: Int
+  , price :: Int
+  , stations :: Array FRFSStationAPI 
+  , validTill :: String
+}
+
+derive instance genericGetMetroQuotesReq :: Generic GetMetroQuotesReq _
+instance standardEncodeGetMetroQuotesReq :: StandardEncode GetMetroQuotesReq where standardEncode (GetMetroQuotesReq body) = standardEncode body
+instance showGetMetroQuotesReq :: Show GetMetroQuotesReq where show = genericShow
+instance decodeGetMetroQuotesReq :: Decode GetMetroQuotesReq where decode = defaultDecode
+instance encodeGetMetroQuotesReq  :: Encode GetMetroQuotesReq where encode = defaultEncode
+
+derive instance genericGetMetroQuotesRes :: Generic GetMetroQuotesRes _
+derive instance newtypeGetMetroQuotesRes :: Newtype GetMetroQuotesRes _
+instance standardEncodeGetMetroQuotesRes :: StandardEncode GetMetroQuotesRes where standardEncode (GetMetroQuotesRes body) = standardEncode body
+instance showGetMetroQuotesRes :: Show GetMetroQuotesRes where show = genericShow
+instance decodeGetMetroQuotesRes :: Decode GetMetroQuotesRes where decode = defaultDecode
+instance encodeGetMetroQuotesRes :: Encode GetMetroQuotesRes where encode = defaultEncode
+
+derive instance genericMetroQuote :: Generic MetroQuote _
+derive instance newtypeMetroQuote :: Newtype MetroQuote _
+instance standardEncodeMetroQuote :: StandardEncode MetroQuote where standardEncode (MetroQuote body) = standardEncode body
+instance showMetroQuote :: Show MetroQuote where show = genericShow
+instance decodeMetroQuote :: Decode MetroQuote where decode = defaultDecode
+instance encodeMetroQuote :: Encode MetroQuote where encode = defaultEncode
+
+derive instance genericFRFSStationAPI :: Generic FRFSStationAPI _
+derive instance newtypeFRFSStationAPI :: Newtype FRFSStationAPI _
+instance standardEncodeFRFSStationAPI :: StandardEncode FRFSStationAPI where standardEncode (FRFSStationAPI body) = standardEncode body
+instance showFRFSStationAPI :: Show FRFSStationAPI where show = genericShow
+instance decodeFRFSStationAPI :: Decode FRFSStationAPI where decode = defaultDecode
+instance encodeFRFSStationAPI :: Encode FRFSStationAPI where encode = defaultEncode
+
+derive instance genericFRFSQuoteType :: Generic FRFSQuoteType _
+instance showFRFSQuoteType :: Show FRFSQuoteType where show = genericShow
+instance decodeFRFSQuoteType :: Decode FRFSQuoteType where decode = defaultDecode
+instance encodeFRFSQuoteType :: Encode FRFSQuoteType where encode = defaultEncode
+instance standardEncodeFRFSQuoteType :: StandardEncode FRFSQuoteType
+  where
+  standardEncode SingleJourney = standardEncode $ show SingleJourney
+  standardEncode ReturnJourney = standardEncode $ show ReturnJourney
+  standardEncode Pass = standardEncode $ show Pass
+
+derive instance genericFRFSVehicleType :: Generic FRFSVehicleType _
+instance showFRFSVehicleType :: Show FRFSVehicleType where show = genericShow
+instance decodeFRFSVehicleType :: Decode FRFSVehicleType where decode = defaultDecode
+instance encodeFRFSVehicleType :: Encode FRFSVehicleType where encode = defaultEncode
+instance standardEncodeFRFSVehicleType :: StandardEncode FRFSVehicleType
+  where
+  standardEncode Metro_ = standardEncode $ show Metro_
+  standardEncode Bus = standardEncode $ show Bus
+
+instance getMetroQuotesReq :: RestEndpoint GetMetroQuotesReq GetMetroQuotesRes where
+ makeRequest reqBody@(GetMetroQuotesReq id) headers = defaultMakeRequest GET (EP.getMetroQuotes id) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+ --------------------------------------------------- confirmMetroQuote ----------------------------------------------------
+
+data ConfirmMetroQuoteReq = ConfirmMetroQuoteReq String
+
+
+newtype ConfirmMetroQuoteResp = ConfirmMetroQuoteResp MetroTicketBookingStatus
+
+newtype MetroTicketBookingStatus = MetroTicketBookingStatus {
+  bookingId :: String
+  , status :: String
+  , _type :: String--FRFSQuoteType
+  , quantity :: Int
+  , vehicleType :: String--FRFSVehicleType
+  , price :: Int
+  , validTill :: String
+  , payment :: Maybe FRFSBookingPaymentAPI
+  , tickets :: Array FRFSTicketAPI
+  , stations :: Array FRFSStationAPI
+}
+
+newtype FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {
+    status :: String
+  , paymentOrder :: CreateOrderRes
+}
+
+newtype FRFSTicketAPI = FRFSTicketAPI {
+    status :: FRFSTicketStatus
+  , qrData :: String
+  , validTill :: String
+  , ticketNumber :: String
+  }
+
+data FRFSTicketStatus = ACTIVE | EXPIRED | USED
+
+instance makeConfirmMetroQuoteReq :: RestEndpoint ConfirmMetroQuoteReq MetroTicketBookingStatus where
+ makeRequest reqBody@(ConfirmMetroQuoteReq quoteId) headers = defaultMakeRequest POST (EP.confirmMetroQuote quoteId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericConfirmMetroQuoteResp :: Generic ConfirmMetroQuoteResp _
+derive instance newtypeConfirmMetroQuoteResp :: Newtype ConfirmMetroQuoteResp _
+instance standardEncodeConfirmMetroQuoteResp :: StandardEncode ConfirmMetroQuoteResp where standardEncode (ConfirmMetroQuoteResp body) = standardEncode body
+instance showConfirmMetroQuoteResp :: Show ConfirmMetroQuoteResp where show = genericShow
+instance decodeConfirmMetroQuoteResp :: Decode ConfirmMetroQuoteResp where decode = defaultDecode
+instance encodeConfirmMetroQuoteResp  :: Encode ConfirmMetroQuoteResp where encode = defaultEncode
+
+derive instance genericMetroTicketBookingStatus :: Generic MetroTicketBookingStatus _
+derive instance newtypeMetroTicketBookingStatus :: Newtype MetroTicketBookingStatus _
+instance standardEncodeMetroTicketBookingStatus :: StandardEncode MetroTicketBookingStatus where standardEncode (MetroTicketBookingStatus body) = standardEncode body
+instance showMetroTicketBookingStatus :: Show MetroTicketBookingStatus where show = genericShow
+instance decodeMetroTicketBookingStatus :: Decode MetroTicketBookingStatus where decode = defaultDecode
+instance encodeMetroTicketBookingStatus :: Encode MetroTicketBookingStatus where encode = defaultEncode
+
+derive instance genericConfirmMetroQuoteReq :: Generic ConfirmMetroQuoteReq _
+instance standardEncodeConfirmMetroQuoteReq :: StandardEncode ConfirmMetroQuoteReq where standardEncode (ConfirmMetroQuoteReq quoteId) = standardEncode quoteId
+instance showConfirmMetroQuoteReq :: Show ConfirmMetroQuoteReq where show = genericShow
+instance decodeConfirmMetroQuoteReq :: Decode ConfirmMetroQuoteReq where decode = defaultDecode
+instance encodeConfirmMetroQuoteReq  :: Encode ConfirmMetroQuoteReq where encode = defaultEncode
+
+derive instance genericFRFSBookingPaymentAPI :: Generic FRFSBookingPaymentAPI _
+derive instance newtypeFRFSBookingPaymentAPI :: Newtype FRFSBookingPaymentAPI _
+instance standardEncodeFRFSBookingPaymentAPI :: StandardEncode FRFSBookingPaymentAPI where standardEncode (FRFSBookingPaymentAPI body) = standardEncode body
+instance showFRFSBookingPaymentAPI :: Show FRFSBookingPaymentAPI where show = genericShow
+instance decodeFRFSBookingPaymentAPI :: Decode FRFSBookingPaymentAPI where decode = defaultDecode
+instance encodeFRFSBookingPaymentAPI :: Encode FRFSBookingPaymentAPI where encode = defaultEncode
+
+derive instance genericFRFSTicketAPI :: Generic FRFSTicketAPI _
+derive instance newtypeFRFSTicketAPI :: Newtype FRFSTicketAPI _
+instance standardEncodeFRFSTicketAPI :: StandardEncode FRFSTicketAPI where standardEncode (FRFSTicketAPI body) = standardEncode body
+instance showFRFSTicketAPI :: Show FRFSTicketAPI where show = genericShow
+instance decodeFRFSTicketAPI :: Decode FRFSTicketAPI where decode = defaultDecode
+instance encodeFRFSTicketAPI :: Encode FRFSTicketAPI where encode = defaultEncode
+
+derive instance genericFRFSTicketStatus :: Generic FRFSTicketStatus _
+instance showFRFSTicketStatus :: Show FRFSTicketStatus where show = genericShow
+instance decodeFRFSTicketStatus :: Decode FRFSTicketStatus where decode = defaultDecode
+instance encodeFRFSTicketStatus :: Encode FRFSTicketStatus where encode = defaultEncode
+instance standardEncodeFRFSTicketStatus :: StandardEncode FRFSTicketStatus
+  where
+  standardEncode ACTIVE = standardEncode $ show ACTIVE
+  standardEncode EXPIRED = standardEncode $ show EXPIRED
+  standardEncode USED = standardEncode $ show USED
+
+ --------------------------------------------------- getMetroBookingStatus ----------------------------------------------------
+
+data GetMetroBookingStatusReq = GetMetroBookingStatusReq String
+
+newtype GetMetroBookingStatusResp = GetMetroBookingStatusResp MetroTicketBookingStatus
+
+instance makeGetMetroBookingStatusReq :: RestEndpoint GetMetroBookingStatusReq GetMetroBookingStatusResp where
+ makeRequest reqBody@(GetMetroBookingStatusReq bookingId) headers = defaultMakeRequest GET (EP.getMetroBookingStatus bookingId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericGetMetroBookingStatusReq :: Generic GetMetroBookingStatusReq _
+instance standardEncodeGetMetroBookingStatusReq :: StandardEncode GetMetroBookingStatusReq where standardEncode (GetMetroBookingStatusReq bookingId) = standardEncode bookingId
+instance showGetMetroBookingStatusReq :: Show GetMetroBookingStatusReq where show = genericShow
+instance decodeGetMetroBookingStatusReq :: Decode GetMetroBookingStatusReq where decode = defaultDecode
+instance encodeGetMetroBookingStatusReq  :: Encode GetMetroBookingStatusReq where encode = defaultEncode
+
+derive instance genericGetMetroBookingStatusResp :: Generic GetMetroBookingStatusResp _
+derive instance newtypeGetMetroBookingStatusResp :: Newtype GetMetroBookingStatusResp _
+instance standardEncodeGetMetroBookingStatusResp :: StandardEncode GetMetroBookingStatusResp where standardEncode (GetMetroBookingStatusResp body) = standardEncode body
+instance showGetMetroBookingStatusResp :: Show GetMetroBookingStatusResp where show = genericShow
+instance decodeGetMetroBookingStatusResp :: Decode GetMetroBookingStatusResp where decode = defaultDecode
+instance encodeGetMetroBookingStatusResp  :: Encode GetMetroBookingStatusResp where encode = defaultEncode
+
+ --------------------------------------------------- getMetroBookingList ----------------------------------------------------
+
+data GetMetroBookingListReq = GetMetroBookingListReq
+
+newtype GetMetroBookingListResp = GetMetroBookingListResp (Array MetroTicketBookingStatus)
+
+instance makeGetMetroBookingListReq :: RestEndpoint GetMetroBookingListReq GetMetroBookingListResp where
+    makeRequest reqBody headers = defaultMakeRequest GET (EP.getMetroBookingList "") headers reqBody Nothing
+    decodeResponse    = decodeJSON
+    encodeRequest = standardEncode
+
+derive instance genericGetMetroBookingListReq :: Generic GetMetroBookingListReq _
+instance showGetMetroBookingListReq     :: Show GetMetroBookingListReq where show     = genericShow
+instance standardGetMetroBookingListReq :: StandardEncode GetMetroBookingListReq where standardEncode (GetMetroBookingListReq ) = standardEncode {}
+instance decodeGetMetroBookingListReq   :: Decode GetMetroBookingListReq where decode = defaultDecode
+instance encodeGetMetroBookingListReq   :: Encode GetMetroBookingListReq where encode = defaultEncode
+
+derive instance genericGetMetroBookingListResp :: Generic GetMetroBookingListResp _
+derive instance newtypeGetMetroBookingListResp :: Newtype GetMetroBookingListResp _
+instance standardEncodeGetMetroBookingListResp :: StandardEncode GetMetroBookingListResp where standardEncode (GetMetroBookingListResp body) = standardEncode body
+instance showGetMetroBookingListResp :: Show GetMetroBookingListResp where show = genericShow
+instance decodeGetMetroBookingListResp :: Decode GetMetroBookingListResp where decode = defaultDecode
+instance encodeGetMetroBookingListResp  :: Encode GetMetroBookingListResp where encode = defaultEncode
+
+--------------------------------------------------- retryMetrTicketPayment ----------------------------------------------------
+
+data RetryMetrTicketPaymentReq = RetryMetrTicketPaymentReq String
+
+newtype RetryMetrTicketPaymentResp = RetryMetrTicketPaymentResp MetroTicketBookingStatus
+
+
+instance makeRetryMetrTicketPaymentReq :: RestEndpoint RetryMetrTicketPaymentReq RetryMetrTicketPaymentResp where
+ makeRequest reqBody@(RetryMetrTicketPaymentReq quoteId) headers = defaultMakeRequest POST (EP.retryMetrTicketPayment quoteId) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
+
+derive instance genericRetryMetrTicketPaymentReq :: Generic RetryMetrTicketPaymentReq _
+instance standardEncodeRetryMetrTicketPaymentReq :: StandardEncode RetryMetrTicketPaymentReq where standardEncode (RetryMetrTicketPaymentReq quoteId) = standardEncode quoteId
+instance showRetryMetrTicketPaymentReq :: Show RetryMetrTicketPaymentReq where show = genericShow
+instance decodeRetryMetrTicketPaymentReq :: Decode RetryMetrTicketPaymentReq where decode = defaultDecode
+instance encodeRetryMetrTicketPaymentReq  :: Encode RetryMetrTicketPaymentReq where encode = defaultEncode
+
+derive instance genericRetryMetrTicketPaymentResp :: Generic RetryMetrTicketPaymentResp _
+derive instance newtypeRetryMetrTicketPaymentResp :: Newtype RetryMetrTicketPaymentResp _
+instance standardEncodeRetryMetrTicketPaymentResp :: StandardEncode RetryMetrTicketPaymentResp where standardEncode (RetryMetrTicketPaymentResp body) = standardEncode body
+instance showRetryMetrTicketPaymentResp :: Show RetryMetrTicketPaymentResp where show = genericShow
+instance decodeRetryMetrTicketPaymentResp :: Decode RetryMetrTicketPaymentResp where decode = defaultDecode
+instance encodeRetryMetrTicketPaymentResp  :: Encode RetryMetrTicketPaymentResp where encode = defaultEncode

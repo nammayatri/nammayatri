@@ -76,6 +76,9 @@ homeScreen = do
     GoToTicketBookingFlow updatedState -> do 
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
           App.BackT $ App.BackPoint <$> (pure $ EXIT_TO_TICKETING updatedState)
+    GoToMetroTicketBookingFlow updatedState -> do 
+          modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_BOOKING updatedState)
     LogoutUser -> App.BackT $ App.NoBack <$> (pure $ LOGOUT)
     SelectEstimate updatedState -> do
           modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
@@ -182,3 +185,6 @@ homeScreen = do
     ReAllocateRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REALLOCATE_RIDE updatedState)
+    GoToMyMetroTickets updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_METRO_TICKETS)

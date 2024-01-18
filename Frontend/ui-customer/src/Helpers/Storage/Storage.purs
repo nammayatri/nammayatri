@@ -91,6 +91,7 @@ data KeyStore
   | REALLOCATE_PRODUCT_ENABLED
   | UPDATE_REPEAT_TRIPS
   | CUSTOMER_LOCATION
+  | METRO_PAYMENT_STATUS_POOLING
 
 derive instance genericKeyStore :: Generic KeyStore _
 

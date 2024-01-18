@@ -266,3 +266,9 @@ greenCoin = "#1A53BB6F"
 
 redCoin :: Color
 redCoin = "#1AE55454"
+
+tealishGreen :: Color 
+tealishGreen = "#E5F5E9"
+
+darkGradientBlue :: Color
+darkGradientBlue = "#E2EAFF"

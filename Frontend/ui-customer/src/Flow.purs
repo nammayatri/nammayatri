@@ -15,32 +15,55 @@
 
 module Flow where
 
-import Engineering.Helpers.LogEvent
 import Accessor
+import ConfigProvider
+import Constants.Configs
+import Engineering.Helpers.LogEvent
+import Helpers.Auth
+import Helpers.Firebase
+import Helpers.Logs
+import Helpers.Ride
+import Helpers.Storage.Flow.BaseApp
+import Helpers.Storage.Flow.SearchStatus
+import Helpers.Version
+import Locale.Utils
+import PaymentPage
+import Screens.TicketBookingFlow.TicketBooking.Transformer
+import Services.API
+import SuggestionUtils
+import Timers
+
+import Common.Resources.Constants (zoomLevel)
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate)
+import Common.Types.App as Common
+import Components.ChatView.Controller (makeChatComponent')
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Constants as Constants
-import Data.Ord (compare)
-import Screens.RideSelectionScreen.Controller (getTitle)
 import Control.Monad.Except (runExcept)
+import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
+import Control.Transformers.Back.Trans (runBackT)
+import Control.Transformers.Back.Trans as App
 import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex)
 import Data.Array as Arr
 import Data.Either (Either(..), either)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1)
 import Data.Int as INT
 import Data.Lens ((^.))
+import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Newtype (unwrap)
 import Data.Number (fromString)
+import Data.Ord (compare)
 import Data.String (Pattern(..), Replacement(..), drop, indexOf, split, toLower, trim, take, joinWith)
+import Data.String (length) as STR
 import Data.String as DS
 import Data.String.Common (joinWith, split, toUpper, trim, replaceAll)
 import Debug (spy)
 import Effect (Effect)
-import Data.String (length) as STR
+import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
@@ -48,59 +71,76 @@ import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage)
 import Foreign (MultipleErrors, unsafeToForeign)
+import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags)
 import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer)
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance, getCityCodeFromCity, getCityNameFromCode)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (printLog)
 import MerchantConfig.Types (AppConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
-import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, otherwise, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*))
+import Mobility.Prelude (capitalize)
 import ModifyScreenState (modifyScreenState, updateRideDetails, updateRepeatRideDetails)
+import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, otherwise, identity, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
+import PrestoDOM (initUI)
+import PrestoDOM.Core (terminateUI)
+import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getSearchRadius, getValueByComponent, getWard, ticketPlaceId)
+import Screens (getScreen)
+import Screens as Screen
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
-import Screens.AddNewAddressScreen.Controller (encodeAddressDescription, getSavedLocations, getSavedTags, getLocationList, calculateDistance, getSavedTagsFromHome, validTag, isValidLocation, getLocTag) as AddNewAddress
+import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
+import Screens.AddNewAddressScreen.Controller (encodeAddressDescription, getSavedLocations, getSavedTags, getLocationList, calculateDistance, getSavedTagsFromHome, validTag, isValidLocation, getLocTag, savedLocTransformer) as AddNewAddress
 import Screens.AddNewAddressScreen.ScreenData (dummyLocation) as AddNewAddressScreenData
 import Screens.ChooseLanguageScreen.Controller (ScreenOutput(..))
+import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
-import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
-import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
+import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
 import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, findingQuotesSearchExpired, tipEnabledState)
-import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
-import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
+import Screens.HomeScreen.ScreenData as HomeScreenData
+import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag, getTripFromRideHistory, getZoneType)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
-import Screens.TicketBookingFlow.PlaceList.Controller as PlaceListC
-import Screens.TicketBookingFlow.PlaceDetails.Controller as PlaceDetailsC
+import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
-import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
-import Screens.TicketBookingFlow.PlaceList.ScreenData as PlaceListData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
-import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..))
+import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
+import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig, getTipViewData, setTipViewData)
+import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
+import Screens.SearchLocationScreen.Controller as SearchLocationController
+import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
+import Screens.TicketBookingFlow.MetroTicketDetails.ScreenData as MetroTicketDetailsScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
+import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
+import Screens.TicketBookingFlow.PlaceDetails.Controller as PlaceDetailsC
+import Screens.TicketBookingFlow.PlaceDetails.View as PlaceDetailsS
+import Screens.TicketBookingFlow.PlaceList.Controller as PlaceListC
+import Screens.TicketBookingFlow.PlaceList.ScreenData as PlaceListData
+import Screens.TicketBookingFlow.PlaceList.View as PlaceListS
+import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
+import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.Types (Gender(..)) as Gender
-import Services.API --(AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..), PersonStatsRes(..), FeedbackReq)
+import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..), PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..), TicketInfoScreenData(..), IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationScreenState, SearchLocationTextField(..), SearchLocationStage(..), LocationInfo, SearchLocationActionType(..),Station(..),MetroTicketBookingStage(..))
+import Screens.Types as ST
+import Screens.Types
 import Services.Backend as Remote
 import Services.Config (getBaseUrl, getSupportNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
-import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), TICKET_BOOKING_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..), TICKET_BOOKING_SCREEN_OUTPUT(..),TICKET_INFO_SCREEN_OUTPUT(..),defaultGlobalState, RIDE_SELECTION_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..),  TICKETING_SCREEN_SCREEN_OUTPUT(..))
+import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), TICKET_BOOKING_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..), TICKET_BOOKING_SCREEN_OUTPUT(..),TICKET_INFO_SCREEN_OUTPUT(..),defaultGlobalState, RIDE_SELECTION_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..),  TICKETING_SCREEN_SCREEN_OUTPUT(..),METRO_TICKET_SCREEN_OUTPUT(..))
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
@@ -133,6 +173,14 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Control.Transformers.Back.Trans as App
 import Locale.Utils
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
+import Types.App
+import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
+import Screens.Types
+import Screens.TicketBookingFlow.TicketStatus.Transformer as TicketStatusTransformer
+import Screens as Screen
+import Screens.TicketBookingFlow.MetroTicketStatus.Transformer
+import Screens.TicketBookingFlow.MetroTicketDetails.Transformer
+import Screens.TicketBookingFlow.MetroMyTickets.Transformer
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -445,7 +493,7 @@ homeScreenFlow = do
       myRidesScreenFlow true
     GO_TO_HELP -> do
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_help"
-      helpAndSupportScreenFlow
+      metroTicketDetailsFlow
     CHANGE_LANGUAGE ->  selectLanguageScreenFlow
     GO_TO_EMERGENCY_CONTACTS -> do
       modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> EmergencyContactsScreenData.initData)
@@ -627,7 +675,7 @@ homeScreenFlow = do
               Just false -> "ny_user_auto_complete_api_trigger_dst"
               Nothing -> ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ event
-      let sortedByDistanceList = sortPredctionByDistance searchLocationResp.predictions
+      let sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
           predictionList = getLocationList sortedByDistanceList
           sortedWithDistance =  recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong
           recentLists = if state.props.isSource == Just true then sortedWithDistance else recentDistance state.data.destinationSuggestions state.props.sourceLat state.props.sourceLong
@@ -1328,7 +1376,12 @@ homeScreenFlow = do
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{navigateToHome = true}})
       modifyScreenState $ TicketingScreenStateType (\_ -> PlaceListData.initData{ props { hideMyTickets = false }})
       placeListFlow
+    GO_TO_METRO_BOOKING _ -> metroTicketBookingFlow
     GO_TO_HELP_AND_SUPPORT -> helpAndSupportScreenFlow
+    GO_TO_MY_METRO_TICKETS -> do
+      (GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT
+      modifyScreenState $ MetroMyTicketsScreenStateType (\metroMyTicketsScreen -> metroTicketListApiToMyTicketsTransformer resp metroMyTicketsScreen)
+      metroMyTicketsFlow
     _ -> homeScreenFlow
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
@@ -2007,7 +2060,7 @@ addNewAddressScreenFlow input = do
     SEARCH_ADDRESS input state -> do
       (GlobalState newState) <- getState
       (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq input ( newState.homeScreen.props.sourceLat) ( newState.homeScreen.props.sourceLong) getSearchRadius (EHC.getMapsLanguageFormat (getLanguageLocale languageKey) ) "")
-      let sortedByDistanceList = sortPredctionByDistance searchLocationResp.predictions
+      let sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
           predictionList = AddNewAddress.getLocationList sortedByDistanceList
           recentLists = state.data.recentSearchs.predictionArray
           filteredRecentsList = filterRecentSearches recentLists predictionList
@@ -2236,6 +2289,7 @@ checkAndUpdateSavedLocations state = do
 
 addLocationToRecents :: LocationListItemState -> HomeScreenState -> Boolean -> Boolean -> FlowBT String Unit
 addLocationToRecents item state srcServiceable destServiceable = do
+  (GlobalState currentState) <- getState
   let serviceable = if (state.props.isSource == Just false) then destServiceable else srcServiceable
       lat = if (state.props.isSource == Just false) then state.props.destinationLat else state.props.sourceLat
       lon = if (state.props.isSource == Just false) then state.props.destinationLong else state.props.sourceLong
@@ -2244,7 +2298,7 @@ addLocationToRecents item state srcServiceable destServiceable = do
                   _ -> {latitude : (fromMaybe 0.0 item.lat) , longitude : (fromMaybe 0.0 item.lon) }
   saveToRecents item latLong.latitude latLong.longitude serviceable
   when (state.props.isSource == Just false) $ do
-    setSuggestionsMapInLocal item latLong.latitude latLong.longitude serviceable state
+    setSuggestionsMapInLocal item currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong latLong.latitude latLong.longitude serviceable state.data.config
   pure unit
 
 saveToRecents :: LocationListItemState -> Number -> Number -> Boolean -> FlowBT String Unit
@@ -2252,22 +2306,22 @@ saveToRecents item lat lon serviceability = do
   (GlobalState currentState) <- getState
   recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
   when (serviceability && lat /= 0.0 && lon /= 0.0) $ do
+    modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{recentSearches = addToRecentSearches item{lat = Just lat, lon = Just lon, locationScore = Just 0.0} recentPredictionsObject.predictionArray})
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ data { recentSearchs { predictionArray = addToRecentSearches item{lat = Just lat, lon = Just lon, locationScore = Just 0.0} recentPredictionsObject.predictionArray}}})
     (GlobalState modifiedState) <- getState
     _ <- pure $ saveObject "RECENT_SEARCHES" modifiedState.homeScreen.data.recentSearchs
     pure unit
 
-setSuggestionsMapInLocal :: LocationListItemState -> Number -> Number -> Boolean -> HomeScreenState -> FlowBT String Unit
-setSuggestionsMapInLocal item lat lon serviceability state= do
-    (GlobalState currentState) <- getState
-    when (serviceability && lat /= 0.0 && lon /= 0.0) $ do
-      let currentSourceGeohash = runFn3 encodeGeohash currentState.homeScreen.props.sourceLat currentState.homeScreen.props.sourceLong state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
-          destinationWithLatLong = item{lat = Just lat, lon = Just lon}
-          currentMap = getSuggestionsMapFromLocal FunctionCall
-          updatedMap = addOrUpdateSuggestedDestination currentSourceGeohash destinationWithLatLong currentMap state.data.config.suggestedTripsAndLocationConfig
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{suggestionsData {suggestionsMap=updatedMap}}})
-      void $ pure $ setSuggestionsMap updatedMap
-      pure unit
+setSuggestionsMapInLocal :: LocationListItemState -> Number -> Number -> Number -> Number -> Boolean -> AppConfig -> FlowBT String Unit
+setSuggestionsMapInLocal item srcLat srcLon lat lon serviceability config = do
+  when (serviceability && lat /= 0.0 && lon /= 0.0) $ do
+    let currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon config.suggestedTripsAndLocationConfig.geohashPrecision
+        destinationWithLatLong = item{lat = Just lat, lon = Just lon}
+        currentMap = getSuggestionsMapFromLocal FunctionCall
+        updatedMap = addOrUpdateSuggestedDestination currentSourceGeohash destinationWithLatLong currentMap config.suggestedTripsAndLocationConfig
+    modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{suggestionsData {suggestionsMap=updatedMap}}})
+    void $ pure $ setSuggestionsMap updatedMap
+    pure unit
 
 
 fetchAndModifyLocationLists :: Array (LocationListItemState) -> FlowBT String Unit
@@ -2285,6 +2339,9 @@ fetchAndModifyLocationLists savedLocationResp = do
         updatedLocationList = recentDistance updateFavIcon state.props.sourceLat state.props.sourceLong
         locationListWithinXDistance = filter (\item -> isLocationWithinXDist item state state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist) updatedLocationList
     
+    updateSavedLocations savedLocationResp 
+    modifyScreenState $ GlobalPropsType (\globalProps -> globalProps{cachedSearches = updatedLocationList , recentSearches = recents, savedLocations = savedLocationResp})
+    modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{data{locationList = updatedLocationList}})
     modifyScreenState $ 
       HomeScreenStateType 
         (\homeScreen -> 
@@ -2686,26 +2743,127 @@ ticketStatusFlow = do
   (GlobalState currentState) <- getState
   void $ pure $ spy "ZOO TICKET STATUS CALLED" currentState
   liftFlowBT $ hideLoader
-  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{dateOfVisit = (getNextDateV2 "")}})             
-  flow <- UI.ticketStatusScreen
+  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{dateOfVisit = (getNextDateV2 "")}})  
+  modifyScreenState $ TicketStatusScreenStateType (\ticketStatusScreen -> ticketStatusScreen{data{dateOfVisit = (getNextDateV2 "")}})      
+  flow <- UI.ticketStatusScreen 
   case flow of
-    GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING state -> do
+    GO_TO_HOME_SCREEN_FROM_TICKET_STATUS state -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
       if state.props.navigateToHome then homeScreenFlow else placeListFlow
-    RESET_SCREEN_STATE -> do
-      modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
-      ticketStatusFlow
-    REFRESH_PAYMENT_STATUS state -> do
+    REFRESH_PAYMENT_STATUS_FROM_TICKET_STATUS_SCREEN state -> do
       (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT state.props.selectedBookingId
       updatePaymentStatusData ticketStatus state.props.selectedBookingId
       setValueToLocalStore PAYMENT_STATUS_POOLING "false"
       ticketStatusFlow
-    GO_TO_TICKET_LIST state -> do
+    GO_TO_TICKET_LIST_FROM_STATUS_SCREEN state -> do
       (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
       (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes)}})
       ticketListFlow
     _ -> ticketStatusFlow
+
+metroTicketBookingFlow :: FlowBT String Unit
+metroTicketBookingFlow = do
+  (GlobalState currentState) <- getState
+  flow <- UI.metroTicketBookingScreen
+  case flow of
+    GO_TO_HOME_SCREEN_FROM_METRO_TICKET state -> homeScreenFlow
+    GO_TO_METRO_STATION_SEARCH srcdest -> do
+      let searchLocationState = currentState.searchLocationScreen
+          textFieldFocus = case srcdest of
+                      Src -> Just SearchLocPickup
+                      Dest -> Just SearchLocDrop
+      if null searchLocationState.data.metroStations then do
+        (GetMetroStationResponse getMetroStationResp) <- Remote.getMetroStationBT ""
+        
+        let parsedMetroStation = map (\(GetMetroStationResp item) -> {
+                          stationName : item.name,
+                          stationCode : item.code
+                        }) getMetroStationResp
+        void $ pure $ spy "parsedMetroStation" getMetroStationResp
+        void $ pure $ spy "parsedMetroStation updated" parsedMetroStation
+        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+        modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = parsedMetroStation, updatedMetroStations = parsedMetroStation}})
+      else do
+        modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+        modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = searchLocationState.data.metroStations, updatedMetroStations = searchLocationState.data.metroStations}})
+      searchLocationFlow
+    METRO_FARE_AND_PAYMENT state -> do
+      if state.props.currentStage == MetroTicketSelection then do
+        void $ pure $ spy "METRO_FARE_AND_PAYMENT LIST CALLED" state
+        (SearchMetroResp searchMetroResp) <- Remote.searchMetroBT (Remote.makeSearchMetroReq state.data.srcCode state.data.destCode state.data.ticketCount)
+        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ searchId = searchMetroResp.searchId}, props { currentStage = GetMetroQuote }})
+        metroTicketBookingFlow
+        else if state.props.currentStage == ConfirmMetroQuote then do
+          (confirmMetroQuoteResp) <- Remote.confirmMetroQuoteBT state.data.quoteId
+          let (MetroTicketBookingStatus metroBookingStatus) = confirmMetroQuoteResp
+          modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ bookingId = ( (metroBookingStatus.bookingId))}})
+          void $ pure $ spy "METRO_FARE_AND_PAYMENT LIST CALLED" (show $ (metroBookingStatus.bookingId))
+          metroTicketPaymentFlow metroBookingStatus.bookingId
+          else do
+            metroTicketBookingFlow  
+    GO_TO_MY_METRO_TICKET_SCREEN -> metroTicketDetailsFlow
+    GO_TO_METRO_ROUTE_MAP -> do
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{props{stage = ST.MetroMapStage, previousScreenStage = ST.MetroTicketSelectionStage}})
+      metroTicketDetailsFlow
+    REFRESH_METRO_TICKET_SCREEN state -> do
+      modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{props { currentStage = ConfirmMetroQuote }})
+      _ <- pure $ spy "REFRESH_METRO_TICKET_SCREEN" state
+      metroTicketBookingFlow
+
+metroTicketPaymentFlow :: String ->  FlowBT String Unit
+metroTicketPaymentFlow bookingId = do
+  void $ pure $ spy "metroTicketPaymentFlow" bookingId
+  liftFlowBT $ initiatePaymentPage
+  (GetMetroBookingStatusResp getMetroStatusResp) <- Remote.getMetroStatusBT bookingId
+  let (MetroTicketBookingStatus metroTicketStatusResp) = getMetroStatusResp
+  case metroTicketStatusResp.payment of
+    Just (FRFSBookingPaymentAPI paymentInfo) -> do
+      let (CreateOrderRes orderResp) = paymentInfo.paymentOrder
+          (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
+          (PayPayload innerpayload) = sdk_payload.payload
+          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
+          sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+          shortOrderID = orderResp.order_id
+      lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+      _ <- paymentPageUI sdkPayload
+      void $ lift $ lift $ toggleLoader true
+      _ <- pure $ toggleBtnLoader "" false
+      pure unit
+    Nothing -> pure unit
+
+sdkPayload :: PaymentPagePayload
+sdkPayload = PaymentPagePayload {
+  service : Just "in.juspay.hyperpay",
+  requestId : Just "29b40641b1dc4d049241c59616a26b54",
+  payload : PayPayload {
+        returnUrl : Just "https://api.juspay.in/end",
+        orderId : Just "yECo8nctlJ",
+        options_getUpiDeepLinks : Nothing,
+        "options.createMandate" : Nothing,
+        merchantId : Just "nammayatri",
+        "mandate.startDate" : Nothing,
+        "mandate.maxAmount" : Nothing,
+        "mandate.endDate" : Nothing,
+        lastName : Nothing,
+        language : Just "english",
+        -- issuingPsp : Just "YES_BIZ",
+        firstName : Just "Driverds",
+        environment : Just "production",
+        description : Just "Complete your payment",
+        customerPhone : Nothing, -- This should be same as sim operator or null
+        customerId : Just "9c6f7363-c313-4455-bd2b-7a613017444a",
+        -- customer_id  : Just "107006461",
+        customerEmail : Just"test@juspay.in",
+        currency : "INR",
+        clientId : Just "nammayatri",
+        clientAuthTokenExpiry : "2024-01-25T21:16:45Z",
+        clientAuthToken : "tkn_8bacdade745a46c28cf9dcb362cb2602",
+        amount : "1.0",
+        action : Just "paymentPage"
+  }
+}
 
 ticketListFlow :: FlowBT String Unit
 ticketListFlow = do
@@ -2724,6 +2882,14 @@ ticketListFlow = do
       if bookingStatus == Pending
         then do
           modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
+          modifyScreenState $ TicketStatusScreenStateType (\ticketStatusScreen -> 
+            ticketStatusScreen { 
+              props {
+                  currentStage = BookingConfirmationStage
+                , selectedBookingId = state.props.selectedBookingId
+                }
+              }
+            )
           setValueToLocalStore PAYMENT_STATUS_POOLING "true"
           fillBookingDetails (TicketBookingDetails resp) state.props.selectedBookingId "Pending"
           ticketStatusFlow
@@ -2816,9 +2982,11 @@ updatePaymentStatusData ticketStatus shortOrderID =
       setValueToLocalStore PAYMENT_STATUS_POOLING "true"
       fillBookingDetails infoRes shortOrderID ticketStatus
     "Failed" -> do
+      modifyScreenState $ TicketStatusScreenStateType (\ticketStatusScreen -> ticketStatusScreen { props { paymentStatus = Common.Failed } })
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { paymentStatus = Common.Failed } })
     _ -> do
       _ <- pure $ toast $ getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
+      modifyScreenState $ TicketStatusScreenStateType (\ticketStatusScreen -> ticketStatusScreen { props { currentStage = ticketStatusScreen.props.previousStage} }) -- temporary fix - will remove once 500 INTERNAL_SERVER_ERROR is solved.
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = ticketBookingScreen.props.previousStage} }) -- temporary fix - will remove once 500 INTERNAL_SERVER_ERROR is solved.
       pure unit
 
@@ -2834,31 +3002,36 @@ zooTicketInfoFlow = do
 fillBookingDetails :: TicketBookingDetails-> String -> String -> FlowBT String Unit
 fillBookingDetails (TicketBookingDetails resp) shortOrderID ticketStatus = do
   let
-    serv = resp.services !! 0
+    serv = resp.services !! 0 
+    initRows =  [ { key: "Date", val: convertUTCtoISC resp.visitDate "Do MMM YYYY"}
+                , { key: "Booking For", val: "" }
+                , { key: "Total Paid", val: ("₹" <> show resp.amount) }
+                , { key: "Booking ID", val: resp.ticketShortId }
+                , { key: "Transaction ID", val: shortOrderID }
+                ]
+    validityDetailRows = case serv of
+                           Nothing -> []
+                           Just (TicketBookingServiceDetails serviceDetails) -> 
+                             if isJust serviceDetails.expiryDate then 
+                               [
+                                 { key : "Valid until",
+                                   val : (maybe (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "hh:mm A") (\sl -> fromMaybe "" (convertUTCToISTAnd12HourFormat sl)) serviceDetails.slot )  
+                                          <> ", " 
+                                          <> (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "Do MMM YYYY") 
+                                 }
+                               ] 
+                            else 
+                              []
   modifyScreenState
-    $ TicketBookingScreenStateType
-        ( \ticketBookingScreen ->
-            ticketBookingScreen
+    $ TicketStatusScreenStateType
+        ( \ticketStatusScreen ->
+            ticketStatusScreen
               { props
                 { paymentStatus = if ticketStatus == "Booked" then Common.Success else Common.Pending
                 }
               , data
-                { zooName = resp.ticketPlaceName
-                , keyValArray =
-                  [ { key: "Date", val: convertUTCtoISC resp.visitDate "Do MMM YYYY"}
-                  , { key: "Booking For", val: "" }
-                  , { key: "Total Paid", val: ("₹" <> show resp.amount) }
-                  , { key: "Booking ID", val: resp.ticketShortId }
-                  , { key: "Transaction ID", val: shortOrderID }
-                  ]
-                    <> case serv of
-                        Nothing -> []
-                        Just (TicketBookingServiceDetails serviceDetails) -> 
-                          if isJust serviceDetails.expiryDate then 
-                            [ { key: "Valid until",
-                                val: (maybe (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "hh:mm A") (\sl -> fromMaybe "" (convertUTCToISTAnd12HourFormat sl)) serviceDetails.slot )  
-                                     <> ", " <> (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "Do MMM YYYY") } ] 
-                          else []
+                { ticketName = resp.ticketPlaceName
+                , keyValArray = initRows <> validityDetailRows
                 , bookedForArray = (map (\(TicketBookingServiceDetails item) -> item.ticketServiceName) resp.services)
                 }
               }
@@ -2911,3 +3084,358 @@ rideScheduledFlow = do
   case action of
     RideScheduledScreenOutput.GoToHomeScreen -> homeScreenFlow
     _ -> pure unit
+
+metroTicketDetailsFlow :: FlowBT String Unit
+metroTicketDetailsFlow = do
+  logField_ <- lift $ lift $ getLogFields
+  flow <- UI.metroTicketDetailsScreen 
+  case flow of 
+    BACK_TO_SEARCH_METRO_LOCATION -> metroTicketBookingFlow
+    _ -> metroTicketDetailsFlow
+
+metroMyTicketsFlow :: FlowBT String Unit
+metroMyTicketsFlow = do
+  logField_ <- lift $ lift $ getLogFields
+  flow <- UI.metroMyTicketsScreen 
+  case flow of 
+    GO_TO_METRO_TICKET_DETAILS_FLOW bookingStatusResp -> do
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer bookingStatusResp metroTicketDetailsState)
+      metroTicketDetailsFlow
+    GO_TO_METRO_TICKET_STAUS_FLOW bookingStatusResp -> do
+      modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer bookingStatusResp "" metroTicketStatusScreen)
+      metroTicketStatusFlow
+    _ -> metroMyTicketsFlow
+
+metroTicketStatusFlow :: FlowBT String Unit
+metroTicketStatusFlow = do
+  (GlobalState currentState) <- getState
+  flow <- UI.metroTicketStatusScreen
+  case flow of 
+    GO_TO_METRO_TICKET_DETAILS _ -> metroTicketDetailsFlow
+    REFRESH_STATUS_AC state -> do
+      resp <- (Remote.retryMetroTicketPayment state.data.shortOrderId)
+      case resp of 
+        Right (RetryMetrTicketPaymentResp ticketStatus) -> do
+          let (MetroTicketBookingStatus metroTicketStatus) = ticketStatus
+          setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+          modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer ticketStatus metroTicketDetailsState)
+          modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer ticketStatus state.data.shortOrderId metroTicketStatusScreen)
+          metroTicketStatusFlow
+        Left _ -> pure unit
+      metroTicketStatusFlow
+    GO_TO_TRY_AGAIN_PAYMENT state -> do 
+      -- Handle Retry Payment 
+      metroTicketStatusFlow
+    _ -> metroTicketStatusFlow
+  pure unit
+
+
+searchLocationFlow :: FlowBT String Unit
+searchLocationFlow = do 
+  (GlobalState globalState) <- getState
+  action <- lift $ lift $ runScreen $ UI.searchLocationScreen globalState.searchLocationScreen globalState.globalProps
+  case action of 
+    SearchLocationController.AddStop state -> do 
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+      searchLocationFlow
+    SearchLocationController.UpdateLocName state lat lon -> handleUpdateLocNameFlow state lat lon
+    SearchLocationController.Reload state -> do 
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+      searchLocationFlow 
+    SearchLocationController.GoToMetroRouteMap -> do
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{props{stage = ST.MetroMapStage, previousScreenStage = ST.SearchMetroLocationStage}})
+      metroTicketDetailsFlow
+    SearchLocationController.NoOutput -> pure unit
+    SearchLocationController.SearchPlace searchString state -> searchPlaceFlow searchString state
+    SearchLocationController.SaveFavLoc state savedLoc -> checkRedundantFavLocFlow state savedLoc    
+    SearchLocationController.ConfirmAndSaveFav state -> confirmAndSaveLocFlow state
+    SearchLocationController.PredictionClicked prediction state -> predictionClickedFlow prediction state
+    SearchLocationController.AddFavLoc state tag -> addFavLocFlow state tag
+    SearchLocationController.MetroTicketBookingScreen state -> metroTicketBookingFlow
+    _ -> pure unit
+  where
+
+    handleUpdateLocNameFlow :: SearchLocationScreenState -> String -> String -> FlowBT String Unit
+    handleUpdateLocNameFlow state lat lon =  do 
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+      let latNum = fromMaybe 0.0 (fromString lat)
+          lonNum = fromMaybe 0.0 (fromString lon)
+      {pickUpPoints, locServiceable , city, geoJson, specialLocCategory} <- getServiceability latNum lonNum $ fromMaybe SearchLocPickup state.props.focussedTextField
+      let cityName = getCityNameFromCode city
+          isSpecialZone = (geoJson /= "") && (geoJson /= state.data.specialZoneCoordinates) &&
+                          pickUpPoints /= state.data.nearByGates
+          dummyLocInfo = {  lat : Nothing,  lon : Nothing,  placeId : Nothing,  address : "", addressComponents : dummyAddress, city : Nothing}
+          locOnMap = state.data.mapLoc
+          updatedState = { lat : fromString lat, lon : fromString lon, placeId : locOnMap.placeId, address : locOnMap.address, addressComponents : locOnMap.addressComponents , city : Just cityName , metroInfo : Nothing, stationCode : ""} 
+      modifyScreenState 
+        $ SearchLocationScreenStateType 
+            (\slsState -> slsState{data{ mapLoc = updatedState}})
+      if isSpecialZone then 
+        specialLocFlow geoJson pickUpPoints specialLocCategory latNum lonNum
+        else 
+          updateLocDetailsFlow state latNum lonNum pickUpPoints cityName
+
+    updateLocDetailsFlow :: SearchLocationScreenState -> Number -> Number  -> Array Location -> City -> FlowBT String Unit
+    updateLocDetailsFlow state lat lon pickUpPoints cityName = do
+      let mapLoc = state.data.mapLoc
+      let {mapLat , mapLon} = {mapLat : fromMaybe 0.0 mapLoc.lat, mapLon : fromMaybe 0.0 mapLoc.lon}
+          distanceBwLatLon = getDistanceBwCordinates lat lon mapLat mapLon 
+          isDistMoreThanThreshold = distanceBwLatLon > (state.appConfig.mapConfig.locateOnMapConfig.apiTriggerRadius/1000.0)
+          pickUpPoint = filter ( \item -> (item.place == state.data.defaultGate)) pickUpPoints
+          gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoint)
+      when (isDistMoreThanThreshold ) do  
+        PlaceName address <- getPlaceName lat lon gateAddress 
+        let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing, metroInfo : Nothing, stationCode : ""}
+        modifyScreenState 
+          $ SearchLocationScreenStateType 
+              (\ slsState -> slsState { data  {mapLoc = updatedAddress, confirmLocCategory = ""} }) 
+      searchLocationFlow
+
+    specialLocFlow :: String -> Array Location -> String -> Number -> Number -> FlowBT String Unit
+    specialLocFlow geoJson pickUpPoints category lat lon = do
+      modifyScreenState
+          $ SearchLocationScreenStateType 
+              (\searchLocScreen -> searchLocScreen 
+                  { data {
+                      specialZoneCoordinates = geoJson ,
+                      nearByGates = pickUpPoints ,
+                      confirmLocCategory = category
+                  }
+                  })
+      void $ pure $ removeAllPolylines "" 
+      liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig {goToCurrentLocation = false, lat = lat, lon = lon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapSLSPin" }
+      searchLocationFlow 
+
+    searchPlaceFlow :: String -> SearchLocationScreenState -> FlowBT String Unit
+    searchPlaceFlow searchString state = do
+      modifyScreenState $ SearchLocationScreenStateType ( \_ -> state) 
+      (GlobalState globalState) <- getState
+      savedLoc <- fetchGlobalSavedLocations
+      let { currentLat, currentLng } = maybe { currentLat: 0.0, currentLng: 0.0 } (\loc -> { currentLat: fromMaybe 0.0 loc.lat, currentLng: fromMaybe 0.0 loc.lon }) (state.data.currentLoc)
+          { lat, lng } = maybe { lat : currentLat, lng : currentLng } (\loc -> { lat: fromMaybe 0.0 loc.lat, lng: fromMaybe 0.0 loc.lon }) $ maybe Nothing (\currField -> if currField == SearchLocPickup then (state.data.srcLoc) else  (state.data.destLoc)) $ state.props.focussedTextField
+      (SearchLocationResp searchLocationResp) <- Remote.searchLocationBT (Remote.makeSearchLocationReq searchString lat lng getSearchRadius (EHC.getMapsLanguageFormat $ getLanguageLocale languageKey) "")
+      let sortedByDistanceList = sortPredictionByDistance searchLocationResp.predictions
+          predictionList = getLocationList sortedByDistanceList
+          sortedRecentsList =  recentDistance globalState.globalProps.recentSearches lat lng
+          filteredRecentsList = filterRecentSearches sortedRecentsList predictionList
+          filteredPredictionList = differenceOfLocationLists predictionList filteredRecentsList     
+          updatedLocList = map 
+                            (\item -> do
+                              let savedLocation = getPrediction item savedLoc 
+                                  locInSavedLoc = checkPrediction item savedLoc
+                              if (not locInSavedLoc) then 
+                                item { lat = savedLocation.lat, lon = savedLocation.lon, locationItemType = Just SAVED_LOCATION, postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav_red"}
+                              else
+                                item { lat = item.lat, lon = item.lon, locationItemType = item.locationItemType, postfixImageUrl = fetchImage FF_ASSET "ny_ic_fav"}
+                            )
+                            (filteredRecentsList <> filteredPredictionList)
+
+      modifyScreenState   
+        $ SearchLocationScreenStateType   
+          ( \searchLocationScreen -> 
+              searchLocationScreen { data {locationList = updatedLocList}
+                                   , props {showLoader = false }})
+
+      searchLocationFlow
+
+    checkRedundantFavLocFlow :: SearchLocationScreenState -> Array LocationListItemState -> FlowBT String Unit
+    checkRedundantFavLocFlow state savedLoc  = do
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+      let selectedItem = state.data.saveFavouriteCard.selectedItem
+      case selectedItem.locationItemType of 
+        Just RECENTS -> getDistDiff savedLoc (fromMaybe 0.0 selectedItem.lat) (fromMaybe 0.0 selectedItem.lon) (fromMaybe "" selectedItem.placeId)
+        Nothing -> getDistDiff savedLoc (fromMaybe 0.0 selectedItem.lat) (fromMaybe 0.0 selectedItem.lon) (fromMaybe "" selectedItem.placeId)
+        _ -> do 
+          (GetPlaceNameResp placeNameResp) <- getPlaceNameResp (selectedItem.title <> "," <> selectedItem.subTitle) selectedItem.placeId (fromMaybe 0.0 selectedItem.lat) (fromMaybe 0.0 selectedItem.lon) selectedItem
+          let (PlaceName placeName) = maybe SearchLocationScreenData.dummyLocationName identity $ head placeNameResp
+              (LatLong placeLatLong) = placeName.location 
+          (ServiceabilityResDestination serviceabilityRes) <- Remote.destServiceabilityBT $ Remote.makeServiceabilityReqForDest placeLatLong.lat placeLatLong.lon
+          case serviceabilityRes.serviceable of 
+            false -> do
+              void $ pure $ toast $ getString STR.LOCATION_UNSERVICEABLE
+              searchLocationFlow
+            _ -> modifyScreenState $ SearchLocationScreenStateType (\_ -> state{data{saveFavouriteCard { selectedItem{lat = Just placeLatLong.lat, lon = Just placeLatLong.lon}}}})
+          getDistDiff savedLoc placeLatLong.lat placeLatLong.lon (fromMaybe "" selectedItem.placeId)
+      pure unit
+      
+    confirmAndSaveLocFlow :: SearchLocationScreenState -> FlowBT String Unit
+    confirmAndSaveLocFlow state = do 
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+      let saveFavouriteCard = state.data.saveFavouriteCard
+          selectedItem = saveFavouriteCard.selectedItem 
+          tag = case (toLower saveFavouriteCard.tag) of 
+            "work" -> "Work"
+            "home" -> "Home"
+            _ -> saveFavouriteCard.tag 
+      void $ setValueToLocalStore RELOAD_SAVED_LOCATION "true"
+      { lat, long, addressComponents } <-  case selectedItem.lat , selectedItem.lon of 
+          Nothing , Nothing -> fetchLatLong selectedItem tag
+          _       , _ -> pure $ {lat : selectedItem.lat, long : selectedItem.lon, addressComponents : []}
+
+      when (isJust lat && isJust long) $ do
+        resp <- Remote.addSavedLocationBT (encodeAddressDescription saveFavouriteCard.address tag selectedItem.placeId lat long addressComponents )
+        void $ pure $ toast $ getString STR.FAVOURITE_ADDED_SUCCESSFULLY 
+      savedLocResp <- lift $ lift $ Remote.getSavedLocationList ""
+      case savedLocResp of 
+        Right (SavedLocationsListRes savedLocs) -> do 
+          let updatedLocList = getUpdatedLocationList state.data.locationList selectedItem.placeId
+              savedLocList = AddNewAddress.savedLocTransformer savedLocs.list
+          modifyScreenState $ SearchLocationScreenStateType (\searchLocScreenState -> searchLocScreenState{data{locationList = updatedLocList}})
+          updateSavedLocations savedLocList
+          searchLocationFlow
+        Left (err) -> searchLocationFlow
+
+    addFavLocFlow :: SearchLocationScreenState -> String -> FlowBT String Unit
+    addFavLocFlow state tag = do 
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+      savedLoc <- fetchGlobalSavedLocations
+      (GlobalState globalState) <- getState
+      let recents = globalState.globalProps.recentSearches
+      modifyScreenState $ AddNewAddressScreenStateType (\addNewAddressScreen ->
+        addNewAddressScreen
+          { props
+            { showSavePlaceView = false
+            , editLocation = false
+            , editSavedLocation = false
+            , isLocateOnMap = false
+            , isBtnActive = true
+            , isSearchedLocationServiceable = true
+            , tagExists = false
+            , placeNameExists = false }
+          , data
+            { addressSavedAs = ""
+            , placeName = ""
+            , savedLocations = savedLoc
+            , locationList = recents
+            , recentSearchs{predictionArray = recents}
+            , selectedTag = getCardType tag
+            , savedTags = getExistingTags savedLoc
+            , address = ""
+            , activeIndex = case tag of
+                              "HOME_TAG" -> Just 0
+                              "WORK_TAG" -> Just 1
+                              _        -> Just 2  }})
+      addNewAddressScreenFlow ""
+
+predictionClickedFlow :: LocationListItemState -> SearchLocationScreenState -> FlowBT String Unit
+predictionClickedFlow prediction state = do 
+  modifyScreenState $ SearchLocationScreenStateType (\_ -> state)
+  if state.props.actionType == AddingStopAction then do 
+    void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)  -- TODO : Handlde Loader in IOS Side
+    void $ lift $ lift $ toggleLoader true
+    let {lat, lon, placeId} = {lat : fromMaybe 0.0 prediction.lat, lon : fromMaybe 0.0 prediction.lon, placeId : prediction.placeId}
+    (GetPlaceNameResp resp) <- getPlaceNameResp (prediction.title <> ", " <> prediction.subTitle) placeId lat lon prediction
+    let (PlaceName placeName) = maybe SearchLocationScreenData.dummyLocationName identity $ head resp
+        (LatLong placeLatLong) = placeName.location
+        {placeLat , placeLon} = {placeLat : placeLatLong.lat, placeLon : placeLatLong.lon}
+    maybe 
+      (pure unit) 
+      (\ currTextField -> onPredictionClicked placeLat placeLon currTextField prediction) 
+      state.props.focussedTextField
+    else if state.props.actionType == MetroStationSelectionAction then do
+      if isJust state.data.srcLoc && isJust state.data.destLoc then do
+        -- TicketBookingScreenStateType
+        let src = maybe "" (\(loc) -> loc.address) state.data.srcLoc
+            dest = maybe "" (\(loc) -> loc.address) state.data.destLoc
+            srcCode = maybe "" (\(loc) -> loc.stationCode) state.data.srcLoc
+            destCode = maybe "" (\(loc) -> loc.stationCode) state.data.destLoc
+        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ srcLoc = src, destLoc = dest , srcCode = srcCode, destCode = destCode}, props {isButtonActive = true}})
+        metroTicketBookingFlow
+      else do
+        void $ pure $ spy "else do" state
+        modifyScreenState 
+          $ SearchLocationScreenStateType 
+              (\slsScreen -> slsScreen{data { updatedMetroStations = state.data.metroStations }})
+        -- modifyScreenState $ SearchLocationScreenStateType (\state -> state{data{ updatedMetroStations = state.data.metroStations}})
+        searchLocationFlow
+    else do 
+      searchLocationFlow
+
+  where 
+
+    onPredictionClicked :: Number -> Number -> SearchLocationTextField -> LocationListItemState -> FlowBT String Unit
+    onPredictionClicked placeLat placeLon currTextField prediction = do
+      {pickUpPoints , locServiceable, city, geoJson, specialLocCategory} <- getServiceability placeLat placeLon currTextField
+      if locServiceable then do 
+        let {sourceLoc, destinationLoc, updatedState} = mkSrcAndDestLoc placeLat placeLon state currTextField prediction city
+        liftFlowBT $ runEffectFn1 locateOnMap locateOnMapConfig {goToCurrentLocation = false, lat = placeLat, lon = placeLon, geoJson = geoJson, points = pickUpPoints, zoomLevel = zoomLevel, labelId = getNewIDWithTag "LocateOnMapSLSPin" }
+        modifyScreenState 
+          $ SearchLocationScreenStateType 
+              (\slsScreen -> slsScreen{ props {searchLocStage = ConfirmLocationStage}
+                              , data { srcLoc = sourceLoc, destLoc = destinationLoc, mapLoc = updatedState, confirmLocCategory = specialLocCategory }
+                              })
+        void $ lift $ lift $ toggleLoader false
+        updateCachedLocation prediction placeLat placeLon state locServiceable
+        searchLocationFlow 
+        else do 
+          modifyScreenState $ SearchLocationScreenStateType (\state -> state{props{ locUnserviceable = true}})
+          void $ lift $ lift $ toggleLoader false
+          searchLocationFlow
+
+    mkSrcAndDestLoc :: Number -> Number -> SearchLocationScreenState -> SearchLocationTextField -> LocationListItemState -> Maybe String -> {sourceLoc :: Maybe LocationInfo, destinationLoc :: Maybe LocationInfo, updatedState :: LocationInfo}
+    mkSrcAndDestLoc placeLat placeLon state currTextField prediction city = 
+      let updatedState = {lat : Just placeLat, lon : Just placeLon, city : Just (getCityNameFromCode city ), addressComponents : encodeAddress prediction.description [] Nothing , placeId : prediction.placeId, address : prediction.description, metroInfo : Nothing, stationCode : ""} 
+          sourceLoc = if currTextField == SearchLocPickup then Just updatedState else state.data.srcLoc
+          destinationLoc = if currTextField == SearchLocPickup then state.data.destLoc else Just updatedState
+      in {sourceLoc, destinationLoc, updatedState}
+
+    updateCachedLocation :: LocationListItemState -> Number -> Number -> SearchLocationScreenState -> Boolean -> FlowBT String Unit
+    updateCachedLocation prediction placeLat placeLon state locServiceable = do 
+      saveToRecents prediction placeLat placeLon locServiceable
+      let { currLat , currLon } = maybe ({currLat : 0.0 , currLon : 0.0}) (\ loc -> {currLat : fromMaybe 0.0 loc.lat, currLon : fromMaybe 0.0 loc.lon}) state.data.currentLoc  
+          { srcLat , srcLon } = maybe ({srcLat : currLat , srcLon : currLon}) (\ loc -> {srcLat : fromMaybe currLat loc.lat, srcLon : fromMaybe currLon loc.lon}) state.data.srcLoc  
+      when (state.props.focussedTextField == Just SearchLocDrop) $ do 
+        setSuggestionsMapInLocal prediction srcLat srcLon placeLat placeLon locServiceable state.appConfig
+      pure unit
+      
+getServiceability :: Number -> Number -> SearchLocationTextField -> FlowBT String {pickUpPoints :: Array Location, locServiceable :: Boolean, city :: Maybe String, geoJson :: String, specialLocCategory :: String}
+getServiceability placeLat placeLon currTextField = do
+  (ServiceabilityRes pickUpServiceability) <- Remote.originServiceabilityBT $ Remote.makeServiceabilityReq placeLat placeLon
+  (ServiceabilityResDestination dropServiceability) <- Remote.destServiceabilityBT $ Remote.makeServiceabilityReqForDest placeLat placeLon
+  let serviceabilityRes = if currTextField == SearchLocPickup then pickUpServiceability else dropServiceability
+      city = serviceabilityRes.city
+      geoJson = fromMaybe "" serviceabilityRes.geoJson
+      locServiceable = serviceabilityRes.serviceable
+      (SpecialLocation specialLoc) = fromMaybe HomeScreenData.specialLocation (serviceabilityRes.specialLocation)
+      specialLocCategory = specialLoc.category
+      pickUpPoints = map (\(GatesInfo item) -> {
+        place: item.name,
+        lat  : (item.point)^._lat,
+        lng : (item.point)^._lon,
+        address : item.address,
+        city : Nothing
+      }) specialLoc.gates
+  pure $ {pickUpPoints , locServiceable, city, geoJson, specialLocCategory}
+
+fetchLatLong :: LocationListItemState -> String -> FlowBT String {lat :: Maybe Number, long :: Maybe Number, addressComponents :: Array AddressComponents}
+fetchLatLong selectedItem tag = do
+  case selectedItem.placeId of 
+    Just placeId -> do
+      (GetPlaceNameResp placeNameResp) <- getPlaceNameResp (selectedItem.title <> "," <> selectedItem.subTitle) (Just placeId) (fromMaybe 0.0 selectedItem.lat) (fromMaybe 0.0 selectedItem.lon) selectedItem
+      let (PlaceName placeName) =  maybe SearchLocationScreenData.dummyLocationName identity $ head placeNameResp
+          (LatLong placeLatLong) = placeName.location
+      pure {lat : Just placeLatLong.lat, long : Just placeLatLong.lon, addressComponents : placeName.addressComponents}
+    Nothing -> pure {lat : Nothing, long : Nothing, addressComponents : []}
+
+getDistDiff :: Array LocationListItemState -> Number -> Number -> String -> FlowBT String Unit
+getDistDiff savedLoc lat lon placeId = do
+  let distanceInfo = getDistInfo savedLoc "" lat lon placeId
+  case distanceInfo.locExistsAs of
+    "" ->  modifyScreenState $ SearchLocationScreenStateType (\searchLocScreenState -> searchLocScreenState{props{showSaveFavCard = true}})
+    _  -> do
+            void $ pure $ toast  (getString STR.ALREADY_EXISTS)
+            modifyScreenState $ SearchLocationScreenStateType (\searchLocScreenState -> searchLocScreenState{data{saveFavouriteCard{selectedItem = locationListStateObj}}})
+  searchLocationFlow
+
+updateSavedLocations :: Array LocationListItemState -> FlowBT String Unit
+updateSavedLocations savedLocs = do 
+  modifyScreenState $ 
+    GlobalPropsType 
+      ( \globalProps -> globalProps { savedLocations = savedLocs} )
+
+
+fetchGlobalSavedLocations :: FlowBT String (Array LocationListItemState) 
+fetchGlobalSavedLocations = do
+  (GlobalState globalState) <- getState
+  pure $ (globalState.globalProps.savedLocations)
