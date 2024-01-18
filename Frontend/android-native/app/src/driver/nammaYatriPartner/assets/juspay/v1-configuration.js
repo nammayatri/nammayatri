@@ -264,7 +264,7 @@ window.getMerchantConfig = function () {
         "cityName" : "Tumakuru",
         "mapImage" : "ny_ic_tumakuru_map",
         "cityCode" : "std:0816",
-        "showSubscriptions" : false,
+        "showSubscriptions" : true,
         "cityLat" : 15.32383804957557,
         "cityLong" : 75.88071672412116,
         "supportNumber" : "",
