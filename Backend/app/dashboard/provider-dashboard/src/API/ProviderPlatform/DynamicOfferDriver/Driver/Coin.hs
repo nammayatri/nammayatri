@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common (withFlowHandlerAPI')
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 

@@ -18,7 +18,7 @@ module API
   )
 where
 
-import qualified "lib-dashboard" API.Dashboard as Dashboard
+import qualified API.Dashboard as Dashboard
 import qualified API.Exotel as Exotel
 import qualified API.Fleet.Registration as FReg
 import qualified API.ProviderPlatform as BPP
