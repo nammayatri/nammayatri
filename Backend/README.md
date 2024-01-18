@@ -274,6 +274,7 @@ Run `nix run github:nix-community/nix-melt` to navigate and find that transitive
 [nammayatri]: https://www.nammayatri.in/
 [haskell]: https://www.haskell.org/
 [arion]: https://github.com/hercules-ci/arion
+[services-flake]: https://github.com/juspay/services-flake
 [cabal]: https://cabal.readthedocs.io/
 [nix-shell]: https://nixos.wiki/wiki/Development_environment_with_nix-shell
 
