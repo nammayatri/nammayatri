@@ -39,7 +39,7 @@ import Data.Int (round, toNumber, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Number (pi, sin, cos, sqrt, asin, abs)
-import Data.Ord (comparing)
+import Data.Ord (comparing, Ordering)
 import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
 import Data.String (replace, split, Pattern(..), Replacement(..))
@@ -78,8 +78,8 @@ import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
 import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location)
-import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash)
-import Services.API (Prediction)
+import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
+import Services.API (Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
@@ -400,8 +400,8 @@ type AffSuccess s = (s -> Effect Unit)
 isHaveFare :: String -> Array FareComponent -> Boolean
 isHaveFare fare = not null <<< filter (\item -> item.fareType == fare)
 
-sortPredctionByDistance :: Array Prediction -> Array Prediction
-sortPredctionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
+sortPredictionByDistance :: Array Prediction -> Array Prediction
+sortPredictionByDistance arr = sortBy (comparing (_^._distance_meters)) arr
 
 
 getDistanceString :: Int -> Int -> String
@@ -623,3 +623,55 @@ getCityCodeFromCity city =
     let 
       cityCodeTuple = find (\tuple -> (snd tuple) == city) cityCodeMap
     in maybe Nothing (\tuple -> fst tuple) cityCodeTuple
+
+getCard :: CardType -> String 
+getCard cardType = case cardType of 
+  HOME_TAG -> "Home"
+  WORK_TAG -> "Work"
+  _ -> ""
+
+getSavedLocationByTag :: Array LocationListItemState -> CardType -> Maybe LocationListItemState
+getSavedLocationByTag list tag = 
+  find (\item -> item.tag == getCard tag) list
+
+calculateSavedLocDist :: Array LocationListItemState -> String -> Number -> Number -> Array DistInfo
+calculateSavedLocDist savedLocs excludeTag lat lon =
+  sortBy compareByDistance $ map (\item -> getDistInfo item) $ listAfterExcludedTag excludeTag savedLocs 
+  where 
+    compareByDistance :: DistInfo -> DistInfo -> Ordering
+    compareByDistance a b = compare (a.distanceDiff) (b.distanceDiff)
+
+    getDistInfo :: LocationListItemState -> DistInfo
+    getDistInfo item = do 
+      let x = getDistanceBwCordinates (fromMaybe 0.0 item.lat) (fromMaybe 0.0 item.lon) lat lon
+      {locationName : item.tag, distanceDiff : x} 
+
+
+isValidLocation :: Array LocationListItemState -> String -> String -> Array DistInfo
+isValidLocation savedLocations excludeTag placeId = 
+  map (\item -> {locationName : item.tag, distanceDiff : 100.0}) validList
+  where
+    validList :: Array LocationListItemState
+    validList = filter (\x -> placeIdExists x.placeId) (listAfterExcludedTag excludeTag savedLocations)
+
+    placeIdExists :: Maybe String -> Boolean
+    placeIdExists = maybe false (\item -> not (DS.null placeId) && item == placeId)
+
+
+listAfterExcludedTag :: String -> Array LocationListItemState -> Array LocationListItemState
+listAfterExcludedTag excludeTag = filter (\item -> (DS.toLower item.tag) /= (DS.toLower excludeTag))
+
+getDistInfo savedLoc excludeLocation lat lon placeId = do 
+  let distArr = calculateSavedLocDist savedLoc excludeLocation lat lon
+      rslt = isValidLocation savedLoc excludeLocation placeId
+      placeIdExists = maybe { locationName: "", distanceDiff : 1.0 } identity $ head rslt
+      minDist = maybe { locationName: "", distanceDiff : 1.0 } identity $ head distArr
+      locExistsAs = case (DS.null placeIdExists.locationName) , minDist.distanceDiff <= 0.020 of
+                      false , _ -> placeIdExists.locationName
+                      true  , true -> minDist.locationName
+                      _ , _ -> ""
+      tagExists = not (null rslt) || minDist.distanceDiff <= 0.020 
+  {tagExists, locExistsAs}
+
+getExistingTags :: Array LocationListItemState -> Array String 
+getExistingTags savedLoc = map (\item -> DS.toLower $ item.tag) savedLoc
