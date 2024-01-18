@@ -3,6 +3,17 @@ ny:
 { config, pkgs, lib, ... }:
 let
   inherit (lib) types;
+  pcLib = import ny.inputs.common.inputs.process-compose-flake.lib { inherit lib; };
+  # Which Haskell package contains the given cabal executable?
+  cabalTargetForExe = lib.listToAttrs (lib.flatten (lib.mapAttrsToList
+    (name: info: map (exe: lib.nameValuePair exe "${name}:exe:${exe}") (lib.attrNames info.exes))
+    ny.config.haskellProjects.default.outputs.packages));
+  accumulateProcessEnv = envVar: processes:
+    lib.filter (x: x != null)
+      (builtins.map
+        (p:
+          pcLib.lookupEnv envVar (p.environment or null))
+        (lib.attrValues processes));
 in
 {
   options = {
@@ -18,7 +29,6 @@ in
 
   config =
     let
-      pcLib = import ny.inputs.common.inputs.process-compose-flake.lib { inherit lib; };
       cfg = config.services.nammayatri;
       # The cabal executables we want to run as part of the nammayatri service
       # group.
@@ -47,20 +57,10 @@ in
 
       haskellProcessFor = name:
         if cfg.useCabal
-        then
-          let
-            # Which Haskell package contains the given cabal executable?
-            cabalTargetForExe = lib.listToAttrs (lib.flatten (lib.mapAttrsToList
-              (name: info: map (exe: lib.nameValuePair exe "${name}:exe:${exe}") (lib.attrNames info.exes))
-              ny.config.haskellProjects.default.outputs.packages));
-          in
-          {
-            command =
-              "set -x; cabal run ${cabalTargetForExe.${name}}";
-            environment = {
-              CABAL_TARGET = cabalTargetForExe.${name};
-            };
-          }
+        then {
+          command = "set -x; cabal run ${cabalTargetForExe.${name}}";
+          environment.CABAL_TARGET = cabalTargetForExe.${name};
+        }
         else {
           command = ny.config.apps.${name}.program;
         };
@@ -103,20 +103,10 @@ in
             disabled = !cfg.useCabal;
             command = pkgs.writeShellApplication {
               name = "cabal-build";
-              text =
-                let
-                  # The cabal target of all Haskell processes.
-                  cabalTargets =
-                    lib.filter (x: x != null)
-                      (builtins.map
-                        (p:
-                          pcLib.lookupEnv "CABAL_TARGET" (p.environment or null))
-                        (lib.attrValues config.settings.processes));
-                in
-                ''
-                  set -x
-                  cabal build ${builtins.concatStringsSep " " cabalTargets}
-                '';
+              text = ''
+                set -x
+                cabal build ${builtins.concatStringsSep " " (accumulateProcessEnv "CABAL_TARGET" config.settings.processes)}
+              '';
             };
           };
         };
