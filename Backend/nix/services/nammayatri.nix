@@ -49,9 +49,10 @@ in
         (name: info: map (exe: lib.nameValuePair exe "${name}:exe:${exe}") (lib.attrNames info.exes))
         ny.config.haskellProjects.default.outputs.packages));
       cabalProcesses = {
-        processes = lib.foldl'
-          (acc: name: acc // {
-            "${name}" = {
+        processes = lib.listToAttrs (builtins.map
+          (name: {
+            inherit name;
+            value = {
               log_location = "${name}.log";
               command =
                 if cfg.useCabal
@@ -63,8 +64,7 @@ in
               depends_on."nammayatri-init".condition = "process_completed_successfully";
             };
           })
-          { }
-          cabalExecutables;
+          cabalExecutables);
       };
       initProcess =
         let
@@ -89,7 +89,7 @@ in
                 rm -f ./*.log # Clean up the log files
 
                 ${if cfg.useCabal then ''
-                    cabal build ${builtins.concatStringsSep " " (builtins.trace cabalTargets cabalTargets)}
+                    cabal build ${builtins.concatStringsSep " " cabalTargets}
                   '' else ""}
 
                 redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
