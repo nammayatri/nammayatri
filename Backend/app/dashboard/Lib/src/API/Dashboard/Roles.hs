@@ -16,11 +16,11 @@ module API.Dashboard.Roles where
 
 import qualified Domain.Action.Dashboard.Roles as DRoles
 import Domain.Types.Role as DRole
-import Environment
+-- import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
-import Kernel.Utils.Common
+-- import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 
@@ -44,20 +44,22 @@ type API =
              :> Get '[JSON] DRoles.ListRoleRes
        )
 
-handler :: FlowServer API
-handler =
-  createRole
-    :<|> assignAccessLevel
-    :<|> listRoles
+-- Note : Handle is moved to rider and provider dashboard
 
-createRole :: TokenInfo -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
-createRole tokenInfo =
-  withFlowHandlerAPI' . DRoles.createRole tokenInfo
+-- handler :: FlowServer API
+-- handler =
+--   createRole
+--     :<|> assignAccessLevel
+--     :<|> listRoles
 
-assignAccessLevel :: TokenInfo -> Id DRole.Role -> DRoles.AssignAccessLevelReq -> FlowHandler APISuccess
-assignAccessLevel tokenInfo roleId =
-  withFlowHandlerAPI' . DRoles.assignAccessLevel tokenInfo roleId
+-- createRole :: TokenInfo -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
+-- createRole tokenInfo =
+--   withFlowHandlerAPI' . DRoles.createRole tokenInfo
 
-listRoles :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
-listRoles mbsearchstr mblimit mboffset =
-  withFlowHandlerAPI' . DRoles.listRoles mbsearchstr mblimit mboffset
+-- assignAccessLevel :: TokenInfo -> Id DRole.Role -> DRoles.AssignAccessLevelReq -> FlowHandler APISuccess
+-- assignAccessLevel tokenInfo roleId =
+--   withFlowHandlerAPI' . DRoles.assignAccessLevel tokenInfo roleId
+
+-- listRoles :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
+-- listRoles mbsearchstr mblimit mboffset =
+--   withFlowHandlerAPI' . DRoles.listRoles mbsearchstr mblimit mboffset

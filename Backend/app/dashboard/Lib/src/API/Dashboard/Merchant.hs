@@ -17,9 +17,9 @@ module API.Dashboard.Merchant where
 import qualified Domain.Action.Dashboard.Merchant as DMerchant
 import qualified Domain.Action.Dashboard.Person as DPerson
 import Domain.Types.Merchant as DMerchant
-import Environment
-import Kernel.Prelude
-import Kernel.Utils.Common
+-- import Environment
+-- import Kernel.Prelude
+-- import Kernel.Utils.Common
 import Servant
 import Tools.Auth
 
@@ -40,20 +40,22 @@ type API =
              :> Post '[JSON] DPerson.CreatePersonRes
        )
 
-handler :: FlowServer API
-handler =
-  createMerchant
-    :<|> listMerchants
-    :<|> createUserForMerchant
+-- Note : Handle is moved to rider and provider dashboard
 
-createMerchant :: TokenInfo -> DMerchant.CreateMerchantReq -> FlowHandler DMerchant.MerchantAPIEntity
-createMerchant tokenInfo =
-  withFlowHandlerAPI' . DMerchant.createMerchant tokenInfo
+-- handler :: FlowServer API
+-- handler =
+--   createMerchant
+--     :<|> listMerchants
+--     :<|> createUserForMerchant
 
-listMerchants :: TokenInfo -> FlowHandler [DMerchant.MerchantAPIEntity]
-listMerchants tokenInfo =
-  withFlowHandlerAPI' $ DMerchant.listMerchants tokenInfo
+-- createMerchant :: TokenInfo -> DMerchant.CreateMerchantReq -> FlowHandler DMerchant.MerchantAPIEntity
+-- createMerchant tokenInfo =
+--   withFlowHandlerAPI' . DMerchant.createMerchant tokenInfo
 
-createUserForMerchant :: TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
-createUserForMerchant tokenInfo req =
-  withFlowHandlerAPI' $ DMerchant.createUserForMerchant tokenInfo req
+-- listMerchants :: TokenInfo -> FlowHandler [DMerchant.MerchantAPIEntity]
+-- listMerchants tokenInfo =
+--   withFlowHandlerAPI' $ DMerchant.listMerchants tokenInfo
+
+-- createUserForMerchant :: TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
+-- createUserForMerchant tokenInfo req =
+--   withFlowHandlerAPI' $ DMerchant.createUserForMerchant tokenInfo req

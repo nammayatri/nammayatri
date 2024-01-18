@@ -27,6 +27,12 @@ flag Local
 library
   exposed-modules:
       API
+      API.Dashboard
+      API.Dashboard.AccessMatrix
+      API.Dashboard.Merchant
+      API.Dashboard.Person
+      API.Dashboard.Registration
+      API.Dashboard.Roles
       API.Exotel
       API.Fleet.Registration
       API.ProviderPlatform
@@ -53,6 +59,7 @@ library
       ProviderPlatformClient.DynamicOfferDriver.RideBooking
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
+      Storage.Beam.CommonInstances
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:
