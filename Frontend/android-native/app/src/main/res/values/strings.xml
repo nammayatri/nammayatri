@@ -18,6 +18,8 @@
     <string name="too_far">Too far</string>
     <string name="on_another_ride">On Another Ride</string>
     <string name="accept_offer">Accept Offer</string>
+    <string name="navigate_to_location">Navigate to location</string>
+    <string name="close">Close</string>
     <string name="extra">Extra</string>
     <string name="upload_image">Upload Image</string>
     <string name="open_settings">1. Open Settings</string>

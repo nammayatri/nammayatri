@@ -112,6 +112,11 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                 }
 
                 @Override
+                public void addStopCallBack(String newStopLocation) {
+                    Log.i(CALLBACK, "No Required");
+                }
+
+                @Override
                 public void imageUploadCallBack(String encImage, String filename, String filePath) {
                     Log.i(CALLBACK, "No Required");
                 }

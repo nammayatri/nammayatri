@@ -140,6 +140,7 @@ getEN stringKey =
         TRIP_ID -> "Trip Id"
         SAVE_PLACE -> "Save Place"
         RIDE_FARE -> "Ride Fare"
+        RENTAL_FARE -> "Ride Fare"
         ASK_FOR_PRICE -> "Ask for a price"
         ASK_FOR_PRICE_INFO -> "You will receive a fare based on <b> government set </b> base price , with an additional <b> Rs.10 </b> nominal fee for the <b> pick-up distance </b> traveled by the drivers. Some drivers may request nominal tips solely at their discretion to cover factors like traffic, chances of return trip etc."
         GET_ESTIMATE_FARE -> "Get estimate fare"

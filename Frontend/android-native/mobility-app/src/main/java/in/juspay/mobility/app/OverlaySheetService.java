@@ -10,6 +10,8 @@
 package in.juspay.mobility.app;
 
 import static in.juspay.mobility.app.NotificationUtils.NO_VARIANT;
+import static in.juspay.mobility.app.NotificationUtils.RENTAL;
+import static in.juspay.mobility.app.NotificationUtils.INTERCITY;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -109,12 +111,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private Boolean isRideAcceptedOrRejected = false;
     private TextView indicatorText1, indicatorText2, indicatorText3, vehicleText1, vehicleText2, vehicleText3;
     private TextView indicatorTip1, indicatorTip2, indicatorTip3;
+    private TextView indicatorRental1, indicatorRental2, indicatorRental3;
     private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3;
     private ArrayList<TextView> indicatorTextList, vehicleVariantList;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList;
     private ArrayList<LinearLayout> indicatorList;
     private ArrayList<TextView> tipsList;
+    private ArrayList<TextView> rentalList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private String key = "";
     private static MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
@@ -138,7 +142,42 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private void updateTagsView (SheetAdapter.SheetViewHolder holder, SheetModel model) {
         mainLooper.post(() -> {
             String variant = model.getRequestedVehicleVariant();
-            if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
+            if(model.getRideProductType().equals(RENTAL)){
+                holder.tagsBlock.setVisibility(View.VISIBLE);
+                holder.reqButton.setTextColor(getColor(R.color.white));
+                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.turquoise)));
+                if (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider")) {
+                    if (Utils.getVariantType(variant).equals(Utils.VariantType.AC)) {
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_ac_variant_tag);
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                    } else {
+                        holder.rideTypeTag.setVisibility(View.VISIBLE);
+                        holder.rideTypeTag.setBackgroundResource(R.drawable.ic_non_ac_variant_tag);
+                        holder.rideTypeImage.setVisibility(View.GONE);
+                    }
+                    holder.rideTypeText.setText(variant);
+                }
+                holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
+                holder.rentalDateTimeTag.setVisibility(View.VISIBLE);
+                holder.rentalStartTime.setText(model.getRentalRideStartTime());
+                holder.rentalStartDate.setVisibility(View.VISIBLE);
+                if(model.getRentalRideStartDate() != "")
+                {
+                    holder.rentalStartDate.setText(model.getRentalRideStartDate());
+                }
+                holder.rentalDurationDistanceTag.setVisibility(View.VISIBLE);
+                holder.rentalRideDuration.setText(model.getRentalRideDuration());
+                holder.rentalRideDistance.setText(model.getRentalRideDistance());
+                holder.destinationArea.setVisibility(View.GONE);
+                holder.destinationAddress.setVisibility(View.GONE);
+                holder.distanceToBeCovered.setVisibility(View.GONE);
+                holder.destinationPinCode.setVisibility(View.GONE);
+                holder.locationDashedLine.setVisibility(View.GONE);
+                holder.locationDestinationPinTag.setVisibility(View.GONE);
+                holder.gotoTag.setVisibility(View.GONE);
+                holder.customerTipTag.setVisibility(View.GONE);
+            }
+            else if (model.getCustomerTip() > 0 || model.getDisabilityTag() || model.isGotoTag() || (!variant.equals(NO_VARIANT) && key.equals("yatrisathiprovider"))) {
                 String pickupChargesText = model.getCustomerTip() > 0 ?
                         getString(R.string.includes_pickup_charges_10) + " " + getString(R.string.and) + sharedPref.getString("CURRENCY", "₹") + " " + model.getCustomerTip() + " " + getString(R.string.tip) :
                         getString(R.string.includes_pickup_charges_10);
@@ -597,6 +636,11 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     int rideRequestedBuffer = Integer.parseInt(sharedPref.getString("RIDE_REQUEST_BUFFER", "2"));
                     int customerExtraFee = rideRequestBundle.getInt("customerExtraFee");
                     boolean gotoTag = rideRequestBundle.getBoolean("gotoTag");
+                    String rideProductType = rideRequestBundle.getString("rideProductType");
+                    String rentalRideDuration = rideRequestBundle.getString("rentalRideDuration");
+                    String rentalRideDistance = rideRequestBundle.getString("rentalRideDistance");
+                    String rentalStartTime = rideRequestBundle.getString("rentalStartTime");
+                    String rentalStartDate = rideRequestBundle.getString("rentalStartDate");
                     if (calculatedTime > rideRequestedBuffer) {
                         calculatedTime -= rideRequestedBuffer;
 
@@ -624,7 +668,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             requestedVehicleVariant,
                             disabilityTag,
                             isTranslated,
-                            gotoTag);
+                            gotoTag,
+                            rideProductType,
+                            rentalRideDuration,
+                            rentalRideDistance,
+                            rentalStartTime,
+                            rentalStartDate);
 
                     if (floatyView == null) {
                         startTimer();
@@ -1006,10 +1055,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             indicatorTip1 = floatyView.findViewById(R.id.tip_view_0);
             indicatorTip2 = floatyView.findViewById(R.id.tip_view_1);
             indicatorTip3 = floatyView.findViewById(R.id.tip_view_2);
+            indicatorRental1 = floatyView.findViewById(R.id.rental_view_0);
+            indicatorRental2 = floatyView.findViewById(R.id.rental_view_1);
+            indicatorRental3 = floatyView.findViewById(R.id.rental_view_2);
             shimmerTip1 = floatyView.findViewById(R.id.shimmer_view_container_0);
             shimmerTip2 = floatyView.findViewById(R.id.shimmer_view_container_1);
             shimmerTip3 = floatyView.findViewById(R.id.shimmer_view_container_2);
             tipsList = new ArrayList<>(Arrays.asList(indicatorTip1, indicatorTip2, indicatorTip3));
+            rentalList = new ArrayList<>(Arrays.asList(indicatorRental1, indicatorRental2, indicatorRental3));
             shimmerTipList = new ArrayList<>(Arrays.asList(shimmerTip1, shimmerTip2, shimmerTip3));
             for (int i = 0; i < 3; i++) {
                 if (viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i))) {
@@ -1048,6 +1101,16 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                         tipsList.get(i).setVisibility(View.VISIBLE);
                     } else {
                         tipsList.get(i).setVisibility(View.INVISIBLE);
+                    }
+
+                    if (sheetArrayList.get(i).getRideProductType().equals("RENTAL")) {
+                        rentalList.get(i).setVisibility(View.VISIBLE);
+                    } else {
+                        rentalList.get(i).setVisibility(View.INVISIBLE);
+                    }
+                    if(viewPager.getCurrentItem() == indicatorList.indexOf(indicatorList.get(i)) && sheetArrayList.get(i).getRideProductType().equals("RENTAL"))
+                    {
+                        indicatorList.get(i).setBackgroundColor(Color.parseColor("#1a42b8ba"));
                     }
                 } else {
                     indicatorTextList.get(i).setText("--");

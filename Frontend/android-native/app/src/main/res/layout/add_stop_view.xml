@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:id="@+id/relative_layout"
+    android:background="@android:color/transparent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <RelativeLayout
+        android:id="@+id/containerLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="24dp"
+        android:layout_marginRight="24dp"
+        android:layout_marginTop="24dp">
+
+    <androidx.cardview.widget.CardView
+                android:id="@+id/card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+
+                app:cardElevation="0dp">
+        <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="15dp"
+                        android:orientation="vertical"
+                        android:gravity="center">
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:src="@drawable/customer_added_a_stop"
+                        android:layout_gravity="center"
+                        android:padding="20dp"
+                        />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Customer added a stop!"
+                        android:layout_gravity="center_horizontal"
+                        android:textAlignment="center"
+                        android:textColor="#454545"
+                        android:fontFamily="@font/plus_jakartasans_semibold"
+
+                        android:lineHeight="23dp"/>
+
+                     <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="20dp"
+                        android:paddingHorizontal="15dp"
+                        android:orientation="vertical">
+
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/reqButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="8dp"
+                            android:layout_weight="12"
+                            android:backgroundTint="#2C2F3A"
+                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:letterSpacing="0"
+                            android:paddingHorizontal="15dp"
+                            android:textColor="#FCC32C"
+                            android:paddingVertical="16dp"
+                            android:shadowColor="@color/black"
+                            android:text="Navigate To Location"
+                            android:layout_gravity="center_horizontal"
+                            android:textAllCaps="false"
+                            android:textFontWeight="700"
+                            android:textSize="18dp"
+                            android:theme="@style/Theme.MaterialComponents.Light"
+                            app:cornerRadius="8dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/rejButton"
+                            style="?attr/borderlessButtonStyle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:letterSpacing="0"
+                            android:text="Cancel"
+                            android:textAllCaps="false"
+                            android:textColor="#6D7280"
+                            android:layout_gravity="center_horizontal"
+                            android:textFontWeight="600"
+                            android:textSize="16dp"
+                            android:theme="@style/Theme.MaterialComponents.Light"
+                             />
+
+                    </LinearLayout>
+                    </LinearLayout>
+    </androidx.cardview.widget.CardView>
+    </RelativeLayout>
+</RelativeLayout>

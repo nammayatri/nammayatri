@@ -153,6 +153,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     private String storeDriverCallBack = null;
     private String storeUpdateTimeCallBack = null;
     private String storeImageUploadCallBack = null;
+    private String storeAddRideStopCallBack = null;
     private CallBack callBack;
     private LocationUpdateService.UpdateTimeCallback locationCallback;
     private PreviewView previewView;
@@ -180,6 +181,20 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     storeDriverCallBack, notificationType);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
+    }
+
+    @JavascriptInterface
+    public void storeCallBackForAddRideStop(String callback) {
+        storeAddRideStopCallBack = callback;
+    }
+
+    public void callDriverAddRideStopCallBack(String newStopLocation) {
+       
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                    storeAddRideStopCallBack, newStopLocation);
+            Log.d(CALLBACK, javascript);
+            bridgeComponents.getJsCallback().addJsToWebView(javascript);
+        
     }
 
     @JavascriptInterface
@@ -244,6 +259,11 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                 }
 
                 @Override
+                public void addStopCallBack(String newStopLocation) {
+                    callDriverAddRideStopCallBack(newStopLocation);
+                }
+
+                @Override
                 public void imageUploadCallBack(String encImage, String filename, String filePath) {
                     callImageUploadCallBack(encImage, filename, filePath);
                 }
@@ -299,6 +319,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
 
         // CallBacks
         storeDriverCallBack = null;
+        storeAddRideStopCallBack = null;
         storeUpdateTimeCallBack = null;
         storeImageUploadCallBack = null;
         callBack = null;

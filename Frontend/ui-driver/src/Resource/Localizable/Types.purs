@@ -184,6 +184,8 @@ data STR = LETS_GET_STARTED
         | IS_WAITING_FOR_YOU
         | YOU_ARE_ON_A_RIDE
         | PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP
+        | ENTER_CURRENT_ODOMETER_READING
+        | ENTER_THE_LAST_4_DIGITS_OF_ODOMETER
         | COMPLETED_
         | CANCELLED_
         | WHERE_IS_MY_LICENSE_NUMBER
@@ -1120,3 +1122,19 @@ data STR = LETS_GET_STARTED
         | DOWNLOAD_NAMMA_YATRI String
         | ENTER_CODE
         | COMPLETE_REGISTRATION
+        | DURATION
+        | RENTAL_FARE
+        | START_TIME 
+        | START_ODO_READING
+        | RIDE_START
+        | RIDE_END 
+        | RIDE_STARTED_AT 
+        | RIDE_ENDED_AT
+        | ODOMETER_READING
+        | PICKED_UP_AT
+        | UPCOMING_STOP
+        | LAST_STOP
+        | PREVIOUS_STOP
+        | RIDE_TIME
+        | YOU_ARE_ON_A_RENTAL_RIDE
+        | ENTER_END_RIDE_OTP

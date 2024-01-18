@@ -88,6 +88,9 @@ public class NotificationUtils {
     public static String DRIVER_REACHED = "DRIVER_REACHED";
     public static String RIDE_STARTED = "RIDE_STARTED";
     public static String NO_VARIANT = "NO_VARIANT";
+    public static String RENTAL = "RENTAL";
+    public static String INTERCITY = "INTERCITY";
+    public static String NEW_STOP_ADDED = "NEW_STOP_ADDED";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();
@@ -192,8 +195,14 @@ public class NotificationUtils {
                     sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
+                    sheetData.putString("rideProductType",entity_payload.has("rideProductType") && !entity_payload.isNull("rideProductType") ? entity_payload.getString("rideProductType") : "RENTAL");
+                    sheetData.putString("rentalRideDuration",entity_payload.has("rentalRideDuration") && !entity_payload.isNull("rentalRideDuration") ? entity_payload.getString("rentalRideDuration") : "8");
+                    sheetData.putString("rentalRideDistance",entity_payload.has("rentalRideDistance") && !entity_payload.isNull("rentalRideDistance") ? entity_payload.getString("rentalRideDistance") : "90");
+                    sheetData.putString("rentalStartTime",entity_payload.has("rentalStartTime") && !entity_payload.isNull("rentalStartTime") ? entity_payload.getString("rentalStartTime") : "6:30");
+                    sheetData.putString("rentalStartDate",entity_payload.has("rentalStartDate") && !entity_payload.isNull("rentalStartDate") ? entity_payload.getString("rentalStartDate") : "");
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
+
                     System.out.println(entity_payload);
                 } catch (Exception e) {
                     System.out.println("exception_parsing_overlay_data" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
@@ -298,6 +307,7 @@ public class NotificationUtils {
                             cleverTapParams.put("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
                             cleverTapParams.put("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
                             cleverTapParams.put("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
+                            cleverTapParams.put("rideProductType",(entity_payload.has("rideProductType") && !entity_payload.isNull("rideProductType") ? entity_payload.getString("rideProductType") : "RENTAL"));
                             cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
                             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                                 LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
@@ -505,6 +515,11 @@ public class NotificationUtils {
         if (DRIVER_ASSIGNMENT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_REACHED.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType)) {
             for (int i = 0; i < callBack.size(); i++) {
                 callBack.get(i).driverCallBack(notificationType);
+            }
+        }
+        if(NEW_STOP_ADDED.equals(notificationType)){
+            for (int i = 0; i < callBack.size(); i++) {
+                callBack.get(i).addStopCallBack(data.getString("driver_notification_payload"));
             }
         }
         if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_STARTED.equals(notificationType)) && (key.equals("USER"))) {

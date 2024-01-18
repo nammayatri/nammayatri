@@ -108,6 +108,7 @@ foreign import setEnabled :: String -> Boolean -> Unit
 foreign import decodeErrorCode :: String -> String
 foreign import decodeErrorMessage :: String -> String
 foreign import storeCallBackForNotification :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackForAddRideStop :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import secondsLeft :: String -> Int
 foreign import objectToAllocationType :: String -> AllocationData
 foreign import getcurrentdate :: String -> String

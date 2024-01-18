@@ -15,8 +15,8 @@
 
 module Screens.HomeScreen.View where
 
+import Services.Accessor (_lat, _lon)
 import Screens.HomeScreen.ComponentConfig
-
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..), APIPaymentStatus(..))
@@ -45,6 +45,7 @@ import Data.Array as DA
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Int (ceil, toNumber, fromString)
+import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.String as DS
 import Data.Time.Duration (Milliseconds(..))
@@ -77,7 +78,7 @@ import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, Screen
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..),DriverStatus(..), DriverStatusResult(..), PillButtonState(..),TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..))
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..))
+import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..),LocationInfo(..),RidesInfo(..))
 import Services.Backend as Remote
 import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
 import Styles.Colors as Color
@@ -93,11 +94,14 @@ screen initialState =
   , name : "HomeScreen"
   , globalEvents : [
         ( \push -> do
+          _ <- JB.storeCallBackImageUpload push CallBackImageUpload
           _ <- pure $ JB.checkAndAskNotificationPermission false
           _ <- pure $ printLog "initial State" initialState
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
+          _ <- HU.storeCallBackForAddRideStop push CallBackAddNewStop
+          _ <- pure $ printLog "NEW_ADD_STOP value" $ getValueToLocalNativeStore NEW_ADD_STOP
           when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
@@ -182,6 +186,13 @@ screen initialState =
                                 _ <- pure $ setValueToLocalStore DRIVER_MIN_DISPLACEMENT "25.0"
                                 _ <- push RemoveChat
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
+                                if (initialState.data.activeRide.rideProductType == ST.RENTAL) 
+                                  then do 
+                                    _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
+                                    _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "True"
+                                    _ <- launchAff $ EHC.flowRunner defaultGlobalState $ rentalRideStatusPolling (getValueToLocalStore RENTAL_RIDE_STATUS_POLLING_ID) 60000.0 initialState push NewAddStop
+                                    pure unit
+                                else pure unit
                                 if (DA.elem initialState.data.peekHeight [518,470,0]) then void $ push $ RideActionModalAction (RideActionModal.NoAction) else pure unit
                                 if (not initialState.props.routeVisible) && initialState.props.mapRendered then do
                                   _ <- JB.getCurrentPosition push $ ModifyRoute
@@ -235,7 +246,8 @@ view push state =
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
       , if state.data.paymentState.makePaymentModal && (not $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer, RideCompleted]) then makePaymentModal push state else dummyTextView
       , if state.props.goOfflineModal then goOfflineModal push state else dummyTextView
-      , if state.props.enterOtpModal then enterOtpModal push state else dummyTextView
+      , if state.props.enterOtpModal || state.props.endRideOtpModal then enterOtpModal push state else dummyTextView
+      , if state.props.rentalBooking && ( state.props.enterOdometerReadingModal || state.props.endRideOdometerReadingModal ) then enterOdometerReadingModal push state else dummyTextView
       , if state.props.endRidePopUp then endRidePopView push state else dummyTextView
       , if ((state.props.isMockLocation && (MU.getMerchant FunctionCall == MU.NAMMAYATRI)) && state.props.currentStage == HomeScreen) then (sourceUnserviceableView push state) else dummyTextView
       , if state.props.cancelConfirmationPopup then cancelConfirmation push state else dummyTextView
@@ -1189,6 +1201,10 @@ enterOtpModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Presto
 enterOtpModal push state =
   InAppKeyboardModal.view (push <<< InAppKeyboardModalAction) (enterOtpStateConfig state)
 
+enterOdometerReadingModal :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+enterOdometerReadingModal push state =
+  InAppKeyboardModal.view (push <<< InAppKeyboardModalOdometerAction) (enterOdometerReadingConfig state)
+  
 showOfflineStatus :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 showOfflineStatus push state =
   linearLayout
@@ -1627,6 +1643,30 @@ rideStatusPolling pollingId duration state push action = do
             _ <- pure $ setValueToLocalStore RIDE_STATUS_POLLING "False"
             if isLocalStageOn HomeScreen then pure unit
               else doAff do liftEffect $ push $ action "CANCELLED_PRODUCT"
+      Left err -> pure unit
+    else pure unit
+
+rentalRideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (LocationInfo -> action) -> Flow GlobalState Unit
+rentalRideStatusPolling pollingId duration state push action = do
+  if (getValueToLocalStore RENTAL_RIDE_STATUS_POLLING) == "True" && (getValueToLocalStore RENTAL_RIDE_STATUS_POLLING_ID) == pollingId && (state.data.activeRide.rideProductType == ST.RENTAL) && isLocalStageOn ST.RideStarted then do
+    activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
+    _ <- pure $ spy "polling inside rentalRideStatusPolling function" activeRideResponse
+    case activeRideResponse of
+      Right (GetRidesHistoryResp rideList) -> do
+        if not (DA.null rideList.list) then do
+          void $ delay $ Milliseconds duration
+          _ <- case (rideList.list DA.!! 0) of
+            Just (RidesInfo {toLocation}) ->
+              if (((toLocation ^. _lat) /= (state.data.activeRide.dest_lat))  || ((toLocation ^. _lon) /= state.data.activeRide.dest_lon))
+                then 
+                  doAff do liftEffect $ push $ action toLocation
+              else pure unit
+            Nothing -> pure unit
+          rentalRideStatusPolling pollingId duration state push action
+          else do
+            _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
+            _ <- pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
+            pure unit
       Left err -> pure unit
     else pure unit
 

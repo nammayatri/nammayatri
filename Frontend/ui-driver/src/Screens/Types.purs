@@ -17,7 +17,6 @@ module Screens.Types where
 
 import Common.Types.App as Common
 import Components.ChatView.Controller as ChatView
-import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Components.GoToLocationModal.Controller as GoToModal
 import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
@@ -408,6 +407,7 @@ type DriverProfileScreenProps = {
   alternateNumberView :: Boolean,
   removeAlternateNumber :: Boolean,
   enterOtpModal :: Boolean,
+  enterOdometerFocusIndex :: Int,
   enterOtpFocusIndex :: Int,
   otpIncorrect :: Boolean,
   otpAttemptsExceeded :: Boolean,
@@ -737,7 +737,7 @@ type DriverDetailsScreenState = {
   props :: DriverDetailsScreenStateProps
 }
 
-data KeyboardModalType = MOBILE__NUMBER | OTP | NONE
+data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE
 
 derive instance genericKeyboardModalType :: Generic KeyboardModalType _
 instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
@@ -864,7 +864,8 @@ type HomeScreenData =  {
   peekHeight :: Int,
   driverGotoState :: DriverGoToState,
   snappedOrigin :: Maybe Location,
-  gender :: String
+  gender :: String,
+  odometerReading :: OdometerReading
 }
 
 type DriverGoToState = {
@@ -989,7 +990,9 @@ type ActiveRide = {
   specialLocationTag :: Maybe String,
   requestedVehicleVariant :: Maybe String,
   disabilityTag :: Maybe DisabilityType,
-  waitTimeSeconds :: Int
+  waitTimeSeconds :: Int,
+  rideStartTime :: String,
+  rideProductType :: RideProductType
 }
 
 type HomeScreenProps =  {
@@ -999,7 +1002,16 @@ type HomeScreenProps =  {
   screenName :: String,
   rideActionModal :: Boolean,
   enterOtpModal :: Boolean,
+  endRideOtpModal :: Boolean,
   rideOtp :: String,
+  odometerValueInKm :: String,
+  editedOdometerValue :: String,
+  odometerValue :: String,
+  endOdometerValue :: String,
+  enterOdometerReadingModal :: Boolean,
+  endRideOdometerReadingModal :: Boolean,
+  rentalBooking :: Boolean,
+  odometerConfig :: OdometerConfig,
   enterOtpFocusIndex :: Int,
   time :: Int,
   otpIncorrect :: Boolean,
@@ -1041,7 +1053,10 @@ type HomeScreenProps =  {
   waitTimeStatus :: TimerStatus,
   isMockLocation :: Boolean,
   accountBlockedPopup :: Boolean,
-  tobeLogged :: Boolean
+  tobeLogged :: Boolean,
+  startRideOdometerImage :: String,
+  endRideOdometerImage :: String,
+  arrivedAtStop :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -1077,6 +1092,14 @@ instance eqTimerStatus :: Eq TimerStatus where eq = genericEq
 instance showTimerStatus :: Show TimerStatus where show = genericShow
 instance encodeTimerStatus :: Encode TimerStatus where encode = defaultEnumEncode
 instance decodeTimerStatus :: Decode TimerStatus where decode = defaultEnumDecode
+
+data RideProductType = RENTAL | INTERCITY | NORMAL
+
+derive instance genericRideProductType :: Generic RideProductType _
+instance eqRideProductType :: Eq RideProductType where eq = genericEq 
+instance showRideProductType :: Show RideProductType where show = genericShow
+instance encodeRideProductType :: Encode RideProductType where encode = defaultEnumEncode
+instance decodeRideProductType :: Decode RideProductType where decode = defaultEnumDecode
 
 type PillButtonState = {
   status :: DriverStatus,
@@ -2139,4 +2162,14 @@ type DriverReferralScreenData = {
 type DriverReferralScreenProps = {
   showDriverReferralQRCode :: Boolean
 , showNewDriverReferralText :: Boolean
+}
+
+type OdometerConfig = {
+  updateKm :: Boolean,
+  updateM :: Boolean
+}
+
+type OdometerReading = {
+  valueInM :: String,
+  valueInkm :: String
 }

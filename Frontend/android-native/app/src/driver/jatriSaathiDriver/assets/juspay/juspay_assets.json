@@ -490,6 +490,7 @@
       "progress_loader" : true,
       "progressbar_clip" : true,
       "rectangle_9506" : true,
+      "rectangle_9506_rental" : true,
       "rotate_drawable" : true,
       "round_circle" : true,
       "round_corner_layout" : true,
@@ -498,6 +499,8 @@
       "shape_profile_drawable" : true,
       "silent_popup_background" : true,
       "up_hand_arrow" : true,
-      "widget_close_gradient" : true
+      "widget_close_gradient" : true,
+      "ny_ic_drop_indicator": true,
+      "customer_added_a_stop": true
    }
 }

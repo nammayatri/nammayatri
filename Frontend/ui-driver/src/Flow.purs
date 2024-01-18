@@ -17,6 +17,7 @@ module Flow where
 
 import Constants.Configs
 import Debug
+import Debug (spy)
 import Log
 import Screens.SubscriptionScreen.Controller
 import Common.Resources.Constants (zoomLevel)
@@ -1760,7 +1761,7 @@ currentRideFlow activeRideResp = do
           setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
           _ <- updateStage $ HomeScreenStage stage
           void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod, rideProductType = RC.rideProductTypeConstructor ride.rideProductType, rideStartTime = fromMaybe "00:00" ride.rideStartTime}}, props{ rentalBooking = ride.rideProductType == Nothing, silentPopUpView = false, goOfflineModal = false}})
         Nothing -> do
           setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
           _ <- updateStage $ HomeScreenStage HomeScreen
@@ -1943,15 +1944,16 @@ homeScreenFlow = do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
     GO_TO_EDIT_GENDER_SCREEN -> driverProfileFlow
-    GO_TO_START_RIDE {id, otp , lat, lon, ts} updatedState -> do
+    GO_TO_START_RIDE {id, otp ,odometerReading, lat, lon, ts} updatedState -> do
       void $ lift $ lift $ loaderText (getString START_RIDE) ""
       void $ lift $ lift $ toggleLoader true
+      _ <- pure $ spy ( " OTP FLOW " <> otp  <> " odometerReading" <> odometerReading)
       startRideResp <- lift $ lift $ Remote.startRide id (Remote.makeStartRideReq otp (fromMaybe 0.0 (Number.fromString lat)) (fromMaybe 0.0 (Number.fromString lon)) ts) -- driver's lat long during starting ride
       case startRideResp of
         Right startRideResp -> do
           _ <- pure $ setValueToLocalNativeStore RIDE_ID id
           liftFlowBT $ logEvent logField_ "ny_driver_ride_start"
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false,enterOdometerReadingModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
           _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
@@ -1963,11 +1965,13 @@ homeScreenFlow = do
         Left errorPayload -> do
           let errResp = errorPayload.response
           let codeMessage = decodeErrorCode errResp.errorMessage
+          
+          liftFlowBT $ logEvent logField_ "incorrect flow"
           if ( errorPayload.code == 400 && codeMessage == "INCORRECT_OTP") then do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = ""} })
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = "",enterOtpFocusIndex = 0} })
               void $ lift $ lift $ toggleLoader false
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
-              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = ""} })
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {otpAttemptsExceeded = true, enterOtpModal = true, rideOtp = "",enterOtpFocusIndex = 0} })
               void $ lift $ lift $ toggleLoader false
               else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
           homeScreenFlow
@@ -2016,6 +2020,7 @@ homeScreenFlow = do
       _ <- pure $ metaLogEvent "ny_driver_ride_ended"
       liftFlowBT $ firebaseLogEvent "ny_driver_ride_ended"
       _ <- pure $ removeAllPolylines ""
+      void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
       void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
       _ <- pure $ setValueToLocalNativeStore IS_RIDE_ACTIVE  "false"
       void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "No"}]
@@ -2089,6 +2094,7 @@ homeScreenFlow = do
       _ <- pure $ setValueToLocalStore DRIVER_STATUS_N "Online"
       _ <- pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
       void $ Remote.driverActiveInactiveBT "true" $ toUpper $ show Online
+      void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
       _ <- updateStage $ HomeScreenStage HomeScreen
       when state.data.driverGotoState.isGotoEnabled do
         driverInfoResp <- Remote.getDriverInfoBT (GetDriverInfoReq { })

@@ -33,29 +33,40 @@
                         android:id="@+id/indicator1"
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
+                        android:layout_weight="1.0"
                         android:gravity="center"
-                        android:orientation="vertical"
-                        android:layout_weight="1.0">
+                        android:orientation="vertical">
 
                         <com.facebook.shimmer.ShimmerFrameLayout
                             android:id="@+id/shimmer_view_container_0"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            app:shimmer_base_color="#FFFFFF"
-                            app:shimmer_highlight_color="#FFFFFF"
                             app:shimmer_auto_start="true"
                             app:shimmer_base_alpha="1.0"
-                            app:shimmer_highlight_alpha="0.6">
+                            app:shimmer_base_color="#FFFFFF"
+                            app:shimmer_highlight_alpha="0.6"
+                            app:shimmer_highlight_color="#FFFFFF">
 
                             <TextView
                                 android:id="@+id/tip_view_0"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
+                                android:background="@drawable/rectangle_9506"
+                                android:gravity="center"
                                 android:text="TIP"
                                 android:textColor="@color/Black900"
-                                android:gravity="center"
                                 android:textStyle="bold"
-                                android:background="@drawable/rectangle_9506"
+                                android:visibility="invisible" />
+
+                            <TextView
+                                android:id="@+id/rental_view_0"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/rectangle_9506_rental"
+                                android:gravity="center"
+                                android:text="Rental"
+                                android:textColor="@color/white"
+                                android:textStyle="bold"
                                 android:visibility="invisible" />
                         </com.facebook.shimmer.ShimmerFrameLayout>
 
@@ -114,29 +125,40 @@
                         android:id="@+id/indicator2"
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
-                        android:gravity="center"
                         android:layout_weight="1.0"
+                        android:gravity="center"
                         android:orientation="vertical">
 
                         <com.facebook.shimmer.ShimmerFrameLayout
                             android:id="@+id/shimmer_view_container_1"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            app:shimmer_base_color="#FFFFFF"
-                            app:shimmer_highlight_color="#FFFFFF"
                             app:shimmer_auto_start="true"
                             app:shimmer_base_alpha="1.0"
-                            app:shimmer_highlight_alpha="0.6">
+                            app:shimmer_base_color="#FFFFFF"
+                            app:shimmer_highlight_alpha="0.6"
+                            app:shimmer_highlight_color="#FFFFFF">
 
                             <TextView
                                 android:id="@+id/tip_view_1"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="TIP"
-                                android:gravity="center"
-                                android:textStyle="bold"
-                                android:textColor="@color/Black900"
                                 android:background="@drawable/rectangle_9506"
+                                android:gravity="center"
+                                android:text="TIP"
+                                android:textColor="@color/Black900"
+                                android:textStyle="bold"
+                                android:visibility="invisible" />
+
+                            <TextView
+                                android:id="@+id/rental_view_1"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/rectangle_9506_rental"
+                                android:gravity="center"
+                                android:text="Rental"
+                                android:textColor="@color/white"
+                                android:textStyle="bold"
                                 android:visibility="invisible" />
                         </com.facebook.shimmer.ShimmerFrameLayout>
 
@@ -144,8 +166,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:orientation="vertical"
                             android:gravity="center"
+                            android:orientation="vertical"
                             android:paddingHorizontal="10dp"
                             android:paddingBottom="10dp">
 
@@ -196,29 +218,40 @@
                         android:id="@+id/indicator3"
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
-                        android:gravity="center"
                         android:layout_weight="1.0"
+                        android:gravity="center"
                         android:orientation="vertical">
 
                         <com.facebook.shimmer.ShimmerFrameLayout
                             android:id="@+id/shimmer_view_container_2"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            app:shimmer_base_color="#FFFFFF"
-                            app:shimmer_highlight_color="#FFFFFF"
                             app:shimmer_auto_start="true"
                             app:shimmer_base_alpha="1.0"
-                            app:shimmer_highlight_alpha="0.6">
+                            app:shimmer_base_color="#FFFFFF"
+                            app:shimmer_highlight_alpha="0.6"
+                            app:shimmer_highlight_color="#FFFFFF">
 
                             <TextView
                                 android:id="@+id/tip_view_2"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
+                                android:background="@drawable/rectangle_9506"
+                                android:gravity="center"
                                 android:text="TIP"
                                 android:textColor="@color/Black900"
-                                android:gravity="center"
                                 android:textStyle="bold"
-                                android:background="@drawable/rectangle_9506"
+                                android:visibility="invisible" />
+
+                            <TextView
+                                android:id="@+id/rental_view_2"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/rectangle_9506_rental"
+                                android:gravity="center"
+                                android:text="Rental"
+                                android:textColor="@color/white"
+                                android:textStyle="bold"
                                 android:visibility="invisible" />
                         </com.facebook.shimmer.ShimmerFrameLayout>
 
