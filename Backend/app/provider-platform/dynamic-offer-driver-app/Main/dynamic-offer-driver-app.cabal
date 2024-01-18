@@ -117,8 +117,8 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
-      Beckn.OnDemand.Utils.Callback
       Beckn.OnDemand.Transformer.OnUpdate
+      Beckn.OnDemand.Utils.Callback
       Beckn.OnDemand.Utils.Common
       Beckn.OnDemand.Utils.Init
       Beckn.OnDemand.Utils.OnInit

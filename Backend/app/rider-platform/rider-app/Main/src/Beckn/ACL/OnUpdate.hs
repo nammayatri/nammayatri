@@ -17,6 +17,9 @@ module Beckn.ACL.OnUpdate (buildOnUpdateReq) where
 import Beckn.ACL.Common (getTag)
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as OnUpdate
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Common as Utils
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -41,6 +44,18 @@ buildOnUpdateReq req = do
   handleError req.contents $ \message -> do
     parseEvent transactionId message.order
 
+buildOnUpdateReqV2 ::
+  ( HasFlowEnv m r '["_version" ::: Text],
+    EsqDBFlow m r
+  ) =>
+  Spec.OnUpdateReq ->
+  m (Maybe DOnUpdate.OnUpdateReq)
+buildOnUpdateReqV2 req = do
+  ContextV2.validateContext Context.ON_UPDATE $ req.onUpdateReqContext
+  transactionId <- Utils.getTransactionId req.onUpdateReqContext
+  handleErrorV2 req $ \message -> do
+    parseEventV2 transactionId message.confirmReqMessageOrder
+
 handleError ::
   (MonadFlow m) =>
   Either Error OnUpdate.OnUpdateMessage ->
@@ -51,6 +66,18 @@ handleError etr action =
     Right msg -> do
       Just <$> action msg
     Left err -> do
+      logTagError "on_update req" $ "on_update error: " <> show err
+      pure Nothing
+
+handleErrorV2 ::
+  (MonadFlow m) =>
+  Spec.OnUpdateReq ->
+  (Spec.ConfirmReqMessage -> m (Maybe DOnUpdate.OnUpdateReq)) ->
+  m (Maybe DOnUpdate.OnUpdateReq)
+handleErrorV2 req action =
+  case req.onUpdateReqError of
+    Nothing -> req.onUpdateReqMessage & maybe (pure Nothing) action
+    Just err -> do
       logTagError "on_update req" $ "on_update error: " <> show err
       pure Nothing
 
@@ -172,6 +199,48 @@ parseEvent _ (OnUpdate.SafetyAlert saEvent) =
       { bppBookingId = Id saEvent.id,
         bppRideId = Id saEvent.fulfillment.id,
         reason = saEvent.reason
+      }
+
+parseEventV2 :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseEventV2 transactionId order = do
+  eventType <-
+    order.orderFulfillments
+      >>= listToMaybe
+      >>= (.fulfillmentState)
+      >>= (.fulfillmentStateDescriptor)
+      >>= (.descriptorCode)
+      & fromMaybeM (InvalidRequest "Event type is not present in OnUpdateReq.")
+
+  case eventType of
+    "RIDE_COMPLETED" -> parseRideCompletedEvent order
+    "RIDE_STARTED" -> parseRideStartedEvent order
+    "RIDE_ASSIGNED" -> parseRideAssignedEvent order
+    "RIDE_BOOKING_CANCELLED" -> parseBookingCancelledEvent order
+    "RIDE_BOOKING_REALLOCATION" -> parseBookingReallocationEvent order
+    "DRIVER_ARRIVED" -> parseDriverArrivedEvent order
+    "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
+    "NEW_MESSAGE" -> parseNewMessageEvent order
+    "SAFETY_ALERT" -> parseSafetyAlertEvent order
+    _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
+
+parseRideAssignedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseRideAssignedEvent order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideAssigned Event.")
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideAssigned Event.")
+  return
+    DOnUpdate.RideAssignedReq
+      { bppBookingId = Id bppBookingId,
+        bppRideId = Id bppRideId,
+        otp = authorization.token,
+        driverName = agentPerson.name,
+        driverMobileNumber = agentPhone,
+        driverMobileCountryCode = Just "+91", -----------TODO needs to be added in agent Tags------------
+        driverRating = realToFrac <$> rating,
+        driverImage = agentPerson.image >>= (.url),
+        driverRegisteredAt = registeredAt,
+        vehicleNumber = vehicle.registration,
+        vehicleColor = vehicle.color,
+        vehicleModel = vehicle.model
       }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
