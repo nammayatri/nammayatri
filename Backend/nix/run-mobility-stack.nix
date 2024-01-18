@@ -8,6 +8,7 @@
           imports = [
             (import ./services/nammayatri.nix { inherit (perSystem) config; inherit inputs; })
           ];
+          apiServer = false;
           services.nammayatri.enable = true;
         };
 
