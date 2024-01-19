@@ -56,11 +56,11 @@ in
       haskellProcessFor = name:
         if cfg.useCabal
         then {
-          command = "set -x; cabal run ${cabalTargetForExe.${name}}";
+          command = "set -x; pwd; cabal run ${cabalTargetForExe.${name}}";
           environment.CABAL_TARGET = cabalTargetForExe.${name};
         }
         else {
-          command = ny.config.apps.${name}.program;
+          command = "set -x; pwd; ${ny.config.apps.${name}.program}";
         };
 
       haskellProcesses = {
@@ -89,6 +89,7 @@ in
               ];
               text = ''
                 set -x
+                pwd
                 rm -f ./*.log # Clean up the log files
                 redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
                 redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM

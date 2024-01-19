@@ -4,7 +4,7 @@
   perSystem = perSystem@{ inputs', self', pkgs, lib, ... }: {
     process-compose =
       let
-        common = { config, ... }: {
+        local = { config, ... }: {
           imports = [
             (import ./services/nammayatri.nix { inherit (perSystem) config; inherit inputs; })
           ];
@@ -14,16 +14,25 @@
 
         external = {
           settings.processes = {
-            beckn-gateway.command = perSystem.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
-            mock-registry.command = perSystem.config.haskellProjects.default.outputs.finalPackages.mock-registry;
-            location-tracking-service.command = inputs'.location-tracking-service.packages.default;
+            beckn-gateway = {
+              command = perSystem.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
+              working_dir = "Backend";
+            };
+            mock-registry = {
+              command = perSystem.config.haskellProjects.default.outputs.finalPackages.mock-registry;
+              working_dir = "Backend";
+            };
+            location-tracking-service = {
+              command = inputs'.location-tracking-service.packages.default;
+              working_dir = "Backend";
+            };
           };
         };
       in
       {
         run-mobility-stack-nix = {
           imports = [
-            common
+            local
             external
           ];
           services.nammayatri.useCabal = false;
@@ -31,7 +40,7 @@
 
         run-mobility-stack-dev = {
           imports = [
-            common
+            local
             external
           ];
           services.nammayatri.useCabal = true;
