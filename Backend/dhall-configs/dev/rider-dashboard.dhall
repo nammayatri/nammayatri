@@ -62,6 +62,11 @@ let rccfg =
 
 let cacheConfig = { configsExpTime = +86400 }
 
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -70,6 +75,7 @@ in  { esqDBCfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = True
+    , kafkaProducerCfg
     , port = +8017
     , migrationPath =
       [   env:RIDER_DASHBOARD_MIGRATION_PATH as Text
@@ -96,4 +102,5 @@ in  { esqDBCfg
     , slackChannel = "CXXXXXXXXXF"
     , internalEndPointMap = common.internalEndPointMap
     , cacheConfig
+    , kvConfigUpdateFrequency = +60
     }
