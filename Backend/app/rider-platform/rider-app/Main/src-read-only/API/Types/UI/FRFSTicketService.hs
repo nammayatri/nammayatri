@@ -3,6 +3,7 @@
 
 module API.Types.UI.FRFSTicketService where
 
+import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.FRFSQuote
@@ -36,7 +37,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
     validTill :: Kernel.Prelude.UTCTime,
-    vehicleType :: Data.Text.Text
+    vehicleType :: Domain.Types.Station.FRFSVehicleType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -53,13 +54,13 @@ data FRFSSearchAPIRes = FRFSSearchAPIRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data FRFSStationAPI = FRFSStationAPI
-  { address :: Kernel.Prelude.Maybe Data.Text.Text,
+  { address :: Data.Maybe.Maybe Data.Text.Text,
     code :: Data.Text.Text,
-    color :: Kernel.Prelude.Maybe Data.Text.Text,
+    color :: Data.Maybe.Maybe Data.Text.Text,
     lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
     name :: Data.Text.Text,
-    stationType :: Kernel.Prelude.Maybe Domain.Types.FRFSTrip.StationType
+    stationType :: Data.Maybe.Maybe Domain.Types.FRFSTrip.StationType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -74,13 +75,13 @@ data FRFSTicketAPI = FRFSTicketAPI
 data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     bookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
-    payment :: Kernel.Prelude.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentAPI,
+    payment :: Data.Maybe.Maybe API.Types.UI.FRFSTicketService.FRFSBookingPaymentAPI,
     price :: Kernel.Types.Common.HighPrecMoney,
     quantity :: Kernel.Prelude.Int,
     stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     ticket :: [API.Types.UI.FRFSTicketService.FRFSTicketAPI],
     validTill :: Kernel.Prelude.UTCTime,
-    vehicleType :: Data.Text.Text
+    vehicleType :: Domain.Types.Station.FRFSVehicleType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)

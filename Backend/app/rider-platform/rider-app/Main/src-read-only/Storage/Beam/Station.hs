@@ -22,7 +22,7 @@ data StationT f = StationT
     lat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     lon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     name :: B.C f Kernel.Prelude.Text,
-    vehicleType :: B.C f Kernel.Prelude.Text,
+    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
     merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
