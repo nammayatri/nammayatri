@@ -95,7 +95,7 @@ sendSearchRequestToDrivers searchReq searchTry driverExtraFeeBounds driverPoolCo
             then fromMaybe searchReq $ M.lookup language languageDictionary
             else searchReq
     let entityData = makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.keepHiddenForSeconds searchTry.vehicleVariant needTranslation
-    -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
+    _ <- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData Notify.EmptyDynamicParam
     Notify.sendSearchRequestToDriverNotification searchReq.providerId searchReq.merchantOperatingCityId notificationData
   where
