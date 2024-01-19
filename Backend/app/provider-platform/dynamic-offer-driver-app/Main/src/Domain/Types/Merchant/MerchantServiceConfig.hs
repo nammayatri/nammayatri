@@ -140,6 +140,7 @@ getServiceName osc = case osc.serviceConfig of
     Maps.GoogleConfig _ -> MapsService Maps.Google
     Maps.OSRMConfig _ -> MapsService Maps.OSRM
     Maps.MMIConfig _ -> MapsService Maps.MMI
+    Maps.NextBillionConfig _ -> MapsService Maps.NextBillion
   SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig _ -> SmsService Sms.ExotelSms
     Sms.MyValueFirstConfig _ -> SmsService Sms.MyValueFirst
