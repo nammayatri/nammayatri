@@ -1630,11 +1630,11 @@
     "namma-dsl": {
       "flake": false,
       "locked": {
-        "lastModified": 1704969554,
-        "narHash": "sha256-4XhG4paLeRhevfe35Tbr1RPS1CxisLhQWucIiVmbsk4=",
+        "lastModified": 1705908582,
+        "narHash": "sha256-3ww2XPywnL2enQUriztsPFilXhy/lfsddysNoZuTeTg=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "99ea894ee5879bfef574f850dc64f99c2a953d99",
+        "rev": "7e15a9914bae63c4fc44ba209a135933f6fe5b2d",
         "type": "github"
       },
       "original": {
@@ -3066,11 +3066,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1705687761,
-        "narHash": "sha256-Eb3lRacbmtxIeyHvHXtV5U8V46uPu4l8qMpmksBRM5E=",
+        "lastModified": 1705925027,
+        "narHash": "sha256-tJsjyZGGbZe40Ed5iCXTtxI8eMf7aDkD9dmyERQU9zY=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "253889c585e29df68273f12527fde78f0aa0292d",
+        "rev": "08eba04877444899fa9beaa014637fc9feb75f57",
         "type": "github"
       },
       "original": {
