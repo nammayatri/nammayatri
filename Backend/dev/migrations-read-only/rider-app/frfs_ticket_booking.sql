@@ -443,3 +443,60 @@ ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN rider_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN stations_json text NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;

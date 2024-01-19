@@ -7,6 +7,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -24,6 +25,12 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ()
 createMany = traverse_ createWithKV
+
+findAllByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAllByRiderId (Kernel.Types.Id.Id riderId) = do
+  findAllWithKV
+    [ Se.Is Beam.riderId $ Se.Eq riderId
+    ]
 
 findAllByStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do
@@ -66,6 +73,8 @@ updateByPrimaryKey Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..} = do
       Se.Set Beam.providerName $ providerName,
       Se.Set Beam.quantity $ quantity,
       Se.Set Beam.quoteId $ (Kernel.Types.Id.getId quoteId),
+      Se.Set Beam.riderId $ (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.stationsJson $ stationsJson,
       Se.Set Beam.status $ status,
       Se.Set Beam.toStationId $ (Kernel.Types.Id.getId toStationId),
       Se.Set Beam.validTill $ validTill,
@@ -97,6 +106,8 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             providerName = providerName,
             quantity = quantity,
             quoteId = Kernel.Types.Id.Id quoteId,
+            riderId = Kernel.Types.Id.Id riderId,
+            stationsJson = stationsJson,
             status = status,
             toStationId = Kernel.Types.Id.Id toStationId,
             validTill = validTill,
@@ -122,6 +133,8 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.providerName = providerName,
         Beam.quantity = quantity,
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
+        Beam.riderId = Kernel.Types.Id.getId riderId,
+        Beam.stationsJson = stationsJson,
         Beam.status = status,
         Beam.toStationId = Kernel.Types.Id.getId toStationId,
         Beam.validTill = validTill,

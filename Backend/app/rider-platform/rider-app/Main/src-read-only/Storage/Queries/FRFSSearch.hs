@@ -6,6 +6,7 @@ module Storage.Queries.FRFSSearch where
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -49,6 +50,7 @@ updateByPrimaryKey Domain.Types.FRFSSearch.FRFSSearch {..} = do
   updateWithKV
     [ Se.Set Beam.fromStationId $ (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.quantity $ quantity,
+      Se.Set Beam.riderId $ (Kernel.Types.Id.getId riderId),
       Se.Set Beam.toStationId $ (Kernel.Types.Id.getId toStationId),
       Se.Set Beam.vehicleType $ vehicleType,
       Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
@@ -69,6 +71,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
           { fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
             quantity = quantity,
+            riderId = Kernel.Types.Id.Id riderId,
             toStationId = Kernel.Types.Id.Id toStationId,
             vehicleType = vehicleType,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -83,6 +86,7 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
       { Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.quantity = quantity,
+        Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.toStationId = Kernel.Types.Id.getId toStationId,
         Beam.vehicleType = vehicleType,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

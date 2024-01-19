@@ -80,7 +80,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     quantity :: Kernel.Prelude.Int,
     stations :: [API.Types.UI.FRFSTicketService.FRFSStationAPI],
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
-    ticket :: [API.Types.UI.FRFSTicketService.FRFSTicketAPI],
+    tickets :: [API.Types.UI.FRFSTicketService.FRFSTicketAPI],
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Domain.Types.Station.FRFSVehicleType
   }
