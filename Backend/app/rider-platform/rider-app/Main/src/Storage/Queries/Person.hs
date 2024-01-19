@@ -393,7 +393,8 @@ instance ToTType' BeamP.Person Person where
         BeamP.triggerSupport = triggerSupport,
         BeamP.hasCompletedSafetySetup = hasCompletedSafetySetup,
         BeamP.registrationLat = registrationLat,
-        BeamP.registrationLon = registrationLon
+        BeamP.registrationLon = registrationLon,
+        BeamP.followsRide = followsRide
       }
 
 updateEmergencyInfo ::
@@ -413,4 +414,13 @@ updateEmergencyInfo (Id personId) shareEmergencyContacts triggerSupport nightSaf
         <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
         <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup]
     )
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateFollowsRide :: MonadFlow m => Id Person -> Bool -> m ()
+updateFollowsRide (Id personId) followsRide = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamP.followsRide followsRide,
+      Se.Set BeamP.updatedAt now
+    ]
     [Se.Is BeamP.id (Se.Eq personId)]

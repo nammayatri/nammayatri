@@ -46,6 +46,7 @@ import Environment ()
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -255,7 +256,7 @@ data BreakupPriceInfo = BreakupPriceInfo
   }
 
 onUpdate ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
@@ -336,6 +337,7 @@ onUpdate ValidatedRideStartedReq {..} = do
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
   _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
+  fork "notify emergency contacts" $ Notify.notifyEmergencyContacts booking ride
   Notify.notifyOnRideStarted booking ride
 onUpdate ValidatedRideCompletedReq {..} = do
   frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) TripEnd

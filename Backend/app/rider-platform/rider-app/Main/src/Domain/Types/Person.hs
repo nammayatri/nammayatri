@@ -104,7 +104,8 @@ data PersonE e = Person
     triggerSupport :: Bool,
     hasCompletedSafetySetup :: Bool,
     registrationLat :: Maybe Double,
-    registrationLon :: Maybe Double
+    registrationLon :: Maybe Double,
+    followsRide :: Bool
   }
   deriving (Generic)
 
@@ -147,7 +148,8 @@ data PersonAPIEntity = PersonAPIEntity
     hasCompletedSafetySetup :: Bool,
     enableLocalPoliceSupport :: Maybe Bool,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    followsRide :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
