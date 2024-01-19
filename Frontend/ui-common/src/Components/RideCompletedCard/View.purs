@@ -1,8 +1,8 @@
 module Components.RideCompletedCard.View where
 
-import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..))
+import Components.RideCompletedCard.Controller (Config, Action(..), Theme(..), RideCompletedElements(..), RentalRowView(..))
 
-import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView)
+import PrestoDOM ( Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..), singleLine, scrollView, background, clickable, color, cornerRadius, disableClickFeedback, ellipsize, fontStyle, gradient, gravity, height, id, imageView, imageWithFallback, lineHeight, linearLayout, margin, onClick, alpha, orientation, padding, relativeLayout, stroke, text, textFromHtml, textSize, textView, url, visibility, webView, weight, width, layoutGravity, accessibility, accessibilityHint, afterRender, alignParentBottom, onAnimationEnd, scrollBarY, lottieAnimationView, Prop)
 import Components.Banner.View as Banner
 import Components.Banner as BannerConfig
 import Data.Functor (map)
@@ -13,18 +13,16 @@ import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (*
 import Common.Styles.Colors as Color
 import Components.SelectListModal as CancelRidePopUp
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Data.Array (mapWithIndex, length, (!!), null)
+import Data.Array (mapWithIndex, length, (!!), null, any)
 import Engineering.Helpers.Commons (flowRunner, os, safeMarginBottom, screenWidth, getExpiryTime, safeMarginTop, screenHeight, getNewIDWithTag)
 import Components.PrimaryButton as PrimaryButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Properties (cornerRadii)
-import Language.Types (STR(..))
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), RentalBookingConfig)
 import Font.Style as FontStyle
 import Font.Size as FontSize
 import Halogen.VDom.DOM.Prop (Prop)
 import Components.PopUpModal as PopUpModal
-import Language.Strings (getString)
 import JBridge as JB
 import Data.Function.Uncurried (runFn1)
 import Mobility.Prelude
@@ -229,24 +227,36 @@ bottomCardView config push =
 
 customerSideBottomCardsView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 customerSideBottomCardsView config push = 
-  scrollView[
-    width MATCH_PARENT,
-    height $ if os == "IOS" then getBottomCardHeight "topViewId" else WRAP_CONTENT
-  ][
-    linearLayout[
-      height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , padding $ Padding 16 16 16 16
-    , background Color.white900
-    , gravity CENTER
+  let bottomCardPadding = if config.showRentalRideDetails then Padding 8 16 8 16 else Padding 16 16 16 16
+  in 
+    scrollView[
+      width MATCH_PARENT,
+      height $ if os == "IOS" then getBottomCardHeight "topViewId" else WRAP_CONTENT
     ][
-      customerIssueView config push
-    , customerRatingDriverView config push
-    , needHelpPillView config push
+      linearLayout[
+        height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , padding bottomCardPadding
+      , background Color.white900
+      , gravity CENTER
+      ]
+      [ if config.showRentalRideDetails then rentalTripDetailsView config push
+        else rideCustomerExperienceView config push 
+      ]
     ]
-  ]
 
+rideCustomerExperienceView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rideCustomerExperienceView config push =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  ]
+  [ customerIssueView config push
+  , customerRatingDriverView config push
+  , needHelpPillView config push
+  ]
 
 ---------------------------------------------------- customerIssueView ------------------------------------------------------------------------------------------------------------------------------------------
 customerIssueView :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -666,6 +676,124 @@ contactSupportPopUpView config push =
     height MATCH_PARENT
   ][PopUpModal.view (push <<< ContactSupportPopUpAC) config.contactSupportPopUpConfig] 
 
+---------------------------------------------- (Driver Card 7) rentalRideDetailsView  ------------------------------------------------------------------------------------------------------------------------------------------
+
+rentalTripDetailsView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+rentalTripDetailsView config push =
+  let rentalRowDetails = config.rentalRowDetails
+  in 
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ]
+    [ textView $
+      [ text rentalRowDetails.rideDetailsTitle
+      , color Color.black800
+      , margin $ MarginVertical 4 8
+      ] <> FontStyle.body1 TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , cornerRadius 9.0
+      , background Color.white900
+      , padding $ Padding 16 16 16 16
+      , stroke $ "1,"<> Color.grey900
+      , orientation VERTICAL
+      ] 
+      [ rentalTripRowView config push RideTime
+      , rentalTripRowView config push RideDistance
+      , separatorView
+      , rentalTripRowView config push RideStartedAt
+      , rentalTripRowView config push RideEndedAt
+      ]
+    , textView $
+      [ text rentalRowDetails.fareUpdateTitle
+      , color Color.black800
+      , margin $ MarginVertical 24 8
+      ] <> FontStyle.body1 TypoGraphy
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , cornerRadius 9.0
+      , background Color.white900
+      , padding $ Padding 16 16 16 16
+      , stroke $ "1,"<> Color.grey900
+      , orientation VERTICAL
+      ]
+      [ rentalTripRowView config push EstimatedFare
+      , rentalTripRowView config push ExtraTimePrice
+      , separatorView
+      , rentalTripRowView config push TotalFare
+      ]
+    ]
+
+rentalTripRowView :: forall w. Config -> (Action -> Effect Unit) -> RentalRowView -> PrestoDOM (Effect Unit) w
+rentalTripRowView config push description =
+  let rentalBookingData = config.rentalBookingData
+  in 
+    linearLayout 
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , margin $ MarginTop if (description == RideTime || description == EstimatedFare) then 0 else 16
+    ] 
+    [ textView $ [
+        text $ showTitleAndValue config true description
+      , weight 0.1
+      , gravity LEFT
+      ] <> FontStyle.body1 TypoGraphy
+    , linearLayout [
+        height MATCH_PARENT
+      , width WRAP_CONTENT
+      , gravity RIGHT
+      ] 
+      [ textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , ellipsize true
+        , singleLine true
+        ] <> rideDurationOrDistanceProp config description 
+          <> FontStyle.body1 TypoGraphy
+      , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ showTitleAndValue config false description
+        , color Color.black700
+        , ellipsize true
+        , singleLine true
+        ] <> FontStyle.body1 TypoGraphy
+      ]
+    ]
+    where
+      showTitleAndValue :: Config -> Boolean -> RentalRowView -> String
+      showTitleAndValue config isTitle description =
+        let rentalBookingData = config.rentalBookingData
+            rentalRowDetails = config.rentalRowDetails
+        in 
+          case description of
+            RideTime -> if isTitle then rentalRowDetails.rideTime else " / " <> show rentalBookingData.baseDuration <> "hr"
+            RideDistance -> if isTitle then rentalRowDetails.rideDistance else " / " <> show rentalBookingData.baseDistance <> "km"
+            RideStartedAt -> if isTitle then rentalRowDetails.rideStartedAt else rentalBookingData.startOdometer <> " km"
+            RideEndedAt -> if isTitle then rentalRowDetails.rideEndedAt else rentalBookingData.endOdometer <> " km"
+            EstimatedFare -> if isTitle then rentalRowDetails.estimatedFare else "₹" <> show rentalBookingData.estimatedFare
+            ExtraTimePrice -> if isTitle then rentalRowDetails.extraTimePrice else "₹" <> show (rentalBookingData.finalFare - rentalBookingData.estimatedFare)
+            TotalFare -> if isTitle then rentalRowDetails.totalFare else "₹" <>  show rentalBookingData.finalFare
+            _ -> ""
+
+      rideDurationOrDistanceProp :: Config -> RentalRowView -> Array (Prop (Effect Unit))
+      rideDurationOrDistanceProp config description =
+        let rentalBookingData = config.rentalBookingData
+        in 
+          case description of
+            RideTime -> [text $ show rentalBookingData.finalDuration <> "hr"] <> showRedOrBlackColor (rentalBookingData.finalDuration > rentalBookingData.baseDuration)
+            RideDistance -> [text $ show rentalBookingData.finalDistance <> "km"] <> showRedOrBlackColor (rentalBookingData.finalDistance > rentalBookingData.baseDistance)
+            _ -> if any (_ == description) [RideStartedAt, RideEndedAt] then [color Color.black600] else []
+
+      showRedOrBlackColor :: Boolean -> Array (Prop (Effect Unit))
+      showRedOrBlackColor isRed =
+        if isRed then [color Color.red] else [color Color.black900]
+
 --------------------------------- Helpers ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 commonTextView :: forall w. Config -> (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> PrestoDOM (Effect Unit) w
 commonTextView config push text' color' fontStyle marginTop =
@@ -719,3 +847,12 @@ lottieQRView config push =
       , width MATCH_PARENT
       , onAnimationEnd (\_-> void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig{ rawJson = config.lottieQRAnim.url , lottieId = (EHC.getNewIDWithTag "QRLottie"), speed = 1.0 , scaleType = "CENTER_CROP"})(const UpiQrRendered)
       ]
+
+separatorView :: forall w. PrestoDOM (Effect Unit) w
+separatorView =
+  linearLayout
+    [ height $ V 1
+    , width MATCH_PARENT
+    , margin $ MarginTop 16
+    , background Color.grey900
+    ][]
