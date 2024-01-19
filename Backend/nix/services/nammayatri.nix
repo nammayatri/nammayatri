@@ -77,6 +77,24 @@ in
           cabalExecutables);
       };
 
+      # External nammayatri processes (ie., not in this repo)
+      externalProcesses = {
+        processes = {
+          beckn-gateway = {
+            command = ny.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
+            working_dir = "Backend";
+          };
+          mock-registry = {
+            command = ny.config.haskellProjects.default.outputs.finalPackages.mock-registry;
+            working_dir = "Backend";
+          };
+          location-tracking-service = {
+            command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
+            working_dir = "Backend";
+          };
+        };
+      };
+
       initProcesses = {
         processes = {
           nammayatri-init = {
@@ -116,6 +134,7 @@ in
         imports = [
           initProcesses
           haskellProcesses
+          externalProcesses
         ];
         processes = {
           kafka-consumers-exe = {
