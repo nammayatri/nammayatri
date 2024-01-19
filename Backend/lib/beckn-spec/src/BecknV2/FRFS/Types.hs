@@ -1323,6 +1323,8 @@ data Stop = Stop
     stopInstructions :: Maybe Descriptor,
     -- |
     stopLocation :: Maybe Location,
+    -- |
+    stopParentStopId :: Maybe Text,
     -- | The type of stop. Allowed values of this property can be defined by the network policy.
     stopType :: Maybe Text
   }
@@ -1346,6 +1348,7 @@ optionsStop =
         ("stopId", "id"),
         ("stopInstructions", "instructions"),
         ("stopLocation", "location"),
+        ("stopParentStopId", "parent_stop_id"),
         ("stopType", "type")
       ]
 

@@ -78,14 +78,16 @@ tfStops fromStation toStation =
           stopId = Nothing,
           stopInstructions = Nothing,
           stopLocation = tfLocation $ fromStation,
-          stopType = Just $ encodeToText Spec.START
+          stopType = Just $ encodeToText Spec.START,
+          stopParentStopId = Nothing
         },
       Spec.Stop
         { stopAuthorization = Nothing,
           stopId = Nothing,
           stopInstructions = Nothing,
           stopLocation = tfLocation $ toStation,
-          stopType = Just $ encodeToText Spec.END
+          stopType = Just $ encodeToText Spec.END,
+          stopParentStopId = Nothing
         }
     ]
 
