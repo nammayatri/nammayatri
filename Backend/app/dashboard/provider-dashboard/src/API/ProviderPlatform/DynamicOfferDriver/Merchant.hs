@@ -55,6 +55,7 @@ type API =
            :<|> VerificationServiceConfigUpdateAPI
            :<|> CreateFPDriverExtraFee
            :<|> UpdateFPDriverExtraFee
+           :<|> UpdateFPPerExtraKmRate
            :<|> SchedulerTriggerAPI
        )
 
@@ -134,6 +135,10 @@ type UpdateFPDriverExtraFee =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_FP_DRIVER_EXTRA_FEE
     :> Common.UpdateFPDriverExtraFee
 
+type UpdateFPPerExtraKmRate =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_FP_PER_EXTRA_KM_RATE
+    :> Common.UpdateFPPerExtraKmRate
+
 type SchedulerTriggerAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SCHEDULER_TRIGGER
     :> Common.SchedulerTriggerAPI
@@ -159,6 +164,7 @@ handler merchantId city =
     :<|> verificationServiceConfigUpdate merchantId city
     :<|> createFPDriverExtraFee merchantId city
     :<|> updateFPDriverExtraFee merchantId city
+    :<|> updateFPPerExtraKmRate merchantId city
     :<|> schedulerTrigger merchantId city
 
 buildTransaction ::
@@ -399,3 +405,9 @@ updateFPDriverExtraFee merchantShortId opCity apiTokenInfo farePolicyId startDis
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.UpdateFPDriverExtraFeeEndpoint apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFPDriverExtraFee) farePolicyId startDistance req
+
+updateFPPerExtraKmRate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.FarePolicy -> Common.UpdateFPPerExtraKmRateReq -> FlowHandler APISuccess
+updateFPPerExtraKmRate merchantShortId opCity apiTokenInfo farePolicyId req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpdateFPPerExtraKmRate apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFPPerExtraKmRate) farePolicyId req

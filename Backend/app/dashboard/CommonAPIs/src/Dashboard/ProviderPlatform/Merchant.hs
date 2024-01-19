@@ -629,6 +629,24 @@ type UpdateFPDriverExtraFee =
     :> ReqBody '[JSON] CreateFPDriverExtraFeeReq
     :> Post '[JSON] APISuccess
 
+type UpdateFPPerExtraKmRate =
+  "config"
+    :> "farePolicy"
+    :> Capture "farePolicyId" (Id Common.FarePolicy)
+    :> "perExtraKmRate"
+    :> "update"
+    :> ReqBody '[JSON] UpdateFPPerExtraKmRateReq
+    :> Post '[JSON] APISuccess
+
+newtype UpdateFPPerExtraKmRateReq = UpdateFPPerExtraKmRateReq
+  { perExtraKmRate :: HighPrecMoney
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpdateFPPerExtraKmRateReq where
+  hideSecrets = identity
+
 ---- generic trigger for schedulers ----
 
 type SchedulerTriggerAPI =
