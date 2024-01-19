@@ -19,7 +19,6 @@
               ../../dev/local-testing-data/public-transport-rider-platform.sql
               ../../dev/sql-seed/mock-registry-seed.sql
               ../../dev/local-testing-data/mock-registry.sql
-              ../../dev/sql-seed/scheduler-example-seed.sql
               ../../dev/sql-seed/dynamic-offer-driver-app-seed.sql
               ../../dev/local-testing-data/dynamic-offer-driver-app.sql
               ../../dev/sql-seed/rider-dashboard-seed.sql
