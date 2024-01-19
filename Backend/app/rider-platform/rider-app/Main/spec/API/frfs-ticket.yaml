@@ -67,8 +67,8 @@ types:
   FRFSStationAPI:
     name: Text
     code: Text
-    lat: Double
-    lon: Double
+    lat: Maybe Double
+    lon: Maybe Double
     address: Maybe Text
     stationType: Maybe StationType
     color: Maybe Text
@@ -78,7 +78,7 @@ apis:
   - GET:
       endpoint: /frfs/stations
       auth: TokenAuth
-      query:
+      mandatoryQuery:
         vehicleType: FRFSVehicleType
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
@@ -87,7 +87,7 @@ apis:
   - POST:
       endpoint: /frfs/search
       auth: TokenAuth
-      query:
+      mandatoryQuery:
         vehicleType: FRFSVehicleType
       request:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
