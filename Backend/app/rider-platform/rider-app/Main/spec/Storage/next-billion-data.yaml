@@ -1,0 +1,15 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SearchRequest: Domain.Types.SearchRequest
+  NextBillionData: Domain.Types.NextBillionData
+
+NextBillionData:
+  tableName: next_billion_data
+
+  fields:
+    searchRequestId: Id SearchRequest
+    routes: "[Text]"
+
+  constraints:
+    searchRequestId: PrimaryKey
