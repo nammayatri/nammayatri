@@ -76,6 +76,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("BecknRequest" :: Text) [(obj, val, entryId, BecknRequestObject obj) | (CreateDBCommand entryId _ _ _ _ (BecknRequestObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Location" :: Text) [(obj, val, entryId, LocationObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("LocationMapping" :: Text) [(obj, val, entryId, LocationMappingObject obj) | (CreateDBCommand entryId _ _ _ _ (LocationMappingObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("NextBillionData" :: Text) [(obj, val, entryId, NextBillionDataObject obj) | (CreateDBCommand entryId _ _ _ _ (NextBillionDataObject obj), val) <- cmds]
   where
     runCreate dbConf _ model object = do
       let dbObjects = map (\(dbObject, _, _, _) -> dbObject) object

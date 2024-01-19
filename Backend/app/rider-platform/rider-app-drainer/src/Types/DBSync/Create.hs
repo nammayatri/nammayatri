@@ -39,6 +39,7 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantPaymentMethod as Merc
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
+import qualified "rider-app" Storage.Beam.NextBillionData as NextBillionData
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
 import qualified "rider-app" Storage.Beam.Payment ()
 import qualified "rider-app" Storage.Beam.Person as Person
@@ -106,6 +107,7 @@ data DBCreateObject
   | BecknRequestObject BecknRequest.BecknRequest
   | LocationObject Location.Location
   | LocationMappingObject LocationMapping.LocationMapping
+  | NextBillionDataObject NextBillionData.NextBillionData
   deriving (Generic, FromJSON, ToJSON, Show)
 
 modelName :: DBCreateObject -> Text
@@ -158,3 +160,4 @@ modelName (HotSpotConfigObject _) = "HotSpotConfig"
 modelName (BecknRequestObject _) = "BecknRequest"
 modelName (LocationObject _) = "Location"
 modelName (LocationMappingObject _) = "LocationMapping"
+modelName (NextBillionDataObject _) = "NextBillionData"
