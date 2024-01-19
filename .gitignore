@@ -10,6 +10,8 @@ result-*
 # Backend ignores
 dist-newstyle
 /data
+# process-compose log files
+*.log
 
 # Frontend ignores
 Frontend/.DS_Store
