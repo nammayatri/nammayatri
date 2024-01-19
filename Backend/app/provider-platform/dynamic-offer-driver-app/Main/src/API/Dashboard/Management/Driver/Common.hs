@@ -48,7 +48,7 @@ type API =
            :<|> Common.UpdateDriverNameAPI
            :<|> Common.DeleteRCAPI
            :<|> Common.ClearOnRideStuckDriversAPI
-           :<|> Common.SendDummyNotificationToDriverAPI
+           :<|> Common.SendDummyRideRequestToDriverAPI
            :<|> Common.ChangeOperatingCityAPI
        )
 
@@ -86,7 +86,7 @@ handler merchantId city =
     :<|> updateDriverName merchantId city
     :<|> deleteRC merchantId city
     :<|> clearOnRideStuckDrivers merchantId city
-    :<|> sendDummyNotificationToDriver merchantId city
+    :<|> sendDummyRideRequestToDriver merchantId city
     :<|> changeOperatingCity merchantId city
 
 driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> FlowHandler Common.DriverDocumentsInfoRes
@@ -147,8 +147,8 @@ deleteRC merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.deleteRC
 clearOnRideStuckDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> FlowHandler Common.ClearOnRideStuckDriversRes
 clearOnRideStuckDrivers merchantShortId opCity = withFlowHandlerAPI . DDriver.clearOnRideStuckDrivers merchantShortId opCity
 
-sendDummyNotificationToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
-sendDummyNotificationToDriver merchantShortId opCity = withFlowHandlerAPI . DDN.sendDummyNotificationToDriver merchantShortId opCity
+sendDummyRideRequestToDriver :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> FlowHandler APISuccess
+sendDummyRideRequestToDriver merchantShortId opCity = withFlowHandlerAPI . DDN.sendDummyRideRequestToDriver merchantShortId opCity
 
 changeOperatingCity :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.ChangeOperatingCityReq -> FlowHandler APISuccess
 changeOperatingCity merchantShortId opCity driverId_ = withFlowHandlerAPI . DDriver.changeOperatingCity merchantShortId opCity driverId_

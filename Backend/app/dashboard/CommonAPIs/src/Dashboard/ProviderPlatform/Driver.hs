@@ -61,7 +61,7 @@ data DriverEndpoint
   | SetVehicleDriverRcStatusForFleetEndpoint
   | FleetUnlinkVehicleEndpoint
   | SendMessageToDriverViaDashboardEndPoint
-  | SendDummyNotificationToDriverViaDashboardEndPoint
+  | SendDummyRideRequestToDriverViaDashboardEndPoint
   | ChangeOperatingCityEndpoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
@@ -1007,11 +1007,11 @@ type GetFleetVehicleAssociationAPI =
 --   deriving (PrettyShow) via Showable DriverMode
 
 ---------------------------------------------------------
--- Send dummy notification to driver ---------------------
+-- Send dummy ride request to driver ---------------------
 
-type SendDummyNotificationToDriverAPI =
+type SendDummyRideRequestToDriverAPI =
   Capture "driverId" (Id Driver)
-    :> "sendDummyNotification"
+    :> "sendDummyNotification" -- TODO: refactor to sendDummyRideRequestToDriver
     :> Post '[JSON] APISuccess
 
 -- change operating city Api ------------------------

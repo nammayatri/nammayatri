@@ -22,6 +22,7 @@ module Storage.Queries.Merchant.TransporterConfig
 where
 
 import qualified Data.Aeson as A
+import Domain.Types.Location (dummyFromLocationData, dummyToLocationData)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
 import Kernel.Beam.Functions
@@ -139,6 +140,8 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             badDebtTimeThreshold = badDebtTimeThreshold,
             driverAutoPayExecutionTimeFallBack = secondsToNominalDiffTime driverAutoPayExecutionTimeFallBack,
             orderAndNotificationStatusCheckFallBackTime = secondsToNominalDiffTime orderAndNotificationStatusCheckFallBackTime,
+            dummyFromLocation = fromMaybe dummyFromLocationData (valueToMaybe =<< dummyFromLocation),
+            dummyToLocation = fromMaybe dummyToLocationData (valueToMaybe =<< dummyToLocation),
             ..
           }
     where
@@ -262,5 +265,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.updatedAt = updatedAt,
         BeamTC.specialDrivers = specialDrivers,
         BeamTC.specialLocationTags = specialLocationTags,
-        BeamTC.kaptureDisposition = kaptureDisposition
+        BeamTC.kaptureDisposition = kaptureDisposition,
+        BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,
+        BeamTC.dummyToLocation = Just $ toJSON dummyToLocation
       }
