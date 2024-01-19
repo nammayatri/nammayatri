@@ -24,6 +24,7 @@ import Kernel.Utils.Common
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 

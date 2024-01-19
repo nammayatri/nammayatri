@@ -40,6 +40,7 @@ import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import qualified ProviderPlatformClient.DynamicOfferDriver.RideBooking as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Storage.Queries.Role as QRole
 import "lib-dashboard" Tools.Auth

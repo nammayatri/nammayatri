@@ -250,7 +250,7 @@ logout tokenInfo = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokensByMerchantIdAndCity personId tokenInfo.merchantId tokenInfo.city
-  (QR.deleteAllByPersonIdAndMerchantIdAndCity person.id tokenInfo.merchantId tokenInfo.city)
+  QR.deleteAllByPersonIdAndMerchantIdAndCity person.id tokenInfo.merchantId tokenInfo.city
   pure $ LogoutRes "Logged out successfully"
 
 logoutAllMerchants ::
@@ -265,7 +265,7 @@ logoutAllMerchants tokenInfo = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   -- this function uses tokens from db, so should be called before transaction
   Auth.cleanCachedTokens personId
-  (QR.deleteAllByPersonId person.id)
+  QR.deleteAllByPersonId person.id
   pure $ LogoutRes "Logged out successfully from all servers"
 
 buildRegistrationToken :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> City.City -> m DR.RegistrationToken

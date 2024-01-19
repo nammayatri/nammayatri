@@ -103,21 +103,19 @@ findAllWithLimitOffset mbLimit mbOffset mbSearchString = do
   res <- L.runDB dbConf $
     L.findRows $
       B.select $
-        B.limit_ (limitVal) $
-          B.offset_ (offsetVal) $
+        B.limit_ limitVal $
+          B.offset_ offsetVal $
             B.orderBy_ (\role -> B.desc_ role.name) $
               B.filter_'
-                ( \(role) ->
+                ( \role ->
                     maybe (B.sqlBool_ $ B.val_ False) (\searchStr -> B.sqlBool_ (role.name `B.like_` B.val_ ("%" <> searchStr <> "%"))) mbSearchString
                 )
                 do
-                  role <- B.all_ (SBC.role SBC.atlasDB)
-                  pure role
+                  B.all_ (SBC.role SBC.atlasDB)
   case res of
     Right res' -> do
       let m' = res'
-      m <- catMaybes <$> mapM fromTType' m'
-      pure m
+      catMaybes <$> mapM fromTType' m'
     Left _ -> pure []
 
 instance FromTType' BeamR.Role Role.Role where

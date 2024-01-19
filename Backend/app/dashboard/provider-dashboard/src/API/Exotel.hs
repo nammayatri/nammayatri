@@ -32,6 +32,7 @@ import qualified ProviderPlatformClient.DynamicOfferDriver.Exotel as Client
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import qualified Storage.Queries.Transaction as QT
 
 type API =

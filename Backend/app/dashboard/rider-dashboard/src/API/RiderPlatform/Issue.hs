@@ -37,6 +37,7 @@ import Kernel.Utils.Error (fromMaybeM)
 import qualified RiderPlatformClient.RiderApp.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
@@ -174,7 +175,7 @@ addAuthorDetails Common.IssueInfoRes {..} = do
   where
     mkAuthorDetail :: Common.IssueReportCommentItem -> Flow Common.IssueReportCommentItem
     mkAuthorDetail Common.IssueReportCommentItem {..} = do
-      author <- Esq.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
+      author <- B.runInReplica (QP.findById $ cast authorDetail.authorId) >>= fromMaybeM (PersonNotFound authorDetail.authorId.getId)
       let authorDetail_ =
             Common.AuthorDetail
               { authorId = cast author.id,
