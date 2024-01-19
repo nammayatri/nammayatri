@@ -308,7 +308,7 @@ view push state =
                   , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
                   ][ 
                     if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
-                  , if isHomeScreenView state then emptyTextView state else mapView push state
+                  , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen"
                     ]
                 , linearLayout
                     [ width MATCH_PARENT
@@ -449,7 +449,6 @@ rideInfoView push state =
   , width MATCH_PARENT
   , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.props.bottomSheetState == STATE_EXPANDED || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
   , clickable isClickable
-  , background $ if state.props.bottomSheetState == STATE_EXPANDED then Color.blackLessTrans else Color.transparent
   , orientation VERTICAL
   ][ (if disableSuggestions state then 
         PrestoAnim.animationSet[] 
@@ -2152,7 +2151,7 @@ rideTrackingView push state =
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     ][ bottomSheetLayout
-                        [ height WRAP_CONTENT
+                        ([ height WRAP_CONTENT
                         , width MATCH_PARENT
                         , background Color.transparent
                         , sheetState state.props.sheetState 
@@ -2161,8 +2160,8 @@ rideTrackingView push state =
                         , peakHeight $ getInfoCardPeekHeight state
                         , halfExpandedRatio $ halfExpanded
                         , orientation VERTICAL
-                        , onStateChanged push $ ScrollStateChanged
-                        ]
+                        ] <> if lowVisionDisability then 
+                            [onStateChanged push $ ScrollStateChanged] else [])
                         [ linearLayout
                             [ height WRAP_CONTENT
                             , width MATCH_PARENT
@@ -3361,6 +3360,7 @@ homeScreenViewV2 push state =
                           , margin $ MarginTop 32 
                           , padding $ PaddingTop 30 
                           , stroke if state.data.config.homeScreen.header.showSeparator then "1," <> Color.borderGreyColor else "0," <> Color.borderGreyColor
+                          , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.grey700]) else (Linear 180.0 [Color.white900 , Color.grey700])
                           ][ scrollView
                               [ height $ if os == "IOS" then (V (getHeightFromPercent 90)) else MATCH_PARENT
                               , width MATCH_PARENT
@@ -3374,7 +3374,7 @@ homeScreenViewV2 push state =
                                     (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
                                       [locationUnserviceableView push state]
                                     else 
-                                      [if isHomeScreenView state then mapView push state else emptyTextView state
+                                      [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state
                                       , if state.data.config.feature.enableZooTicketBookingFlow
                                           then zooTicketBookingBanner state push 
                                           else linearLayout[visibility GONE][]
@@ -3400,7 +3400,6 @@ footerView push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    , gradient if os == "IOS" then (Linear 270.0 [Color.white900 , Color.grey700]) else (Linear 180.0 [Color.white900 , Color.grey700])
     , padding $ Padding 24 5 24 30
     , gravity CENTER
     , accessibilityHint $  getString BOOK_AND_MOVE <>  getString ANYWHERE_IN_THE_CITY
@@ -3711,8 +3710,8 @@ pickupLocationView push state =
             ]
         ]
 
-mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-mapView push state = 
+mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
+mapView push state idTag = 
   let mapDimensions = getMapDimensions state
   in
   relativeLayout
@@ -3723,7 +3722,7 @@ mapView push state =
             ( \action -> do
                 _ <- push action
                 _ <- getCurrentPosition push CurrentLocation
-                _ <- showMap (getNewIDWithTag "CustomerHomeScreenMap") isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
+                _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
                 if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
                 else pure unit
                 case state.props.currentStage of
@@ -3735,7 +3734,7 @@ mapView push state =
         [ height  $ mapDimensions.height
         , width $ mapDimensions.width 
         , accessibility DISABLE_DESCENDANT
-        , id (getNewIDWithTag "CustomerHomeScreenMap")
+        , id (getNewIDWithTag idTag)
         , visibility if state.props.isSrcServiceable then VISIBLE else GONE
         , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
         , clickable $ not isHomeScreenView state 
@@ -3893,8 +3892,6 @@ shimmerView state =
         ]
     ]
 
-  
-
 movingRightArrowView :: forall w. String -> PrestoDOM (Effect Unit) w
 movingRightArrowView viewId =
   lottieAnimationView
@@ -3908,7 +3905,7 @@ movingRightArrowView viewId =
       , gravity CENTER_HORIZONTAL
       , accessibility DISABLE
       ]
-
+      
 suggestedLocationCardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 suggestedLocationCardView push state = 
   let takeValue = if state.props.suggestionsListExpanded then state.data.config.suggestedTripsAndLocationConfig.maxLocationsToBeShown else state.data.config.suggestedTripsAndLocationConfig.minLocationsToBeShown
@@ -3980,7 +3977,7 @@ suggestedDestinationCard push state index suggestion =
           , layoutGravity "center_vertical"
           , gravity CENTER
           , background Color.yellow900
-          , cornerRadius 22.5
+          , cornerRadius if os == "IOS" then 20.0 else 22.5
           ][ movingRightArrowView ("movingArrowView" <> show index)]
     ]
 
@@ -4054,7 +4051,7 @@ repeatRideCard push state index trip =
           , layoutGravity "center_vertical"
           , gravity CENTER
           , background Color.yellow900
-          , cornerRadius 22.5
+          , cornerRadius if os == "IOS" then 20.0 else 22.5
           ][ movingRightArrowView ("movingArrowView" <> show index)]
     ]
   where

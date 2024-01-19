@@ -57,6 +57,8 @@ import Language.Strings( getString)
 import Components.IssueList as IssueList
 import Data.Function.Uncurried (runFn2)
 import Locale.Utils
+import Screens.HelpAndSupportScreen.Transformer
+
 
 instance showAction :: Show Action where
     show _ = ""
@@ -299,124 +301,6 @@ eval (FetchIssueListApiCall issueList) state = do
      let apiIssueList = getApiIssueList issueList
          updatedResolvedIssueList = getUpdatedIssueList ["CLOSED"] apiIssueList
          updatedOngoingIssueList =  getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] apiIssueList
-     continue state {data {issueList =apiIssueList, resolvedIssueList =  updatedResolvedIssueList , ongoingIssueList =  updatedOngoingIssueList}}
+     continue state {data {issueList =apiIssueList, resolvedIssueList =  updatedResolvedIssueList , ongoingIssueList =  updatedOngoingIssueList}, props {needIssueListApiCall = false}}
 eval _ state = continue state
 
-myRideListTransform :: HelpAndSupportScreenState -> Array RideBookingRes -> Array HelpAndSupportScreenState
-myRideListTransform state listRes = filter (\item -> (item.data.status == "COMPLETED")) (map(\(RideBookingRes ride) ->
-    let
-    (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
-    baseDistanceVal = (getKmMeter (fromMaybe 0 (rideDetails.chargeableRideDistance)))
-    updatedFareList = getFaresList ride.fareBreakup baseDistanceVal
-    config = getAppConfig appConfig
-      in  {
-        data:{
-          date : (convertUTCtoISC (ride.createdAt) "ddd, Do MMM"),
-          time : (convertUTCtoISC (fromMaybe (ride.createdAt) ride.rideStartTime ) "h:mm A"),
-          source: decodeAddress (Booking ride.fromLocation),
-          destination: (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
-          rating: (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
-          driverName :((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName) ,
-          totalAmount : (config.currency <> " " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
-          status : (ride.status),
-          isNull : false,
-          rideStartTime : (convertUTCtoISC (fromMaybe "" ride.rideStartTime )"h:mm A"),
-          rideEndTime : (convertUTCtoISC (fromMaybe "" ride.rideEndTime )"h:mm A"),
-          vehicleNumber : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleNumber),
-          rideId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._id),
-          tripId : ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._shortRideId),
-          bookingId : ride.id,
-          faresList : updatedFareList,
-          config : config,
-          email : "",
-          description : "",
-          accountStatus : ACTIVE,
-          vehicleVariant : fetchVehicleVariant ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^._vehicleVariant),
-          logField : empty,
-          issueList : [],
-          resolvedIssueList : [],
-          ongoingIssueList : [],
-          issueListType : HELP_AND_SUPPORT_SCREEN_MODAL,
-          categories : state.data.categories,
-          merchantExoPhone : ride.merchantExoPhone
-          },
-      props : {
-        apiFailure : false
-      , isCallConfirmation : false
-      , showDeleteAccountView : false
-      , btnActive : false
-      }
-      }) listRes)
-
-
-dummyFareBreakUp :: FareBreakupAPIEntity
-dummyFareBreakUp = FareBreakupAPIEntity{amount: 0,description: ""}
-
-isEmailPresent :: LazyCheck -> Boolean
-isEmailPresent _ = not ( getValueToLocalStore USER_EMAIL == "__failed" || getValueToLocalStore USER_EMAIL == "(null)" )
-
-getApiIssueList :: Array IssueReportCustomerListItem -> Array IssueInfo
-getApiIssueList issueList = (map (\(IssueReportCustomerListItem issue) -> {
-   issueReportId : issue.issueReportId,
-   status : issue.status,
-   category : if (getLanguageLocale languageKey == "EN_US")
-                then
-                  joinWith " " (map (\catName ->
-                    let { before, after } = splitAt 1 catName
-                    in (toUpper before <> after)
-                  ) (split (Pattern " ") issue.category))
-                else issue.category,
-   createdAt : getExactTime (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") (issue.createdAt)) issue.createdAt
-}) issueList)
-
-getExactTime :: Int -> String -> String 
-getExactTime sec createdAt = 
-   if sec >= 86400 then convertUTCtoISC createdAt "DD/MM/YYYY"
-   else 
-    let {base , suffix}=    if sec >= 3600 then {base : sec / 3600, suffix : getString HOURS_AGO}
-                            else if sec >= 60 then {base : sec / 60,  suffix : getString MIN_AGO}
-                            else {base: sec , suffix: getString SEC_AGO}
-    in toStringJSON (base) <> " " <> suffix
-
-getUpdatedIssueList :: Array String -> Array IssueInfo -> Array IssueInfo
-getUpdatedIssueList statusList list = filter (\(issue) -> elem issue.status statusList ) list 
-
-topicsList :: HelpAndSupportScreenState -> Array CategoryListType
-topicsList state =  (if state.data.config.feature.enableSelfServe 
-  then 
-    state.data.categories 
-  else 
-    [{ categoryAction : "CONTACT_US"
-    , categoryName : getString FOR_OTHER_ISSUES_WRITE_TO_US
-    , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_clip_board"
-    , categoryId : "5"
-    },
-    { categoryAction : "CALL_SUPPORT"
-    , categoryName : getString CONTACT_SUPPORT
-    , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_help"
-    , categoryId : "6"
-    }]
-  ) <> if state.data.config.showDeleteAccount 
-          then 
-            [{ categoryAction : "DELETE_ACCOUNT"
-            , categoryName : getString REQUEST_TO_DELETE_ACCOUNT
-            , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_delete_account"
-            , categoryId : "7"
-            }] 
-          else 
-            []
-
-reportsList :: HelpAndSupportScreenState -> Array CategoryListType
-reportsList state = []
-  <> if null state.data.ongoingIssueList then [] else [
-        { categoryAction : "REPORTED"
-        , categoryName : getString REPORTED <> " : " <> (toStringJSON (DA.length (state.data.ongoingIssueList)))
-        , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_reported"
-        , categoryId : "1"
-        }]
-  <> if null state.data.resolvedIssueList then [] else [
-        { categoryAction : "CLOSED"
-        , categoryName : getString RESOLVED <> " : " <> (toStringJSON (DA.length (state.data.resolvedIssueList)))
-        , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_resolved"
-        , categoryId : "2"
-        }]
