@@ -31,7 +31,7 @@ view push config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , cornerRadius 12.0
+    , cornerRadius config.cornerRadius
     , margin config.margin
     , padding config.padding
     , background config.backgroundColor
@@ -104,7 +104,7 @@ view push config =
             [
               height config.imageHeight
             , width config.imageWidth
-            , margin $ MarginRight 5
+            , margin $ config.imageMargin
             , imageWithFallback config.imageUrl
             ]]
     ]

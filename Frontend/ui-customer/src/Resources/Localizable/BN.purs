@@ -766,3 +766,5 @@ getBN stringKey =
         PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER -> "ড্রাইভারকে কল করতে রাইড নির্বাচন করুন"
         ADD_IMAGE_S -> "ছবি যোগ করুন"
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "আপনার কাছে ইতিমধ্যে একটি সক্রিয় রাইড আছে"
+        CONFIRM_STOP_LOCATION -> "Confirm stop location"
+        CONFIRM_DROP -> "Confirm Drop"
