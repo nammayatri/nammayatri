@@ -104,6 +104,7 @@ library
       Beckn.ACL.Cancel
       Beckn.ACL.Common
       Beckn.ACL.Confirm
+      Beckn.ACL.FRFS.Confirm
       Beckn.ACL.FRFS.Init
       Beckn.ACL.FRFS.OnConfirm
       Beckn.ACL.FRFS.OnInit
