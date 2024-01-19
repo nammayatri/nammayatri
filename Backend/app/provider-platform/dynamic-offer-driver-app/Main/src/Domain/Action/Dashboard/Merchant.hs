@@ -32,6 +32,7 @@ module Domain.Action.Dashboard.Merchant
     verificationServiceConfigUpdate,
     createFPDriverExtraFee,
     updateFPDriverExtraFee,
+    updateFPPerExtraKmRate,
     schedulerTrigger,
   )
 where
@@ -74,6 +75,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as CQODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -697,5 +699,12 @@ updateFPDriverExtraFee :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.F
 updateFPDriverExtraFee _ _ farePolicyId startDistance req = do
   _ <- QFPEFB.findByFarePolicyIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy with given id and startDistance not found")
   _ <- QFPEFB.update farePolicyId startDistance req.minFee req.maxFee
+  CQFP.clearCacheById farePolicyId
+  pure Success
+
+updateFPPerExtraKmRate :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFPPerExtraKmRateReq -> Flow APISuccess
+updateFPPerExtraKmRate _ _ farePolicyId req = do
+  _ <- QFPPDEKM.findById' farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  _ <- QFPPDEKM.updatePerExtraKmRate farePolicyId req.perExtraKmRate
   CQFP.clearCacheById farePolicyId
   pure Success
