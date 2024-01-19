@@ -20,15 +20,10 @@ module Storage.Beam.RegistrationToken where
 
 import qualified Data.Time as Time
 import qualified Database.Beam as B
--- import qualified Domain.Types.RegistrationToken as Domain
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
--- import Kernel.Types.App (RegToken)
 import Kernel.Types.Beckn.City (City)
 import Kernel.Types.Common hiding (id)
-
--- import Storage.Tabular.Merchant (MerchantTId)
--- import Storage.Tabular.Person (PersonTId)
 
 data RegistrationTokenT f = RegistrationTokenT
   { id :: B.C f Text,

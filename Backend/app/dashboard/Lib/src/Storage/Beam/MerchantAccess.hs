@@ -20,14 +20,9 @@ module Storage.Beam.MerchantAccess where
 
 import qualified Data.Time as Time
 import qualified Database.Beam as B
--- import qualified Domain.Types.MerchantAccess as Domain
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Beckn.City (City)
-
--- import Kernel.Types.Common hiding (id)
--- import Storage.Tabular.Merchant (MerchantTId)
--- import Storage.Tabular.Person (PersonTId)
 
 data MerchantAccessT f = MerchantAccessT
   { id :: B.C f Text,
@@ -40,8 +35,6 @@ data MerchantAccessT f = MerchantAccessT
     createdAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
-
--- handle the unique constraint
 
 instance B.Table MerchantAccessT where
   data PrimaryKey MerchantAccessT f
