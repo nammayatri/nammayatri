@@ -123,6 +123,7 @@ homeScreen = do
        modifyScreenState $ HomeScreenStateType (\homeScreenState → screenState)
        App.BackT $ App.BackPoint <$> (pure $ UPDATE_SAVED_LOCATION )
     CheckLocServiceability updatedState lat long -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.NoBack <$> (pure $ CHECK_SERVICEABILITY updatedState lat long)
     GoToInvoice updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
@@ -178,3 +179,6 @@ homeScreen = do
     GoToHelpAndSupport updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_HELP_AND_SUPPORT)
+    ReAllocateRide updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ REALLOCATE_RIDE updatedState)

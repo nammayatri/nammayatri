@@ -90,7 +90,7 @@ import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreen
 import Screens.TicketBookingFlow.PlaceList.ScreenData as PlaceListData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..))
+import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..))
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig, getTipViewData, setTipViewData)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
@@ -947,6 +947,10 @@ homeScreenFlow = do
 
       homeScreenFlow
     RETRY  -> homeScreenFlow
+    REALLOCATE_RIDE state -> do
+      if DS.null state.props.estimateId then
+        currentFlowStatus
+      else homeScreenFlow
     CHECK_SERVICEABILITY updatedState lat long-> do
       (ServiceabilityRes sourceServiceabilityResp) <- Remote.originServiceabilityBT (Remote.makeServiceabilityReq lat long)
       let sourceLat = if sourceServiceabilityResp.serviceable then lat else updatedState.props.sourceLat
@@ -1540,17 +1544,15 @@ contactUsScreenFlow = do
 
 helpAndSupportScreenFlow :: FlowBT String Unit
 helpAndSupportScreenFlow = do
-  config <- pure $ getAppConfig Constants.appConfig
-  modifyScreenState $ ContactUsScreenStateType (\contactUsScreen -> contactUsScreen{data{config = config}})
-  let language = fetchLanguage $ getLanguageLocale languageKey
-      categoryOrder = ["LOST_AND_FOUND", "DRIVER_RELATED", "RIDE_RELATED", "APP_RELATED"]
-      compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
-  (GetCategoriesRes response) <- Remote.getCategoriesBT language
-  let unsortedCatagory = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : catObj.label, categoryImageUrl : catObj.logoUrl}) response.categories
-      categories' = sortBy compareByOrder unsortedCatagory
-  modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {config = config, categories = categories' } } )
-  modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatScreen -> reportIssueChatScreen { data { entryPoint = ST.HelpAndSupportScreenEntry }})
   (GlobalState globalState) <- getState
+  let helpAndSupportScreenState = globalState.helpAndSupportScreen
+  if null helpAndSupportScreenState.data.categories then do 
+    let language = fetchLanguage $ getLanguageLocale languageKey 
+    (GetCategoriesRes response) <- Remote.getCategoriesBT language
+    let categories' = map (\(Category catObj) ->{ categoryName : if (language == "en") then capitalize catObj.category else catObj.category , categoryId : catObj.issueCategoryId, categoryAction : catObj.label, categoryImageUrl : catObj.logoUrl}) response.categories
+    modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data {categories = categories' } } )
+  else pure unit
+  modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueChatScreen -> reportIssueChatScreen { data { entryPoint = ST.HelpAndSupportScreenEntry }})
   flow <- UI.helpAndSupportScreen
   case flow of
     GO_TO_HOME_FROM_HELP -> homeScreenFlow
@@ -1654,6 +1656,7 @@ issueReportChatScreenFlow = do
                               mediaMessages', 
                               mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 1 + index))) postIssueRes.messages]
       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {issueId = Just postIssueRes.issueReportId, chatConfig { messages = messages'},  messageToBeSent = "" , uploadedAudioId = Nothing, uploadedImagesIds = [] }, props { showSubmitComp = false } })
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen {props {needIssueListApiCall = true}})
       issueReportChatScreenFlow
     CALL_DRIVER_MODAL updatedState -> do
       let selectedOptionId = fromMaybe "" $ map (\option -> option.issueOptionId) updatedState.data.selectedOption
@@ -1703,6 +1706,7 @@ issueReportChatScreenFlow = do
       (UpdateIssueRes updateIssueRes) <- Remote.updateIssue (fromMaybe "" updatedState.data.issueId) language updateIssueReqBody
       let messages' = mapWithIndex (\index (Message currMessage) -> (makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (index + 1)))) updateIssueRes.messages
       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {showStillHaveIssue = false, chatConfig = updatedState.data.chatConfig{messages = updatedState.data.chatConfig.messages<> messages'} }, props {isResolved = false}})
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen {props {needIssueListApiCall = true}})
       issueReportChatScreenFlow
     GO_TO_TRIP_DETAILS_SCREEN updatedState -> do 
       (GlobalState globalState) <-  getState
@@ -1792,6 +1796,7 @@ selectLanguageScreenFlow = do
                                 resp <- lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest FunctionCall)
                                 modifyScreenState $ SelectLanguageScreenStateType (\selectLanguageScreen -> SelectLanguageScreenData.initData) 
                                 modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data{categories = []}})
+                                modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen {data {categories = []}, props {needIssueListApiCall = true}})
                                 homeScreenFlow
     GO_TO_HOME_SCREEN     -> homeScreenFlow
 
@@ -2271,8 +2276,14 @@ fetchAndModifyLocationLists savedLocationResp = do
     let state = currentState.homeScreen
     recentPredictionsObject <- lift $ lift $ getObjFromLocal currentState.homeScreen
     let {savedLocationsWithOtherTag, recents, suggestionsMap, tripArrWithNeighbors, updateFavIcon} = getHelperLists savedLocationResp recentPredictionsObject currentState.homeScreen
-        sortedTripList = Arr.take 30 (Arr.reverse (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors))
+        sortedTripList =  
+          Arr.take 30 
+            $ filter 
+                (\item -> isPointWithinXDist item state state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
+            $ Arr.reverse 
+                (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
         updatedLocationList = recentDistance updateFavIcon state.props.sourceLat state.props.sourceLong
+        locationListWithinXDistance = filter (\item -> isLocationWithinXDist item state state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist) updatedLocationList
     
     modifyScreenState $ 
       HomeScreenStateType 
@@ -2281,18 +2292,38 @@ fetchAndModifyLocationLists savedLocationResp = do
             { data
               { savedLocations = savedLocationResp
               , recentSearchs {predictionArray = recents}
-              , locationList = updatedLocationList
-              , destinationSuggestions = updatedLocationList
+              , locationList = locationListWithinXDistance
+              , destinationSuggestions = locationListWithinXDistance
               , suggestionsData{suggestionsMap = suggestionsMap}
               , tripSuggestions = sortedTripList
               }
             })
     where
+      isPointWithinXDist :: Trip -> HomeScreenState -> Number -> Boolean
+      isPointWithinXDist item state thresholdDist = 
+        getDistanceBwCordinates 
+          item.sourceLat 
+          item.sourceLong 
+          state.props.sourceLat 
+          state.props.sourceLong 
+          <= thresholdDist
+      
+      isLocationWithinXDist :: LocationListItemState -> HomeScreenState -> Number -> Boolean
+      isLocationWithinXDist item state thresholdDist = 
+        getDistanceBwCordinates 
+          (fromMaybe 0.0 item.lat) 
+          (fromMaybe 0.0 item.lon) 
+          state.props.sourceLat 
+          state.props.sourceLong 
+          <= thresholdDist
+      
       getHelperLists savedLocationLists recentPredictionsObject state = 
         let suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
-            savedLocationWithHomeOrWorkTag = filter (\listItem ->  (any (_ == listItem.prefixImageUrl) [fetchImage FF_ASSET "ny_ic_home_blue", fetchImage FF_ASSET "ny_ic_work_blue"])) savedLocationResp
+            homeWorkImages = [fetchImage FF_ASSET "ny_ic_home_blue", fetchImage FF_ASSET "ny_ic_work_blue"]
+            isHomeOrWorkImage = \listItem -> any (_ == listItem.prefixImageUrl) homeWorkImages
+            savedLocationWithHomeOrWorkTag = filter isHomeOrWorkImage savedLocationResp
             recents = differenceOfLocationLists recentPredictionsObject.predictionArray savedLocationWithHomeOrWorkTag
-            savedLocationsWithOtherTag = filter (\listItem -> not( any (_ == listItem.prefixImageUrl) [fetchImage FF_ASSET "ny_ic_home_blue", fetchImage FF_ASSET "ny_ic_work_blue"])) savedLocationResp
+            savedLocationsWithOtherTag = filter (not <<< isHomeOrWorkImage) savedLocationResp
             suggestionsMap = getSuggestionsMapFromLocal FunctionCall
             currentGeoHash = getGeoHash state.props.sourceLat state.props.sourceLong suggestionsConfig.geohashPrecision
             geohashNeighbors = Arr.cons currentGeoHash $ geohashNeighbours currentGeoHash
@@ -2381,6 +2412,7 @@ updateFlowStatus eventType = do
       homeScreenFlow
     _               -> do
       res <- lift $ lift $ Remote.notifyFlowEvent (Remote.makeNotifyFlowEventReq (show eventType))
+      hideLoaderFlow
       case res of
         Right _  -> homeScreenFlow
         Left err -> do

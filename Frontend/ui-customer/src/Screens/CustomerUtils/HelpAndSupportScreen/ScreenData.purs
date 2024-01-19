@@ -60,6 +60,7 @@ initData = {
   , isCallConfirmation : false
   , showDeleteAccountView : false
   , btnActive : false
+  , needIssueListApiCall : true
   }
 
 }

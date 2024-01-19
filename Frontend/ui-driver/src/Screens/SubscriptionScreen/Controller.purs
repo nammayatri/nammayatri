@@ -111,6 +111,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RetryPayment SubscriptionScreenState String
                     | ClearDues SubscriptionScreenState
                     | SubscribeAPI SubscriptionScreenState
+                    | EarningsScreen SubscriptionScreenState 
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state = 
@@ -194,6 +195,7 @@ eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpSt
 eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = case state.props.redirectToNav of
             "Home" -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
             "Rides" -> exit $ RideHistory state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+            "Earnings" -> exit $ EarningsScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
             "Alert" -> do
               _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
               _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
@@ -240,6 +242,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
     continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
   else do case screen of
             "Home" -> exit $ HomeScreen newState
+            "Earnings" -> exit $ EarningsScreen newState
             "Rides" -> exit $ RideHistory newState
             "Alert" -> do
               _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"

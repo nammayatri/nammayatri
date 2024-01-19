@@ -54,6 +54,7 @@ separatorConfig =
   , width: V 2
   , layoutWidth: V 15
   , layoutHeight: V 15
+  , color : Color.grey900
   }
 
 sourceToDestinationConfig :: RideScheduledScreenState -> SourceToDestination.Config

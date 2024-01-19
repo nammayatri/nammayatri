@@ -14,7 +14,7 @@
 
 module Domain.Action.Beckn.Confirm where
 
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import Data.String.Conversions
 import qualified Data.Text as T
 import Domain.Action.Beckn.Search
@@ -320,7 +320,7 @@ cancelBooking ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->
@@ -379,7 +379,7 @@ validateRequest ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasLongDurationRetryCfg r c,
     LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

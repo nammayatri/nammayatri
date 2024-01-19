@@ -22,9 +22,11 @@ module Lib.DriverCoins.Coins
     checkHasTakenValidRide,
     incrementValidRideCount,
     updateDriverCoins,
+    sendCoinsNotification,
   )
 where
 
+import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import Domain.Types.Coins.CoinHistory (CoinStatus (..))
 import qualified Domain.Types.Coins.CoinHistory as DTCC
@@ -34,6 +36,7 @@ import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Person as DP
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Types as L
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
@@ -44,6 +47,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.Coins.CoinsConfig as DCQ
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.Notifications as Notify
 
 type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters))
@@ -201,11 +205,24 @@ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction m
           }
   CHistory.updateCoinEvent driverCoinEvent
   when (numCoins > 0) $ do
-    driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    let coinTitle = "Coins earned!"
-        coinMessage = "You have earned " <> show numCoins <> " coins. Check them out."
-    Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS coinTitle coinMessage driverId driver.deviceToken
+    sendCoinsNotification merchantOpCityId driverId numCoins
   pure numCoins
+
+sendCoinsNotification :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> m ()
+sendCoinsNotification merchantOpCityId driverId coinsValue =
+  B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
+    let language = fromMaybe L.ENGLISH driver.language
+     in MTQuery.findByErrorAndLanguage (T.pack (show DCT.CoinAdded)) language >>= processMessage driver
+  where
+    processMessage driver mbCoinsMessage =
+      case mbCoinsMessage of
+        Just coinsMessage ->
+          case T.splitOn " | " coinsMessage.message of
+            [title, description] ->
+              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title (replaceCoinsValue description) driverId (driver.deviceToken)
+            _ -> logDebug "Invalid message format."
+        Nothing -> logDebug "Could not find Translations."
+    replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
 
 checkHasTakenValidRide :: (MonadReader r m, HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters)) => Maybe Meters -> m Bool
 checkHasTakenValidRide chargeableDistance = do

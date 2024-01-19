@@ -29,6 +29,8 @@ import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerific
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Notification as Notification
+import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -68,6 +70,7 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.MapsService Maps.Google -> Domain.MapsServiceConfig . Maps.GoogleConfig <$> valueToMaybe configJSON
       Domain.MapsService Maps.OSRM -> Domain.MapsServiceConfig . Maps.OSRMConfig <$> valueToMaybe configJSON
       Domain.MapsService Maps.MMI -> Domain.MapsServiceConfig . Maps.MMIConfig <$> valueToMaybe configJSON
+      Domain.MapsService Maps.NextBillion -> Domain.MapsServiceConfig . Maps.NextBillionConfig <$> valueToMaybe configJSON
       Domain.SmsService Sms.ExotelSms -> Domain.SmsServiceConfig . Sms.ExotelSmsConfig <$> valueToMaybe configJSON
       Domain.SmsService Sms.MyValueFirst -> Domain.SmsServiceConfig . Sms.MyValueFirstConfig <$> valueToMaybe configJSON
       Domain.SmsService Sms.GupShup -> Domain.SmsServiceConfig . Sms.GupShupConfig <$> valueToMaybe configJSON
@@ -79,6 +82,9 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> valueToMaybe configJSON
       Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
       Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
+      Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> valueToMaybe configJSON
+      Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> valueToMaybe configJSON
+      Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> valueToMaybe configJSON
 
     pure $
       Just
@@ -110,6 +116,7 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
           Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
           Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
           Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
+          Maps.NextBillionConfig cfg -> (Domain.MapsService Maps.NextBillion, toJSON cfg)
         Domain.SmsServiceConfig smsCfg -> case smsCfg of
           Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, toJSON cfg)
           Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, toJSON cfg)
@@ -127,3 +134,7 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
           Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
         Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
           Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
+        Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
+          Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
+          Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
+          Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)

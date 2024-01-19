@@ -191,7 +191,6 @@ library
     , containers
     , esqueleto
     , euler-hs
-    , hashmap
     , hedis
     , mobility-core
     , openapi3
@@ -208,6 +207,7 @@ library
     , template-haskell
     , text
     , time
+    , unordered-containers
     , wai
   default-language: Haskell2010
   if flag(Local)
@@ -267,7 +267,6 @@ executable public-transport-rider-platform-exe
     , containers
     , esqueleto
     , euler-hs
-    , hashmap
     , hedis
     , mobility-core
     , openapi3
@@ -285,6 +284,7 @@ executable public-transport-rider-platform-exe
     , template-haskell
     , text
     , time
+    , unordered-containers
     , wai
   default-language: Haskell2010
   if flag(Local)

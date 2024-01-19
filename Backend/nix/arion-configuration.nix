@@ -27,7 +27,6 @@ let
           "${../dev/local-testing-data/public-transport-rider-platform.sql}:/docker-entrypoint-initdb.d/2-public-transport-rider-platform-testing-data.sql:Z"
           "${../dev/sql-seed/mock-registry-seed.sql}:/docker-entrypoint-initdb.d/1-mock-registry-seed.sql:Z"
           "${../dev/local-testing-data/mock-registry.sql}:/docker-entrypoint-initdb.d/2-mock-registry-testing-data.sql:Z"
-          "${../dev/sql-seed/scheduler-example-seed.sql}:/docker-entrypoint-initdb.d/1-scheduler-example-seed.sql:Z"
           "${../dev/sql-seed/dynamic-offer-driver-app-seed.sql}:/docker-entrypoint-initdb.d/1-dynamic-offer-driver-app-seed.sql:Z"
           "${../dev/local-testing-data/dynamic-offer-driver-app.sql}:/docker-entrypoint-initdb.d/2-dynamic-offer-driver-app-testing-data.sql:Z"
           "${../dev/sql-seed/rider-dashboard-seed.sql}:/docker-entrypoint-initdb.d/1-rider-dashboard-seed.sql:Z"

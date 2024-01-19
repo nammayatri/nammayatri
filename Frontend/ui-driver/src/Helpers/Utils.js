@@ -6,7 +6,6 @@ const Android = window.Android;
 let timerIdForTimeout;
 const allTimerIID = [];
 let uniqueId = 0;
-let countDownInMinutesId = null;
 const microapps = ["in.juspay.hyperpay", "in.juspay.ec", "in.juspay.upiintent"];
 let popupType = null;
 
@@ -476,26 +475,6 @@ export const getDeviceDefaultDensity = function (){
   }
 }
 
-export const countDownInMinutes = function (seconds, cb, action) {
-  let sec;
-  function convertInMinutesFormat() {
-    sec = sec - 60;
-    const minutes = Math.floor(sec / 60);
-    cb(action(countDownInMinutesId)(minutes + 1)(sec))();
-  }
-  try {
-    sec = seconds - 5; //5 seconds buffer
-    if (sec <= 0) {
-      cb(action(countDownInMinutesId)("")(0))();
-    } else {
-      if (countDownInMinutesId) clearInterval(countDownInMinutesId);
-      countDownInMinutesId = setInterval(convertInMinutesFormat, 60000); //setting interval of 1 min
-      cb(action(countDownInMinutesId)(Math.floor(sec / 60) + 1)(sec))();
-    }
-  } catch (error) {
-    console.error("Error occured ", error);
-  }
-}
 
 export const istToUtcDate = function (dateStr) {
   try {
@@ -523,5 +502,17 @@ export const getPopupType = function (just, nothing) {
     const localPopup = popupType;
     popupType = null;
     return just(localPopup);
+  }
+};
+
+export const renderSlider = function (cb) {
+  return function (action) {
+    return function (config) {
+      const { id, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId } = config;
+      const callback = callbackMapper.map(function (val) {
+        cb(action(parseInt(val)))();
+      });
+      window.JBridge.renderSlider(id, callback, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId);
+    }
   }
 }

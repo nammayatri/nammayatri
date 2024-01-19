@@ -36,7 +36,8 @@ initData = {
             isSplit : false,
             isAutoPayFailed : false,
             feeType : AUTOPAY_PAYMENT,
-            numOfDriverFee : 0
+            numOfDriverFee : 0,
+            isCoinCleared : false
         },
         planData : dummyPlanConfig,
         gradientConfig : [],
@@ -68,7 +69,8 @@ dummyPlanConfig =
                 hasImage : true,
                 imageURL : "",
                 offerDescription : Mb.Nothing,
-                addedFromUI : false
+                addedFromUI : false,
+                isPaidByYatriCoins : false
                 }
                 ]
     , priceBreakup : []
@@ -85,5 +87,6 @@ dummyPromoConfig = {
                         gradient : [],
                         hasImage : false,
                         imageURL : "",
-                        addedFromUI : false
+                        addedFromUI : false,
+                        isPaidByYatriCoins : false
                     }

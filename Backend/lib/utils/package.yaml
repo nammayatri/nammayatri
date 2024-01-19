@@ -80,7 +80,6 @@ dependencies:
   - prometheus-client
   - record-hasfield
   - record-dot-preprocessor
-  - hashmap
   - servant-openapi3
   - openapi3
   - string-conversions

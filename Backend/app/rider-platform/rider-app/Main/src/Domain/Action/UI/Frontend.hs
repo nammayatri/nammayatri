@@ -22,7 +22,7 @@ module Domain.Action.UI.Frontend
   )
 where
 
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
@@ -100,7 +100,7 @@ handleRideTracking ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     HasField "rideCfg" r RideConfig,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id DP.Person ->
   Maybe Bool ->

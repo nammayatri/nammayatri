@@ -156,6 +156,7 @@ data MerchantAPIs = MerchantAPIs
     verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     createFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
     updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
+    updateFPPerExtraKmRate :: Id Common.FarePolicy -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
     schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess
   }
 
@@ -187,6 +188,7 @@ data IssueAPIs = IssueAPIs
   { issueCategoryList :: Euler.EulerClient Issue.IssueCategoryListRes,
     issueList :: Maybe Int -> Maybe Int -> Maybe IssueStatus -> Maybe (Id IssueCategory) -> Maybe Text -> Euler.EulerClient Issue.IssueReportListResponse,
     issueInfo :: Id IssueReport -> Euler.EulerClient Issue.IssueInfoRes,
+    issueInfoV2 :: Maybe (Id IssueReport) -> Maybe (ShortId IssueReport) -> Euler.EulerClient Issue.IssueInfoRes,
     issueUpdate :: Id IssueReport -> Issue.IssueUpdateByUserReq -> Euler.EulerClient APISuccess,
     issueAddComment :: Id IssueReport -> Issue.IssueAddCommentByUserReq -> Euler.EulerClient APISuccess,
     issueFetchMedia :: Text -> Euler.EulerClient Text,
@@ -325,6 +327,7 @@ mkDriverOperationAPIs merchantId city token = do
       :<|> verificationServiceConfigUpdate
       :<|> createFPDriverExtraFee
       :<|> updateFPDriverExtraFee
+      :<|> updateFPPerExtraKmRate
       :<|> schedulerTrigger = merchantClient
 
     uploadFile
@@ -345,6 +348,7 @@ mkDriverOperationAPIs merchantId city token = do
     issueCategoryList
       :<|> issueList
       :<|> issueInfo
+      :<|> issueInfoV2
       :<|> issueUpdate
       :<|> issueAddComment
       :<|> issueFetchMedia

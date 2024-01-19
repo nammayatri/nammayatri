@@ -23,7 +23,6 @@ packages:
   app/rider-platform/public-transport-rider-platform/Main
   app/rider-platform/public-transport-rider-platform/search-consumer
   app/mocks/public-transport-provider-platform
-  app/scheduler-example
   app/utils/route-extractor
   app/utils/image-api-helper
   lib/beckn-spec

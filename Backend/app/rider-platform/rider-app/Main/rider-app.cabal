@@ -376,6 +376,7 @@ library
       API.Types.UI.TicketService
       Domain.Types.BusinessHour
       Domain.Types.MerchantOperatingCity
+      Domain.Types.NextBillionData
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
@@ -388,6 +389,7 @@ library
       Domain.Types.TicketService
       Storage.Beam.BusinessHour
       Storage.Beam.MerchantOperatingCity
+      Storage.Beam.NextBillionData
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
@@ -400,6 +402,7 @@ library
       Storage.Beam.TicketService
       Storage.Queries.BusinessHour
       Storage.Queries.MerchantOperatingCity
+      Storage.Queries.NextBillionData
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
@@ -475,7 +478,6 @@ library
     , extra
     , filepath
     , geohash ==1.0.1
-    , hashmap
     , http-media
     , http-types
     , lens
@@ -586,7 +588,6 @@ executable rider-app-exe
     , extra
     , filepath
     , geohash ==1.0.1
-    , hashmap
     , http-media
     , http-types
     , lens

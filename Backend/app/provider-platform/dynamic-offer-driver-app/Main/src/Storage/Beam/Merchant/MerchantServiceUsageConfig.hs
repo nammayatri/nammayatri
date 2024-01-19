@@ -20,6 +20,7 @@ import qualified Database.Beam as B
 import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types
+import Kernel.External.Notification.Types (NotificationService)
 import Kernel.External.SMS.Types
 import Kernel.External.Ticket.Types
 import Kernel.External.Verification.Types
@@ -46,6 +47,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     whatsappProvidersPriorityList :: B.C f [WhatsappService],
     verificationService :: B.C f VerificationService,
     faceVerificationService :: B.C f VerificationService,
+    sendSearchRequestToDriver :: B.C f [NotificationService],
     aadhaarVerificationService :: B.C f AadhaarVerificationService,
     issueTicketService :: B.C f IssueTicketService,
     getExophone :: B.C f CallService,

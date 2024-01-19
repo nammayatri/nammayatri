@@ -55,6 +55,7 @@ getServiceNameConfigJSON = \case
     Maps.GoogleConfig cfg -> (Domain.MapsService Maps.Google, toJSON cfg)
     Maps.OSRMConfig cfg -> (Domain.MapsService Maps.OSRM, toJSON cfg)
     Maps.MMIConfig cfg -> (Domain.MapsService Maps.MMI, toJSON cfg)
+    Maps.NextBillionConfig cfg -> (Domain.MapsService Maps.NextBillion, toJSON cfg)
   Domain.SmsServiceConfig smsCfg -> case smsCfg of
     Sms.ExotelSmsConfig cfg -> (Domain.SmsService Sms.ExotelSms, toJSON cfg)
     Sms.MyValueFirstConfig cfg -> (Domain.SmsService Sms.MyValueFirst, toJSON cfg)
@@ -66,6 +67,7 @@ getServiceNameConfigJSON = \case
   Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of
     Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
     Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
+    Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig cfg -> (Domain.AadhaarVerificationService AadhaarVerification.Gridline, toJSON cfg)
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of

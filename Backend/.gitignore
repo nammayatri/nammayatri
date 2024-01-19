@@ -25,7 +25,6 @@ cabal.project.local
 cabal.project.local~
 .HTF/
 .ghc.environment.*
-*.log
 dhall-configs/dev/secrets/top-secret.dhall
 dev/rest-client/dashboard/top-secret/
 *.gpx

@@ -16,6 +16,7 @@
 module Lib.DriverCoins.Types
   ( DriverCoinsEventType (..),
     DriverCoinsFunctionType (..),
+    CoinMessage (..),
   )
 where
 
@@ -47,6 +48,12 @@ data DriverCoinsEventType
   | Training
   | BulkUploadEvent
   deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
+
+data CoinMessage
+  = CoinAdded
+  deriving (Show, Eq, Read, Generic, FromJSON, ToSchema, ToJSON, Ord, Typeable)
+
+$(mkBeamInstancesForEnum ''CoinMessage)
 
 $(mkBeamInstancesForEnum ''DriverCoinsEventType)
 

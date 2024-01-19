@@ -41,6 +41,7 @@ import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
@@ -82,7 +83,7 @@ import Tools.Metrics (CoreMetrics)
 
 callOnSelect ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c
@@ -106,7 +107,7 @@ callOnSelect transporter searchRequest searchTry content = do
 
 callOnUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     CoreMetrics m,
     HasHttpClientOptions r c
   ) =>
@@ -130,7 +131,7 @@ callOnUpdate transporter bapId bapUri bapCity bapCountry transactionId content r
 
 callOnConfirm ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m
@@ -171,7 +172,7 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -257,7 +258,7 @@ sendRideStartedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -282,7 +283,7 @@ sendRideCompletedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -307,7 +308,7 @@ sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasLongDurationRetryCfg r c,
     CoreMetrics m
@@ -326,7 +327,7 @@ sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m,
@@ -375,7 +376,7 @@ sendDriverArrivalUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -401,7 +402,7 @@ sendNewMessageToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -425,7 +426,7 @@ sendSafetyAlertToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -448,7 +449,7 @@ sendEstimateRepetitionUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl]
   ) =>
   DRB.Booking ->
   SRide.Ride ->

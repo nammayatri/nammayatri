@@ -138,3 +138,6 @@ homeScreen = do
     RefreshGoTo updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_GOTO updatedState)
+    EarningsScreen updatedState showCoinsView -> do 
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV $ GoToEarningsScreen showCoinsView)

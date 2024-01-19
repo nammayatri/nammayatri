@@ -71,6 +71,7 @@ data ScreenOutput
   | GoToProfileScreen
   | GoToCurrentRideFlow
   | SubscriptionScreen NotificationsScreenState
+  | EarningsScreen
 
 data Action
   = OnFadeComplete String
@@ -240,23 +241,26 @@ eval LoadMore state = do
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
   case item of
     "Home" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToHomeScreen
     "Rides" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToRidesScreen
+    "Earnings" -> do
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit EarningsScreen
     "Profile" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToProfileScreen
     "Rankings" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit $ GoToReferralScreen
     "Join" -> do 
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
     _ -> continue state

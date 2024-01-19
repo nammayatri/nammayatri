@@ -120,7 +120,8 @@ dummyPlanConfig =
                 hasImage : true,
                 imageURL : "",
                 offerDescription : Mb.Nothing,
-                addedFromUI : false
+                addedFromUI : false,
+                isPaidByYatriCoins : false
                 }
                 ]
     , priceBreakup : []

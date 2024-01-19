@@ -239,3 +239,30 @@ transparentGrey = "#66888888"
 
 brightBlue :: Color
 brightBlue = "#0066FF"
+
+yellowOpacity40 :: Color
+yellowOpacity40 = "#66FEEBB9"
+
+yellowOpacity50 :: Color
+yellowOpacity50 = "#80FCC32C"
+
+red600 :: Color
+red600 = "#FFDDDD"
+
+yellowCoinGradient1 ::Color
+yellowCoinGradient1 = "#FFF8EE"
+
+yellowCoinGradient2 ::Color
+yellowCoinGradient2 = "#FFEBCC"
+
+blue400 :: Color
+blue400 = "#662194FF"
+
+atlantisGreen :: Color
+atlantisGreen = "#E1E7F5"
+
+greenCoin :: Color
+greenCoin = "#1A53BB6F"
+
+redCoin :: Color
+redCoin = "#1AE55454"

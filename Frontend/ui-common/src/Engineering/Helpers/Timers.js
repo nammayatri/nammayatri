@@ -9,14 +9,15 @@ function instantGetTimer(fn, id, delay) {
   return timerId;
 }
 
-export const countDownImpl = function (countDownTime, id, cb, action) {
+export const countDownImpl = function (countDownTime, id, interval, cb, action) {
+  if (countDownTime < interval) interval = countDownTime;
   if (activeTimers[id] != undefined) {
     clearInterval(activeTimers[id].id);
   }
   const handler = function (keyId) {
     const timer = activeTimers[keyId];
     if (timer) {
-      timer.time = timer.time -= 1;
+      timer.time = timer.time - timer.timerInterval;
       if (timer.time <= 0) {
         clearInterval(timer.id);
         activeTimers[keyId] = undefined;
@@ -27,10 +28,11 @@ export const countDownImpl = function (countDownTime, id, cb, action) {
       }
     }
   }
-  const timerId = instantGetTimer(handler, id, 1000);
+  const timerId = instantGetTimer(handler, id, interval * 1000);
   const timer = {
     time: countDownTime,
-    id: timerId
+    id: timerId,
+    timerInterval: parseInt(interval)
   }
   activeTimers[id] = timer;
   handler(id);
@@ -89,17 +91,18 @@ export const waitingCountdownTimerV2Impl = function (startingTime, interval, tim
     const handler = function (keyId) {
       const timer = activeTimers[keyId];
       if (timer) {
-        timer.time = timer.time + 1;
+        timer.time = timer.time + timer.timerInterval;
         const minutes = getTwoDigitsNumber(Math.floor(timer.time / 60));
         const seconds = getTwoDigitsNumber(timer.time - minutes * 60);
         const timeInMinutesFormat = minutes + " : " + seconds;
         cb(action(keyId)(timeInMinutesFormat)(timer.time))();
       }
     }
-    const timerID = instantGetTimer(handler, timerId, 1000);
+    const timerID = instantGetTimer(handler, timerId, interval * 1000);
     const timer = {
       time: startingTime,
-      id: timerID
+      id: timerID,
+      timerInterval: parseInt(interval)
     }
     activeTimers[timerId] = timer;
     handler(timerId);

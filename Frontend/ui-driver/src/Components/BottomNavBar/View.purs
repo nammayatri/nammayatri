@@ -92,6 +92,7 @@ view push state =
                               "Home"          -> getString HOME
                               "Rides"         -> getString RIDES
                               "Rankings"      -> getString CONTEST
+                              "Earnings"      -> getString EARNINGS
                               "Profile"       -> getString PROFILE
                               "Alert"         -> getString MESSAGES
                               "Join"          -> getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS

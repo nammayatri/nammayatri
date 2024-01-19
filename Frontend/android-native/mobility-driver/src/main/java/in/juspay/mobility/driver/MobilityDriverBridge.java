@@ -96,6 +96,7 @@ import in.juspay.hyper.core.BridgeComponents;
 import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.mobility.app.CheckPermissionOverlay;
+import in.juspay.mobility.app.SliderComponent;
 import in.juspay.mobility.app.LocationUpdateService;
 import in.juspay.mobility.app.LocationUpdateWorker;
 import in.juspay.mobility.app.NotificationUtils;
@@ -247,7 +248,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     public void onDestroy() {
-        Log.e("onDestroy","onDestroy");
+        Log.e("onDestroy", "onDestroy");
         NotificationUtils.deRegisterCallback(callBack);
         Utils.deRegisterCallback(callBack);
         DefaultMediaPlayerControl.mediaPlayer.reset();
@@ -470,8 +471,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                                 }
                             });
                         });
-                    } 
-                    catch (Exception e) {
+                    } catch (Exception e) {
                         Log.e(LOG_TAG, "Error in mapSnapShot " + e);
                     }
                 });
@@ -584,7 +584,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     public void launchDateSettings() {
         try {
             bridgeComponents.getContext().startActivity(new Intent(android.provider.Settings.ACTION_DATE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-        }catch (ActivityNotFoundException e){
+        } catch (ActivityNotFoundException e) {
             bridgeComponents.getContext().startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         }
     }
@@ -743,16 +743,13 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
 
-
     @JavascriptInterface
     public void renderCameraProfilePicture(String id) {
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
-        if(activity!=null)
-        {
+        if (activity != null) {
             activity.runOnUiThread(() -> {
-                if (isCameraPermissionGranted())
-                {
+                if (isCameraPermissionGranted()) {
                     View profilePictureLayout = LayoutInflater.from(context).inflate(R.layout.validate_documents_preview, null, false);
                     previewView = profilePictureLayout.findViewById(R.id.previewView);
                     bCapture = profilePictureLayout.findViewById(R.id.bCapture);
@@ -764,14 +761,13 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                             startCameraX(cameraProvider);
                         } catch (ExecutionException | InterruptedException e) {
                             e.printStackTrace();
-                            return ;
+                            return;
                         }
                     }, ContextCompat.getMainExecutor(activity));
                     LinearLayout layout = activity.findViewById(Integer.parseInt(id));
                     layout.removeAllViews();
                     layout.addView(profilePictureLayout);
-                } else
-                {
+                } else {
                     requestCameraPermission(() -> renderCameraProfilePicture(id));
                 }
             });
@@ -794,6 +790,7 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                         Uri imageUri = outputFileResults.getSavedUri();
                         Utils.encodeImageToBase64(null, bridgeComponents.getContext(), imageUri);
                     }
+
                     @Override
                     public void onError(@NonNull ImageCaptureException exception) {
                         Toast.makeText(bridgeComponents.getActivity(), "error", Toast.LENGTH_SHORT).show();
@@ -807,6 +804,14 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         return cameraPermission == PackageManager.PERMISSION_GRANTED;
     }
     //endregion
+
+    @JavascriptInterface
+    public void renderSlider(String id, String callback, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId) {
+        ExecutorManager.runOnMainThread(() -> {
+            SliderComponent sliderComponent = new SliderComponent();
+            sliderComponent.addSlider(id,callback,conversionRate,minLimit,maxLimit,defaultValue,toolTipId, bridgeComponents);
+        });
+    }
 }
 
 

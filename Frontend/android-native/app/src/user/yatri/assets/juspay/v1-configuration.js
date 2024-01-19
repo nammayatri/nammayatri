@@ -156,7 +156,7 @@ window.getMerchantConfig = function () {
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രവർത്തനക്ഷമമാക്കുക.",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "നിങ്ങളുടെ പ്രശ്നം വിവരിക്കുക. 24 മണിക്കൂറിനുള്ളിൽ അത് പരിഹരിക്കാൻ യാത്രി ശ്രമിക്കും.",
       "CALL_SUPPORT_DESCRIPTION" : "നിങ്ങൾ യാത്രി സപ്പോർട്ടിലേക്ക് ഒരു കോൾ ചെയ്യാൻ പോകുകയാണ്. നിങ്ങൾക്ക് തുടരണോ?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಲಾಗಿದೆ ಎಂದು ನಾವು ಭಾವಿಸುತ್ತೇವೆ, ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿಗೆ ನಮಗೆ nammayatri.support@juspay.in ನಲ್ಲಿ ಬರೆಯಲು ಮುಕ್ತವಾಗಿರಿ."
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "പ്രശ്‌നം പരിഹരിച്ചുവെന്ന് ഞങ്ങൾ പ്രതീക്ഷിക്കുന്നു, എന്തെങ്കിലും ചോദ്യങ്ങൾക്ക് nammayatri.support@juspay.in എന്ന വിലാസത്തിൽ ഞങ്ങൾക്ക് എഴുതാൻ മടിക്കേണ്ടതില്ല."
     },
     "languageList": [{
       "name": "English",
@@ -203,27 +203,27 @@ window.getMerchantConfig = function () {
       "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
-          "image" : "ic_hatchback,https://assets.juspay.in/beckn/yatri/user/ic_hatchback.png"
+          "image" : "ic_hatchback,https://assets.juspay.in/beckn/yatri/user/images/ic_hatchback.png"
           },
         "taxiPlus" : {
           "name" : "AC Taxi",
-          "image" : "ic_sedan_ac,https://assets.juspay.in/beckn/yatri/user/ic_sedan_ac.png"
+          "image" : "ic_sedan_ac,https://assets.juspay.in/beckn/yatri/user/images/ic_sedan_ac.png"
         },
         "sedan" : {
           "name" : "Sedan",
-          "image" : "ic_sedan,https://assets.juspay.in/beckn/yatri/user/ic_sedan.png"
+          "image" : "ic_sedan,https://assets.juspay.in/beckn/yatri/user/images/ic_sedan.png"
         },
         "taxi" : {
           "name" : "Non-AC Taxi",
-          "image" : "ic_sedan,https://assets.juspay.in/beckn/yatri/user/ic_sedan.png"
+          "image" : "ic_sedan,https://assets.juspay.in/beckn/yatri/user/images/ic_sedan.png"
         },
         "suv" : {
           "name" : "SUV",
-          "image" : "ic_suv,https://assets.juspay.in/beckn/yatri/user/ic_suv.png"
+          "image" : "ic_suv,https://assets.juspay.in/beckn/yatri/user/images/ic_suv.png"
         },
         "autoRickshaw" : {
           "name" : "Auto Rickshaw",
-          "image" : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/yatri/user/ny_ic_auto_quote_list.png"
+          "image" : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/yatri/user/images/ny_ic_auto_quote_list.png"
         }
 
       }

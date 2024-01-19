@@ -74,31 +74,34 @@ primaryButtonViewConfig state = let
       }
   in primaryButtonConfig'
 
-getStatusConfig :: Common.PaymentStatus -> {color :: String, backgroundColor :: String, name :: String, description :: String}
-getStatusConfig status = case status of
-                              Common.Success -> {color : Color.green900, backgroundColor : Color.greenOpacity16, name : getString SUCCESS, description : getString DEBITED_ON}
-                              Common.Pending -> {color : Color.yellow900, backgroundColor : Color.yellowOpacity16, name : getString PENDING_CAPS, description : getString ATTEMPTED_ON}
-                              Common.Failed  -> {color : Color.red, backgroundColor : Color.redOpacity16, name : getString FAILURE, description : getString ATTEMPTED_ON}
-                              Common.Scheduled  -> {color : Color.yellow900, backgroundColor : Color.yellowOpacity16, name : getString SCHEDULED, description : getString SCHEDULED_ON}
+getStatusConfig :: Common.PaymentStatus -> Boolean -> {color :: String, backgroundColor :: String, name :: String, description :: String}
+getStatusConfig status isCoinCleared = case status, isCoinCleared of
+                              _, true -> {color : Color.green900, backgroundColor : Color.greenOpacity16, name : getString SUCCESS, description : getString DEBITED_ON}
+                              Common.Success, _ -> {color : Color.green900, backgroundColor : Color.greenOpacity16, name : getString SUCCESS, description : getString DEBITED_ON}
+                              Common.Pending, _ -> {color : Color.yellow900, backgroundColor : Color.yellowOpacity16, name : getString PENDING_CAPS, description : getString ATTEMPTED_ON}
+                              Common.Failed, _  -> {color : Color.red, backgroundColor : Color.redOpacity16, name : getString FAILURE, description : getString ATTEMPTED_ON}
+                              Common.Scheduled, _  -> {color : Color.yellow900, backgroundColor : Color.yellowOpacity16, name : getString SCHEDULED, description : getString SCHEDULED_ON}
 
 getTransactionConfig :: ST.TransactionInfo -> {image :: String, title :: String, statusTimeDesc :: String}
-getTransactionConfig transactionInfo = do
+getTransactionConfig transactionInfo  = do
   let status = transactionInfo.paymentStatus
       feeType = transactionInfo.feeType
       isRegisteredWithDuesClear = transactionInfo.numOfDriverFee > 1
-      title' = getString case status, feeType, isRegisteredWithDuesClear of
-                  Common.Success, API.AUTOPAY_REGISTRATION, true  ->  AUTOPAY_SETUP_AND_PAYMENT_SUCCESSFUL
-                  Common.Success, API.AUTOPAY_REGISTRATION, false ->  AUTOPAY_SETUP_SUCCESSFUL
-                  Common.Success, _, _                            ->  PAYMENT_SUCCESSFUL
-                  Common.Pending, API.AUTOPAY_REGISTRATION, true  ->  AUTOPAY_SETUP_AND_PAYMENT_PENDING
-                  Common.Pending, API.AUTOPAY_REGISTRATION, false ->  AUTOPAY_SETUP_PENDING
-                  Common.Pending, _, _                            ->  PAYMENT_PENDING
-                  Common.Failed, API.AUTOPAY_REGISTRATION, true   ->  AUTOPAY_SETUP_AND_PAYMENT_FAILED
-                  Common.Failed, API.AUTOPAY_REGISTRATION, false  ->  AUTOPAY_SETUP_FAILED
-                  Common.Failed, _, _                             ->  PAYMENT_FAILED
-                  _, _, _                                         ->  PAYMENT_SCHEDULED
-  case status of
-    Common.Success -> {image : fetchImage FF_ASSET "ny_ic_green_tick", statusTimeDesc : getString TRANSACTION_DEBITED_ON, title : title'}
-    Common.Pending -> {image : fetchImage FF_ASSET "ny_ic_transaction_pending", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
-    Common.Failed  -> {image : fetchImage FF_ASSET "ny_ic_payment_failed", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
-    Common.Scheduled  -> {image : fetchImage FF_ASSET "ny_ic_pending", statusTimeDesc : getString SCHEDULED_AT, title : title'}
+      title' = getString case status, feeType, isRegisteredWithDuesClear, transactionInfo.isCoinCleared of
+                  _, _, _ ,true                                     ->  PAYMENT_SUCCESSFUL
+                  Common.Success, API.AUTOPAY_REGISTRATION, true ,_ ->  AUTOPAY_SETUP_AND_PAYMENT_SUCCESSFUL
+                  Common.Success, API.AUTOPAY_REGISTRATION, false,_ ->  AUTOPAY_SETUP_SUCCESSFUL
+                  Common.Success, _, _, _                           ->  PAYMENT_SUCCESSFUL
+                  Common.Pending, API.AUTOPAY_REGISTRATION, true ,_ ->  AUTOPAY_SETUP_AND_PAYMENT_PENDING
+                  Common.Pending, API.AUTOPAY_REGISTRATION, false,_ ->  AUTOPAY_SETUP_PENDING
+                  Common.Pending, _, _, _                           ->  PAYMENT_PENDING
+                  Common.Failed, API.AUTOPAY_REGISTRATION, true  ,_ ->  AUTOPAY_SETUP_AND_PAYMENT_FAILED
+                  Common.Failed, API.AUTOPAY_REGISTRATION, false ,_ ->  AUTOPAY_SETUP_FAILED
+                  Common.Failed, _, _ , _                           ->  PAYMENT_FAILED
+                  _, _, _, _                                        ->  PAYMENT_SCHEDULED
+  case status, transactionInfo.isCoinCleared of
+    _ , true -> {image : fetchImage FF_ASSET "ny_ic_green_tick", statusTimeDesc : getString TRANSACTION_DEBITED_ON, title : title'}
+    Common.Success, false -> {image : fetchImage FF_ASSET "ny_ic_green_tick", statusTimeDesc : getString TRANSACTION_DEBITED_ON, title : title'}
+    Common.Pending, false -> {image : fetchImage FF_ASSET "ny_ic_transaction_pending", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
+    Common.Failed, false  -> {image : fetchImage FF_ASSET "ny_ic_payment_failed", statusTimeDesc : getString TRANSACTION_ATTEMPTED_ON, title : title'}
+    Common.Scheduled, false  -> {image : fetchImage FF_ASSET "ny_ic_pending", statusTimeDesc : getString SCHEDULED_AT, title : title'}

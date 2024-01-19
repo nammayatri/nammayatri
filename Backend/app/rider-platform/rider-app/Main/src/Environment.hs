@@ -27,8 +27,8 @@ module Environment
 where
 
 import AWS.S3
-import qualified Data.HashMap as HM
-import qualified Data.Map as M
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as M
 import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
@@ -187,7 +187,7 @@ data AppEnv = AppEnv
     dontEnableForKafka :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
-    internalEndPointHashMap :: HM.Map BaseUrl BaseUrl
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl
   }
   deriving (Generic)
 
