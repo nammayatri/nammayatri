@@ -10,10 +10,10 @@ import Kernel.Prelude
 import qualified Kernel.Types.Id
 
 data FRFSSearch = FRFSSearch
-  { from :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+  { fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     quantity :: Kernel.Prelude.Int,
-    to :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     vehicleType :: Domain.Types.Station.FRFSVehicleType,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

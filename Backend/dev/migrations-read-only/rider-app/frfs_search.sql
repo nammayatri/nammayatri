@@ -10,3 +10,11 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN merchant_operating_city_id characte
 ALTER TABLE atlas_app.frfs_search ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_search ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_search ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN to_station_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.frfs_search ADD COLUMN from_station_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.frfs_search DROP COLUMN to;
+ALTER TABLE atlas_app.frfs_search DROP COLUMN from;

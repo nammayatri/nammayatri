@@ -388,3 +388,23 @@ ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
 ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN to_station_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN from_station_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN to;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN from;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;

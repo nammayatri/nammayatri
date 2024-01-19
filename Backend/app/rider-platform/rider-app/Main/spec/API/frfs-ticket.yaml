@@ -18,8 +18,8 @@ imports:
 module: FRFSTicketService
 types:
   FRFSSearchAPIReq:
-    from: Id Station
-    to: Id Station
+    fromStationId: Id Station
+    toStationId: Id Station
     quantity: Int
 
   FRFSSearchAPIRes:
