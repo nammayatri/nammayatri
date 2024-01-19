@@ -28,7 +28,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     to :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,
-    vehicleType :: Kernel.Prelude.Text,
+    vehicleType :: Domain.Types.Station.FRFSVehicleType,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

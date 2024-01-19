@@ -29,6 +29,10 @@ library
   exposed-modules:
       API
       API.Beckn
+      API.Beckn.FRFS.OnConfirm
+      API.Beckn.FRFS.OnInit
+      API.Beckn.FRFS.OnSearch
+      API.Beckn.FRFS.OnStatus
       API.Beckn.OnConfirm
       API.Beckn.OnInit
       API.Beckn.OnSearch
@@ -100,6 +104,10 @@ library
       Beckn.ACL.Cancel
       Beckn.ACL.Common
       Beckn.ACL.Confirm
+      Beckn.ACL.FRFS.OnConfirm
+      Beckn.ACL.FRFS.OnInit
+      Beckn.ACL.FRFS.OnSearch
+      Beckn.ACL.FRFS.OnStatus
       Beckn.ACL.Init
       Beckn.ACL.Metro.OnSearch
       Beckn.ACL.Metro.Search
@@ -117,6 +125,10 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Domain.Action.Beckn.FRFS.OnConfirm
+      Domain.Action.Beckn.FRFS.OnInit
+      Domain.Action.Beckn.FRFS.OnSearch
+      Domain.Action.Beckn.FRFS.OnStatus
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch
@@ -187,6 +199,7 @@ library
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.FeedbackForm
+      Domain.Types.FRFSVehicleType111
       Domain.Types.Geometry
       Domain.Types.HotSpot
       Domain.Types.HotSpotConfig

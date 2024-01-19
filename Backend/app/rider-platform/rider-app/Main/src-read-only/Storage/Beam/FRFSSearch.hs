@@ -21,7 +21,7 @@ data FRFSSearchT f = FRFSSearchT
     id :: B.C f Kernel.Prelude.Text,
     quantity :: B.C f Kernel.Prelude.Int,
     to :: B.C f Kernel.Prelude.Text,
-    vehicleType :: B.C f Kernel.Prelude.Text,
+    vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
     merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

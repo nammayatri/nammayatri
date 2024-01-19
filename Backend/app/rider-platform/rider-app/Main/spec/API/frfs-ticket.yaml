@@ -13,6 +13,7 @@ imports:
   UTCTime: Kernel.Prelude
   FRFSTrip: Domain.Types.FRFSTrip
   FRFSSearch: Domain.Types.FRFSSearch
+  FRFSVehicleType: Domain.Types.Station
 
 module: FRFSTicketService
 types:
@@ -27,7 +28,7 @@ types:
   FRFSQuoteAPIRes:
     quoteId: Id FRFSQuote
     _type: FRFSQuoteType
-    vehicleType: Text
+    vehicleType: FRFSVehicleType
     quantity: Int
     price: HighPrecMoney
     stations: [FRFSStationAPI]
@@ -38,7 +39,7 @@ types:
     status: FRFSTicketBookingStatus
     _type: FRFSQuoteType
     quantity: Int
-    vehicleType: Text
+    vehicleType: FRFSVehicleType
     price: HighPrecMoney
     validTill: UTCTime
     payment: Maybe FRFSBookingPaymentAPI
@@ -78,7 +79,7 @@ apis:
       endpoint: /frfs/stations
       auth: TokenAuth
       query:
-        vehicleType: Text
+        vehicleType: FRFSVehicleType
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
@@ -87,7 +88,7 @@ apis:
       endpoint: /frfs/search
       auth: TokenAuth
       query:
-        vehicleType: Text
+        vehicleType: FRFSVehicleType
       request:
         type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:
