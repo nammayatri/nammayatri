@@ -195,6 +195,7 @@ library
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent.Payment
       Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType
+      BecknV2.FRFS.Types
   other-modules:
       Paths_beckn_spec
   hs-source-dirs:
