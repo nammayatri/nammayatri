@@ -29,7 +29,11 @@ type BeamFlow m r =
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasSchemaName BeamAM.AccessMatrixT,
+    BeamFlow'
+  )
+
+type BeamFlow' =
+  ( HasSchemaName BeamAM.AccessMatrixT,
     HasSchemaName BeamM.MerchantT,
     HasSchemaName BeamMA.MerchantAccessT,
     HasSchemaName BeamP.PersonT,

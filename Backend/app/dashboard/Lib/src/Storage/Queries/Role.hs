@@ -15,12 +15,15 @@
 
 module Storage.Queries.Role where
 
+import qualified Database.Beam as B
 import Domain.Types.Role as Role
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
 import Sequelize as Se
 import Storage.Beam.BeamFlow
+import Storage.Beam.Common as SBC
 import qualified Storage.Beam.Role as BeamR
 
 -- create :: Role -> SqlDB ()
@@ -102,3 +105,33 @@ instance ToTType' BeamR.Role Role.Role where
       { id = getId id,
         ..
       }
+
+findAllWithLimitOffset ::
+  BeamFlow m r =>
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Text ->
+  m [Role]
+findAllWithLimitOffset mbLimit mbOffset mbSearchString = do
+  let limitVal = fromMaybe 10 mbLimit
+      offsetVal = fromMaybe 0 mbOffset
+  dbConf <- getMasterBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ (limitVal) $
+          B.offset_ (offsetVal) $
+            B.orderBy_ (\role -> B.desc_ role.name) $
+              B.filter_'
+                ( \(role) ->
+                    maybe (B.sqlBool_ $ B.val_ False) (\searchStr -> B.sqlBool_ (role.name `B.like_` B.val_ ("%" <> searchStr <> "%"))) mbSearchString
+                )
+                do
+                  role <- B.all_ (SBC.role SBC.atlasDB)
+                  pure role
+  case res of
+    Right res' -> do
+      let m' = res'
+      m <- catMaybes <$> mapM fromTType' m'
+      pure m
+    Left _ -> pure []

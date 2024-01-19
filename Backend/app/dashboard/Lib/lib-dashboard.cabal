@@ -51,6 +51,7 @@ library
       SharedLogic.Transaction
       Storage.Beam.AccessMatrix
       Storage.Beam.BeamFlow
+      Storage.Beam.Common
       Storage.Beam.Merchant
       Storage.Beam.MerchantAccess
       Storage.Beam.Person

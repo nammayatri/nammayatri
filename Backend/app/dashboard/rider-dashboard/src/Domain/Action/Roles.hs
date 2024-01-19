@@ -21,7 +21,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Common
 import "lib-dashboard" Storage.Beam.BeamFlow (BeamFlow)
-import qualified Storage.Queries.Role as QRole
+import qualified "lib-dashboard" Storage.Queries.Role as QRole
 import "lib-dashboard" Tools.Auth
 
 listRoles ::
