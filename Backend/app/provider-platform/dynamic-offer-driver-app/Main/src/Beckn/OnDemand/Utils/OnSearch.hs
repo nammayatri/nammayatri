@@ -31,6 +31,7 @@ import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
 import qualified Data.Aeson as A
+import qualified Data.List as List
 import Domain.Action.Beckn.Search
 import Domain.Types.Estimate
 import EulerHS.Prelude hiding (id, view, (^?))
@@ -73,34 +74,39 @@ mkGeneralInfoTag estimate estInfo =
                   descriptorShortDesc = Nothing
                 },
           tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = (\_ -> Just True) =<< specialLocationTag,
-                    tagDescriptor =
-                      ( \_ ->
-                          Just
-                            Spec.Descriptor
-                              { descriptorCode = (\_ -> Just "special_location_tag") =<< specialLocationTag,
-                                descriptorName = (\_ -> Just "Special Location Tag") =<< specialLocationTag,
-                                descriptorShortDesc = Nothing
-                              }
-                      )
-                        =<< specialLocationTag,
-                    tagValue = specialLocationTag
-                  },
-                Spec.Tag
-                  { tagDisplay = Just False,
-                    tagDescriptor =
-                      Just
-                        Spec.Descriptor
-                          { descriptorCode = Just "distance_to_nearest_driver",
-                            descriptorName = Just "Distance To Nearest Driver",
-                            descriptorShortDesc = Nothing
-                          },
-                    tagValue = Just $ show . double2Int . realToFrac $ estInfo.distanceToNearestDriver
-                  }
-              ]
+            Just $
+              specialLocationTagSingleton specialLocationTag
+                ++ distanceToNearestDriverTagSingleton estInfo.distanceToNearestDriver
         }
+  where
+    specialLocationTagSingleton specialLocationTag
+      | isNothing specialLocationTag = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDisplay = Just True,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just "special_location_tag",
+                      descriptorName = Just "Special Location Tag",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = specialLocationTag
+            }
+    distanceToNearestDriverTagSingleton distanceToNearestDriver =
+      List.singleton $
+        Spec.Tag
+          { tagDisplay = Just False,
+            tagDescriptor =
+              Just
+                Spec.Descriptor
+                  { descriptorCode = Just "distance_to_nearest_driver",
+                    descriptorName = Just "Distance To Nearest Driver",
+                    descriptorShortDesc = Nothing
+                  },
+            tagValue = Just $ show . double2Int . realToFrac $ distanceToNearestDriver
+          }
 
 buildEstimateBreakUpListTags :: EstimateBreakup -> Spec.Tag
 buildEstimateBreakUpListTags EstimateBreakup {..} = do
@@ -148,76 +154,86 @@ mkRateCardTag estimate =
                   descriptorShortDesc = Nothing
                 },
           tagGroupList =
-            Just
-              [ Spec.Tag
-                  { tagDisplay = (\_ -> Just False) =<< nightShiftCharges,
-                    tagDescriptor =
-                      ( \_ ->
-                          Just
-                            Spec.Descriptor
-                              { descriptorCode = (\_ -> Just "night_shift_charge") =<< nightShiftCharges,
-                                descriptorName = (\_ -> Just "Night Shift Charges") =<< nightShiftCharges,
-                                descriptorShortDesc = Nothing
-                              }
-                      )
-                        =<< nightShiftCharges,
-                    tagValue = (\charges -> Just $ show charges.getMoney) =<< nightShiftCharges
-                  },
-                Spec.Tag
-                  { tagDisplay = (\_ -> Just False) =<< oldNightShiftCharges,
-                    tagDescriptor =
-                      ( \_ ->
-                          Just
-                            Spec.Descriptor
-                              { descriptorCode = (\_ -> Just "old_night_shift_charge") =<< oldNightShiftCharges,
-                                descriptorName = (\_ -> Just "Old Night Shift Charges") =<< oldNightShiftCharges,
-                                descriptorShortDesc = Nothing
-                              }
-                      )
-                        =<< oldNightShiftCharges,
-                    tagValue = (Just . DecimalValue.valueToString) =<< oldNightShiftCharges
-                  },
-                Spec.Tag
-                  { tagDisplay = (\_ -> Just False) =<< nightShiftStart,
-                    tagDescriptor =
-                      ( \_ ->
-                          Just
-                            Spec.Descriptor
-                              { descriptorCode = (\_ -> Just "night_shift_start") =<< nightShiftStart,
-                                descriptorName = (\_ -> Just "Night Shift Start Timings") =<< nightShiftStart,
-                                descriptorShortDesc = Nothing
-                              }
-                      )
-                        =<< nightShiftStart,
-                    tagValue = (Just . show) =<< nightShiftStart
-                  },
-                Spec.Tag
-                  { tagDisplay = (\_ -> Just False) =<< waitingChargePerMin,
-                    tagDescriptor =
-                      ( \_ ->
-                          Just
-                            Spec.Descriptor
-                              { descriptorCode = (\_ -> Just "waiting_charge_per_min") =<< waitingChargePerMin,
-                                descriptorName = (\_ -> Just "Waiting Charges Per Min") =<< waitingChargePerMin,
-                                descriptorShortDesc = Nothing
-                              }
-                      )
-                        =<< waitingChargePerMin,
-                    tagValue = (\charges -> Just $ show charges.getMoney) =<< waitingChargePerMin
-                  },
-                Spec.Tag
-                  { tagDisplay = (\_ -> Just False) =<< nightShiftEnd,
-                    tagDescriptor =
-                      ( \_ ->
-                          Just
-                            Spec.Descriptor
-                              { descriptorCode = (\_ -> Just "night_shift_end") =<< nightShiftEnd,
-                                descriptorName = (\_ -> Just "Night Shift End Timings") =<< nightShiftEnd,
-                                descriptorShortDesc = Nothing
-                              }
-                      )
-                        =<< nightShiftEnd,
-                    tagValue = (Just . show) =<< nightShiftEnd
-                  }
-              ]
+            Just $
+              nightShiftChargesTagSingleton nightShiftCharges
+                ++ oldNightShiftChargesTagSingleton oldNightShiftCharges
+                ++ nightShiftStartTagSingleton nightShiftStart
+                ++ waitingChargePerMinTagSingleton waitingChargePerMin
+                ++ nightShiftEndTagSingleton nightShiftEnd
         }
+  where
+    nightShiftChargesTagSingleton nightShiftCharges
+      | isNothing nightShiftCharges = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just "night_shift_charge",
+                      descriptorName = Just "Night Shift Charges",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = (\charges -> Just $ show charges.getMoney) =<< nightShiftCharges
+            }
+    oldNightShiftChargesTagSingleton oldNightShiftCharges
+      | isNothing oldNightShiftCharges = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just "old_night_shift_charge",
+                      descriptorName = Just "Old Night Shift Charges",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = (Just . DecimalValue.valueToString) =<< oldNightShiftCharges
+            }
+    nightShiftStartTagSingleton nightShiftStart
+      | isNothing nightShiftStart = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just "night_shift_start",
+                      descriptorName = Just "Night Shift Start Timings",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = (Just . show) =<< nightShiftStart
+            }
+    waitingChargePerMinTagSingleton waitingChargePerMin
+      | isNothing waitingChargePerMin = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just "waiting_charge_per_min",
+                      descriptorName = Just "Waiting Charges Per Min",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = (\charges -> Just $ show charges.getMoney) =<< waitingChargePerMin
+            }
+    nightShiftEndTagSingleton nightShiftEnd
+      | isNothing nightShiftEnd = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDisplay = Just False,
+              tagDescriptor =
+                Just
+                  Spec.Descriptor
+                    { descriptorCode = Just "night_shift_end",
+                      descriptorName = Just "Night Shift End Timings",
+                      descriptorShortDesc = Nothing
+                    },
+              tagValue = (Just . show) =<< nightShiftEnd
+            }
