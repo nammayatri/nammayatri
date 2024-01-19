@@ -25,7 +25,6 @@ import qualified Domain.Types.Station as DStation
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
-import Kernel.Utils.Text
 
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
