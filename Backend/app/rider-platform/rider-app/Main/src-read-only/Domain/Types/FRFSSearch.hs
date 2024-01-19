@@ -14,7 +14,7 @@ data FRFSSearch = FRFSSearch
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     quantity :: Kernel.Prelude.Int,
     to :: Kernel.Types.Id.Id Domain.Types.Station.Station,
-    vehicleType :: Kernel.Prelude.Text,
+    vehicleType :: Domain.Types.Station.FRFSVehicleType,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

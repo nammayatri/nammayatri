@@ -4,6 +4,7 @@ imports:
   ShortId: Kernel.Types.Id
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  FRFSVehicleType: Domain.Types.Station
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTrip: Domain.Types.FRFSTrip
@@ -11,7 +12,6 @@ imports:
   FRFSTicket: Domain.Types.FRFSTicket
   FRFSTicketBookingPayment: Domain.Types.FRFSTicketBookingPayment
   Station: Domain.Types.Station
-  # Text: Domain.Types.FRFSSearch
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
   FRFSTicketStatus: Domain.Types.FRFSTicket
@@ -26,10 +26,10 @@ FRFSSearch:
     from: Id Station
     to: Id Station
     quantity: Int
-    vehicleType: Text
+    vehicleType: FRFSVehicleType
 
   # types:
-  #   VehicleType:
+  #   FRFSVehicleType:
   #     enum: "METRO"
   #     derive: HttpInstance
 
@@ -46,12 +46,17 @@ Station:
 
   fields:
     id: Id Station
-    vehicleType: Text
+    vehicleType: FRFSVehicleType
     name: Text
     code: Text
     lat: Maybe Double
     lon: Maybe Double
     address: Maybe Text
+
+  types:
+    FRFSVehicleType:
+      enum: "METRO"
+      derive: HttpInstance
 
   queries:
     getTicketPlaces:
@@ -75,7 +80,7 @@ FRFSQuote:
     from: Id Station
     to: Id Station
     quantity: Int
-    vehicleType: Text
+    vehicleType: FRFSVehicleType
     bppSubscriberId: Text
     providerId: Text
     providerName: Text
@@ -132,7 +137,7 @@ FRFSTicketBooking:
     from: Id Station
     to: Id Station
     quantity: Int
-    vehicleType: Text
+    vehicleType: FRFSVehicleType
     bppSubscriberId: Text
     providerId: Text
     providerName: Text
