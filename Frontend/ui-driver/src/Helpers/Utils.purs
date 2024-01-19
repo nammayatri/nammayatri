@@ -462,6 +462,7 @@ getCurrentLocation currentLat currentLon defaultLat defaultLon timeOut specialLo
           _,_ -> pure (LatLon "0.0" "0.0" currentUtc)
         else pure (LatLon (show defaultLat) (show defaultLon) currentUtc)
 
+
 translateString :: String -> Int -> FlowBT String String 
 translateString toTranslate timeOut = do
   (Translation translation) <- (lift $ lift $ doAff $ makeAff \cb -> translateStringWithTimeout (cb <<< Right) Translation timeOut toTranslate $> nonCanceler )

@@ -30,6 +30,7 @@ import Components.ErrorModal as ErrorModal
 import Components.FavouriteLocationModel as FavouriteLocationModel
 import Components.LocationListItem.View as LocationListItem
 import Components.LocationTagBar as LocationTagBar
+import Components.LocationTagBarV2 as LocationTagBarV2
 import Components.MenuButton as MenuButton
 import Components.PopUpModal as PopUpModal
 import Components.RideCompletedCard as RideCompletedCard
@@ -52,7 +53,7 @@ import Data.Either (Either(..))
 import Data.Int (ceil, floor, fromNumber, fromString, toNumber)
 import Data.Function.Uncurried (runFn1)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe, isNothing)
 import Data.Number as NUM
 import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
@@ -87,7 +88,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
-import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..))
+import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
@@ -394,6 +395,7 @@ view push state =
                     , clickable $ not DS.null state.props.repeatRideTimerId 
                     ][]
               else emptyTextView state
+            , bottomNavBarView push state
             ]  <> if state.props.showEducationalCarousel then 
                     [ linearLayout
                       [ height MATCH_PARENT
@@ -406,6 +408,48 @@ view push state =
         ]
   ]
 
+bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+bottomNavBarView push state = let 
+  viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen 
+  in
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.transparent
+    , alignParentBottom "true,-1"
+    , visibility viewVisibility
+    , gravity BOTTOM
+    , orientation VERTICAL
+    ][  separator (V 1) Color.grey900 state.props.currentStage
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , background Color.white900
+          , padding $ PaddingVertical 10 10
+          ](map (\item -> 
+              linearLayout
+              [ height WRAP_CONTENT
+              , weight 1.0 
+              , gravity CENTER 
+              , onClick push $ const $ BottomNavBarAction item.id
+              , orientation VERTICAL
+              , alpha if (state.props.focussedBottomIcon == item.id) then 1.0 else 0.5
+              ][  imageView
+                    [ height $ V 24 
+                    , width $ V 24 
+                    , imageWithFallback $ fetchImage FF_ASSET $ item.image
+                    ]
+                , textView $
+                    [ text item.text 
+                    , height WRAP_CONTENT
+                    , width WRAP_CONTENT
+                    , color $ Color.black800
+                    ] <> FontStyle.body9 TypoGraphy
+
+              ]
+            ) ([  {text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}
+                , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
+    ]
 getMapHeight :: HomeScreenState -> Length
 getMapHeight state = V (if state.data.currentSearchResultType == QUOTES then (((screenHeight unit)/ 4)*3) 
                             else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then ((screenHeight unit) - (getInfoCardPeekHeight state)) + 50
@@ -924,12 +968,14 @@ buttonLayout state push =
       , background if ((null state.data.savedLocations  && null state.data.recentSearchs.predictionArray ) || state.props.isSearchLocation == LocateOnMap) then Color.transparent else Color.white900
       , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent])
       , orientation VERTICAL
-      , padding $ if state.data.config.feature.enableZooTicketBookingFlow then PaddingTop 0 else PaddingTop 16
+      , padding $ PaddingTop 16
       ]
-      [ if state.data.config.feature.enableZooTicketBookingFlow
-        then zooTicketBookingBanner state push 
-        else linearLayout[visibility GONE][]
-      , PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
+      [ 
+      --   if state.data.config.feature.enableZooTicketBookingFlow
+      --   then zooTicketBookingBanner state push 
+      --   else linearLayout[visibility GONE][]
+      -- , 
+      PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
       , if state.props.isSearchLocation == LocateOnMap
         then emptyLayout state 
         else recentSearchesAndFavourites state push (null state.data.savedLocations) (null state.data.recentSearchs.predictionArray)
@@ -946,6 +992,7 @@ recentSearchesAndFavourites state push hideSavedLocsView hideRecentSearches =
   , cornerRadii $ Corners (4.0) true true false false
   ]([ if (not hideSavedLocsView) then savedLocationsView state push else linearLayout[visibility GONE][]
     , shimmerView state
+    , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
     , suggestionsView push state
     , emptySuggestionsBanner state push
     ]
@@ -3379,10 +3426,11 @@ homeScreenViewV2 push state =
                                       [locationUnserviceableView push state]
                                     else 
                                       [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state
-                                      , if state.data.config.feature.enableZooTicketBookingFlow
-                                          then zooTicketBookingBanner state push 
-                                          else linearLayout[visibility GONE][]
+                                      -- , if state.data.config.feature.enableZooTicketBookingFlow
+                                      --     then zooTicketBookingBanner state push 
+                                      --     else linearLayout[visibility GONE][]
                                       , shimmerView state
+                                      , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
                                       , suggestionsView push state
                                       , emptySuggestionsBanner state push
                                       , footerView push state])
@@ -3726,6 +3774,8 @@ mapView push state idTag =
   relativeLayout
     [ height mapDimensions.height
     , width mapDimensions.width 
+    -- , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
+    , stroke $ "1,"<>Color.grey700
     , margin if state.props.currentStage == HomeScreen then (Margin 16 16 16 0) else (Margin 0 0 0 0)
     , onAnimationEnd
             ( \action -> do
@@ -3748,6 +3798,7 @@ mapView push state idTag =
         , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
         , clickable $ not isHomeScreenView state 
         ][]
+     , if (isJust state.data.rentalsInfo && isLocalStageOn HomeScreen) then rentalBanner push state else linearLayout[visibility GONE][]
      , linearLayout 
         [ height WRAP_CONTENT
         , width MATCH_PARENT
@@ -3776,10 +3827,8 @@ getMapDimensions :: HomeScreenState -> {height :: Length, width :: Length}
 getMapDimensions state = 
   let mapHeight = if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver ] && os /= "IOS") then 
                     getMapHeight state
-                  else if ( (suggestionViewVisibility state) && (isBannerVisible state)|| suggestionViewVisibility state) then 
-                    V (getHeightFromPercent 27)
                   else if (isHomeScreenView state) then
-                    V (getHeightFromPercent 45)
+                    V (getHeightFromPercent 27)
                   else
                     MATCH_PARENT
       mapWidth =  if state.props.currentStage /= HomeScreen then MATCH_PARENT else V ((screenWidth unit)-32)
@@ -4202,3 +4251,35 @@ locationUnserviceableView push state =
       ] <> (FontStyle.tags TypoGraphy)
     ]
   ]
+
+rentalBanner :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rentalBanner push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , padding $ Padding 8 0 8 28
+    , gradient if os == "IOS" then (Linear 90.0 ["#FFFFFF" , "#FFFFFF" , "#FFFFFF", Color.transparent]) else (Linear 0.0 [Color.transparent, "#FFFFFF" , "#FFFFFF" , "#FFFFFF"])
+    ][  if state.props.showShimmer then 
+          textView[]
+          else Banner.view (push <<< RentalBannerAction) (rentalBannerConfig state) ]
+
+additionalServicesView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+additionalServicesView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL 
+    , padding $ PaddingHorizontal 16 16
+    , margin $ MarginTop 20
+    ][  textView $
+          [ text "More Services"
+          , color Color.black900
+          ] <> FontStyle.subHeading1 TypoGraphy
+      , linearLayout
+          [ height WRAP_CONTENT
+          , margin $ MarginTop 16
+          , width MATCH_PARENT
+          , gravity CENTER
+          ][  LocationTagBarV2.view (push <<< LocationTagBarAC) (locationTagBarConfig state)]
+      ]
+

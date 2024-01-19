@@ -47,7 +47,9 @@ type Config = {
   margin :: Margin,
   actionTextVisibility :: Boolean,
   titleTextVisibility :: Boolean,
-  imagePadding :: Padding
+  imagePadding :: Padding,
+  cornerRadius :: Number,
+  imageMargin :: Margin
 }
 
 config :: Config
@@ -74,5 +76,7 @@ config = {
     margin : MarginTop 12,
     actionTextVisibility : true,
     titleTextVisibility : true,
-    imagePadding : PaddingVertical 5 5
+    imagePadding : PaddingVertical 5 5,
+    imageMargin : MarginRight 5,
+    cornerRadius : 12.0
 }
