@@ -15,6 +15,7 @@ data FRFSTrip = FRFSTrip
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTrip.FRFSTrip,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     stationCode :: Kernel.Prelude.Text,
+    stationName :: Kernel.Prelude.Text,
     stationType :: Domain.Types.FRFSTrip.StationType,
     stopSequence :: Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

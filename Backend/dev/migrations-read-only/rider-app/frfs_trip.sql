@@ -17,3 +17,8 @@ ALTER TABLE atlas_app.frfs_trip ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.frfs_trip ADD COLUMN stop_sequence integer NOT NULL;
 ALTER TABLE atlas_app.frfs_trip DROP COLUMN sequence;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_trip ADD COLUMN station_name text NOT NULL;

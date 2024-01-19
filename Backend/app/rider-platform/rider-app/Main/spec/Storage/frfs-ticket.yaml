@@ -55,7 +55,7 @@ Station:
 
   types:
     FRFSVehicleType:
-      enum: "METRO"
+      enum: "METRO, BUS"
       derive: HttpInstance
 
   queries:
@@ -103,8 +103,8 @@ FRFSQuote:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findBySearchId:
-      kvFunction: findOneWithKV
+    findAllBySearchId:
+      kvFunction: findAllWithKV
       where: searchId
 
 FRFSTrip:
@@ -117,6 +117,7 @@ FRFSTrip:
     stationCode: Text
     stationType: StationType
     stopSequence: Int
+    stationName: Text
 
   types:
     StationType:
@@ -126,8 +127,8 @@ FRFSTrip:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findByQuoteId:
-      kvFunction: findOneWithKV
+    findAllByQuoteId:
+      kvFunction: findAllWithKV
       where: quoteId
 
 FRFSTicketBooking:
