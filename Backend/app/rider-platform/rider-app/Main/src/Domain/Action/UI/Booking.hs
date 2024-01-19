@@ -38,11 +38,10 @@ newtype BookingListRes = BookingListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 bookingStatus :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> m SRB.BookingAPIEntity
-bookingStatus bookingId (personId, _) = do
+bookingStatus bookingId _ = do
   booking <- runInReplica (QRB.findById bookingId) >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  unless (booking.riderId == personId) $ throwError AccessDenied
   logInfo $ "booking: test " <> show booking
-  SRB.buildBookingAPIEntity booking personId
+  SRB.buildBookingAPIEntity booking booking.riderId
 
 bookingList :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> m BookingListRes
 bookingList (personId, _) mbLimit mbOffset mbOnlyActive mbBookingStatus = do

@@ -111,6 +111,9 @@ dependencies:
   - raw-strings-qq
   - directory
   - filepath
+  - scheduler
+  - singletons
+  - singletons-th
 
 ghc-options:
   - -fwrite-ide-info

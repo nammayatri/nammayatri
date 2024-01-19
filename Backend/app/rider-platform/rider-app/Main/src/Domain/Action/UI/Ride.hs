@@ -97,9 +97,8 @@ getDriverLoc ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id SRide.Ride ->
-  Id SPerson.Person ->
   m GetDriverLocResp
-getDriverLoc rideId personId = do
+getDriverLoc rideId = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
@@ -118,10 +117,10 @@ getDriverLoc rideId personId = do
       Nothing -> Redis.setExp distanceUpdates distance 3600
       Just startDistance -> when (startDistance - 50 > distance) $ do
         unless (isJust mbIsOnTheWayNotified) $ do
-          Notify.notifyDriverOnTheWay personId
+          Notify.notifyDriverOnTheWay booking.riderId
           Redis.setExp driverOnTheWay () driverOnTheWayNotifyExpiry
         when (isNothing mbHasReachedNotified && distance <= driverReachedDistance) $ do
-          Notify.notifyDriverHasReached personId ride.otp ride.vehicleNumber
+          Notify.notifyDriverHasReached booking.riderId ride.otp ride.vehicleNumber
           Redis.setExp driverHasReached () 1500
   return $
     GetDriverLocResp

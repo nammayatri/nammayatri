@@ -71,7 +71,8 @@ data PersonT f = PersonT
     nightSafetyChecks :: B.C f Bool,
     hasCompletedSafetySetup :: B.C f Bool,
     registrationLat :: B.C f (Maybe Double),
-    registrationLon :: B.C f (Maybe Double)
+    registrationLon :: B.C f (Maybe Double),
+    followsRide :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

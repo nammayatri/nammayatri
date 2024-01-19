@@ -105,7 +105,8 @@ validateUpdateProfileDefaultEmergencyNumbersReq maxEmergencyNumberCount UpdatePr
 data PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumber
   { name :: Text,
     mobileCountryCode :: Text,
-    mobileNumber :: Text
+    mobileNumber :: Text,
+    priority :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -216,9 +217,10 @@ updateDefaultEmergencyNumbers ::
     HasFlowEnv m r '["maxEmergencyNumberCount" ::: Int]
   ) =>
   Id Person.Person ->
+  Id Merchant.Merchant ->
   UpdateProfileDefaultEmergencyNumbersReq ->
   m UpdateProfileDefaultEmergencyNumbersResp
-updateDefaultEmergencyNumbers personId req = do
+updateDefaultEmergencyNumbers personId merchantId req = do
   maxEmergencyNumberCount <- asks (.maxEmergencyNumberCount)
   runRequestValidation (validateUpdateProfileDefaultEmergencyNumbersReq maxEmergencyNumberCount) req
   now <- getCurrentTime
@@ -230,12 +232,17 @@ updateDefaultEmergencyNumbers personId req = do
   where
     buildPersonDefaultEmergencyNumber now defEmNum = do
       encMobNum <- encrypt defEmNum.mobileNumber
+      dbHash <- getDbHash defEmNum.mobileNumber
+      mbEmNumPerson <- QPerson.findByMobileNumberAndMerchantId defEmNum.mobileCountryCode dbHash merchantId
       return $
         DPDEN.PersonDefaultEmergencyNumber
           { mobileNumber = encMobNum,
             name = defEmNum.name,
             mobileCountryCode = defEmNum.mobileCountryCode,
             createdAt = now,
+            contactPersonId = (.id) <$> mbEmNumPerson,
+            enableForFollowing = True,
+            priority = defEmNum.priority,
             ..
           }
     updateSettingReq enableEmergencySharing =

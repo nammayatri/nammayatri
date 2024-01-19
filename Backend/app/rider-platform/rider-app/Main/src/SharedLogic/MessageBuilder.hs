@@ -23,6 +23,8 @@ module SharedLogic.MessageBuilder
     buildSOSAlertMessage,
     BuildMarkRideAsSafeMessageReq (..),
     buildMarkRideAsSafeMessage,
+    BuildFollowRideMessageReq (..),
+    buildFollowRideStartedMessage,
   )
 where
 
@@ -114,3 +116,19 @@ buildMarkRideAsSafeMessage merchantOperatingCityId req = do
   return $
     merchantMessage.message
       & T.replace (templateText "userName") req.userName
+
+data BuildFollowRideMessageReq = BuildFollowRideMessageReq
+  { userName :: Text,
+    rideLink :: Text
+  }
+  deriving (Generic)
+
+buildFollowRideStartedMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFollowRideMessageReq -> m Text
+buildFollowRideStartedMessage merchantOperatingCityId req = do
+  merchantMessage <-
+    QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.FOLLOW_RIDE
+      >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.FOLLOW_RIDE))
+  return $
+    merchantMessage.message
+      & T.replace (templateText "userName") req.userName
+      & T.replace (templateText "rideLink") req.rideLink

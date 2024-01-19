@@ -27,6 +27,9 @@ data PersonDefaultEmergencyNumberT f = PersonDefaultEmergencyNumberT
     mobileCountryCode :: B.C f Text,
     mobileNumberEncrypted :: B.C f Text,
     mobileNumberHash :: B.C f DbHash,
+    contactPersonId :: B.C f (Maybe Text),
+    enableForFollowing :: B.C f Bool,
+    priority :: B.C f Int,
     createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
