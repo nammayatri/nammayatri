@@ -8,6 +8,7 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
+import qualified Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -15,13 +16,17 @@ import qualified Domain.Types.Station as Station
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant as QMerc
+import qualified Storage.Queries.FRFSSearch as SearchQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Station as QS
+import qualified Storage.Queries.Station as QStation
 import Tools.Auth
 import Tools.Error
 
@@ -42,8 +47,28 @@ getFrfsStations (mbPersonId, merchantId_) vehicleType_ = do
       )
       stations
 
-postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Station.FRFSVehicleType -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearch = error "Logic yet to be decided"
+postFrfsSearch :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Station.FRFSVehicleType -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+postFrfsSearch (personId, merchantId) mVehicleType req = do
+  fromStation <- QStation.findByStationCode req.from >>= fromMaybeM (InvalidRequest "Invalid from station code")
+  toStation <- QStation.findByStationCode req.from >>= fromMaybeM (InvalidRequest "Invalid from station code")
+
+  searchReqId <- generateGUID
+  now <- getCurrentTime
+
+  let searchReq =
+        DSearch.FRFSSearch
+          { id = searchReqId,
+            fromStationId = fromStation.id.getId,
+            quantity = req.quantity,
+            toStationId = toStation.id.getId,
+            vehicleType = vehicleType,
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
+  SearchQ.create searchReq
+  return $ FRFSSearchAPIRes searchReqId
 
 getFrfsSearchQuote :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
 getFrfsSearchQuote = error "Logic yet to be decided"
