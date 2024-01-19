@@ -3,19 +3,15 @@
 
 module API.Action.UI.FRFSTicketService where
 
-import API.Types.UI.FRFSTicketService (FRFSBookingPaymentAPI, FRFSBookingPaymentStatusAPI, FRFSBookingStatusAPIRes, FRFSQuoteAPI, FRFSSearchAPIReq, FRFSSearchAPIRes, FRFSStationAPI, FRFSTicketAPI)
+import API.Types.UI.FRFSTicketService (FRFSBookingPaymentAPI, FRFSBookingPaymentStatusAPI, FRFSQuoteAPIRes, FRFSSearchAPIReq, FRFSSearchAPIRes, FRFSStationAPI, FRFSTicketAPI, FRFSTicketBookingStatusAPIRes)
+import qualified API.Types.UI.FRFSTicketService
+import qualified Data.Text
 import qualified Domain.Action.UI.FRFSTicketService as Domain.Action.UI.FRFSTicketService
-import qualified Domain.Types.FRFSBookingStatusAPIRes
 import qualified Domain.Types.FRFSQuote
-import qualified Domain.Types.FRFSQuoteAPI
 import qualified Domain.Types.FRFSSearch
-import qualified Domain.Types.FRFSSearchAPIReq
-import qualified Domain.Types.FRFSSearchAPIRes
 import qualified Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.FRFSTicketBookingStatusAPIRes
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
-import qualified Domain.Types.Station
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -26,13 +22,13 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  TokenAuth :> "frfs" :> "stations" :> QueryParam "vehicleType" (Kernel.Prelude.Text) :> Get '[JSON] [Domain.Types.Station.Station]
-    :<|> TokenAuth :> "frfs" :> "search" :> QueryParam "vehicleType" (Kernel.Prelude.Text) :> ReqBody '[JSON] Domain.Types.FRFSSearchAPIReq.FRFSSearchAPIReq :> Post '[JSON] Domain.Types.FRFSSearchAPIRes.FRFSSearchAPIRes
-    :<|> TokenAuth :> "frfs" :> "search" :> Capture "searchId" (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch) :> "quote" :> Get '[JSON] [Domain.Types.FRFSQuoteAPI.FRFSQuoteAPI]
-    :<|> TokenAuth :> "frfs" :> "quote" :> Capture "quoteId" (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote) :> "confirm" :> Post '[JSON] Domain.Types.FRFSTicketBookingStatusAPIRes.FRFSTicketBookingStatusAPIRes
-    :<|> TokenAuth :> "frfs" :> "quote" :> Capture "quoteId" (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote) :> "payment" :> "retry" :> Post '[JSON] Domain.Types.FRFSTicketBookingStatusAPIRes.FRFSTicketBookingStatusAPIRes
-    :<|> TokenAuth :> "frfs" :> "booking" :> Capture "bookingId" (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking) :> "status" :> Get '[JSON] Domain.Types.FRFSTicketBookingStatusAPIRes.FRFSTicketBookingStatusAPIRes
-    :<|> TokenAuth :> "frfs" :> "booking" :> "list" :> Get '[JSON] [Domain.Types.FRFSBookingStatusAPIRes.FRFSBookingStatusAPIRes]
+  TokenAuth :> "frfs" :> "stations" :> QueryParam "vehicleType" (Data.Text.Text) :> Get '[JSON] [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+    :<|> TokenAuth :> "frfs" :> "search" :> QueryParam "vehicleType" (Data.Text.Text) :> ReqBody '[JSON] API.Types.UI.FRFSTicketService.FRFSSearchAPIReq :> Post '[JSON] API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+    :<|> TokenAuth :> "frfs" :> "search" :> Capture "searchId" (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch) :> "quote" :> Get '[JSON] [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
+    :<|> TokenAuth :> "frfs" :> "quote" :> Capture "quoteId" (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote) :> "confirm" :> Post '[JSON] API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+    :<|> TokenAuth :> "frfs" :> "quote" :> Capture "quoteId" (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote) :> "payment" :> "retry" :> Post '[JSON] API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+    :<|> TokenAuth :> "frfs" :> "booking" :> Capture "bookingId" (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking) :> "status" :> Get '[JSON] API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+    :<|> TokenAuth :> "frfs" :> "booking" :> "list" :> Get '[JSON] [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
 
 handler :: Environment.FlowServer API
 handler =
@@ -44,23 +40,23 @@ handler =
     :<|> getFrfsBookingStatus
     :<|> getFrfsBookingList
 
-getFrfsStations :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler [Domain.Types.Station.Station]
-getFrfsStations a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations (Kernel.Prelude.first Kernel.Prelude.Just a2) a1
+getFrfsStations :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Data.Text.Text) -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+getFrfsStations a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsStations a2 a1
 
-postFrfsSearch :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Domain.Types.FRFSSearchAPIReq.FRFSSearchAPIReq -> Environment.FlowHandler Domain.Types.FRFSSearchAPIRes.FRFSSearchAPIRes
-postFrfsSearch a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch (Kernel.Prelude.first Kernel.Prelude.Just a3) a2 a1
+postFrfsSearch :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Data.Text.Text) -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+postFrfsSearch a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsSearch a3 a2 a1
 
-getFrfsSearchQuote :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Environment.FlowHandler [Domain.Types.FRFSQuoteAPI.FRFSQuoteAPI]
-getFrfsSearchQuote a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsSearchQuote (Kernel.Prelude.first Kernel.Prelude.Just a2) a1
+getFrfsSearchQuote :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
+getFrfsSearchQuote a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsSearchQuote a2 a1
 
-postFrfsQuoteConfirm :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Environment.FlowHandler Domain.Types.FRFSTicketBookingStatusAPIRes.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteConfirm (Kernel.Prelude.first Kernel.Prelude.Just a2) a1
+postFrfsQuoteConfirm :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuoteConfirm a2 a1
 
-postFrfsQuotePaymentRetry :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Environment.FlowHandler Domain.Types.FRFSTicketBookingStatusAPIRes.FRFSTicketBookingStatusAPIRes
-postFrfsQuotePaymentRetry a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuotePaymentRetry (Kernel.Prelude.first Kernel.Prelude.Just a2) a1
+postFrfsQuotePaymentRetry :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuotePaymentRetry a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsQuotePaymentRetry a2 a1
 
-getFrfsBookingStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.FlowHandler Domain.Types.FRFSTicketBookingStatusAPIRes.FRFSTicketBookingStatusAPIRes
-getFrfsBookingStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingStatus (Kernel.Prelude.first Kernel.Prelude.Just a2) a1
+getFrfsBookingStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.FlowHandler API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+getFrfsBookingStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingStatus a2 a1
 
-getFrfsBookingList :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [Domain.Types.FRFSBookingStatusAPIRes.FRFSBookingStatusAPIRes]
-getFrfsBookingList a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingList (Kernel.Prelude.first Kernel.Prelude.Just a1)
+getFrfsBookingList :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
+getFrfsBookingList a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsBookingList a1
