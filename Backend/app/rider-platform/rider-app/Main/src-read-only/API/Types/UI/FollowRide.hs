@@ -22,3 +22,8 @@ data Followers = Followers
     priority :: Kernel.Prelude.Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data ShareRideReq = ShareRideReq
+  { emergencyContactNumbers :: [Data.Text.Text]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)

@@ -390,7 +390,8 @@ instance ToTType' BeamP.Person Person where
         BeamP.clientVersion = versionToText <$> clientVersion,
         BeamP.shareEmergencyContacts = shareEmergencyContacts,
         BeamP.nightSafetyChecks = nightSafetyChecks,
-        BeamP.triggerSupport = triggerSupport,
+        BeamP.shareTripWithEmergencyContacts = shareTripWithEmergencyContacts,
+        BeamP.hasCompletedMockSafetyDrill = hasCompletedMockSafetyDrill,
         BeamP.hasCompletedSafetySetup = hasCompletedSafetySetup,
         BeamP.registrationLat = registrationLat,
         BeamP.registrationLon = registrationLon,
@@ -405,12 +406,12 @@ updateEmergencyInfo ::
   Maybe Bool ->
   Maybe Bool ->
   m ()
-updateEmergencyInfo (Id personId) shareEmergencyContacts triggerSupport nightSafetyChecks hasCompletedSafetySetup = do
+updateEmergencyInfo (Id personId) shareEmergencyContacts shareTripWithEmergencyContacts nightSafetyChecks hasCompletedSafetySetup = do
   now <- getCurrentTime
   updateWithKV
     ( [Se.Set BeamP.updatedAt now]
         <> [Se.Set BeamP.shareEmergencyContacts (fromJust shareEmergencyContacts) | isJust shareEmergencyContacts]
-        <> [Se.Set BeamP.triggerSupport (fromJust triggerSupport) | isJust triggerSupport]
+        <> [Se.Set BeamP.shareTripWithEmergencyContacts shareTripWithEmergencyContacts | isJust shareEmergencyContacts]
         <> [Se.Set BeamP.nightSafetyChecks (fromJust nightSafetyChecks) | isJust nightSafetyChecks]
         <> [Se.Set BeamP.hasCompletedSafetySetup (fromJust hasCompletedSafetySetup) | isJust hasCompletedSafetySetup]
     )
@@ -421,6 +422,15 @@ updateFollowsRide (Id personId) followsRide = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamP.followsRide followsRide,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id (Se.Eq personId)]
+
+updateSafetyDrillStatus :: MonadFlow m => Id Person -> Maybe Bool -> m ()
+updateSafetyDrillStatus (Id personId) hasCompletedMockSafetyDrill = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.hasCompletedMockSafetyDrill hasCompletedMockSafetyDrill,
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
