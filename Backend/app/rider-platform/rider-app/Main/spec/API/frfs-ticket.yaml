@@ -1,29 +1,18 @@
 imports:
-  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  Merchant: Domain.Types.Merchant
-  FRFSSearchAPIReq: Domain.Types.FRFSSearchAPIReq
-  FRFSSearchAPIRes: Domain.Types.FRFSSearchAPIRes
-  FRFSBookingStatusAPIRes: Domain.Types.FRFSBookingStatusAPIRes
-  FRFSBookingPayment: Domain.Types.FRFSBookingPayment
-  FRFSTicketBookingPaymentStatus: Domain.Types.FRFSBookingPaymentStatus
+  Text: Data.Text
+  Maybe: Data.Maybe
+  # FRFSTicketService: Domain.Types.FRFSTicketService
   Station: Domain.Types.Station
   StationType: Domain.Types.FRFSTrip
-  # Text: Domain.Types.FRFSSearch
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSQuote: Domain.Types.FRFSQuote
-  FRFSTicketBookingStatusAPIRes: Domain.Types.FRFSTicketBookingStatusAPIRes
-  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
-  FRFSTicket: Domain.Types.FRFSTicket
+  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   FRFSTicketStatus: Domain.Types.FRFSTicket
-  # Gps: Kernel.Types.Common
-  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   HighPrecMoney: Kernel.Types.Common
   UTCTime: Kernel.Prelude
-  FRFSTicketBookingPayment: Domain.Types.FRFSTicketBookingPayment
   FRFSTrip: Domain.Types.FRFSTrip
   FRFSSearch: Domain.Types.FRFSSearch
-  FRFSQuoteAPI: Domain.Types.FRFSQuoteAPI
 
 module: FRFSTicketService
 types:
@@ -35,7 +24,7 @@ types:
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
 
-  FRFSQuoteAPI:
+  FRFSQuoteAPIRes:
     quoteId: Id FRFSQuote
     _type: FRFSQuoteType
     vehicleType: Text
@@ -44,7 +33,7 @@ types:
     stations: [FRFSStationAPI]
     validTill: UTCTime
 
-  FRFSBookingStatusAPIRes:
+  FRFSTicketBookingStatusAPIRes:
     bookingId: Id FRFSTicketBooking
     status: FRFSTicketBookingStatus
     _type: FRFSQuoteType
@@ -53,14 +42,14 @@ types:
     price: HighPrecMoney
     validTill: UTCTime
     payment: Maybe FRFSBookingPaymentAPI
+    ticket: [FRFSTicketAPI]
+    stations: [FRFSStationAPI]
 
     # FRFSBookingPayment:
     #   status: FRFSBookingPaymentStatus
 
     # FRFSBookingPaymentStatus:
     #   enum: "PENDING, SUCCESS, FAILURE, REFUNDED"
-    ticket: [FRFSTicketAPI]
-    stations: [FRFSStationAPI]
 
   FRFSTicketAPI:
     status: FRFSTicketStatus
@@ -91,7 +80,7 @@ apis:
       query:
         vehicleType: Text
       response:
-        type: "[Station]"
+        type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
   # Initiate search for metro tickets
   - POST:
@@ -100,9 +89,9 @@ apis:
       query:
         vehicleType: Text
       request:
-        type: FRFSSearchAPIReq
+        type: API.Types.UI.FRFSTicketService.FRFSSearchAPIReq
       response:
-        type: FRFSSearchAPIRes
+        type: API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 
   # Get quotes for metro tickets
   - GET:
@@ -111,7 +100,7 @@ apis:
         searchId: Id FRFSSearch
       auth: TokenAuth
       response:
-        type: "[FRFSQuoteAPI]"
+        type: "[API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]"
 
   # Confirm quote for metro tickets (return PP sdk params)
   - POST:
@@ -120,7 +109,7 @@ apis:
         quoteId: Id FRFSQuote
       auth: TokenAuth
       response:
-        type: FRFSTicketBookingStatusAPIRes
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 
   # Retry payment
   - POST:
@@ -129,7 +118,7 @@ apis:
         quoteId: Id FRFSQuote
       auth: TokenAuth
       response:
-        type: FRFSTicketBookingStatusAPIRes
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 
   # Get booking status
   - GET:
@@ -138,10 +127,11 @@ apis:
         bookingId: Id FRFSTicketBooking
       auth: TokenAuth
       response:
-        type: FRFSTicketBookingStatusAPIRes
+        type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 
   # List metro tickets
   - GET:
       endpoint: /frfs/booking/list
+      auth: TokenAuth
       response:
-        type: "[FRFSBookingStatusAPIRes]"
+        type: "[API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]"
