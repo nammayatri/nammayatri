@@ -25,7 +25,10 @@ data PersonDefaultEmergencyNumberE e = PersonDefaultEmergencyNumber
     name :: Text,
     mobileNumber :: EncryptedHashedField e Text,
     mobileCountryCode :: Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    contactPersonId :: Maybe (Id Person),
+    enableForFollowing :: Bool,
+    priority :: Int
   }
   deriving (Generic)
 
@@ -51,7 +54,8 @@ data PersonDefaultEmergencyNumberAPIEntity = PersonDefaultEmergencyNumberAPIEnti
   { personId :: Id Person,
     name :: Text,
     mobileCountryCode :: Text,
-    mobileNumber :: Text
+    mobileNumber :: Text,
+    priority :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

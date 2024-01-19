@@ -350,7 +350,8 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         nightSafetyChecks = True,
         hasCompletedSafetySetup = False,
         registrationLat = req.registrationLat,
-        registrationLon = req.registrationLon
+        registrationLon = req.registrationLon,
+        followsRide = False
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing

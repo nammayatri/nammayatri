@@ -18,6 +18,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AppInstalls as AppInstalls
@@ -93,6 +94,7 @@ type API =
            :<|> AadhaarVerification.API
            :<|> Issue.API
            :<|> TicketService.API
+           :<|> FollowRide.API
        )
 
 handler :: FlowServer API
@@ -132,3 +134,4 @@ handler =
     :<|> AadhaarVerification.handler
     :<|> Issue.handler
     :<|> TicketService.handler
+    :<|> FollowRide.handler

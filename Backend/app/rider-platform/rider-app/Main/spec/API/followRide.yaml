@@ -1,0 +1,19 @@
+imports:
+  Text: Data.Text
+  Booking: Domain.Types.Booking
+
+module: FollowRide
+types:
+  Followers:
+    name: Maybe Text
+    bookingId: Id Booking
+    mobileNumber: Text
+    priority: Int
+
+apis:
+  # GET /follow/ride
+  - GET:
+      endpoint: /follow/ride
+      auth: TokenAuth
+      response:
+        type: "[API.Types.UI.FollowRide.Followers]"

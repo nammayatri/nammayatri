@@ -40,16 +40,18 @@ replaceAll (Id personId) pdenList = do
 findAllByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [PersonDefaultEmergencyNumber]
 findAllByPersonId (Id personId) = findAllWithKV [Se.Is BeamPDEN.personId $ Se.Eq personId]
 
+findAllByContactPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [PersonDefaultEmergencyNumber]
+findAllByContactPersonId (Id contactPersonId) = findAllWithKV [Se.Is BeamPDEN.contactPersonId $ Se.Eq (Just contactPersonId)]
+
 instance FromTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNumber where
   fromTType' BeamPDEN.PersonDefaultEmergencyNumberT {..} = do
     pure $
       Just
         PersonDefaultEmergencyNumber
           { personId = Id personId,
-            name = name,
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
-            mobileCountryCode = mobileCountryCode,
-            createdAt = createdAt
+            contactPersonId = Id <$> contactPersonId,
+            ..
           }
 
 instance ToTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNumber where
@@ -60,5 +62,8 @@ instance ToTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNu
         BeamPDEN.mobileCountryCode = mobileCountryCode,
         BeamPDEN.mobileNumberHash = mobileNumber.hash,
         BeamPDEN.mobileNumberEncrypted = unEncrypted (mobileNumber.encrypted),
+        BeamPDEN.contactPersonId = getId <$> contactPersonId,
+        BeamPDEN.enableForFollowing = enableForFollowing,
+        BeamPDEN.priority = priority,
         BeamPDEN.createdAt = createdAt
       }
