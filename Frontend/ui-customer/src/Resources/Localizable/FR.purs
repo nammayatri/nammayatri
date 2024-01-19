@@ -1012,3 +1012,4 @@ getFR stringKey =
         ONE_WAY_STR -> "Aller simple"
         SHARE_TICKET -> "Partager le billet"
         ORIGIN -> "Origine"
+        HISTORY -> "Histoire"

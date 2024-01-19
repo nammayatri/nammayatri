@@ -112,18 +112,30 @@ isEmailPresent :: LazyCheck -> Boolean
 isEmailPresent _ = not ( getValueToLocalStore USER_EMAIL == "__failed" || getValueToLocalStore USER_EMAIL == "(null)" )
 
 getApiIssueList :: Array IssueReportCustomerListItem -> Array IssueInfo
-getApiIssueList issueList = (map (\(IssueReportCustomerListItem issue) -> {
-   issueReportId : issue.issueReportId,
-   status : issue.status,
-   category : if (getLanguageLocale languageKey == "EN_US")
-                then
-                  joinWith " " (map (\catName ->
-                    let { before, after } = splitAt 1 catName
-                    in (toUpper before <> after)
-                  ) (split (Pattern " ") issue.category))
-                else issue.category,
-   createdAt : getExactTime (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") (issue.createdAt)) issue.createdAt
-}) issueList)
+getApiIssueList issueList = map (\(IssueReportCustomerListItem issue) -> issueInfoT (IssueReportCustomerListItem issue)) issueList
+  where 
+    issueInfoT :: IssueReportCustomerListItem -> IssueInfo
+    issueInfoT (IssueReportCustomerListItem issue) = 
+      let issueReportId' =  issue.issueReportId
+          status' = issue.status
+          category' = if getLanguageLocale languageKey == "EN_US" then
+                        joinWith " " $ map (\catName -> categoriesT catName) (split (Pattern " ") issue.category)
+                      else 
+                        issue.category
+          createdAt' = getExactTime (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") (issue.createdAt)) issue.createdAt
+          issueReportShortId' = issue.issueReportShortId
+      in {
+        issueReportId : issueReportId'
+      , status : status'
+      , category : category'
+      , createdAt : createdAt' 
+      , issueReportShortId : issueReportShortId'
+      }
+    
+    categoriesT :: String -> String
+    categoriesT catName = 
+      let { before, after } = splitAt 1 catName
+      in (toUpper before <> after)
 
 getExactTime :: Int -> String -> String 
 getExactTime sec createdAt = 
@@ -164,15 +176,15 @@ topicsList state =  (if state.data.config.feature.enableSelfServe
 
 reportsList :: HelpAndSupportScreenState -> Array CategoryListType
 reportsList state = []
-  <> if null state.data.ongoingIssueList then [] else [
+  <> (if null state.data.ongoingIssueList then [] else [
         { categoryAction : "REPORTED"
         , categoryName : getString REPORTED <> " : " <> (toStringJSON (DA.length (state.data.ongoingIssueList)))
         , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_reported"
         , categoryId : "1"
-        }]
-  <> if null state.data.resolvedIssueList then [] else [
+        }])
+  <> (if null state.data.resolvedIssueList then [] else [
         { categoryAction : "CLOSED"
         , categoryName : getString RESOLVED <> " : " <> (toStringJSON (DA.length (state.data.resolvedIssueList)))
         , categoryImageUrl : fetchImage FF_COMMON_ASSET "ny_ic_resolved"
         , categoryId : "2"
-        }]
+        }])

@@ -765,8 +765,6 @@ getKN stringKey =
         PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER -> "ಚಾಲಕನಿಗೆ ಕರೆ ಮಾಡಲು ಸವಾರಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ" 
         ADD_IMAGE_S -> "ಚಿತ್ರಗಳನ್ನು ಸೇರಿಸಿ"
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "ಈಗಾಗಲೇ ಸಕ್ರಿಯವಾಗಿರುವ ಸವಾರಿ ಇದೆ"
-        CONFIRM_STOP_LOCATION -> "Confirm stop location"
-        CONFIRM_DROP -> "Confirm Drop"
         BOOK_METRO_WITH_NY_NOW -> "ಇದೀಗ ನಮ್ಮ ಯಾತ್ರಿ \nಮೂಲಕ ಮೆಟ್ರೋ ಟಿಕೆಟ್‌ಗಳನ್ನು ಬುಕ್ ಮಾಡಿ!"
         CONFIRM_STOP_LOCATION -> "ಸ್ಥಳವನ್ನು ದೃಢೀಕರಿಸಿ"
         CONFIRM_DROP -> "ಡ್ರಾಪ್ ಸ್ಥಳವನ್ನು ದೃಢೀಕರಿಸಿ"
@@ -1013,3 +1011,4 @@ getKN stringKey =
         TERMS_AND_CONDITIONS_UPDATED -> "T&Cಗಳು ಮತ್ತು ಗೌಪ್ಯತೆ ನೀತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"
         SHARE_TICKET -> "ಟಿಕೆಟ್ ಹಂಚಿಕೊಳ್ಳಿ"
         ORIGIN -> "ಮೂಲ"
+        HISTORY -> "ಇತಿಹಾಸ"

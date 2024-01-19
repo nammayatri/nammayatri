@@ -1026,3 +1026,4 @@ getTA stringKey =
     ONE_WAY_STR -> "ஒரு வழி"
     SHARE_TICKET -> "பகிர் டிக்கெட்"
     ORIGIN -> "தொடக்கம்"
+    HISTORY -> "வரலாறு"

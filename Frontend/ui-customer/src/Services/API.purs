@@ -2489,7 +2489,8 @@ newtype IssueReportCustomerListItem = IssueReportCustomerListItem
     issueReportId :: String,
     status :: String,
     category :: String,
-    createdAt :: String
+    createdAt :: String,
+    issueReportShortId :: Maybe String
   }
 
 instance makeFetchIssueListReq :: RestEndpoint FetchIssueListReq FetchIssueListResp where
@@ -2609,6 +2610,7 @@ newtype PostIssueReqBody = PostIssueReqBody
   , mediaFiles :: Array String
   , description :: String
   , chats :: Array Chat
+  , createTicket :: Boolean
   }
 
 newtype Chat = Chat
@@ -2619,6 +2621,7 @@ newtype Chat = Chat
 
 newtype PostIssueRes = PostIssueRes { 
   issueReportId :: String, 
+  issueReportShortId :: Maybe String,
   messages :: Array Message
 }
 
@@ -2663,6 +2666,7 @@ newtype IssueInfoRes = IssueInfoRes
   , categoryLabel :: String
   , chats :: Array ChatDetail
   , options :: Array Option
+  , issueReportShortId :: Maybe String
   }
 
 newtype ChatDetail = ChatDetail
