@@ -70,6 +70,7 @@ module Domain.Action.UI.Driver
     getPlanDataFromDriverFee,
     planMaxRides,
     getDownloadInvoiceData,
+    getDummyRideRequest,
   )
 where
 
@@ -86,6 +87,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
 import Data.Time.Format.ISO8601 (iso8601Show)
+import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.Driver.GoHomeFeature.DriverHomeLocation as DDHL
@@ -1618,3 +1620,16 @@ getDownloadInvoiceData (personId, _merchantId, merchantOpCityId) from mbTo = do
             amount = sgst
           }
       ]
+
+getDummyRideRequest ::
+  ( EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+  ) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  m APISuccess
+getDummyRideRequest (personId, _, merchantOpCityId) = do
+  driver <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  DriverNotify.triggerDummyRideRequest driver merchantOpCityId False

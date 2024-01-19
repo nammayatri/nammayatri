@@ -135,7 +135,9 @@ data TransporterConfigT f = TransporterConfigT
     notificationRetryTimeGap :: B.C f Seconds,
     driverAutoPayExecutionTimeFallBack :: B.C f Seconds,
     orderAndNotificationStatusCheckFallBackTime :: B.C f Seconds,
-    kaptureDisposition :: B.C f Text
+    kaptureDisposition :: B.C f Text,
+    dummyFromLocation :: B.C f (Maybe A.Value),
+    dummyToLocation :: B.C f (Maybe A.Value)
   }
   deriving (Generic, B.Beamable)
 

@@ -178,6 +178,10 @@ type API =
              :> MandatoryQueryParam "from" Day
              :> QueryParam "to" Day
              :> Get '[JSON] [DDriver.DriverFeeResp]
+           :<|> "getDummyRideRequest"
+             :> ( TokenAuth
+                    :> Get '[JSON] APISuccess
+                )
        )
 
 handler :: FlowServer API
@@ -211,6 +215,7 @@ handler =
     :<|> getDriverPaymentsHistoryEntityDetailsV2
     :<|> getCity
     :<|> getDownloadInvoiceData
+    :<|> getDummyRideRequest
 
 getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.DriverInformationRes
 getInformation = withFlowHandlerAPI . DDriver.getInformation
@@ -297,3 +302,6 @@ getCity = withFlowHandlerAPI . DDriver.getCity
 
 getDownloadInvoiceData :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Maybe Day -> FlowHandler [DDriver.DriverFeeResp]
 getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate = withFlowHandlerAPI . DDriver.getDownloadInvoiceData (personId, merchantId, merchantOpCityId) fromDate
+
+getDummyRideRequest :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
+getDummyRideRequest = withFlowHandlerAPI . DDriver.getDummyRideRequest
