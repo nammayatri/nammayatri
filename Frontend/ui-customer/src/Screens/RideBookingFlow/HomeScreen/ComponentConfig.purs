@@ -20,8 +20,6 @@ import Language.Strings
 import Prelude
 import PrestoDOM
 import Animation.Config as AnimConfig
-import Animation.Config as AnimConfig
-import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Components.Banner as Banner
 import Components.MessagingView as MessagingView
@@ -39,7 +37,7 @@ import Components.RatingCard as RatingCard
 import Components.RequestInfoCard as RequestInfoCard
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SearchLocationModel as SearchLocationModel
-import Components.SearchLocationModel as SearchLocationModel
+import Components.LocationTagBarV2 as LocationTagBar
 import Components.SelectListModal as CancelRidePopUpConfig
 import Components.SourceToDestination as SourceToDestination
 import Control.Monad.Except (runExcept)
@@ -371,6 +369,26 @@ genderBannerConfig state =
       , actionTextColor = Color.elfGreen
       , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_banner_gender_feat"
       , isBanner = state.props.isBanner
+      }
+  in config'
+
+rentalBannerConfig :: ST.HomeScreenState -> Banner.Config
+rentalBannerConfig state =
+  let
+    config = Banner.config
+    config' = config
+      {
+        backgroundColor = Color.blue600
+      , stroke = "1," <> Color.grey900
+      , imageHeight = V 43
+      , imageWidth = V 66
+      , imagePadding = PaddingVertical 0 0
+      , title = "Rental booking at " <> (maybe "" (_.rentalsScheduledAt) state.data.rentalsInfo)
+      , titleColor = Color.blue800
+      , actionTextVisibility = false
+      , cornerRadius = 8.0
+      , imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_rental_booking"
+      , imageMargin = MarginRight 0
       }
   in config'
 
@@ -1614,3 +1632,33 @@ getChatSuggestions state = do
         else if hideInitial then getSuggestionsfromKey "customerInitialBP" --"customerInitialBP2" --TODO Revert during suggestions update
         else getSuggestionsfromKey "customerInitialBP" --"customerInitialBP1" --TODO Revert during suggestions update
   else state.data.chatSuggestionsList
+
+locationTagBarConfig :: ST.HomeScreenState -> LocationTagBar.LocationTagBarConfig
+locationTagBarConfig state  = let 
+  locTagList =
+      map 
+        (\item -> 
+          { imageConfig : 
+              { height : V 16
+              , width : V 16
+              , imageWithFallback : item.image
+              } ,
+            textConfig : 
+              { text : item.text
+              , fontStyle : FontStyle.Body1
+              , fontSize : FontSize.a_14
+              , color : Color.black800
+              },
+            stroke : "0," <> Color.blue600 ,
+            cornerRadius : Corners 19.0 true true true true ,
+            background : Color.blue600 ,
+            height : WRAP_CONTENT ,
+            width : WRAP_CONTENT,
+            padding : Padding 8 8 8 8 ,
+            id : item.id
+          })
+        [ { image : "ny_ic_intercity", text : "Intercity", id : "INTER_CITY" },
+          { image : "ny_ic_rental" , text : "Rentals", id : "RENTALS" },
+          { image : "ny_ic_ambulance", text : "Ambulance", id : "AMBULANCE" }]
+  in 
+    { tagList : locTagList }

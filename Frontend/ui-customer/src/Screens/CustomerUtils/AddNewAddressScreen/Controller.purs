@@ -22,7 +22,7 @@ import Components.GenericHeader as GenericHeader
 import Components.LocationListItem as LocationListItemController
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText as PrimaryEditText
-import Data.Array ((!!), length, filter, any, sortBy, null) as DA
+import Data.Array ((!!), length, filter, any, sortBy, null, head) as DA
 import Data.Lens ((^.))
 import Data.Ord
 import Data.Eq
@@ -113,6 +113,7 @@ data ScreenOutput = SearchPlace String AddNewAddressScreenState
                   | GoToFavourites
                   | CheckLocServiceability AddNewAddressScreenState LocItemType
                   | GoToHome
+                  | GoToSearchLocScreen
 
 data Action = BackPressed AddNewAddressScreenState
             | NoAction
@@ -190,7 +191,9 @@ eval RecenterCurrentLocation state = continueWithCmd state [do
   ]
 
 eval (BackPressed backpressState) state = do
-  case state.props.isLocateOnMap , state.props.editLocation , state.props.showSavePlaceView , state.props.fromHome of
+  let searchLocScreen = getScreen SEARCH_LOCATION_SCREEN
+      homeScreen = getScreen HOME_SCREEN
+  case state.props.isLocateOnMap , state.props.editLocation , state.props.showSavePlaceView , state.props.fromHome  of
     true , _ , _ , _ -> do
       continue state{props{isLocateOnMap = false}, data{selectedItem{description = state.data.address},locationList = state.data.recentSearchs.predictionArray}}
     _ , true , false , _ -> do
@@ -199,9 +202,11 @@ eval (BackPressed backpressState) state = do
         continue state {props{showSavePlaceView = true, isLocateOnMap = false}, data{address= state.data.selectedItem.description}}
     _ , _ , _ , true -> do
       exit $ GoToHome
-    _ , _ , _ , _ -> do
+    _ , _ , _ , false -> do 
+      if (state.props.fromScreen == searchLocScreen) then exit $ GoToSearchLocScreen
+      else do 
         void $ pure $ hideKeyboardOnNavigation true
-        _ <- pure $ exitLocateOnMap ""
+        void $ pure $ exitLocateOnMap ""
         updateAndExit state{props{editLocation = false}} $ GoToFavourites
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure $ BackPressed state]
@@ -388,11 +393,54 @@ getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 
 }) savedLocation )
 
+
+
+savedLocTransformer :: (Array SavedReqLocationAPIEntity) -> Array LocationListItemState
+savedLocTransformer savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
+  {
+  prefixImageUrl : fetchImage FF_ASSET $ case (toLower (item.tag) ) of 
+                "home" -> "ny_ic_home_blue"
+                "work" -> "ny_ic_work_blue"
+                _      -> "ny_ic_fav_red"
+, postfixImageUrl : ""
+, postfixImageVisibility : false
+, title : (fromMaybe "" (DA.head (split (Pattern ",") (decodeAddress(SavedLoc (SavedReqLocationAPIEntity item))))))
+, subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))) + 2) (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))
+, lat : (Just item.lat)
+, lon : (Just item.lon)
+, description : (fromMaybe "" (DA.head (split (Pattern ":") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))))
+, placeId : item.placeId
+, tag : item.tag
+, tagType : Just (show LOC_LIST)
+, cardType : Nothing
+, address : ""
+, tagName : ""
+, isEditEnabled : true
+, savedLocation : ""
+, placeName : ""
+, isClickable : true
+, alpha : 1.0
+, fullAddress : getAddressFromSaved (SavedReqLocationAPIEntity item)
+, locationItemType : Just SAVED_LOCATION
+, distance : Nothing
+, showDistance : Just false
+, actualDistance : Nothing
+, frequencyCount : Nothing
+, recencyDate : Nothing
+, locationScore : Nothing
+
+}) savedLocation )
+
 getSavedTags :: (Array SavedReqLocationAPIEntity) -> Array String
 getSavedTags savedLocation = (map (\(SavedReqLocationAPIEntity item) -> toLower (item.tag) ) savedLocation)
 
 getSavedTagsFromHome :: (Array LocationListItemState) -> Array String
 getSavedTagsFromHome savedLocation = (map (\(item) -> toLower (item.tag)) savedLocation)
+
+
+-- savedTagExists :: (Array LocationListItemState) -> String -> Boolean
+-- savedTagExists savedLoc tag = 
+--   (isJust find (\x -> (toLower x) == (toLower tag)) savedLoc)
 
 validTag :: (Array String) -> String -> String -> Boolean
 validTag savedTags input editTag = not (DA.any (\x -> (trim (toLower x)) == trim (toLower input)) (DA.filter (\item -> (trim (toLower item)) /= (trim (toLower editTag)) ) savedTags) )

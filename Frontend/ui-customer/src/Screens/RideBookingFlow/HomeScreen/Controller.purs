@@ -30,6 +30,7 @@ import Components.FavouriteLocationModel as FavouriteLocationModelController
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.LocationListItem.Controller as LocationListItemController
 import Components.LocationTagBar as LocationTagBarController
+import Components.LocationTagBarV2 as LocationTagBarV2Controller
 import Components.MenuButton as MenuButton
 import Components.MenuButton as MenuButton
 import Components.RideCompletedCard.Controller as RideCompletedCard
@@ -72,8 +73,8 @@ import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWi
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
-import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, recentDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo)
+import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, updateLocListWithDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, showDatePicker)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -91,7 +92,7 @@ import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZo
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip)
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -114,6 +115,8 @@ import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
 import Timers (clearTimerWithId)
 import Mobility.Prelude (boolToInt, toBool)
 import SuggestionUtils
+import Data.Tuple (Tuple(..))
+import PrestoDOM.Core (getPushFn)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -746,6 +749,9 @@ data ScreenOutput = LogoutUser
                   | ExitToTicketing HomeScreenState
                   | GoToHelpAndSupport HomeScreenState
                   | ReAllocateRide HomeScreenState
+                  | GoToRentalsFlow 
+                  | GoToScheduledRides
+                  | Add_Stop HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -888,10 +894,13 @@ data Action = NoAction
             | UpdateRepeatTrips RideBookingListRes 
             | RemoveShimmer 
             | ReportIssueClick
+            | DateTimePickerAction String Int Int Int String Int Int
             | ChooseSingleVehicleAction ChooseVehicleController.Action
+            | LocationTagBarAC LocationTagBarV2Controller.Action
+            | RentalBannerAction Banner.Action
+            | BottomNavBarAction BottomNavBarIcon
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
   continue state 
     { props 
@@ -1161,20 +1170,22 @@ eval (SendQuickMessage chatSuggestion) state = do
     continue state {props {unReadMessages = false}}
   else continue state
 
-eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
-  if state.data.config.feature.enableChat then do
-    if not state.props.chatcallbackInitiated || state.props.emergencyHelpModal || state.data.waitTimeInfo then continue state else do
-      _ <- pure $ performHapticFeedback unit
-      _ <- pure $ updateLocalStage ChatWithDriver
-      _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
-      let allMessages = getChatMessages FunctionCall
-      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = COLLAPSED}} 
-      -- [ do
-      --   pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
-      -- ]
-  else continueWithCmd state[ do
-        pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
-      ]
+eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = 
+  exit $ Add_Stop state
+-- do
+  -- if state.data.config.feature.enableChat then do
+  --   if not state.props.chatcallbackInitiated || state.props.emergencyHelpModal || state.data.waitTimeInfo then continue state else do
+  --     _ <- pure $ performHapticFeedback unit
+  --     _ <- pure $ updateLocalStage ChatWithDriver
+  --     _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
+  --     let allMessages = getChatMessages FunctionCall
+  --     continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = COLLAPSED}} 
+  --     -- [ do
+  --     --   pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
+  --     -- ]
+  -- else continueWithCmd state[ do
+  --       pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
+  --     ]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = COLLAPSED}}
 
@@ -1570,6 +1581,7 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
 
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
+  -- _ <- launchAff $ showDatePicker 30000
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_burger_menu"
   continue state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
@@ -1774,7 +1786,7 @@ eval (PredictionClickedAction (LocationListItemController.FavClick item)) state 
   if (length state.data.savedLocations >= 20) then do
     void $ pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     continue state
-    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, tagData = [], isBtnActive = false }, selectedLocationListItem = Just item}}
+    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, isBtnActive = false }, selectedLocationListItem = Just item}}
 
 eval (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose)) state = continue state{props{isSaveFavourite = false},data{selectedLocationListItem = Nothing, saveFavouriteCard {address = "" , tag = "", isBtnActive = false}}}
 
@@ -1866,7 +1878,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SourceC
     pure unit
   else
     pure unit
-  let predicArray = (recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong)
+  let predicArray = (updateLocListWithDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist)
   continue state { data { source = "", recentSearchs {predictionArray = predicArray}, locationList = predicArray, searchLocationModelData{prevLocation = state.data.source}}, props { isSource = Just true, isSrcServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList} } }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.DestinationClear)) state = do
@@ -1876,7 +1888,7 @@ eval (SearchLocationModelActionController (SearchLocationModelController.Destina
     pure unit
   else
     pure unit
-  let predicArray = (recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong)
+  let predicArray = (updateLocListWithDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist)
   continue state { data { destination = "", locationList = predicArray }, props {isSource = Just false, isDestServiceable = true, isRideServiceable = true, searchLocationModelProps{crossBtnDestVisibility = false, findPlaceIllustration = null state.data.locationList}} }
 
 eval (SearchLocationModelActionController (SearchLocationModelController.GoBack)) state = do
@@ -1894,6 +1906,12 @@ eval (SearchLocationModelActionController (SearchLocationModelController.SetCurr
   continue state{ data{source = (getString CURRENT_LOCATION)} ,props{ sourceSelectedOnMap = if (state.props.isSource == Just true) then false else state.props.sourceSelectedOnMap, searchLocationModelProps{isAutoComplete = false}}}
 
 eval (SearchLocationModelActionController (SearchLocationModelController.SetLocationOnMap)) state = do
+  -- continueWithCmd state
+  --   [ do 
+  --     push <- getPushFn Nothing "HomeScreen"
+  --     _ <- launchAff $ showDatePicker push DateTimePickerAction 
+  --     pure NoAction
+  --   ]
   _ <- pure $ performHapticFeedback unit
   let isSource = case state.props.isSource of
                     Just true -> true
@@ -2418,6 +2436,24 @@ eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowTy
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state true
 
 eval ReportIssueClick state = exit $  GoToHelp state
+
+eval (DateTimePickerAction dateResp year month day timeResp hour minute) state = do 
+  let _ = spy "DatePIcker Action" "kuhjhh" 
+  continue state
+
+eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
+  case tag of 
+    "RENTALS" -> exit $ GoToRentalsFlow 
+    _ -> continue state
+  
+eval (RentalBannerAction Banner.OnClick) state = exit $ GoToScheduledRides
+
+eval (BottomNavBarAction id) state = do 
+  let newState = state {props {focussedBottomIcon = id}}
+  case id of 
+    TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
+    MOBILITY -> continue newState 
+    _ -> continue state 
 
 eval _ state = continue state
 

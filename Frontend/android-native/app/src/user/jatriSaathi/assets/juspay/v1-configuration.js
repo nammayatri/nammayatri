@@ -259,7 +259,8 @@ window.getMerchantConfig = function () {
   , "showNearByDrivers" : true
   , "features" : {
     "enableAutoReadOtp" : true ,
-    "enableZooTicketBookingFlow" : true
+    "enableZooTicketBookingFlow" : true ,
+    "enableAdditionalServices" : true
       }
   , "showDisabilityBanner" : false
   , "notifyRideConfirmationConfig" : 
@@ -307,7 +308,8 @@ window.getMerchantConfig = function () {
     , "feature" : {
       "enableAutoReadOtp" : true ,
       "enableZooTicketBookingFlow" : true,
-      "enableShareRide" : false
+      "enableShareRide" : false,
+      "enableAdditionalServices" : true
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,

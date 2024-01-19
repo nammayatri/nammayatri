@@ -21,6 +21,7 @@ import Screens.HomeScreen.ScreenData (dummyAddress)
 import Screens.Types (AddNewAddressScreenState, CardType(..), Location)
 import Services.API (Prediction(..))
 import ConfigProvider
+import Screens(ScreenName(..), getScreen)
  
 initData :: AddNewAddressScreenState
 initData = {
@@ -87,6 +88,7 @@ initData = {
   , isLocateOnMap : false
   , isLocationServiceable : true
   , fromHome : false
+  , fromScreen : getScreen HOME_SCREEN
   , selectFromCurrentOrMap : true
   , isSearchedLocationServiceable : true
   , editSavedLocation : false

@@ -766,3 +766,5 @@ getKN stringKey =
         PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER -> "ಚಾಲಕನಿಗೆ ಕರೆ ಮಾಡಲು ಸವಾರಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿ" 
         ADD_IMAGE_S -> "ಚಿತ್ರಗಳನ್ನು ಸೇರಿಸಿ"
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "ಈಗಾಗಲೇ ಸಕ್ರಿಯವಾಗಿರುವ ಸವಾರಿ ಇದೆ"
+        CONFIRM_STOP_LOCATION -> "Confirm stop location"
+        CONFIRM_DROP -> "Confirm Drop"

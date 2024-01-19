@@ -219,7 +219,8 @@ config =
     enableShareApp: false,
     enableReAllocation : true,
     forceLogReferrerUrl : true,
-    enableSelfServe : true
+    enableSelfServe : true,
+    enableAdditionalServices : false
   }
 
   , rideCompletedCardConfig : {

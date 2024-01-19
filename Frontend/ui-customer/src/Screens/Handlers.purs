@@ -45,3 +45,4 @@ import Screens.TicketBookingFlow.PlaceList.Handler (placeListScreen) as UI
 import Screens.RentalBookingFlow.RideScheduledScreen.View (rideScheduledScreen) as UI
 import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
+import Screens.SearchLocationScreen.View (searchLocationScreen) as UI

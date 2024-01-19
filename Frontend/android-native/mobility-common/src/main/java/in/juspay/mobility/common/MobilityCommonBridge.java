@@ -1550,12 +1550,30 @@ public class MobilityCommonBridge extends HyperBridge {
             Log.e(DTUTILS, "Time picker called");
             TimePickerDialog timePickerDialog = new TimePickerDialog(bridgeComponents.getActivity(), (timePicker, hourOfDay, minute1) -> {
                 if (callback != null) {
-                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s',%d,%d);",
-                            callback, hourOfDay, minute1);
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
+                            callback, "SELECTED", hourOfDay, minute1);
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
             }, hour, minute, false);
+
+
+            timePickerDialog.setOnCancelListener(var1 -> {
+                if (callback != null) {
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
+                      callback, "CANCELLED", 0, 0);
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            });
+            timePickerDialog.setOnDismissListener(var1 -> {
+                if (callback != null) {
+                    String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s',%d,%d);",
+                      callback,"DISMISSED", 0, 0);
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            });
+
             timePickerDialog.show();
+
         });
     }
 
