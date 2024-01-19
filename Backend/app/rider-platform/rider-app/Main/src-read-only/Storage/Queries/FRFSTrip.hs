@@ -23,16 +23,16 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSTrip.FRFSTrip] -> m ()
 createMany = traverse_ createWithKV
 
+findAllByQuoteId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ([Domain.Types.FRFSTrip.FRFSTrip])
+findAllByQuoteId (Kernel.Types.Id.Id quoteId) = do
+  findAllWithKV
+    [ Se.Is Beam.quoteId $ Se.Eq quoteId
+    ]
+
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTrip.FRFSTrip -> m (Maybe (Domain.Types.FRFSTrip.FRFSTrip))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.Is Beam.id $ Se.Eq id
-    ]
-
-findByQuoteId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe (Domain.Types.FRFSTrip.FRFSTrip))
-findByQuoteId (Kernel.Types.Id.Id quoteId) = do
-  findOneWithKV
-    [ Se.Is Beam.quoteId $ Se.Eq quoteId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTrip.FRFSTrip -> m (Maybe (Domain.Types.FRFSTrip.FRFSTrip))
@@ -50,6 +50,7 @@ updateByPrimaryKey Domain.Types.FRFSTrip.FRFSTrip {..} = do
     [ Se.Set Beam.bppFulfillmentId $ bppFulfillmentId,
       Se.Set Beam.quoteId $ (Kernel.Types.Id.getId quoteId),
       Se.Set Beam.stationCode $ stationCode,
+      Se.Set Beam.stationName $ stationName,
       Se.Set Beam.stationType $ stationType,
       Se.Set Beam.stopSequence $ stopSequence,
       Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
@@ -71,6 +72,7 @@ instance FromTType' Beam.FRFSTrip Domain.Types.FRFSTrip.FRFSTrip where
             id = Kernel.Types.Id.Id id,
             quoteId = Kernel.Types.Id.Id quoteId,
             stationCode = stationCode,
+            stationName = stationName,
             stationType = stationType,
             stopSequence = stopSequence,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -86,6 +88,7 @@ instance ToTType' Beam.FRFSTrip Domain.Types.FRFSTrip.FRFSTrip where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
         Beam.stationCode = stationCode,
+        Beam.stationName = stationName,
         Beam.stationType = stationType,
         Beam.stopSequence = stopSequence,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

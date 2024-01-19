@@ -21,6 +21,7 @@ data FRFSTripT f = FRFSTripT
     id :: B.C f Kernel.Prelude.Text,
     quoteId :: B.C f Kernel.Prelude.Text,
     stationCode :: B.C f Kernel.Prelude.Text,
+    stationName :: B.C f Kernel.Prelude.Text,
     stationType :: B.C f Domain.Types.FRFSTrip.StationType,
     stopSequence :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),

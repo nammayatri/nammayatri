@@ -25,16 +25,16 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.FRFSQuote.FRFSQuote] -> m ()
 createMany = traverse_ createWithKV
 
+findAllBySearchId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ([Domain.Types.FRFSQuote.FRFSQuote])
+findAllBySearchId (Kernel.Types.Id.Id searchId) = do
+  findAllWithKV
+    [ Se.Is Beam.searchId $ Se.Eq searchId
+    ]
+
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe (Domain.Types.FRFSQuote.FRFSQuote))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.Is Beam.id $ Se.Eq id
-    ]
-
-findBySearchId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m (Maybe (Domain.Types.FRFSQuote.FRFSQuote))
-findBySearchId (Kernel.Types.Id.Id searchId) = do
-  findOneWithKV
-    [ Se.Is Beam.searchId $ Se.Eq searchId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m (Maybe (Domain.Types.FRFSQuote.FRFSQuote))

@@ -26,7 +26,7 @@ data Station = Station
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSVehicleType = METRO
+data FRFSVehicleType = METRO | BUS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnum ''FRFSVehicleType)

@@ -410,3 +410,36 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN from_station_id character v
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
 ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN to;
 ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN from;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
