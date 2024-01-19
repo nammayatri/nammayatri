@@ -14,14 +14,15 @@
 
 module API.Dashboard.AccessMatrix where
 
--- import qualified Domain.Action.Dashboard.AccessMatrix as DAccessMatrix
+import qualified Domain.Action.Dashboard.AccessMatrix as DAccessMatrix
 import Domain.Types.AccessMatrix as DMatrix
 import Domain.Types.Role as DRole
--- import Environment
+import Environment
 import Kernel.Prelude
 import Kernel.Types.Id
--- import Kernel.Utils.Common
+import Kernel.Utils.Common
 import Servant
+import Storage.Beam.BeamFlow
 import Tools.Auth
 
 type API =
@@ -39,22 +40,20 @@ type API =
              :> Get '[JSON] [DMatrix.MerchantCityList]
        )
 
--- Note : Handle is moved to rider and provider dashboard
+handler :: BeamFlow' => FlowServer API
+handler =
+  getAccessMatrix
+    :<|> getAccessMatrixByRole
+    :<|> getMerchantWithCityList
 
--- handler :: FlowServer API
--- handler =
---   getAccessMatrix
---     :<|> getAccessMatrixByRole
---     :<|> getMerchantWithCityList
+getAccessMatrix :: BeamFlow' => TokenInfo -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
+getAccessMatrix tokenInfo mbLimit =
+  withFlowHandlerAPI' . DAccessMatrix.getAccessMatrix tokenInfo mbLimit
 
--- getAccessMatrix :: TokenInfo -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
--- getAccessMatrix tokenInfo mbLimit =
---   withFlowHandlerAPI' . DAccessMatrix.getAccessMatrix tokenInfo mbLimit
+getAccessMatrixByRole :: BeamFlow' => TokenInfo -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
+getAccessMatrixByRole tokenInfo =
+  withFlowHandlerAPI' . DAccessMatrix.getAccessMatrixByRole tokenInfo
 
--- getAccessMatrixByRole :: TokenInfo -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
--- getAccessMatrixByRole tokenInfo =
---   withFlowHandlerAPI' . DAccessMatrix.getAccessMatrixByRole tokenInfo
-
--- getMerchantWithCityList :: FlowHandler [DMatrix.MerchantCityList]
--- getMerchantWithCityList =
---   withFlowHandlerAPI' DAccessMatrix.getMerchantWithCityList
+getMerchantWithCityList :: BeamFlow' => FlowHandler [DMatrix.MerchantCityList]
+getMerchantWithCityList =
+  withFlowHandlerAPI' DAccessMatrix.getMerchantWithCityList

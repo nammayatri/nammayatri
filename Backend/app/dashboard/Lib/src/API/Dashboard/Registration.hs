@@ -15,11 +15,12 @@
 module API.Dashboard.Registration where
 
 import qualified Domain.Action.Dashboard.Registration as DReg
--- import Environment
--- import Kernel.Prelude
+import Environment
+import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
--- import Kernel.Utils.Common
+import Kernel.Utils.Common
 import Servant
+import Storage.Beam.BeamFlow
 import Tools.Auth
 
 type API =
@@ -50,35 +51,33 @@ type API =
              :> Post '[JSON] APISuccess
        )
 
--- Note : Handle is moved to rider and provider dashboard
+handler :: BeamFlow' => FlowServer API
+handler =
+  login
+    :<|> logout
+    :<|> logoutAllMerchants
+    :<|> enable2fa
+    :<|> switchMerchant
+    :<|> switchMerchantAndCity
+    :<|> registerFleetOwner
 
--- handler :: FlowServer API
--- handler =
---   login
---     :<|> logout
---     :<|> logoutAllMerchants
---     :<|> enable2fa
---     :<|> switchMerchant
---     :<|> switchMerchantAndCity
---     :<|> registerFleetOwner
+login :: BeamFlow' => DReg.LoginReq -> FlowHandler DReg.LoginRes
+login = withFlowHandlerAPI' . DReg.login
 
--- login :: DReg.LoginReq -> FlowHandler DReg.LoginRes
--- login = withFlowHandlerAPI' . DReg.login
+logout :: BeamFlow' => TokenInfo -> FlowHandler DReg.LogoutRes
+logout = withFlowHandlerAPI' . DReg.logout
 
--- logout :: TokenInfo -> FlowHandler DReg.LogoutRes
--- logout = withFlowHandlerAPI' . DReg.logout
+logoutAllMerchants :: BeamFlow' => TokenInfo -> FlowHandler DReg.LogoutRes
+logoutAllMerchants = withFlowHandlerAPI' . DReg.logoutAllMerchants
 
--- logoutAllMerchants :: TokenInfo -> FlowHandler DReg.LogoutRes
--- logoutAllMerchants = withFlowHandlerAPI' . DReg.logoutAllMerchants
+enable2fa :: BeamFlow' => DReg.Enable2FAReq -> FlowHandler DReg.Enable2FARes
+enable2fa = withFlowHandlerAPI' . DReg.enable2fa
 
--- enable2fa :: DReg.Enable2FAReq -> FlowHandler DReg.Enable2FARes
--- enable2fa = withFlowHandlerAPI' . DReg.enable2fa
+switchMerchant :: BeamFlow' => TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
+switchMerchant token = withFlowHandlerAPI' . DReg.switchMerchant token
 
--- switchMerchant :: TokenInfo -> DReg.SwitchMerchantReq -> FlowHandler DReg.LoginRes
--- switchMerchant token = withFlowHandlerAPI' . DReg.switchMerchant token
+switchMerchantAndCity :: BeamFlow' => TokenInfo -> DReg.SwitchMerchantAndCityReq -> FlowHandler DReg.LoginRes
+switchMerchantAndCity token = withFlowHandlerAPI' . DReg.switchMerchantAndCity token
 
--- switchMerchantAndCity :: TokenInfo -> DReg.SwitchMerchantAndCityReq -> FlowHandler DReg.LoginRes
--- switchMerchantAndCity token = withFlowHandlerAPI' . DReg.switchMerchantAndCity token
-
--- registerFleetOwner :: DReg.FleetRegisterReq -> FlowHandler APISuccess
--- registerFleetOwner = withFlowHandlerAPI' . DReg.registerFleetOwner
+registerFleetOwner :: BeamFlow' => DReg.FleetRegisterReq -> FlowHandler APISuccess
+registerFleetOwner = withFlowHandlerAPI' . DReg.registerFleetOwner

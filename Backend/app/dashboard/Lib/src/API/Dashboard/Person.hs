@@ -15,20 +15,20 @@
 module API.Dashboard.Person where
 
 import qualified Domain.Action.Dashboard.Person as DPerson
--- import Domain.Types.AccessMatrix
+import Domain.Types.AccessMatrix
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Role as DRole
--- import Environment
+import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
--- import Kernel.Utils.Common (fromMaybeM, withFlowHandlerAPI')
+import Kernel.Utils.Common (fromMaybeM, withFlowHandlerAPI')
 import Servant hiding (Unauthorized, throwError)
--- import qualified Storage.Queries.Merchant as QMerchant
+import Storage.Beam.BeamFlow
+import qualified Storage.Queries.Merchant as QMerchant
 import Tools.Auth
-
--- import Tools.Error
+import Tools.Error
 
 type API =
   "admin"
@@ -113,89 +113,87 @@ type API =
                :> Get '[JSON] DPerson.GetProductSpecInfoResp
          )
 
--- Note : Handle is moved to rider and provider dashboard
+handler :: BeamFlow' => FlowServer API
+handler =
+  ( listPerson
+      :<|> assignRole
+      :<|> assignMerchantAccess -- TODO : Deprecated, Remove after successful deployment
+      :<|> assignMerchantCityAccess
+      :<|> resetMerchantAccess
+      :<|> resetMerchantCityAccess
+      :<|> createPerson
+      :<|> changeEmailByAdmin
+      :<|> changePasswordByAdmin
+      :<|> changeMobileByAdmin
+  )
+    :<|> ( profile
+             :<|> getCurrentMerchant
+             :<|> changePassword
+             :<|> getAccessMatrix
+         )
+    :<|> registerRelease
+    :<|> getProductSpecInfo
 
--- handler :: FlowServer API
--- handler =
---   ( listPerson
---       :<|> assignRole
---       :<|> assignMerchantAccess -- TODO : Deprecated, Remove after successful deployment
---       :<|> assignMerchantCityAccess
---       :<|> resetMerchantAccess
---       :<|> resetMerchantCityAccess
---       :<|> createPerson
---       :<|> changeEmailByAdmin
---       :<|> changePasswordByAdmin
---       :<|> changeMobileByAdmin
---   )
---     :<|> ( profile
---              :<|> getCurrentMerchant
---              :<|> changePassword
---              :<|> getAccessMatrix
---          )
---     :<|> registerRelease
---     :<|> getProductSpecInfo
+listPerson :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> FlowHandler DPerson.ListPersonRes
+listPerson tokenInfo mbSearchString mbLimit mbPersonId =
+  withFlowHandlerAPI' . DPerson.listPerson tokenInfo mbSearchString mbLimit mbPersonId
 
--- listPerson :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> Maybe (Id DP.Person) -> FlowHandler DPerson.ListPersonRes
--- listPerson tokenInfo mbSearchString mbLimit mbPersonId =
---   withFlowHandlerAPI' . DPerson.listPerson tokenInfo mbSearchString mbLimit mbPersonId
+createPerson :: BeamFlow' => TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
+createPerson tokenInfo = withFlowHandlerAPI' . DPerson.createPerson tokenInfo
 
--- createPerson :: TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
--- createPerson tokenInfo = withFlowHandlerAPI' . DPerson.createPerson tokenInfo
+assignRole :: BeamFlow' => TokenInfo -> Id DP.Person -> Id DRole.Role -> FlowHandler APISuccess
+assignRole tokenInfo personId =
+  withFlowHandlerAPI' . DPerson.assignRole tokenInfo personId
 
--- assignRole :: TokenInfo -> Id DP.Person -> Id DRole.Role -> FlowHandler APISuccess
--- assignRole tokenInfo personId =
---   withFlowHandlerAPI' . DPerson.assignRole tokenInfo personId
+assignMerchantAccess :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
+assignMerchantAccess tokenInfo personId req = do
+  city <- withFlowHandlerAPI' $ QMerchant.findByShortId req.merchantId >>= fmap (.defaultOperatingCity) . fromMaybeM (MerchantNotFound req.merchantId.getShortId)
+  let req' = DPerson.MerchantCityAccessReq {merchantId = req.merchantId, operatingCity = city}
+  withFlowHandlerAPI' $ DPerson.assignMerchantCityAccess tokenInfo personId req'
 
--- assignMerchantAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
--- assignMerchantAccess tokenInfo personId req = do
---   city <- withFlowHandlerAPI' $ QMerchant.findByShortId req.merchantId >>= fmap (.defaultOperatingCity) . fromMaybeM (MerchantNotFound req.merchantId.getShortId)
---   let req' = DPerson.MerchantCityAccessReq {merchantId = req.merchantId, operatingCity = city}
---   withFlowHandlerAPI' $ DPerson.assignMerchantCityAccess tokenInfo personId req'
+assignMerchantCityAccess :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.MerchantCityAccessReq -> FlowHandler APISuccess
+assignMerchantCityAccess tokenInfo personId =
+  withFlowHandlerAPI' . DPerson.assignMerchantCityAccess tokenInfo personId
 
--- assignMerchantCityAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantCityAccessReq -> FlowHandler APISuccess
--- assignMerchantCityAccess tokenInfo personId =
---   withFlowHandlerAPI' . DPerson.assignMerchantCityAccess tokenInfo personId
+resetMerchantAccess :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
+resetMerchantAccess tokenInfo personId =
+  withFlowHandlerAPI' . DPerson.resetMerchantAccess tokenInfo personId
 
--- resetMerchantAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantAccessReq -> FlowHandler APISuccess
--- resetMerchantAccess tokenInfo personId =
---   withFlowHandlerAPI' . DPerson.resetMerchantAccess tokenInfo personId
+resetMerchantCityAccess :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.MerchantCityAccessReq -> FlowHandler APISuccess
+resetMerchantCityAccess tokenInfo personId =
+  withFlowHandlerAPI' . DPerson.resetMerchantCityAccess tokenInfo personId
 
--- resetMerchantCityAccess :: TokenInfo -> Id DP.Person -> DPerson.MerchantCityAccessReq -> FlowHandler APISuccess
--- resetMerchantCityAccess tokenInfo personId =
---   withFlowHandlerAPI' . DPerson.resetMerchantCityAccess tokenInfo personId
+profile :: BeamFlow' => TokenInfo -> FlowHandler DP.PersonAPIEntity
+profile =
+  withFlowHandlerAPI' . DPerson.profile
 
--- profile :: TokenInfo -> FlowHandler DP.PersonAPIEntity
--- profile =
---   withFlowHandlerAPI' . DPerson.profile
+getCurrentMerchant :: BeamFlow' => TokenInfo -> FlowHandler DPerson.MerchantAccessRes
+getCurrentMerchant =
+  withFlowHandlerAPI' . DPerson.getCurrentMerchant
 
--- getCurrentMerchant :: TokenInfo -> FlowHandler DPerson.MerchantAccessRes
--- getCurrentMerchant =
---   withFlowHandlerAPI' . DPerson.getCurrentMerchant
+changePassword :: BeamFlow' => TokenInfo -> DPerson.ChangePasswordReq -> FlowHandler APISuccess
+changePassword req =
+  withFlowHandlerAPI' . DPerson.changePassword req
 
--- changePassword :: TokenInfo -> DPerson.ChangePasswordReq -> FlowHandler APISuccess
--- changePassword req =
---   withFlowHandlerAPI' . DPerson.changePassword req
+getAccessMatrix :: BeamFlow' => TokenInfo -> FlowHandler AccessMatrixRowAPIEntity
+getAccessMatrix =
+  withFlowHandlerAPI' . DPerson.getAccessMatrix
 
--- getAccessMatrix :: TokenInfo -> FlowHandler AccessMatrixRowAPIEntity
--- getAccessMatrix =
---   withFlowHandlerAPI' . DPerson.getAccessMatrix
+changeEmailByAdmin :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.ChangeEmailByAdminReq -> FlowHandler APISuccess
+changeEmailByAdmin tokenInfo personId req =
+  withFlowHandlerAPI' $ DPerson.changeEmailByAdmin tokenInfo personId req
 
--- changeEmailByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangeEmailByAdminReq -> FlowHandler APISuccess
--- changeEmailByAdmin tokenInfo personId req =
---   withFlowHandlerAPI' $ DPerson.changeEmailByAdmin tokenInfo personId req
+changePasswordByAdmin :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.ChangePasswordByAdminReq -> FlowHandler APISuccess
+changePasswordByAdmin tokenInfo personId req =
+  withFlowHandlerAPI' $ DPerson.changePasswordByAdmin tokenInfo personId req
 
--- changePasswordByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangePasswordByAdminReq -> FlowHandler APISuccess
--- changePasswordByAdmin tokenInfo personId req =
---   withFlowHandlerAPI' $ DPerson.changePasswordByAdmin tokenInfo personId req
+changeMobileByAdmin :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.ChangeMobileNumberByAdminReq -> FlowHandler APISuccess
+changeMobileByAdmin tokenInfo personId req =
+  withFlowHandlerAPI' $ DPerson.changeMobileNumberByAdmin tokenInfo personId req
 
--- changeMobileByAdmin :: TokenInfo -> Id DP.Person -> DPerson.ChangeMobileNumberByAdminReq -> FlowHandler APISuccess
--- changeMobileByAdmin tokenInfo personId req =
---   withFlowHandlerAPI' $ DPerson.changeMobileNumberByAdmin tokenInfo personId req
+registerRelease :: BeamFlow' => TokenInfo -> DPerson.ReleaseRegisterReq -> FlowHandler DPerson.ReleaseRegisterRes
+registerRelease tokenInfo = withFlowHandlerAPI' . DPerson.registerRelease tokenInfo
 
--- registerRelease :: TokenInfo -> DPerson.ReleaseRegisterReq -> FlowHandler DPerson.ReleaseRegisterRes
--- registerRelease tokenInfo = withFlowHandlerAPI' . DPerson.registerRelease tokenInfo
-
--- getProductSpecInfo :: Maybe Text -> FlowHandler DPerson.GetProductSpecInfoResp
--- getProductSpecInfo releaseId =
---   withFlowHandlerAPI' $ DPerson.getProductSpecInfo releaseId
+getProductSpecInfo :: BeamFlow' => Maybe Text -> FlowHandler DPerson.GetProductSpecInfoResp
+getProductSpecInfo releaseId =
+  withFlowHandlerAPI' $ DPerson.getProductSpecInfo releaseId

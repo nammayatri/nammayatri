@@ -21,16 +21,13 @@ import qualified Domain.Types.MerchantAccess as DAccess
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Sequelize as Se
 import Storage.Beam.BeamFlow
+import qualified Storage.Beam.Merchant as BeamM
 import qualified Storage.Beam.MerchantAccess as BeamMA
-import Storage.Tabular.Merchant
-import Storage.Tabular.MerchantAccess
-
--- import Database.Beam as B
+import Storage.Queries.Merchant ()
 
 create :: BeamFlow m r => DAccess.MerchantAccess -> m ()
 create = createWithKV
@@ -72,57 +69,30 @@ findAllMerchantAccessByPersonId personId =
     [ Se.Is BeamMA.personId $ Se.Eq $ getId personId
     ]
 
--- findAllWithLimitOffsetByMerchantId ::
---   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
---   Maybe Text ->
---   Maybe DbHash ->
---   Maybe Integer ->
---   Maybe Integer ->
---   Id Merchant ->
---   m [(Person, DriverInformation)]
--- findAllWithLimitOffsetByMerchantId mbSearchString mbSearchStrDBHash mbLimit mbOffset merchantId = do
---   dbConf <- getMasterBeamConfig
---   res <- L.runDB dbConf $
---     L.findRows $
---       B.select $
---         B.limit_ (fromMaybe 100 mbLimit) $
---           B.offset_ (fromMaybe 0 mbOffset) $
---             B.orderBy_ (\(_person, driverInfo) -> B.desc_ (driverInfo.createdAt)) $
---               B.filter_'
---                 ( \(person, _driverInfo) ->
---                     person.role B.==?. B.val_ Person.DRIVER
---                       B.&&?. person.merchantId B.==?. B.val_ (getId merchantId)
---                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\searchString -> B.sqlBool_ (B.concat_ [person.firstName, B.val_ "", B.fromMaybe_ (B.val_ "") person.middleName, B.val_ "", B.fromMaybe_ (B.val_ "") person.lastName] `B.like_` B.val_ ("%" <> searchString <> "%"))) mbSearchString
---                       B.||?. maybe (B.sqlBool_ $ B.val_ True) (\searchStrDBHash -> person.mobileNumberHash B.==?. B.val_ (Just searchStrDBHash)) mbSearchStrDBHash
---                 )
---                 do
---                   person' <- B.all_ (SBC.person SBC.atlasDB)
---                   driverInfo' <- B.join_' (SBC.driverInformation SBC.atlasDB) (\driverInfo'' -> BeamDI.driverId driverInfo'' B.==?. BeamP.id person')
---                   pure (person', driverInfo')
---   case res of
---     Right res' -> do
---       let p' = fst <$> res'
---           di' = snd <$> res'
---       p <- catMaybes <$> mapM fromTType' p'
---       di <- catMaybes <$> mapM fromTType' di'
---       pure $ zip p di
---     Left _ -> pure []
+-- findAllByPersonId ::
+--   (Transactionable m) =>
+--   Id DP.Person ->
+--   m [DMerchant.Merchant]
+-- findAllByPersonId personId = findAll $ do
+--   (merchantAccess :& merchant) <-
+--     from $
+--       table @MerchantAccessT
+--         `innerJoin` table @MerchantT
+--           `Esq.on` ( \(merchantAccess :& merchant) ->
+--                        merchantAccess ^. MerchantAccessMerchantId ==. merchant ^. MerchantTId
+--                    )
+--   where_ $
+--     merchantAccess ^. MerchantAccessPersonId ==. val (toKey personId)
+--   return merchant
 
-findAllByPersonId ::
-  (Transactionable m) =>
-  Id DP.Person ->
-  m [DMerchant.Merchant]
-findAllByPersonId personId = findAll $ do
-  (merchantAccess :& merchant) <-
-    from $
-      table @MerchantAccessT
-        `innerJoin` table @MerchantT
-          `Esq.on` ( \(merchantAccess :& merchant) ->
-                       merchantAccess ^. MerchantAccessMerchantId ==. merchant ^. MerchantTId
-                   )
-  where_ $
-    merchantAccess ^. MerchantAccessPersonId ==. val (toKey personId)
-  return merchant
+findAllByPersonId :: BeamFlow m r => Id DP.Person -> m [DMerchant.Merchant]
+findAllByPersonId personId = do
+  merchantAccessMerchantId <-
+    findAllWithKV
+      [Se.Is BeamMA.personId $ Se.Eq $ getId personId]
+      <&> (getId . DAccess.merchantId <$>)
+  findAllWithKV
+    [Se.Is BeamM.id $ Se.In merchantAccessMerchantId]
 
 deleteById :: BeamFlow m r => Id DAccess.MerchantAccess -> m ()
 deleteById merchantAccessId = deleteWithKV [Se.Is BeamMA.id $ Se.Eq $ getId merchantAccessId]
