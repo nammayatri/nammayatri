@@ -11,7 +11,7 @@
     };
 
     namma-dsl = {
-      url = "github:nammayatri/namma-dsl/260aafe6a1c2aecbd40538b30899624d03ef0ec7";
+      url = "github:nammayatri/namma-dsl";
       flake = false;
       # inputs = {
       #   # common.follows = "common";

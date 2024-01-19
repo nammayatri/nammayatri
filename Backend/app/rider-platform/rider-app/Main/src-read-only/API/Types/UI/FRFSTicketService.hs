@@ -57,8 +57,8 @@ data FRFSStationAPI = FRFSStationAPI
   { address :: Data.Maybe.Maybe Data.Text.Text,
     code :: Data.Text.Text,
     color :: Data.Maybe.Maybe Data.Text.Text,
-    lat :: Kernel.Prelude.Double,
-    lon :: Kernel.Prelude.Double,
+    lat :: Data.Maybe.Maybe Kernel.Prelude.Double,
+    lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text,
     stationType :: Data.Maybe.Maybe Domain.Types.FRFSTrip.StationType
   }
