@@ -4,31 +4,37 @@
 module Domain.Action.UI.FollowRide where
 
 import API.Types.UI.FollowRide
-import qualified API.Types.UI.FollowRide
 import Data.OpenApi (ToSchema)
+import Domain.Action.UI.Profile (getDefaultEmergencyNumbers, sendNotificationToEmergencyContact)
 import Domain.Types.Booking
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.Person
+import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonDefaultEmergencyNumber as PDEN
+import Environment
 import qualified Environment
+import EulerHS.Prelude hiding (elem, id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
-import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Servant
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.Queries.Booking as Booking
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as PDEN
 import Tools.Auth
+import Tools.Error
 
-getFollowRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Log m) => (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> m [API.Types.UI.FollowRide.Followers]
-getFollowRide (id, _) = do
+getFollowRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r, Log m) => (Maybe (Id Person.Person), Id Merchant.Merchant) -> m [Followers]
+getFollowRide (mbPersonId, _) = do
+  id <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   emContacts <- PDEN.findAllByContactPersonId id
   let follwingEmContacts = filter (.enableForFollowing) emContacts
   foldlM
@@ -48,7 +54,7 @@ getFollowRide (id, _) = do
     []
     follwingEmContacts
 
-buildFollower :: Maybe Text -> Maybe Text -> Kernel.Types.Id.Id Booking -> Int -> API.Types.UI.FollowRide.Followers
+buildFollower :: Maybe Text -> Maybe Text -> Id Booking -> Int -> Followers
 buildFollower phoneNo name bookingId priority =
   Followers
     { bookingId,
@@ -57,19 +63,20 @@ buildFollower phoneNo name bookingId priority =
       priority
     }
 
-updateFollowsRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> m ()
-updateFollowsRideCount personId = do
-  emContacts <- PDEN.findAllByPersonId personId
-  let followingContacts = filter (.enableForFollowing) emContacts
-  mapM_
-    ( \contact -> case contact.contactPersonId of
-        Just id -> updateFollowRideCount id
-        Nothing -> return ()
-    )
-    followingContacts
+postShareRide :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> ShareRideReq -> Flow APISuccess.APISuccess
+postShareRide (mbPersonId, merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  emergencyContacts <- getDefaultEmergencyNumbers (personId, merchantId)
+  void $
+    mapM
+      ( \emergencyContact ->
+          when (emergencyContact.mobileNumber `elem` req.emergencyContactNumbers) $
+            sendNotificationToEmergencyContact person title (body person) Notification.SHARE_RIDE
+      )
+      emergencyContacts.defaultEmergencyNumbers
+  return APISuccess.Success
   where
-    updateFollowRideCount emPersonId = do
-      count <- CQFollowRide.decrementFollowRideCount emPersonId
-      when (count <= 0) $ do
-        CQFollowRide.clearFollowsRideCounter emPersonId
-        QPerson.updateFollowsRide emPersonId False
+    title = "Ride Share"
+    body person = personName person <> " has invited you to follow their ride! Follow along to ensure their safety."
+    personName person = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)
