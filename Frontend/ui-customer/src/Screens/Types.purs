@@ -449,7 +449,8 @@ type ReportIssueChatScreenData = {
   merchantExoPhone :: Maybe String,
   selectedRide :: Maybe IndividualRideCardState,
   entryPoint :: ReportIssueChatScreenEntryPoint,
-  config :: AppConfig
+  config :: AppConfig,
+  issueReportShortId :: Maybe String
 }
 data ReportIssueChatScreenEntryPoint = TripDetailsScreenEntry | RideSelectionScreenEntry | HelpAndSupportScreenEntry | OldChatEntry | SafetyScreen | HomeScreenEntry
 derive instance genericReportIssueChatScreenEntryPoint :: Generic ReportIssueChatScreenEntryPoint _
@@ -508,14 +509,16 @@ type ReportIssueChatScreenProps = {
   timerId :: String, 
   initalizedCallbacks :: Boolean,
   isResolved :: Boolean,
-  isEndFlow :: Boolean
+  isEndFlow :: Boolean, 
+  showEndFlowMessage :: Boolean
 }
 
 type IssueInfo = {
     issueReportId :: String,
     status :: String,
     category :: String,
-    createdAt :: String
+    createdAt :: String,
+    issueReportShortId :: Maybe String
 }
 
 type HelpAndSuportScreenProps =

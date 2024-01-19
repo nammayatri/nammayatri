@@ -1301,7 +1301,8 @@ type IssueInfo = {
     issueReportId :: String,
     status :: String,
     category :: String,
-    createdAt :: String
+    createdAt :: String,
+    issueReportShortId :: Maybe String
 }
 
 data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | ONGOING_ISSUES_MODAL | RESOLVED_ISSUES_MODAL | BACKPRESSED_MODAL

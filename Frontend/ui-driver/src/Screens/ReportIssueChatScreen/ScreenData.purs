@@ -78,20 +78,9 @@ chatConfig' = ChatView.config {
                      , showHeader = false
                      , showStroke = false
                      , mapsText = "maps"
-                     , grey700 = Color.grey700
-                     , blue600 = Color.blue600
                      , enableSuggestionClick = false
-                     , blue900 = Color.blue900
-                     , transparentGrey = Color.transparentGrey
-                     , green200 = Color.green200
-                     , grey900 = Color.grey900
-                     , grey800 = Color.grey800
-                     , blue800 = Color.blue800
-                     , white900 = Color.white900
                      , showTextEdit = false
                      , spanParent = true
-                     , black800 = Color.black800
-                     , black700 = Color.black700
               }
 
 recordAudioState' = {

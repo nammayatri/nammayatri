@@ -66,8 +66,7 @@ config = {
 
 doneButtonConfig :: AddImagesModelState -> PrimaryButton.Config
 doneButtonConfig state = let
-    config = PrimaryButton.config
-    primaryButtonConfig' = config
+    primaryButtonConfig' =  PrimaryButton.config
       { textConfig
       { text = state.doneButtonText
       , color = Color.primaryButtonColor
