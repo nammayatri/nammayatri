@@ -7,6 +7,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -58,7 +59,9 @@ updateByPrimaryKey Domain.Types.FRFSQuote.FRFSQuote {..} = do
       Se.Set Beam.providerId $ providerId,
       Se.Set Beam.providerName $ providerName,
       Se.Set Beam.quantity $ quantity,
+      Se.Set Beam.riderId $ (Kernel.Types.Id.getId riderId),
       Se.Set Beam.searchId $ (Kernel.Types.Id.getId searchId),
+      Se.Set Beam.stationsJson $ stationsJson,
       Se.Set Beam.toStationId $ (Kernel.Types.Id.getId toStationId),
       Se.Set Beam.validTill $ validTill,
       Se.Set Beam.vehicleType $ vehicleType,
@@ -87,7 +90,9 @@ instance FromTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
             providerId = providerId,
             providerName = providerName,
             quantity = quantity,
+            riderId = Kernel.Types.Id.Id riderId,
             searchId = Kernel.Types.Id.Id searchId,
+            stationsJson = stationsJson,
             toStationId = Kernel.Types.Id.Id toStationId,
             validTill = validTill,
             vehicleType = vehicleType,
@@ -110,7 +115,9 @@ instance ToTType' Beam.FRFSQuote Domain.Types.FRFSQuote.FRFSQuote where
         Beam.providerId = providerId,
         Beam.providerName = providerName,
         Beam.quantity = quantity,
+        Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.searchId = Kernel.Types.Id.getId searchId,
+        Beam.stationsJson = stationsJson,
         Beam.toStationId = Kernel.Types.Id.getId toStationId,
         Beam.validTill = validTill,
         Beam.vehicleType = vehicleType,

@@ -43,7 +43,7 @@ types:
     price: HighPrecMoney
     validTill: UTCTime
     payment: Maybe FRFSBookingPaymentAPI
-    ticket: [FRFSTicketAPI]
+    tickets: [FRFSTicketAPI]
     stations: [FRFSStationAPI]
 
     # FRFSBookingPayment:
