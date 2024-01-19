@@ -764,8 +764,6 @@ getML stringKey =
         PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER -> "ഡ്രൈവർ വിളിക്കാൻ റൈഡ് തിരഞ്ഞെടുക്കുക"
         ADD_IMAGE_S -> "ചിത്രം ചേർക്കുക"
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "ഇതിനകം നിങ്ങളുടെ റൈഡ് പ്രവർത്തിക്കുന്നു"
-        CONFIRM_STOP_LOCATION -> "Confirm stop location"
-        CONFIRM_DROP -> "Confirm Drop"
         BOOK_METRO_WITH_NY_NOW -> "നമ്മ യാത്രി ഉപയോഗിച്ച് \nമെട്രോ ടിക്കറ്റുകൾ ബുക്ക് ചെയ്യുക!"
         CONFIRM_STOP_LOCATION -> "സ്റ്റോപ്പ് ലൊക്കേഷൻ സ്ഥിരീകരിക്കുക"
         CONFIRM_DROP -> "ഡ്രോപ്പ് സ്ഥിരീകരിക്കുക"
@@ -1011,4 +1009,5 @@ getML stringKey =
         ONE_WAY_STR -> "ഒരു വഴി"
         SHARE_TICKET -> "ടിക്കറ്റ് പങ്കിടുക"
         ORIGIN -> "ഉത്ഭവം"
+        HISTORY -> "ചരിത്രം"
 

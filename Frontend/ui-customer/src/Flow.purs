@@ -1898,7 +1898,27 @@ helpAndSupportScreenFlow = do
           showStillHaveIssue' = case (last issueInfoRes.chats) of
                       Just (ChatDetail msg) -> (fromMaybe "" msg.label) == "AUTO_MARKED_RESOLVED"
                       Nothing -> false 
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ST.OldChatEntry,  showStillHaveIssue = showStillHaveIssue', categoryId = issueInfoRes.categoryId, categoryName = categoryName, options = options', issueId = Just selectedIssue.issueReportId, chatConfig = ReportIssueChatScreenData.initData.data.chatConfig{messages = messages'} }, props {showSubmitComp = false, isResolved = selectedIssue.status == "CLOSED"}})
+          isResolved' =  any (\x -> x == selectedIssue.status) ["CLOSED", "NOT_APPLICABLE"]
+      modifyScreenState $ ReportIssueChatScreenStateType 
+        (\_ -> ReportIssueChatScreenData.initData { 
+            data {
+              entryPoint = ST.OldChatEntry
+              , showStillHaveIssue = showStillHaveIssue'
+              , categoryId = issueInfoRes.categoryId
+              , categoryName = categoryName
+              , options = options'
+              , issueId = Just selectedIssue.issueReportId
+              , issueReportShortId = issueInfoRes.issueReportShortId
+              , chatConfig = ReportIssueChatScreenData.initData.data.chatConfig {
+                              messages = messages'
+                            } 
+              }
+          , props {
+              showSubmitComp = false
+            , isResolved = isResolved'
+            }
+          }
+        )
       issueReportChatScreenFlow
 
 issueReportChatScreenFlow :: FlowBT String Unit
@@ -1926,7 +1946,41 @@ issueReportChatScreenFlow = do
                                                         timestamp : getCurrentUTC ""}) getOptionsRes.messages)
           showSubmitComp = any (\ (Message  message) -> (fromMaybe "" message.label) == "CREATE_TICKET") getOptionsRes.messages 
           isEndFlow' = any (\ (Message  message) -> (fromMaybe "" message.label) == "END_FLOW") getOptionsRes.messages
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {chats = (updatedState.data.chats <> chats'), options = getOptionsRes', chatConfig = updatedState.data.chatConfig{messages = (updatedState.data.chatConfig.messages <> messages')} }, props {isResolved = isResolved, showSubmitComp = (not isResolved && showSubmitComp), isEndFlow = isEndFlow'}})
+      when isEndFlow' $ do 
+        let postIssueReqBody = PostIssueReqBody {
+                                mediaFiles : []
+                              , categoryId : updatedState.data.categoryId 
+                              , optionId : Just selectedOptionId
+                              , description : ""
+                              , rideId : updatedState.data.tripId
+                              , chats : updatedState.data.chats <> chats'
+                              , createTicket : false
+                              }
+        (PostIssueRes postIssueRes) <- Remote.postIssueBT language postIssueReqBody 
+        pure unit 
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> 
+        updatedState { 
+          data {
+            chats = (updatedState.data.chats <> chats')
+          , options = getOptionsRes'
+          , chatConfig = updatedState.data.chatConfig{
+              messages = (updatedState.data.chatConfig.messages <> messages')
+            } 
+          }
+        , props {
+            isResolved = isResolved
+          , showSubmitComp = (not isResolved && showSubmitComp)
+          , isEndFlow = isEndFlow'
+          }
+        }
+      )
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> 
+        helpAndSupportScreen {
+          props {
+            needIssueListApiCall = true
+          }
+        }
+      )
       issueReportChatScreenFlow
     GO_TO_RIDE_SELECTION_SCREEN updatedState -> rideSelectionScreenFlow
     SUBMIT_ISSUE updatedState -> do
@@ -1940,7 +1994,9 @@ issueReportChatScreenFlow = do
                                                 optionId : selectedOptionId, 
                                                 description : trim updatedState.data.messageToBeSent, 
                                                 rideId : updatedState.data.tripId, 
-                                                chats : updatedState.data.chats}
+                                                chats : updatedState.data.chats,
+                                                createTicket : true
+                                                }
       (PostIssueRes postIssueRes) <- Remote.postIssueBT language postIssueReqBody
       void $ pure $ toast $ getString STR.YOUR_ISSUE_HAS_BEEN_REPORTED
       (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT language postIssueRes.issueReportId
@@ -1952,7 +2008,23 @@ issueReportChatScreenFlow = do
           messages' = concat [descMessages, 
                               mediaMessages', 
                               mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 1 + index))) postIssueRes.messages]
-      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> updatedState { data {issueId = Just postIssueRes.issueReportId, chatConfig { messages = messages'},  messageToBeSent = "" , uploadedAudioId = Nothing, uploadedImagesIds = [] }, props { showSubmitComp = false } })
+      modifyScreenState $ ReportIssueChatScreenStateType 
+        (\_ -> updatedState { 
+            data {
+              issueId = Just postIssueRes.issueReportId
+            , issueReportShortId = postIssueRes.issueReportShortId
+            , chatConfig { 
+                messages = messages'
+              }
+            , messageToBeSent = "" 
+            , uploadedAudioId = Nothing
+            , uploadedImagesIds = [] 
+            }
+          , props { 
+            showSubmitComp = false 
+            } 
+          }
+        )
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen {props {needIssueListApiCall = true}})
       issueReportChatScreenFlow
     CALL_DRIVER_MODAL updatedState -> do

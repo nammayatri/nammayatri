@@ -252,18 +252,31 @@ eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = c
 eval ViewRides state = exit $ GoToMyRides state
 
 eval (RideBookingListAPIResponseAction rideList status) state = do
-  let email = if isEmailPresent FunctionCall then getValueToLocalStore USER_EMAIL else ""
-      updatedState = state{data{email = email}}
+  let email = if isEmailPresent FunctionCall then 
+                getValueToLocalStore USER_EMAIL 
+              else 
+                ""
+      updatedState = state { 
+                        data {
+                          email = email
+                        }
+                      }
   case status of
       "success" -> do
-                    if (null (rideList^._list)) then continue updatedState {data{isNull = true}, props{apiFailure = false}}
-                      else do
-                        let list = myRideListTransform state (rideList ^._list)
-                        case (null (list)) of
-                          true -> continue updatedState {data{isNull = true }, props{apiFailure=false}}
-                          _    -> do
-                                    let newState = (myRideListTransform state (rideList ^._list))!!0
-                                    updateAndExit (fromMaybe initData newState) (UpdateState (fromMaybe initData newState))
+                    let list = myRideListTransform state (rideList ^._list)
+                    if null list then 
+                      continue 
+                        updatedState {
+                          data { 
+                            isNull = true 
+                          }
+                        , props { 
+                            apiFailure = false
+                          }
+                        }
+                    else do
+                      let newState = (myRideListTransform state (rideList ^._list))!!0
+                      updateAndExit (fromMaybe initData newState) (UpdateState (fromMaybe initData newState))
       "failure"   -> continue updatedState{props{apiFailure = true}}
       _           -> continue updatedState
 
@@ -302,7 +315,7 @@ eval (AccountDeletedModalAction (PopUpModal.OnButton2Click)) state =  exit $ GoH
 
 eval (FetchIssueListApiCall issueList) state = do
      let apiIssueList = getApiIssueList issueList
-         updatedResolvedIssueList = getUpdatedIssueList ["CLOSED"] apiIssueList
+         updatedResolvedIssueList = getUpdatedIssueList ["CLOSED", "NOT_APPLICABLE"] apiIssueList
          updatedOngoingIssueList =  getUpdatedIssueList ["OPEN", "PENDING", "RESOLVED", "REOPENED"] apiIssueList
      continue state {data {issueList =apiIssueList, resolvedIssueList =  updatedResolvedIssueList , ongoingIssueList =  updatedOngoingIssueList}, props {needIssueListApiCall = false}}
 eval _ state = continue state

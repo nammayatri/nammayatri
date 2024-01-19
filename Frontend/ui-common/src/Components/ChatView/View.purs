@@ -17,7 +17,7 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import Engineering.Helpers.Commons (getNewIDWithTag, screenWidth, os, safeMarginBottom)
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import PrestoDOM.Animation as PrestoAnim
-import Prelude (Unit, bind, const, pure, unit, show, discard, ($), (&&), (-), (/), (<>), (==), (>), (*), (/=), (||), not, ($), negate, (+))
+import Prelude
 import PrestoDOM.Properties (alpha, cornerRadii, lineHeight, minWidth)
 import Font.Size as FontSize
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -45,7 +45,7 @@ view push config =
   , width MATCH_PARENT
   , orientation VERTICAL
   , clickable true
-  , background config.white900
+  , background Color.white900
   , accessibility DISABLE
   ]
   [ chatHeaderView config push
@@ -86,7 +86,7 @@ chatHeaderView config push =
     , linearLayout
       [ width MATCH_PARENT
       , height $ V 1
-      , background config.grey900
+      , background Color.grey900
       ][]
   ]
 
@@ -98,7 +98,7 @@ headerNameView config push =
   , orientation VERTICAL
   ][textView (
     [ text config.userConfig.userName
-    , color config.black800
+    , color Color.black800
     , ellipsize true
     , singleLine true
     , accessibilityHint $ "Driver Name : " <> config.userConfig.userName
@@ -107,7 +107,7 @@ headerNameView config push =
    ,textView (
     [ text config.vehicleNo
     , visibility (getConfig config.userConfig.appType).customerVisibility
-    , color config.black700
+    , color Color.black700
     , accessibilityHint $ "Vehicle Number : " <> config.vehicleNo
     , accessibility ENABLE
     , ellipsize true
@@ -128,7 +128,7 @@ headerActionView config push =
      , gravity CENTER
      , cornerRadius if os == "IOS" then 20.0 else 32.0
      , clickable true
-     , background config.green200
+     , background Color.green200
      , onClick push (const Call)
      ][ imageView
         [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_call"
@@ -145,8 +145,8 @@ headerActionView config push =
     , gravity CENTER
     , alpha if config.enableCall then 1.0 else 0.5
     , clickable (config.enableCall)
-    , background config.grey700
-    , stroke $ "1,"<> config.grey900
+    , background Color.grey700
+    , stroke $ "1,"<> Color.grey900
     , cornerRadius 32.0
     , margin $ MarginRight 8
     , onClick push (const $ Call)
@@ -164,8 +164,8 @@ headerActionView config push =
     , visibility (getConfig config.userConfig.appType).driverVisibility
     , gravity CENTER
     , orientation HORIZONTAL
-    , background config.blue600
-    , stroke $ "1,"<> config.blue900
+    , background Color.blue600
+    , stroke $ "1,"<> Color.blue900
     , cornerRadius 32.0
     , onClick push (const $ Navigate)
     ][ imageView
@@ -176,7 +176,7 @@ headerActionView config push =
        ]
      , textView (
        [ text config.mapsText
-       , color config.blue900
+       , color Color.blue900
        ] <> FontStyle.subHeading2 TypoGraphy)
     ]  
   ]
@@ -227,7 +227,7 @@ chatFooterView config push =
   [ height WRAP_CONTENT
   , width MATCH_PARENT
   , orientation VERTICAL
-  , background config.white900
+  , background Color.white900
   , visibility $ boolToVisibility $ config.showTextEdit 
   , margin $ MarginBottom $ if os == "IOS" then 16 else 0
   , adjustViewWithKeyboard "true"
@@ -235,7 +235,7 @@ chatFooterView config push =
    , linearLayout
      [ width (V (screenWidth unit))
      , height $ V 1
-     , background config.grey900
+     , background Color.grey900
      , margin $ MarginTop 16
      ][]
     , linearLayout
@@ -245,17 +245,17 @@ chatFooterView config push =
       , margin (Margin 16 16 16 16)
       , cornerRadius 24.0
       , gravity CENTER_VERTICAL
-      , background config.grey800
+      , background Color.grey800
       , orientation HORIZONTAL
       ][ editText $
          [ weight 1.0
          , height $ V 48
          , id (getNewIDWithTag "ChatInputEditText")
-         , background config.grey800
+         , background Color.grey800
          , cornerRadius 24.0
          , hint $ config.hint <> " " <> fromMaybe "" ((STR.split (STR.Pattern " ") config.userConfig.userName) !! 0) <> "..."
          , singleLine true
-         , hintColor config.black700
+         , hintColor Color.black700
          , ellipsize true
          , onChange push $ TextChanged
          , pattern "[^\n]*,255"
@@ -289,10 +289,10 @@ emptyChatView config push =
      , width MATCH_PARENT
      , orientation VERTICAL
      , accessibility DISABLE
-     , background config.white900
+     , background Color.white900
      ]([ textView $
        [ text $ if config.userConfig.appType == "Customer" && null config.chatSuggestionsList && null config.messages then config.emptyChatHeader else config.suggestionHeader
-       , color config.black700
+       , color Color.black700
        , accessibility ENABLE
        , width MATCH_PARENT
        , margin (Margin 16 16 16 20)
@@ -319,7 +319,7 @@ suggestionsView config push =
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity LEFT
-      , stroke ("1,"<> config.grey900)
+      , stroke ("1,"<> Color.grey900)
       , cornerRadius 8.0
       , orientation VERTICAL
       ] (mapWithIndex (\index item -> quickMessageView config item (index == (length config.chatSuggestionsList)-1) push) (config.chatSuggestionsList))
@@ -345,14 +345,14 @@ quickMessageView config message isLastItem push =
   , onClick push (if config.enableSuggestionClick then const (SendSuggestion message) else (const NoAction))
   ][ textView $
      [ text $ value
-     , color config.blue800
+     , color Color.blue800
      , padding (Padding 12 16 12 16)
      ] <> FontStyle.body1 TypoGraphy
    , linearLayout
      [ width MATCH_PARENT
      , height $ V 1
      , visibility if (isLastItem) then GONE else VISIBLE
-     , background config.grey900
+     , background Color.grey900
      ][]
   ]
 chatComponentView :: forall w. Config -> (Action -> Effect Unit) -> ChatComponentConfig -> Maybe ChatComponentConfig -> Boolean -> String -> Int -> PrestoDOM (Effect Unit) w
@@ -386,12 +386,14 @@ chatComponentView state push config nextConfig isLastItem userType index =
   , gravity chatConfig.gravity
   , orientation VERTICAL
   , visibility $ boolToVisibility $ not $ (not state.spanParent && STR.null value)
-  , onAnimationEnd (\action ->
+  , onAnimationEnd (\action -> do
+      push action
       if isLastItem || state.spanParent then do
-        _ <- scrollToEnd (getNewIDWithTag "ChatScrollView") true
+        void $ scrollToEnd (getNewIDWithTag "ChatScrollView") true
         pure unit
       else
-        pure unit) (const NoAction)
+        pure unit
+    ) (const MessageAnimationEnd)
   ][ linearLayout
      [ padding (Padding 12 12 12 12)
      , height WRAP_CONTENT
@@ -461,7 +463,7 @@ chatComponentView state push config nextConfig isLastItem userType index =
       , textView $ 
        [ text $ convertUTCtoISC config.timeStamp "hh:mm A"
        , visibility $ boolToVisibility $ hasTimeStamp config nextConfig 
-       , color state.black800
+       , color Color.black800
        , margin $ MarginTop 4
        , fontStyle $ FontStyle.regular LanguageStyle
        ] <> FontStyle.captions TypoGraphy
@@ -483,7 +485,7 @@ chatComponentView state push config nextConfig isLastItem userType index =
         ][]
       , textView $ 
         [ text $ maybe "" (\nextConfig' -> convertUTCtoISC nextConfig'.timeStamp "dddFull, DD/MM/YYYY") nextConfig
-        , color state.black800
+        , color Color.black800
         , gravity CENTER
         , margin $ MarginHorizontal 10 10
         ] <> FontStyle.tags TypoGraphy
@@ -519,17 +521,17 @@ getChatConfig state sentBy isLastItem hasTimeStamp index =
       margin : if state.spanParent then Margin ((screenWidth unit)/4) 0 0 if (isLastItem && hasTimeStamp) then 18 else 8
                else Margin ((screenWidth unit)/4) 24 0 if(os == "IOS" && isLastItem && hasTimeStamp) then 12 else 0,
       gravity : RIGHT,
-      background : state.blue800,
+      background : Color.blue800,
       cornerRadii : (Corners 16.0 true true false true),
-      textColor :  state.white900
+      textColor :  Color.white900
     }
   else
     { margin : if state.spanParent then Margin 0 (if index == 0 then 27 else 0) ((screenWidth unit)/4)  if (isLastItem && hasTimeStamp) then 18 else 8
                else Margin 0 24 ((screenWidth unit)/4) if (os == "IOS" && isLastItem && hasTimeStamp) then 12 else 0,
       gravity :  LEFT,
-      background : state.grey900,
+      background : Color.grey900,
       cornerRadii : (Corners 16.0 true true true false ),
-      textColor :   state.black800
+      textColor :   Color.black800
     }
 
 hasTimeStamp :: ChatComponentConfig -> Maybe ChatComponentConfig -> Boolean

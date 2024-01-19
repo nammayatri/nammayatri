@@ -23,6 +23,7 @@ import Prelude (Unit, const, ($), (/), (==), (<>), (<))
 import Data.String (take)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, fontStyle, gravity, height, linearLayout, margin, orientation, padding, text, textSize, textView, weight, width, onClick, alpha, cornerRadius, id, visibility, stroke)
 import Mobility.Prelude (boolToVisibility)
+import Data.Maybe (fromMaybe)
 
 view :: (Action -> Effect Unit) -> IssueState -> forall w. PrestoDOM (Effect Unit) w
 view push state =
@@ -125,7 +126,7 @@ issueView state =
   textView
     [ height state.thirdTextConfig.height
     , width state.thirdTextConfig.width
-    , text (state.thirdTextConfig.text <> " " <> (take 13 state.issue.issueReportId) <> "...")
+    , text $ state.thirdTextConfig.text <> " " <> ( fromMaybe ((take 13 state.issue.issueReportId) <> "...") state.issue.issueReportShortId )
     , visibility state.thirdTextConfig.visibility
     , color state.thirdTextConfig.color
     , fontStyle $ state.thirdTextConfig.fontStyle

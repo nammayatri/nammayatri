@@ -1008,3 +1008,4 @@ getEN stringKey =
         ONE_WAY_STR -> "One Way"
         SHARE_TICKET -> "Share Ticket"
         ORIGIN -> "Origin"
+        HISTORY -> "History"

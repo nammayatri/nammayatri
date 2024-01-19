@@ -572,17 +572,7 @@ chatViewConfig state = let
     , emptyChatHeader = (getString START_YOUR_CHAT_WITH_THE_DRIVER)
     , mapsText = (getString MAPS)
     , languageKey = (getLanguageLocale languageKey)
-    , grey700 = Color.grey700
-    , blue600 = Color.blue600
-    , blue900 = Color.blue900
     , transparentGrey = Color.transparentGrey
-    , green200 = Color.green200
-    , grey900 = Color.grey900
-    , grey800 = Color.grey800
-    , blue800 = Color.blue800
-    , white900 = Color.white900
-    , black800 = Color.black800
-    , black700 = Color.black700
     , canSendSuggestion = state.props.canSendSuggestion
     , enableCall = (not (state.data.activeRide.disabilityTag == Just ST.HEAR_IMPAIRMENT))
     , enableSuggestions = state.data.config.feature.enableSuggestions

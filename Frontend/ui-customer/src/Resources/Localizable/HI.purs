@@ -765,8 +765,8 @@ getHI stringKey =
         PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER -> "ड्राइवर को कॉल करने के लिए सवारी का चयन करें"
         ADD_IMAGE_S -> "छवि जोड़ें" 
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "पहले से ही एक सक्रिय सवारी है"
-        CONFIRM_STOP_LOCATION -> "Confirm stop location"
-        CONFIRM_DROP -> "Confirm Drop"
+        CONFIRM_STOP_LOCATION -> "क्या आप वाकई यहां रुकना चाहते हैं?"
+        CONFIRM_DROP -> "गिरावट की पुष्टि करें"
         BOOK_METRO_WITH_NY_NOW -> "नम्मा यात्री के साथ अभी \nमेट्रो टिकट बुक करें!"
         FOLLOWING name -> name <> " का अनुसरण कर रहा हूँ"
         TURN_OFF_ALARM -> "अलार्म बंद करें"
@@ -1011,4 +1011,5 @@ getHI stringKey =
         SHARE_TICKET -> "टिकट साझा करें"
         ORIGIN -> "मूल"
 
+        HISTORY -> "इतिहास"
 
