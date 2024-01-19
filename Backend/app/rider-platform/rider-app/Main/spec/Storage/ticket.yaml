@@ -43,6 +43,7 @@ TicketPlace:
   default:
     termsAndConditions: "'{}'"
     placeType: "'Other'"
+    shortDesc: "'Short description not available'"
 
   queries:
     getTicketPlaces:

@@ -12,3 +12,8 @@ ALTER TABLE atlas_app.ticket_booking ADD COLUMN merchant_operating_city_id chara
 ALTER TABLE atlas_app.ticket_booking ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_booking ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.ticket_booking ADD PRIMARY KEY ( id, person_id, short_id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking ALTER COLUMN merchant_operating_city_id SET NOT NULL;

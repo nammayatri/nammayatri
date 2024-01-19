@@ -29,7 +29,7 @@ executable alchemist-generator-exe
   other-modules:
       Paths_alchemist
   hs-source-dirs:
-      spec
+      src
   default-extensions:
       ConstraintKinds
       DataKinds

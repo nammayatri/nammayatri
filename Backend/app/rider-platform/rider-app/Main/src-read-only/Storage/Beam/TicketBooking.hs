@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -20,16 +21,16 @@ import Tools.Beam.UtilsTH
 
 data TicketBookingT f = TicketBookingT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
     id :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     personId :: B.C f Kernel.Prelude.Text,
     shortId :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.TicketBooking.BookingStatus,
     ticketPlaceId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
     visitDate :: B.C f Data.Time.Calendar.Day,
-    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))
   }
   deriving (Generic, B.Beamable)
 

@@ -10,8 +10,9 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.TicketPlace as Beam
 
@@ -30,7 +31,7 @@ findById (Kernel.Types.Id.Id id) = do
 getTicketPlaces :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.TicketPlace.TicketPlace])
 getTicketPlaces (Kernel.Types.Id.Id merchantOperatingCityId) = do
   findAllWithKV
-    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> m (Maybe (Domain.Types.TicketPlace.TicketPlace))
@@ -52,13 +53,13 @@ updateByPrimaryKey Domain.Types.TicketPlace.TicketPlace {..} = do
       Se.Set Beam.lat $ lat,
       Se.Set Beam.lon $ lon,
       Se.Set Beam.mapImageUrl $ mapImageUrl,
+      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name $ name,
       Se.Set Beam.openTimings $ openTimings,
       Se.Set Beam.placeType $ placeType,
       Se.Set Beam.shortDesc $ shortDesc,
       Se.Set Beam.termsAndConditions $ termsAndConditions,
       Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt $ createdAt,
       Se.Set Beam.updatedAt $ now
     ]
@@ -80,13 +81,13 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
             lat = lat,
             lon = lon,
             mapImageUrl = mapImageUrl,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
             openTimings = openTimings,
             placeType = placeType,
             shortDesc = shortDesc,
             termsAndConditions = termsAndConditions,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -102,13 +103,13 @@ instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
         Beam.lat = lat,
         Beam.lon = lon,
         Beam.mapImageUrl = mapImageUrl,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
         Beam.openTimings = openTimings,
         Beam.placeType = placeType,
         Beam.shortDesc = shortDesc,
         Beam.termsAndConditions = termsAndConditions,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

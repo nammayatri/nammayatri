@@ -17,12 +17,6 @@ findGitRoot dir = do
             then return Nothing -- No more directories to check
             else findGitRoot parent
 
-dslInputPathPrefix :: FilePath
-dslInputPathPrefix = "Backend" </> "app" </> "alchemist" </> "spec"
-
-haskellOutputPathPrefix :: FilePath
-haskellOutputPathPrefix = "Backend" </> "app"
-
 sqlOutputPathPrefix :: FilePath
 sqlOutputPathPrefix = "Backend" </> "dev" </> "migrations-read-only"
 
@@ -33,16 +27,18 @@ driverAppName :: FilePath
 driverAppName = "dynamic-offer-driver-app"
 
 riderAppPath :: FilePath
-riderAppPath = "rider-platform" </> rideAppName </> "Main"
+riderAppPath = "Backend" </> "app" </> "rider-platform" </> rideAppName </> "Main"
 
 driverAppPath :: FilePath
-driverAppPath = "provider-platform" </> driverAppName </> "Main"
+driverAppPath = "Backend" </> "app" </> "provider-platform" </> driverAppName </> "Main"
 
 applyDirectory :: FilePath -> (FilePath -> IO ()) -> IO ()
 applyDirectory dirPath processFile = do
-  files <- listDirectory dirPath
-  let yamlFiles = filter (\file -> takeExtension file `elem` [".yaml", ".yml"]) files
-  mapM_ (processFile . (dirPath </>)) yamlFiles
+  exists <- doesDirectoryExist dirPath
+  when exists $ do
+    files <- listDirectory dirPath
+    let yamlFiles = filter (\file -> takeExtension file `elem` [".yaml", ".yml"]) files
+    mapM_ (processFile . (dirPath </>)) yamlFiles
 
 main :: IO ()
 main = do
@@ -55,11 +51,11 @@ main = do
   where
     processApp :: FilePath -> FilePath -> FilePath -> IO ()
     processApp rootDir appPath appName = do
-      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "Storage") (processStorageDSL rootDir appPath appName)
-      applyDirectory (rootDir </> dslInputPathPrefix </> appPath </> "API") (processAPIDSL rootDir appPath)
+      applyDirectory (rootDir </> appPath </> "spec" </> "Storage") (processStorageDSL rootDir appPath appName)
+      applyDirectory (rootDir </> appPath </> "spec" </> "API") (processAPIDSL rootDir appPath)
 
     processStorageDSL rootDir appPath appName inputFile = do
-      let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
+      let readOnlySrc = rootDir </> appPath </> "src-read-only/"
       let readOnlyMigration = rootDir </> sqlOutputPathPrefix </> appName
 
       NammaDSL.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
@@ -68,8 +64,8 @@ main = do
       NammaDSL.mkSQLFile readOnlyMigration inputFile
 
     processAPIDSL rootDir appPath inputFile = do
-      let readOnlySrc = rootDir </> haskellOutputPathPrefix </> appPath </> "src-read-only/"
-      let src = rootDir </> haskellOutputPathPrefix </> appPath </> "src"
+      let readOnlySrc = rootDir </> appPath </> "src-read-only/"
+      let src = rootDir </> appPath </> "src"
 
       -- NammaDSL.mkFrontendAPIIntegration (readOnlySrc </> "Domain/Action") inputFile
       NammaDSL.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
