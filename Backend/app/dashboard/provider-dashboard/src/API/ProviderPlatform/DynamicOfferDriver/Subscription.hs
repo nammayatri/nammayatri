@@ -32,6 +32,7 @@ import Kernel.Utils.Common
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
 import Tools.Auth.Merchant
 

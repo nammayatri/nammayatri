@@ -69,7 +69,7 @@ findByMobileNumber ::
   m (Maybe Person)
 findByMobileNumber mobileNumber mobileCountryCode = do
   mobileDbHash <- getDbHash mobileNumber
-  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq $ mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq $ mobileCountryCode]]
+  findOneWithKV [Se.And [Se.Is BeamP.mobileNumberHash $ Se.Eq mobileDbHash, Se.Is BeamP.mobileCountryCode $ Se.Eq mobileCountryCode]]
 
 -- TODO :: Beam Query for this
 -- TODO add filtering by role ---todo to be done in beam queries
