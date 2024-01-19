@@ -59,12 +59,19 @@ Station:
       derive: HttpInstance
 
   queries:
-    getTicketPlaces:
+    getTicketPlacesByMerchantOperatingCityIdAndVehicleType:
       kvFunction: findAllWithKV
-      where: merchantOperatingCityId
+      where:
+        and: [merchantOperatingCityId, vehicleType]
+    getTicketPlacesByVehicleType:
+      kvFunction: findAllWithKV
+      where: vehicleType
     findById:
       kvFunction: findOneWithKV
       where: id
+    findByStationCode:
+      kvFunction: findOneWithKV
+      where: code
     findByStationCode:
       kvFunction: findOneWithKV
       where: code
