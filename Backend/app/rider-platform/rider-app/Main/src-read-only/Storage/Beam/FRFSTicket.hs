@@ -10,6 +10,7 @@ import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -20,6 +21,7 @@ data FRFSTicketT f = FRFSTicketT
   { frfsTicketBookingId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     qrData :: B.C f Kernel.Prelude.Text,
+    riderId :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.FRFSTicket.FRFSTicketStatus,
     ticketNumber :: B.C f Kernel.Prelude.Text,
     validTill :: B.C f Kernel.Prelude.UTCTime,

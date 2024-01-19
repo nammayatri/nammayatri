@@ -10,6 +10,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -31,6 +32,8 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     providerName :: B.C f Kernel.Prelude.Text,
     quantity :: B.C f Kernel.Prelude.Int,
     quoteId :: B.C f Kernel.Prelude.Text,
+    riderId :: B.C f Kernel.Prelude.Text,
+    stationsJson :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: B.C f Kernel.Prelude.Text,
     validTill :: B.C f Kernel.Prelude.UTCTime,

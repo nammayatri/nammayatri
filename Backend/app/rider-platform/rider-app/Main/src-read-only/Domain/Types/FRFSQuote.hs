@@ -6,6 +6,7 @@ module Domain.Types.FRFSQuote where
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -23,7 +24,9 @@ data FRFSQuote = FRFSQuote
     providerId :: Kernel.Prelude.Text,
     providerName :: Kernel.Prelude.Text,
     quantity :: Kernel.Prelude.Int,
+    riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
+    stationsJson :: Kernel.Prelude.Text,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Domain.Types.Station.FRFSVehicleType,

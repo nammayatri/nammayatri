@@ -17,6 +17,7 @@ imports:
   FRFSTicketStatus: Domain.Types.FRFSTicket
   # Gps: Kernel.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  Person: Domain.Types.Person
 
 FRFSSearch:
   tableName: frfs_search
@@ -27,6 +28,7 @@ FRFSSearch:
     toStationId: Id Station
     quantity: Int
     vehicleType: FRFSVehicleType
+    riderId: Id Person
 
   # types:
   #   FRFSVehicleType:
@@ -87,6 +89,7 @@ FRFSQuote:
     fromStationId: Id Station
     toStationId: Id Station
     quantity: Int
+    stationsJson : Text
     vehicleType: FRFSVehicleType
     bppSubscriberId: Text
     providerId: Text
@@ -94,6 +97,7 @@ FRFSQuote:
     providerDescription: Maybe Text
     price: HighPrecMoney
     validTill: UTCTime
+    riderId: Id Person
 
   types:
     FRFSQuoteType:
@@ -139,7 +143,8 @@ FRFSTicketBooking:
     bppOrderId: Maybe Text
     quoteId: Id FRFSQuote
     status: FRFSTicketBookingStatus
-
+    riderId: Id Person
+    stationsJson : Text
     bppItemId: Text
     _type: FRFSQuoteType
     fromStationId: Id Station
@@ -167,6 +172,9 @@ FRFSTicketBooking:
     findAllByStatus:
       kvFunction: findAllWithKV
       where: status
+    findAllByRiderId:
+      kvFunction: findAllWithKV
+      where: riderId
 # Make use of FareBreakup to store the fare breakup of a ticket
 
 # Get transaction_id from Payment Transaction table
@@ -177,6 +185,7 @@ FRFSTicket:
   fields:
     id: Id FRFSTicket
     frfsTicketBookingId: Id FRFSTicketBooking
+    riderId: Id Person
     status: FRFSTicketStatus
     qrData: Text
     validTill: UTCTime
@@ -193,8 +202,8 @@ FRFSTicket:
     findAllByStatus:
       kvFunction: findOneWithKV
       where: status
-    findByTicketBookingId:
-      kvFunction: findOneWithKV
+    findAllByTicketBookingId:
+      kvFunction: findAllWithKV
       where: frfsTicketBookingId
 
 FRFSTicketBookingPayment:
@@ -208,7 +217,7 @@ FRFSTicketBookingPayment:
 
   types:
     FRFSTicketBookingPaymentStatus:
-      enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING"
+      enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING, REFUNDED"
 
   queries:
     findById:

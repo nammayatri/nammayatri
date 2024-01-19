@@ -7,6 +7,7 @@ import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -29,16 +30,16 @@ findAllByStatus status = do
     [ Se.Is Beam.status $ Se.Eq status
     ]
 
+findAllByTicketBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ([Domain.Types.FRFSTicket.FRFSTicket])
+findAllByTicketBookingId (Kernel.Types.Id.Id frfsTicketBookingId) = do
+  findAllWithKV
+    [ Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId
+    ]
+
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe (Domain.Types.FRFSTicket.FRFSTicket))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.Is Beam.id $ Se.Eq id
-    ]
-
-findByTicketBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m (Maybe (Domain.Types.FRFSTicket.FRFSTicket))
-findByTicketBookingId (Kernel.Types.Id.Id frfsTicketBookingId) = do
-  findOneWithKV
-    [ Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId
     ]
 
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe (Domain.Types.FRFSTicket.FRFSTicket))
@@ -55,6 +56,7 @@ updateByPrimaryKey Domain.Types.FRFSTicket.FRFSTicket {..} = do
   updateWithKV
     [ Se.Set Beam.frfsTicketBookingId $ (Kernel.Types.Id.getId frfsTicketBookingId),
       Se.Set Beam.qrData $ qrData,
+      Se.Set Beam.riderId $ (Kernel.Types.Id.getId riderId),
       Se.Set Beam.status $ status,
       Se.Set Beam.ticketNumber $ ticketNumber,
       Se.Set Beam.validTill $ validTill,
@@ -76,6 +78,7 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
           { frfsTicketBookingId = Kernel.Types.Id.Id frfsTicketBookingId,
             id = Kernel.Types.Id.Id id,
             qrData = qrData,
+            riderId = Kernel.Types.Id.Id riderId,
             status = status,
             ticketNumber = ticketNumber,
             validTill = validTill,
@@ -91,6 +94,7 @@ instance ToTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
       { Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.qrData = qrData,
+        Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.status = status,
         Beam.ticketNumber = ticketNumber,
         Beam.validTill = validTill,

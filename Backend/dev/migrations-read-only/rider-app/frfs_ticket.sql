@@ -11,3 +11,8 @@ ALTER TABLE atlas_app.frfs_ticket ADD COLUMN merchant_operating_city_id characte
 ALTER TABLE atlas_app.frfs_ticket ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_ticket ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_ticket ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket ADD COLUMN rider_id character varying(36) NOT NULL;

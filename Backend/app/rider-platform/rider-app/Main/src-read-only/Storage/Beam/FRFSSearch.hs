@@ -9,6 +9,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -20,6 +21,7 @@ data FRFSSearchT f = FRFSSearchT
   { fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     quantity :: B.C f Kernel.Prelude.Int,
+    riderId :: B.C f Kernel.Prelude.Text,
     toStationId :: B.C f Kernel.Prelude.Text,
     vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,
     merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),

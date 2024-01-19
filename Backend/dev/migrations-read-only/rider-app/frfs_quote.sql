@@ -441,3 +441,60 @@ ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN rider_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN stations_json text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;

@@ -18,3 +18,8 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN to_station_id character varying(36)
 ALTER TABLE atlas_app.frfs_search ADD COLUMN from_station_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.frfs_search DROP COLUMN to;
 ALTER TABLE atlas_app.frfs_search DROP COLUMN from;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN rider_id character varying(36) NOT NULL;

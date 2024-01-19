@@ -10,6 +10,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -29,7 +30,9 @@ data FRFSQuoteT f = FRFSQuoteT
     providerId :: B.C f Kernel.Prelude.Text,
     providerName :: B.C f Kernel.Prelude.Text,
     quantity :: B.C f Kernel.Prelude.Int,
+    riderId :: B.C f Kernel.Prelude.Text,
     searchId :: B.C f Kernel.Prelude.Text,
+    stationsJson :: B.C f Kernel.Prelude.Text,
     toStationId :: B.C f Kernel.Prelude.Text,
     validTill :: B.C f Kernel.Prelude.UTCTime,
     vehicleType :: B.C f Domain.Types.Station.FRFSVehicleType,

@@ -6,6 +6,7 @@ module Domain.Types.FRFSTicketBooking where
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -25,6 +26,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     providerName :: Kernel.Prelude.Text,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    stationsJson :: Kernel.Prelude.Text,
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     validTill :: Kernel.Prelude.UTCTime,
