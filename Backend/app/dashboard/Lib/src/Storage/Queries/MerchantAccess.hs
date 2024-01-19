@@ -69,22 +69,6 @@ findAllMerchantAccessByPersonId personId =
     [ Se.Is BeamMA.personId $ Se.Eq $ getId personId
     ]
 
--- findAllByPersonId ::
---   (Transactionable m) =>
---   Id DP.Person ->
---   m [DMerchant.Merchant]
--- findAllByPersonId personId = findAll $ do
---   (merchantAccess :& merchant) <-
---     from $
---       table @MerchantAccessT
---         `innerJoin` table @MerchantT
---           `Esq.on` ( \(merchantAccess :& merchant) ->
---                        merchantAccess ^. MerchantAccessMerchantId ==. merchant ^. MerchantTId
---                    )
---   where_ $
---     merchantAccess ^. MerchantAccessPersonId ==. val (toKey personId)
---   return merchant
-
 findAllByPersonId :: BeamFlow m r => Id DP.Person -> m [DMerchant.Merchant]
 findAllByPersonId personId = do
   merchantAccessMerchantId <-

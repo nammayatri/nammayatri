@@ -33,6 +33,7 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
 import Tools.Metrics
+import Tools.Streaming.Kafka
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -64,7 +65,9 @@ data AppCfg = AppCfg
     slackToken :: Text,
     slackChannel :: Text,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    kafkaProducerCfg :: KafkaProducerCfg,
+    kvConfigUpdateFrequency :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -100,7 +103,8 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     slackEnv :: SlackEnv,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
-    cacheConfig :: CacheConfig
+    cacheConfig :: CacheConfig,
+    kafkaProducerTools :: KafkaProducerTools
   }
   deriving (Generic)
 
@@ -113,6 +117,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
   slackEnv <- createSlackConfig slackToken slackChannel
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let modifierFunc = ("dashboard:" <>)
   let nonCriticalModifierFunc = ("dashboard:non-critical:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc
