@@ -6,9 +6,9 @@ module Domain.Action.UI.FRFSTicketService where
 import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import Data.OpenApi (ToSchema)
-import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch
-import qualified Domain.Types.FRFSSearch as DSearch
+import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -23,7 +23,7 @@ import Kernel.Utils.Common
 import Servant
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerc
-import qualified Storage.Queries.FRFSSearch as SearchQ
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Station as QS
 import qualified Storage.Queries.Station as QStation
@@ -31,10 +31,7 @@ import Tools.Auth
 import Tools.Error
 
 getFrfsStations :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Station.FRFSVehicleType -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
-getFrfsStations (mbPersonId, merchantId_) vehicleType_ = do
-  personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  _ <- B.runInReplica $ QP.findById personId_ >>= fromMaybeM (PersonNotFound personId_.getId)
-  _ <- B.runInReplica $ CQM.findById merchantId_ >>= fromMaybeM (MerchantNotFound merchantId_.getId)
+getFrfsStations _ vehicleType_ = do
   stations <- B.runInReplica $ QS.getTicketPlacesByVehicleType vehicleType_
   return $
     map
@@ -47,36 +44,61 @@ getFrfsStations (mbPersonId, merchantId_) vehicleType_ = do
       )
       stations
 
-postFrfsSearch :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Station.FRFSVehicleType -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearch (personId, merchantId) mVehicleType req = do
-  fromStation <- QStation.findByStationCode req.from >>= fromMaybeM (InvalidRequest "Invalid from station code")
-  toStation <- QStation.findByStationCode req.from >>= fromMaybeM (InvalidRequest "Invalid from station code")
+postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Station.FRFSVehicleType -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
+postFrfsSearch (_, merchantId) vehicleType_ FRFSSearchAPIReq {..} = do
+  _ <- QStation.findById fromStationId >>= fromMaybeM (InvalidRequest "Invalid from station id")
+  _ <- QStation.findById toStationId >>= fromMaybeM (InvalidRequest "Invalid to station id")
 
   searchReqId <- generateGUID
   now <- getCurrentTime
 
   let searchReq =
-        DSearch.FRFSSearch
+        DFRFSSearch.FRFSSearch
           { id = searchReqId,
-            fromStationId = fromStation.id.getId,
-            quantity = req.quantity,
-            toStationId = toStation.id.getId,
-            vehicleType = vehicleType,
+            vehicleType = vehicleType_,
             merchantId = Just merchantId,
             merchantOperatingCityId = Nothing,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            ..
           }
-  SearchQ.create searchReq
+  QFRFSSearch.create searchReq
   return $ FRFSSearchAPIRes searchReqId
 
 getFrfsSearchQuote :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
 getFrfsSearchQuote = error "Logic yet to be decided"
 
-postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+-- _ <- QFRFSSearch.findById searchId >>= fromMaybeM (InvalidRequest "Invalid search id")
+-- quotes <- B.runInReplica $ QFRFSQuote.findBySearchId searchId
+-- mapM (\DFRFSQuote{..} -> do
+--   trips <- B.runInReplica $ QFRFSTrip.findAllByQuoteId id
+--   let trips' = sortBy (\tripA tripB -> compare tripA.stopSequence tripB.stopSequence) trips
+--   map ()
+--   return $ FRFSTicketService.FRFSQuoteAPIRes
+--     {
+--       quoteId = id,
+--       ..
+--     }) quotes
+
+-- -- let vehicleType_ = searchReq.vehicleType
+-- -- stations <- B.runInReplica $ QS.getTicketPlacesByMerchantOperatingCityIdAndVehicleType (DFRFSSearch.merchantOperatingCityId searchReq) vehicleType_
+-- -- let stationIds = map (Kernel.Types.Id.getId . Station.id) stations
+-- quotes <- B.runInReplica $ QFRFSQuote.findBySearchId searchId
+-- return $
+--   map
+--     ( \DFRFSQuote.FRFSQuote {..} ->
+--         FRFSTicketService.FRFSQuoteAPIRes
+--           { stations = filter (\s -> Station.id s `elem` stationIds) stations,
+--             quoteId = id,
+--             ..
+--           }
+--     )
+--     quotes
+
+postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm = error "Logic yet to be decided"
 
-postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
 
 getFrfsBookingStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes

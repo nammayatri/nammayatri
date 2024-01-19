@@ -47,9 +47,9 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.FRFSSearch.FRFSSearch {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.from $ (Kernel.Types.Id.getId from),
+    [ Se.Set Beam.fromStationId $ (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.quantity $ quantity,
-      Se.Set Beam.to $ (Kernel.Types.Id.getId to),
+      Se.Set Beam.toStationId $ (Kernel.Types.Id.getId toStationId),
       Se.Set Beam.vehicleType $ vehicleType,
       Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -66,10 +66,10 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
-          { from = Kernel.Types.Id.Id from,
+          { fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
             quantity = quantity,
-            to = Kernel.Types.Id.Id to,
+            toStationId = Kernel.Types.Id.Id toStationId,
             vehicleType = vehicleType,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -80,10 +80,10 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
 instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   toTType' Domain.Types.FRFSSearch.FRFSSearch {..} = do
     Beam.FRFSSearchT
-      { Beam.from = Kernel.Types.Id.getId from,
+      { Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.quantity = quantity,
-        Beam.to = Kernel.Types.Id.getId to,
+        Beam.toStationId = Kernel.Types.Id.getId toStationId,
         Beam.vehicleType = vehicleType,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

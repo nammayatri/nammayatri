@@ -42,9 +42,9 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data FRFSSearchAPIReq = FRFSSearchAPIReq
-  { from :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+  { fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     quantity :: Kernel.Prelude.Int,
-    to :: Kernel.Types.Id.Id Domain.Types.Station.Station
+    toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

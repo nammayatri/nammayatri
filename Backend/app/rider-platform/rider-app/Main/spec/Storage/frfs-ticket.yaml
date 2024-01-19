@@ -23,8 +23,8 @@ FRFSSearch:
 
   fields:
     id: Id FRFSSearch
-    from: Id Station
-    to: Id Station
+    fromStationId: Id Station
+    toStationId: Id Station
     quantity: Int
     vehicleType: FRFSVehicleType
 
@@ -84,8 +84,8 @@ FRFSQuote:
     bppItemId: Text
     searchId: Id FRFSSearch
     _type: FRFSQuoteType
-    from: Id Station
-    to: Id Station
+    fromStationId: Id Station
+    toStationId: Id Station
     quantity: Int
     vehicleType: FRFSVehicleType
     bppSubscriberId: Text
@@ -141,8 +141,8 @@ FRFSTicketBooking:
 
     bppItemId: Text
     _type: FRFSQuoteType
-    from: Id Station
-    to: Id Station
+    fromStationId: Id Station
+    toStationId: Id Station
     quantity: Int
     vehicleType: FRFSVehicleType
     bppSubscriberId: Text
