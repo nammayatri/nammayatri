@@ -41,6 +41,7 @@ import qualified "rider-app" Storage.Beam.Merchant.MerchantPaymentMethod as Merc
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceConfig as MerchantServiceConfig
 import qualified "rider-app" Storage.Beam.Merchant.MerchantServiceUsageConfig as MerchantServiceUsageConfig
 import qualified "rider-app" Storage.Beam.MerchantConfig as MerchantConfig
+import qualified "rider-app" Storage.Beam.NextBillionData as NextBillionData
 import qualified "rider-app" Storage.Beam.OnSearchEvent as OnSearchEvent
 import qualified "rider-app" Storage.Beam.Payment ()
 import qualified "rider-app" Storage.Beam.Person as Person
@@ -110,6 +111,7 @@ data UpdateModel
   | BecknRequestUpdate
   | LocationUpdate
   | LocationMappingUpdate
+  | NextBillionDataUpdate
   deriving (Generic, Show)
 
 getTagUpdate :: UpdateModel -> Text
@@ -161,6 +163,7 @@ getTagUpdate HotSpotConfigUpdate = "HotSpotConfigOptions"
 getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
 getTagUpdate LocationUpdate = "LocationOptions"
 getTagUpdate LocationMappingUpdate = "LocationMappingOptions"
+getTagUpdate NextBillionDataUpdate = "NextBillionDataOptions"
 
 parseTagUpdate :: Text -> Parser UpdateModel
 parseTagUpdate "AppInstallsOptions" = return AppInstallsUpdate
@@ -211,6 +214,7 @@ parseTagUpdate "HotSpotConfigOptions" = return HotSpotConfigUpdate
 parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
 parseTagUpdate "LocationOptions" = return LocationUpdate
 parseTagUpdate "LocationMappingOptions" = return LocationMappingUpdate
+parseTagUpdate "NextBillionDataOptions" = return NextBillionDataUpdate
 parseTagUpdate t = fail $ T.unpack ("Expected a UpdateModel but got '" <> t <> "'")
 
 data DBUpdateObject
@@ -262,6 +266,7 @@ data DBUpdateObject
   | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
   | LocationOptions UpdateModel [Set Postgres Location.LocationT] (Where Postgres Location.LocationT)
   | LocationMappingOptions UpdateModel [Set Postgres LocationMapping.LocationMappingT] (Where Postgres LocationMapping.LocationMappingT)
+  | NextBillionDataOptions UpdateModel [Set Postgres NextBillionData.NextBillionDataT] (Where Postgres NextBillionData.NextBillionDataT)
 
 -------------------------------- ToJSON DBUpdateObject -------------------------------------
 instance ToJSON DBUpdateObject where
@@ -417,3 +422,6 @@ instance FromJSON DBUpdateObject where
       LocationMappingUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ LocationMappingOptions updateModel updVals whereClause
+      NextBillionDataUpdate -> do
+        (updVals, whereClause) <- parseUpdateCommandValues contents
+        return $ NextBillionDataOptions updateModel updVals whereClause
