@@ -111,6 +111,7 @@ library
       Beckn.ACL.FRFS.OnSearch
       Beckn.ACL.FRFS.OnStatus
       Beckn.ACL.FRFS.Search
+      Beckn.ACL.FRFS.Status
       Beckn.ACL.FRFS.Utils
       Beckn.ACL.Init
       Beckn.ACL.Metro.OnSearch
