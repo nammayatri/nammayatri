@@ -27,12 +27,6 @@ flag Local
 library
   exposed-modules:
       API
-      API.Dashboard
-      API.Dashboard.AccessMatrix
-      API.Dashboard.Merchant
-      API.Dashboard.Person
-      API.Dashboard.Registration
-      API.Dashboard.Roles
       API.RiderPlatform
       API.RiderPlatform.Booking
       API.RiderPlatform.Customer

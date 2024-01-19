@@ -19,8 +19,9 @@ import qualified API.Dashboard.Merchant as Merchant
 import qualified API.Dashboard.Person as Person
 import qualified API.Dashboard.Registration as Registration
 import qualified API.Dashboard.Roles as Roles
--- import Environment
+import Environment
 import Servant
+import Storage.Beam.BeamFlow
 
 type API =
   Person.API
@@ -29,12 +30,10 @@ type API =
     :<|> Roles.API
     :<|> Merchant.API
 
--- Note : Handle is moved to rider and provider dashboard
-
--- handler :: FlowServer API
--- handler =
---   Person.handler
---     :<|> Registration.handler
---     :<|> AccessMatrix.handler
---     :<|> Roles.handler
---     :<|> Merchant.handler
+handler :: BeamFlow' => FlowServer API
+handler =
+  Person.handler
+    :<|> Registration.handler
+    :<|> AccessMatrix.handler
+    :<|> Roles.handler
+    :<|> Merchant.handler

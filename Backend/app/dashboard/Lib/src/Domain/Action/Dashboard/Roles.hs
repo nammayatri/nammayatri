@@ -18,9 +18,8 @@ import Dashboard.Common
 import qualified Domain.Types.AccessMatrix as DMatrix
 import Domain.Types.Role
 import qualified Domain.Types.Role as DRole
+import Kernel.Beam.Functions as B
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -119,7 +118,7 @@ buildAccessMatrixItem roleId req = do
       }
 
 listRoles ::
-  ( EsqDBReplicaFlow m r,
+  ( BeamFlow m r,
     EncFlow m r
   ) =>
   TokenInfo ->
@@ -128,7 +127,7 @@ listRoles ::
   Maybe Integer ->
   m ListRoleRes
 listRoles _ mbSearchString mbLimit mbOffset = do
-  personAndRoleList <- Esq.runInReplica $ QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
+  personAndRoleList <- B.runInReplica $ QRole.findAllWithLimitOffset mbLimit mbOffset mbSearchString
   res <- forM personAndRoleList $ \role -> do
     pure $ mkRoleAPIEntity role
   let count = length res

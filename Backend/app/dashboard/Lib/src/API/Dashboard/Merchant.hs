@@ -17,10 +17,11 @@ module API.Dashboard.Merchant where
 import qualified Domain.Action.Dashboard.Merchant as DMerchant
 import qualified Domain.Action.Dashboard.Person as DPerson
 import Domain.Types.Merchant as DMerchant
--- import Environment
--- import Kernel.Prelude
--- import Kernel.Utils.Common
+import Environment
+import Kernel.Prelude
+import Kernel.Utils.Common
 import Servant
+import Storage.Beam.BeamFlow
 import Tools.Auth
 
 type API =
@@ -40,22 +41,20 @@ type API =
              :> Post '[JSON] DPerson.CreatePersonRes
        )
 
--- Note : Handle is moved to rider and provider dashboard
+handler :: BeamFlow' => FlowServer API
+handler =
+  createMerchant
+    :<|> listMerchants
+    :<|> createUserForMerchant
 
--- handler :: FlowServer API
--- handler =
---   createMerchant
---     :<|> listMerchants
---     :<|> createUserForMerchant
+createMerchant :: BeamFlow' => TokenInfo -> DMerchant.CreateMerchantReq -> FlowHandler DMerchant.MerchantAPIEntity
+createMerchant tokenInfo =
+  withFlowHandlerAPI' . DMerchant.createMerchant tokenInfo
 
--- createMerchant :: TokenInfo -> DMerchant.CreateMerchantReq -> FlowHandler DMerchant.MerchantAPIEntity
--- createMerchant tokenInfo =
---   withFlowHandlerAPI' . DMerchant.createMerchant tokenInfo
+listMerchants :: BeamFlow' => TokenInfo -> FlowHandler [DMerchant.MerchantAPIEntity]
+listMerchants tokenInfo =
+  withFlowHandlerAPI' $ DMerchant.listMerchants tokenInfo
 
--- listMerchants :: TokenInfo -> FlowHandler [DMerchant.MerchantAPIEntity]
--- listMerchants tokenInfo =
---   withFlowHandlerAPI' $ DMerchant.listMerchants tokenInfo
-
--- createUserForMerchant :: TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
--- createUserForMerchant tokenInfo req =
---   withFlowHandlerAPI' $ DMerchant.createUserForMerchant tokenInfo req
+createUserForMerchant :: BeamFlow' => TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
+createUserForMerchant tokenInfo req =
+  withFlowHandlerAPI' $ DMerchant.createUserForMerchant tokenInfo req
