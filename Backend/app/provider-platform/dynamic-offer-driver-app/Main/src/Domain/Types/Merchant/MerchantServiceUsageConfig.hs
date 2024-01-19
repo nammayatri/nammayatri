@@ -20,6 +20,7 @@ import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.External.AadhaarVerification.Types (AadhaarVerificationService)
 import Kernel.External.Call (CallService)
 import Kernel.External.Maps.Types (MapsService)
+import Kernel.External.Notification.Types (NotificationService)
 import Kernel.External.SMS.Types
 import Kernel.External.Ticket.Types (IssueTicketService)
 import Kernel.External.Verification.Types (VerificationService)
@@ -49,6 +50,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     faceVerificationService :: VerificationService,
     issueTicketService :: IssueTicketService,
     getExophone :: CallService,
+    sendSearchRequestToDriver :: [NotificationService],
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }

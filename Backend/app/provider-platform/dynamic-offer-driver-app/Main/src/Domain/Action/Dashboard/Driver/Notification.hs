@@ -50,9 +50,9 @@ sendDummyNotificationToDriver merchantShortId opCity driverId = do
   unless (merchantOperatingCity.id == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   now <- getCurrentTime
-  let deviceToken = driver.deviceToken
-      entityData = mkDummyNotificationEntityData now
-  void $ TN.notifyOnNewSearchRequestAvailable merchantOperatingCity.id driver.id deviceToken entityData
+  let entityData = mkDummyNotificationEntityData now
+  notificationData <- TN.buildSendSearchRequestNotificationData driver.id driver.deviceToken entityData TN.EmptyDynamicParam
+  void $ TN.sendSearchRequestToDriverNotification driver.merchantId driver.merchantOperatingCityId notificationData
   pure Success
 
 dummyId :: Text

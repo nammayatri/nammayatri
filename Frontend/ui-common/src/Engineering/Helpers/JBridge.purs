@@ -23,7 +23,7 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..),ChatComponent(..), LazyCheck(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData, CarouselModal, PolylineAnimationConfig)
+import Common.Types.App (EventPayload(..),ChatComponent(..), LazyCheck(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData, CarouselModal, PolylineAnimationConfig, DisplayBase64ImageConig)
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
@@ -110,6 +110,7 @@ foreign import uploadFile :: Boolean -> Effect Unit
 foreign import previewImage :: String -> Effect Unit
 foreign import storeCallBackImageUpload :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import renderBase64Image :: String -> String -> Boolean -> String -> Effect Unit
+foreign import storeCallBackUploadMultiPartData :: forall action. EffectFn2 (action -> Effect Unit)  (String -> String -> action) Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
 foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
@@ -208,6 +209,14 @@ foreign import storeCallBackInternetAction :: forall action. (action -> Effect U
 foreign import openWhatsAppSupport :: String -> Effect Unit
 foreign import generateSessionToken :: String -> String
 foreign import addMediaFile :: String -> String -> String -> String -> String -> String -> Effect Unit
+foreign import clearFocus :: EffectFn1 String Unit
+foreign import removeMediaPlayer :: EffectFn1 String Unit
+foreign import renderBase64ImageFile :: EffectFn4 String String Boolean String Unit
+foreign import saveAudioFile :: EffectFn1 String String
+foreign import uploadMultiPartData :: EffectFn3 String String String Unit
+foreign import startAudioRecording :: EffectFn1 String Boolean
+foreign import stopAudioRecording :: EffectFn1 String String
+foreign import differenceBetweenTwoUTC :: Fn2 String String Int
 
 foreign import toggleBtnLoader :: String -> Boolean -> Unit
 foreign import getBtnLoader :: String -> Boolean
@@ -256,6 +265,8 @@ foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitud
 foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
 
 foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
+
+foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
@@ -546,3 +557,11 @@ getArray count = if count <= 0 then [] else [count] <> (getArray (count - 1))
 
 addCarousel :: CarouselModal ->  String -> Effect Unit
 addCarousel = runEffectFn2 addCarouselImpl
+
+displayBase64ImageConfig :: DisplayBase64ImageConig
+displayBase64ImageConfig = {
+    source : ""
+  , id : ""
+  , scaleType : "CENTER_CROP"
+  , inSampleSize : 1
+}

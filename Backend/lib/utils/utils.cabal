@@ -88,7 +88,6 @@ library
     , extra
     , generic-lens
     , geohash ==1.0.1
-    , hashmap
     , hspec
     , http-client
     , http-types

@@ -75,7 +75,7 @@ dependencies:
   - esqueleto
   - template-haskell
   - wai
-  - hashmap
+  - unordered-containers
   - containers
   - singletons
   - singletons-th

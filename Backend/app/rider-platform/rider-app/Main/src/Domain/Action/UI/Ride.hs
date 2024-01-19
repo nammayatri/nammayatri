@@ -25,7 +25,7 @@ where
 
 import qualified Beckn.ACL.Update as ACL
 import qualified Beckn.Types.Core.Taxi.Common.Location as Common
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking.Type as DB
 import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
 import qualified Domain.Types.Location as DL
@@ -94,7 +94,7 @@ getDriverLoc ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "rideCfg" r RideConfig,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->
@@ -140,7 +140,7 @@ getRideStatus ::
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     HasField "rideCfg" r RideConfig,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id SRide.Ride ->
   Id SPerson.Person ->
@@ -176,7 +176,7 @@ editLocation ::
     MonadFlow m,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Id SRide.Ride ->
   (Id SPerson.Person, Id DM.Merchant) ->

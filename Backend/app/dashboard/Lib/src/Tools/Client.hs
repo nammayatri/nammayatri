@@ -16,7 +16,7 @@
 
 module Tools.Client (CallServerAPI (..), clientWithMerchantAndCity) where
 
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.ServerName as DSN
 import qualified EulerHS.Types as Euler
@@ -53,7 +53,7 @@ class
 instance
   ( CoreMetrics m,
     HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     ToJSON d,
     FromJSON d
   ) =>

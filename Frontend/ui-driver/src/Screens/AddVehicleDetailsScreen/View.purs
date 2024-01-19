@@ -655,13 +655,13 @@ headerLayout state push =
       , padding $ Padding 6 4 6 4
       , margin $ MarginRight 10
       , background Color.lightBlue
-      , stroke $ "1," <> Color.blueBtn
+      , stroke $ "1," <> Color.brightBlue
       , alpha 0.8
       ][ textView
           [ width MATCH_PARENT
           , height MATCH_PARENT
           , text $ getString HELP
-          , color Color.blueBtn
+          , color Color.brightBlue
           , fontStyle $ FontStyle.semiBold LanguageStyle
           , clickable true
           , onClick push $ const $ TutorialModal "RC"

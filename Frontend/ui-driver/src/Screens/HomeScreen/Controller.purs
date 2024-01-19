@@ -48,7 +48,7 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (saveObject)
@@ -91,6 +91,7 @@ import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
 import Data.String as DS
 import Services.Config as SC
+import Data.Function.Uncurried (runFn2)
 import Timers as TF
 import Components.BannerCarousel as BannerCarousel
 import Styles.Colors as Color
@@ -259,6 +260,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | DisableGoto ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
+                    | EarningsScreen ST.HomeScreenState Boolean
 
 data Action = NoAction
             | BackPressed
@@ -337,7 +339,7 @@ data Action = NoAction
             | GotoCancellationPreventionAction PopUpModal.Action 
             | GotoLocInRangeAction PopUpModal.Action
             | EnableGotoTimerAC PrimaryButtonController.Action
-            | UpdateGoHomeTimer String String Int
+            | UpdateGoHomeTimer Int String String
             | AddLocation PrimaryButtonController.Action
             | ConfirmDisableGoto PopUpModal.Action
             | UpdateOriginDist Number Number
@@ -355,6 +357,10 @@ data Action = NoAction
             | UpdateBanner
             | BannerChanged String
             | BannerStateChanged String
+            | CoinsPopupAC PopUpModal.Action 
+            | ToggleStatsModel
+            | ToggleBonusPopup
+            | GoToEarningsScreen Boolean
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -417,11 +423,14 @@ eval (EnableGotoTimerAC PrimaryButtonController.OnClick)state = updateAndExit st
 
 eval AddGotoAC state = exit $ ExitGotoLocation state false
 
-eval (UpdateGoHomeTimer timerID timeInMinutes sec ) state = if sec <= 0 then do
-  void $ pure $ TF.clearTimerWithId timerID
-  void $ pure $ HU.setPopupType ST.VALIDITY_EXPIRED
-  continue state { data { driverGotoState { goToPopUpType = ST.VALIDITY_EXPIRED}}}
-  else continue state { data { driverGotoState { timerInMinutes = timeInMinutes <> " " <>(getString MIN_LEFT), timerId = timerID} } }
+eval (UpdateGoHomeTimer seconds status timerID) state = do
+  if status == "EXPIRED" then do 
+    void $ pure $ TF.clearTimerWithId timerID
+    void $ pure $ HU.setPopupType ST.VALIDITY_EXPIRED
+    continue state { data { driverGotoState { goToPopUpType = ST.VALIDITY_EXPIRED, timerId = "" }}}
+    else do
+      let timeInMinutes = seconds/60 + 1
+      continue state { data { driverGotoState { timerInMinutes = show timeInMinutes <> " " <>(getString MIN_LEFT), timerId = timerID} } }
 
 eval (CancelBackAC PrimaryButtonController.OnClick) state = continue state { data { driverGotoState { showGoto = false}}}
 
@@ -507,6 +516,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
     "Rides" -> exit $ GoToRidesScreen state
     "Profile" -> exit $ GoToProfileScreen state
+    "Earnings" ->  exit $ EarningsScreen state false
     "Alert" -> do
       _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
@@ -907,7 +917,7 @@ eval ClickAddAlternateButton state = do
     else do
       let curr_time = getCurrentUTC ""
       let last_attempt_time = getValueToLocalStore SET_ALTERNATE_TIME
-      let time_diff = differenceBetweenTwoUTC curr_time last_attempt_time
+      let time_diff = runFn2 differenceBetweenTwoUTC curr_time last_attempt_time
       if(time_diff <= 600) then do
         pure $ toast $ getString TOO_MANY_ATTEMPTS_PLEASE_TRY_AGAIN_LATER
         continue state
@@ -952,7 +962,9 @@ eval (AutoPayBanner (Banner.OnClick)) state = do
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
-eval (StatsModelAction StatsModelController.OnIconClick) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
+eval (ToggleBonusPopup) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = not state.props.showBonusInfo } }
+
+eval (StatsModelAction StatsModelController.OnIconClick) state = continueWithCmd state [ pure $ ToggleBonusPopup]
 
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { data {activeRide {waitTimeInfo =false}}, props { showBonusInfo = false } }
 
@@ -1031,6 +1043,10 @@ eval (RCDeactivatedAC PopUpModal.OnButton1Click) state = exit $ GoToVehicleDetai
 
 eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {rcDeactivePopup = false}}
 
+eval (CoinsPopupAC PopUpModal.OnButton1Click) state = exit $ EarningsScreen state true
+
+eval (CoinsPopupAC PopUpModal.OptionWithHtmlClick) state = continue state {props {showCoinsPopup = false}}
+
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 
 eval (PaymentBannerAC (Banner.OnClick)) state = do
@@ -1038,6 +1054,10 @@ eval (PaymentBannerAC (Banner.OnClick)) state = do
   continue state
 
 eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
+
+eval ToggleStatsModel state = continue state { props { isStatsModelExpanded = not state.props.isStatsModelExpanded } }
+
+eval (GoToEarningsScreen showCoinsView) state = exit $ EarningsScreen state showCoinsView
 
 eval _ state = continue state
 
@@ -1229,7 +1249,7 @@ getBannerConfigs state =
   (if state.props.autoPayBanner /= ST.NO_SUBSCRIPTION_BANNER 
     then [autpPayBannerCarousel state BannerCarousal] 
     else [])
-  <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else [])
+  -- <> (if getValueToLocalStore IS_BANNER_ACTIVE == "True" then [genderBannerConfig state BannerCarousal] else []) NOTE::- Deprecated the complete profile banner for now
   <> (if state.props.currentStage == ST.HomeScreen && state.data.config.purpleRideConfig.showPurpleVideos then [accessbilityBannerConfig state BannerCarousal] else [])
   <> getRemoteBannerConfigs
   where 
@@ -1240,4 +1260,4 @@ getBannerConfigs state =
     getLanguage :: String -> String
     getLanguage lang = 
       let language = toLower $ take 2 lang
-      in if not (null language) then "_" <> language else "en"
+      in if not (null language) then "_" <> language else "_en"

@@ -38,10 +38,9 @@ import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
-import Data.Maybe (Maybe(..))
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.Show.Generic (genericShow)
-import Data.String (Pattern(..), split) as DS
+import Data.String (Pattern(..), split, take) as DS
 import Data.String as DS
 import Data.Traversable (traverse)
 import Effect (Effect)
@@ -73,7 +72,7 @@ import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Services.API (PromotionPopupConfig)
 import Storage (KeyStore) 
 import JBridge (getCurrentPositionWithTimeout, firebaseLogEventWithParams, translateStringWithTimeout, openWhatsAppSupport, showDialer)
-import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3,runEffectFn3)
+import Effect.Uncurried(EffectFn1, EffectFn4, EffectFn3, EffectFn7, runEffectFn3)
 import Storage (KeyStore(..), isOnFreeTrial, getValueToLocalNativeStore)
 import Styles.Colors as Color
 import Screens.Types (LocalStoreSubscriptionInfo)
@@ -99,7 +98,6 @@ foreign import getTime :: Unit -> Int
 foreign import hideSplash :: Effect Unit
 foreign import startTimer :: forall action. Int -> Boolean -> (action -> Effect Unit) -> (String -> action) -> Effect Unit
 foreign import convertKmToM :: String -> String
-foreign import differenceBetweenTwoUTC :: String -> String -> Int
 foreign import clearTimer :: String -> Unit
 foreign import clearAllTimer :: String -> Unit
 foreign import toStringJSON :: forall a. a-> String
@@ -116,13 +114,6 @@ foreign import getDatebyCount :: Int -> String
 foreign import launchAppSettings :: Unit -> Effect Unit
 foreign import getTimeStampString :: String -> String
 foreign import addMediaPlayer :: String -> String -> Effect Unit
-foreign import saveAudioFile :: String -> Effect String
-foreign import clearFocus :: String -> Effect Unit
-foreign import uploadMultiPartData :: String -> String -> String -> Effect String
-foreign import startAudioRecording :: String -> Effect Boolean
-foreign import stopAudioRecording :: String -> Effect String
-foreign import renderBase64ImageFile :: String -> String -> Boolean -> String ->  Effect Unit
-foreign import removeMediaPlayer :: String -> Effect Unit
 foreign import parseNumber :: Int -> String
 foreign import getPixels :: Fn1 String Number
 foreign import setValueToLocalStore :: Fn2 String String Unit
@@ -134,7 +125,6 @@ foreign import currentPosition  :: String -> Effect Unit
 foreign import getPeriod :: String -> Period
 foreign import clampNumber :: Number -> Number -> Int -> Int
 foreign import getPopupObject :: forall f a. Fn3 (f -> Maybe f) (Maybe f) String (Maybe PromotionPopupConfig)
-foreign import countDownInMinutes :: forall action. EffectFn3 Int (action -> Effect Unit) (String -> String -> Int -> action) Unit
 foreign import istToUtcDate :: String -> String
 
 foreign import preFetch :: Effect (Array RenewFile)
@@ -143,6 +133,17 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
+
+foreign import renderSlider :: forall action. (action -> Effect Unit) -> (Int -> action) -> SliderConfig -> Unit
+
+type SliderConfig = { 
+  id :: String,
+  sliderConversionRate :: Number,
+  sliderMinValue :: Int,
+  sliderMaxValue :: Int,
+  sliderDefaultValue :: Int,
+  toolTipId :: String
+}
 
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 foreign import setPopupType :: ST.GoToPopUpType -> Unit
@@ -498,7 +499,13 @@ fetchFiles = do
   DA.fold $ map (\item -> launchAff_ $ do 
     result <- download item.filePath item.location
     if result then pure unit else liftEffect $ firebaseLogEventWithParams "download_failed" "file_name" item.filePath) files
-  
+
+getDayOfWeek :: String -> Int
+getDayOfWeek dayName =
+  let
+    weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  in
+    fromMaybe 0 $ DA.elemIndex (DS.take 3 dayName) weekDays
 
 download :: String -> String -> Aff Boolean
 download filepath location = makeAff \cb -> runEffectFn3 renewFile filepath location (cb <<< Right) $> nonCanceler
@@ -591,6 +598,7 @@ getCityConfig cityConfig cityName = do
                           cityLong : 0.0,
                           supportNumber : "",
                           languageKey : "",
+                          enableYatriCoins : false,
                           showDriverReferral : false,
                           uploadRCandDL : true
                         }

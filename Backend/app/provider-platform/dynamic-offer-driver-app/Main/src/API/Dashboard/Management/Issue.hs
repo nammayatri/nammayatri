@@ -29,6 +29,7 @@ handler merchantId city =
   issueCategoryList merchantId city
     :<|> issueList merchantId city
     :<|> issueInfo merchantId city
+    :<|> issueInfoV2 merchantId city
     :<|> issueUpdate merchantId city
     :<|> issueAddComment merchantId city
     :<|> issueFetchMedia merchantId city
@@ -91,7 +92,15 @@ issueInfo ::
   Context.City ->
   Id IssueReport ->
   FlowHandler Common.IssueInfoRes
-issueInfo (ShortId merchantShortId) opCity issueReportId = withFlowHandlerAPI $ DIssue.issueInfo (ShortId merchantShortId) opCity (cast issueReportId) dashboardIssueHandle Common.DRIVER
+issueInfo (ShortId merchantShortId) opCity issueReportId = withFlowHandlerAPI $ DIssue.issueInfo (ShortId merchantShortId) opCity (Just issueReportId) Nothing dashboardIssueHandle Common.DRIVER
+
+issueInfoV2 ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe (Id IssueReport) ->
+  Maybe (ShortId IssueReport) ->
+  FlowHandler Common.IssueInfoRes
+issueInfoV2 (ShortId merchantShortId) opCity mbIssueReportId mbIssueReportShortId = withFlowHandlerAPI $ DIssue.issueInfo (ShortId merchantShortId) opCity mbIssueReportId mbIssueReportShortId dashboardIssueHandle Common.DRIVER
 
 issueUpdate ::
   ShortId DM.Merchant ->

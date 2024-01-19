@@ -22,7 +22,7 @@ module Domain.Action.Beckn.Cancel
   )
 where
 
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
 import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Types.Booking as SRB
@@ -83,7 +83,7 @@ cancel ::
     EventStreamFlow m r,
     LT.HasLocationService m r,
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   CancelReq ->
   DM.Merchant ->

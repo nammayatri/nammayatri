@@ -475,7 +475,6 @@ library
     , extra
     , filepath
     , geohash ==1.0.1
-    , hashmap
     , http-media
     , http-types
     , lens
@@ -586,7 +585,6 @@ executable rider-app-exe
     , extra
     , filepath
     , geohash ==1.0.1
-    , hashmap
     , http-media
     , http-types
     , lens

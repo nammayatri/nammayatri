@@ -306,3 +306,6 @@ ticketAquariumId = "a7eba6ed-99f7-442f-a9d8-00c8b380657b"
 
 ticketCamId :: String
 ticketCamId = "d8f47b42-50a5-4a97-8dda-e80a3633d7ab"
+
+maxImageUploadInIssueReporting :: Int  
+maxImageUploadInIssueReporting = 3 

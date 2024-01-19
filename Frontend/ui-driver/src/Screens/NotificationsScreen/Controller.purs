@@ -17,6 +17,7 @@ module Screens.NotificationsScreen.Controller where
 
 import Prelude
 
+import Common.Types.App (YoutubeData)
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.ErrorModal as ErrorModalController
 import Components.NotificationCard.Controller as NotificationCardAC
@@ -27,15 +28,17 @@ import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), union, length, unionBy, any, filter) as Array
+import Data.Function.Uncurried (runFn3)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
 import Data.String.CodeUnits (charAt)
-import Debug (spy)
 import Effect.Aff (launchAff)
-import Helpers.Utils (getTimeStampString, removeMediaPlayer, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey)
+import Effect.Uncurried (runEffectFn1)
+import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner, getImageUrl)
-import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer)
+import Helpers.Utils (getTimeStampString, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey)
+import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer, removeMediaPlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Eval, ScrollState(..), Visibility(..), continue, exit, toPropValue, continueWithCmd)
@@ -68,6 +71,7 @@ data ScreenOutput
   | GoToProfileScreen
   | GoToCurrentRideFlow
   | SubscriptionScreen NotificationsScreenState
+  | EarningsScreen
 
 data Action
   = OnFadeComplete String
@@ -91,7 +95,7 @@ eval BackPressed state = do
     continueWithCmd state { notifsDetailModelVisibility = GONE }
       [ do
           _ <- pure $ runFn3 setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") $ show PAUSE
-          _ <- removeMediaPlayer ""
+          void $ runEffectFn1 removeMediaPlayer ""
           _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
           pure NoAction
       ]
@@ -237,23 +241,26 @@ eval LoadMore state = do
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
   case item of
     "Home" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToHomeScreen
     "Rides" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToRidesScreen
+    "Earnings" -> do
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit EarningsScreen
     "Profile" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToProfileScreen
     "Rankings" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit $ GoToReferralScreen
     "Join" -> do 
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
       let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
     _ -> continue state

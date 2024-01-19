@@ -39,6 +39,9 @@ subscriptionScreen = do
     RideHistory updatedState -> do 
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NAV GoToRideHistory)
+    EarningsScreen updatedState -> do 
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ NAV $ GoToEarningsScreen false)
     Contest updatedState -> do 
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NAV GoToContest)

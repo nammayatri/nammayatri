@@ -80,6 +80,7 @@ type AppDatas = {
     link :: String
   , supportMail :: String
   , name :: String
+  , website :: String
 }
 
 type CityConfig = {
@@ -92,7 +93,8 @@ type CityConfig = {
   supportNumber :: String,
   languageKey :: String,
   showDriverReferral :: Boolean,
-  uploadRCandDL :: Boolean
+  uploadRCandDL :: Boolean,
+  enableYatriCoins :: Boolean
 }
 
 type DashboardConfig = {

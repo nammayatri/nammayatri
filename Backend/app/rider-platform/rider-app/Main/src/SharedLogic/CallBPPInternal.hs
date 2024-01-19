@@ -1,6 +1,6 @@
 module SharedLogic.CallBPPInternal where
 
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import Domain.Types.FeedbackForm
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
@@ -36,7 +36,7 @@ likeRefereeApi = Proxy
 linkReferee ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Text ->
   BaseUrl ->
@@ -67,7 +67,7 @@ feedbackFormApi = Proxy
 feedbackForm ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   FeedbackFormReq ->
@@ -100,7 +100,7 @@ disputeCancellationDuesApi = Proxy
 disputeCancellationDues ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Text ->
   BaseUrl ->
@@ -138,7 +138,7 @@ getCancellationDuesDetailsApi = Proxy
 getCancellationDuesDetails ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Text ->
   BaseUrl ->
@@ -178,7 +178,7 @@ customerCancellationDuesSyncApi = Proxy
 customerCancellationDuesSync ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Text ->
   BaseUrl ->

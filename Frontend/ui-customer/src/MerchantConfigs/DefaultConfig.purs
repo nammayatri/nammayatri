@@ -141,10 +141,12 @@ config =
         minTripsToBeShown : 2,
         locationsToBeStored : 30,
         tripsToBeStored : 30,
-        frequencyWeight : 0.7,
+        frequencyWeight : 0.85,
         tripDistanceThreshold : 0.021,
         repeatRideTime : 8,
-        autoScrollTime : 5
+        autoScrollTime : 5,
+        tripWithinXDist : 0.05,
+        locationWithinXDist : 100.0
       }
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"
@@ -216,7 +218,8 @@ config =
     enableSupport: true,
     enableShareApp: false,
     enableReAllocation : true,
-    forceLogReferrerUrl : true
+    forceLogReferrerUrl : true,
+    enableSelfServe : true
   }
 
   , rideCompletedCardConfig : {

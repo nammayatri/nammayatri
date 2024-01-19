@@ -45,6 +45,7 @@ carouselView push config =
   frameLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
+  , gravity BOTTOM
   , visibility $ boolToVisibility $ itemsLen  > 0
   ][ animationSet
   [ scaleYAnimWithDelay 50

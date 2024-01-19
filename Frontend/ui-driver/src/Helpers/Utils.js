@@ -6,7 +6,6 @@ const Android = window.Android;
 let timerIdForTimeout;
 const allTimerIID = [];
 let uniqueId = 0;
-let countDownInMinutesId = null;
 const microapps = ["in.juspay.hyperpay", "in.juspay.ec", "in.juspay.upiintent"];
 let popupType = null;
 
@@ -291,65 +290,11 @@ export const getTimeStampString = function (utcTime){
   else            return s + (s == 1 ? " second" : " seconds")
 }
 
-export const clearFocus = function (id) {
-  return JBridge.clearFocus(id)
-}
-
 export const addMediaPlayer = function (id) {
   return function(source) {
     return function () {
       JBridge.addMediaPlayer(id,source);
     }
-  };
-};
-
-export const saveAudioFile = function (source) {
-  return function() {
-    return JBridge.saveAudioFile(source);
-  }
-}
-
-export const uploadMultiPartData = function (path) {
-  return function (url) {
-    return function(fileType) {
-      return function() {
-        return JBridge.uploadMultiPartData(path, url, fileType);
-      }
-    }
-  }
-}
-
-export const startAudioRecording = function (id) {
-  return function() {
-    return JBridge.startAudioRecording();
-  }
-};
-
-export const stopAudioRecording = function (id) {
-  return function() {
-    return JBridge.stopAudioRecording();
-  }
-}
-
-export const renderBase64ImageFile = function (base64Image) {
-  return function(id) {
-    return function (fitCenter) {
-      return function (imgScaleType){
-        return function () {
-          try{
-            return JBridge.renderBase64ImageFile(base64Image, id, fitCenter, imgScaleType);
-          }catch (err){
-            return JBridge.renderBase64ImageFile(base64Image, id, fitCenter);
-          }
-        }
-      }  
-    }
-  }
-}
-
-export const removeMediaPlayer = function (id) {
-  return function () {
-    JBridge.removeMediaPlayer();
   };
 };
 
@@ -530,26 +475,6 @@ export const getDeviceDefaultDensity = function (){
   }
 }
 
-export const countDownInMinutes = function (seconds, cb, action) {
-  let sec;
-  function convertInMinutesFormat() {
-    sec = sec - 60;
-    const minutes = Math.floor(sec / 60);
-    cb(action(countDownInMinutesId)(minutes + 1)(sec))();
-  }
-  try {
-    sec = seconds - 5; //5 seconds buffer
-    if (sec <= 0) {
-      cb(action(countDownInMinutesId)("")(0))();
-    } else {
-      if (countDownInMinutesId) clearInterval(countDownInMinutesId);
-      countDownInMinutesId = setInterval(convertInMinutesFormat, 60000); //setting interval of 1 min
-      cb(action(countDownInMinutesId)(Math.floor(sec / 60) + 1)(sec))();
-    }
-  } catch (error) {
-    console.error("Error occured ", error);
-  }
-}
 
 export const istToUtcDate = function (dateStr) {
   try {
@@ -577,5 +502,17 @@ export const getPopupType = function (just, nothing) {
     const localPopup = popupType;
     popupType = null;
     return just(localPopup);
+  }
+};
+
+export const renderSlider = function (cb) {
+  return function (action) {
+    return function (config) {
+      const { id, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId } = config;
+      const callback = callbackMapper.map(function (val) {
+        cb(action(parseInt(val)))();
+      });
+      window.JBridge.renderSlider(id, callback, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId);
+    }
   }
 }

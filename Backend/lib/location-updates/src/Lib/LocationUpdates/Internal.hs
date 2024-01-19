@@ -173,7 +173,9 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pi
       prevSnapToRoadState :: SnapToRoadState <- (Redis.safeGet $ onRideSnapToRoadStateKey driverId) >>= pure . fromMaybe (SnapToRoadState 0 0 0)
       arePointsRemaining <- pointsRemaining
       (currSnapToRoadState, snapToRoadCallFailed) <- recalcDistanceBatches' prevSnapToRoadState False arePointsRemaining
-      when snapToRoadCallFailed $ throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
+      when snapToRoadCallFailed $ do
+        updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls
+        throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
       return currSnapToRoadState
 
 recalcDistanceBatchStep ::
@@ -205,7 +207,8 @@ mkRideInterpolationHandler ::
     Metrics.CoreMetrics m,
     EncFlow m r,
     HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
-    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters]
+    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["snapToRoadPostCheckThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
   (Id person -> HighPrecMeters -> Int -> Int -> m ()) ->
@@ -291,7 +294,8 @@ interpolatePointsAndCalculateDistanceImplementation ::
     EncFlow m r,
     Metrics.CoreMetrics m,
     HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
-    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters]
+    HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
+    HasFlowEnv m r '["snapToRoadPostCheckThreshold" ::: HighPrecMeters]
   ) =>
   Bool ->
   (Maps.SnapToRoadReq -> m ([Maps.MapsService], Either String Maps.SnapToRoadResp)) ->

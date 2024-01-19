@@ -609,5 +609,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
         private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
         private static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
+        private static final String COINS_SUCCESS = "COINS_SUCCESS";
     }
 }

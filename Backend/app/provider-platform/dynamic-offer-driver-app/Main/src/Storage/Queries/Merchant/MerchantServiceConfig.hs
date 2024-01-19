@@ -29,6 +29,8 @@ import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerific
 import qualified Kernel.External.Call as Call
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Notification as Notification
+import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.SMS.Interface as Sms
 import Kernel.External.Ticket.Interface.Types as Ticket
@@ -79,6 +81,9 @@ instance FromTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
       Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> valueToMaybe configJSON
       Domain.PaymentService Payment.Juspay -> Domain.PaymentServiceConfig . Payment.JuspayConfig <$> valueToMaybe configJSON
       Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
+      Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> valueToMaybe configJSON
+      Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> valueToMaybe configJSON
+      Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> valueToMaybe configJSON
 
     pure $
       Just
@@ -127,3 +132,7 @@ instance ToTType' BeamMSC.MerchantServiceConfig MerchantServiceConfig where
           Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
         Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
           Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
+        Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
+          Notification.FCMConfig cfg -> (Domain.NotificationService Notification.FCM, toJSON cfg)
+          Notification.PayTMConfig cfg -> (Domain.NotificationService Notification.PayTM, toJSON cfg)
+          Notification.GRPCConfig cfg -> (Domain.NotificationService Notification.GRPC, toJSON cfg)

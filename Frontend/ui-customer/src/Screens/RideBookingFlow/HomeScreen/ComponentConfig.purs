@@ -1205,7 +1205,7 @@ chooseYourRideConfig state = ChooseYourRide.config
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
     nearByDrivers = state.data.nearByDrivers,
     showPreferences = state.data.showPreferences,
-    bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference,
+    bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city /= Kochi,
     flowWithoutOffers = state.props.flowWithoutOffers
   }
 
@@ -1460,7 +1460,8 @@ rideCompletedCardConfig state =
           visible = not state.data.ratingViewState.issueFacedView
         },
         primaryButtonConfig = skipButtonConfig state,
-        enableContactSupport = state.data.config.feature.enableSupport
+        enableContactSupport = state.data.config.feature.enableSupport,
+        needHelpText = getString NEED_HELP
       }
   where 
     mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}

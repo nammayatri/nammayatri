@@ -125,7 +125,6 @@ library
     , dynamic-offer-driver-app
     , esqueleto
     , euler-hs
-    , hashmap
     , http-types
     , mobility-core
     , persistent
@@ -143,6 +142,7 @@ library
     , template-haskell
     , text
     , time
+    , unordered-containers
     , wai
   default-language: Haskell2010
   if flag(Local)

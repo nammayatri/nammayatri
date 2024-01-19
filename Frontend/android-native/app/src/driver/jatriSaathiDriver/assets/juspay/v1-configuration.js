@@ -253,5 +253,8 @@ window.getMerchantConfig = function () {
             "cab" : "10"
         }
     }
+  , "rideCompletedCardConfig" : {
+      "lottieQRAnim" : true
+  }
   })
 }

@@ -15,22 +15,25 @@
 
 module Flow where
 
+import Common.Types.Config
+import ConfigProvider
 import Constants.Configs
 import Debug
+import Helpers.Firebase
 import Log
+import Mobility.Prelude
 import Screens.SubscriptionScreen.Controller
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
 import Common.Types.App (APIPaymentStatus(..)) as PS
-import Common.Types.Config
-import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event, FCMBundleUpdate)
+import Common.Types.App (Version(..), LazyCheck(..), PaymentStatus(..), Event, FCMBundleUpdate, CategoryListType)
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
-import Data.Either (Either(..), either)
+import Data.Either (Either(..), either, isRight)
 import Data.Function.Uncurried (runFn1, runFn2)
 import Data.Functor (map)
 import Data.Int (ceil, fromString, round, toNumber)
@@ -45,8 +48,9 @@ import Data.String (length) as STR
 import Data.String.CodeUnits (splitAt)
 import Data.String.Common (joinWith, split, toUpper, trim)
 import Data.Time.Duration (Milliseconds(..))
-import Data.Tuple (Tuple(..), fst, snd)
 import Data.Traversable (traverse)
+import Data.Tuple (Tuple(..), fst, snd)
+import DecodeUtil (stringifyJSON)
 import Effect (Effect)
 import Effect.Aff (makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
@@ -57,21 +61,19 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Suggestions as EHS
-import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), getCityFromCode)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), fetchLanguage, capitalizeFirstChar, getCityFromCode)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
-import DecodeUtil (stringifyJSON)
-import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
 import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig)
-import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
-import JBridge as JB
 import Helpers.Utils as HU
 import JBridge (cleverTapCustomEvent, cleverTapCustomEventWithParams, cleverTapEvent, cleverTapSetLocation, drawRoute, factoryResetApp, firebaseLogEvent, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getAndroidVersion, getCurrentLatLong, getCurrentPosition, getVersionCode, getVersionName, hideKeyboardOnNavigation, initiateLocationServiceClient, isBatteryPermissionEnabled, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, metaLogEvent, metaLogEventWithTwoParams, openNavigation, removeAllPolylines, removeMarker, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, showMarker, startLocationPollingAPI, stopChatListenerService, stopLocationPollingAPI, toast, toggleBtnLoader, unregisterDateAndTime, withinTimeRange)
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.DefaultConfig as DC
-import Mobility.Prelude (capitalize)
+import MerchantConfig.Types (AppConfig(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
+import PaymentPage (checkPPInitiateStatus, consumeBP, initiatePP, paymentPageUI, PayPayload(..), PaymentPagePayload(..), getAvailableUpiApps, getPaymentPageLangKey, initiatePaymentPage)
 import Prelude (Unit, bind, discard, pure, unit, unless, negate, void, when, map, otherwise, ($), (==), (/=), (&&), (||), (/), when, (+), show, (>), not, (<), (*), (-), (<=), (<$>), (>=), ($>), (<<<), const)
 import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff, fork)
 import PrestoDOM (initUI)
@@ -106,21 +108,17 @@ import Screens.RideSelectionScreen.View (getCategoryName)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..))
 import Screens.Types as ST
-import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..))
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
+import Services.API (AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..), DriverAlternateNumberOtpResp(..), DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverDLResp(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRCResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), GetDriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), LogOutRes(..), MakeRcActiveOrInactiveResp(..), OfferRideResp(..), OnCallRes(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes), ReferDriverResp(..), RemoveAlternateNumberRequest(..), RemoveAlternateNumberResp(..), ResendOTPResp(..), RidesInfo(..), Route(..), StartRideResponse(..), Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_REFERRAL_SCREEN_OUTPUT(..))
+import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), DRIVER_REFERRAL_SCREEN_OUTPUT(..))
 import Types.App as TA
-import Engineering.Helpers.Suggestions as EHS
-import Resource.Constants as RC
-import Helpers.Firebase 
 import Types.ModifyScreenState (modifyScreenState, updateStage)
-import MerchantConfig.Types (AppConfig(..))
 import ConfigProvider
 import Timers (clearTimerWithId)
 import RemoteConfigs as RC
@@ -419,6 +417,10 @@ handleDeepLinksFlow event activeRideResp = do
             "contest" -> do
               liftFlowBT hideSplash
               referralFlow
+            "coins" -> do 
+              liftFlowBT hideSplash
+              modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen {props{subView = ST.YATRI_COINS_VIEW}})
+              driverEarningsFlow
             _ -> pure unit
         Nothing -> pure unit
   (GlobalState allState) <- getState
@@ -961,19 +963,7 @@ driverProfileFlow = do
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let temp = (map (\(Category x) ->
-                          { categoryName :
-                              if (language == "en")
-                              then
-                                joinWith " " (map (\catName ->
-                                  let { before, after } = splitAt 1 catName
-                                  in (toUpper before <> after)
-                                ) (split (Pattern " ") x.category))
-                              else x.category
-                          , categoryId       : x.issueCategoryId
-                          , categoryAction   : x.label
-                          , categoryImageUrl : x.logoUrl
-                          }) response.categories)
+      let temp = categoryTransformer response.categories language
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
@@ -1404,14 +1394,7 @@ helpAndSupportFlow = do
                      )
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT selectedCategory.categoryId language
       let getOptionsRes' = (mapWithIndex (\index (Option x) ->
-        { option : (show (index + 1)) <> ". " <>
-                   if (language == "en")
-                   then
-                     joinWith " " (map (\optName ->
-                       let {before, after} = splitAt 1 optName
-                       in (toUpper before <> after)
-                     ) (split (Pattern " ") x.option))
-                   else x.option
+        { option : (show (index + 1)) <> ". " <> x.option
         , issueOptionId : x.issueOptionId
         , label : x.label
         }
@@ -1545,14 +1528,7 @@ rideSelectionScreenFlow = do
                      )
       (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT state.selectedCategory.categoryId language
       let getOptionsRes' = (mapWithIndex (\index (Option x) ->
-        { option : (show (index + 1)) <> ". " <>
-                   if (language == "en")
-                   then
-                     joinWith " " (map (\optName ->
-                       let {before, after} = splitAt 1 optName
-                       in (toUpper before <> after)
-                     ) (split (Pattern " ") x.option))
-                   else x.option
+        { option : (show (index + 1)) <> ". " <> x.option
           , issueOptionId : x.issueOptionId
           , label : x.label
         }
@@ -1579,19 +1555,7 @@ issueReportChatScreenFlow = do
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let temp = (map (\(Category x) ->
-                          { categoryName :
-                              if (language == "en")
-                              then
-                                joinWith " " (map (\catName ->
-                                  let { before, after } = splitAt 1 catName
-                                  in (toUpper before <> after)
-                                ) (split (Pattern " ") x.category))
-                              else x.category
-                          , categoryId       : x.issueCategoryId
-                          , categoryAction   : x.label
-                          , categoryImageUrl : x.logoUrl
-                          }) response.categories)
+      let temp = categoryTransformer response.categories language 
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
@@ -1604,16 +1568,17 @@ issueReportChatScreenFlow = do
                                        , optionId    : state.data.selectedOptionId
                                        , description : trim state.data.messageToBeSent
                                        , rideId      : state.data.tripId
+                                       , chats       : []
                                        })
       (PostIssueRes postIssueRes) <- Remote.postIssueBT postIssueReq
       (IssueInfoRes issueInfoRes) <- Remote.issueInfoBT postIssueRes.issueReportId
       _ <- pure $ hideKeyboardOnNavigation true
       let showDescription = STR.length (trim issueInfoRes.description) > 0
-      let descMessages = if showDescription then snoc state.data.chatConfig.messages (makeChatComponent' issueInfoRes.description "Driver" (if (length issueInfoRes.mediaFiles) == 0 then (convertUTCtoISC (getCurrentUTC "") "hh:mm A") else "") "Text" 500) else state.data.chatConfig.messages
+      let descMessages = if showDescription then snoc state.data.chatConfig.messages (makeChatComponent' issueInfoRes.description "Driver" (if null issueInfoRes.mediaFiles then (getCurrentUTC "") else "") "Text" 500) else state.data.chatConfig.messages
       let mediaMessages' = mapWithIndex (\index media -> do
                         if index == length issueInfoRes.mediaFiles - 1
                         then
-                          makeChatComponent' media.url "Driver" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") media._type ((index + if showDescription then 2 else 1) * 500)
+                          makeChatComponent' media.url "Driver" (getCurrentUTC "") media._type ((index + if showDescription then 2 else 1) * 500)
                         else
                           makeChatComponent' media.url "Driver" "" media._type ((index + if showDescription then 2 else 1) * 500)
                     ) (issueInfoRes.mediaFiles)
@@ -1622,11 +1587,11 @@ issueReportChatScreenFlow = do
         let options'  = map (\x -> x.option) state.data.options
         let message = (getString SELECT_OPTION_REVERSED) <> "\n"
                       <> joinWith "\n" options'
-        let messages' = concat [ descMessages, mediaMessages', [ (makeChatComponent' message "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" (500 * (length mediaMessages' + 2))) ] ]
+        let messages' = concat [ descMessages, mediaMessages', [ (makeChatComponent' message "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 2))) ] ]
         modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data { issueId = Just postIssueRes.issueReportId, chatConfig { enableSuggestionClick = false, messages = messages', chatSuggestionsList = options', suggestionDelay = 500 * (length mediaMessages' + 3) } }, props { showSubmitComp = false } })
         issueReportChatScreenFlow
       else do
-        let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" (500 * (length mediaMessages' + 2))
+        let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (getCurrentUTC "") "Text" (500 * (length mediaMessages' + 2))
         let messages' = concat [descMessages, mediaMessages', [message]]
         modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data { issueId = Just postIssueRes.issueReportId, chatConfig { messages = messages' } }, props { showSubmitComp = false } })
         issueReportChatScreenFlow
@@ -1637,7 +1602,7 @@ issueReportChatScreenFlow = do
                        void $ lift $ lift $ toggleLoader true
                        resp <- Remote.callCustomerBT tripId
                        void $ lift $ lift $ toggleLoader false
-                       let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (convertUTCtoISC (getCurrentUTC "") "hh:mm A") "Text" 500
+                       let message = makeChatComponent' (getString ISSUE_SUBMITTED_MESSAGE) "Bot" (getCurrentUTC "") "Text" 500
                        let messages' = snoc state.data.chatConfig.messages message
                        modifyScreenState $ ReportIssueChatScreenStateType (\reportIssueScreen -> state { data  { chatConfig { messages = messages' } } })
                        issueReportChatScreenFlow
@@ -1678,6 +1643,7 @@ referralScreenFlow = do
       referralScreenFlow
     REFRESH_LEADERBOARD -> referralScreenFlow
     REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
+    REFERRAL_SCREEN_NAV (GoToEarningsScreen _) -> driverEarningsFlow
     REFERRAL_SCREEN_NAV _ -> referralScreenFlow
     _ -> referralScreenFlow
 
@@ -1688,9 +1654,7 @@ tripDetailsScreenFlow = do
   flow <- UI.tripDetailsScreen
   case flow of
     ON_SUBMIT  -> pure unit
-    GO_TO_HOME_SCREEN -> do
-      modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
-      myRidesScreenFlow
+    GO_TO_HOME_SCREEN -> driverEarningsFlow
     OPEN_HELP_AND_SUPPORT -> do
       let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
@@ -1702,19 +1666,7 @@ tripDetailsScreenFlow = do
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let temp = (map (\(Category x) ->
-                          { categoryName :
-                              if (language == "en")
-                              then
-                                joinWith " " (map (\catName ->
-                                  let { before, after } = splitAt 1 catName
-                                  in (toUpper before <> after)
-                                ) (split (Pattern " ") x.category))
-                              else x.category
-                          , categoryId       : x.issueCategoryId
-                          , categoryAction   : x.label
-                          , categoryImageUrl : x.logoUrl
-                          }) response.categories)
+      let temp = categoryTransformer response.categories language
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
@@ -1931,19 +1883,7 @@ homeScreenFlow = do
       let categoryOrder = ["LOST_AND_FOUND", "RIDE_RELATED", "APP_RELATED", "FARE"]
       let compareByOrder a b = compare (fromMaybe (length categoryOrder) $ elemIndex a.categoryAction categoryOrder) (fromMaybe (length categoryOrder) $ elemIndex b.categoryAction categoryOrder)
       (GetCategoriesRes response) <- Remote.getCategoriesBT language
-      let temp = (map (\(Category x) ->
-                          { categoryName :
-                              if (language == "en")
-                              then
-                                joinWith " " (map (\catName ->
-                                  let { before, after } = splitAt 1 catName
-                                  in (toUpper before <> after)
-                                ) (split (Pattern " ") x.category))
-                              else x.category
-                          , categoryId       : x.issueCategoryId
-                          , categoryAction   : x.label
-                          , categoryImageUrl : x.logoUrl
-                          }) response.categories)
+      let temp = categoryTransformer response.categories language
       let categories' = sortBy compareByOrder temp
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
       helpAndSupportFlow
@@ -2203,6 +2143,9 @@ homeScreenFlow = do
     HOMESCREEN_NAV GoToSubscription -> do
       let (GlobalState defGlobalState) = defaultGlobalState
       updateAvailableAppsAndGoToSubs
+    HOMESCREEN_NAV (GoToEarningsScreen showCoinsView) -> do
+      modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen { props { subView = if showCoinsView then ST.YATRI_COINS_VIEW else ST.EARNINGS_VIEW }})
+      driverEarningsFlow
     HOMESCREEN_NAV _ -> homeScreenFlow
     GO_TO_AADHAAR_VERIFICATION -> do
       modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
@@ -2224,6 +2167,7 @@ homeScreenFlow = do
       updateDriverDataToStates
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
       homeScreenFlow
+    GO_TO_EARNINGS_SCREEN -> driverEarningsFlow
     CLEAR_PENDING_DUES -> clearPendingDuesFlow true
     ENABLE_GOTO_API state id currentLocation -> do
       activateResp <- lift $ lift $ Remote.activateDriverGoTo id currentLocation
@@ -2273,6 +2217,17 @@ homeScreenFlow = do
       updateDriverDataToStates
       homeScreenFlow
   homeScreenFlow
+
+categoryTransformer :: Array Category -> String -> Array CategoryListType 
+categoryTransformer categories language = map (\(Category catObj) ->
+                                          { categoryName :
+                                              if (language == "en")
+                                              then capitalizeFirstChar catObj.category
+                                              else catObj.category
+                                          , categoryId       : catObj.issueCategoryId
+                                          , categoryAction   : catObj.label
+                                          , categoryImageUrl : catObj.logoUrl
+                                          }) categories
 
 clearPendingDuesFlow :: Boolean -> FlowBT String Unit
 clearPendingDuesFlow showLoader = do
@@ -2540,6 +2495,7 @@ subScriptionFlow = do
     NAV GoToContest -> referralFlow
     NAV GoToAlerts -> notificationFlow
     GOTO_HOMESCREEN -> homeScreenFlow
+    NAV (GoToEarningsScreen _) -> driverEarningsFlow
     MAKE_PAYMENT state -> do
       case state.props.joinPlanProps.selectedPlanItem of 
         Just selectedPlan -> do
@@ -2778,6 +2734,7 @@ notificationFlow = do
       notificationFlow
     GO_HOME_SCREEN -> homeScreenFlow
     GO_REFERRAL_SCREEN -> referralFlow
+    GO_EARNINGS_SCREEN -> driverEarningsFlow
     GO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow Nothing
@@ -2813,6 +2770,7 @@ updateDriverDataToStates = do
         , driverAlternateMobile =getDriverInfoResp.alternateNumber
         , totalRidesOfDay = resp.totalRidesOfDay
         , totalEarningsOfDay = resp.totalEarningsOfDay
+        , coinBalance = resp.coinBalance
         , bonusEarned = resp.bonusEarning
         , profileImg = getDriverInfoResp.aadhaarCardPhoto
         , gender = fromMaybe "UNKNOWN" getDriverInfoResp.gender
@@ -2947,6 +2905,7 @@ updateBannerAndPopupFlags = do
   (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   appConfig <- getAppConfigFlowBT Constants.appConfig
   let
+    cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
     autoPayNotActive = isNothing getDriverInfoResp.autoPayStatus || getDriverInfoResp.autoPayStatus /= Just "ACTIVE"
     pendingTotalManualDues = fromMaybe 0.0 getDriverInfoResp.manualDues
     subscriptionConfig = appConfig.subscriptionConfig
@@ -3013,6 +2972,7 @@ updateBannerAndPopupFlags = do
                 { autoPayBanner = autopayBannerType
                 , subscriptionPopupType = subscriptionPopupType
                 , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
+                , showCoinsPopup = fromMaybe 0 (fromString $ getValueToLocalStore VISITED_DRIVER_COINS_PAGE) == 0 && appConfig.feature.enableYatriCoins && cityConfig.enableYatriCoins && toBool (getValueToLocalNativeStore IS_RIDE_ACTIVE) == false
                 }
               }
         )
@@ -3127,3 +3087,64 @@ referralFlow = do
   if cityConfig.showDriverReferral || appConfig.enableDriverReferral then driverReferralScreenFlow
     else referralScreenFlow
 
+driverEarningsFlow :: FlowBT String Unit
+driverEarningsFlow = do 
+  (GlobalState globalState) <- getState
+  appConfig <- getAppConfigFlowBT Constants.appConfig
+  let earningScreenState = globalState.driverEarningsScreen
+  modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
+  uiAction <- UI.driverEarningsScreen
+  case uiAction of
+    EARNINGS_NAV HomeScreenNav state -> do
+       updateDriverStats state homeScreenFlow  
+    EARNINGS_NAV GoToSubscription state -> do
+       updateDriverStats state updateAvailableAppsAndGoToSubs  
+    EARNINGS_NAV GoToContest state -> do
+       updateDriverStats state referralScreenFlow  
+    EARNINGS_NAV GoToAlerts state -> do
+       updateDriverStats state notificationFlow  
+    EARNINGS_NAV _ state -> do
+       updateDriverStats state driverEarningsFlow
+    CHANGE_SUB_VIEW subView state -> do
+      modifyScreenState $ DriverEarningsScreenStateType (\state -> state{props{subView = subView, date = getCurrentUTC ""}})
+      driverEarningsFlow
+    CONVERT_COIN_TO_CASH state -> do
+      resp <- lift $ lift $ Remote.convertCoinToCash state.data.coinsToUse
+      let lottieFile = if isRight resp then "ny_ic_coins_redeemed_success.json" else "ny_ic_coins_redeemed_failure.json"
+      modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{showCoinsRedeemedAnim = lottieFile, coinConvertedSuccess = isRight resp}})
+      driverEarningsFlow
+    REFRESH_EARNINGS_SCREEN state -> driverEarningsFlow
+    EARNINGS_HISTORY _ -> driverEarningsFlow
+    GOTO_PAYMENT_HISTORY_FROM_COINS -> paymentHistoryFlow
+    GOTO_TRIP_DETAILS  selectedCard -> do
+      sourceMod <- translateString selectedCard.source 400
+      destinationMod <- translateString selectedCard.destination 400
+      modifyScreenState $ TripDetailsScreenStateType (\tripDetailsScreen -> tripDetailsScreen {data {
+      tripId = selectedCard.id,
+      date = selectedCard.date,
+      time = selectedCard.time,
+      source = sourceMod,
+      destination = destinationMod,
+      totalAmount = selectedCard.total_amount,
+      distance = selectedCard.rideDistance,
+      status = selectedCard.status,
+      vehicleType = selectedCard.vehicleType,
+      rider = selectedCard.riderName,
+      customerExtraFee = selectedCard.customerExtraFee,
+      purpleTagVisibility = selectedCard.purpleTagVisibility,
+      gotoTagVisibility = selectedCard.gotoTagVisibility,
+      spLocTagVisibility = selectedCard.spLocTagVisibility,
+      specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
+      specialZoneImage = selectedCard.specialZoneImage,
+      specialZoneText = selectedCard.specialZoneText
+      }})
+      tripDetailsScreenFlow
+    LOAD_MORE_HISTORY state -> do
+      modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{props{offsetValue = state.props.offsetValue + 10}})
+      driverEarningsFlow
+  where 
+    updateDriverStats state flow = do
+      when (state.props.subView == ST.YATRI_COINS_VIEW) $ do
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = (<$>) (\(DriverProfileStatsResp stats) -> DriverProfileStatsResp stats{ coinBalance = state.data.coinBalance }) globalProps.driverRideStats}
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{coinBalance = state.data.coinBalance}})
+      flow

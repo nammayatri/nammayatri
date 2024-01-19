@@ -26,6 +26,7 @@ import Data.OpenApi (ToSchema)
 import Domain.Types.Booking (Booking)
 import qualified Domain.Types.CallbackRequest as DCallback
 import qualified Domain.Types.Issue as DIssue
+import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Quote (Quote)
 import qualified EulerHS.Language as L
@@ -43,6 +44,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.CallbackRequest as QCallback
 import qualified Storage.Queries.Issues as Queries
@@ -87,14 +89,15 @@ validateSendIssueReq SendIssueReq {..} =
 
 type SendIssueRes = APISuccess
 
-sendIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Person.Person -> SendIssueReq -> m SendIssueRes
-sendIssue personId request = do
+sendIssue :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> SendIssueReq -> m SendIssueRes
+sendIssue (personId, merchantId) request = do
   runRequestValidation validateSendIssueReq request
   newIssue <- buildDBIssue personId request
   Queries.insertIssue newIssue
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
-  ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket newIssue person phoneNumber))
+  ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket newIssue person phoneNumber merchant.kaptureDisposition))
   case ticketResponse of
     Right ticketResponse' -> do
       Queries.updateTicketId newIssue.id ticketResponse'.ticketId
@@ -102,20 +105,23 @@ sendIssue personId request = do
       logTagInfo "Create Ticket API failed - " $ show err
   return Success
 
-safetyCheckSupport :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Id Person.Person -> SafetyCheckSupportReq -> m SendIssueRes
-safetyCheckSupport personId req = do
+safetyCheckSupport :: (EncFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => (Id Person.Person, Id Merchant.Merchant) -> SafetyCheckSupportReq -> m SendIssueRes
+safetyCheckSupport (personId, merchantId) req = do
   ride <- runInReplica $ QRide.findActiveByRBId req.bookingId >>= fromMaybeM (RideDoesNotExist "")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let moCityId = person.merchantOperatingCityId
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId moCityId >>= fromMaybeM (RiderConfigDoesNotExist moCityId.getId)
   void $ QRide.updateSafetyCheckStatus ride.id $ Just req.isSafe
-  when (not req.isSafe && riderConfig.enableSupportForSafety) $ void $ createTicket person.merchantId person.merchantOperatingCityId $ ticketReq ride person phoneNumber req.description
+  when (not req.isSafe && riderConfig.enableSupportForSafety) $ void $ createTicket person.merchantId moCityId $ ticketReq ride person phoneNumber req.description (merchant.kaptureDisposition)
   return Success
   where
-    ticketReq ride person phoneNumber description =
+    ticketReq ride person phoneNumber description disposition =
       Ticket.CreateTicketReq
         { category = "Code Red",
           subCategory = Just "Night safety check",
+          disposition,
           issueId = Nothing,
           issueDescription = description,
           mediaFiles = Just [show ride.trackingUrl],
@@ -175,11 +181,12 @@ buildDBIssue (Id customerId) SendIssueReq {..} = do
         updatedAt = time
       }
 
-mkTicket :: DIssue.Issue -> Person.Person -> Maybe Text -> Ticket.CreateTicketReq
-mkTicket issue person phoneNumber =
+mkTicket :: DIssue.Issue -> Person.Person -> Maybe Text -> Text -> Ticket.CreateTicketReq
+mkTicket issue person phoneNumber disposition =
   Ticket.CreateTicketReq
     { category = "Driver Related",
       subCategory = Just issue.reason,
+      disposition,
       issueId = Just issue.id.getId,
       issueDescription = issue.description,
       mediaFiles = Nothing,

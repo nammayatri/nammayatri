@@ -176,7 +176,9 @@ type SuggestedDestinationAndTripsConfig = {
   frequencyWeight :: Number,
   tripDistanceThreshold :: Number,
   repeatRideTime :: Int,
-  autoScrollTime :: Int
+  autoScrollTime :: Int,
+  tripWithinXDist :: Number,
+  locationWithinXDist :: Number
 }
 
 type Language =  {
@@ -228,7 +230,8 @@ type Features = {
   enableSupport :: Boolean,
   enableShareApp:: Boolean,
   enableReAllocation :: Boolean,
-  forceLogReferrerUrl :: Boolean
+  forceLogReferrerUrl :: Boolean,
+  enableSelfServe :: Boolean
   }
 
 type RideCompletedCardConfig = {

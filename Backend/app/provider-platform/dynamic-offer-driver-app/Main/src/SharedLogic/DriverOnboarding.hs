@@ -35,6 +35,7 @@ import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverOnboarding.Image as Query
 import qualified Storage.Queries.Message.Message as MessageQuery
@@ -51,17 +52,19 @@ notifyErrorToSupport ::
   [Maybe DriverOnboardingError] ->
   Flow ()
 notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let reasons = catMaybes $ mapMaybe toMsg errs
   let description = T.intercalate ", " reasons
-  _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description)
+  _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig.kaptureDisposition)
   return ()
   where
     toMsg e = toMessage <$> e
 
-    mkTicket description =
+    mkTicket description disposition =
       Ticket.CreateTicketReq
         { category = "GENERAL",
           subCategory = Just "DRIVER ONBOARDING ISSUE",
+          disposition = disposition,
           issueId = Nothing,
           issueDescription = description,
           mediaFiles = Nothing,

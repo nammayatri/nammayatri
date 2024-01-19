@@ -15,12 +15,14 @@
 
 module Components.DriverInfoCard.Controller where
 
+import MerchantConfig.Types
+
+import Components.ChatView.Controller (ChatComponentConfig)
 import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
-import Screens.Types(Stage, ZoneType(..), SheetState(..), SearchResultType, City(..))
-import Data.Maybe(Maybe)
-import MerchantConfig.Types
+import Data.Maybe (Maybe)
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..))
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
