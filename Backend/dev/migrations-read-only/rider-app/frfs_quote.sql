@@ -408,3 +408,36 @@ ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
+ALTER TABLE atlas_app.frfs_quote DROP COLUMN type;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN type text NOT NULL;
