@@ -29,6 +29,8 @@ import Domain.Types.HotSpot hiding (updatedAt)
 import Domain.Types.HotSpotConfig
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
+import qualified Domain.Types.NextBillionData as DNB
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import Domain.Types.SavedReqLocation
@@ -36,6 +38,8 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps
+import qualified Kernel.External.Maps as MapsK
+import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Beckn.Context (City)
@@ -49,9 +53,11 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
+import qualified Storage.Queries.NextBillionData as QNB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -194,6 +200,27 @@ oneWaySearch personId req bundleVersion clientVersion device = do
       tag
       shortestRouteDuration
   Metrics.incrementSearchRequestCount merchant.name
+
+  fork "calling next billion directions api" $ do
+    nextBillionConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
+    case nextBillionConfigs.serviceConfig of
+      DMSC.MapsServiceConfig mapsCfg -> do
+        case mapsCfg of
+          MapsK.NextBillionConfig msc -> do
+            nextBillionrouteResponse <- NextBillion.getRoutes msc request
+            logInfo $ "NextBillion route response: " <> show nextBillionrouteResponse
+            let routeData =
+                  DNB.NextBillionData
+                    { routes = map show nextBillionrouteResponse,
+                      searchRequestId = searchRequest.id,
+                      merchantId = Just merchant.id,
+                      merchantOperatingCityId = Just merchantOperatingCity.id,
+                      createdAt = now,
+                      updatedAt = now
+                    }
+            QNB.create routeData
+          _ -> logInfo "No NextBillion config"
+      _ -> logInfo "NextBillion route not found"
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics merchant.name txnId
   triggerSearchEvent SearchEventData {searchRequest = searchRequest}
