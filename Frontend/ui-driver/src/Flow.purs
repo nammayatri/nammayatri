@@ -1655,7 +1655,8 @@ tripDetailsScreenFlow = do
   flow <- UI.tripDetailsScreen
   case flow of
     ON_SUBMIT  -> pure unit
-    GO_TO_HOME_SCREEN -> driverEarningsFlow
+    GO_TO_EARINING -> driverEarningsFlow
+    GO_TO_HOME_SCREEN -> homeScreenFlow
     OPEN_HELP_AND_SUPPORT -> do
       let language = ( case getLanguageLocale languageKey of
                          "HI_IN" -> "hi"
@@ -2152,6 +2153,7 @@ homeScreenFlow = do
       modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
       aadhaarVerificationFlow
     GO_TO_RIDE_DETAILS_SCREEN -> do 
+      modifyScreenState $ TripDetailsScreenStateType $ \tripDetailsScreen -> tripDetailsScreen { data {goBackTo = ST.Home}}
       tripDetailsScreenFlow
     POST_RIDE_FEEDBACK state-> do 
       _ <- lift $ lift $ Remote.postRideFeedback state.data.endRideData.rideId state.data.endRideData.rating state.data.endRideData.feedback
@@ -3143,7 +3145,8 @@ driverEarningsFlow = do
       spLocTagVisibility = selectedCard.spLocTagVisibility,
       specialZoneLayoutBackground = selectedCard.specialZoneLayoutBackground,
       specialZoneImage = selectedCard.specialZoneImage,
-      specialZoneText = selectedCard.specialZoneText
+      specialZoneText = selectedCard.specialZoneText,
+      goBackTo = ST.Earning
       }})
       tripDetailsScreenFlow
     LOAD_MORE_HISTORY state -> do
