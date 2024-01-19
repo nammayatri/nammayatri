@@ -2,7 +2,7 @@
 
 ```
 You should have the Nammayatri servers and services running using
-nix run .#services
+, run-svc
 , run-mobility-stack-dev
 ```
 

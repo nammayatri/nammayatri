@@ -108,7 +108,7 @@ For running the database, redis, passetto, osrm-server and kafka run this comman
 ```sh
 # Note: This will create a `data` directory in the root of the project, it will persist the data
 # on restart. If you want a fresh start, you can delete the entire `data` directory and re-run:
-nix run .#services
+, run-svc
 ```
 
 That should run most of the services required.
