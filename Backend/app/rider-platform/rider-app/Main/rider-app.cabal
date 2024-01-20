@@ -242,6 +242,7 @@ library
       Lib.Mesh
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
+      SharedLogic.CallFRFSBPP
       SharedLogic.Confirm
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler

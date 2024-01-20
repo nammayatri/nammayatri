@@ -17,6 +17,7 @@ data FRFSQuote = FRFSQuote
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     bppItemId :: Kernel.Prelude.Text,
     bppSubscriberId :: Kernel.Prelude.Text,
+    bppSubscriberUrl :: Kernel.Prelude.Text,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     price :: Kernel.Types.Common.HighPrecMoney,

@@ -14,6 +14,7 @@ imports:
   FRFSTrip: Domain.Types.FRFSTrip
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSVehicleType: Domain.Types.Station
+  CreateOrderResp : Kernel.External.Payment.Juspay.Types.CreateOrder
 
 module: FRFSTicketService
 types:
@@ -60,6 +61,7 @@ types:
 
   FRFSBookingPaymentAPI:
     status: FRFSBookingPaymentStatusAPI
+    paymentOrder : CreateOrderResp
 
   FRFSBookingPaymentStatusAPI:
     enum: "PENDING, SUCCESS, FAILURE, REFUNDED"

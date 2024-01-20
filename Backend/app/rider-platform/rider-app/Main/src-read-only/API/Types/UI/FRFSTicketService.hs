@@ -16,6 +16,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -23,7 +24,8 @@ import Servant
 import Tools.Auth
 
 data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
-  { status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI
+  { paymentOrder :: Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp,
+    status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
