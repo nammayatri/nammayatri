@@ -182,3 +182,6 @@ homeScreen = do
     ReAllocateRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REALLOCATE_RIDE updatedState)
+    GoToMyMetroTickets updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_METRO_TICKETS)

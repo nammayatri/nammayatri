@@ -1329,6 +1329,7 @@ homeScreenFlow = do
       modifyScreenState $ TicketingScreenStateType (\_ -> PlaceListData.initData{ props { hideMyTickets = false }})
       placeListFlow
     GO_TO_HELP_AND_SUPPORT -> helpAndSupportScreenFlow
+    GO_TO_MY_METRO_TICKETS -> metroMyTicketsFlow
     _ -> homeScreenFlow
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
@@ -2918,3 +2919,10 @@ metroTicketDetailsFlow = do
   flow <- UI.metroTicketDetailsScreen 
   case flow of 
     _ -> metroTicketDetailsFlow
+
+metroMyTicketsFlow :: FlowBT String Unit
+metroMyTicketsFlow = do
+  logField_ <- lift $ lift $ getLogFields
+  flow <- UI.metroMyTicketsScreen 
+  case flow of 
+    _ -> metroMyTicketsFlow

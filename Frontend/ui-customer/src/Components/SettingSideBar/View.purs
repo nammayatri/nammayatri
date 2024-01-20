@@ -30,7 +30,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY, accessibility, accessibilityHint)
+import PrestoDOM 
 import PrestoDOM.Animation as PrestoAnim
 import Storage (getValueToLocalStore, KeyStore(..), isLocalStageOn)
 import Styles.Colors as Color
@@ -39,6 +39,8 @@ import Common.Types.App (LazyCheck(..))
 import Data.Array as DA
 import Screens.Types (Stage(..))
 import Data.String as DS
+import Debug
+import Mobility.Prelude
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -91,11 +93,12 @@ settingsView state push =
   , padding (Padding 18 24 18 8)
   , orientation VERTICAL
   ](map (\item -> 
-        case item of
+        case (spy "itemValue" item) of
         "MyRides" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : ""} push
         "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : ""} push
         "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
         "EmergencyContacts" ->  settingsMenuView {imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_emergency_contacts" , text : (getString EMERGENCY_CONTACTS) , accessibilityHint : "Emergency Contacts " , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
+        "MetroTickets" -> settingsMenuView (spy "dfasd" {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_MY_METRO_TICKETS, iconUrl : ""}) push
         "HelpAndSupport" -> settingsMenuView {imageUrl : fetchImage FF_ASSET  "ny_ic_help", text :  getString HELP_AND_SUPPORT , accessibilityHint :  "Help And Support", tag : SETTINGS_HELP, iconUrl : ""} push
         "Language" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : ""} push
         "ShareApp" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_APP), accessibilityHint : "Share App ", tag : SETTINGS_SHARE_APP, iconUrl : ""} push
@@ -246,7 +249,8 @@ settingsMenuView item push  =
                               SETTINGS_LOGOUT         -> OnLogout
                               SETTINGS_SHARE_APP      -> ShareAppLink
                               SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts
-                              SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard)
+                              SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard 
+                              SETTINGS_MY_METRO_TICKETS -> GoToMyMetroTickets)
   , accessibility case item.tag of
                               SETTINGS_RIDES          -> ENABLE
                               SETTINGS_TICKETS        -> ENABLE
@@ -258,6 +262,7 @@ settingsMenuView item push  =
                               SETTINGS_SHARE_APP      -> DISABLE_DESCENDANT
                               SETTINGS_EMERGENCY_CONTACTS       -> ENABLE
                               SETTINGS_LIVE_DASHBOARD -> DISABLE_DESCENDANT
+                              SETTINGS_MY_METRO_TICKETS -> ENABLE
   ][  imageView
       [ width ( V 25 )
       , height ( V 25 )
@@ -276,6 +281,23 @@ settingsMenuView item push  =
       , visibility if item.tag == SETTINGS_LIVE_DASHBOARD && getValueToLocalStore LIVE_DASHBOARD /= "LIVE_DASHBOARD_SELECTED" then VISIBLE else GONE
       , margin ( Margin 6 1 0 0)
       , imageWithFallback item.iconUrl
+      ]
+    , linearLayout [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , margin $ MarginLeft 16
+      , background Color.blue900
+      , padding $ Padding 8 3 3 5 
+      , visibility $ boolToVisibility $ item.tag == SETTINGS_MY_METRO_TICKETS 
+      , cornerRadius 4.0
+      , gravity CENTER
+      ][
+        textView $ [
+          width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , text "NEW ✨"
+        , color Color.white900
+        ] <> FontStyle.body17 TypoGraphy
       ]
     ]
 
