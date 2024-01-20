@@ -13,3 +13,31 @@
 -}
 
 module Domain.Action.Beckn.FRFS.OnSearch where
+
+import Domain.Types.FRFSTrip as DTrip
+import qualified Domain.Types.Station as DStation
+import Kernel.Prelude
+import Kernel.Utils.Common
+
+data DOnSearch = DOnSearch
+  { bppSubscriberId :: Text,
+    providerDescription :: Maybe Text,
+    providerId :: Text,
+    providerName :: Text,
+    quotes :: [DQuote],
+    validTill :: Maybe UTCTime
+  }
+
+data DQuote = DQuote
+  { bppItemId :: Text,
+    price :: HighPrecMoney,
+    vehicleType :: DStation.FRFSVehicleType,
+    stations :: [DStation]
+  }
+
+data DStation = DStation
+  { stationCode :: Text,
+    stationName :: Text,
+    stationType :: DTrip.StationType,
+    stopSequence :: Int
+  }

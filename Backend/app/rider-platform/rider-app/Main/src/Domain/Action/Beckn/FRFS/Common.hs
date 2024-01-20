@@ -12,18 +12,30 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.Beckn.FRFS.OnInit where
+module Domain.Action.Beckn.FRFS.Common where
 
-import Domain.Action.Beckn.FRFS.Common (DFareBreakUp)
 import Kernel.Prelude
 import Kernel.Utils.Common
 
-data DOnInit = DOnInit
+data DFareBreakUp = DFareBreakUp
+  { title :: Text,
+    price :: HighPrecMoney,
+    pricePerUnit :: HighPrecMoney,
+    quantity :: Int
+  }
+
+data DOrder = DOrder
   { providerId :: Text,
     totalPrice :: HighPrecMoney,
     fareBreakUp :: [DFareBreakUp],
     bppItemId :: Text,
-    validTill :: Maybe UTCTime,
     transactionId :: Text,
-    messageId :: Text
+    messageId :: Text,
+    tickets :: [DTicket]
+  }
+
+data DTicket = DTicket
+  { qrData :: Text,
+    validTill :: UTCTime,
+    status :: Text
   }
