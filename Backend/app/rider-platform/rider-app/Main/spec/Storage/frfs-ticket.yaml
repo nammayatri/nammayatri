@@ -249,3 +249,7 @@ FRFSTicketBookingPayment:
     findAllByStatus:
       kvFunction: findAllWithKV
       where: status
+    updateStatusByTicketBookingId:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: frfsTicketBookingId

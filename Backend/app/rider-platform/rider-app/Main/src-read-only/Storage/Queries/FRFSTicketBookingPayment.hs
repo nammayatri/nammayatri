@@ -48,6 +48,16 @@ findByPaymentOrderId (Kernel.Types.Id.Id paymentOrderId) = do
     [ Se.Is Beam.paymentOrderId $ Se.Eq paymentOrderId
     ]
 
+updateStatusByTicketBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
+updateStatusByTicketBookingId status (Kernel.Types.Id.Id frfsTicketBookingId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.status $ status,
+      Se.Set Beam.updatedAt $ now
+    ]
+    [ Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId
+    ]
+
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment -> m (Maybe (Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
