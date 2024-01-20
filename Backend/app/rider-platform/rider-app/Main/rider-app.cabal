@@ -203,7 +203,6 @@ library
       Domain.Types.FarePolicy.FareBreakup
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.FeedbackForm
-      Domain.Types.FRFSVehicleType111
       Domain.Types.Geometry
       Domain.Types.HotSpot
       Domain.Types.HotSpotConfig

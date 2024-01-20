@@ -10,7 +10,7 @@ import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
-import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTrip as DFRFSTrip
 import qualified Domain.Types.Merchant
@@ -30,6 +30,7 @@ import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransact
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Servant hiding (throwError)
+import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -124,43 +125,85 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
     quotes
 
 postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteConfirm = error "Logic yet to be decided"
+postFrfsQuoteConfirm (mbPersonId, _) quoteId = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+  unless (personId == quote.riderId) $ throwError AccessDenied
+  now <- getCurrentTime
+  unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
+  booking <- buildBooking quote
+  stations <- decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
+  return $
+    FRFSTicketService.FRFSTicketBookingStatusAPIRes
+      { bookingId = booking.id,
+        _type = booking._type,
+        price = booking.price,
+        quantity = booking.quantity,
+        validTill = booking.validTill,
+        vehicleType = booking.vehicleType,
+        status = booking.status,
+        payment = Nothing,
+        tickets = [],
+        ..
+      }
+  where
+    -- makeBooking :: DFRFSQuote.FRFSQuote -> DFRFSTicketBooking.FRFSTicketBooking
+    buildBooking DFRFSQuote.FRFSQuote {..} = do
+      uuid <- generateGUID
+      now <- getCurrentTime
+      return $
+        DFRFSTicketBooking.FRFSTicketBooking
+          { -- { _type = quote._type,
+            --   bppItemId = quote.bppItemId,
+            --   bppOrderId = quote.bppOrderId,
+            --   bppSubscriberId = quote.bppSubscriberId,
+            --   fromStationId = quote.fromStationId,
+            id = uuid,
+            bppOrderId = Nothing,
+            -- price = quote.price,
+            -- providerDescription = quote.providerDescription,
+            -- providerId = quote.providerId,
+            -- providerName = quote.providerName,
+            -- quantity = quote.quantity,
+            quoteId = id,
+            -- riderId = quote.riderId,
+            -- searchId = quote.searchId,
+            status = DFRFSTicketBooking.NEW,
+            -- stationsJson = quote.stationsJson,
+            -- toStationId = quote.toStationId,
+            -- validTill = quote.validTill,
+            -- vehicleType = quote.vehicleType,
+            -- merchantId = quote.merchantId,
+            -- merchantOperatingCityId = quote.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now,
+            ..
+          }
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
 
-getFrfsBookingStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+getFrfsBookingStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 getFrfsBookingStatus (mbPersonId, _) bookingId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   unless (personId == booking.riderId) $ throwError AccessDenied
   stations <- decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
-  -- (paymentBooking :: Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment) <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId
-  -- payment <- case paymentBooking of
-  --   Just paymentBooking' -> do
-  --     -- paymentOrder <- B.runInReplica $ QPaymentOrder.findById paymentBooking'.paymentOrderId
-  --     paymentTransaction <- QPaymentTransaction.findNewTransactionByOrderId paymentBooking'.paymentOrderId
-  --     case paymentTransaction of
-  --       Just paymentTransaction' ->
-  --         return $
-  --           Just
-  --             FRFSTicketService.FRFSBookingPaymentAPI
-  --               { status = makeTicketBookingPaymentAPIStatus paymentTransaction'.status
-  --               }
-  --       Nothing -> return Nothing
-  --   Nothing -> return Nothing
-  -- let paymentOrderId' :: Maybe (Id DPaymentOrder.PaymentOrder) = (.paymentOrderId) <$> paymentBooking
-  -- paymentTransaction <- traverse (\(orderId :: (Id DPaymentOrder.PaymentOrder)) ->  B.runInReplica $ QPaymentTransaction.findNewTransactionByOrderId orderId) Nothing
-  -- -- paymentTransaction <- B.runInReplica $ QPaymentTransaction.findByOrderId (QPaymentOrder.id <$> paymentOrder)
-  -- let payment = case paymentTransaction of
-  --       Just paymentTransaction' ->
-  --         Just
-  --           FRFSTicketService.FRFSBookingPaymentAPI
-  --             { status = makeTicketBookingPaymentAPIStatus paymentTransaction'.status
-  --             }
-  --       Nothing -> Nothing
-
+  (paymentBooking :: Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment) <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId
+  payment <- case paymentBooking of
+    Just paymentBooking' -> do
+      paymentTransaction <- QPaymentTransaction.findNewTransactionByOrderId paymentBooking'.paymentOrderId
+      case paymentTransaction of
+        Just paymentTransaction' ->
+          return $
+            Just
+              FRFSTicketService.FRFSBookingPaymentAPI
+                { status = makeTicketBookingPaymentAPIStatus paymentTransaction'.status
+                }
+        Nothing -> return Nothing
+    Nothing -> return Nothing
   let tickets =
         map
           ( \DFRFSTicket.FRFSTicket {..} ->
@@ -176,11 +219,10 @@ getFrfsBookingStatus (mbPersonId, _) bookingId = do
         validTill = booking.validTill,
         vehicleType = booking.vehicleType,
         status = booking.status,
-        payment = Nothing,
         ..
       }
 
--- findByShortId
+-- payment = Nothing,
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
 getFrfsBookingList (mbPersonId, _) = do
@@ -196,24 +238,6 @@ getFrfsBookingList (mbPersonId, _) = do
                     FRFSTicketService.FRFSTicketAPI {..}
                 )
                 tickets'
-        -- quote <- B.runInReplica $ QFRFSQuote.findById booking.quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
-        -- trips <- B.runInReplica $ QFRFSTrip.findAllByQuoteId quote.id
-        -- let trips' = sortBy (\tripA tripB -> compare tripA.stopSequence tripB.stopSequence) trips
-        -- let stations =
-        --       map
-        --         ( \DFRFSTrip.FRFSTrip {..} ->
-        --             FRFSTicketService.FRFSStationAPI
-        --               { address = Nothing,
-        --                 code = stationCode,
-        --                 color = Nothing,
-        --                 lat = Nothing,
-        --                 lon = Nothing,
-        --                 name = stationName,
-        --                 stationType = Just stationType,
-        --                 ..
-        --               }
-        --         )
-        --         trips'
         return $
           FRFSTicketService.FRFSTicketBookingStatusAPIRes
             { bookingId = booking.id,
