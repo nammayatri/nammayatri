@@ -2330,3 +2330,14 @@ export const timePickerImpl = function (cb , action, delay){
   })
   window.JBridge.timePicker(callback);
 }
+
+export const renderSlider = (cb, action, config) => {
+  const { id, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId, enableToolTip } = config;
+  console.log("inside render Slider" + config);
+  const callback = callbackMapper.map(function (val) {
+    cb(action(parseInt(val)))();
+  });
+  const configg = { config, callback };
+
+  window.JBridge.renderSlider(JSON.stringify(configg));
+};

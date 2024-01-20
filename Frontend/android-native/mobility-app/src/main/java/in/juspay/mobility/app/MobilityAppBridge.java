@@ -58,6 +58,7 @@ import com.google.android.gms.auth.api.credentials.Credential;
 import com.google.android.gms.auth.api.credentials.Credentials;
 import com.google.android.gms.auth.api.credentials.HintRequest;
 import com.google.android.gms.tasks.Task;
+import com.google.android.material.slider.Slider;
 import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
@@ -963,7 +964,6 @@ public class MobilityAppBridge extends HyperBridge {
         });
     }
 
-
     @JavascriptInterface
     public void cleverTapCustomEvent(String event) {
         ExecutorManager.runOnBackgroundThread(() -> {
@@ -1096,5 +1096,27 @@ public class MobilityAppBridge extends HyperBridge {
                 break;
         }
         return super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @JavascriptInterface
+    public void renderSlider(String config) {
+        System.out.println("Confifg ::" + config);
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject jsonData = new JSONObject(config);
+                String id = jsonData.getString("id");
+                String callback = jsonData.optString("callback", "");
+                float conversionRate = jsonData.optLong("sliderConversionRate", (long) 1.0);
+                int minLimit = jsonData.optInt("sliderMinValue",1);
+                int maxLimit = jsonData.optInt("sliderMaxValue",10);
+                int defaultValue = jsonData.optInt("sliderDefaultValue",1);
+                String toolTipId = jsonData.optString("toolTipId","");
+                Boolean enableToolTip = jsonData.optBoolean("enableToolTip",false);
+                SliderComponent sliderComponent = new SliderComponent();
+                sliderComponent.addSlider(id, callback, conversionRate , minLimit, maxLimit, defaultValue, toolTipId, enableToolTip, bridgeComponents);
+            } catch (JSONException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 }

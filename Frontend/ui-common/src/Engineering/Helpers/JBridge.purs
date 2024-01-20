@@ -270,6 +270,18 @@ foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
 
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 
+foreign import renderSlider :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) SliderConfig Unit
+
+type SliderConfig = { 
+  id :: String,
+  sliderConversionRate :: Number,
+  sliderMinValue :: Int,
+  sliderMaxValue :: Int,
+  sliderDefaultValue :: Int,
+  toolTipId :: String,
+  enableToolTip :: Boolean
+}
+
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
 

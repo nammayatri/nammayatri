@@ -62,6 +62,7 @@ data Action =
   | ChooseVehicleAC ChooseVehicleController.Action
   | DateTimePickerAction String Int Int Int String Int Int
   | InputViewAC InputViewController.Action
+  | SliderCallback Int
 
 data ScreenOutput = NoScreen
 
@@ -72,6 +73,8 @@ instance showFareBreakupRowType :: Show FareBreakupRowType where show = genericS
 instance eqFareBreakupRowType :: Eq FareBreakupRowType where eq = genericEq
 
 eval :: Action -> RentalScreenState -> Eval Action ScreenOutput RentalScreenState
+
+eval (SliderCallback value) state = continue state{data{sliderVal = value}}
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = 
   case state.data.currentStage of

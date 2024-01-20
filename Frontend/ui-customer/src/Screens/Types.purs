@@ -1885,6 +1885,7 @@ type RentalScreenData = {
   , endOTP :: Maybe String
   , nextStop :: Maybe String
   , selectedDateTimeConfig :: DateTimeConfig
+  , sliderVal :: Int
 }
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION

@@ -29,11 +29,15 @@ import Effect (Effect)
 import Font.Style as FontStyle
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, gravity, height, linearLayout, margin, onClick, orientation, padding, scrollBarY, scrollView, stroke, text, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, gravity, height, linearLayout, margin, onClick, orientation, padding, scrollBarY, scrollView, stroke, text, textView, visibility, weight, width, cornerRadius, id, onAnimationEnd)
 import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval)
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
 import Styles.Colors as Color
+import Engineering.Helpers.Commons (getNewIDWithTag)
+import JBridge(renderSlider)
+import Animation as Anim
+import Effect.Uncurried (runEffectFn3)
 
 rentalScreen :: RentalScreenState -> Screen Action RentalScreenState ScreenOutput
 rentalScreen initialState =
@@ -72,17 +76,37 @@ rentalPackageSelectionView push state =
     [ InputView.view (push <<< InputViewAC) $ mapInputViewConfig state
     , linearLayout
       [ height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , orientation HORIZONTAL
+      , width MATCH_PARENT
+      , orientation VERTICAL
       , margin $ Margin 16 16 16 16
       ]
-      [ IncrementDecrement.view (push <<< DurationIncrementDecrementAC) (incrementDecrementConfig "Duration" state) 
-      , linearLayout [
+      [ 
+      --   IncrementDecrement.view (push <<< DurationIncrementDecrementAC) (incrementDecrementConfig "Duration" state) 
+      -- , linearLayout [
+      --     height WRAP_CONTENT
+      --   , width WRAP_CONTENT
+      --   , margin $ MarginLeft 12
+      --   ]
+      --   [ IncrementDecrement.view (push <<< DistanceIncrementDecrementAC) (incrementDecrementConfig "Distance" state) ]
+      -- , 
+      linearLayout [
           height WRAP_CONTENT
-        , width WRAP_CONTENT
+        , width MATCH_PARENT
         , margin $ MarginLeft 12
+        , background Color.squidInkBlue
+        , cornerRadius 12.0 
+        , orientation VERTICAL
+        , padding $ Padding 16 32 16 32
         ]
-        [ IncrementDecrement.view (push <<< DistanceIncrementDecrementAC) (incrementDecrementConfig "Distance" state) ]
+        [ textView $
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER
+          , text $ (show state.data.sliderVal) <> " hours"
+          , color Color.white900
+          ] <> FontStyle.heading TypoGraphy
+        , sliderView push state
+        ]
       ]
       , linearLayout [
           height MATCH_PARENT
@@ -102,6 +126,32 @@ rentalPackageSelectionView push state =
         ]
     ]
 
+sliderView push state = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ MarginTop 24
+    ][  textView $ 
+          [ text "2 hr"
+          , color Color.white900
+          ] <> FontStyle.body1 TypoGraphy
+      , Anim.screenAnimationFadeInOut $
+          linearLayout
+            [ height WRAP_CONTENT
+            , weight 1.0 
+            , id $ getNewIDWithTag "DurationSliderView"
+            , background Color.squidInkBlue
+            , onAnimationEnd 
+                (\ action -> 
+                  void $ runEffectFn3 renderSlider push SliderCallback { id: (getNewIDWithTag "DurationSliderView"), sliderConversionRate: 1.0, sliderMinValue: 2, sliderMaxValue: 12, sliderDefaultValue: 2, toolTipId: getNewIDWithTag "DurationSliderViewToolTip", enableToolTip : false }
+                )(const NoAction)
+              ][]
+      , textView $ 
+          [ text "12 hr"
+          , color Color.white900
+          ] <> FontStyle.body1 TypoGraphy
+
+    ]
 rentalVariantSelectionView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 rentalVariantSelectionView push state =
   linearLayout

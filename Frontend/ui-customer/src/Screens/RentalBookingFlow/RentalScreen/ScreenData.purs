@@ -36,6 +36,7 @@ initData =
         , finalFare : 0
         , nightCharge : ""
       }
+    , sliderVal : 0
     , currentTime : ""
     , currentStage : RENTAL_SELECT_PACKAGE
     , quoteList : []
