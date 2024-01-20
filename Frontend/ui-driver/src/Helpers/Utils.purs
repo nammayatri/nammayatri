@@ -133,18 +133,6 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
-
-foreign import renderSlider :: forall action. (action -> Effect Unit) -> (Int -> action) -> SliderConfig -> Unit
-
-type SliderConfig = { 
-  id :: String,
-  sliderConversionRate :: Number,
-  sliderMinValue :: Int,
-  sliderMaxValue :: Int,
-  sliderDefaultValue :: Int,
-  toolTipId :: String
-}
-
 foreign import _generateQRCode :: EffectFn5 String String Int Int (AffSuccess String) Unit
 foreign import setPopupType :: ST.GoToPopUpType -> Unit
 foreign import getPopupType :: forall f. Fn2 (f -> Maybe f) (Maybe f) (Maybe ST.GoToPopUpType)

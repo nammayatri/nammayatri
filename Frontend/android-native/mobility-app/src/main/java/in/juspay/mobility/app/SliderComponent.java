@@ -1,5 +1,6 @@
 package in.juspay.mobility.app;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
@@ -45,7 +46,8 @@ public class SliderComponent {
         }
     }
 
-    public void addSlider(String id, String callback, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId, Boolean enableToolTip, BridgeComponents bridgeComponents){
+    @SuppressLint("Range")
+    public void addSlider(String id, String callback, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId, Boolean enableToolTip, String progressColor, String thumbColor, String bgColor, int bgAlpha, BridgeComponents bridgeComponents){
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
         if (activity != null) {
@@ -55,7 +57,7 @@ public class SliderComponent {
                 return;
             SeekBar seekBar = new SeekBar(context);
             ShapeDrawable thumbDrawable = new ShapeDrawable(new OvalShape());
-            thumbDrawable.getPaint().setColor(Color.parseColor("#2194FF"));
+            thumbDrawable.getPaint().setColor(Color.parseColor(thumbColor));
             thumbDrawable.setIntrinsicHeight(dpToPx(context, 20));
             thumbDrawable.setIntrinsicWidth(dpToPx(context, 20));
             seekBar.setThumb(thumbDrawable);
@@ -63,10 +65,11 @@ public class SliderComponent {
             Drawable backgroundDrawable = progressDrawable.findDrawableByLayerId(android.R.id.background);
             Drawable progress = progressDrawable.findDrawableByLayerId(android.R.id.progress);
             if (backgroundDrawable != null) {
-                DrawableCompat.setTint(backgroundDrawable, Color.parseColor("#FFFFFF"));
+                DrawableCompat.setTint(backgroundDrawable, Color.parseColor(bgColor));
+                backgroundDrawable.setAlpha(bgAlpha);
             }
             if (progress != null) {
-                DrawableCompat.setTint(progress, Color.parseColor("#FFFFFF"));
+                DrawableCompat.setTint(progress, Color.parseColor(progressColor));
             }
             seekBar.setProgressDrawable(progressDrawable);
             seekBar.setMax(maxLimit);

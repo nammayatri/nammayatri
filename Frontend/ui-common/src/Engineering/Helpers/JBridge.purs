@@ -51,6 +51,7 @@ import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2)
 import Foreign.Class (encode)
+import Common.Styles.Colors as Color
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -279,7 +280,26 @@ type SliderConfig = {
   sliderMaxValue :: Int,
   sliderDefaultValue :: Int,
   toolTipId :: String,
-  enableToolTip :: Boolean
+  enableToolTip :: Boolean,
+  progressColor :: String,
+  thumbColor :: String,
+  bgColor :: String,
+  bgAlpha :: Int 
+}
+
+sliderConfig :: SliderConfig
+sliderConfig = {
+  id : "",
+  sliderConversionRate : 1.0,
+  sliderMinValue : 0,
+  sliderMaxValue : 100,
+  sliderDefaultValue : 0,
+  toolTipId : "",
+  enableToolTip : false,
+  progressColor : Color.white900,
+  thumbColor : Color.blue800,
+  bgColor : Color.black,
+  bgAlpha : 50
 }
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit

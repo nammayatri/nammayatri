@@ -1100,7 +1100,6 @@ public class MobilityAppBridge extends HyperBridge {
 
     @JavascriptInterface
     public void renderSlider(String config) {
-        System.out.println("Confifg ::" + config);
         ExecutorManager.runOnMainThread(() -> {
             try {
                 JSONObject jsonData = new JSONObject(config);
@@ -1112,8 +1111,12 @@ public class MobilityAppBridge extends HyperBridge {
                 int defaultValue = jsonData.optInt("sliderDefaultValue",1);
                 String toolTipId = jsonData.optString("toolTipId","");
                 Boolean enableToolTip = jsonData.optBoolean("enableToolTip",false);
+                String progressColor = jsonData.optString("progressColor", "#FFFFFF");
+                String bgColor = jsonData.optString("bgColor", String.valueOf(Color.BLACK));
+                String thumbColor = jsonData.optString("thumbColor", "#2194FF");
+                int bgAlpha  = jsonData.optInt("bgAlpha", 50);
                 SliderComponent sliderComponent = new SliderComponent();
-                sliderComponent.addSlider(id, callback, conversionRate , minLimit, maxLimit, defaultValue, toolTipId, enableToolTip, bridgeComponents);
+                sliderComponent.addSlider(id, callback, conversionRate , minLimit, maxLimit, defaultValue, toolTipId, enableToolTip, progressColor, thumbColor, bgColor, bgAlpha, bridgeComponents);
             } catch (JSONException e) {
                 throw new RuntimeException(e);
             }

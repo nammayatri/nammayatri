@@ -35,7 +35,7 @@ import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreaku
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
 import Styles.Colors as Color
 import Engineering.Helpers.Commons (getNewIDWithTag)
-import JBridge(renderSlider)
+import JBridge(renderSlider, sliderConfig)
 import Animation as Anim
 import Effect.Uncurried (runEffectFn3)
 
@@ -143,7 +143,18 @@ sliderView push state =
             , background Color.squidInkBlue
             , onAnimationEnd 
                 (\ action -> 
-                  void $ runEffectFn3 renderSlider push SliderCallback { id: (getNewIDWithTag "DurationSliderView"), sliderConversionRate: 1.0, sliderMinValue: 2, sliderMaxValue: 12, sliderDefaultValue: 2, toolTipId: getNewIDWithTag "DurationSliderViewToolTip", enableToolTip : false }
+                  void $ runEffectFn3 renderSlider push SliderCallback 
+                    sliderConfig
+                    { id = (getNewIDWithTag "DurationSliderView")
+                    , sliderMinValue = 2
+                    , sliderMaxValue = 12
+                    , sliderDefaultValue = 2
+                    , toolTipId = getNewIDWithTag "DurationSliderViewToolTip"
+                    , progressColor = Color.white900 
+                    , thumbColor = Color.blue800
+                    , bgColor = Color.white900
+                    , bgAlpha = 1000 }
+                    
                 )(const NoAction)
               ][]
       , textView $ 
