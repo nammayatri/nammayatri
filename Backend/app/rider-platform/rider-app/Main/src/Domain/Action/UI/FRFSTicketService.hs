@@ -5,7 +5,9 @@ module Domain.Action.UI.FRFSTicketService where
 
 import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
+import Beckn.ACL.FRFS.Init as ACLInit
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
@@ -17,22 +19,28 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Station as Station
 import qualified Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, map)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransaction
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Servant hiding (throwError)
+import qualified SharedLogic.CallBPP as CallBPP
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerc
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -126,60 +134,54 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
 
 postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, _) quoteId = do
-  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
-  unless (personId == quote.riderId) $ throwError AccessDenied
-  now <- getCurrentTime
-  unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
-  booking <- buildBooking quote
-  stations <- decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
-  return $
-    FRFSTicketService.FRFSTicketBookingStatusAPIRes
-      { bookingId = booking.id,
-        _type = booking._type,
-        price = booking.price,
-        quantity = booking.quantity,
-        validTill = booking.validTill,
-        vehicleType = booking.vehicleType,
-        status = booking.status,
-        payment = Nothing,
-        tickets = [],
-        ..
-      }
+  dConfirmRes <- confirm
+  _ <- ACLInit.buildInitReq dConfirmRes
+  -- handle (errHandler dConfirmRes.booking) $
+  --   void $ withShortRetry $ CallBPP.init dConfirmRes.bppSubscriberUrl becknInitReq
+  stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
+  return $ makeBookingStatusAPI dConfirmRes stations
   where
-    -- makeBooking :: DFRFSQuote.FRFSQuote -> DFRFSTicketBooking.FRFSTicketBooking
+    -- errHandler booking exc
+    --   | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = cancelFRFSTicketBooking booking
+    --   | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = cancelFRFSTicketBooking booking
+    --   | otherwise = throwM exc
+
+    confirm = do
+      personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+      _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+      unless (personId == quote.riderId) $ throwError AccessDenied
+      now <- getCurrentTime
+      unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
+      buildBooking quote
+
     buildBooking DFRFSQuote.FRFSQuote {..} = do
       uuid <- generateGUID
       now <- getCurrentTime
       return $
         DFRFSTicketBooking.FRFSTicketBooking
-          { -- { _type = quote._type,
-            --   bppItemId = quote.bppItemId,
-            --   bppOrderId = quote.bppOrderId,
-            --   bppSubscriberId = quote.bppSubscriberId,
-            --   fromStationId = quote.fromStationId,
-            id = uuid,
+          { id = uuid,
             bppOrderId = Nothing,
-            -- price = quote.price,
-            -- providerDescription = quote.providerDescription,
-            -- providerId = quote.providerId,
-            -- providerName = quote.providerName,
-            -- quantity = quote.quantity,
             quoteId = id,
-            -- riderId = quote.riderId,
-            -- searchId = quote.searchId,
             status = DFRFSTicketBooking.NEW,
-            -- stationsJson = quote.stationsJson,
-            -- toStationId = quote.toStationId,
-            -- validTill = quote.validTill,
-            -- vehicleType = quote.vehicleType,
-            -- merchantId = quote.merchantId,
-            -- merchantOperatingCityId = quote.merchantOperatingCityId,
             createdAt = now,
             updatedAt = now,
             ..
           }
+
+    makeBookingStatusAPI booking stations =
+      FRFSTicketService.FRFSTicketBookingStatusAPIRes
+        { bookingId = booking.id,
+          _type = booking._type,
+          price = booking.price,
+          quantity = booking.quantity,
+          validTill = booking.validTill,
+          vehicleType = booking.vehicleType,
+          status = booking.status,
+          payment = Nothing,
+          tickets = [],
+          ..
+        }
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
@@ -194,15 +196,47 @@ getFrfsBookingStatus (mbPersonId, _) bookingId = do
   (paymentBooking :: Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment) <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId
   payment <- case paymentBooking of
     Just paymentBooking' -> do
-      paymentTransaction <- QPaymentTransaction.findNewTransactionByOrderId paymentBooking'.paymentOrderId
-      case paymentTransaction of
-        Just paymentTransaction' ->
-          return $
-            Just
-              FRFSTicketService.FRFSBookingPaymentAPI
-                { status = makeTicketBookingPaymentAPIStatus paymentTransaction'.status
-                }
-        Nothing -> return Nothing
+      paymentOrder' <- QPaymentOrder.findById paymentBooking'.paymentOrderId
+      paymentTransaction' <- QPaymentTransaction.findNewTransactionByOrderId paymentBooking'.paymentOrderId
+      case (paymentTransaction', paymentOrder') of
+        (Just paymentTransaction, Just paymentOrder) -> do
+          person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+          personEmail <- mapM decrypt person.email
+          personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+          let createOrderReq =
+                Payment.CreateOrderReq
+                  { orderId = paymentOrder.id.getId,
+                    orderShortId = paymentOrder.shortId.getShortId,
+                    amount = paymentOrder.amount,
+                    customerId = personId.getId,
+                    customerEmail = fromMaybe "test@gmail.com" personEmail,
+                    customerPhone = personPhone,
+                    customerFirstName = person.firstName,
+                    customerLastName = person.lastName,
+                    createMandate = Nothing,
+                    mandateMaxAmount = Nothing,
+                    mandateFrequency = Nothing,
+                    mandateEndDate = Nothing,
+                    mandateStartDate = Nothing
+                  }
+          sdk_payload' <- DPayment.buildSDKPayload createOrderReq paymentOrder
+          case sdk_payload' of
+            Just sdk_payload -> do
+              return $
+                Just
+                  FRFSTicketService.FRFSBookingPaymentAPI
+                    { status = makeTicketBookingPaymentAPIStatus paymentTransaction.status,
+                      paymentOrder =
+                        Payment.CreateOrderResp
+                          { status = paymentOrder.status,
+                            id = paymentOrder.paymentServiceOrderId,
+                            order_id = paymentOrder.shortId.getShortId,
+                            payment_links = Just paymentOrder.paymentLinks,
+                            sdk_payload
+                          }
+                    }
+            Nothing -> return Nothing
+        (_, _) -> return Nothing
     Nothing -> return Nothing
   let tickets =
         map
@@ -265,3 +299,8 @@ makeTicketBookingPaymentAPIStatus COD_INITIATED = FRFSTicketService.REFUNDED
 makeTicketBookingPaymentAPIStatus STARTED = FRFSTicketService.PENDING
 makeTicketBookingPaymentAPIStatus AUTO_REFUNDED = FRFSTicketService.REFUNDED
 makeTicketBookingPaymentAPIStatus CLIENT_AUTH_TOKEN_EXPIRED = FRFSTicketService.FAILURE
+
+cancelFRFSTicketBooking :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
+cancelFRFSTicketBooking booking = do
+  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
+  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id

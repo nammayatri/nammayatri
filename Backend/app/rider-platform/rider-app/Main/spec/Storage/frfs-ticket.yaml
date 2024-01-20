@@ -89,6 +89,7 @@ FRFSQuote:
     stationsJson: Text
     vehicleType: FRFSVehicleType
     bppSubscriberId: Text
+    bppSubscriberUrl: Text
     providerId: Text
     providerName: Text
     providerDescription: Maybe Text
@@ -150,6 +151,7 @@ FRFSTicketBooking:
     quantity: Int
     vehicleType: FRFSVehicleType
     bppSubscriberId: Text
+    bppSubscriberUrl: Text
     providerId: Text
     providerName: Text
     providerDescription: Maybe Text
@@ -173,6 +175,10 @@ FRFSTicketBooking:
     findAllByRiderId:
       kvFunction: findAllWithKV
       where: riderId
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
 # Make use of FareBreakup to store the fare breakup of a ticket
 
 # Get transaction_id from Payment Transaction table

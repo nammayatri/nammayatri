@@ -23,6 +23,7 @@ data FRFSQuoteT f = FRFSQuoteT
   { _type :: B.C f Domain.Types.FRFSQuote.FRFSQuoteType,
     bppItemId :: B.C f Kernel.Prelude.Text,
     bppSubscriberId :: B.C f Kernel.Prelude.Text,
+    bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
