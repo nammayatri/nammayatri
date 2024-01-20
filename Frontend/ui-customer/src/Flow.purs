@@ -445,7 +445,7 @@ homeScreenFlow = do
       myRidesScreenFlow true
     GO_TO_HELP -> do
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_help"
-      helpAndSupportScreenFlow
+      metroTicketDetailsFlow
     CHANGE_LANGUAGE ->  selectLanguageScreenFlow
     GO_TO_EMERGENCY_CONTACTS -> do
       modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> EmergencyContactsScreenData.initData)
@@ -2911,3 +2911,10 @@ rideScheduledFlow = do
   case action of
     RideScheduledScreenOutput.GoToHomeScreen -> homeScreenFlow
     _ -> pure unit
+
+metroTicketDetailsFlow :: FlowBT String Unit
+metroTicketDetailsFlow = do
+  logField_ <- lift $ lift $ getLogFields
+  flow <- UI.metroTicketDetailsScreen 
+  case flow of 
+    _ -> metroTicketDetailsFlow

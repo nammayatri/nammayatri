@@ -1867,3 +1867,57 @@ data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | REPORTED_ISSUES_MODAL | RE
 
 derive instance genericIssueModalType :: Generic IssueModalType _
 instance eqIssueModalType :: Eq IssueModalType where eq = genericEq
+
+
+
+-- ######################################### MetroTicketDetailsState ####################################################
+type MetroTicketDetailsScreenState = {
+    data :: MetroTicketDetailsScreenData
+  , props :: MetroTicketDetailsScreenProps
+}
+
+type MetroTicketDetailsScreenData = {
+  dummyData :: String
+, metroRoute :: Array MetroRoute
+, ticketsInfo :: Array MetroTicketInfo
+}
+
+type MetroTicketInfo = {
+  qrString :: String
+, ticketNumber :: String 
+, validUntil :: String
+}
+
+type MetroRoute = {
+  name :: String
+, line :: MetroLine 
+, stops :: Array MetroStop
+, listExpanded :: Boolean
+}
+data MetroLine = BlueLine 
+               | GreenLine 
+               | RedLine
+
+derive instance genericMetroLine :: Generic MetroLine _                                  
+instance showMetroLine :: Show MetroLine where show = genericShow
+instance eqMetroLine :: Eq MetroLine where eq = genericEq 
+
+type MetroStop = {
+  name :: String
+}
+
+type MetroTicketDetailsScreenProps = {
+  dummyProps :: String
+, stage :: MetroTicketDetailsScreenStage
+, currentTicketIndex :: Int
+}
+
+data MetroTicketDetailsScreenStage = MetroTicketDetailsStage 
+                                   | MetroMapStage 
+                                   | MetroRouteDetailsStage 
+
+derive instance genericMetroTicketDetailsScreenStage :: Generic MetroTicketDetailsScreenStage _                                  
+instance showMetroTicketDetailsScreenStage :: Show MetroTicketDetailsScreenStage where show = genericShow
+instance eqMetroTicketDetailsScreenStage :: Eq MetroTicketDetailsScreenStage where eq = genericEq 
+
+
