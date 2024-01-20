@@ -2782,3 +2782,83 @@ instance standardEncodeSearchMetroResp :: StandardEncode SearchMetroResp where s
 instance showSearchMetroResp :: Show SearchMetroResp where show = genericShow
 instance decodeSearchMetroResp :: Decode SearchMetroResp where decode = defaultDecode
 instance encodeSearchMetroResp :: Encode SearchMetroResp where encode = defaultEncode
+
+--------------------------------------------------- getMetroQuote ----------------------------------------------------
+
+data GetMetroQuotesReq = GetMetroQuotesReq String
+
+data FRFSQuoteType = SingleJourney | ReturnJourney | Pass
+
+data FRFSVehicleType = Metro_ | Bus
+newtype GetMetroQuotesRes = GetMetroQuotesRes (Array MetroQuote)
+
+newtype FRFSStationAPI = FRFSStationAPI {
+  code :: String
+  , name :: String
+  , lat :: Maybe Number
+  , lon :: Maybe Number
+  , address :: Maybe String
+  , stationType :: Maybe StationType
+  , color :: Maybe String
+}
+
+newtype MetroQuote = MetroQuote {
+  quoteId :: String
+  , _type :: FRFSQuoteType
+  , vehicleType :: FRFSVehicleType
+  , quantity :: Int
+  , price :: Int
+  , stations :: Array FRFSStationAPI 
+  , validTill :: String
+}
+
+derive instance genericGetMetroQuotesReq :: Generic GetMetroQuotesReq _
+instance standardEncodeGetMetroQuotesReq :: StandardEncode GetMetroQuotesReq where standardEncode (GetMetroQuotesReq body) = standardEncode body
+instance showGetMetroQuotesReq :: Show GetMetroQuotesReq where show = genericShow
+instance decodeGetMetroQuotesReq :: Decode GetMetroQuotesReq where decode = defaultDecode
+instance encodeGetMetroQuotesReq  :: Encode GetMetroQuotesReq where encode = defaultEncode
+
+derive instance genericGetMetroQuotesRes :: Generic GetMetroQuotesRes _
+derive instance newtypeGetMetroQuotesRes :: Newtype GetMetroQuotesRes _
+instance standardEncodeGetMetroQuotesRes :: StandardEncode GetMetroQuotesRes where standardEncode (GetMetroQuotesRes body) = standardEncode body
+instance showGetMetroQuotesRes :: Show GetMetroQuotesRes where show = genericShow
+instance decodeGetMetroQuotesRes :: Decode GetMetroQuotesRes where decode = defaultDecode
+instance encodeGetMetroQuotesRes :: Encode GetMetroQuotesRes where encode = defaultEncode
+
+derive instance genericMetroQuote :: Generic MetroQuote _
+derive instance newtypeMetroQuote :: Newtype MetroQuote _
+instance standardEncodeMetroQuote :: StandardEncode MetroQuote where standardEncode (MetroQuote body) = standardEncode body
+instance showMetroQuote :: Show MetroQuote where show = genericShow
+instance decodeMetroQuote :: Decode MetroQuote where decode = defaultDecode
+instance encodeMetroQuote :: Encode MetroQuote where encode = defaultEncode
+
+derive instance genericFRFSStationAPI :: Generic FRFSStationAPI _
+derive instance newtypeFRFSStationAPI :: Newtype FRFSStationAPI _
+instance standardEncodeFRFSStationAPI :: StandardEncode FRFSStationAPI where standardEncode (FRFSStationAPI body) = standardEncode body
+instance showFRFSStationAPI :: Show FRFSStationAPI where show = genericShow
+instance decodeFRFSStationAPI :: Decode FRFSStationAPI where decode = defaultDecode
+instance encodeFRFSStationAPI :: Encode FRFSStationAPI where encode = defaultEncode
+
+derive instance genericFRFSQuoteType :: Generic FRFSQuoteType _
+instance showFRFSQuoteType :: Show FRFSQuoteType where show = genericShow
+instance decodeFRFSQuoteType :: Decode FRFSQuoteType where decode = defaultDecode
+instance encodeFRFSQuoteType :: Encode FRFSQuoteType where encode = defaultEncode
+instance standardEncodeFRFSQuoteType :: StandardEncode FRFSQuoteType
+  where
+  standardEncode SingleJourney = standardEncode $ show SingleJourney
+  standardEncode ReturnJourney = standardEncode $ show ReturnJourney
+  standardEncode Pass = standardEncode $ show Pass
+
+derive instance genericFRFSVehicleType :: Generic FRFSVehicleType _
+instance showFRFSVehicleType :: Show FRFSVehicleType where show = genericShow
+instance decodeFRFSVehicleType :: Decode FRFSVehicleType where decode = defaultDecode
+instance encodeFRFSVehicleType :: Encode FRFSVehicleType where encode = defaultEncode
+instance standardEncodeFRFSVehicleType :: StandardEncode FRFSVehicleType
+  where
+  standardEncode Metro_ = standardEncode $ show Metro_
+  standardEncode Bus = standardEncode $ show Bus
+
+instance getMetroQuotesReq :: RestEndpoint GetMetroQuotesReq GetMetroQuotesRes where
+ makeRequest reqBody@(GetMetroQuotesReq id) headers = defaultMakeRequest GET (EP.getMetroQuotes id) headers reqBody Nothing
+ decodeResponse = decodeJSON
+ encodeRequest req = standardEncode req
