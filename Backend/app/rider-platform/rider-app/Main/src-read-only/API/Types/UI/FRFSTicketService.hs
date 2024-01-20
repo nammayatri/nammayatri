@@ -24,7 +24,7 @@ import Servant
 import Tools.Auth
 
 data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
-  { paymentOrder :: Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp,
+  { paymentOrder :: Data.Maybe.Maybe Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp,
     status :: API.Types.UI.FRFSTicketService.FRFSBookingPaymentStatusAPI
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
