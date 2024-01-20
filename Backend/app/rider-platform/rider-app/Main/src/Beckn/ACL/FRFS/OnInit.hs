@@ -25,7 +25,9 @@ data DOnInit = DOnInit
     totalPrice :: HighPrecMoney,
     fareBreakUp :: [DFareBreakUp],
     bppItemId :: Text,
-    validTill :: Maybe UTCTime
+    validTill :: Maybe UTCTime,
+    transactionId :: Text,
+    messageId :: Text
   }
 
 data DFareBreakUp = DFareBreakUp
@@ -41,6 +43,9 @@ buildOnInitReq ::
   m DOnInit
 buildOnInitReq onInitReq = do
   -- validate context
+  transactionId <- onInitReq.onInitReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  messageId <- onInitReq.onInitReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
+
   order <- onInitReq.onInitReqMessage <&> (.confirmReqMessageOrder) & fromMaybeM (InvalidRequest "Order not found")
 
   providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
@@ -60,6 +65,8 @@ buildOnInitReq onInitReq = do
         totalPrice,
         fareBreakUp = fareBreakUp,
         bppItemId,
+        transactionId,
+        messageId,
         validTill = Nothing -- TODO: fix me
       }
 

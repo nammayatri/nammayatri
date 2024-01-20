@@ -7,6 +7,7 @@ module Storage.Beam.FRFSTicketBooking where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -33,6 +34,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     quantity :: B.C f Kernel.Prelude.Int,
     quoteId :: B.C f Kernel.Prelude.Text,
     riderId :: B.C f Kernel.Prelude.Text,
+    searchId :: B.C f Kernel.Prelude.Text,
     stationsJson :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
     toStationId :: B.C f Kernel.Prelude.Text,

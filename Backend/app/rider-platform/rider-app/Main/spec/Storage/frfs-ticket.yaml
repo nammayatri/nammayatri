@@ -74,9 +74,6 @@ Station:
     findByStationCode:
       kvFunction: findOneWithKV
       where: code
-    findByStationCode:
-      kvFunction: findOneWithKV
-      where: code
 
 FRFSQuote:
   tableName: frfs_quote
@@ -89,7 +86,7 @@ FRFSQuote:
     fromStationId: Id Station
     toStationId: Id Station
     quantity: Int
-    stationsJson : Text
+    stationsJson: Text
     vehicleType: FRFSVehicleType
     bppSubscriberId: Text
     providerId: Text
@@ -140,11 +137,12 @@ FRFSTicketBooking:
 
   fields:
     id: Id FRFSTicketBooking
+    searchId: Id FRFSSearch
     bppOrderId: Maybe Text
     quoteId: Id FRFSQuote
     status: FRFSTicketBookingStatus
     riderId: Id Person
-    stationsJson : Text
+    stationsJson: Text
     bppItemId: Text
     _type: FRFSQuoteType
     fromStationId: Id Station
