@@ -82,7 +82,7 @@ data ScreenOutput = NoOutput
                   | AddStop SearchLocationScreenState
                   | HomeScreen SearchLocationScreenState
                   | RentalsScreen SearchLocationScreenState
-
+                  | MetroTicketBookingScreen SearchLocationScreenState
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state =  
@@ -225,6 +225,7 @@ eval (InputViewAC _ (InputViewController.BackPress)) state = do
     ConfirmLocationStage -> continue state {props {searchLocStage = PredictionsStage}}
     PredictionsStage -> if state.data.fromScreen == getScreen HOME_SCREEN then 
       exit $ HomeScreen state 
+      else if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
       else exit $ RentalsScreen state 
     _ -> continue state 
 
