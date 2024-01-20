@@ -15,7 +15,6 @@
 module Domain.Action.Beckn.FRFS.OnConfirm where
 
 import Domain.Action.Beckn.FRFS.Common
--- import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import Domain.Types.Merchant as Merchant

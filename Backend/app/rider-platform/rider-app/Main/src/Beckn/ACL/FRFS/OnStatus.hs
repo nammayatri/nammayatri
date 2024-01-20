@@ -22,11 +22,11 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 
-buildOnConfirmReq ::
+buildOnStatusReq ::
   (MonadFlow m) =>
   Spec.OnStatusReq ->
   m Domain.DOrder
-buildOnConfirmReq onStatusReq = do
+buildOnStatusReq onStatusReq = do
   -- validate context
   transactionId <- onStatusReq.onStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   messageId <- onStatusReq.onStatusReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
