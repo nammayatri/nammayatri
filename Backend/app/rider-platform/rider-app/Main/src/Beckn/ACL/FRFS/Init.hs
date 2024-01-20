@@ -19,53 +19,52 @@ module Beckn.ACL.FRFS.Init (buildInitReq) where
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
-import qualified Domain.Types.FRFSQuote as DQuote
+import qualified Domain.Types.FRFSTicketBooking as DTBooking
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 
 buildInitReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  DQuote.FRFSQuote ->
+  DTBooking.FRFSTicketBooking ->
   m (Spec.InitReq)
-buildInitReq quote = do
-  let transactionId = quote.searchId.getId
+buildInitReq tBooking = do
+  let transactionId = tBooking.searchId.getId
+  let messageId = tBooking.id.getId
 
-  messageId <- generateGUID
-
-  merchantId <- quote.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
+  merchantId <- tBooking.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
   context <- Utils.buildContext Spec.INIT merchantId transactionId messageId Nothing
 
   pure $
     Spec.InitReq
       { initReqContext = context,
-        initReqMessage = tfInitMessage quote
+        initReqMessage = tfInitMessage tBooking
       }
 
-tfInitMessage :: DQuote.FRFSQuote -> Spec.ConfirmReqMessage
-tfInitMessage quote =
+tfInitMessage :: DTBooking.FRFSTicketBooking -> Spec.ConfirmReqMessage
+tfInitMessage tBooking =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder quote
+    { confirmReqMessageOrder = tfOrder tBooking
     }
 
-tfOrder :: DQuote.FRFSQuote -> Spec.Order
-tfOrder quote =
+tfOrder :: DTBooking.FRFSTicketBooking -> Spec.Order
+tfOrder tBooking =
   Spec.Order
-    { orderBilling = tfBilling quote,
+    { orderBilling = tfBilling tBooking,
       orderCancellationTerms = Nothing,
       orderCreatedAt = Nothing,
       orderFulfillments = Nothing,
       orderId = Nothing,
-      orderItems = tfItems quote,
-      orderPayments = tfPayments quote,
-      orderProvider = tfProvider quote,
+      orderItems = tfItems tBooking,
+      orderPayments = tfPayments tBooking,
+      orderProvider = tfProvider tBooking,
       orderQuote = Nothing,
       orderStatus = Nothing,
       orderTags = Nothing,
       orderUpdatedAt = Nothing
     }
 
-tfBilling :: DQuote.FRFSQuote -> Maybe Spec.Billing
+tfBilling :: DTBooking.FRFSTicketBooking -> Maybe Spec.Billing
 tfBilling _quote =
   Just $
     Spec.Billing
@@ -74,22 +73,22 @@ tfBilling _quote =
         billingPhone = Nothing
       }
 
-tfItems :: DQuote.FRFSQuote -> Maybe [Spec.Item]
-tfItems quote =
+tfItems :: DTBooking.FRFSTicketBooking -> Maybe [Spec.Item]
+tfItems tBooking =
   Just $
     [ Spec.Item
         { itemCategoryIds = Nothing,
           itemDescriptor = Nothing,
           itemFulfillmentIds = Nothing,
-          itemId = Just quote.bppItemId,
+          itemId = Just tBooking.bppItemId,
           itemPrice = Nothing,
-          itemQuantity = tfQuantity quote,
+          itemQuantity = tfQuantity tBooking,
           itemTime = Nothing
         }
     ]
 
-tfQuantity :: DQuote.FRFSQuote -> Maybe Spec.ItemQuantity
-tfQuantity quote =
+tfQuantity :: DTBooking.FRFSTicketBooking -> Maybe Spec.ItemQuantity
+tfQuantity tBooking =
   Just $
     Spec.ItemQuantity
       { itemQuantityMaximum = Nothing,
@@ -97,21 +96,21 @@ tfQuantity quote =
         itemQuantitySelected =
           Just $
             Spec.ItemQuantitySelected
-              { itemQuantitySelectedCount = Just quote.quantity
+              { itemQuantitySelectedCount = Just tBooking.quantity
               }
       }
 
-tfPayments :: DQuote.FRFSQuote -> Maybe [Spec.Payment]
+tfPayments :: DTBooking.FRFSTicketBooking -> Maybe [Spec.Payment]
 tfPayments _quote = Nothing -- TODO: add payment tags
 
-tfProvider :: DQuote.FRFSQuote -> Maybe Spec.Provider
-tfProvider quote =
+tfProvider :: DTBooking.FRFSTicketBooking -> Maybe Spec.Provider
+tfProvider tBooking =
   Just $
     Spec.Provider
       { providerCategories = Nothing,
         providerDescriptor = Nothing,
         providerFulfillments = Nothing,
-        providerId = Just quote.providerId,
+        providerId = Just tBooking.providerId,
         providerItems = Nothing,
         providerPayments = Nothing,
         providerTags = Nothing,
