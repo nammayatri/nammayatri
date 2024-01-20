@@ -1869,7 +1869,6 @@ derive instance genericIssueModalType :: Generic IssueModalType _
 instance eqIssueModalType :: Eq IssueModalType where eq = genericEq
 
 
-
 -- ######################################### MetroTicketDetailsState ####################################################
 type MetroTicketDetailsScreenState = {
     data :: MetroTicketDetailsScreenData
@@ -1921,3 +1920,16 @@ instance showMetroTicketDetailsScreenStage :: Show MetroTicketDetailsScreenStage
 instance eqMetroTicketDetailsScreenStage :: Eq MetroTicketDetailsScreenStage where eq = genericEq 
 
 
+-- ######################################### MetroMyTicket ####################################################
+type MetroMyTicketsScreenState = {
+    data :: MetroMyTicketsScreenData
+  , props :: MetroMyTicketsScreenProps
+}
+
+type MetroMyTicketsScreenData = {
+  dummyData :: String
+}
+
+type MetroMyTicketsScreenProps = {
+  dummyProps :: String
+}
