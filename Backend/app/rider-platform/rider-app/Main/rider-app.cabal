@@ -130,6 +130,7 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Domain.Action.Beckn.FRFS.Common
       Domain.Action.Beckn.FRFS.OnConfirm
       Domain.Action.Beckn.FRFS.OnInit
       Domain.Action.Beckn.FRFS.OnSearch

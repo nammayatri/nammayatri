@@ -17,37 +17,15 @@ module Beckn.ACL.FRFS.OnConfirm (buildOnConfirmReq) where
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 
-data DOrder = DOrder
-  { providerId :: Text,
-    totalPrice :: HighPrecMoney,
-    fareBreakUp :: [DFareBreakUp],
-    bppItemId :: Text,
-    transactionId :: Text,
-    messageId :: Text,
-    tickets :: [DTicket]
-  }
-
-data DFareBreakUp = DFareBreakUp
-  { title :: Text,
-    price :: HighPrecMoney,
-    pricePerUnit :: HighPrecMoney,
-    quantity :: Int
-  }
-
-data DTicket = DTicket
-  { qrData :: Text,
-    validTill :: UTCTime,
-    status :: Text
-  }
-
 buildOnConfirmReq ::
   (MonadFlow m) =>
   Spec.OnConfirmReq ->
-  m DOrder
+  m Domain.DOrder
 buildOnConfirmReq onConfirmReq = do
   -- validate context
   transactionId <- onConfirmReq.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
@@ -64,14 +42,14 @@ buildOnConfirmReq onConfirmReq = do
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
   totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Invalid quotationPrice")
 
-  fareBreakUp <- traverse mkFareBreakup quoteBreakup
+  fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
 
   fulfillments <- order.orderFulfillments & fromMaybeM (InvalidRequest "Fulfillments not found")
   when (null fulfillments) $ throwError $ InvalidRequest "Empty fulfillments"
-  tickets <- parseTickets item fulfillments
+  tickets <- Utils.parseTickets item fulfillments
 
   pure $
-    DOrder
+    Domain.DOrder
       { providerId = providerId,
         totalPrice,
         fareBreakUp = fareBreakUp,
@@ -79,49 +57,4 @@ buildOnConfirmReq onConfirmReq = do
         transactionId,
         messageId,
         tickets
-      }
-
-mkFareBreakup :: (MonadFlow m) => Spec.QuotationBreakupInner -> m DFareBreakUp
-mkFareBreakup fareBreakup = do
-  title <- fareBreakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "Title not found")
-  price <- fareBreakup.quotationBreakupInnerPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Price not found")
-
-  breakupItem <- fareBreakup.quotationBreakupInnerItem & fromMaybeM (InvalidRequest "BreakupItem not found")
-  let pricePerUnit = breakupItem.itemPrice >>= Utils.parseMoney & fromMaybe price
-  let quantity = breakupItem.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybe 1
-
-  pure $
-    DFareBreakUp
-      { title,
-        price,
-        pricePerUnit,
-        quantity
-      }
-
-parseTickets :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> m [DTicket]
-parseTickets item fulfillments = do
-  fulfillmentIds <- item.itemFulfillmentIds & fromMaybeM (InvalidRequest "FulfillmentIds not found")
-  when (null fulfillmentIds) $ throwError $ InvalidRequest "Empty fulfillmentIds"
-
-  let ticketFulfillments = filterByIds fulfillmentIds
-  when (null ticketFulfillments) $ throwError $ InvalidRequest "No ticket fulfillment found"
-
-  traverse parseTicket ticketFulfillments
-  where
-    filterByIds fIds = filter (\f -> f.fulfillmentId `elem` (Just <$> fIds)) fulfillments
-
-parseTicket :: (MonadFlow m) => Spec.Fulfillment -> m DTicket
-parseTicket fulfillment = do
-  stops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "FulfillmentStops not found")
-  startStopAuth <- Utils.getStartStop stops >>= (.stopAuthorization) & fromMaybeM (InvalidRequest "StartStop Auth not found")
-
-  qrData <- startStopAuth.authorizationToken & fromMaybeM (InvalidRequest "TicketQrData not found")
-  validTill <- startStopAuth.authorizationValidTo & fromMaybeM (InvalidRequest "TicketValidTill not found")
-  status <- startStopAuth.authorizationStatus & fromMaybeM (InvalidRequest "TicketStatus not found")
-
-  pure $
-    DTicket
-      { qrData,
-        validTill,
-        status
       }
