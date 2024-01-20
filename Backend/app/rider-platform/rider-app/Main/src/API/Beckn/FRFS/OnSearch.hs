@@ -14,5 +14,46 @@
 
 module API.Beckn.FRFS.OnSearch where
 
--- import qualified Beckn.ACL.FRFS.OnSearch as TaxiACL
--- import qualified BecknV2.FRFS.Types as Spec
+import qualified Beckn.ACL.FRFS.OnSearch as ACL
+import qualified BecknV2.FRFS.APIs as Spec
+import qualified BecknV2.FRFS.Types as Spec
+import qualified BecknV2.FRFS.Utils as Utils
+import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
+import Environment
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
+import Kernel.Utils.Common
+import Kernel.Utils.Servant.SignatureAuth
+import Servant hiding (throwError)
+import Storage.Beam.SystemConfigs ()
+
+type API =
+  SignatureAuth "X-Gateway-Authorization"
+    :> Spec.OnSearchAPI
+
+handler :: SignatureAuthResult -> FlowServer API
+handler = onSearch
+
+onSearch ::
+  SignatureAuthResult ->
+  SignatureAuthResult ->
+  Spec.OnSearchReq ->
+  FlowHandler Spec.AckResponse
+onSearch _ _ req = withFlowHandlerAPI $ do
+  transaction_id <- req.onSearchReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  withTransactionIdLogTag' transaction_id $ do
+    message_id <- req.onSearchReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
+    onSearchReq <- ACL.buildOnSearchReq req
+    Redis.whenWithLockRedis (onSearchLockKey message_id) 60 $ do
+      (merchant, search) <- DOnSearch.validateRequest onSearchReq
+      fork "FRFS on_search processing" $ do
+        Redis.whenWithLockRedis (onSearchProcessingLockKey message_id) 60 $
+          DOnSearch.onSearch onSearchReq merchant search
+  pure Utils.ack
+
+onSearchLockKey :: Text -> Text
+onSearchLockKey id = "FRFS:OnSearch:MessageId-" <> id
+
+onSearchProcessingLockKey :: Text -> Text
+onSearchProcessingLockKey id = "FRFS:OnSearch:Processing:MessageId-" <> id
