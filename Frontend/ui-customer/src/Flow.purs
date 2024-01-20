@@ -15,32 +15,55 @@
 
 module Flow where
 
-import Engineering.Helpers.LogEvent
 import Accessor
+import ConfigProvider
+import Constants.Configs
+import Engineering.Helpers.LogEvent
+import Helpers.Auth
+import Helpers.Firebase
+import Helpers.Logs
+import Helpers.Ride
+import Helpers.Storage.Flow.BaseApp
+import Helpers.Storage.Flow.SearchStatus
+import Helpers.Version
+import Locale.Utils
+import PaymentPage
+import Screens.TicketBookingFlow.TicketBooking.Transformer
+import Services.API
+import SuggestionUtils
+import Timers
+
+import Common.Resources.Constants (zoomLevel)
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate)
+import Common.Types.App as Common
+import Components.ChatView.Controller (makeChatComponent')
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Constants as Constants
-import Data.Ord (compare)
-import Screens.RideSelectionScreen.Controller (getTitle)
 import Control.Monad.Except (runExcept)
+import Control.Monad.Except (runExceptT)
 import Control.Monad.Except.Trans (lift)
+import Control.Transformers.Back.Trans (runBackT)
+import Control.Transformers.Back.Trans as App
 import Data.Array (catMaybes, reverse, filter, length, null, snoc, (!!), any, sortBy, head, uncons, last, concat, all, elemIndex, mapWithIndex)
 import Data.Array as Arr
 import Data.Either (Either(..), either)
 import Data.Function.Uncurried (runFn3, runFn2, runFn1)
 import Data.Int as INT
 import Data.Lens ((^.))
+import Data.Map as Map
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Newtype (unwrap)
 import Data.Number (fromString)
+import Data.Ord (compare)
 import Data.String (Pattern(..), Replacement(..), drop, indexOf, split, toLower, trim, take, joinWith)
+import Data.String (length) as STR
 import Data.String as DS
 import Data.String.Common (joinWith, split, toUpper, trim, replaceAll)
 import Debug (spy)
 import Effect (Effect)
-import Data.String (length) as STR
+import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
@@ -48,56 +71,69 @@ import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage)
 import Foreign (MultipleErrors, unsafeToForeign)
+import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer)
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (printLog)
 import MerchantConfig.Types (AppConfig(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import MerchantConfig.Utils as MU
-import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, otherwise, identity, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*))
+import Mobility.Prelude (capitalize)
 import ModifyScreenState (modifyScreenState, updateRideDetails, updateRepeatRideDetails)
+import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, void, when, otherwise, identity, ($), (&&), (+), (-), (/), (/=), (<), (<=), (<>), (==), (>), (>=), (||), (<$>), (<<<), ($>), (>>=), (*))
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
+import PrestoDOM (initUI)
+import PrestoDOM.Core (terminateUI)
+import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getSearchRadius, getValueByComponent, getWard, ticketPlaceId)
+import Screens (getScreen)
+import Screens as Screen
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
+import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
 import Screens.AddNewAddressScreen.Controller (encodeAddressDescription, getSavedLocations, getSavedTags, getLocationList, calculateDistance, getSavedTagsFromHome, validTag, isValidLocation, getLocTag, savedLocTransformer) as AddNewAddress
 import Screens.AddNewAddressScreen.ScreenData (dummyLocation) as AddNewAddressScreenData
 import Screens.ChooseLanguageScreen.Controller (ScreenOutput(..))
+import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
 import Screens.EnterMobileNumberScreen.Controller (ScreenOutput(..))
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.Handlers as UI
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
-import Screens.EmergencyContactsScreen.ScreenData as EmergencyContactsScreenData
-import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
+import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
 import Screens.HomeScreen.Controller (flowWithoutOffers, getSearchExpiryTime, isTipEnabled, findingQuotesSearchExpired, tipEnabledState)
-import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
-import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.HomeScreen.ScreenData as HomeScreenData
-import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
+import Screens.HomeScreen.ScreenData as HomeScreenData
+import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList)
 import Screens.HomeScreen.Transformer (getLocationList, getDriverInfo, dummyRideAPIEntity, encodeAddressDescription, getPlaceNameResp, getUpdatedLocationList, transformContactList, getSpecialTag, getTripFromRideHistory, getZoneType)
 import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
-import Screens.TicketBookingFlow.PlaceList.Controller as PlaceListC
-import Screens.TicketBookingFlow.PlaceDetails.Controller as PlaceDetailsC
+import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutput
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
-import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
-import Screens.TicketBookingFlow.PlaceList.ScreenData as PlaceListData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
-import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
-import Screens.SearchLocationScreen.Controller as SearchLocationController
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationScreenState , SearchLocationTextField(..), SearchLocationStage(..), LocationInfo, SearchLocationActionType(..))
+import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
+import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig, getTipViewData, setTipViewData)
+import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
+import Screens.SearchLocationScreen.Controller as SearchLocationController
+import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
+import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
+import Screens.TicketBookingFlow.PlaceDetails.Controller as PlaceDetailsC
+import Screens.TicketBookingFlow.PlaceDetails.View as PlaceDetailsS
+import Screens.TicketBookingFlow.PlaceList.Controller as PlaceListC
+import Screens.TicketBookingFlow.PlaceList.ScreenData as PlaceListData
+import Screens.TicketBookingFlow.PlaceList.View as PlaceListS
+import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
+import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.Types (Gender(..)) as Gender
-import Services.API --(AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..), PersonStatsRes(..), FeedbackReq)
+import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..), PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..), TicketInfoScreenData(..), IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationScreenState, SearchLocationTextField(..), SearchLocationStage(..), LocationInfo, SearchLocationActionType(..))
+import Screens.Types as ST
 import Services.Backend as Remote
 import Services.Config (getBaseUrl, getSupportNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
@@ -2737,6 +2773,10 @@ metroTicketBookingFlow = do
   flow <- UI.metroTicketBookingScreen
   case flow of
     GO_TO_HOME_SCREEN_FROM_METRO_TICKET state -> homeScreenFlow
+    GO_TO_METRO_STATION_SEARCH state -> do
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN}})
+      searchLocationFlow
 
 ticketListFlow :: FlowBT String Unit
 ticketListFlow = do
@@ -2989,6 +3029,7 @@ searchLocationFlow = do
     SearchLocationController.ConfirmAndSaveFav state -> confirmAndSaveLocFlow state
     SearchLocationController.PredictionClicked prediction state -> predictionClickedFlow prediction state
     SearchLocationController.AddFavLoc state tag -> addFavLocFlow state tag
+    SearchLocationController.MetroTicketBookingScreen state -> metroTicketBookingFlow
     _ -> pure unit
   where
 

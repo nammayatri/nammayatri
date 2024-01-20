@@ -29,9 +29,12 @@ data Action = AfterRender
             | UpdateButtonAction PrimaryButton.Action
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
+                  | UpdateAction ST.MetroTicketBookingScreenState
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
 eval BackPressed state =  exit $ GoBack state
+eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
+    updateAndExit state $ UpdateAction state
 
 eval _ state = continue state
