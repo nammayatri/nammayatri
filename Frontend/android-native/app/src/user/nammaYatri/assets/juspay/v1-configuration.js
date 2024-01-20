@@ -185,6 +185,7 @@ window.getMerchantConfig = function () {
       "enableSupport" : false
       , "enableSuggestions" : true
       , "enableAdditionalServices" : true
+  , "enableZooTicketBookingFlow" : true
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)

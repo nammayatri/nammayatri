@@ -13,7 +13,38 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Types.App where
+module Types.App
+  ( ABOUT_US_SCREEN_OUTPUT(..)
+  , ACCOUNT_SET_UP_SCREEN_OUTPUT(..)
+  , ADD_NEW_ADDRESS_SCREEN_OUTPUT(..)
+  , APP_UPDATE_POPUP(..)
+  , CONTACT_US_SCREEN_OUTPUT(..)
+  , EMERGECY_CONTACTS_SCREEN_OUTPUT(..)
+  , FlowBT
+  , GlobalState(..)
+  , HELP_AND_SUPPORT_SCREEN_OUTPUT(..)
+  , HOME_SCREEN_OUTPUT(..)
+  , METRO_MY_TICKETS_SCREEN_OUTPUT(..)
+  , METRO_TICKET_DETAILS_SCREEN_OUTPUT(..)
+  , METRO_TICKET_SCREEN_OUTPUT(..)
+  , MY_PROFILE_SCREEN_OUTPUT(..)
+  , MY_RIDES_SCREEN_OUTPUT(..)
+  , PERMISSION_SCREEN_OUTPUT(..)
+  , REFERRAL_SCREEN_OUPUT(..)
+  , REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..)
+  , RIDE_SELECTION_SCREEN_OUTPUT(..)
+  , SAVED_LOCATION_SCREEN_OUTPUT(..)
+  , SELECT_LANGUAGE_SCREEN_OUTPUT(..)
+  , ScreenType(..)
+  , TICKETING_SCREEN_SCREEN_OUTPUT(..)
+  , TICKET_BOOKING_SCREEN_OUTPUT(..)
+  , TICKET_INFO_SCREEN_OUTPUT(..)
+  , TICKET_STATUS_SCREEN_OUTPUT(..)
+  , TRIP_DETAILS_SCREEN_OUTPUT(..)
+  , WELCOME_SCREEN_OUTPUT(..)
+  , defaultGlobalState
+  )
+  where
 
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
@@ -91,6 +122,9 @@ newtype GlobalState = GlobalState {
   , metroTicketDetailsScreen :: MetroTicketDetailsScreenState
   , metroMyTicketsScreen :: MetroMyTicketsScreenState
   , ticketStatusScreen  :: TicketStatusScreenState
+  , searchLocationScreen :: SearchLocationScreenState
+  , globalProps :: GlobalProps
+  , metroTicketBookingScreen :: MetroTicketBookingScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -126,6 +160,9 @@ defaultGlobalState = GlobalState {
   , metroTicketDetailsScreen : MetroTicketDetailsScreenData.initData
   , metroMyTicketsScreen : MetroMyTicketsScreenData.initData
   , ticketStatusScreen : TicketStatusScreenData.initData
+  , searchLocationScreen : SearchLocationScreenData.initData
+  , globalProps : defaultGlobalProps
+  , metroTicketBookingScreen : MetroTicketBookingScreenData.initData
   }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
@@ -205,6 +242,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_HELP_AND_SUPPORT 
                         | REALLOCATE_RIDE HomeScreenState
                         | GO_TO_MY_METRO_TICKETS
+                        | GO_TO_METRO_BOOKING HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -250,6 +288,7 @@ data METRO_TICKET_DETAILS_SCREEN_OUTPUT = METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_
 
 data METRO_MY_TICKETS_SCREEN_OUTPUT = METRO_MY_TICKETS_SCREEN_OUTPUT_NO_OUTPUT
 
+data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicketBookingScreenState
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)
