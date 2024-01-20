@@ -51,3 +51,8 @@ buildContext action merchantId txnId msgId mTTL = do
         contextTtl = mTTL,
         contextVersion = Just "2.0.0"
       }
+
+getStartStop :: [Spec.Stop] -> Maybe Spec.Stop
+getStartStop stops = stops & find (\stop -> stop.stopType == start)
+  where
+    start = Just $ encodeToText Spec.START
