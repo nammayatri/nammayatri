@@ -5,7 +5,10 @@ module Domain.Action.UI.FRFSTicketService where
 
 import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
-import Beckn.ACL.FRFS.Init as ACLInit
+import qualified Beckn.ACL.FRFS.Confirm as ACL
+import qualified Beckn.ACL.FRFS.Init as ACL
+import qualified Beckn.ACL.FRFS.Search as ACL
+import qualified Beckn.ACL.FRFS.Status as ACL
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
@@ -36,7 +39,7 @@ import qualified Lib.Payment.Domain.Types.PaymentTransaction as DPaymentTransact
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import Servant hiding (throwError)
-import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallFRFSBPP as CallBPP
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerc
@@ -90,6 +93,10 @@ postFrfsSearch (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..} = do
             ..
           }
   QFRFSSearch.create searchReq
+  fork "FRFS SearchReq" $ do
+    gatewayUrl <- parseBaseUrl "https://gateway.beckn.org" & fromMaybeM (InvalidRequest "Invalid gateway url") -- TODO: get Gateway url from Merchant
+    bknSearchReq <- ACL.buildSearchReq searchReq fromStation toStation
+    void $ CallBPP.search gatewayUrl bknSearchReq
   return $ FRFSSearchAPIRes searchReqId
 
 getFrfsSearchQuote :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
@@ -135,10 +142,15 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
 postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, _) quoteId = do
   dConfirmRes <- confirm
-  _ <- ACLInit.buildInitReq dConfirmRes
   -- handle (errHandler dConfirmRes.booking) $
   --   void $ withShortRetry $ CallBPP.init dConfirmRes.bppSubscriberUrl becknInitReq
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
+
+  fork "FRFS Init Req" $ do
+    providerUrl <- dConfirmRes.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+    bknSearchReq <- ACL.buildInitReq dConfirmRes
+    void $ CallBPP.init providerUrl bknSearchReq
+
   return $ makeBookingStatusAPI dConfirmRes stations
   where
     -- errHandler booking exc
@@ -190,6 +202,9 @@ getFrfsBookingStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.P
 getFrfsBookingStatus (mbPersonId, _) bookingId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
+
+  callBPPStatus booking
+
   unless (personId == booking.riderId) $ throwError AccessDenied
   stations <- decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
@@ -255,6 +270,13 @@ getFrfsBookingStatus (mbPersonId, _) bookingId = do
         status = booking.status,
         ..
       }
+
+callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
+callBPPStatus booking = do
+  fork "FRFS Init Req" $ do
+    providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+    bknStatusReq <- ACL.buildStatusReq booking
+    void $ CallBPP.status providerUrl bknStatusReq
 
 -- payment = Nothing,
 
