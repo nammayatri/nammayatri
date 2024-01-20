@@ -13,3 +13,69 @@
 -}
 
 module Beckn.ACL.FRFS.OnInit where
+
+import qualified BecknV2.FRFS.Types as Spec
+import qualified BecknV2.FRFS.Utils as Utils
+import Kernel.Prelude
+import Kernel.Types.Error
+import Kernel.Utils.Common
+
+data DOnInit = DOnInit
+  { providerId :: Text,
+    totalPrice :: HighPrecMoney,
+    fareBreakUp :: [DFareBreakUp],
+    bppItemId :: Text,
+    validTill :: Maybe UTCTime
+  }
+
+data DFareBreakUp = DFareBreakUp
+  { title :: Text,
+    price :: HighPrecMoney,
+    pricePerUnit :: HighPrecMoney,
+    quantity :: Int
+  }
+
+buildOnInitReq ::
+  (MonadFlow m) =>
+  Spec.OnInitReq ->
+  m DOnInit
+buildOnInitReq onInitReq = do
+  -- validate context
+  order <- onInitReq.onInitReqMessage <&> (.confirmReqMessageOrder) & fromMaybeM (InvalidRequest "Order not found")
+
+  providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
+
+  item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
+  bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
+
+  quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
+  quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
+  totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Invalid quotationPrice")
+
+  fareBreakUp <- traverse mkFareBreakup quoteBreakup
+
+  pure $
+    DOnInit
+      { providerId = providerId,
+        totalPrice,
+        fareBreakUp = fareBreakUp,
+        bppItemId,
+        validTill = Nothing -- TODO: fix me
+      }
+
+mkFareBreakup :: (MonadFlow m) => Spec.QuotationBreakupInner -> m DFareBreakUp
+mkFareBreakup fareBreakup = do
+  title <- fareBreakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "Title not found")
+  price <- fareBreakup.quotationBreakupInnerPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Price not found")
+
+  breakupItem <- fareBreakup.quotationBreakupInnerItem & fromMaybeM (InvalidRequest "BreakupItem not found")
+  let pricePerUnit = breakupItem.itemPrice >>= Utils.parseMoney & fromMaybe price
+  let quantity = breakupItem.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybe 1
+
+  pure $
+    DFareBreakUp
+      { title,
+        price,
+        pricePerUnit,
+        quantity
+      }
