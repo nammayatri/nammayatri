@@ -91,6 +91,7 @@ parseTickets item fulfillments = do
 
 parseTicket :: (MonadFlow m) => Spec.Fulfillment -> m Domain.DTicket
 parseTicket fulfillment = do
+  fId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "FulfillmentId not found")
   stops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "FulfillmentStops not found")
   startStopAuth <- getStartStop stops >>= (.stopAuthorization) & fromMaybeM (InvalidRequest "StartStop Auth not found")
 
@@ -98,9 +99,14 @@ parseTicket fulfillment = do
   validTill <- startStopAuth.authorizationValidTo & fromMaybeM (InvalidRequest "TicketValidTill not found")
   status <- startStopAuth.authorizationStatus & fromMaybeM (InvalidRequest "TicketStatus not found")
 
+  tags <- fulfillment.fulfillmentTags & fromMaybeM (InvalidRequest "FulfillmentTags not found")
+  ticketNumber <- Utils.getTag "TICKET_INFO" "NUMBER" tags & fromMaybeM (InvalidRequest "TicketNumber not found")
+
   pure $
     Domain.DTicket
       { qrData,
         validTill,
+        bppFulfillmentId = fId,
+        ticketNumber,
         status
       }
