@@ -447,8 +447,11 @@ homeScreenFlow = do
       modifyScreenState $ MyRideScreenStateType (\myRidesScreen -> myRidesScreen{data{offsetValue = 0}})
       myRidesScreenFlow true
     GO_TO_HELP -> do
-      _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_help"
-      helpAndSupportScreenFlow
+      -- _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_help"
+      -- helpAndSupportScreenFlow
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false}})
+      searchLocationFlow 
     CHANGE_LANGUAGE ->  selectLanguageScreenFlow
     GO_TO_EMERGENCY_CONTACTS -> do
       modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> EmergencyContactsScreenData.initData)

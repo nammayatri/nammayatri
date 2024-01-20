@@ -15,12 +15,12 @@
 
 module Screens.SearchLocationScreen.View where
 
-import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), bind, show, pure, const, unit, not, void, discard)
+import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), bind, show, pure, const, unit, not, void, discard, map)
 import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig)
 import Components.InputView as InputView
 import Effect (Effect)
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps)
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps,Station(..))
 import Styles.Colors as Color
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize)
@@ -53,6 +53,7 @@ import Engineering.Helpers.Commons (os, screenHeight, screenWidth) as EHC
 import Data.String (length, null, take) as DS
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Components.LocationListItem.Controller 
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -305,6 +306,7 @@ locateOnMapView push state globalProps = let
         ][ recenterButtonView push state
           , PrimaryButton.view (push <<< PrimaryButtonAC)(primaryButtonConfig state)]
 
+inputView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> Boolean -> GlobalProps -> PrestoDOM (Effect Unit) w
 inputView push state isEditable globalProps = 
   InputView.view (push <<< InputViewAC globalProps ) $ mapInputViewConfig state isEditable
 
@@ -348,6 +350,7 @@ popUpViews push state globalProps =
 locateOnMapFooterView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 locateOnMapFooterView push state = let 
   viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage
+  locateOnMapData = getDataBasedActionType state.props.actionType 
   in linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -368,14 +371,14 @@ locateOnMapFooterView push state = let
             , width $ V 20
             , margin $ MarginRight 8
             , layoutGravity "center"
-            , imageWithFallback "ny_ic_locate_on_map,https://assets.juspay.in/nammayatri/images/user/ny_ic_locate_on_map.png"
+            , imageWithFallback $ fetchImage FF_ASSET locateOnMapData.imageUrl
             ]  
           , textView
-            [ text "Set Location On Map"
+            [ text locateOnMapData.text
             , layoutGravity "center"
             , height WRAP_CONTENT
             , gravity CENTER
-            , onClick push $ const $ SetLocationOnMap
+            , onClick push $ const $ locateOnMapData.action
             ]
           -- , horizontalSeparatorView 2
           -- , textView
@@ -403,6 +406,14 @@ locateOnMapFooterView push state = let
         , height $ V hght
         , background Color.grey900
         ][]
+
+    getDataBasedActionType :: SearchLocationActionType -> {imageUrl :: String, text :: String, action :: Action}
+    getDataBasedActionType actionType = 
+      case actionType of 
+        SearchLocationAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
+        AddingStopAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
+        MetroStationSelectionAction -> {imageUrl : "ny_ic_metro", text : "See Metro Map", action : SetLocationOnMap}
+
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
 searchLocationView push state globalProps = let
@@ -444,6 +455,7 @@ predictionsView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenStat
 predictionsView push state globalProps = let 
   viewVisibility = boolToVisibility $ not $ DA.null state.data.locationList
   headerText = spy "Header Text ::" $ if state.props.isAutoComplete then "Search Results" 
+    else if state.props.actionType == MetroStationSelectionAction then "Metro Stations"
     else 
       MB.maybe "" (\ currField -> if currField == SearchLocPickup then "Past Searches" else "Suggested Destination") state.props.focussedTextField
   in
@@ -464,7 +476,7 @@ predictionsView push state globalProps = let
               , color Color.black700
               , margin $ MarginVertical 14 8
               ] <> FontStyle.body3 TypoGraphy
-          , predictionArrayView state.data.locationList
+          , predictionArrayView if state.props.actionType == MetroStationSelectionAction then metroStationsArray state.data.updatedMetroStations else state.data.locationList
           , footerView
         ]
       ]
@@ -484,8 +496,38 @@ predictionsView push state globalProps = let
         , orientation VERTICAL
         ](  DA.mapWithIndex 
               (\index item -> locationListItemView item index ) 
-              if DA.null locList then globalProps.cachedSearches else locList )
+              if (DA.null locList && state.props.actionType /= MetroStationSelectionAction) then globalProps.cachedSearches else locList )
 
+    metroStationsArray:: Array Station -> Array LocationListItemState
+    metroStationsArray metroStations = 
+      map (\item -> { prefixImageUrl : fetchImage FF_ASSET "ny_ic_loc_grey"
+              , postfixImageUrl : ""
+              , postfixImageVisibility : false
+              , title : item.stationName
+              , subTitle : ""
+              , placeId : MB.Nothing
+              , lat : MB.Nothing
+              , lon : MB.Nothing
+              , description : ""
+              , tag : ""
+              , tagType : MB.Nothing
+              , cardType : MB.Nothing
+              , address : ""
+              , tagName : ""
+              , isEditEnabled : true
+              , savedLocation : ""
+              , placeName : ""
+              , isClickable : true
+              , alpha : 1.0
+              , fullAddress : dummyAddress
+              , locationItemType : MB.Nothing
+              , distance : MB.Nothing
+              , showDistance : MB.Just false
+              , actualDistance : MB.Nothing
+              , frequencyCount : MB.Nothing
+              , recencyDate : MB.Nothing
+              , locationScore : MB.Nothing
+              }) metroStations
     locationListItemView :: LocationListItemState -> Int -> PrestoDOM (Effect Unit) w
     locationListItemView item index = let 
       enableErrorFeedback = 
