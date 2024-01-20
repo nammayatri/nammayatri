@@ -48,3 +48,4 @@ import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.TicketBookingFlow.MetroTicketDetails.Handler (metroTicketDetailsScreen) as UI
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.SearchLocationScreen.View (searchLocationScreen) as UI
+import Screens.TicketBookingFlow.MetroTicketBooking.Handler (metroTicketBookingScreen) as UI

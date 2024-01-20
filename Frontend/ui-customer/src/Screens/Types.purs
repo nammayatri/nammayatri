@@ -2000,3 +2000,17 @@ type LocationInfo =
     addressComponents :: Address ,
     city :: Maybe City
   }
+-- ######################################### MetroTicketBookingScreenState ####################################################
+
+type MetroTicketBookingScreenState = {
+  data :: MetroTicketBookingScreenData,
+  props :: MetroTicketBookingScreenProps
+}
+
+type MetroTicketBookingScreenData = {
+
+}
+
+type MetroTicketBookingScreenProps = {
+
+}
