@@ -54,3 +54,20 @@ nack errorCode errorMessage =
                 }
           }
     }
+
+type TagGroupCode = Text
+
+type TagCode = Text
+
+getTag :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text
+getTag tagGroupCode tagCode tagGroups = do
+  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just tagGroupCode) tagGroups
+  case tagGroup.tagGroupList of
+    Nothing -> Nothing
+    Just tagGroupList -> do
+      tag <- find (\tag -> descriptorCode tag.tagDescriptor == Just tagCode) tagGroupList
+      tag.tagValue
+  where
+    descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
+    descriptorCode (Just desc) = desc.descriptorCode
+    descriptorCode Nothing = Nothing
