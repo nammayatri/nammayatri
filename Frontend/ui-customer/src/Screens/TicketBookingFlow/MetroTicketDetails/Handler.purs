@@ -18,6 +18,7 @@ metroTicketDetailsScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ MetroTicketDetails.screen state.metroTicketDetailsScreen
   case action of
+    GoBack ->  App.BackT $ pure App.GoBack 
     _  -> App.BackT $ App.NoBack <$> (pure $ METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_OUTPUT)
 
 

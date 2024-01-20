@@ -122,6 +122,7 @@ import Screens.RideSelectionScreen.Controller (getTitle)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SearchLocationScreen.Controller as SearchLocationController
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
+import Screens.TicketBookingFlow.MetroTicketDetails.ScreenData as MetroTicketDetailsScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.TicketBookingFlow.PlaceDetails.Controller as PlaceDetailsC
@@ -2727,6 +2728,12 @@ metroTicketBookingFlow = do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
       modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN}})
       searchLocationFlow
+    GO_TO_MY_METRO_TICKET_SCREEN state -> metroTicketDetailsFlow
+    GO_TO_METRO_ROUTE_MAP -> do
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{props{stage = ST.MetroMapStage}})
+      metroTicketDetailsFlow
+      
 
 ticketListFlow :: FlowBT String Unit
 ticketListFlow = do

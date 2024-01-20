@@ -174,10 +174,12 @@
       "ny_ic_cancel_recording" : true,
       "ny_ic_change_language" : true,
       "ny_ic_chat_white" : true,
+      "ny_ic_checked" : true,
       "ny_ic_chennai_metro" : true,
       "ny_ic_chennai_metro_map" : true,
       "ny_ic_chevron_down" : true,
       "ny_ic_chevron_down_blue" : true,
+      "ny_ic_chevron_down_green" : true,
       "ny_ic_chevron_down_light" : true,
       "ny_ic_chevron_left" : true,
       "ny_ic_chevron_left_white" : true,
@@ -185,6 +187,8 @@
       "ny_ic_chevron_right_white" : true,
       "ny_ic_chevron_up" : true,
       "ny_ic_chevron_up_dark" : true,
+      "ny_ic_chevron_up_green" : true,
+      "ny_ic_chvron_up_blue" : true,
       "ny_ic_circle" : true,
       "ny_ic_clear" : true,
       "ny_ic_clip_board" : true,
@@ -283,6 +287,7 @@
       "ny_ic_menu_dark" : true,
       "ny_ic_message_black" : true,
       "ny_ic_message_square" : true,
+      "ny_ic_metro_banner" : true,
       "ny_ic_metro_black" : true,
       "ny_ic_metro_blue" : true,
       "ny_ic_metro_logo_mini" : true,
@@ -372,6 +377,7 @@
       "ny_ic_track_in_app" : true,
       "ny_ic_transaction_pending" : true,
       "ny_ic_trash" : true,
+      "ny_ic_unchecked" : true,
       "ny_ic_upi_logo" : true,
       "ny_ic_user" : true,
       "ny_ic_vehicle_nav_on_map" : true,
@@ -409,7 +415,6 @@
       "rounded_corner_background" : true,
       "separator_silent_mode" : true,
       "silent_popup_background" : true,
-      "widget_close_gradient" : true,
-      "ny_ic_metro_banner" :  true
+      "widget_close_gradient" : true
    }
 }

@@ -2,7 +2,7 @@ module Screens.TicketBookingFlow.MetroTicketDetails.Controller where
 
 import Log 
 import Prelude 
-import PrestoDOM (Eval, continue, continueWithCmd)
+import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import Screens 
 import Screens.Types 
 import Helpers.Utils 
@@ -34,7 +34,7 @@ data Action = NoAction
             | PrevTicketClick 
             | NextTicketClick
 
-data ScreenOutput = NoOutput
+data ScreenOutput = NoOutput | GoBack
 
 
 eval :: Action -> MetroTicketDetailsScreenState -> Eval Action ScreenOutput MetroTicketDetailsScreenState
@@ -48,7 +48,7 @@ eval BackPressed state =
         }
       }
   else
-    continue state
+    exit GoBack
 
 eval ShareTicketClick state = do
   void $ pure $ shareImageMessage "" getShareTicketConfig

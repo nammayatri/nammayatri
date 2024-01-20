@@ -27,9 +27,17 @@ data Action = AfterRender
             | SourceEditText PrimaryEditText.Action
             | DestinationEditText PrimaryEditText.Action
             | UpdateButtonAction PrimaryButton.Action
+            | MyMetroTicketAction
+            | ChangeTicketTab ST.TicketType
+            | IncrementTicket
+            | DecrementTicket
+            | MetroRouteMapAction
+            | ToggleTermsAndConditions
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
+                  | MyMetroTicketScreen ST.MetroTicketBookingScreenState
+                  | GoToMetroRouteMap
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
@@ -37,4 +45,21 @@ eval BackPressed state =  exit $ GoBack state
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     updateAndExit state $ UpdateAction state
 
+eval MyMetroTicketAction state = exit $ MyMetroTicketScreen state
+
+eval IncrementTicket state = do
+  if state.data.ticketCount < 6
+    then continue state { data {ticketCount = state.data.ticketCount + 1 }}
+    else continue state
+
+eval DecrementTicket state = do
+  if state.data.ticketCount > 1
+    then continue state { data {ticketCount = state.data.ticketCount - 1 }}
+    else continue state
+
+eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
+
+eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSelected = not state.props.termsAndConditionsSelected}}
+
+eval (ChangeTicketTab ticketType) state = continue state { data {ticketType = ticketType }}
 eval _ state = continue state
