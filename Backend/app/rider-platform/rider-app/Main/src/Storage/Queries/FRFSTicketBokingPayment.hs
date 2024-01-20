@@ -1,7 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.FRFSTicketBokingPayment where
+module Storage.Queries.FRFSTicketBokingPayment
+  ( module Storage.Queries.FRFSTicketBokingPayment,
+    module Reexport,
+  )
+where
 
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
@@ -17,7 +21,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBookingPayment as Beam
-import Storage.Queries.FRFSTicketBookingPayment
+import Storage.Queries.FRFSTicketBookingPayment as Reexport
 
 findNewTBPByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DFRFSTicketBooking.FRFSTicketBooking -> m (Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment)
 findNewTBPByBookingId (Id bookingId) =

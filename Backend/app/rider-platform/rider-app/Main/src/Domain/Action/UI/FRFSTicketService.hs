@@ -20,14 +20,16 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTrip as DFRFSTrip
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Station as Station
 import qualified Environment
 import EulerHS.Prelude hiding (id, map)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface
-import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Id
@@ -56,6 +58,7 @@ import qualified Storage.Queries.Station as QS
 import qualified Storage.Queries.Station as QStation
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Payment as Payment
 
 getFrfsStations :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Station.FRFSVehicleType -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
 getFrfsStations _ vehicleType_ = do
@@ -201,60 +204,213 @@ postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Ty
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
 
 getFrfsBookingStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-getFrfsBookingStatus (mbPersonId, _) bookingId = do
+getFrfsBookingStatus (mbPersonId, merchantId) bookingId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   booking <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
-
-  callBPPStatus booking
-
   unless (personId == booking.riderId) $ throwError AccessDenied
+  if (booking.status == DFRFSTicketBooking.NEW)
+    then buildFRFSTicketBookingStatusAPIRes booking Nothing
+    else do
+      -- callBPPStatus booking
+
+      -- stations <- decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
+      -- tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
+      (paymentBooking :: Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment) <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId
+      payment <- case paymentBooking of
+        Just paymentBooking' -> do
+          paymentOrder' <- QPaymentOrder.findById paymentBooking'.paymentOrderId
+          paymentTransaction' <- QPaymentTransaction.findNewTransactionByOrderId paymentBooking'.paymentOrderId
+          case (paymentTransaction', paymentOrder') of
+            (Just paymentTransaction, Just paymentOrder) -> do
+              let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentTransaction.status
+              person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+              case paymentBookingStatus of
+                FRFSTicketService.PENDING -> do
+                  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING booking.id
+                  paymentOrder_ <- buildCreateOrderResp paymentOrder person
+                  return $
+                    Just
+                      FRFSTicketService.FRFSBookingPaymentAPI
+                        { status = paymentBookingStatus,
+                          paymentOrder = Just paymentOrder_
+                        }
+                FRFSTicketService.FAILURE -> do
+                  QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.FAILED booking.id
+                  QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+                  return $
+                    Just
+                      FRFSTicketService.FRFSBookingPaymentAPI
+                        { status = paymentBookingStatus,
+                          paymentOrder = Nothing
+                        }
+                FRFSTicketService.REFUNDED -> do
+                  void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUNDED booking.id
+                  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+                  return $
+                    Just
+                      FRFSTicketService.FRFSBookingPaymentAPI
+                        { status = paymentBookingStatus,
+                          paymentOrder = Nothing
+                        }
+                FRFSTicketService.SUCCESS -> do
+                  void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
+                  void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING booking.id
+                  fork "FRFS Confirm Req" $ do
+                    providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+                    bknConfirmReq <- ACL.buildConfirmReq booking
+                    void $ CallBPP.confirm providerUrl bknConfirmReq
+                  return $
+                    Just
+                      FRFSTicketService.FRFSBookingPaymentAPI
+                        { status = paymentBookingStatus,
+                          paymentOrder = Nothing
+                        }
+            -- let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
+            --     commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
+            --     createOrderCall = Payment.createOrder merchantId
+            -- createOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
+            -- person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+            -- personEmail <- mapM decrypt person.email
+            -- personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+            -- let createOrderReq =
+            --       Payment.CreateOrderReq
+            --         { orderId = paymentOrder.id.getId,
+            --           orderShortId = paymentOrder.shortId.getShortId,
+            --           amount = paymentOrder.amount,
+            --           customerId = personId.getId,
+            --           customerEmail = fromMaybe "test@gmail.com" personEmail,
+            --           customerPhone = personPhone,
+            --           customerFirstName = person.firstName,
+            --           customerLastName = person.lastName,
+            --           createMandate = Nothing,
+            --           mandateMaxAmount = Nothing,
+            --           mandateFrequency = Nothing,
+            --           mandateEndDate = Nothing,
+            --           mandateStartDate = Nothing
+            --         }
+            -- sdk_payload' <- DPayment.buildSDKPayload createOrderReq paymentOrder
+            -- case sdk_payload' of
+            --   Just sdk_payload -> do
+            --     return $
+            --       Just
+            --         FRFSTicketService.FRFSBookingPaymentAPI
+            --           { status = paymentBookingStatus,
+            --             paymentOrder =
+            --               Payment.CreateOrderResp
+            --                 { status = paymentOrder.status,
+            --                   id = paymentOrder.paymentServiceOrderId,
+            --                   order_id = paymentOrder.shortId.getShortId,
+            --                   payment_links = Just paymentOrder.paymentLinks,
+            --                   sdk_payload
+            --                 }
+            --           }
+            --   Nothing -> return Nothing
+            -- FRFSTicketService.FAILURE -> do
+            --   void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.FAILED booking.id
+            --   void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
+            --   return $
+            --     Just
+            --       FRFSTicketService.FRFSBookingPaymentAPI
+            --         { status = paymentBookingStatus,
+            --           paymentOrder =
+            --             Payment.CreateOrderResp
+            --               { status = paymentOrder.status,
+            --                 id = paymentOrder.paymentServiceOrderId,
+            --                 order_id = paymentOrder.shortId.getShortId,
+            --                 payment_links = Just paymentOrder.paymentLinks,
+            --                 sdk_payload = Nothing
+            --               }
+            --         }
+            -- FRFSTicketService.SUCCESS -> do
+
+            (_, _) -> return Nothing
+        Nothing -> return Nothing
+      buildFRFSTicketBookingStatusAPIRes booking payment
+  where
+    buildCreateOrderResp paymentOrder person = do
+      personEmail <- mapM decrypt person.email
+      personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+      let createOrderReq =
+            Payment.CreateOrderReq
+              { orderId = paymentOrder.id.getId,
+                orderShortId = paymentOrder.shortId.getShortId,
+                amount = paymentOrder.amount,
+                customerId = person.id.getId,
+                customerEmail = fromMaybe "test@gmail.com" personEmail,
+                customerPhone = personPhone,
+                customerFirstName = person.firstName,
+                customerLastName = person.lastName,
+                createMandate = Nothing,
+                mandateMaxAmount = Nothing,
+                mandateFrequency = Nothing,
+                mandateEndDate = Nothing,
+                mandateStartDate = Nothing
+              }
+      let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
+          commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
+          createOrderCall = Payment.createOrder merchantId
+      DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrder.id.getId)
+
+-- let tickets =
+--       map
+--         ( \DFRFSTicket.FRFSTicket {..} ->
+--             FRFSTicketService.FRFSTicketAPI {..}
+--         )
+--         tickets'
+-- return $
+--   FRFSTicketService.FRFSTicketBookingStatusAPIRes
+--     { bookingId = booking.id,
+--       _type = booking._type,
+--       price = booking.price,
+--       quantity = booking.quantity,
+--       validTill = booking.validTill,
+--       vehicleType = booking.vehicleType,
+--       status = booking.status,
+--       ..
+--     }
+
+callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
+callBPPStatus booking = do
+  fork "FRFS Init Req" $ do
+    providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+    bknStatusReq <- ACL.buildStatusReq booking
+    void $ CallBPP.status providerUrl bknStatusReq
+
+-- payment = Nothing,
+
+getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
+getFrfsBookingList (mbPersonId, _) = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  bookings <- B.runInReplica $ QFRFSTicketBooking.findAllByRiderId personId
+  mapM
+    ( \booking -> buildFRFSTicketBookingStatusAPIRes booking Nothing
+    -- stations <- decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
+    -- tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
+    -- let tickets =
+    --       map
+    --         ( \DFRFSTicket.FRFSTicket {..} ->
+    --             FRFSTicketService.FRFSTicketAPI {..}
+    --         )
+    --         tickets'
+    -- return $
+    --   FRFSTicketService.FRFSTicketBookingStatusAPIRes
+    --     { bookingId = booking.id,
+    --       _type = booking._type,
+    --       price = booking.price,
+    --       quantity = booking.quantity,
+    --       validTill = booking.validTill,
+    --       vehicleType = booking.vehicleType,
+    --       status = booking.status,
+    --       payment = Nothing,
+    --       ..
+    --     }
+    )
+    bookings
+
+buildFRFSTicketBookingStatusAPIRes :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe FRFSTicketService.FRFSBookingPaymentAPI -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes
+buildFRFSTicketBookingStatusAPIRes booking payment = do
   stations <- decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
-  (paymentBooking :: Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment) <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId
-  payment <- case paymentBooking of
-    Just paymentBooking' -> do
-      paymentOrder' <- QPaymentOrder.findById paymentBooking'.paymentOrderId
-      paymentTransaction' <- QPaymentTransaction.findNewTransactionByOrderId paymentBooking'.paymentOrderId
-      case (paymentTransaction', paymentOrder') of
-        (Just paymentTransaction, Just paymentOrder) -> do
-          person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-          personEmail <- mapM decrypt person.email
-          personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-          let createOrderReq =
-                Payment.CreateOrderReq
-                  { orderId = paymentOrder.id.getId,
-                    orderShortId = paymentOrder.shortId.getShortId,
-                    amount = paymentOrder.amount,
-                    customerId = personId.getId,
-                    customerEmail = fromMaybe "test@gmail.com" personEmail,
-                    customerPhone = personPhone,
-                    customerFirstName = person.firstName,
-                    customerLastName = person.lastName,
-                    createMandate = Nothing,
-                    mandateMaxAmount = Nothing,
-                    mandateFrequency = Nothing,
-                    mandateEndDate = Nothing,
-                    mandateStartDate = Nothing
-                  }
-          sdk_payload' <- DPayment.buildSDKPayload createOrderReq paymentOrder
-          case sdk_payload' of
-            Just sdk_payload -> do
-              return $
-                Just
-                  FRFSTicketService.FRFSBookingPaymentAPI
-                    { status = makeTicketBookingPaymentAPIStatus paymentTransaction.status,
-                      paymentOrder =
-                        Payment.CreateOrderResp
-                          { status = paymentOrder.status,
-                            id = paymentOrder.paymentServiceOrderId,
-                            order_id = paymentOrder.shortId.getShortId,
-                            payment_links = Just paymentOrder.paymentLinks,
-                            sdk_payload
-                          }
-                    }
-            Nothing -> return Nothing
-        (_, _) -> return Nothing
-    Nothing -> return Nothing
   let tickets =
         map
           ( \DFRFSTicket.FRFSTicket {..} ->
@@ -272,44 +428,6 @@ getFrfsBookingStatus (mbPersonId, _) bookingId = do
         status = booking.status,
         ..
       }
-
-callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
-callBPPStatus booking = do
-  fork "FRFS Init Req" $ do
-    providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-    bknStatusReq <- ACL.buildStatusReq booking
-    void $ CallBPP.status providerUrl bknStatusReq
-
--- payment = Nothing,
-
-getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
-getFrfsBookingList (mbPersonId, _) = do
-  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  bookings <- B.runInReplica $ QFRFSTicketBooking.findAllByRiderId personId
-  mapM
-    ( \booking -> do
-        stations <- decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
-        tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
-        let tickets =
-              map
-                ( \DFRFSTicket.FRFSTicket {..} ->
-                    FRFSTicketService.FRFSTicketAPI {..}
-                )
-                tickets'
-        return $
-          FRFSTicketService.FRFSTicketBookingStatusAPIRes
-            { bookingId = booking.id,
-              _type = booking._type,
-              price = booking.price,
-              quantity = booking.quantity,
-              validTill = booking.validTill,
-              vehicleType = booking.vehicleType,
-              status = booking.status,
-              payment = Nothing,
-              ..
-            }
-    )
-    bookings
 
 makeTicketBookingPaymentAPIStatus :: Payment.TransactionStatus -> FRFSTicketService.FRFSBookingPaymentStatusAPI
 makeTicketBookingPaymentAPIStatus NEW = FRFSTicketService.PENDING
