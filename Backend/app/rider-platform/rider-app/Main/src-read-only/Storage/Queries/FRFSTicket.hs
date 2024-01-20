@@ -42,6 +42,19 @@ findById (Kernel.Types.Id.Id id) = do
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
+updateStatusByTBookingIdAndTicketNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicket.FRFSTicketStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Text -> m ()
+updateStatusByTBookingIdAndTicketNumber status (Kernel.Types.Id.Id frfsTicketBookingId) ticketNumber = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.status $ status,
+      Se.Set Beam.updatedAt $ now
+    ]
+    [ Se.And
+        [ Se.Is Beam.frfsTicketBookingId $ Se.Eq frfsTicketBookingId,
+          Se.Is Beam.ticketNumber $ Se.Eq ticketNumber
+        ]
+    ]
+
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe (Domain.Types.FRFSTicket.FRFSTicket))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV

@@ -14,5 +14,41 @@
 
 module API.Beckn.FRFS.OnStatus where
 
--- import qualified Beckn.ACL.FRFS.OnStatus as ACL
--- import qualified BecknV2.FRFS.Types as Spec
+import qualified Beckn.ACL.FRFS.OnStatus as ACL
+import qualified BecknV2.FRFS.APIs as Spec
+import qualified BecknV2.FRFS.Types as Spec
+import qualified BecknV2.FRFS.Utils as Utils
+import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
+import Environment
+import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Types.Error
+import Kernel.Utils.Common
+import Kernel.Utils.Servant.SignatureAuth
+import Storage.Beam.SystemConfigs ()
+
+type API = Spec.OnStatusAPI
+
+handler :: SignatureAuthResult -> FlowServer API
+handler = onStatus
+
+onStatus ::
+  SignatureAuthResult ->
+  Spec.OnStatusReq ->
+  FlowHandler Spec.AckResponse
+onStatus _ req = withFlowHandlerAPI $ do
+  transaction_id <- req.onStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  withTransactionIdLogTag' transaction_id $ do
+    dOnStatusReq <- ACL.buildOnStatusReq req
+    Redis.whenWithLockRedis (onConfirmLockKey dOnStatusReq.bppBookingId) 60 $ do
+      (merchant, booking) <- DOnStatus.validateRequest dOnStatusReq
+      fork "onStatus request processing" $
+        Redis.whenWithLockRedis (onConfirmProcessingLockKey dOnStatusReq.bppBookingId) 60 $
+          DOnStatus.onStatus merchant booking dOnStatusReq
+  pure Utils.ack
+
+onConfirmLockKey :: Text -> Text
+onConfirmLockKey id = "FRFS:OnStatus:BppBookingId-" <> id
+
+onConfirmProcessingLockKey :: Text -> Text
+onConfirmProcessingLockKey id = "FRFS:OnStatus:Processing:BppBookingId-" <> id

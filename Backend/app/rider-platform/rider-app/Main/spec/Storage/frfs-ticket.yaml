@@ -185,7 +185,7 @@ FRFSTicketBooking:
       where: id
     updateBPPOrderIdAndStatusById:
       kvFunction: updateWithKV
-      params: [bppOrderId,status,updatedAt]
+      params: [bppOrderId, status, updatedAt]
       where: id
 # Make use of FareBreakup to store the fare breakup of a ticket
 
@@ -217,6 +217,11 @@ FRFSTicket:
     findAllByTicketBookingId:
       kvFunction: findAllWithKV
       where: frfsTicketBookingId
+    updateStatusByTBookingIdAndTicketNumber:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where:
+        and: [frfsTicketBookingId, ticketNumber]
 
 FRFSTicketBookingPayment:
   tableName: frfs_ticket_booking_payment
