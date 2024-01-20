@@ -51,11 +51,32 @@ findByQuoteId (Kernel.Types.Id.Id quoteId) = do
     [ Se.Is Beam.quoteId $ Se.Eq quoteId
     ]
 
+updateBPPOrderIdAndStatusById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
+updateBPPOrderIdAndStatusById bppOrderId status (Kernel.Types.Id.Id id) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.bppOrderId $ bppOrderId,
+      Se.Set Beam.status $ status,
+      Se.Set Beam.updatedAt $ now
+    ]
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
 updateStatusById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
 updateStatusById status (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.status $ status,
+      Se.Set Beam.updatedAt $ now
+    ]
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
+updateValidTillById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
+updateValidTillById validTill (Kernel.Types.Id.Id id) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.validTill $ validTill,
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.Is Beam.id $ Se.Eq id

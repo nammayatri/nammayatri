@@ -9,6 +9,7 @@ import qualified Beckn.ACL.FRFS.Confirm as ACL
 import qualified Beckn.ACL.FRFS.Init as ACL
 import qualified Beckn.ACL.FRFS.Search as ACL
 import qualified Beckn.ACL.FRFS.Status as ACL
+import Control.Monad.Extra hiding (fromMaybeM)
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
@@ -140,17 +141,17 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
     quotes
 
 postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteConfirm (mbPersonId, _) quoteId = do
+postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
   dConfirmRes <- confirm
   -- handle (errHandler dConfirmRes.booking) $
   --   void $ withShortRetry $ CallBPP.init dConfirmRes.bppSubscriberUrl becknInitReq
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
 
-  fork "FRFS Init Req" $ do
+  -- fork "FRFS Init Req" $ do
+  when (isNothing dConfirmRes.bppOrderId) $ do
     providerUrl <- dConfirmRes.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-    bknSearchReq <- ACL.buildInitReq dConfirmRes
-    void $ CallBPP.init providerUrl bknSearchReq
-
+    bknInitReq <- ACL.buildInitReq dConfirmRes
+    void $ CallBPP.init providerUrl bknInitReq
   return $ makeBookingStatusAPI dConfirmRes stations
   where
     -- errHandler booking exc
@@ -165,7 +166,7 @@ postFrfsQuoteConfirm (mbPersonId, _) quoteId = do
       unless (personId == quote.riderId) $ throwError AccessDenied
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
-      buildBooking quote
+      maybeM (buildBooking quote) (\booking -> return booking) (QFRFSTicketBooking.findByQuoteId quoteId)
 
     buildBooking DFRFSQuote.FRFSQuote {..} = do
       uuid <- generateGUID
@@ -178,6 +179,7 @@ postFrfsQuoteConfirm (mbPersonId, _) quoteId = do
             status = DFRFSTicketBooking.NEW,
             createdAt = now,
             updatedAt = now,
+            merchantId = Just merchantId_,
             ..
           }
 
