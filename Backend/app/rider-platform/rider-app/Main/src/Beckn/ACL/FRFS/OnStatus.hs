@@ -13,3 +13,48 @@
 -}
 
 module Beckn.ACL.FRFS.OnStatus where
+
+import qualified Beckn.ACL.FRFS.Utils as Utils
+import qualified BecknV2.FRFS.Types as Spec
+import qualified BecknV2.FRFS.Utils as Utils
+import qualified Domain.Action.Beckn.FRFS.Common as Domain
+import Kernel.Prelude
+import Kernel.Types.Error
+import Kernel.Utils.Common
+
+buildOnConfirmReq ::
+  (MonadFlow m) =>
+  Spec.OnStatusReq ->
+  m Domain.DOrder
+buildOnConfirmReq onStatusReq = do
+  -- validate context
+  transactionId <- onStatusReq.onStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  messageId <- onStatusReq.onStatusReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
+
+  order <- onStatusReq.onStatusReqMessage <&> (.confirmReqMessageOrder) & fromMaybeM (InvalidRequest "Order not found")
+
+  providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
+
+  item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
+  bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
+
+  quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
+  quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
+  totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Invalid quotationPrice")
+
+  fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
+
+  fulfillments <- order.orderFulfillments & fromMaybeM (InvalidRequest "Fulfillments not found")
+  when (null fulfillments) $ throwError $ InvalidRequest "Empty fulfillments"
+  tickets <- Utils.parseTickets item fulfillments
+
+  pure $
+    Domain.DOrder
+      { providerId = providerId,
+        totalPrice,
+        fareBreakUp = fareBreakUp,
+        bppItemId,
+        transactionId,
+        messageId,
+        tickets
+      }

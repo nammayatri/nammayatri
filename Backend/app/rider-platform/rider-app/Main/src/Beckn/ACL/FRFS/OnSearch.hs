@@ -16,39 +16,17 @@ module Beckn.ACL.FRFS.OnSearch where
 
 import qualified BecknV2.FRFS.Types as Spec
 import qualified Data.Text as T
+import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import Domain.Types.FRFSTrip as DTrip
-import qualified Domain.Types.Station as DStation
+import qualified Domain.Types.Station as Domain.DStation
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 
-data DOnSearch = DOnSearch
-  { bppSubscriberId :: Text,
-    providerDescription :: Maybe Text,
-    providerId :: Text,
-    providerName :: Text,
-    quotes :: [DQuote],
-    validTill :: Maybe UTCTime
-  }
-
-data DQuote = DQuote
-  { bppItemId :: Text,
-    price :: HighPrecMoney,
-    vehicleType :: DStation.FRFSVehicleType,
-    stations :: [DStation]
-  }
-
-data DStation = DStation
-  { stationCode :: Text,
-    stationName :: Text,
-    stationType :: DTrip.StationType,
-    stopSequence :: Int
-  }
-
 buildOnSearchReq ::
   (MonadFlow m) =>
   Spec.OnSearchReq ->
-  m DOnSearch
+  m Domain.DOnSearch
 buildOnSearchReq onSearchReq = do
   -- validate context
   message <- onSearchReq.onSearchReqMessage & fromMaybeM (InvalidRequest "Message not found")
@@ -64,7 +42,7 @@ buildOnSearchReq onSearchReq = do
   quotes <- mkQuotes items fulfillments
 
   return
-    DOnSearch
+    Domain.DOnSearch
       { providerDescription,
         providerId,
         providerName,
@@ -73,16 +51,16 @@ buildOnSearchReq onSearchReq = do
         validTill = Nothing
       }
 
-mkQuotes :: (MonadFlow m) => [Spec.Item] -> [Spec.Fulfillment] -> m [DQuote]
+mkQuotes :: (MonadFlow m) => [Spec.Item] -> [Spec.Fulfillment] -> m [Domain.DQuote]
 mkQuotes items fulfillments =
   traverse (parseItems fulfillments) items <&> concat
 
-parseItems :: (MonadFlow m) => [Spec.Fulfillment] -> Spec.Item -> m [DQuote]
+parseItems :: (MonadFlow m) => [Spec.Fulfillment] -> Spec.Item -> m [Domain.DQuote]
 parseItems fulfillments item = do
   fulfillmentIds <- item.itemFulfillmentIds & fromMaybeM (InvalidRequest "FulfillmentIds not found")
   traverse (parseFulfillments item fulfillments) fulfillmentIds
 
-parseFulfillments :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> Text -> m DQuote
+parseFulfillments :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> Text -> m Domain.DQuote
 parseFulfillments item fulfillments fulfillmentId = do
   itemId <- item.itemId & fromMaybeM (InvalidRequest "ItemId not found")
   fulfillment <- fulfillments & find (\fulfillment -> fulfillment.fulfillmentId == Just fulfillmentId) & fromMaybeM (InvalidRequest "Fulfillment not found")
@@ -94,21 +72,21 @@ parseFulfillments item fulfillments fulfillmentId = do
   vehicleType <- vehicleCategory & castVehicleVariant & fromMaybeM (InvalidRequest "VehicleType not found")
 
   return $
-    DQuote
+    Domain.DQuote
       { bppItemId = itemId,
         price,
         vehicleType,
         stations
       }
 
-mkDStation :: (MonadFlow m) => Spec.Stop -> Int -> m DStation
+mkDStation :: (MonadFlow m) => Spec.Stop -> Int -> m Domain.DStation
 mkDStation stop seqNumber = do
   stationCode <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorCode) & fromMaybeM (InvalidRequest "Stop Location code not found")
   stationName <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorName) & fromMaybeM (InvalidRequest "Stop Location name not found")
   stopType <- stop.stopType & fromMaybeM (InvalidRequest "Stop Location type not found")
   stationType <- stopType & castStationType & fromMaybeM (InvalidRequest "Stop Location type not found")
   return
-    DStation
+    Domain.DStation
       { stationCode,
         stationName,
         stationType,
@@ -145,10 +123,10 @@ mapWithIndex f xs = go 0 xs
       ys <- go (idx + 1) xs'
       return (y : ys)
 
-castVehicleVariant :: Text -> Maybe DStation.FRFSVehicleType
+castVehicleVariant :: Text -> Maybe Domain.DStation.FRFSVehicleType
 castVehicleVariant = \case
-  "METRO" -> Just DStation.METRO
-  "BUS" -> Just DStation.BUS
+  "METRO" -> Just Domain.DStation.METRO
+  "BUS" -> Just Domain.DStation.BUS
   _ -> Nothing
 
 castStationType :: Text -> Maybe DTrip.StationType
