@@ -2709,3 +2709,76 @@ instance standardEncodeUpdateIssueRes :: StandardEncode UpdateIssueRes where sta
 instance decodeUpdateIssueRes         :: Decode UpdateIssueRes where decode = defaultDecode
 instance encodeUpdateIssueRes         :: Encode UpdateIssueRes where encode = defaultEncode
 
+--------------------------------------------------- GetMetroStation ----------------------------------------------------
+data GetMetroStationReq = GetMetroStationReq 
+
+newtype GetMetroStationResp = GetMetroStationResp { 
+     name :: String
+  ,  code :: String
+  ,  lat :: Maybe Number
+  ,  lon :: Maybe Number
+  ,  address :: Maybe String
+  ,  stationType :: Maybe StationType
+  ,  color :: Maybe String
+}
+
+data StationType = START | END | TRANSIT | INTERMEDIATE
+
+instance makeGetMetroStationReq :: RestEndpoint GetMetroStationReq GetMetroStationResp where
+    makeRequest reqBody headers = defaultMakeRequest GET (EP.getMetroStations "") headers reqBody Nothing
+    decodeResponse    = decodeJSON
+    encodeRequest = standardEncode
+
+derive instance genericGetMetroStationReq :: Generic GetMetroStationReq _
+instance showGetMetroStationReq     :: Show GetMetroStationReq where show     = genericShow
+instance standardGetMetroStationReq :: StandardEncode GetMetroStationReq where standardEncode (GetMetroStationReq ) = standardEncode {}
+instance decodeGetMetroStationReq   :: Decode GetMetroStationReq where decode = defaultDecode
+instance encodeGetMetroStationReq   :: Encode GetMetroStationReq where encode = defaultEncode
+
+derive instance genericGetMetroStationResp :: Generic GetMetroStationResp _
+instance showGetMetroStationResp        :: Show GetMetroStationResp where show     = genericShow
+instance standardEncodeGetMetroStationResp :: StandardEncode GetMetroStationResp where standardEncode (GetMetroStationResp res) = standardEncode res
+instance decodeGetMetroStationResp         :: Decode GetMetroStationResp where decode = defaultDecode
+instance encodeGetMetroStationResp         :: Encode GetMetroStationResp where encode = defaultEncode
+
+derive instance genericStationType :: Generic StationType _
+instance showStationType :: Show StationType where show = genericShow
+instance decodeStationType :: Decode StationType where decode = defaultDecode
+instance encodeStationType :: Encode StationType where encode = defaultEncode
+instance standardEncodeStationType :: StandardEncode StationType
+  where
+  standardEncode START = standardEncode $ show START
+  standardEncode END = standardEncode $ show END
+  standardEncode TRANSIT = standardEncode $ show TRANSIT
+  standardEncode INTERMEDIATE = standardEncode $ show INTERMEDIATE
+
+--------------------------------------------------- searchMetro ----------------------------------------------------
+
+newtype SearchMetroReq = SearchMetroReq {
+  fromStationCode :: String
+  ,  toStationCode :: String
+  ,  quantity :: Int
+}
+
+newtype SearchMetroResp = SearchMetroResp {
+  searchId :: String
+}
+
+instance makeSearchMetroReq :: RestEndpoint SearchMetroReq SearchMetroResp where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.searchMetro "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericSearchMetroReq :: Generic SearchMetroReq _
+derive instance newtypeSearchMetroReq :: Newtype SearchMetroReq _
+instance standardEncodeSearchMetroReq :: StandardEncode SearchMetroReq where standardEncode (SearchMetroReq payload) = standardEncode payload
+instance showSearchMetroReq :: Show SearchMetroReq where show = genericShow
+instance decodeSearchMetroReq :: Decode SearchMetroReq where decode = defaultDecode
+instance encodeSearchMetroReq :: Encode SearchMetroReq where encode = defaultEncode
+
+derive instance genericSearchMetroResp :: Generic SearchMetroResp _
+derive instance newtypeSearchMetroResp :: Newtype SearchMetroResp _
+instance standardEncodeSearchMetroResp :: StandardEncode SearchMetroResp where standardEncode (SearchMetroResp id) = standardEncode id
+instance showSearchMetroResp :: Show SearchMetroResp where show = genericShow
+instance decodeSearchMetroResp :: Decode SearchMetroResp where decode = defaultDecode
+instance encodeSearchMetroResp :: Encode SearchMetroResp where encode = defaultEncode

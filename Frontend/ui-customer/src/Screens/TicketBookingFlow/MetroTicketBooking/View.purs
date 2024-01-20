@@ -78,8 +78,8 @@ view push state =
                 , stroke $ "1," <> Color.grey900
                 , cornerRadius 30.0
                 , gravity CENTER
-                ][ selectionTab "One Way" -- ST.Daily push state
-                , selectionTab "Round Trip" -- ST.Weekly push state
+                ][ selectionTab "One Way"  ST.ONE_WAY push state
+                , selectionTab "Round Trip" ST.ROUND_TRIP push state
                 ]
             ]
         , srcEditTextView push state
@@ -96,6 +96,7 @@ view push state =
                   , textView $ 
                     [ text " See Map"
                     , color Color.blue900
+                    , onClick push $ const MetroRouteMapAction
                     -- , onClick (\action -> do
                     --         _<- push action
                     --         _ <- JB.openUrlInApp $ "getTermsAndConditionsUrl state.data.placeInfo"
@@ -118,13 +119,13 @@ view push state =
             , width MATCH_PARENT
             , gravity BOTTOM
             , margin $ MarginHorizontal 16 16
-            -- , onClick push $ const ToggleTermsAndConditions
+            , onClick push $ const ToggleTermsAndConditions
                 ][  imageView
                     [ height $ V 16
                     , width $ V 16 
                     , layoutGravity "center_vertical"
                     , margin $ MarginRight 8
-                    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_checked"--(if state.props.termsAndConditionsSelected then "ny_ic_checked" else "ny_ic_unchecked")
+                    , imageWithFallback $ fetchImage FF_COMMON_ASSET (if state.props.termsAndConditionsSelected then "ny_ic_checked" else "ny_ic_unchecked")
                     ]
                   , textView $ 
                     [ text "I agree to the"
@@ -145,25 +146,25 @@ view push state =
         , updateButtonView state push
     ]
 
-selectionTab :: forall w . String-> PrestoDOM (Effect Unit) w
-selectionTab _text =
+selectionTab :: forall w . String  -> ST.TicketType -> (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
+selectionTab _text ticketType push state =
   textView
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , text _text
-  , background if _text == "Round Trip" then Color.black900 else Color.white900 -- if leaderBoardType == state.props.leaderBoardType then Color.black900 else Color.grey800
+  , background if ticketType == state.data.ticketType then Color.black900 else Color.white900 -- if leaderBoardType == state.props.leaderBoardType then Color.black900 else Color.grey800
   , padding (Padding 8 8 8 8)
   , weight 1.0
   , gravity CENTER
-  , color Color.black700 --if leaderBoardType == state.props.leaderBoardType then Color.white900 else Color.black700
+  , color if ticketType == state.data.ticketType then Color.white900 else Color.black900
   , cornerRadius 20.0
   , textSize FontSize.a_14
-  -- , onClick (\action ->
-  --             if state.props.leaderBoardType /= leaderBoardType then do
-  --               _ <- push action
-  --               pure unit
-  --             else pure unit
-  --           ) (const $ ChangeLeaderBoardtab leaderBoardType)
+  , onClick (\action ->
+              if state.data.ticketType /= ticketType then do
+                _ <- push action
+                pure unit
+              else pure unit
+            ) (const $ ChangeTicketTab ticketType)
   ]
 
 termsAndConditionsView :: forall w . Array String -> Boolean -> PrestoDOM (Effect Unit) w
@@ -219,7 +220,7 @@ headerView state push =
               , accessibility ENABLE
               , color Color.blueTextColor
               , padding $ PaddingBottom 0 --(if state.data.config.profileEditGravity == "bottom" then 10 else 0)
-              -- , onClick push (const $ EditProfile Nothing)
+              , onClick push (const $ MyMetroTicketAction)
               ] <> FontStyle.subHeading1 LanguageStyle
             ]
           ]
@@ -258,12 +259,12 @@ incrementDecrementView push state =
           , cornerRadius 4.0
           , width WRAP_CONTENT
           , padding $ Padding 28 1 28 7
-          -- , onClick push $ const (DecrementTicket pcCategory ticketLimit)
+          , onClick push $ const (DecrementTicket)-- pcCategory ticketLimit)
           , height WRAP_CONTENT
           ] <> FontStyle.body10 TypoGraphy
         , textView $
           [ background Color.white900
-          , text "1"--"$ show pcCategory.currentValue"
+          , text $ show state.data.ticketCount--"$ show pcCategory.currentValue"
           , height WRAP_CONTENT
           , color Color.black800
           , weight 1.0
@@ -275,7 +276,7 @@ incrementDecrementView push state =
           , color Color.yellow900
           , padding $ Padding 28 1 28 7
           , cornerRadius 4.0
-          -- , onClick push $ const (IncrementTicket pcCategory ticketLimit)
+          , onClick push $ const (IncrementTicket ) --pcCategory ticketLimit)
           , width WRAP_CONTENT
           , height WRAP_CONTENT
           , gravity CENTER

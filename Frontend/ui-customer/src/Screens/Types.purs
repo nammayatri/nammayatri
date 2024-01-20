@@ -2069,9 +2069,16 @@ type MetroTicketBookingScreenState = {
 }
 
 type MetroTicketBookingScreenData = {
-
+  ticketType :: TicketType
+  , ticketCount :: Int
 }
 
 type MetroTicketBookingScreenProps = {
-
+  isLimitExceeded :: Boolean
+, termsAndConditionsSelected :: Boolean
 }
+
+data TicketType = ONE_WAY | ROUND_TRIP
+
+derive instance genericTicketType :: Generic TicketType _
+instance eqTicketType :: Eq TicketType where eq = genericEq
