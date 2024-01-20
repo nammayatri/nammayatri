@@ -51,6 +51,16 @@ findByQuoteId (Kernel.Types.Id.Id quoteId) = do
     [ Se.Is Beam.quoteId $ Se.Eq quoteId
     ]
 
+updateStatusById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
+updateStatusById status (Kernel.Types.Id.Id id) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.status $ status,
+      Se.Set Beam.updatedAt $ now
+    ]
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
 findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m (Maybe (Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
 findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
@@ -67,6 +77,7 @@ updateByPrimaryKey Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..} = do
       Se.Set Beam.bppItemId $ bppItemId,
       Se.Set Beam.bppOrderId $ bppOrderId,
       Se.Set Beam.bppSubscriberId $ bppSubscriberId,
+      Se.Set Beam.bppSubscriberUrl $ bppSubscriberUrl,
       Se.Set Beam.fromStationId $ (Kernel.Types.Id.getId fromStationId),
       Se.Set Beam.price $ price,
       Se.Set Beam.providerDescription $ providerDescription,
@@ -100,6 +111,7 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             bppItemId = bppItemId,
             bppOrderId = bppOrderId,
             bppSubscriberId = bppSubscriberId,
+            bppSubscriberUrl = bppSubscriberUrl,
             fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
             price = price,
@@ -128,6 +140,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.bppItemId = bppItemId,
         Beam.bppOrderId = bppOrderId,
         Beam.bppSubscriberId = bppSubscriberId,
+        Beam.bppSubscriberUrl = bppSubscriberUrl,
         Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.price = price,
