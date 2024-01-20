@@ -28,6 +28,7 @@ data DOrder = DOrder
   { providerId :: Text,
     totalPrice :: HighPrecMoney,
     fareBreakUp :: [DFareBreakUp],
+    bppBookingId :: Text,
     bppItemId :: Text,
     transactionId :: Text,
     messageId :: Text,
@@ -36,6 +37,8 @@ data DOrder = DOrder
 
 data DTicket = DTicket
   { qrData :: Text,
+    bppFulfillmentId :: Text,
+    ticketNumber :: Text,
     validTill :: UTCTime,
     status :: Text
   }

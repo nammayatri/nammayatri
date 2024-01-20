@@ -32,7 +32,7 @@ buildOnConfirmReq onStatusReq = do
   messageId <- onStatusReq.onStatusReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
 
   order <- onStatusReq.onStatusReqMessage <&> (.confirmReqMessageOrder) & fromMaybeM (InvalidRequest "Order not found")
-
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "BppBookingId not found")
   providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
 
   item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
@@ -54,6 +54,7 @@ buildOnConfirmReq onStatusReq = do
         totalPrice,
         fareBreakUp = fareBreakUp,
         bppItemId,
+        bppBookingId,
         transactionId,
         messageId,
         tickets
