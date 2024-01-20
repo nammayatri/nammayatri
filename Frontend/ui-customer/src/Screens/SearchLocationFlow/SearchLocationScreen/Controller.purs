@@ -17,7 +17,7 @@ module Screens.SearchLocationScreen.Controller where
 
 import Prelude
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
-import Screens.Types (SearchLocationScreenState, SearchLocationTextField(..), SearchLocationStage(..), LocationListItemState, GlobalProps)
+import Screens.Types
 import Components.LocationTagBarV2 as LocationTagBarController
 import Components.LocationListItem as LocationListItemController
 import Components.FavouriteLocationModel as FavouriteLocModelController
@@ -31,7 +31,7 @@ import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick)
 import Screens (getScreen, ScreenName(..))
-import Data.String(length, trim, toLower) as STR
+import Data.String(length, trim, toLower, null) as STR
 import Data.Array (length, find, sortBy, filter, findIndex) as DA
 import Debug (spy)
 import JBridge (currentPosition, toast, hideKeyboardOnNavigation, updateInputString, locateOnMap, locateOnMapConfig, scrollViewFocus)
@@ -42,6 +42,7 @@ import Data.Ord (comparing)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (getNewIDWithTag)
+import Mobility.Prelude
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -150,11 +151,19 @@ eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchange
   autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
 
 eval (InputViewAC _ (InputViewController.InputChanged value)) state = do 
-  let canClearText = STR.length value > 2
-  continueWithCmd state {props { canClearText = canClearText, isAutoComplete = canClearText}} [ do 
-    void $ pure $ updateInputString value 
-    pure NoAction
-  ]
+  if state.props.actionType == MetroStationSelectionAction && not (STR.null value) then do
+    let newArray = findStationWithPrefix value state.data.metroStations
+        canClearText = STR.length value > 2
+    continueWithCmd state{ data { updatedMetroStations = newArray},props { canClearText = canClearText, isAutoComplete = canClearText} } [ do
+      void $ pure $ updateInputString value 
+      pure NoAction
+    ]
+    else do
+      let canClearText = STR.length value > 2
+      continueWithCmd state {props { canClearText = canClearText, isAutoComplete = canClearText}} [ do 
+        void $ pure $ updateInputString value 
+        pure NoAction
+      ]
 
 eval (UpdateLocAndLatLong recentSearches lat lng) state = do 
   let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "Current Location" , lat : NUM.fromString lat , lon : NUM.fromString lng}
@@ -236,3 +245,6 @@ fetchSortedCachedSearches state globalProps textField = do
       {srcLat, srcLon} = MB.maybe {srcLat: 0.0, srcLon: 0.0} (\srcLoc -> {srcLat: MB.fromMaybe 0.0 srcLoc.lat, srcLon: MB.fromMaybe 0.0 srcLoc.lon}) state.data.srcLoc
       {lat, lon} = if textField == "SearchLocPickup" then {lat: currLat, lon: currLon} else {lat: srcLat, lon: srcLon}
   recentDistance (globalProps.cachedSearches) lat lon
+
+findStationWithPrefix :: String -> Array Station -> Array Station
+findStationWithPrefix prefix arr = DA.filter (\station -> startsWith prefix station.stationName) arr

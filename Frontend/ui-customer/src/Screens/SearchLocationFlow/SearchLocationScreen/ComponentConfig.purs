@@ -24,7 +24,7 @@ import Components.MenuButton as MenuButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
 import MerchantConfig.Types as MT
-import Prelude ((==), (<>), ($), (/=), (>), (||), (&&), show, map)
+import Prelude ((==), (<>), ($), (/=), (>), (||), (&&), show, map, not)
 import Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
@@ -128,9 +128,12 @@ confirmLocBtnConfig state =
 
 mapInputViewConfig :: ST.SearchLocationScreenState -> Boolean -> InputView.InputViewConfig
 mapInputViewConfig state isEditable = let 
+    getInputView = getInputViewConfigBasedOnActionType state.props.actionType
     config = InputView.config 
     inputViewConfig' = config
       { headerText = MB.maybe ("Trip Details") ( \ currTextField -> if currTextField == ST.SearchLocPickup then "Edit Pickup" else "Add Stop") state.props.focussedTextField,
+        headerVisibility =  getInputView.headerVisibility,
+        imageLayoutMargin = getInputView.imageLayoutMargin,
         inputView = map 
           ( \item -> 
             { margin : item.margin
@@ -169,24 +172,32 @@ inputViewArray state =
     addressOnMap = state.data.mapLoc.address
     pickUpFocussed = state.props.focussedTextField == MB.Just ST.SearchLocPickup 
     dropLocFocussed = state.props.focussedTextField == MB.Just ST.SearchLocDrop 
+    getInputView = getInputViewConfigBasedOnActionType state.props.actionType
   in 
     [ { textValue : if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc
       , isFocussed : pickUpFocussed
-      , prefixImageName : "ny_ic_green_circle"
-      , margin : MarginTop 8
-      , placeHolder : "Enter Pickup Location"
+      , prefixImageName : getInputView.srcPrefixImageName
+      , margin : getInputView.inputViewMargin
+      , placeHolder : getInputView.srcPlaceHolder
       , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
       , id : ST.SearchLocPickup
       } ,
       { textValue : if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc
       , isFocussed : dropLocFocussed
-      , prefixImageName : "ny_ic_blue_circle"
+      , prefixImageName : getInputView.destPrefixImageName
       , margin : MarginTop 8
-      , placeHolder : "Add Stop"
+      , placeHolder : getInputView.destPlaceHolder
       , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
       , id : ST.SearchLocDrop
       }
     ]
+
+getInputViewConfigBasedOnActionType :: ST.SearchLocationActionType -> { srcPrefixImageName :: String, destPrefixImageName :: String, srcPlaceHolder :: String, destPlaceHolder :: String, inputViewMargin :: Margin, headerVisibility :: Boolean, imageLayoutMargin :: Margin }
+getInputViewConfigBasedOnActionType actionType =
+  case actionType of 
+        ST.AddingStopAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : "Enter Pickup Location", destPlaceHolder : "Add Stop",  inputViewMargin : MarginTop 8,  headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
+        ST.SearchLocationAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : "Enter Pickup Location", destPlaceHolder : "Add Stop", inputViewMargin : MarginTop 8, headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
+        ST.MetroStationSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Starting From?", destPlaceHolder : "Where to?", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
 
 menuButtonConfig :: ST.SearchLocationScreenState -> ST.Location -> MenuButton.Config
 menuButtonConfig state item = let

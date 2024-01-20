@@ -15,7 +15,7 @@
 
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo)
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, Station(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
@@ -41,6 +41,8 @@ initData = {
         , nearByGates : []
         , specialZoneCoordinates : ""
         , confirmLocCategory : ""
+        , metroStations : dummyStations
+        , updatedMetroStations : dummyStations
   } ,
   props : {
     searchLocStage : PredictionsStage ,
@@ -56,6 +58,36 @@ initData = {
   },
   appConfig : getAppConfig appConfig
 }
+
+dummyStations :: Array Station
+dummyStations = [{
+        stationName : "Anna Nagar East",
+        stationCode : "XYZ789"
+      },
+    {
+        stationName : "Anna Nagar Tower",
+        stationCode : "XYZ789"
+      },
+      {
+        stationName : "Arignar Anna Alandur",
+        stationCode : "XYZ789"
+      },
+      {
+        stationName : "Arumbakkam",
+        stationCode : "XYZ789"
+      },
+      {
+        stationName : "Ashok Nagar",
+        stationCode : "XYZ789"
+      },
+      {
+        stationName : "Chennai International Airport",
+        stationCode : "XYZ789"
+      },
+      {
+        stationName : "Egmore",
+        stationCode : "XYZ789"
+      }]
 
 dummyLocationName :: PlaceName
 dummyLocationName = PlaceName {

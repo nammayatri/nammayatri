@@ -34,7 +34,7 @@ import PrestoDOM.Types.Core (toPropValue)
 import Data.String.Regex (match)
 import Halogen.VDom.DOM.Prop (PropValue)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), setRefreshing)
-
+import Debug (spy)
 screen :: EmergencyContactsScreenState -> PrestoList.ListItem -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState listItemm =
   { initialState
@@ -46,7 +46,10 @@ screen initialState listItemm =
                         pure (pure unit)
                     )
                   ]
-  , eval
+  , eval : \action state -> do
+        let _ = spy "EmergencyContactsScreen action " action
+        let _ = spy "EmergencyContactsScreen state " state
+        eval action state
   }
 
 view :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w

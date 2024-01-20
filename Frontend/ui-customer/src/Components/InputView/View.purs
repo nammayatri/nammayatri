@@ -35,7 +35,7 @@ view push state =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , orientation VERTICAL
+    , orientation HORIZONTAL
     , padding $ PaddingHorizontal 16 16
     , background Color.black900 
     ][  backPressView state push
@@ -55,6 +55,7 @@ backPressView config push =
     , width WRAP_CONTENT
     , padding $ config.backIcon.padding 
     , onClick push $ const $ BackPress
+    , orientation HORIZONTAL
     ][  imageView
         [ height $ config.backIcon.height 
         , width $ config.backIcon.width

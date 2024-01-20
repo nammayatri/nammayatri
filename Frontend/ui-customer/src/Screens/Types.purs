@@ -2003,8 +2003,15 @@ type SearchLocationScreenData =
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
-    confirmLocCategory :: String
+    confirmLocCategory :: String,
+    metroStations :: Array Station,
+    updatedMetroStations :: Array Station
   }
+
+type Station = {
+  stationName :: String,
+  stationCode :: String
+}
 
 type SearchLocationScreenProps = 
   { searchLocStage :: SearchLocationStage
@@ -2020,6 +2027,7 @@ type SearchLocationScreenProps =
 
 data SearchLocationActionType = AddingStopAction 
                               | SearchLocationAction
+                              | MetroStationSelectionAction
 
 derive instance genericSearchLocationActionType :: Generic SearchLocationActionType _
 instance eqSearchLocationActionType :: Eq SearchLocationActionType where eq = genericEq
