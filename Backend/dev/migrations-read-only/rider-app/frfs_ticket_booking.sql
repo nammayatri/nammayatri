@@ -4,6 +4,7 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_item_id text NOT NULL;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_order_id text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_subscriber_id text NOT NULL;
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_subscriber_url text NOT NULL;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN from_station_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN price double precision NOT NULL;
@@ -24,32 +25,3 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN merchant_operating_city_id 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD PRIMARY KEY ( id);
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN bpp_subscriber_url text NOT NULL;
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
-ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
-ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN type text NOT NULL;
-ALTER TABLE atlas_app.frfs_ticket_booking DROP COLUMN type;
