@@ -29,6 +29,9 @@ buildOnSearchReq ::
   m Domain.DOnSearch
 buildOnSearchReq onSearchReq = do
   -- validate context
+  transactionId <- onSearchReq.onSearchReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  messageId <- onSearchReq.onSearchReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
+
   message <- onSearchReq.onSearchReqMessage & fromMaybeM (InvalidRequest "Message not found")
   provider <- message.onSearchReqMessageCatalog.catalogProviders >>= listToMaybe & fromMaybeM (InvalidRequest "Provider not found")
 
@@ -48,7 +51,9 @@ buildOnSearchReq onSearchReq = do
         providerName,
         quotes,
         bppSubscriberId = "",
-        validTill = Nothing
+        validTill = Nothing,
+        transactionId,
+        messageId
       }
 
 mkQuotes :: (MonadFlow m) => [Spec.Item] -> [Spec.Fulfillment] -> m [Domain.DQuote]

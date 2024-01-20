@@ -26,6 +26,14 @@ type SearchAPI =
 searchAPI :: Proxy SearchAPI
 searchAPI = Proxy
 
+type OnSearchAPI =
+  "on_search"
+    :> ReqBody '[JSON] Spec.OnSearchReq
+    :> Post '[JSON] Spec.AckResponse
+
+onSearchAPI :: Proxy OnSearchAPI
+onSearchAPI = Proxy
+
 type InitAPI =
   "init"
     :> ReqBody '[JSON] Spec.InitReq
@@ -33,6 +41,14 @@ type InitAPI =
 
 initAPI :: Proxy InitAPI
 initAPI = Proxy
+
+type OnInitAPI =
+  "on_init"
+    :> ReqBody '[JSON] Spec.OnInitReq
+    :> Post '[JSON] Spec.AckResponse
+
+onInitAPI :: Proxy OnInitAPI
+onInitAPI = Proxy
 
 type ConfirmAPI =
   "confirm"
@@ -42,6 +58,14 @@ type ConfirmAPI =
 confirmAPI :: Proxy ConfirmAPI
 confirmAPI = Proxy
 
+type OnConfirmAPI =
+  "on_confirm"
+    :> ReqBody '[JSON] Spec.OnConfirmReq
+    :> Post '[JSON] Spec.AckResponse
+
+onConfirmAPI :: Proxy OnConfirmAPI
+onConfirmAPI = Proxy
+
 type StatusAPI =
   "status"
     :> ReqBody '[JSON] Spec.StatusReq
@@ -49,3 +73,11 @@ type StatusAPI =
 
 statusAPI :: Proxy StatusAPI
 statusAPI = Proxy
+
+type OnStatusAPI =
+  "on_status"
+    :> ReqBody '[JSON] Spec.OnStatusReq
+    :> Post '[JSON] Spec.AckResponse
+
+onStatusAPI :: Proxy OnStatusAPI
+onStatusAPI = Proxy
