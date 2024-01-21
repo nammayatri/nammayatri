@@ -71,3 +71,14 @@ getTag tagGroupCode tagCode tagGroups = do
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
     descriptorCode (Just desc) = desc.descriptorCode
     descriptorCode Nothing = Nothing
+
+type Lat = Double
+
+type Lon = Double
+
+parseGPS :: Text -> Maybe (Lat, Lon)
+parseGPS gps = do
+  let (lat, lon) = T.breakOn "," gps
+  lat' <- readMaybe $ T.unpack lat
+  lon' <- readMaybe $ T.unpack $ T.drop 1 lon
+  return (lat', lon')
