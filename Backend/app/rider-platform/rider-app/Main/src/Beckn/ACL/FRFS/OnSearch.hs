@@ -15,6 +15,7 @@
 module Beckn.ACL.FRFS.OnSearch where
 
 import qualified BecknV2.FRFS.Types as Spec
+import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import Domain.Types.FRFSTrip as DTrip
@@ -88,6 +89,7 @@ mkDStation :: (MonadFlow m) => Spec.Stop -> Int -> m Domain.DStation
 mkDStation stop seqNumber = do
   stationCode <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorCode) & fromMaybeM (InvalidRequest "Stop Location code not found")
   stationName <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorName) & fromMaybeM (InvalidRequest "Stop Location name not found")
+  let mLatLon = stop.stopLocation >>= (.locationGps) >>= Utils.parseGPS
   stopType <- stop.stopType & fromMaybeM (InvalidRequest "Stop Location type not found")
   stationType <- stopType & castStationType & fromMaybeM (InvalidRequest "Stop Location type not found")
   return
@@ -95,7 +97,9 @@ mkDStation stop seqNumber = do
       { stationCode,
         stationName,
         stationType,
-        stopSequence = seqNumber
+        stopSequence = seqNumber,
+        stationLat = fst <$> mLatLon,
+        stationLon = snd <$> mLatLon
       }
 
 sequenceStops :: [Spec.Stop] -> [Spec.Stop]
