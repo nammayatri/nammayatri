@@ -14,13 +14,13 @@ imports:
   FRFSTrip: Domain.Types.FRFSTrip
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSVehicleType: Domain.Types.Station
-  CreateOrderResp : Kernel.External.Payment.Juspay.Types.CreateOrder
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
 
 module: FRFSTicketService
 types:
   FRFSSearchAPIReq:
-    fromStationCode : Text
-    toStationCode : Text
+    fromStationCode: Text
+    toStationCode: Text
     quantity: Int
 
   FRFSSearchAPIRes:
@@ -61,7 +61,7 @@ types:
 
   FRFSBookingPaymentAPI:
     status: FRFSBookingPaymentStatusAPI
-    paymentOrder : Maybe CreateOrderResp
+    paymentOrder: Maybe CreateOrderResp
 
   FRFSBookingPaymentStatusAPI:
     enum: "PENDING, SUCCESS, FAILURE, REFUNDED"
@@ -74,6 +74,7 @@ types:
     address: Maybe Text
     stationType: Maybe StationType
     color: Maybe Text
+    sequence: Maybe Int
 
 apis:
   # GET metro stops for the merchant city
