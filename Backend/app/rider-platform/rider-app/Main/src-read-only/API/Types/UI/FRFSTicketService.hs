@@ -15,7 +15,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import qualified Environment
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, sequence)
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -62,6 +62,7 @@ data FRFSStationAPI = FRFSStationAPI
     lat :: Data.Maybe.Maybe Kernel.Prelude.Double,
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text,
+    sequence :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe Domain.Types.FRFSTrip.StationType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
