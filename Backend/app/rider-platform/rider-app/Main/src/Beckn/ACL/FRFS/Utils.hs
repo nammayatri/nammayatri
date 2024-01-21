@@ -110,3 +110,112 @@ parseTicket fulfillment = do
         ticketNumber,
         status
       }
+
+type TxnId = Text
+
+type Amount = Text
+
+mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Spec.Payment
+mkPayment paymentStatus mAmount mTxnId =
+  Spec.Payment
+    { paymentCollectedBy = Just "BAP",
+      paymentId = Nothing,
+      paymentParams = mTxnId >>= (\txnId -> mAmount <&> (mkPaymentParams txnId)),
+      paymentStatus = Just $ encodeToText paymentStatus,
+      paymentTags = Just $ mkPaymentTags mAmount,
+      paymentType = Just $ encodeToText Spec.PRE_ORDER
+    }
+
+mkPaymentParams :: TxnId -> Amount -> Spec.PaymentParams
+mkPaymentParams txnId amount =
+  Spec.PaymentParams
+    { paymentParamsAmount = Just amount,
+      paymentParamsBankAccountNumber = Nothing,
+      paymentParamsBankCode = Nothing,
+      paymentParamsCurrency = Just "INR",
+      paymentParamsTransactionId = Just txnId,
+      paymentParamsVirtualPaymentAddress = Nothing
+    }
+
+mkPaymentTags :: Maybe Amount -> [Spec.TagGroup]
+mkPaymentTags mAmount =
+  [ mkBuyerFinderFeeTagGroup,
+    mkSettlementTagGroup mAmount
+  ]
+
+mkBuyerFinderFeeTagGroup :: Spec.TagGroup
+mkBuyerFinderFeeTagGroup =
+  Spec.TagGroup
+    { tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just "BUYER_FINDER_FEE",
+              descriptorImages = Nothing,
+              descriptorName = Nothing
+            },
+      tagGroupDisplay = Just False,
+      tagGroupList = Just [feePercentage]
+    }
+  where
+    feePercentage =
+      Spec.Tag
+        { tagDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "BUYER_FINDER_FEES_PERCENTAGE",
+                  descriptorImages = Nothing,
+                  descriptorName = Nothing
+                },
+          tagValue = Just "0"
+        }
+
+mkSettlementTagGroup :: Maybe Text -> Spec.TagGroup
+mkSettlementTagGroup mAmount =
+  Spec.TagGroup
+    { tagGroupDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just "SETTLEMENT_TERMS",
+              descriptorImages = Nothing,
+              descriptorName = Nothing
+            },
+      tagGroupDisplay = Just False,
+      tagGroupList = Just settlementTags
+    }
+  where
+    settlementTags =
+      catMaybes
+        [ mAmount <&> \amount ->
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "SETTLEMENT_AMOUNT",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just amount
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "DELAY_INTEREST",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "0"
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "STATIC_TERMS",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "https://api.example-bap.com/booking/terms" -- TODO: update with actual terms url
+              }
+        ]

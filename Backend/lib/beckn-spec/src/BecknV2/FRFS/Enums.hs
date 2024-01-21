@@ -73,3 +73,9 @@ data VehicleCategory = METRO
 
 data StopType = START | END | INTERMEDIATE_STOP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+
+data PaymentType = PRE_ORDER | POST_FULFILLMENT | PRE_PAYMENT | ON_FULFILLMENT
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+
+data PaymentStatus = PAID | NOT_PAID
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)

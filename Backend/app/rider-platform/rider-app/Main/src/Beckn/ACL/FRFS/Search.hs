@@ -56,7 +56,7 @@ tfIntent search fromStation toStation =
   Just $
     Spec.Intent
       { intentFulfillment = tfIntentFulfillment search fromStation toStation,
-        intentPayment = tfIntentPayment search
+        intentPayment = Just $ Utils.mkPayment Spec.NOT_PAID Nothing Nothing
       }
 
 tfIntentFulfillment :: DSearch.FRFSSearch -> DStation.Station -> DStation.Station -> Maybe Spec.Fulfillment
@@ -99,24 +99,9 @@ tfLocation station =
         locationGps = Nothing
       }
 
-tfIntentPayment :: DSearch.FRFSSearch -> Maybe Spec.Payment
-tfIntentPayment search =
-  Just $
-    Spec.Payment
-      { paymentCollectedBy = Nothing,
-        paymentId = Nothing,
-        paymentParams = Nothing,
-        paymentStatus = Nothing,
-        paymentTags = tfIntentPaymentTags search,
-        paymentType = Nothing
-      }
-
 tfVehicle :: DSearch.FRFSSearch -> Maybe Spec.Vehicle
 tfVehicle search =
   Just $
     Spec.Vehicle
       { vehicleCategory = Just $ encodeToText search.vehicleType
       }
-
-tfIntentPaymentTags :: DSearch.FRFSSearch -> Maybe [Spec.TagGroup]
-tfIntentPaymentTags _search = Nothing -- TODO: add payment tags
