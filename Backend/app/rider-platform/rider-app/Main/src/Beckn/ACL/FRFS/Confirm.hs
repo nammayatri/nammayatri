@@ -19,6 +19,7 @@ module Beckn.ACL.FRFS.Confirm (buildConfirmReq) where
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
+import Data.List (singleton)
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -101,7 +102,10 @@ tfQuantity booking =
       }
 
 tfPayments :: DBooking.FRFSTicketBooking -> Maybe [Spec.Payment]
-tfPayments _quote = Nothing -- TODO: add payment tags
+tfPayments booking =
+  Just $
+    singleton $
+      Utils.mkPayment Spec.NOT_PAID (Just $ encodeToText booking.price) Nothing
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =
