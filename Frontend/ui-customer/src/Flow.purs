@@ -2300,13 +2300,16 @@ fetchAndModifyLocationLists savedLocationResp = do
             })
     where
       isPointWithinXDist :: Trip -> HomeScreenState -> Number -> Boolean
-      isPointWithinXDist item state thresholdDist = 
-        getDistanceBwCordinates 
-          item.sourceLat 
-          item.sourceLong 
-          state.props.sourceLat 
-          state.props.sourceLong 
-          <= thresholdDist
+      isPointWithinXDist item state thresholdDist =
+        let sourceLat = if state.props.sourceLat == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT else state.props.sourceLat
+            sourceLong = if state.props.sourceLong == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON else state.props.sourceLong
+        in
+          getDistanceBwCordinates 
+            item.sourceLat 
+            item.sourceLong 
+            sourceLat
+            sourceLong
+            <= thresholdDist
       
       isLocationWithinXDist :: LocationListItemState -> HomeScreenState -> Number -> Boolean
       isLocationWithinXDist item state thresholdDist = 
