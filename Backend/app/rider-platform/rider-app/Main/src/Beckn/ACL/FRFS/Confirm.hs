@@ -28,8 +28,9 @@ import Kernel.Utils.Common
 buildConfirmReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DBooking.FRFSTicketBooking ->
+  Text ->
   m (Spec.ConfirmReq)
-buildConfirmReq booking = do
+buildConfirmReq booking txnId = do
   let transactionId = booking.searchId.getId
   messageId <- generateGUID
 
@@ -39,17 +40,17 @@ buildConfirmReq booking = do
   pure $
     Spec.ConfirmReq
       { confirmReqContext = context,
-        confirmReqMessage = tfConfirmMessage booking
+        confirmReqMessage = tfConfirmMessage booking txnId
       }
 
-tfConfirmMessage :: DBooking.FRFSTicketBooking -> Spec.ConfirmReqMessage
-tfConfirmMessage booking =
+tfConfirmMessage :: DBooking.FRFSTicketBooking -> Text -> Spec.ConfirmReqMessage
+tfConfirmMessage booking txnId =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder booking
+    { confirmReqMessageOrder = tfOrder booking txnId
     }
 
-tfOrder :: DBooking.FRFSTicketBooking -> Spec.Order
-tfOrder booking =
+tfOrder :: DBooking.FRFSTicketBooking -> Text -> Spec.Order
+tfOrder booking txnId =
   Spec.Order
     { orderBilling = tfBilling booking,
       orderCancellationTerms = Nothing,
@@ -57,7 +58,7 @@ tfOrder booking =
       orderFulfillments = Nothing,
       orderId = Nothing,
       orderItems = tfItems booking,
-      orderPayments = tfPayments booking,
+      orderPayments = tfPayments booking txnId,
       orderProvider = tfProvider booking,
       orderQuote = Nothing,
       orderStatus = Nothing,
@@ -101,11 +102,11 @@ tfQuantity booking =
               }
       }
 
-tfPayments :: DBooking.FRFSTicketBooking -> Maybe [Spec.Payment]
-tfPayments booking =
+tfPayments :: DBooking.FRFSTicketBooking -> Text -> Maybe [Spec.Payment]
+tfPayments booking txnId =
   Just $
     singleton $
-      Utils.mkPayment Spec.NOT_PAID (Just $ encodeToText booking.price) Nothing
+      Utils.mkPayment Spec.NOT_PAID (Just $ encodeToText booking.price) (Just txnId)
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =
