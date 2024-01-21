@@ -29,7 +29,7 @@ buildStatusReq ::
   DBooking.FRFSTicketBooking ->
   m (Spec.StatusReq)
 buildStatusReq booking = do
-  let transactionId = "booking.searchId.getId" -- TODO: add transaction id
+  let transactionId = booking.searchId.getId
   messageId <- generateGUID
 
   merchantId <- booking.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
