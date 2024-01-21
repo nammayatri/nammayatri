@@ -63,7 +63,6 @@ onInit ::
   Init.FRFSTicketBooking ->
   Flow ()
 onInit onInitReq merchant booking = do
-  void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId Init.APPROVED booking.id
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   personEmail <- mapM decrypt person.email
@@ -111,5 +110,7 @@ onInit onInitReq merchant booking = do
   case mCreateOrderRes of
     Just _ -> do
       void $ QFRFSTicketBookingPayment.create ticketBookingPayment
+      void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId Init.APPROVED booking.id
     Nothing -> do
+      void $ QFRFSTicketBooking.updateStatusById Init.FAILED booking.id
       throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
