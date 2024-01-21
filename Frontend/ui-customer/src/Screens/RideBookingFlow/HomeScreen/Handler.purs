@@ -112,7 +112,7 @@ homeScreen = do
       App.BackT $ App.NoBack <$> (pure $ SUBMIT_RATING updatedState)
     OpenGoogleMaps updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ OPEN_GOOGLE_MAPS updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ OPEN_GOOGLE_MAPS updatedState)
     InAppTrackStatus updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ IN_APP_TRACK_STATUS updatedState)

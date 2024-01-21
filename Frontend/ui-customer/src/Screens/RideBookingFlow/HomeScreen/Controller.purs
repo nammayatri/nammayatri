@@ -987,7 +987,7 @@ eval (AutoScrollCountDown seconds status timerID) state = do
   if status == "EXPIRED" then do
     void $ pure $ clearTimerWithId timerID
     void $ pure $ performHapticFeedback unit
-    let updatedState = state{props{autoScroll = false, autoScrollTimerId = "", homeScreenSheetState = EXPANDED, autoScrollTimer = ""}}
+    let updatedState = state{props{autoScroll = false, autoScrollTimerId = "", homeScreenSheetState = EXPANDED, isHomescreenExpanded=true, currSlideIndex=1.0, autoScrollTimer = ""}}
     continue updatedState
   else continue state{props{autoScrollTimer = (show seconds), autoScrollTimerId = timerID}}
 
@@ -2859,7 +2859,7 @@ getPeekHeight state =
           requiredPeekHeight = if os == "IOS"
                                 then getPeekHeightForIos homescreenHeader scrHeight
                                 else  getPeekHeightForAndroid homescreenHeader
-      in if homescreenHeader == 0 then 700 else requiredPeekHeight
+      in if homescreenHeader == 0 then 500 else requiredPeekHeight
       where 
         getPeekHeightForIos :: Int -> Int -> Int
         getPeekHeightForIos homescreenHeader scrHeight =

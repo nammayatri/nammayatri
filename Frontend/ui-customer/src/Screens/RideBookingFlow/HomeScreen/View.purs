@@ -348,7 +348,7 @@ view push state =
                 ]
             -- , homeScreenView push state
             -- , buttonLayoutParentView push state
-            , if (not state.props.rideRequestFlow) || (state.props.currentStage == FindingEstimate || state.props.currentStage == ConfirmingRide) then emptyTextView state else topLeftIconView state push
+            , if (not state.props.rideRequestFlow) || any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, HomeScreen] then emptyTextView state else topLeftIconView state push
             , rideRequestFlowView push state
             , if state.props.currentStage == PricingTutorial then (pricingTutorialView push state) else emptyTextView state
             , if (any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithDriver]) then rideInfoView push state else emptyTextView state
@@ -481,9 +481,8 @@ rideInfoView push state =
           , gravity BOTTOM
           , clickable isClickable
           , clipChildren false
-          ][ otpAndWaitView push state
-           , trackRideView push state
-          ]
+          ]$[ otpAndWaitView push state 
+          ] <> if state.props.currentStage == RideStarted then [trackRideView push state] else []
         , linearLayout[weight 1.0][]
         , linearLayout
           [ height $ MATCH_PARENT
@@ -2456,11 +2455,13 @@ messagePromtView push state =
 
 trackRideView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
 trackRideView push state =
+  PrestoAnim.animationSet[fadeIn true] $
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , clipChildren false
   , clickable true
+  , onAnimationEnd push (const NotificationAnimationEnd)
   ][ linearLayout
     [ height $ V 40
     , width $ WRAP_CONTENT
@@ -3335,7 +3336,7 @@ homeScreenViewV2 push state =
               ][ bottomSheetLayout
                   [ height MATCH_PARENT
                   , width MATCH_PARENT
-                  , peakHeight $ if state.data.peekHeight == 0 || state.data.peekHeight == 700 then getPeekHeight state else state.data.peekHeight
+                  , peakHeight $ if state.data.peekHeight == 0 || state.data.peekHeight == 500 then getPeekHeight state else state.data.peekHeight
                   , halfExpandedRatio 0.99
                   , sheetState state.props.homeScreenSheetState
                   , enableShift false
@@ -3934,12 +3935,10 @@ suggestedDestinationCard push state index suggestion =
     , cornerRadius 16.0
     , onClick push $ const (SuggestedDestinationClicked suggestion)
     ][ linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
+        [ height $ V 26
+        , width $ V 26
         , gravity CENTER
-        , orientation VERTICAL
         , padding (Padding 3 3 3 3)
-        , layoutGravity "center_vertical"
         , margin $ MarginRight 4
         ][ imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sd"
@@ -4008,12 +4007,10 @@ repeatRideCard push state index trip =
     , cornerRadii $ Corners 16.0 true true true true
     , onClick push $ const (RepeatRide index trip)
     ][ linearLayout
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
+        [ height $ V 26
+        , width $ V 26
         , gravity CENTER
-        , orientation VERTICAL
         , padding (Padding 3 3 3 3)
-        , layoutGravity "center_vertical"
         , margin $ MarginRight 4
         ][ imageView
             [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_repeat_trip"
