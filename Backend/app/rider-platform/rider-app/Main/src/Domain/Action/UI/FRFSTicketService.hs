@@ -259,10 +259,12 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
             then do
               void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING booking.id
+              transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
+              txnId <- getSuccessTransactionId transactions
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING
               fork "FRFS Confirm Req" $ do
                 providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-                bknConfirmReq <- ACL.buildConfirmReq booking
+                bknConfirmReq <- ACL.buildConfirmReq booking txnId.getId
                 void $ CallBPP.confirm providerUrl bknConfirmReq
               buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
             else do
@@ -355,6 +357,12 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId_
 
     makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus = DFRFSTicketBooking.FRFSTicketBooking {status = updatedStatus, ..}
+    getSuccessTransactionId transactions = do
+      let successTransactions = filter (\transaction -> transaction.status == Payment.CHARGED) transactions
+      case successTransactions of
+        [] -> throwError $ InvalidRequest "No successful transaction found"
+        [transaction] -> return transaction.id
+        _ -> throwError $ InvalidRequest "Multiple successful transactions found"
 
 callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
 callBPPStatus booking = do
