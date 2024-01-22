@@ -53,6 +53,7 @@ const refreshThreshold = 30;
 const JBridge = window.JBridge;
 const JOS = window.JOS;
 const Android = window.Android;
+Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;","null");
 
 const eventObject = {
   type : ""
@@ -320,10 +321,10 @@ if (typeof window.JOS != "undefined") {
   console.error("JOS not present")
 }
 
-const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
-if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")){
-  logger.enableLogger();
-}else{
-  logger.disableLogger();
-  Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;","null");
-}
+// const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
+// if(sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging")){
+//   logger.enableLogger();
+// }else{
+//   logger.disableLogger();
+//   Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_false;","null");
+// }
