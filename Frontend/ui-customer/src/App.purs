@@ -43,7 +43,7 @@ import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, RideSelectionScreenState, ReportIssueChatScreenState, IssueInfo, MetroTicketDetailsScreenState, MetroMyTicketsScreenState) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, RideSelectionScreenState, ReportIssueChatScreenState, IssueInfo, MetroTicketDetailsScreenState, MetroMyTicketsScreenState, TicketStatusScreenState) 
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
@@ -54,6 +54,7 @@ import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduled
 import Common.Types.App (CategoryListType)
 import Screens.TicketBookingFlow.MetroTicketDetails.ScreenData as MetroTicketDetailsScreenData
 import Screens.TicketBookingFlow.MetroMyTickets.ScreenData as MetroMyTicketsScreenData
+import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -88,6 +89,7 @@ newtype GlobalState = GlobalState {
   , reportIssueChatScreen :: ReportIssueChatScreenState
   , metroTicketDetailsScreen :: MetroTicketDetailsScreenState
   , metroMyTicketsScreen :: MetroMyTicketsScreenState
+  , ticketStatusScreen  :: TicketStatusScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -122,6 +124,7 @@ defaultGlobalState = GlobalState {
   , reportIssueChatScreen : ReportIssueChatScreenData.initData
   , metroTicketDetailsScreen : MetroTicketDetailsScreenData.initData
   , metroMyTicketsScreen : MetroMyTicketsScreenData.initData
+  , ticketStatusScreen : TicketStatusScreenData.initData
   }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
@@ -231,6 +234,13 @@ data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreen
                                     | REFRESH_PAYMENT_STATUS TicketBookingScreenState
                                     | GO_TO_TICKET_LIST TicketBookingScreenState
 
+data TICKET_STATUS_SCREEN_OUTPUT = GET_BOOKING_INFO_SCREEN_FROM_TICKET_STATUS TicketStatusScreenState BookingStatus
+                                 | GO_TO_HOME_SCREEN_FROM_TICKET_STATUS TicketStatusScreenState
+                                 | REFRESH_PAYMENT_STATUS_FROM_TICKET_STATUS_SCREEN TicketStatusScreenState
+                                 | GO_TO_TICKET_LIST_FROM_STATUS_SCREEN TicketStatusScreenState
+
+
+
 data TICKETING_SCREEN_SCREEN_OUTPUT = EXIT_TO_HOME TicketingScreenState
                                     | EXIT_TO_MY_TICKETS TicketingScreenState
                                     | BOOK_TICKETS TicketingScreenState
@@ -267,3 +277,4 @@ data ScreenType =
   | ReportIssueChatScreenStateType (ReportIssueChatScreenState -> ReportIssueChatScreenState)
   | MetroTicketDetailsScreenStateType (MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState)
   | MetroMyTicketsScreenStateType (MetroMyTicketsScreenState -> MetroMyTicketsScreenState)
+  | TicketStatusScreenStateType (TicketStatusScreenState -> TicketStatusScreenState)

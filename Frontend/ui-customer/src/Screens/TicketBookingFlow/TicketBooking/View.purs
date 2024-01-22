@@ -1615,7 +1615,7 @@ bookingStatusBody state push paymentStatus =
   ]
 
 bookingConfirmationActions :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
-bookingConfirmationActions state push paymentStatus = 
+bookingConfirmationActions state push paymentStatus =                 
   linearLayout
   [ width MATCH_PARENT
   , gravity CENTER

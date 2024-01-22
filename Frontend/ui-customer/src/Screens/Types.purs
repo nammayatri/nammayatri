@@ -1933,3 +1933,52 @@ type MetroMyTicketsScreenData = {
 type MetroMyTicketsScreenProps = {
   dummyProps :: String
 }
+
+
+
+-- ######################################### TicketBookingStatus #################################################### 
+
+type TicketStatusScreenState =
+  { data :: TicketStatusScreenData,
+    props :: TicketStatusScreenProps
+  }
+
+type TicketStatusScreenData = {
+  servicesAvailing :: Array TicketServiceI, -- TODO:: Use this for generic handling
+  dateOfVisit :: String,
+  keyValArray :: Array KeyVal,
+  transactionId :: String,
+  bookedForArray :: Array String,
+  ticketName :: String,
+  totalAmount :: Int,
+  placeInfo :: Maybe TicketPlaceResp,
+  servicesInfo :: Array TicketServiceData,
+  shortOrderId :: String,
+  selectedPlaceType :: PlaceType
+}
+
+type TicketStatusScreenProps = {
+  currentStage :: TicketBookingScreenStage,
+  previousStage :: TicketBookingScreenStage,
+  termsAndConditionsSelected :: Boolean,
+  validDate :: Boolean,
+  showShimmer :: Boolean,
+  paymentStatus :: Common.PaymentStatus,
+  ticketBookingList :: TicketBookings,
+  selectedBookingId :: String,
+  selectedBookingInfo :: IndividualBookingItem,
+  activeListItem :: TicketBookingServiceDetails,
+  activeIndex :: Int,
+  rightButtonDisable :: Boolean,
+  leftButtonDisable :: Boolean,
+  navigateToHome :: Boolean,
+  selectedOperationalDay :: String,
+  actionType :: TicketStatusEntry
+}
+
+
+data TicketStatusEntry = MetroTicketToPaymentStatusEntry
+                       | ZooTicketToPaymentStatusEntry
+derive instance genericTicketStatusEntry :: Generic TicketStatusEntry _ 
+instance showTicketStatusEntry :: Show TicketStatusEntry where show = genericShow
+instance eqTicketStatusEntry :: Eq TicketStatusEntry where eq = genericEq

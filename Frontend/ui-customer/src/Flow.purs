@@ -100,7 +100,6 @@ import Services.Backend as Remote
 import Services.Config (getBaseUrl, getSupportNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
-import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), TICKET_BOOKING_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..), TICKET_BOOKING_SCREEN_OUTPUT(..),TICKET_INFO_SCREEN_OUTPUT(..),defaultGlobalState, RIDE_SELECTION_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..),  TICKETING_SCREEN_SCREEN_OUTPUT(..))
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
@@ -133,6 +132,10 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Control.Transformers.Back.Trans as App
 import Locale.Utils
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
+import Types.App
+import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
+import Screens.Types
+import Screens.TicketBookingFlow.TicketStatus.Transformer as TicketStatusTransformer
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -1329,7 +1332,20 @@ homeScreenFlow = do
       modifyScreenState $ TicketingScreenStateType (\_ -> PlaceListData.initData{ props { hideMyTickets = false }})
       placeListFlow
     GO_TO_HELP_AND_SUPPORT -> helpAndSupportScreenFlow
-    GO_TO_MY_METRO_TICKETS -> metroMyTicketsFlow
+    GO_TO_MY_METRO_TICKETS -> do
+      modifyScreenState $ 
+        TicketStatusScreenStateType (\_ -> 
+          TicketStatusScreenData.initData {
+            props{
+              actionType = MetroTicketToPaymentStatusEntry
+            , currentStage = BookingConfirmationStage
+            }
+          , data{
+              ticketName = "Tickets for Chennai Metro"
+            , keyValArray = TicketStatusTransformer.metroTicketDetailsTransformer
+            }
+          })
+      ticketStatusFlow
     _ -> homeScreenFlow
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
@@ -2687,21 +2703,19 @@ ticketStatusFlow = do
   (GlobalState currentState) <- getState
   void $ pure $ spy "ZOO TICKET STATUS CALLED" currentState
   liftFlowBT $ hideLoader
-  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{dateOfVisit = (getNextDateV2 "")}})             
-  flow <- UI.ticketStatusScreen
+  modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{dateOfVisit = (getNextDateV2 "")}})  
+  modifyScreenState $ TicketStatusScreenStateType (\ticketStatusScreen -> ticketStatusScreen{data{dateOfVisit = (getNextDateV2 "")}})      
+  flow <- UI.ticketStatusScreen 
   case flow of
-    GO_TO_HOME_SCREEN_FROM_TICKET_BOOKING state -> do
+    GO_TO_HOME_SCREEN_FROM_TICKET_STATUS state -> do
       modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
       if state.props.navigateToHome then homeScreenFlow else placeListFlow
-    RESET_SCREEN_STATE -> do
-      modifyScreenState $ TicketBookingScreenStateType (\_ ->  TicketBookingScreenData.initData)
-      ticketStatusFlow
-    REFRESH_PAYMENT_STATUS state -> do
+    REFRESH_PAYMENT_STATUS_FROM_TICKET_STATUS_SCREEN state -> do
       (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT state.props.selectedBookingId
       updatePaymentStatusData ticketStatus state.props.selectedBookingId
       setValueToLocalStore PAYMENT_STATUS_POOLING "false"
       ticketStatusFlow
-    GO_TO_TICKET_LIST state -> do
+    GO_TO_TICKET_LIST_FROM_STATUS_SCREEN state -> do
       (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
       (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes)}})
@@ -2725,6 +2739,14 @@ ticketListFlow = do
       if bookingStatus == Pending
         then do
           modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
+          modifyScreenState $ TicketStatusScreenStateType (\ticketStatusScreen -> 
+            ticketStatusScreen { 
+              props {
+                  currentStage = BookingConfirmationStage
+                , selectedBookingId = state.props.selectedBookingId
+                }
+              }
+            )
           setValueToLocalStore PAYMENT_STATUS_POOLING "true"
           fillBookingDetails (TicketBookingDetails resp) state.props.selectedBookingId "Pending"
           ticketStatusFlow
@@ -2817,9 +2839,11 @@ updatePaymentStatusData ticketStatus shortOrderID =
       setValueToLocalStore PAYMENT_STATUS_POOLING "true"
       fillBookingDetails infoRes shortOrderID ticketStatus
     "Failed" -> do
+      modifyScreenState $ TicketStatusScreenStateType (\ticketStatusScreen -> ticketStatusScreen { props { paymentStatus = Common.Failed } })
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { paymentStatus = Common.Failed } })
     _ -> do
       _ <- pure $ toast $ getString STR.SOMETHING_WENT_WRONG_TRY_AGAIN_LATER
+      modifyScreenState $ TicketStatusScreenStateType (\ticketStatusScreen -> ticketStatusScreen { props { currentStage = ticketStatusScreen.props.previousStage} }) -- temporary fix - will remove once 500 INTERNAL_SERVER_ERROR is solved.
       modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = ticketBookingScreen.props.previousStage} }) -- temporary fix - will remove once 500 INTERNAL_SERVER_ERROR is solved.
       pure unit
 
@@ -2835,31 +2859,36 @@ zooTicketInfoFlow = do
 fillBookingDetails :: TicketBookingDetails-> String -> String -> FlowBT String Unit
 fillBookingDetails (TicketBookingDetails resp) shortOrderID ticketStatus = do
   let
-    serv = resp.services !! 0
+    serv = resp.services !! 0 
+    initRows =  [ { key: "Date", val: convertUTCtoISC resp.visitDate "Do MMM YYYY"}
+                , { key: "Booking For", val: "" }
+                , { key: "Total Paid", val: ("₹" <> show resp.amount) }
+                , { key: "Booking ID", val: resp.ticketShortId }
+                , { key: "Transaction ID", val: shortOrderID }
+                ]
+    validityDetailRows = case serv of
+                           Nothing -> []
+                           Just (TicketBookingServiceDetails serviceDetails) -> 
+                             if isJust serviceDetails.expiryDate then 
+                               [
+                                 { key : "Valid until",
+                                   val : (maybe (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "hh:mm A") (\sl -> fromMaybe "" (convertUTCToISTAnd12HourFormat sl)) serviceDetails.slot )  
+                                          <> ", " 
+                                          <> (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "Do MMM YYYY") 
+                                 }
+                               ] 
+                            else 
+                              []
   modifyScreenState
-    $ TicketBookingScreenStateType
-        ( \ticketBookingScreen ->
-            ticketBookingScreen
+    $ TicketStatusScreenStateType
+        ( \ticketStatusScreen ->
+            ticketStatusScreen
               { props
                 { paymentStatus = if ticketStatus == "Booked" then Common.Success else Common.Pending
                 }
               , data
-                { zooName = resp.ticketPlaceName
-                , keyValArray =
-                  [ { key: "Date", val: convertUTCtoISC resp.visitDate "Do MMM YYYY"}
-                  , { key: "Booking For", val: "" }
-                  , { key: "Total Paid", val: ("₹" <> show resp.amount) }
-                  , { key: "Booking ID", val: resp.ticketShortId }
-                  , { key: "Transaction ID", val: shortOrderID }
-                  ]
-                    <> case serv of
-                        Nothing -> []
-                        Just (TicketBookingServiceDetails serviceDetails) -> 
-                          if isJust serviceDetails.expiryDate then 
-                            [ { key: "Valid until",
-                                val: (maybe (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "hh:mm A") (\sl -> fromMaybe "" (convertUTCToISTAnd12HourFormat sl)) serviceDetails.slot )  
-                                     <> ", " <> (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "Do MMM YYYY") } ] 
-                          else []
+                { ticketName = resp.ticketPlaceName
+                , keyValArray = initRows <> validityDetailRows
                 , bookedForArray = (map (\(TicketBookingServiceDetails item) -> item.ticketServiceName) resp.services)
                 }
               }
