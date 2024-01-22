@@ -12,9 +12,7 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Beam.Person where
 
@@ -23,8 +21,6 @@ import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
-
--- import Storage.Tabular.Role (RoleTId)
 
 data PersonT f = PersonT
   { id :: B.C f Text,

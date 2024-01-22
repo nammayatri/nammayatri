@@ -234,7 +234,6 @@ assignRole ::
 assignRole _ personId roleId = do
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  -- Esq.runTransaction $
   QP.updatePersonRole personId roleId
   pure Success
 
@@ -259,7 +258,6 @@ assignMerchantCityAccess _ personId req = do
   whenJust mbMerchantAccess $ \_ -> do
     throwError $ InvalidRequest "Merchant access already assigned."
   merchantAccess <- buildMerchantAccess personId merchant.id merchant.shortId req.operatingCity
-  -- Esq.runTransaction $
   QAccess.create merchantAccess
   pure Success
 
@@ -285,7 +283,6 @@ resetMerchantAccess _ personId req = do
     (x : _) -> do
       -- this function uses tokens from db, so should be called before transaction
       Auth.cleanCachedTokensByMerchantId personId merchant.id
-      -- Esq.runTransaction $ do
       QAccess.deleteById x.id
       QReg.deleteAllByPersonIdAndMerchantId personId merchant.id
       pure Success
@@ -312,7 +309,6 @@ resetMerchantCityAccess _ personId req = do
     Just merchantAccess -> do
       -- this function uses tokens from db, so should be called before transaction
       Auth.cleanCachedTokensByMerchantIdAndCity personId merchant.id req.operatingCity
-      -- Esq.runTransaction $ do
       QAccess.deleteById merchantAccess.id
       QReg.deleteAllByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
       pure Success
@@ -328,7 +324,6 @@ changePassword tokenInfo req = do
   let oldActual = encPerson.passwordHash
   oldProvided <- getDbHash req.oldPassword
   unless (oldActual == Just oldProvided) . throwError $ InvalidRequest "Old password is incorrect."
-  -- Esq.runTransaction $
   QP.updatePersonPassword tokenInfo.personId newHash
   pure Success
 

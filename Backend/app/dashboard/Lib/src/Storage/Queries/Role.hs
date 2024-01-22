@@ -43,7 +43,7 @@ findAllByLimitOffset :: BeamFlow m r => Maybe Integer -> Maybe Integer -> m [Rol
 findAllByLimitOffset mbLimit mbOffset = do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
-  findAllWithOptionsKV [Se.Is BeamR.id $ Se.Not $ Se.Eq ""] (Se.Desc BeamR.name) (Just limitVal) (Just offsetVal)
+  findAllWithOptionsKV [Se.Is BeamR.id $ Se.Not $ Se.Eq ""] (Se.Asc BeamR.name) (Just limitVal) (Just offsetVal)
 
 findAllWithLimitOffset ::
   BeamFlow m r =>

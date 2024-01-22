@@ -114,12 +114,10 @@ withResponseTransactionStoring' ::
   m response
 withResponseTransactionStoring' responseModifier transaction clientCall = handle errorHandler $ do
   response <- clientCall
-  -- Esq.runTransaction $
   QT.create $ transaction{response = encodeToText <$> responseModifier response}
   pure response
   where
     -- This code do not handle ExternalAPICallError, only E.Error
     errorHandler (err :: E.Error) = do
-      -- Esq.runTransaction $
       QT.create transaction{responseError = Just $ show err}
       throwError err

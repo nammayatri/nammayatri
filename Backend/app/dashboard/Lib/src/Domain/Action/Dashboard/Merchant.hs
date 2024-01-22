@@ -57,7 +57,6 @@ createMerchant _ req = do
   whenJust mbExistingMerchant $ \_ -> throwError (MerchantAlreadyExist req.shortId)
   merchant <- buildMerchant req
   decMerchant <- decrypt merchant
-  -- Esq.runNoTransaction $
   QMerchant.create merchant
   pure $ DMerchant.mkMerchantAPIEntity decMerchant
 
