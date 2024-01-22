@@ -62,7 +62,7 @@ data FRFSStationAPI = FRFSStationAPI
     lat :: Data.Maybe.Maybe Kernel.Prelude.Double,
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Text.Text,
-    sequence :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe Domain.Types.FRFSTrip.StationType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
