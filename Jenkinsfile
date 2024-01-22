@@ -39,7 +39,7 @@ pipeline {
                                 // Requires https://github.com/juspay/jenkins-nix-ci/issues/32
                                 expression { 'x86_64-linux' == env.SYSTEM }
                                 anyOf {
-                                    branch 'main'; branch 'prodHotPush';
+                                    branch 'main'; branch 'prodHotPush-Common'; branch 'prodHotPush-BAP'; branch 'prodHotPush-BPP'; branch 'prodHotPush-Schedulers';
                                 }
                             }
                         }
@@ -50,7 +50,7 @@ pipeline {
                     stage ('Cachix push') {
                         when {
                             anyOf {
-                                branch 'main'; branch 'prodHotPush';
+                                branch 'main'; branch 'prodHotPush-Common'; branch 'prodHotPush-BAP'; branch 'prodHotPush-BPP'; branch 'prodHotPush-Schedulers';
                             }
                         }
                         steps {
