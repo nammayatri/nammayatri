@@ -27,13 +27,14 @@ import Kernel.Utils.Common
 buildStatusReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DBooking.FRFSTicketBooking ->
+  Text ->
   m (Spec.StatusReq)
-buildStatusReq booking = do
+buildStatusReq booking bapId = do
   let transactionId = booking.searchId.getId
   messageId <- generateGUID
 
   merchantId <- booking.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
-  context <- Utils.buildContext Spec.INIT merchantId transactionId messageId Nothing
+  context <- Utils.buildContext Spec.INIT merchantId bapId transactionId messageId Nothing
 
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "bppOrderId not found")
   pure $

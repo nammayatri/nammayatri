@@ -28,13 +28,14 @@ import Kernel.Utils.Common
 buildInitReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DTBooking.FRFSTicketBooking ->
+  Text ->
   m (Spec.InitReq)
-buildInitReq tBooking = do
+buildInitReq tBooking bapId = do
   let transactionId = tBooking.searchId.getId
   messageId <- generateGUID
 
   merchantId <- tBooking.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
-  context <- Utils.buildContext Spec.INIT merchantId transactionId messageId Nothing
+  context <- Utils.buildContext Spec.INIT merchantId bapId transactionId messageId Nothing
 
   pure $
     Spec.InitReq
