@@ -25,22 +25,18 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
-import Servant hiding (throwError)
 import Storage.Beam.SystemConfigs ()
 
-type API =
-  SignatureAuth "X-Gateway-Authorization"
-    :> Spec.OnSearchAPI
+type API = Spec.OnSearchAPI
 
 handler :: SignatureAuthResult -> FlowServer API
 handler = onSearch
 
 onSearch ::
   SignatureAuthResult ->
-  SignatureAuthResult ->
   Spec.OnSearchReq ->
   FlowHandler Spec.AckResponse
-onSearch _ _ req = withFlowHandlerAPI $ do
+onSearch _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onSearchReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   withTransactionIdLogTag' transaction_id $ do
     message_id <- req.onSearchReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
