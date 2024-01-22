@@ -18,10 +18,15 @@ module Domain.Action.UI.Search.OneWay
     OneWaySearchRes (..),
     DSearch.SearchReqLocation (..),
     oneWaySearch,
+    readCsvAndGetEfficientRouteInfo,
   )
 where
 
 import Control.Monad
+import qualified Data.ByteString.Lazy as BL
+import Data.Csv
+import qualified Data.Text as T
+import qualified Data.Vector as V
 import Domain.Action.UI.HotSpot
 import qualified Domain.Action.UI.Search.Common as DSearch
 import qualified Domain.Action.UI.Serviceability as Serviceability
@@ -61,6 +66,7 @@ import qualified Storage.Queries.NextBillionData as QNB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import System.Directory
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -281,3 +287,110 @@ getEfficientRouteInfo routeInfos distanceWeight durationWeight = do
   if resultInfoIdx < length routeInfos
     then Just (routeInfos !! resultInfoIdx)
     else Nothing
+
+data NextBillionCsvRow = NextBillionCsvRow
+  { routes :: Text,
+    searchRequestId :: Text,
+    routeOne :: Text,
+    distanceOne :: Text,
+    durationOne :: Text,
+    routeTwo :: Text,
+    distanceTwo :: Text,
+    durationTwo :: Text,
+    routeThree :: Text,
+    distanceThree :: Text,
+    durationThree :: Text,
+    efficientRoute :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+instance FromNamedRecord NextBillionCsvRow where
+  parseNamedRecord r =
+    NextBillionCsvRow
+      <$> r .: "routes"
+      <*> r .: "search_request_id"
+      <*> r .: "route_one"
+      <*> r .: "distance_one"
+      <*> r .: "duration_one"
+      <*> r .: "route_two"
+      <*> r .: "distance_two"
+      <*> r .: "duration_two"
+      <*> r .: "route_three"
+      <*> r .: "distance_three"
+      <*> r .: "duration_three"
+      <*> r .: "efficient_route"
+
+instance ToNamedRecord NextBillionCsvRow where
+  toNamedRecord row =
+    namedRecord
+      [ "routes" .= routes row,
+        "search_request_id" .= searchRequestId row,
+        "route_one" .= routeOne row,
+        "distance_one" .= distanceOne row,
+        "duration_one" .= durationOne row,
+        "route_two" .= routeTwo row,
+        "distance_two" .= distanceTwo row,
+        "duration_two" .= durationTwo row,
+        "route_three" .= routeThree row,
+        "distance_three" .= distanceThree row,
+        "duration_three" .= durationThree row,
+        "efficient_route" .= efficientRoute row
+      ]
+
+replaceAll :: T.Text -> T.Text -> T.Text -> T.Text
+replaceAll target replacement input =
+  if T.isInfixOf target input
+    then replaceAll target replacement (T.replace target replacement input)
+    else input
+
+readCsvAndGetEfficientRouteInfo :: IO ()
+readCsvAndGetEfficientRouteInfo = do
+  currentDirectory <- getCurrentDirectory
+  putStrLn $ "Current Working Directory: " ++ currentDirectory
+  csvData <- BL.readFile "data.csv"
+  case decodeByName @NextBillionCsvRow csvData of
+    Left err -> putStrLn $ "Error: " ++ err
+    Right (csvHeader, csvResults) -> do
+      -- forM_ csvResults $ \result -> do
+      --   putStrLn (replaceAll "\",\"" "," $ replaceAll "{\"" "[" $ replaceAll "\"}" "]" $ replaceAll "\"\"" "" result.routes)
+      --   let routesInfo :: [Maps.RouteInfo] = read $ T.unpack (replaceAll "\",\"" "," $ replaceAll "{\"" "[" $ replaceAll "\"}" "]" $ replaceAll "\"\"" "" result.routes)
+      --   putStrLn $ "[Maps.RouteInfo]: " ++ show routesInfo
+      let outputRows = map processRow (V.toList csvResults)
+      BL.writeFile "output.csv" $ encodeByName csvHeader outputRows
+      putStrLn ("Output CSV file written successfully." :: Text)
+
+data Route = Route
+  { route :: Text,
+    distance :: Text,
+    duration :: Text
+  }
+
+-- SELECT routes, search_request_id, '{}' as route_one, '{}' as distance_one, '{}' as duration_one, '{}' as route_two, '{}' as distance_two, '{}' as duration_two, '{}' as route_three, '{}' as distance_three, '{}' as duration_three, '{}' as efficient_route FROM atlas_app.next_billion_data LIMIT 1;
+-- readMaybe "[RouteInfo {duration = Just 1244, distance = Just 5871, boundingBox = Nothing, snappedWaypoints = [], points = [LatLong {lat = 12.95003, lon = 77.60797}]}]" :: Maybe [Maps.RouteInfo]
+processRow :: NextBillionCsvRow -> NextBillionCsvRow
+processRow result =
+  let routesInfo :: [Maps.RouteInfo] = read $ T.unpack (replaceAll "\",\"" "," $ replaceAll "{\"" "[" $ replaceAll "\"}" "]" $ replaceAll "\"\"" "" result.routes)
+      distanceWeightage = 70
+      durationWeightage = 100 - distanceWeightage
+      efficientRoute =
+        fromMaybe "{}" (encodeToText <$> getEfficientRouteInfo routesInfo distanceWeightage durationWeightage)
+      (routeOne, routeTwo, routeThree) =
+        case routesInfo of
+          [routeOne', routeTwo', routeThree'] -> (Route (encodeToText routeOne') (maybe "" show routeOne'.distance) (maybe "" show routeOne'.duration), Route (encodeToText routeTwo') (maybe "" show routeTwo'.distance) (maybe "" show routeTwo'.duration), Route (encodeToText routeThree') (maybe "" show routeThree'.distance) (maybe "" show routeThree'.duration))
+          [routeOne', routeTwo'] -> (Route (encodeToText routeOne') (maybe "" show routeOne'.distance) (maybe "" show routeOne'.duration), Route (encodeToText routeTwo') (maybe "" show routeTwo'.distance) (maybe "" show routeTwo'.duration), Route "{}" "" "")
+          [routeOne'] -> (Route (encodeToText routeOne') (maybe "" show routeOne'.distance) (maybe "" show routeOne'.duration), Route "{}" "" "", Route "{}" "" "")
+          _ -> (Route "{}" "" "", Route "{}" "" "", Route "{}" "" "")
+   in NextBillionCsvRow
+        { routes = result.routes,
+          searchRequestId = result.searchRequestId,
+          routeOne = routeOne.route,
+          distanceOne = routeOne.distance,
+          durationOne = routeOne.duration,
+          routeTwo = routeTwo.route,
+          distanceTwo = routeTwo.distance,
+          durationTwo = routeTwo.duration,
+          routeThree = routeThree.route,
+          distanceThree = routeThree.distance,
+          durationThree = routeThree.duration,
+          efficientRoute = efficientRoute
+        }

@@ -64,6 +64,7 @@ dependencies:
   - bytestring
   - cryptonite
   - cryptostore >= 0.2.3.0
+  - cassava
   - x509
   - euler-hs
   - lens

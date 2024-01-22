@@ -473,6 +473,7 @@ library
     , beckn-spec
     , bytestring
     , casing
+    , cassava
     , cereal
     , containers
     , cryptonite
@@ -586,6 +587,7 @@ executable rider-app-exe
     , beckn-spec
     , bytestring
     , casing
+    , cassava
     , cereal
     , containers
     , cryptonite
