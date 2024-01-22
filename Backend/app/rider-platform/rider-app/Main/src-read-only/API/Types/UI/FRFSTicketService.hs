@@ -15,7 +15,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import qualified Environment
-import EulerHS.Prelude hiding (id, sequence)
+import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Juspay.Types.CreateOrder
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
