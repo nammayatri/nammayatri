@@ -41,6 +41,7 @@ data DOnSearch = DOnSearch
     transactionId :: Text,
     messageId :: Text
   }
+  deriving (Show)
 
 data DQuote = DQuote
   { bppItemId :: Text,
@@ -48,6 +49,7 @@ data DQuote = DQuote
     vehicleType :: DStation.FRFSVehicleType,
     stations :: [DStation]
   }
+  deriving (Show)
 
 data DStation = DStation
   { stationCode :: Text,
@@ -57,6 +59,7 @@ data DStation = DStation
     stationType :: DTrip.StationType,
     stopSequence :: Int
   }
+  deriving (Show)
 
 validateRequest :: DOnSearch -> Flow (Merchant, Search.FRFSSearch)
 validateRequest DOnSearch {..} = do
@@ -76,7 +79,9 @@ onSearch onSearchReq merchant search = do
   return ()
 
 mkQuotes :: DOnSearch -> Search.FRFSSearch -> Merchant -> DQuote -> Flow Quote.FRFSQuote
-mkQuotes dOnSearch search merchant DQuote {..} = do
+mkQuotes dOnSearch search merchant quote'@DQuote {..} = do
+  logDebug $ "Creating quote for search: " <> show search <> " and quote: " <> show quote'
+  logDebug $ "Creating quote for dOnSearch: " <> show dOnSearch
   dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
   dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
 
