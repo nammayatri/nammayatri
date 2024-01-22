@@ -101,7 +101,7 @@ _:
               if [ -n "$pid" ]; then
                 echo "Sending SIGTERM to processs running on ${builtins.toString port}:"
                 echo "$pid"
-                echo "$pid" | ${pkgs.findutils}/bin/xargs ${pkgs.procps}/bin/kill
+                echo "$pid" | ${pkgs.findutils}/bin/xargs kill
               else
                 echo "No processes found on port ${builtins.toString port}"
               fi
