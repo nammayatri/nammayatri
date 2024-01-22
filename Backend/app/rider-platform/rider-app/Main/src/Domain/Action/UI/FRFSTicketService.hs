@@ -78,6 +78,7 @@ getFrfsStations _ vehicleType_ = do
 postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Station.FRFSVehicleType -> API.Types.UI.FRFSTicketService.FRFSSearchAPIReq -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
 postFrfsSearch (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..} = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   fromStation <- QStation.findByStationCode fromStationCode >>= fromMaybeM (InvalidRequest "Invalid from station id")
   toStation <- QStation.findByStationCode toStationCode >>= fromMaybeM (InvalidRequest "Invalid to station id")
 
@@ -99,9 +100,8 @@ postFrfsSearch (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..} = do
           }
   QFRFSSearch.create searchReq
   fork "FRFS SearchReq" $ do
-    gatewayUrl <- parseBaseUrl "https://gateway.beckn.org" & fromMaybeM (InvalidRequest "Invalid gateway url") -- TODO: get Gateway url from Merchant
     bknSearchReq <- ACL.buildSearchReq searchReq fromStation toStation
-    void $ CallBPP.search gatewayUrl bknSearchReq
+    void $ CallBPP.search merchant.frfsGatewayUrl bknSearchReq
   return $ FRFSSearchAPIRes searchReqId
 
 getFrfsSearchQuote :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
