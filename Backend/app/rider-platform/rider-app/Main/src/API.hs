@@ -20,6 +20,7 @@ where
 
 import qualified API.Beckn as Beckn
 import qualified API.Dashboard as Dashboard
+import qualified API.FRFS as FRFS
 import qualified API.Internal as Internal
 import qualified API.MetroBeckn as MetroBeckn
 import qualified API.UI as UI
@@ -40,6 +41,7 @@ import Storage.Beam.SystemConfigs ()
 
 type API =
   MainAPI
+    :<|> FRFS.APIM
     :<|> SwaggerAPI
     :<|> OpenAPI
     :<|> Raw
@@ -59,6 +61,7 @@ type MainAPI =
 handler :: FlowServer API
 handler =
   mainServer
+    :<|> const FRFS.handler
     :<|> writeSwaggerHTMLFlow
     :<|> writeOpenAPIFlow
     :<|> serveDirectoryWebApp "swagger"

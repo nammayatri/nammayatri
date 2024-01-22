@@ -61,6 +61,7 @@ library
       API.Dashboard.RideBooking.Search
       API.Dashboard.RideBooking.Select
       API.Dashboard.Tickets
+      API.FRFS
       API.Internal
       API.Internal.Rating
       API.MetroBeckn
