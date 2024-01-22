@@ -105,7 +105,7 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
   MB.maybe (continue state) (\currTextField -> predictionClicked currTextField ) state.props.focussedTextField
   where 
     predictionClicked currTextField = do 
-      let updatedLoc = {placeId : item.placeId, address : item.description, lat : item.lat, lon : item.lon, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress}
+      let updatedLoc = {placeId : item.placeId, address : item.description, lat : item.lat, lon : item.lon, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress, metroInfo : MB.Nothing}
           newState = if currTextField == SearchLocPickup then 
                       state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false }} 
                       else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false} }
@@ -166,7 +166,7 @@ eval (InputViewAC _ (InputViewController.InputChanged value)) state = do
       ]
 
 eval (UpdateLocAndLatLong recentSearches lat lng) state = do 
-  let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "Current Location" , lat : NUM.fromString lat , lon : NUM.fromString lng}
+  let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "Current Location" , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing}
   continue state{ data 
                     { srcLoc = MB.Just updatedLoc
                     , currentLoc = MB.Just updatedLoc

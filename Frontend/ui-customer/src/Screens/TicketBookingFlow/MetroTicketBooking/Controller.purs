@@ -33,6 +33,8 @@ data Action = AfterRender
             | DecrementTicket
             | MetroRouteMapAction
             | ToggleTermsAndConditions
+            | SelectSource
+            | SelectDestination
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
@@ -62,4 +64,9 @@ eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
 eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSelected = not state.props.termsAndConditionsSelected}}
 
 eval (ChangeTicketTab ticketType) state = continue state { data {ticketType = ticketType }}
+
+eval SelectSource state = updateAndExit state $ UpdateAction state
+
+eval SelectDestination state = updateAndExit state $ UpdateAction state
+
 eval _ state = continue state

@@ -2979,7 +2979,7 @@ searchLocationFlow = do
                           pickUpPoints /= state.data.nearByGates
           dummyLocInfo = {  lat : Nothing,  lon : Nothing,  placeId : Nothing,  address : "", addressComponents : dummyAddress, city : Nothing}
           locOnMap = state.data.mapLoc
-          updatedState = { lat : fromString lat, lon : fromString lon, placeId : locOnMap.placeId, address : locOnMap.address, addressComponents : locOnMap.addressComponents , city : Just cityName  } 
+          updatedState = { lat : fromString lat, lon : fromString lon, placeId : locOnMap.placeId, address : locOnMap.address, addressComponents : locOnMap.addressComponents , city : Just cityName , metroInfo : Nothing} 
       modifyScreenState 
         $ SearchLocationScreenStateType 
             (\slsState -> slsState{data{ mapLoc = updatedState}})
@@ -2998,7 +2998,7 @@ searchLocationFlow = do
           gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoint)
       when (isDistMoreThanThreshold ) do  
         PlaceName address <- getPlaceName lat lon gateAddress 
-        let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing}
+        let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing, metroInfo : Nothing}
         modifyScreenState 
           $ SearchLocationScreenStateType 
               (\ slsState -> slsState { data  {mapLoc = updatedAddress, confirmLocCategory = ""} }) 
@@ -3171,7 +3171,7 @@ predictionClickedFlow prediction state = do
 
     mkSrcAndDestLoc :: Number -> Number -> SearchLocationScreenState -> SearchLocationTextField -> LocationListItemState -> Maybe String -> {sourceLoc :: Maybe LocationInfo, destinationLoc :: Maybe LocationInfo, updatedState :: LocationInfo}
     mkSrcAndDestLoc placeLat placeLon state currTextField prediction city = 
-      let updatedState = {lat : Just placeLat, lon : Just placeLon, city : Just (getCityNameFromCode city ), addressComponents : encodeAddress prediction.description [] Nothing , placeId : prediction.placeId, address : prediction.description} 
+      let updatedState = {lat : Just placeLat, lon : Just placeLon, city : Just (getCityNameFromCode city ), addressComponents : encodeAddress prediction.description [] Nothing , placeId : prediction.placeId, address : prediction.description, metroInfo : Nothing} 
           sourceLoc = if currTextField == SearchLocPickup then Just updatedState else state.data.srcLoc
           destinationLoc = if currTextField == SearchLocPickup then state.data.destLoc else Just updatedState
       in {sourceLoc, destinationLoc, updatedState}
