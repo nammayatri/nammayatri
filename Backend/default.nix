@@ -6,6 +6,7 @@
     ./nix/scripts.nix
     ./nix/run-mobility-stack.nix
     ./nix/arion-configuration.nix
+    ./nix/services.nix
     ./nix/osrm.nix
     ./load-test
   ];

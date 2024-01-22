@@ -27,11 +27,12 @@ To build or develop the project, you need to install the following.
 
 Aside from Nix, you also need to:
 
-1. Install [Docker](https://www.docker.com/products/docker-desktop/) (we use [arion]--a `docker-compose` invoker in Nix--for running external service dependencies).
+1. Install [Docker](https://www.docker.com/products/docker-desktop/)[^when-docker] (we use [arion]--a `docker-compose` invoker in Nix--for running external service dependencies).
     - If you are on macOS, open *Docker -> Preferences... -> Resources -> File Sharing* in Docker Desktop and add `/nix/store` to the list of shared folders. ![image](https://user-images.githubusercontent.com/3998/235455381-f88466b7-ee29-4baf-b0a9-4ddcf54ba402.png)
 
 1. Install [Xcode](https://developer.apple.com/xcode/), if you are on macOS.
 
+[^when-docker]: Docker is only used to run monitoring tools and pgadmin, native support for them is WIP in [services-flake]: [Grafana](https://github.com/juspay/services-flake/issues/59), [Prometheus](https://github.com/juspay/services-flake/issues/60), [pgadmin](https://github.com/juspay/services-flake/issues/80)
 
 ### Building
 
@@ -100,14 +101,14 @@ To speed up the compilation times, we use 6 parallel jobs by default. If you hav
 
 #### Running external services
 
-To run the project, we'd first need to run some services. These are provided via docker images, that are built in Nix and run via [arion].
+To run the project, we'd first need to run some services. These are provided via [services-flake].
 
-For running the database, redis, passetto and kafka run this command:
+For running the database, redis, passetto, osrm-server and kafka run this command:
 
 ```sh
-# NOTE: You must run this from inside nix develop shell.
-# The `-d` option will run the containers in background. Remove `-d` if you want to run them in foreground.
-, run-svc -d
+# Note: This will create a `data` directory in the root of the project, it will persist the data
+# on restart. If you want a fresh start, you can delete the entire `data` directory and re-run:
+, run-svc
 ```
 
 That should run most of the services required.
@@ -124,12 +125,6 @@ For running monitoring services like prometheus and grafana use this command:
 
 ```sh
 , run-monitoring
-```
-
-To run osrm-server (which is not using Docker), run:
-
-```sh
-nix run .#osrm-server
 ```
 
 #### Running backend services
@@ -279,6 +274,7 @@ Run `nix run github:nix-community/nix-melt` to navigate and find that transitive
 [nammayatri]: https://www.nammayatri.in/
 [haskell]: https://www.haskell.org/
 [arion]: https://github.com/hercules-ci/arion
+[services-flake]: https://github.com/juspay/services-flake
 [cabal]: https://cabal.readthedocs.io/
 [nix-shell]: https://nixos.wiki/wiki/Development_environment_with_nix-shell
 

@@ -2606,6 +2606,43 @@
         "url": "https://download.geofabrik.de/asia/india/southern-zone-230101.osm.pbf"
       }
     },
+    "passetto": {
+      "inputs": {
+        "flake-parts": [
+          "common",
+          "flake-parts"
+        ],
+        "haskell-flake": [
+          "common",
+          "haskell-flake"
+        ],
+        "nixpkgs": [
+          "common",
+          "nixpkgs"
+        ],
+        "process-compose-flake": [
+          "common",
+          "process-compose-flake"
+        ],
+        "services-flake": [
+          "services-flake"
+        ]
+      },
+      "locked": {
+        "lastModified": 1705397217,
+        "narHash": "sha256-FZtmvLJCCVlNvqHOJ+nUaywSUFgzDAVo6MHNglu4J8A=",
+        "owner": "nammayatri",
+        "repo": "passetto",
+        "rev": "5381386a1892f2f0d46a59ba144f1b2a624a8920",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nammayatri",
+        "ref": "nixify",
+        "repo": "passetto",
+        "type": "github"
+      }
+    },
     "passetto-hs": {
       "flake": false,
       "locked": {
@@ -2966,6 +3003,8 @@
           "nixpkgs"
         ],
         "osrm-pbf": "osrm-pbf",
+        "passetto": "passetto",
+        "services-flake": "services-flake_2",
         "shared-kernel": "shared-kernel"
       }
     },
@@ -3092,6 +3131,21 @@
         "owner": "juspay",
         "repo": "services-flake",
         "rev": "b93a612aa7057fbb395c79a915672f9b6567ffea",
+        "type": "github"
+      },
+      "original": {
+        "owner": "juspay",
+        "repo": "services-flake",
+        "type": "github"
+      }
+    },
+    "services-flake_2": {
+      "locked": {
+        "lastModified": 1705557495,
+        "narHash": "sha256-G37+Jze0LzuxJ4tRDWnp07pKg7icOK6uDWLyo8a5nRE=",
+        "owner": "juspay",
+        "repo": "services-flake",
+        "rev": "bf3a582502dba221f1b0bf147f1d1b84da416f06",
         "type": "github"
       },
       "original": {

@@ -6,6 +6,8 @@ result-*
 .direnv
 /.pre-commit-config.yaml
 .envrc
+## Data directory used by services
+/data
 
 # Backend ignores
 dist-newstyle
