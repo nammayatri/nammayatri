@@ -108,5 +108,6 @@ dummyLocationInfo = {
   placeId : Nothing,
   address : "",
   addressComponents : dummyAddress,
-  city : Nothing 
+  city : Nothing ,
+  metroInfo : Nothing
 }

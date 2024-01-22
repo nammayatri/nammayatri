@@ -82,8 +82,10 @@ view push state =
                 , selectionTab "Round Trip" ST.ROUND_TRIP push state
                 ]
             ]
-        , srcEditTextView push state
-        , destEditTextView push state
+        -- , srcEditTextView push state
+        , srcTextView push state
+        -- , destEditTextView push state
+        , destTextView push state
         , linearLayout
             [ height WRAP_CONTENT
             , width MATCH_PARENT
@@ -332,6 +334,89 @@ destEditTextView push state =
   -- , accessibilityHint "Name edit Text field"
   ][PrimaryEditText.view (push <<< DestinationEditText) (metroDestEditText state)]
 
+srcTextView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
+srcTextView push state =
+  linearLayout 
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginBottom 16
+    ][ textView $ 
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text "From"
+          , color Color.black900
+          , gravity LEFT
+          , lineHeight "28"
+          , singleLine true
+          , margin $ Margin 0 0 0 10
+          , alpha 1.0
+          , accessibility ENABLE
+          ] <> (FontStyle.getFontStyle FontStyle.Body3 LanguageStyle)
+    , linearLayout
+    [ height $ V 54
+    , width MATCH_PARENT
+    , background Color.white900
+    , cornerRadius 5.0
+    , gravity CENTER_VERTICAL
+    , onClick push $ const SelectSource
+    , stroke ("1," <> Color.borderColorLight)
+    ][
+      textView $ 
+        [ height MATCH_PARENT
+        , width WRAP_CONTENT
+        , text "Starting From?"
+        , color Color.black800
+        , gravity CENTER_VERTICAL
+        , lineHeight "28"
+        , singleLine true
+        , margin $ Margin 20 0 10 0
+        , alpha 1.0
+        ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle)
+    ]
+    ]
+
+destTextView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
+destTextView push state =
+  linearLayout 
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin $ MarginBottom 16
+    ][ textView $ 
+          [ height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , text "To"
+          , color Color.black900
+          , gravity LEFT
+          , lineHeight "28"
+          , singleLine true
+          , margin $ Margin 0 0 0 10
+          , alpha 1.0
+          , accessibility ENABLE
+          ] <> (FontStyle.getFontStyle FontStyle.Body3 LanguageStyle)
+    , linearLayout
+    [ height $ V 54
+    , width MATCH_PARENT
+    , background Color.white900
+    , cornerRadius 5.0
+    , gravity CENTER_VERTICAL
+    , onClick push $ const SelectDestination
+    , stroke ("1," <> Color.borderColorLight)
+    ][
+      textView $ 
+        [ height MATCH_PARENT
+        , width WRAP_CONTENT
+        , text "Where to?"
+        , color Color.black800
+        , gravity CENTER_VERTICAL
+        , lineHeight "28"
+        , singleLine true
+        , margin $ Margin 20 0 10 0
+        , alpha 0.5
+        ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle)
+    ]
+    ]
 
 updateButtonView :: forall w. ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 updateButtonView state push = 

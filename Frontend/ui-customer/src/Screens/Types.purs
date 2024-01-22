@@ -2059,8 +2059,19 @@ type LocationInfo =
     placeId :: Maybe String ,
     address :: String ,
     addressComponents :: Address ,
-    city :: Maybe City
+    city :: Maybe City,
+    metroInfo :: Maybe MetroStation
   }
+
+type MetroStation = {
+  code :: String
+  , name :: String
+  , lat :: Maybe Number
+  , lon :: Maybe Number
+  , address :: Maybe String
+  , stationType :: Maybe String
+  , color :: Maybe String
+}
 -- ######################################### MetroTicketBookingScreenState ####################################################
 
 type MetroTicketBookingScreenState = {

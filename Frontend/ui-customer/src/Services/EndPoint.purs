@@ -209,8 +209,8 @@ searchMetro dummy = (getBaseUrl "48") <> "/frfs/search?vehicleType=\"METRO\""
 getMetroQuotes :: String -> String
 getMetroQuotes searchId = (getBaseUrl "49") <> "/frfs/search/" <> searchId <> "/quote"
 
-confirmMetroQuotes :: String -> String
-confirmMetroQuotes quoteId = (getBaseUrl "50") <> "/frfs/quote/" <> quoteId <> "/confirm"
+confirmMetroQuote :: String -> String
+confirmMetroQuote quoteId = (getBaseUrl "50") <> "/frfs/quote/" <> quoteId <> "/confirm"
 
 getMetroBookingStatus :: String -> String
 getMetroBookingStatus bookingId = (getBaseUrl "51") <> "/frfs/booking/" <> bookingId <> "/status"
