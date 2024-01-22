@@ -19,6 +19,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Control.Lens ((%~))
+import Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Kernel.Prelude
@@ -40,12 +41,12 @@ buildContext action merchantId bapId txnId msgId mTTL = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId) <&> showBaseUrlText
   return $
     Spec.Context
-      { contextAction = Just $ encodeToText action,
+      { contextAction = encodeToText' action,
         contextBapId = Just bapId,
         contextBapUri = Just bapUrl,
         contextBppId = Nothing,
         contextBppUri = Nothing,
-        contextDomain = Just $ encodeToText Spec.FRFS,
+        contextDomain = encodeToText' Spec.FRFS,
         contextKey = Nothing,
         contextLocation = Nothing,
         contextMessageId = Just msgId,
@@ -58,7 +59,7 @@ buildContext action merchantId bapId txnId msgId mTTL = do
 getStartStop :: [Spec.Stop] -> Maybe Spec.Stop
 getStartStop stops = stops & find (\stop -> stop.stopType == start)
   where
-    start = Just $ encodeToText Spec.START
+    start = encodeToText' Spec.START
 
 mkFareBreakup :: (MonadFlow m) => Spec.QuotationBreakupInner -> m Domain.DFareBreakUp
 mkFareBreakup fareBreakup = do
@@ -121,9 +122,9 @@ mkPayment paymentStatus mAmount mTxnId =
     { paymentCollectedBy = Just "BAP",
       paymentId = Nothing,
       paymentParams = mTxnId >>= (\txnId -> mAmount <&> (mkPaymentParams txnId)),
-      paymentStatus = Just $ encodeToText paymentStatus,
+      paymentStatus = encodeToText' paymentStatus,
       paymentTags = Just $ mkPaymentTags mAmount,
-      paymentType = Just $ encodeToText Spec.PRE_ORDER
+      paymentType = encodeToText' Spec.PRE_ORDER
     }
 
 mkPaymentParams :: TxnId -> Amount -> Spec.PaymentParams
@@ -219,3 +220,6 @@ mkSettlementTagGroup mAmount =
                 tagValue = Just "https://api.example-bap.com/booking/terms" -- TODO: update with actual terms url
               }
         ]
+
+encodeToText' :: (ToJSON a) => a -> Maybe Text
+encodeToText' = A.decode . A.encode
