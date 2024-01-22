@@ -79,7 +79,7 @@ tfStops fromStation toStation =
           stopId = Nothing,
           stopInstructions = Nothing,
           stopLocation = tfLocation $ fromStation,
-          stopType = Just $ encodeToText Spec.START,
+          stopType = Utils.encodeToText' Spec.START,
           stopParentStopId = Nothing
         },
       Spec.Stop
@@ -87,7 +87,7 @@ tfStops fromStation toStation =
           stopId = Nothing,
           stopInstructions = Nothing,
           stopLocation = tfLocation $ toStation,
-          stopType = Just $ encodeToText Spec.END,
+          stopType = Utils.encodeToText' Spec.END,
           stopParentStopId = Nothing
         }
     ]
@@ -104,5 +104,5 @@ tfVehicle :: DSearch.FRFSSearch -> Maybe Spec.Vehicle
 tfVehicle search =
   Just $
     Spec.Vehicle
-      { vehicleCategory = Just $ encodeToText search.vehicleType
+      { vehicleCategory = Utils.encodeToText' search.vehicleType
       }

@@ -107,7 +107,7 @@ tfPayments :: DBooking.FRFSTicketBooking -> Text -> Maybe [Spec.Payment]
 tfPayments booking txnId =
   Just $
     singleton $
-      Utils.mkPayment Spec.NOT_PAID (Just $ encodeToText booking.price) (Just txnId)
+      Utils.mkPayment Spec.NOT_PAID (Utils.encodeToText' booking.price) (Just txnId)
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =
