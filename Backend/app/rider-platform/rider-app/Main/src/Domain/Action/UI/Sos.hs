@@ -151,6 +151,7 @@ postSosCreateMockSos :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Flow
 postSosCreateMockSos (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  when (not $ fromMaybe False person.hasCompletedMockSafetyDrill) $ QP.updateSafetyDrillStatus personId $ Just True
   DP.notifyEmergencyContacts person notificationTitle (notificationBody person) Notification.SOS_MOCK_DRILL Nothing False
   pure APISuccess.Success
   where

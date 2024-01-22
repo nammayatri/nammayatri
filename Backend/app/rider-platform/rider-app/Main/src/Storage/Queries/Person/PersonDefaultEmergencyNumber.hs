@@ -59,6 +59,7 @@ instance FromTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergency
           { personId = Id personId,
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
             contactPersonId = Id <$> contactPersonId,
+            priority = priority,
             ..
           }
 
