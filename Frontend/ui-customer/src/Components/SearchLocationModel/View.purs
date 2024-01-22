@@ -148,7 +148,7 @@ searchLottieLoader push state =
       , id (getNewIDWithTag "searchLoader")
       , visibility if state.showLoader then VISIBLE else GONE
       , afterRender (\action -> do
-        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
+        void $ pure $ startLottieProcess lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/search_loader.json", lottieId = (getNewIDWithTag "searchLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8, forceToUseRemote = true}
         push action
         ) (const NoAction)
       ]

@@ -685,13 +685,11 @@ rateCardConfig state =
         , applicableCharges = if state.data.rateCard.nightCharges && state.data.rateCard.vehicleVariant == "AUTO_RICKSHAW" then (getString NIGHT_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLIED_AT_NIGHT)
                                  else (getString DAY_TIMES_OF) <> (HU.toStringJSON (state.data.rateCard.nightShiftMultiplier)) <> (getString DAYTIME_CHARGES_APPLICABLE_AT_NIGHT)
         , title = case MU.getMerchant FunctionCall of
-                      MU.NAMMAYATRI -> getString RATE_CARD
                       MU.YATRI -> getVehicleTitle state.data.rateCard.vehicleVariant
-                      _ -> ""
+                      _ -> getString RATE_CARD
         , fareList = case MU.getMerchant FunctionCall of
-                      MU.NAMMAYATRI -> nyRateCardList state
                       MU.YATRI -> yatriRateCardList state.data.rateCard.vehicleVariant state
-                      _ -> []
+                      _ -> nyRateCardList state
 
         , otherOptions  = [
           {key : "DRIVER_ADDITIONS", val : (getString DRIVER_ADDITIONS)},
