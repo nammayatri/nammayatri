@@ -100,7 +100,7 @@ postFrfsSearch (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..} = do
           }
   QFRFSSearch.create searchReq
   fork "FRFS SearchReq" $ do
-    bknSearchReq <- ACL.buildSearchReq searchReq fromStation toStation
+    bknSearchReq <- ACL.buildSearchReq searchReq merchant.bapId fromStation toStation
     void $ CallBPP.search merchant.frfsGatewayUrl bknSearchReq
   return $ FRFSSearchAPIRes searchReqId
 
@@ -146,6 +146,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
 
 postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
+  merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   dConfirmRes <- confirm
   -- handle (errHandler dConfirmRes.booking) $
   --   void $ withShortRetry $ CallBPP.init dConfirmRes.bppSubscriberUrl becknInitReq
@@ -153,7 +154,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
 
   when (isNothing dConfirmRes.bppOrderId) $ do
     providerUrl <- dConfirmRes.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-    bknInitReq <- ACL.buildInitReq dConfirmRes
+    bknInitReq <- ACL.buildInitReq dConfirmRes merchant.bapId
     void $ CallBPP.init providerUrl bknInitReq
   return $ makeBookingStatusAPI dConfirmRes stations
   where
@@ -206,6 +207,7 @@ postFrfsQuotePaymentRetry = error "Logic yet to be decided"
 getFrfsBookingStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   booking' <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   unless (personId == booking'.riderId) $ throwError AccessDenied
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -219,7 +221,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     DFRFSTicketBooking.FAILED -> buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.CONFIRMING -> buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.CONFIRMED -> do
-      callBPPStatus booking
+      callBPPStatus booking merchant.bapId
       buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.APPROVED -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
@@ -264,7 +266,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING
               fork "FRFS Confirm Req" $ do
                 providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-                bknConfirmReq <- ACL.buildConfirmReq booking txnId.getId
+                bknConfirmReq <- ACL.buildConfirmReq booking txnId.getId merchant.bapId
                 void $ CallBPP.confirm providerUrl bknConfirmReq
               buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
             else do
@@ -364,11 +366,11 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         [transaction] -> return transaction.id
         _ -> throwError $ InvalidRequest "Multiple successful transactions found"
 
-callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow ()
-callBPPStatus booking = do
+callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> Text -> Environment.Flow ()
+callBPPStatus booking bapId = do
   fork "FRFS Init Req" $ do
     providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-    bknStatusReq <- ACL.buildStatusReq booking
+    bknStatusReq <- ACL.buildStatusReq booking bapId
     void $ CallBPP.status providerUrl bknStatusReq
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]

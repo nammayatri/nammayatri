@@ -29,13 +29,14 @@ buildConfirmReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DBooking.FRFSTicketBooking ->
   Text ->
+  Text ->
   m (Spec.ConfirmReq)
-buildConfirmReq booking txnId = do
+buildConfirmReq booking txnId bapId = do
   let transactionId = booking.searchId.getId
   messageId <- generateGUID
 
   merchantId <- booking.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
-  context <- Utils.buildContext Spec.INIT merchantId transactionId messageId Nothing
+  context <- Utils.buildContext Spec.CONFIRM merchantId bapId transactionId messageId Nothing
 
   pure $
     Spec.ConfirmReq
