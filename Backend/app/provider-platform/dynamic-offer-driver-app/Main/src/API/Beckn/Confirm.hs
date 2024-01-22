@@ -102,7 +102,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandler
                     context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
                     onConfirmMessage <- ACL.buildOnConfirmMessageV2 dConfirmRes
                     void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage
-                    void $ BP.sendRideAssignedUpdateToBAP dConfirmRes.booking ride
+                    void $ BP.sendRideAssignedUpdateToBAP dConfirmRes.booking normalBookingInfo.ride driver normalBookingInfo.vehicle
                   else do
                     context <- buildTaxiContext Context.CONFIRM msgId txnId bapId callbackUrl bppId bppUri city country False
                     onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes

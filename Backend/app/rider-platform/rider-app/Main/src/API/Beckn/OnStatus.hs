@@ -17,6 +17,7 @@ module API.Beckn.OnStatus (API, handler) where
 import qualified Beckn.ACL.OnStatus as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnStatus as OnStatus
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T

@@ -158,7 +158,7 @@ callOnUpdate transporter bapId bapUri bapCity bapCountry transactionId content r
   void $ withRetryConfig retryConfig $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPIV1 bapUri internalEndPointHashMap (BecknCallbackReq context $ Right content)
 
 callOnUpdateV2 ::
-  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+  ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     MonadFlow m,
     CoreMetrics m,
     HasHttpClientOptions r c
@@ -200,7 +200,7 @@ callOnConfirm transporter contextFromConfirm content = do
 
 callOnConfirmV2 ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CoreMetrics m
@@ -552,7 +552,7 @@ sendSafetyAlertToBAP booking ride code reason = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  let safetyAlertBuildReq = ACL.SafetyAlertBuildReq {..}
+  let safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {..}
   safetyAlertMsg <- ACL.buildOnUpdateMessage safetyAlertBuildReq
   let mbCity = booking.bapCity
   let mbCountry = booking.bapCountry

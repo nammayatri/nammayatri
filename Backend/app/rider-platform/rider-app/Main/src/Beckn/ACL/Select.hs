@@ -171,7 +171,8 @@ mkStops origin destination =
                       locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
               stopType = Just "START",
-              stopAuthorization = Nothing
+              stopAuthorization = Nothing,
+              stopTime = Nothing
             },
           Spec.Stop
             { stopLocation =
@@ -186,7 +187,8 @@ mkStops origin destination =
                       locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
               stopType = Just "END",
-              stopAuthorization = Nothing
+              stopAuthorization = Nothing,
+              stopTime = Nothing
             }
         ]
 

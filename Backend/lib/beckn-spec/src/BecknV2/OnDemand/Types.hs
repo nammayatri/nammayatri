@@ -78,6 +78,7 @@ module BecknV2.OnDemand.Types
     Stop (..),
     Tag (..),
     TagGroup (..),
+    Time (..),
     TrackReq (..),
     TrackReqMessage (..),
     Tracking (..),
@@ -1840,6 +1841,8 @@ data Stop = Stop
     stopAuthorization :: Maybe Authorization,
     -- |
     stopLocation :: Maybe Location,
+    -- |
+    stopTime :: Maybe Time,
     -- | The type of stop. Allowed values of this property can be defined by the network policy.
     stopType :: Maybe Text
   }
@@ -1861,6 +1864,7 @@ optionsStop =
     table =
       [ ("stopAuthorization", "authorization"),
         ("stopLocation", "location"),
+        ("stopTime", "time"),
         ("stopType", "type")
       ]
 
@@ -1922,6 +1926,30 @@ optionsTagGroup =
       [ ("tagGroupDescriptor", "descriptor"),
         ("tagGroupDisplay", "display"),
         ("tagGroupList", "list")
+      ]
+
+-- | Describes time in its various forms. It can be a single point in time; duration; or a structured timetable of operations&lt;br&gt;This has properties like label, time stamp,duration,range, days, schedule
+data Time = Time
+  { -- |
+    timeTimestamp :: Maybe UTCTime
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Time where
+  parseJSON = genericParseJSON optionsTime
+
+instance ToJSON Time where
+  toJSON = genericToJSON optionsTime
+
+optionsTime :: Options
+optionsTime =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("timeTimestamp", "timestamp")
       ]
 
 -- |

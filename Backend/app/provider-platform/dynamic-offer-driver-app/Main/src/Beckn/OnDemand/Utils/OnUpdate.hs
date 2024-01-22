@@ -18,68 +18,17 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified Data.Aeson as A
 import qualified Data.List as List
-import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, (%~))
-import qualified Kernel.Types.Beckn.Gps as Gps
+import Kernel.Types.Beckn.DecimalValue (DecimalValue)
 import Kernel.Types.Common
 import Kernel.Utils.Common
+import SharedLogic.FareCalculator as Fare
 import Tools.Error
-
-mkStops :: DBooking.Booking -> Text -> Maybe [Spec.Stop]
-mkStops booking rideOtp =
-  let origin = booking.fromLocation
-      destination = booking.toLocation
-      originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
-      destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
-   in Just
-        [ Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = origin.address.building, -- JAYPAL, Confirm if it is correct to put it here
-                      locationAreaCode = origin.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing origin.address.city,
-                      locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                      locationGps = A.decode $ A.encode originGps,
-                      locationState = Just $ Spec.State origin.address.state,
-                      locationId = Nothing -- JAYPAL, Not sure what to keep here
-                    },
-              stopType = Just "START",
-              stopAuthorization =
-                Just $
-                  Spec.Authorization
-                    { authorizationToken = Just rideOtp,
-                      authorizationType = Just "OTP"
-                    }
-            },
-          Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = destination.address.building, -- JAYPAL, Confirm if it is correct to put it here
-                      locationAreaCode = destination.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing destination.address.city,
-                      locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                      locationGps = A.decode $ A.encode destinationGps,
-                      locationState = Just $ Spec.State destination.address.state,
-                      locationId = Nothing -- JAYPAL, Not sure what to keep here
-                    },
-              stopType = Just "END",
-              stopAuthorization = Nothing
-            }
-        ]
-
-mkFulfillmentType :: DBooking.BookingType -> Text
-mkFulfillmentType = \case
-  DBooking.NormalBooking -> "RIDE"
-  DBooking.SpecialZoneBooking -> "RIDE_OTP"
 
 mkRideCompletedPaymentType :: Maybe DMPM.PaymentMethodInfo -> Text
 mkRideCompletedPaymentType = show . maybe OnUpdate.ON_FULFILLMENT (Common.castDPaymentType . (.paymentType))
@@ -87,60 +36,102 @@ mkRideCompletedPaymentType = show . maybe OnUpdate.ON_FULFILLMENT (Common.castDP
 showPaymentCollectedBy :: Maybe DMPM.PaymentMethodInfo -> Text
 showPaymentCollectedBy = show . maybe OnUpdate.BPP (Common.castDPaymentCollector . (.collectedBy))
 
-showVariant :: DVeh.Variant -> Maybe Text
-showVariant = A.decode . A.encode
-
-mkRideAssignedPersonTags :: SP.Person -> Maybe [Spec.TagGroup]
-mkRideAssignedPersonTags driver =
-  Just
-    [ Spec.TagGroup
-        { tagGroupDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just "driver_details",
-                  descriptorName = Just "Driver Details",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupDisplay = Just False,
-          tagGroupList =
-            Just $
-              registeredAtSingleton
-                ++ driverRatingSingleton
-        }
-    ]
-  where
-    registeredAtSingleton =
-      List.singleton $
-        Spec.Tag
-          { tagDescriptor =
-              Just $
-                Spec.Descriptor
-                  { descriptorCode = Just "registered_at",
-                    descriptorName = Just "Registered At",
-                    descriptorShortDesc = Nothing
-                  },
-            tagDisplay = Just False,
-            tagValue = Just $ show driver.createdAt
+mkRideCompletedQuote :: MonadFlow m => DRide.Ride -> DFParams.FareParameters -> m Spec.Quotation
+mkRideCompletedQuote ride fareParams = do
+  fare' :: DecimalValue <- realToFrac <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present in RideCompletedReq ride.")
+  let fare = show fare'
+  let currency = "INR"
+      price =
+        Spec.Price
+          { priceComputedValue = Just fare,
+            priceCurrency = Just currency,
+            priceValue = Just fare,
+            priceMaximumValue = Nothing,
+            priceMinimumValue = Nothing,
+            priceOfferedValue = Nothing
           }
+      breakup =
+        Fare.mkBreakupList (mkPrice currency) mkBreakupItem fareParams
+          & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams)
+  pure
+    Spec.Quotation
+      { quotationBreakup = Just breakup,
+        quotationPrice = Just price,
+        quotationTtl = Nothing
+      }
+  where
+    mkPrice currency val =
+      Spec.Price
+        { priceCurrency = Just currency,
+          priceValue = Just . (show :: DecimalValue -> Text) $ fromIntegral val,
+          priceComputedValue = Nothing,
+          priceMaximumValue = Nothing,
+          priceMinimumValue = Nothing,
+          priceOfferedValue = Nothing
+        }
 
-    driverRatingSingleton
-      | isNothing driver.rating = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just "rating",
-                      descriptorName = Just "rating",
-                      descriptorShortDesc = Nothing
-                    },
-              tagDisplay = Just False,
-              tagValue = show <$> driver.rating
-            }
+    mkBreakupItem :: Text -> Spec.Price -> Spec.QuotationBreakupInner
+    mkBreakupItem title price =
+      Spec.QuotationBreakupInner
+        { quotationBreakupInnerTitle = Just title,
+          quotationBreakupInnerPrice = Just price
+        }
 
-mkRideDistanceDetailsTags :: MonadFlow m => DRide.Ride -> m (Maybe [Spec.TagGroup])
-mkRideDistanceDetailsTags ride = do
+    filterRequiredBreakups fParamsType breakup = do
+      let title = breakup.quotationBreakupInnerTitle
+      case fParamsType of
+        DFParams.Progressive ->
+          title
+            `elem` [ Just "BASE_FARE",
+                     Just "SERVICE_CHARGE",
+                     Just "DEAD_KILOMETER_FARE",
+                     Just "EXTRA_DISTANCE_FARE",
+                     Just "DRIVER_SELECTED_FARE",
+                     Just "CUSTOMER_SELECTED_FARE",
+                     Just "TOTAL_FARE",
+                     Just "WAITING_OR_PICKUP_CHARGES",
+                     Just "EXTRA_TIME_FARE",
+                     Just "CUSTOMER_CANCELLATION_DUES"
+                   ]
+        DFParams.Slab ->
+          title
+            `elem` [ Just "BASE_FARE",
+                     Just "SERVICE_CHARGE",
+                     Just "WAITING_OR_PICKUP_CHARGES",
+                     Just "PLATFORM_FEE",
+                     Just "SGST",
+                     Just "CGST",
+                     Just "FIXED_GOVERNMENT_RATE",
+                     Just "TOTAL_FARE",
+                     Just "CUSTOMER_SELECTED_FARE",
+                     Just "NIGHT_SHIFT_CHARGE",
+                     Just "EXTRA_TIME_FARE",
+                     Just "CUSTOMER_CANCELLATION_DUES"
+                   ]
+
+mkRideCompletedPayment :: Maybe DMPM.PaymentMethodInfo -> Maybe Text -> [Spec.Payment]
+mkRideCompletedPayment paymentMethodInfo _paymentUrl = do
+  let currency = "INR"
+  List.singleton $
+    Spec.Payment
+      { paymentCollectedBy = Just $ showPaymentCollectedBy paymentMethodInfo,
+        paymentParams =
+          Just $
+            Spec.PaymentParams
+              { paymentParamsCurrency = Just currency,
+                paymentParamsAmount = Nothing,
+                paymentParamsBankAccountNumber = Nothing,
+                paymentParamsBankCode = Nothing,
+                paymentParamsVirtualPaymentAddress = Nothing
+              },
+        paymentType = Just $ mkRideCompletedPaymentType paymentMethodInfo,
+        paymentId = Nothing,
+        paymentStatus = Nothing,
+        paymentTags = Nothing
+      }
+
+mkDistanceTagGroup :: MonadFlow m => DRide.Ride -> m (Maybe [Spec.TagGroup])
+mkDistanceTagGroup ride = do
   chargeableDistance :: HighPrecMeters <-
     realToFrac <$> ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present in OnUpdateBuildReq ride.")

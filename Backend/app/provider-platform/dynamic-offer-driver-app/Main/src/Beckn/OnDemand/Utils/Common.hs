@@ -20,10 +20,15 @@ import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
 import Data.Aeson
 import qualified Data.Aeson as A
+import qualified Data.List as List
 import qualified Data.Text as T
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, state, view, (%~), (^?))
 import Kernel.External.Maps as Maps
@@ -55,7 +60,8 @@ mkStops originGps destinationGps =
                   locationId = Nothing -- JAYPAL, Not sure what to keep here
                 },
           stopType = Just "START",
-          stopAuthorization = Nothing
+          stopAuthorization = Nothing,
+          stopTime = Nothing
         },
       Spec.Stop
         { stopLocation =
@@ -70,7 +76,8 @@ mkStops originGps destinationGps =
                   locationId = Nothing -- JAYPAL, Not sure what to keep here
                 },
           stopType = Just "END",
-          stopAuthorization = Nothing
+          stopAuthorization = Nothing,
+          stopTime = Nothing
         }
     ]
 
@@ -203,7 +210,8 @@ mkStops' origin destination mAuthorization =
                       locationId = Nothing
                     },
               stopType = Just "START",
-              stopAuthorization = mAuthorization >>= mkAuthorization
+              stopAuthorization = mAuthorization >>= mkAuthorization,
+              stopTime = Nothing
             },
           Spec.Stop
             { stopLocation =
@@ -218,7 +226,8 @@ mkStops' origin destination mAuthorization =
                       locationId = Nothing
                     },
               stopType = Just "END",
-              stopAuthorization = Nothing
+              stopAuthorization = Nothing,
+              stopTime = Nothing
             }
         ]
   where
@@ -232,3 +241,229 @@ mkStops' origin destination mAuthorization =
           { authorizationToken = Just auth,
             authorizationType = Just "OTP"
           }
+
+data DriverInfo = DriverInfo
+  { mobileNumber :: Text,
+    name :: Text,
+    tags :: Maybe [Spec.TagGroup]
+  }
+
+mkFulfillmentType :: DBooking.BookingType -> Text
+mkFulfillmentType = \case
+  DBooking.NormalBooking -> "RIDE"
+  DBooking.SpecialZoneBooking -> "RIDE_OTP"
+
+showVariant :: DVeh.Variant -> Maybe Text
+showVariant = A.decode . A.encode
+
+-- common for on_update & on_status
+mkStopsOUS :: DBooking.Booking -> DRide.Ride -> Text -> Maybe [Spec.Stop]
+mkStopsOUS booking ride rideOtp =
+  let origin = booking.fromLocation
+      destination = booking.toLocation
+      originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
+      destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
+   in Just
+        [ Spec.Stop
+            { stopLocation =
+                Just $
+                  Spec.Location
+                    { locationAddress = origin.address.building, -- JAYPAL, Confirm if it is correct to put it here
+                      locationAreaCode = origin.address.areaCode,
+                      locationCity = Just $ Spec.City Nothing origin.address.city,
+                      locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                      locationGps = A.decode $ A.encode originGps,
+                      locationState = Just $ Spec.State origin.address.state,
+                      locationId = Nothing -- JAYPAL, Not sure what to keep here
+                    },
+              stopType = Just "START",
+              stopAuthorization =
+                Just $
+                  Spec.Authorization
+                    { authorizationToken = Just rideOtp,
+                      authorizationType = Just "OTP"
+                    },
+              stopTime = Just $ Spec.Time {timeTimestamp = ride.tripStartTime}
+            },
+          Spec.Stop
+            { stopLocation =
+                Just $
+                  Spec.Location
+                    { locationAddress = destination.address.building, -- JAYPAL, Confirm if it is correct to put it here
+                      locationAreaCode = destination.address.areaCode,
+                      locationCity = Just $ Spec.City Nothing destination.address.city,
+                      locationCountry = Just $ Spec.Country Nothing destination.address.country,
+                      locationGps = A.decode $ A.encode destinationGps,
+                      locationState = Just $ Spec.State destination.address.state,
+                      locationId = Nothing -- JAYPAL, Not sure what to keep here
+                    },
+              stopType = Just "END",
+              stopAuthorization = Nothing,
+              stopTime = Just $ Spec.Time {timeTimestamp = ride.tripEndTime}
+            }
+        ]
+
+mkFulFillmentV2 ::
+  (MonadFlow m, EncFlow m r) =>
+  Maybe SP.Person ->
+  DRide.Ride ->
+  DBooking.Booking ->
+  Maybe DVeh.Vehicle ->
+  Maybe Text ->
+  Maybe [Spec.TagGroup] ->
+  Bool ->
+  Bool ->
+  Maybe Text ->
+  m Spec.Fulfillment
+mkFulFillmentV2 mbDriver ride booking mbVehicle mbImage mbTags isDriverBirthDay isFreeRide mbEvent = do
+  mbDInfo <- driverInfo
+  pure $
+    Spec.Fulfillment
+      { fulfillmentId = Just ride.id.getId,
+        fulfillmentStops = mkStopsOUS booking ride ride.otp,
+        fulfillmentType = Just $ mkFulfillmentType booking.bookingType,
+        fulfillmentAgent =
+          Just $
+            Spec.Agent
+              { agentContact =
+                  mbDInfo >>= \dInfo ->
+                    Just $
+                      Spec.Contact
+                        { contactPhone = Just dInfo.mobileNumber
+                        },
+                agentPerson =
+                  Just $
+                    Spec.Person
+                      { personId = Nothing,
+                        personImage =
+                          Just $
+                            Spec.Image
+                              { imageHeight = Nothing,
+                                imageSizeType = Nothing,
+                                imageUrl = mbImage,
+                                imageWidth = Nothing
+                              },
+                        personName = mbDInfo >>= Just . (.name),
+                        personTags = mbDInfo >>= (.tags)
+                      }
+              },
+        fulfillmentVehicle =
+          mbVehicle >>= \vehicle ->
+            Just $
+              Spec.Vehicle
+                { vehicleColor = Just vehicle.color,
+                  vehicleModel = Just vehicle.model,
+                  vehicleRegistration = Just vehicle.registrationNo,
+                  vehicleVariant = showVariant vehicle.variant,
+                  vehicleMake = Nothing,
+                  vehicleCategory = Nothing
+                },
+        fulfillmentCustomer = Nothing,
+        fulfillmentState =
+          mbEvent >>= \_ ->
+            Just $
+              Spec.FulfillmentState
+                { fulfillmentStateDescriptor =
+                    Just $
+                      Spec.Descriptor
+                        { descriptorCode = mbEvent,
+                          descriptorName = Nothing,
+                          descriptorShortDesc = Nothing
+                        }
+                },
+        fulfillmentTags = mbTags
+      }
+  where
+    driverInfo = forM mbDriver $ \driver -> do
+      dPhoneNum <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present in OnUpdateBuildReq.")
+      dName <- SP.getPersonFullName driver & fromMaybeM (PersonFieldNotPresent "firstName")
+      let dTags = mkDriverDetailsTags driver isDriverBirthDay isFreeRide
+      pure $
+        DriverInfo
+          { mobileNumber = dPhoneNum,
+            name = dName,
+            tags = dTags
+          }
+
+mkDriverDetailsTags :: SP.Person -> Bool -> Bool -> Maybe [Spec.TagGroup]
+mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
+  Just
+    [ Spec.TagGroup
+        { tagGroupDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "driver_details",
+                  descriptorName = Just "Driver Details",
+                  descriptorShortDesc = Nothing
+                },
+          tagGroupDisplay = Just False,
+          tagGroupList =
+            Just $
+              registeredAtSingleton
+                ++ driverRatingSingleton
+                ++ isDriverBirthDaySingleton
+                ++ isFreeRideSingleton
+        }
+    ]
+  where
+    registeredAtSingleton =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "registered_at",
+                    descriptorName = Just "Registered At",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = Just $ show driver.createdAt
+          }
+
+    driverRatingSingleton
+      | isNothing driver.rating = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "rating",
+                      descriptorName = Just "rating",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = show <$> driver.rating
+            }
+
+    isDriverBirthDaySingleton
+      | not isDriverBirthDay = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "is_driver_birthday",
+                      descriptorName = Just "Is Driver BirthDay",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show isDriverBirthDay
+            }
+
+    isFreeRideSingleton
+      | not isFreeRide = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "is_free_ride",
+                      descriptorName = Just "Is Free Ride",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show isFreeRide
+            }

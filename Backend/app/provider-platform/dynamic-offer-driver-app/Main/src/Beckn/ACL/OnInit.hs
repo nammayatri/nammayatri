@@ -23,6 +23,7 @@ import Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DL
+import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import Kernel.Utils.Common (encodeToText)
 import SharedLogic.FareCalculator

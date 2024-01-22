@@ -49,7 +49,8 @@ mkStops origin mDestination mStartOtp =
                       Spec.Authorization
                         { authorizationType = Just "OTP",
                           authorizationToken = mStartOtp
-                        }
+                        },
+              stopTime = Nothing
             },
           Spec.Stop
             { stopLocation =
@@ -66,7 +67,8 @@ mkStops origin mDestination mStartOtp =
                           locationId = Nothing -- JAYPAL, Not sure what to keep here
                         },
               stopType = Just "END",
-              stopAuthorization = Nothing
+              stopAuthorization = Nothing,
+              stopTime = Nothing
             }
         ]
 

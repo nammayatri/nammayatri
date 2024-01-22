@@ -16,7 +16,6 @@
 
 module Beckn.OnDemand.Utils.Callback where
 
-import qualified Data.HashMap as HM
 import Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding ((.~))
 import qualified EulerHS.Types as ET
@@ -60,7 +59,7 @@ type WithBecknCallback api callback_result m =
   Action ->
   Proxy api ->
   BaseUrl ->
-  HM.Map BaseUrl BaseUrl ->
+  HashMap BaseUrl BaseUrl ->
   (BecknAPIError -> callback_result) ->
   m callback_result ->
   m AckResponse

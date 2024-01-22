@@ -20,10 +20,9 @@ module Beckn.ACL.OnUpdate
 where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.ACL.Common.Order as Common
 import qualified Beckn.OnDemand.Transformer.OnUpdate as TFOU
 import qualified Beckn.OnDemand.Utils.Common as BUtils
-import qualified Beckn.OnDemand.Utils.OnUpdate as Utils
-import qualified Beckn.ACL.Common.Order as Common
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
@@ -36,72 +35,13 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent as SafetyAlertDU
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.OnUpdate as Reexport
-import qualified Domain.Types.Person as SP
-import Domain.Types.Ride as DRide
-import qualified Domain.Types.Vehicle as SVeh
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
-
-data OnUpdateBuildReq
-  = RideAssignedBuildReq
-      { driver :: SP.Person,
-        vehicle :: SVeh.Vehicle,
-        ride :: DRide.Ride,
-        booking :: DRB.Booking,
-        image :: Maybe Text,
-        isDriverBirthDay :: Bool,
-        isFreeRide :: Bool
-      }
-  | RideStartedBuildReq
-      { driver :: SP.Person,
-        vehicle :: SVeh.Vehicle,
-        ride :: DRide.Ride,
-        booking :: DRB.Booking
-      }
-  | RideCompletedBuildReq
-      { ride :: DRide.Ride,
-        driver :: SP.Person,
-        vehicle :: SVeh.Vehicle,
-        booking :: DRB.Booking,
-        fareParams :: Fare.FareParameters,
-        paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-        paymentUrl :: Maybe Text
-      }
-  | BookingCancelledBuildReq
-      { booking :: DRB.Booking,
-        cancellationSource :: SBCR.CancellationSource
-      }
-  | DriverArrivedBuildReq
-      { ride :: DRide.Ride,
-        driver :: SP.Person,
-        vehicle :: SVeh.Vehicle,
-        booking :: DRB.Booking,
-        arrivalTime :: Maybe UTCTime
-      }
-  | EstimateRepetitionBuildReq
-      { ride :: DRide.Ride,
-        booking :: DRB.Booking,
-        estimateId :: Id DEst.Estimate,
-        cancellationSource :: SBCR.CancellationSource
-      }
-  | NewMessageBuildReq
-      { ride :: DRide.Ride,
-        driver :: SP.Person,
-        vehicle :: SVeh.Vehicle,
-        booking :: DRB.Booking,
-        message :: Text
-      }
-  | SafetyAlertBuildReq
-      { ride :: DRide.Ride,
-        booking :: DRB.Booking,
-        code :: Text,
-        reason :: Text
-      }
+import Kernel.Utils.Common
 
 buildOnUpdateMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
