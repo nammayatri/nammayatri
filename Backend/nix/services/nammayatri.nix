@@ -146,6 +146,9 @@ in
             command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
             working_dir = "Backend";
           };
+          osrm-server = {
+            command = self'.packages.osrm-server;
+          };
 
           kafka-consumers-exe = {
             environment = {
@@ -225,10 +228,6 @@ in
           (if pkgs.stdenv.isDarwin
           then inputs.passetto.packages.x86_64-darwin.passetto-service
           else inputs'.passetto.packages.passetto-service);
-      };
-
-      settings.processes.osrm-server = {
-        command = self'.packages.osrm-server;
       };
     };
 }
