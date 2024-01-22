@@ -18,10 +18,10 @@ module Screens.TicketBookingFlow.TicketStatus.ScreenData where
 import Common.Types.App as Common
 import Data.Maybe (Maybe(..))
 import ConfigProvider
-import Screens.Types (TicketBookingScreenState(..), TicketBookingScreenStage(..), TicketBookings(..), TicketItem(..), TicketBookingPeopleCategoryDetails(..), TicketBookingCategoryDetails(..), TicketBookingServiceDetails(..))
+import Screens.Types 
 import Services.API (PlaceType(..), BookingStatus(..))
 
-initData :: TicketBookingScreenState
+initData :: TicketStatusScreenState
 initData = 
   { data : {
       placeInfo : Nothing,
@@ -31,7 +31,7 @@ initData =
       dateOfVisit : "",
       keyValArray : [],
       bookedForArray : [],
-      zooName : "",
+      ticketName : "",
       transactionId : "",
       totalAmount : 0,
       selectedPlaceType : Other
@@ -60,7 +60,8 @@ initData =
       rightButtonDisable : false,
       leftButtonDisable : true,
       navigateToHome : true,
-      selectedOperationalDay : ""
+      selectedOperationalDay : "",
+      actionType : ZooTicketToPaymentStatusEntry
     }
   }
 

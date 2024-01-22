@@ -53,6 +53,7 @@ import Foreign.Object (empty)
 import Data.String as DS
 import ConfigProvider as CP
 import Locale.Utils
+import Debug
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
