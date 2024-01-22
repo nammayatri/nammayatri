@@ -27,6 +27,15 @@ in
     };
   };
 
+  imports = [
+    ny.inputs.services-flake.processComposeModules.default
+    ny.inputs.passetto.processComposeModules.default
+    ./postgres-with-replica.nix
+    (import ./external-services.nix {
+      inherit (ny) inputs self' inputs';
+    })
+  ];
+
   config =
     let
       cfg = config.services.nammayatri;
@@ -63,8 +72,8 @@ in
           command = "set -x; pwd; ${ny.config.apps.${name}.program}";
         };
 
-      haskellProcesses = {
-        processes = lib.listToAttrs (builtins.map
+      haskellProcesses.processes =
+        lib.listToAttrs (builtins.map
           (name: {
             inherit name;
             value = {
@@ -75,31 +84,29 @@ in
             };
           })
           cabalExecutables);
-      };
 
-      # External nammayatri processes (ie., not in this repo)
-      externalProcesses = {
-        processes = {
-          beckn-gateway = {
-            command = ny.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
-            working_dir = "Backend";
-          };
-          mock-registry = {
-            command = ny.config.haskellProjects.default.outputs.finalPackages.mock-registry;
-            working_dir = "Backend";
-          };
-          location-tracking-service = {
-            command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
-            working_dir = "Backend";
-          };
-        };
-      };
+    in
+    {
+      settings = {
+        # Local Haskell processes
+        imports = [ haskellProcesses ];
 
-      initProcesses = {
         processes = {
+          # Things to do before local Haskell processes are started
           nammayatri-init = {
             working_dir = "Backend";
-            depends_on."cabal-build".condition = "process_completed_successfully";
+            depends_on = {
+              # Compile Haskell code
+              "cabal-build".condition = "process_completed_successfully";
+              # Services
+              "db-primary".condition = "process_healthy";
+              "kafka".condition = "process_healthy";
+              "redis".condition = "process_healthy";
+              "redis-cluster".condition = "process_healthy";
+              "nginx".condition = "process_healthy";
+              "osrm-server".condition = "process_healthy";
+              "passetto-server".condition = "process_healthy";
+            };
             command = pkgs.writeShellApplication {
               name = "run-mobility-stack-init";
               runtimeInputs = with pkgs; [
@@ -115,6 +122,7 @@ in
             };
           };
 
+          # Run 'cabal build' for all local Haskel processes
           cabal-build = {
             working_dir = "Backend";
             disabled = !cfg.useCabal;
@@ -126,17 +134,21 @@ in
               '';
             };
           };
-        };
-      };
-    in
-    {
-      settings = {
-        imports = [
-          initProcesses
-          haskellProcesses
-          externalProcesses
-        ];
-        processes = {
+
+          # Processes from other repos in nammayatri GitHub org
+          beckn-gateway = {
+            command = ny.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
+            working_dir = "Backend";
+          };
+          mock-registry = {
+            command = ny.config.haskellProjects.default.outputs.finalPackages.mock-registry;
+            working_dir = "Backend";
+          };
+          location-tracking-service = {
+            command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
+            working_dir = "Backend";
+          };
+
           kafka-consumers-exe = {
             environment = {
               CONSUMER_TYPE = "AVAILABILITY_TIME";

@@ -6,7 +6,7 @@
       let
         common = { config, ... }: {
           imports = [
-            (import ./services/nammayatri.nix { inherit (perSystem) config; inherit inputs; })
+            (import ./services/nammayatri.nix { inherit (perSystem) config self' input'; inherit inputs; })
           ];
           apiServer = false;
           services.nammayatri.enable = true;
