@@ -19,8 +19,12 @@ import Common.Types.App
 
 import Animation (translateInXSidebarAnim, translateOutXSidebarAnim)
 import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..))
 import Components.SettingSideBar.Controller (Action(..), SettingSideBarState, Status(..), Tag(..), Item)
+import Data.Array as DA
 import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..))
+import Data.String as DS
 import Effect (Effect)
 import Engineering.Helpers.Commons (screenWidth, safeMarginBottom, safeMarginTop, os, isPreviousVersion)
 import Font.Size as FontSize
@@ -29,16 +33,13 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), Accessiblity(..), PrestoDOM, visibility, background, clickable, color, disableClickFeedback, fontStyle, gravity, height, imageUrl, imageView, linearLayout, margin, onAnimationEnd, onBackPressed, onClick, orientation, padding, text, textSize, textView, width, weight, ellipsize, maxLines, imageWithFallback, scrollView, scrollBarY, accessibility, accessibilityHint)
+import Mobility.Prelude (boolToVisibility)
+import Prelude
+import PrestoDOM 
 import PrestoDOM.Animation as PrestoAnim
+import Screens.Types (Stage(..))
 import Storage (getValueToLocalStore, KeyStore(..), isLocalStageOn)
 import Styles.Colors as Color
-import Data.Maybe (Maybe(..))
-import Common.Types.App (LazyCheck(..))
-import Data.Array as DA
-import Screens.Types (Stage(..))
-import Data.String as DS
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -92,20 +93,25 @@ settingsView state push =
   , orientation VERTICAL
   ](map (\item -> 
         case item of
-        "MyRides" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : ""} push
-        "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : ""} push
-        "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : ""} push
-        "EmergencyContacts" ->  settingsMenuView {imageUrl : fetchImage FF_COMMON_ASSET "ny_ic_emergency_contacts" , text : (getString EMERGENCY_CONTACTS) , accessibilityHint : "Emergency Contacts " , tag : SETTINGS_EMERGENCY_CONTACTS, iconUrl : ""} push
+        "MyRides" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : "", showNewTag : false} push
+        "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : "", showNewTag : false} push
+        "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : "", showNewTag : false} push
+        "NammaSafety" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_shield_heart", text : getString NAMMA_SAFETY, accessibilityHint : " Safety ", tag : SETTINGS_NAMMASAFETY, iconUrl : "", showNewTag : not state.hasCompletedSafetySetup} push
         "HelpAndSupport" -> settingsMenuView (helpAndSupportConfig state.appConfig.feature.enableSupport) push
-        "Language" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : ""} push
-        "ShareApp" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_APP), accessibilityHint : "Share App ", tag : SETTINGS_SHARE_APP, iconUrl : ""} push
-        "LiveStatsDashboard" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : fetchImage FF_ASSET  "ic_red_icon"} push
-        "About" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_info", text : (getString ABOUT), accessibilityHint : "About " , tag : SETTINGS_ABOUT, iconUrl : ""} push
+        "Language" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_change_language", text : (getString LANGUAGE), accessibilityHint : "Language ", tag : SETTINGS_LANGUAGE, iconUrl : "", showNewTag : false} push
+        "ShareApp" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_share", text : (getString SHARE_APP), accessibilityHint : "Share App ", tag : SETTINGS_SHARE_APP, iconUrl : "", showNewTag : false} push
+        "LiveStatsDashboard" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_graph_black", accessibilityHint : "Live Stats Dashboard ",text : (getString LIVE_STATS_DASHBOARD), tag : SETTINGS_LIVE_DASHBOARD, iconUrl : liveStatsDashboardImage, showNewTag : false} push
+        "About" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_info", text : (getString ABOUT), accessibilityHint : "About " , tag : SETTINGS_ABOUT, iconUrl : "", showNewTag : false} push
         "Logout" -> logoutView state push
         "Separator" -> separator
         _ -> emptyLayout
       ) state.appConfig.sideBarList
     )
+  where
+    liveStatsDashboardImage = 
+      if getValueToLocalStore LIVE_DASHBOARD /= "LIVE_DASHBOARD_SELECTED" 
+        then fetchImage FF_ASSET "ic_red_icon"
+        else ""
 
 helpAndSupportConfig :: Boolean -> Item
 helpAndSupportConfig enableContactSupport = {
@@ -113,7 +119,8 @@ helpAndSupportConfig enableContactSupport = {
   text : if enableContactSupport then (getString HELP_AND_SUPPORT) else  (getString HELP) ,
   accessibilityHint : if enableContactSupport then "Help And Support" else "Help",
   tag : SETTINGS_HELP, 
-  iconUrl : ""
+  iconUrl : "",
+  showNewTag : false
 }
 
 
@@ -144,7 +151,7 @@ logoutView state push =
       , background Color.grey900
       , margin ( MarginVertical 8 8 )
       ][]
-  , settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_logout", text : (getString LOGOUT_), accessibilityHint : "Logout", tag : SETTINGS_LOGOUT, iconUrl : ""} push
+  , settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_logout", text : (getString LOGOUT_), accessibilityHint : "Logout", tag : SETTINGS_LOGOUT, iconUrl : "", showNewTag : false} push
     ]
 
 ------------------------------ profileView --------------------------------
@@ -253,9 +260,9 @@ settingsMenuView item push  =
                               SETTINGS_HELP           -> OnHelp
                               SETTINGS_LANGUAGE       -> ChangeLanguage
                               SETTINGS_ABOUT          -> GoToAbout
+                              SETTINGS_NAMMASAFETY    -> GoToNammaSafety
                               SETTINGS_LOGOUT         -> OnLogout
                               SETTINGS_SHARE_APP      -> ShareAppLink
-                              SETTINGS_EMERGENCY_CONTACTS       -> GoToEmergencyContacts
                               SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard)
   , accessibility case item.tag of
                               SETTINGS_RIDES          -> ENABLE
@@ -266,7 +273,7 @@ settingsMenuView item push  =
                               SETTINGS_ABOUT          -> ENABLE
                               SETTINGS_LOGOUT         -> ENABLE
                               SETTINGS_SHARE_APP      -> DISABLE_DESCENDANT
-                              SETTINGS_EMERGENCY_CONTACTS       -> ENABLE
+                              SETTINGS_NAMMASAFETY       -> ENABLE
                               SETTINGS_LIVE_DASHBOARD -> DISABLE_DESCENDANT
   ][  imageView
       [ width ( V 25 )
@@ -283,10 +290,19 @@ settingsMenuView item push  =
     , imageView
       [ width ( V 8 )
       , height ( V 8 )
-      , visibility if item.tag == SETTINGS_LIVE_DASHBOARD && getValueToLocalStore LIVE_DASHBOARD /= "LIVE_DASHBOARD_SELECTED" then VISIBLE else GONE
+      , visibility if DS.null item.iconUrl then GONE else VISIBLE
       , margin ( Margin 6 1 0 0)
       , imageWithFallback item.iconUrl
       ]
+    , textView $
+      [ text $ getString NEW <> "✨"
+      , color Color.white900
+      , padding $ Padding 5 3 5 3
+      , background Color.blue900
+      , visibility $ boolToVisibility item.showNewTag
+      , margin $ MarginLeft 4
+      , cornerRadius 4.0
+      ] <> FontStyle.body19 TypoGraphy
     ]
 
 profileCompleteValue :: SettingSideBarState -> String

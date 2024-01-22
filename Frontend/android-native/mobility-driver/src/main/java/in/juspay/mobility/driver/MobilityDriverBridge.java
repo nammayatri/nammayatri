@@ -952,77 +952,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
 
     @JavascriptInterface
-    public String uploadMultiPartData(String filePath, String uploadUrl, String fileType) throws IOException {
-        String boundary = UUID.randomUUID().toString();
-
-        URL url = new URL(uploadUrl);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("POST");
-        connection.setDoOutput(true);
-        connection.setUseCaches(false);
-        connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-        connection.setRequestProperty("token", getKeyInNativeSharedPrefKeys("REGISTERATION_TOKEN"));
-
-        File file = new File(filePath);
-        String fileName = file.getName();
-        DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream());
-
-        outputStream.writeBytes("--" + boundary + "\r\n");
-        outputStream.writeBytes(("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"" + "\r\n"));
-        if (fileType.equals("Image"))
-            outputStream.writeBytes("Content-Type: image/jpeg\r\n");
-        else if (fileType.equals("Audio"))
-            outputStream.writeBytes("Content-Type: audio/mpeg\r\n");
-        outputStream.writeBytes("\r\n");
-
-        FileInputStream fileInputStream = new FileInputStream(file);
-        int bytesAvailable = fileInputStream.available();
-        int maxBufferSize = 1024 * 1024;
-        int bufferSize = Math.min(bytesAvailable, maxBufferSize);
-
-        byte[] buffer = new byte[bufferSize];
-        int bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-        while (bytesRead > 0) {
-            outputStream.write(buffer, 0, bufferSize);
-            bytesAvailable = fileInputStream.available();
-            bufferSize = Math.min(bytesAvailable, maxBufferSize);
-            bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-        }
-        outputStream.writeBytes("\r\n");
-        outputStream.writeBytes("--" + boundary + "\r\n");
-
-        outputStream.writeBytes("Content-Disposition: form-data; name=\"fileType\"" + "\r\n");
-        outputStream.writeBytes("Content-Type: application/json" + "\r\n");
-        outputStream.writeBytes("\r\n");
-        outputStream.writeBytes(fileType);
-        outputStream.writeBytes("\r\n");
-        outputStream.writeBytes("--" + boundary + "\r\n" + "--");
-
-        int responseCode = connection.getResponseCode();
-        String res = "";
-        if (responseCode == 200) {
-            StringBuilder s_buffer = new StringBuilder();
-            InputStream is = new BufferedInputStream(connection.getInputStream());
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is));
-            String inputLine;
-            while ((inputLine = bufferedReader.readLine()) != null) {
-                s_buffer.append(inputLine);
-            }
-            res = s_buffer.toString();
-            JSONObject jsonObject;
-            try {
-                jsonObject = new JSONObject(res);
-                res = jsonObject.getString("fileId");
-            } catch (JSONException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            Toast.makeText(bridgeComponents.getContext(), "Unable to upload image", Toast.LENGTH_SHORT).show();
-        }
-        return res;
-    }
-
-    @JavascriptInterface
     public void setScaleType(String id, String imageUrl, String scaleType) {
         Activity activity = bridgeComponents.getActivity();
         if (activity == null) return;
@@ -1116,13 +1045,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
                     }
                 } else {
                     Toast.makeText(context, context.getString(in.juspay.mobility.app.R.string.please_allow_permission_to_capture_the_image), Toast.LENGTH_SHORT).show();
-                }
-                break;
-            case REQUEST_CALL:
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    showDialer(phoneNumber, false);
-                } else {
-                    toast("Permission Denied");
                 }
                 break;
             case LOCATION_PERMISSION_REQ_CODE:

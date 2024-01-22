@@ -330,6 +330,7 @@ type YoutubeData = {
   , videoId :: String
   , videoType :: String
   , videoHeight :: Int
+  , showFullScreen :: Boolean
 }
 
 type FCMBundleUpdate = {

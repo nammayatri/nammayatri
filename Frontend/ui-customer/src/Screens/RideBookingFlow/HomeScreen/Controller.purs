@@ -179,6 +179,7 @@ instance loggableAction :: Loggable Action where
         trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "go_to_my_tickets"
         trackAppEndScreen appId (getScreen HOME_SCREEN)
       SettingSideBarController.NoAction -> trackAppActionClick appId (getScreen HOME_SCREEN) "setting_side_bar" "no_action"
+      _ -> trackAppEndScreen appId (getScreen HOME_SCREEN)
     PricingTutorialModelActionController (PricingTutorialModelController.Close) -> trackAppActionClick appId (getScreen HOME_SCREEN) "pricing_tutorial" "close_icon"
     SearchLocationModelActionController act -> case act of
       SearchLocationModelController.LocationListItemActionController act -> case act of
@@ -692,16 +693,17 @@ instance loggableAction :: Loggable Action where
           ChooseVehicleController.ShowRateCard arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "ShowRateCard"
           ChooseVehicleController.OnImageClick -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnImageClick" 
           ChooseVehicleController.OnSelect arg -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "choose_your_ride_action" "OnSelect"
+    _ -> trackAppScreenEvent appId (getScreen HOME_SCREEN) "in_screen" "no_action"
 
 data ScreenOutput = LogoutUser
                   | Cancel HomeScreenState
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
+                  | GoToNammaSafety HomeScreenState Boolean
                   | PastRides HomeScreenState
                   | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
-                  | GoToEmergencyContacts HomeScreenState
                   | Retry HomeScreenState
                   | GetQuotes HomeScreenState
                   | UpdatedState HomeScreenState Boolean
@@ -742,6 +744,7 @@ data ScreenOutput = LogoutUser
                   | GoToMyTickets HomeScreenState
                   | RepeatTrip HomeScreenState Trip
                   | ExitToTicketing HomeScreenState
+                  | SafetySupport HomeScreenState Boolean
 
 data Action = NoAction
             | BackPressed
@@ -885,6 +888,9 @@ data Action = NoAction
             | RemoveShimmer 
             | ReportIssueClick
             | ChooseSingleVehicleAction ChooseVehicleController.Action
+            | StartSOSOnBoarding Banner.Action
+            | SafetyAlertAction PopUpModal.Action
+            | ReportUnsafe PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1424,9 +1430,8 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_about"
   exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = do
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contacts"
-  exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+eval (SettingSideBarActionController (SettingSideBarController.GoToNammaSafety)) state = do
+  exit $ GoToNammaSafety state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToMyTickets)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_zoo_tickets"
@@ -1658,14 +1663,14 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 
 eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
-  continue state{props{emergencyHelpModal = true}}
+  exit $ GoToNammaSafety state true
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
 eval ShareRide state = do
   continueWithCmd state
         [ do
-            _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> " is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
             pure NoAction
          ]
 
@@ -1688,8 +1693,6 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.StoreContacts)) state  = do
     let newContacts = transformContactList contactsInJson
         newState = state{props{emergencyHelpModelState{emergencyContactData = newContacts}}}
     continue newState
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.AddedEmergencyContacts)) state  =  updateAndExit state{props{emergencyHelpModelState{isSelectEmergencyContact = true}}} $ GoToEmergencyContacts state {props {emergencyHelpModelState{isSelectEmergencyContact = true}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
     void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo false -- TODO: FIX_DIALER
@@ -2255,6 +2258,8 @@ eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showDisabilityPopUp = false}}
 
+eval (StartSOSOnBoarding Banner.OnClick) state = exit $ GoToNammaSafety state false
+
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
 
@@ -2406,6 +2411,21 @@ eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state tru
 
 eval ReportIssueClick state = exit $  GoToHelp state
 
+eval (SafetyAlertAction PopUpModal.OnButton1Click) state = exit $ SafetySupport state true
+
+eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
+    _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
+    continue state {props {reportUnsafe = true}}
+
+eval (ReportUnsafe PopUpModal.OnButton1Click) state = 
+    case state.data.config.safetyConfig.enableSupport of
+      true -> exit $ SafetySupport state false
+      false -> do
+        void $ pure $ showDialer "112" false
+        continue state {props {reportUnsafe = false}}
+
+eval (ReportUnsafe PopUpModal.OnButton2Click) state = continue state{props {reportUnsafe = false}}
+
 eval _ state = continue state
 
 dummyChatComponent :: MessagingView.ChatComponent
@@ -2429,7 +2449,6 @@ constructLatLong lat lng _ =
   , city : Nothing
   }
 
-addItemToFeedbackList :: Array String -> String -> Array String
 addItemToFeedbackList feedbackList feedbackItem = if (any (_ == feedbackItem) feedbackList ) then (filter (\item -> feedbackItem /= item) feedbackList) else snoc feedbackList feedbackItem
 
 checkPermissionAndUpdatePersonMarker :: HomeScreenState -> Effect Unit

@@ -173,3 +173,24 @@ ticketStatus shortId = (getBaseUrl "41") <> "/ticket/bookings/" <> shortId <> "/
 
 ticketBookingDetails :: String -> String
 ticketBookingDetails shortid = (getBaseUrl "41") <> "/ticket/bookings/" <> shortid <> "/details"
+
+getEmergencySettings :: String -> String
+getEmergencySettings dummy = (getBaseUrl "40") <> "/profile/getEmergencySettings"
+
+updateEmergencySettings :: String -> String
+updateEmergencySettings dummy = (getBaseUrl "41") <> "/profile/updateEmergencySettings"
+
+updateSafeRide :: String -> String
+updateSafeRide sosId = (getBaseUrl "42") <> "/sos/markRideAsSafe/" <> sosId
+
+updateSosVideo :: String -> String
+updateSosVideo sosId = (getBaseUrl "43") <> "/sos/" <> sosId <> "/addVideo"
+
+getSosDetails :: String -> String
+getSosDetails rideId = (getBaseUrl "44") <> "/sos/getDetails/" <> rideId
+
+safetySupport :: String -> String
+safetySupport dummy = (getBaseUrl "40") <> "/support/safetyCheckSupport"
+
+createMockSos :: String -> String
+createMockSos dummy = (getBaseUrl "40") <> "/sos/createMockSos"

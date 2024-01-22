@@ -122,7 +122,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
-            _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
+            -- _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
@@ -389,6 +389,8 @@ view push state =
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
             , if state.data.waitTimeInfo && state.props.currentStage == RideAccepted then waitTimeInfoPopUp push state else emptyTextView state
+            , safetyAlertPopup push state
+            , if state.props.reportUnsafe then issueReportedPopup push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -930,8 +932,10 @@ buttonLayout state push =
       , orientation VERTICAL
       , padding $ if state.data.config.feature.enableZooTicketBookingFlow then PaddingTop 0 else PaddingTop 16
       ]
-      [ if state.data.config.feature.enableZooTicketBookingFlow
-        then zooTicketBookingBanner state push 
+      [ if not state.data.settingSideBar.hasCompletedSafetySetup 
+          then sosSetupBannerView state push  
+        else if state.data.config.feature.enableZooTicketBookingFlow
+          then zooTicketBookingBanner state push 
         else linearLayout[visibility GONE][]
       , PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
       , if state.props.isSearchLocation == LocateOnMap
@@ -3375,7 +3379,9 @@ homeScreenViewV2 push state =
                                       [if isHomeScreenView state then mapView push state else emptyTextView state
                                       , if state.data.config.feature.enableZooTicketBookingFlow
                                           then zooTicketBookingBanner state push 
-                                          else linearLayout[visibility GONE][]
+                                        else if not state.data.settingSideBar.hasCompletedSafetySetup 
+                                          then sosSetupBannerView state push
+                                        else linearLayout[visibility GONE][]
                                       , shimmerView state
                                       , suggestionsView push state
                                       , emptySuggestionsBanner state push
@@ -4195,3 +4201,31 @@ locationUnserviceableView push state =
       ] <> (FontStyle.tags TypoGraphy)
     ]
   ]
+    
+sosSetupBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+sosSetupBannerView state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 10 10 10 10)
+    , gravity BOTTOM
+    ][     
+        Banner.view (push <<< StartSOSOnBoarding) (sosSetupBannerConfig state)
+    ]
+
+safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+safetyAlertPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , visibility  if not $ any (_ == (getValueToLocalNativeStore SAFETY_ALERT_TYPE))["__failed", "false", "(null)"]
+                then VISIBLE else GONE
+  ][PopUpModal.view (push <<< SafetyAlertAction) (safetyAlertConfig state)]
+
+issueReportedPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+issueReportedPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< ReportUnsafe) (reportingIssueConfig state)]

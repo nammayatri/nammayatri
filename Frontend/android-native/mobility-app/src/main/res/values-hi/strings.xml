@@ -55,4 +55,6 @@
     <string name="accept_goto">“गो-टू” स्वीकार करें</string>
     <string name="take_a_clear_selfie">चिह्नित क्षेत्र के अंदर अपने ड्राइविंग \n लाइसेंस के साथ एक स्पष्ट फोटो लें</string>
     <string name="need_help">मदद चाहिए?</string>
+    <string name="safety_deviation_alert">हमने देखा है कि आपकी यात्रा एक विभिन्न मार्ग पर है। क्या आप अपनी यात्रा में सुरक्षित महसूस कर रहे हैं?</string>
+    <string name="everything_okay">सब कुछ ठीक है?</string>
 </resources>

@@ -49,15 +49,15 @@ homeScreen = do
     ChangeLanguage updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure CHANGE_LANGUAGE)
-    GoToEmergencyContacts updatedState -> do
-      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure GO_TO_EMERGENCY_CONTACTS)
     GoToMyTickets updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_MY_TICKETS)
     GoToAbout updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure GO_TO_ABOUT)
+    GoToNammaSafety updatedState triggerSos -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_NAMMASAFETY updatedState triggerSos)
     GoToMyProfile updatedState updateProfile -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_PROFILE updateProfile)
@@ -175,3 +175,6 @@ homeScreen = do
     ExitToTicketing updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ EXIT_TO_TICKETING updatedState)
+    SafetySupport updatedState isSafe -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ SAFETY_SUPPORT updatedState isSafe)

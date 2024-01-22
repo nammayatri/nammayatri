@@ -109,12 +109,12 @@ view push state =
                     ][ PrestoAnim.animationSet
                       [translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500]
                       $ searchResultsParentView state push 
-                      , linearLayout
-                        [ width MATCH_PARENT
-                        , height MATCH_PARENT
-                        , margin (Margin 16 ((screenHeight unit)/4) 16 0)
-                        , visibility if (not state.isRideServiceable) then VISIBLE else GONE
-                        ][locationUnserviceableView state push]
+                      -- , linearLayout
+                      --   [ width MATCH_PARENT
+                      --   , height MATCH_PARENT
+                      --   , margin (Margin 16 ((screenHeight unit)/4) 16 0)
+                      --   , visibility if (not state.isRideServiceable) then VISIBLE else GONE
+                      --   ][locationUnserviceableView state push]
                       , searchLottieLoader push state
                       , bottomBtnsView state push
                       , primaryButtonView state push

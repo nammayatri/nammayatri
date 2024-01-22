@@ -1,52 +1,64 @@
 module Screens.EmergencyContactsScreen.View where
 
+import Common.Types.App
+import Debug
+import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig
+
 import Animation (screenAnimation)
 import Components.GenericHeader as GenericHeader
+import Components.GenericRadioButton.Controller as GenericRadioButton
+import Components.GenericRadioButton.View (radioButtonView)
+import Components.PopUpModal as PopUpModal
 import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryButton.Controller as PrimaryButtonConfig
+import Data.Array (take, (!!), mapWithIndex, null, length)
+import Data.Array as DA
+import Data.Maybe (Maybe(..), fromMaybe)
+import Data.String (split, Pattern(..))
+import Data.String as DS
+import Data.String.Regex (match)
+import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
+import Halogen.VDom.DOM.Prop (PropValue)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), setRefreshing)
+import Helpers.Utils (storeCallBackContacts, contactPermission)
 import JBridge (openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&),(-), (>), show)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..),scrollView, swipeRefreshLayout, hint, onScroll, scrollBarY, onScrollStateChange, alignParentBottom, pattern, onChange, id, editText, background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback, onRefresh, accessibility, accessibilityHint)
-import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval, contactColorsList)
+import Prelude 
+import PrestoDOM 
+import PrestoDOM.Elements.Keyed as Keyed
+import PrestoDOM.Events (globalOnScroll)
+import PrestoDOM.List as PrestoList
+import PrestoDOM.Types.Core (toPropValue)
+import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.NammaSafetyFlow.Components.ContactsList as ContactsList
+import Screens.NammaSafetyFlow.Components.HelperViews (recommendContactsToInstallView)
 import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
+import Screens.NammaSafetyFlow.Components.ContactsList
 import Styles.Colors as Color
-import Common.Types.App
-import Helpers.Utils (storeCallBackContacts, contactPermission)
-import Data.Array (take, (!!), mapWithIndex, null, length)
-import Data.String as DS
-import Data.Maybe (Maybe(..), fromMaybe)
-import Data.String (split, Pattern(..))
-import Components.PopUpModal as PopUpModal
-import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig
-import PrestoDOM.List as PrestoList
-import PrestoDOM.Events (globalOnScroll)
-import PrestoDOM.Elements.Keyed as Keyed
-import Data.Tuple (Tuple(..))
-import Components.PrimaryButton.Controller as PrimaryButtonConfig
-import Data.Array as DA
-import PrestoDOM.Types.Core (toPropValue)
-import Data.String.Regex (match)
-import Halogen.VDom.DOM.Prop (PropValue)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), setRefreshing)
 
 screen :: EmergencyContactsScreenState -> PrestoList.ListItem -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState listItemm =
   { initialState
   , view: view listItemm
   , name: "EmergencyContactsScreen"
-  , globalEvents: [ globalOnScroll "EmergencyContactsScreen",
-                    ( \push -> do
-                        _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag") false
-                        pure (pure unit)
-                    )
-                  ]
-  , eval
+  , globalEvents:
+      [ globalOnScroll "EmergencyContactsScreen"
+      , ( \push -> do
+            _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag") false
+            pure (pure unit)
+        )
+      ]
+  , eval:
+      \action state -> do
+        let _ = spy "EC action " action
+        let _ = spy "EC state " state
+        eval action state
   }
 
 view :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
@@ -74,33 +86,36 @@ view listItemm push state =
             )
             (const NoAction)
         ]
-        ([ linearLayout
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , accessibility if state.props.showInfoPopUp then DISABLE_DESCENDANT else DISABLE
-            ]
-            [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
-            , linearLayout
-                [ height $ V 1
-                , width $ V (screenWidth unit)
-                , background Color.greySmoke
-                ]
-                []
-            , linearLayout
-                [ height MATCH_PARENT
-                , width MATCH_PARENT
-                , orientation VERTICAL
-                , gravity CENTER
-                , padding (Padding 16 0 16 0)
-                , visibility if state.props.showContactList then GONE else VISIBLE
-                ]
-                [ emergencyContactsView push state
-                , PrimaryButton.view (push <<< PrimaryButtonActionControll) (primaryButtonConfig state)
-                ]
-            ]
-        , if state.props.showContactList then (contactListView listItemm push state) else emptyTextView state
-        ] <>  if state.props.showInfoPopUp then [removeContactPopUpView push state] else [emptyTextView state])
+        ( [ linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , accessibility if state.props.showInfoPopUp then DISABLE_DESCENDANT else DISABLE
+              ]
+              [ GenericHeader.view (push <<< ContactListGenericHeaderActionController) (genericHeaderConfig state)
+              , linearLayout
+                  [ height $ V 1
+                  , width $ V (screenWidth unit)
+                  , background Color.greySmoke
+                  ]
+                  []
+              , linearLayout
+                  [ height MATCH_PARENT
+                  , width MATCH_PARENT
+                  , orientation VERTICAL
+                  , gravity CENTER
+                  , padding $ PaddingHorizontal 16 16
+                  , visibility if state.props.showContactList then GONE else VISIBLE
+                  ]
+                  [ emergencyContactsView push state
+                  , recommendContactsToInstallView Language
+                  , PrimaryButton.view (push <<< PrimaryButtonActionControll) (primaryButtonConfig state)
+                  ]
+              ]
+          , if state.props.showContactList then (contactListView listItemm push state) else emptyTextView state
+          ]
+            <> if state.props.showInfoPopUp then [ removeContactPopUpView push state ] else [ emptyTextView state ]
+        )
 
 ------------------------ EmptyTextView ---------------------------
 emptyTextView :: forall w. EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
@@ -182,37 +197,39 @@ contactListView listItemm push state =
         ]
     ]
 
-showEmergencyContact :: forall w. PrestoList.ListItem ->  (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
+showEmergencyContact :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 showEmergencyContact listitemm push config =
   swipeRefreshLayout
-    ([ width MATCH_PARENT
-    , height MATCH_PARENT
-    , background Color.blue600
-    , weight 1.0
-    , onRefresh push (const RefreshScreen)
-    ] <> if os == "IOS" then [] else [id $ getNewIDWithTag "EmergencyContactTag"] )
+    ( [ width MATCH_PARENT
+      , height MATCH_PARENT
+      , background Color.blue600
+      , weight 1.0
+      , onRefresh push (const RefreshScreen)
+      ]
+        <> if os == "IOS" then [] else [ id $ getNewIDWithTag "EmergencyContactTag" ]
+    )
     [ showEmergencyContactData listitemm push config
     ]
 
 showEmergencyContactData :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 showEmergencyContactData listItemm push state =
   Keyed.linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  ]
-  [ Tuple "contacts"
-    $ PrestoList.list
     [ height MATCH_PARENT
-    -- , scrollBarY false
     , width MATCH_PARENT
-    , onScroll "contacts" "EmergencyContactsScreen" push (ContactListScroll)
-    , onScrollStateChange push (ContactListScrollStateChanged)
-    , PrestoList.listItem listItemm
-    , background Color.white900
-    , PrestoList.listDataV2  $ state.data.prestoListArrayItems
+    , orientation VERTICAL
     ]
-  ]
+    [ Tuple "contacts"
+        $ PrestoList.list
+            [ height MATCH_PARENT
+            -- , scrollBarY false
+            , width MATCH_PARENT
+            , onScroll "contacts" "EmergencyContactsScreen" push (ContactListScroll)
+            , onScrollStateChange push (ContactListScrollStateChanged)
+            , PrestoList.listItem listItemm
+            , background Color.white900
+            , PrestoList.listDataV2 $ state.data.prestoListArrayItems
+            ]
+    ]
 
 startsWith :: String -> String -> Boolean
 startsWith prefix str = DS.take (DS.length prefix) str == prefix
@@ -226,7 +243,7 @@ contactListPrimaryButtonConfig count =
       config'
         { textConfig
           { text = if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)
-          , accessibilityHint =  (if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)) <> " : Button"
+          , accessibilityHint = (if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)) <> " : Button"
           , color = if (count > 0) then Color.yellow900 else Color.yellow800
           }
         , background = if (count > 0) then Color.black900 else Color.black600
@@ -235,21 +252,20 @@ contactListPrimaryButtonConfig count =
   in
     primaryButtonConfig'
 
-
 horizontalLine :: forall w. PrestoDOM (Effect Unit) w
 horizontalLine =
   linearLayout
     [ height $ V 1
     , width MATCH_PARENT
     , background Color.grey900
-    ][]
-
+    ]
+    []
 
 --------------------------------------------------- emergencyContactsView -----------------------------------------------------
 emergencyContactsView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
-emergencyContactsView push state = 
+emergencyContactsView push state =
   linearLayout
-    [ width $ MATCH_PARENT
+    [ width MATCH_PARENT
     , orientation VERTICAL
     , weight 1.0
     ]
@@ -273,21 +289,23 @@ emptyContactsView push state =
         , width $ V 150
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_emergency_contact_empty"
         ]
-    , textView $
-        [ height $ WRAP_CONTENT
-        , width $ WRAP_CONTENT
-        , gravity CENTER
-        , text (getString NO_EMERGENCY_CONTACTS_SET)
-        , color Color.black900
-        ] <> FontStyle.h2 LanguageStyle
-    , textView $
-        [ height $ WRAP_CONTENT
-        , width WRAP_CONTENT
-        , gravity CENTER
-        , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
-        , color Color.black700
-        , padding (Padding 16 10 16 10)
-        ] <> FontStyle.paragraphText LanguageStyle
+    , textView
+        $ [ height $ WRAP_CONTENT
+          , width $ WRAP_CONTENT
+          , gravity CENTER
+          , text (getString NO_EMERGENCY_CONTACTS_SET)
+          , color Color.black900
+          ]
+        <> FontStyle.h2 LanguageStyle
+    , textView
+        $ [ height $ WRAP_CONTENT
+          , width WRAP_CONTENT
+          , gravity CENTER
+          , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
+          , color Color.black700
+          , padding (Padding 16 10 16 10)
+          ]
+        <> FontStyle.paragraphText LanguageStyle
     ]
 
 --------------------------------------------------- emergencyContactsListView -----------------------------------------------------
@@ -297,68 +315,23 @@ emergencyContactsListView push state =
     [ height $ WRAP_CONTENT
     , width $ MATCH_PARENT
     , orientation VERTICAL
-    , padding (Padding 0 10 0 10)
-    , visibility if (null state.data.contactsList) then GONE else VISIBLE
+    , padding $ PaddingVertical 12 10
+    , visibility if null state.data.contactsList then GONE else VISIBLE
     , weight 1.0
     ]
-    [ textView $ 
-        [ height $ WRAP_CONTENT
-        , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
-        , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
-        , color Color.black700
-        , padding (Padding 0 10 0 10)
-        ] <> FontStyle.paragraphText LanguageStyle
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        ]
-        (mapWithIndex (\index item -> contactCardView push state item index) state.data.contactsList)
+    [ textView
+        $ [ height WRAP_CONTENT
+          , width if os == "IOS" then V (screenWidth unit - 20) else WRAP_CONTENT
+          , text (getString EMERGENCY_CONTACTS_SCREEN_DESCRIPTION)
+          , color Color.black700
+          , padding $ PaddingVertical 10 10
+          ]
+        <> FontStyle.paragraphText LanguageStyle
+    , ContactsList.view (push <<< ContactListAction) state.data.contactsList
     ]
 
 --------------------------------------------------- emergencyContactsListView -----------------------------------------------------
-contactCardView :: forall w. (Action -> Effect Unit) -> EmergencyContactsScreenState -> NewContacts -> Int -> PrestoDOM (Effect Unit) w
-contactCardView push state contact index =
-  linearLayout
-    [ height $ WRAP_CONTENT
-    , width MATCH_PARENT
-    , padding $ Padding 18 18 18 18
-    , margin $ Margin 0 5 0 5
-    , cornerRadius 8.0
-    , stroke ("1," <> Color.grey900)
-    ]
-    [ linearLayout
-        [ height $ V 24
-        , width $ V 24
-        , background (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 0))
-        , cornerRadius 12.0
-        , gravity CENTER
-        , margin (MarginRight 10)
-        ]
-        [ textView $
-            [ text (DS.toUpper ((<>) (getFirstChar contact.name) (getLastChar contact.name)))
-            , color (fromMaybe "" (fromMaybe [] (contactColorsList !! index) !! 1))
-            , accessibility DISABLE
-            ] <> FontStyle.body3 TypoGraphy
-        ]
-    , textView $
-        [ height $ WRAP_CONTENT
-        , width $ WRAP_CONTENT
-        , weight 1.0
-        , text contact.name
-        , color Color.black800
-        ] <> FontStyle.subHeading1 LanguageStyle
-    , textView
-        [ height $ WRAP_CONTENT
-        , width $ WRAP_CONTENT
-        , text (getString REMOVE)
-        , accessibilityHint "Remove : Button"
-        , accessibility ENABLE
-        , color Color.blue900
-        , textSize 14
-        , onClick push (const (RemoveButtonClicked contact))
-        ]
-    ]
+
 
 getNameInitials :: String -> (Array String)
 getNameInitials fullName = (take 2 (split (Pattern " ") (fullName)))

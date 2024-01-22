@@ -309,16 +309,6 @@ export const saveAudioFile = function (source) {
   }
 }
 
-export const uploadMultiPartData = function (path) {
-  return function (url) {
-    return function(fileType) {
-      return function() {
-        return JBridge.uploadMultiPartData(path, url, fileType);
-      }
-    }
-  }
-}
-
 export const startAudioRecording = function (id) {
   return function() {
     return JBridge.startAudioRecording();
