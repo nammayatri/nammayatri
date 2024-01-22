@@ -21,6 +21,7 @@ import qualified Data.Aeson as A
 import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Search.Common as DSearchCommon
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationAddress as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -56,7 +57,8 @@ mkStops origin destination =
                       locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
               stopType = Just "START",
-              stopAuthorization = Nothing
+              stopAuthorization = Nothing,
+              stopTime = Nothing
             },
           Spec.Stop
             { stopLocation =
@@ -71,7 +73,8 @@ mkStops origin destination =
                       locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
               stopType = Just "END",
-              stopAuthorization = Nothing
+              stopAuthorization = Nothing,
+              stopTime = Nothing
             }
         ]
 
@@ -168,6 +171,15 @@ castVehicleVariant = \case
   VehVar.TAXI -> "TAXI"
   VehVar.TAXI_PLUS -> "TAXI_PLUS"
 
+castCancellationSourceV2 :: Text -> SBCR.CancellationSource
+castCancellationSourceV2 = \case
+  "ByUser" -> SBCR.ByUser
+  "ByDriver" -> SBCR.ByDriver
+  "ByMerchant" -> SBCR.ByMerchant
+  "ByAllocator" -> SBCR.ByAllocator
+  "ByApplication" -> SBCR.ByApplication
+  _ -> SBCR.ByUser
+
 getContextBapId :: MonadFlow m => Spec.Context -> m Text -- shrey00 : move to common
 getContextBapId context = do
   context.contextBapId & fromMaybeM (InvalidRequest "Missing contextBapId")
@@ -201,11 +213,6 @@ getContextBppUri context = do
 withTransactionIdLogTag :: (Log m) => Text -> m a -> m a
 withTransactionIdLogTag = withTransactionIdLogTag'
 
-getTransactionId :: MonadFlow m => Spec.Context -> m Text
-getTransactionId context = do
-  transactionUuid <- context.contextTransactionId & fromMaybeM (InvalidRequest "Missing transaction_id")
-  pure $ T.pack $ show transactionUuid
-
 mkStops' :: DLoc.Location -> Maybe DLoc.Location -> Maybe [Spec.Stop]
 mkStops' origin mDestination =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
@@ -225,7 +232,8 @@ mkStops' origin mDestination =
                           locationId = Nothing
                         },
                   stopType = Just "START",
-                  stopAuthorization = Nothing
+                  stopAuthorization = Nothing,
+                  stopTime = Nothing
                 },
             mDestination >>= \destination -> do
               let destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
@@ -243,7 +251,8 @@ mkStops' origin mDestination =
                             locationId = Nothing
                           },
                     stopType = Just "END",
-                    stopAuthorization = Nothing
+                    stopAuthorization = Nothing,
+                    stopTime = Nothing
                   }
           ]
   where

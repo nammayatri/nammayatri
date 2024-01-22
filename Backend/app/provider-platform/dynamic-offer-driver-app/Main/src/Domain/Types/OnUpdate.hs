@@ -41,7 +41,9 @@ data DRideAssignedReq = DRideAssignedReq
     vehicle :: SVeh.Vehicle,
     ride :: DRide.Ride,
     booking :: DRB.Booking,
-    image :: Maybe Text
+    image :: Maybe Text,
+    isDriverBirthDay :: Bool,
+    isFreeRide :: Bool
   }
 
 data DRideStartedReq = DRideStartedReq
@@ -92,5 +94,6 @@ data DNewMessageReq = DNewMessageReq
 data DSafetyAlertReq = DSafetyAlertReq
   { ride :: DRide.Ride,
     booking :: DRB.Booking,
+    code :: Text,
     reason :: Text
   }

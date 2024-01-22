@@ -14,7 +14,7 @@
 
 module Beckn.ACL.OnSelect where
 
-import Beckn.ACL.Common
+import Beckn.ACL.Common hiding (filterRequiredBreakups)
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
 import qualified BecknV2.OnDemand.Types as Spec
@@ -240,7 +240,8 @@ mkStops origin destination =
                       locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
               stopType = Just "START",
-              stopAuthorization = Nothing
+              stopAuthorization = Nothing,
+              stopTime = Nothing
             },
           Spec.Stop
             { stopLocation =
@@ -255,7 +256,8 @@ mkStops origin destination =
                       locationId = Nothing -- JAYPAL, Not sure what to keep here
                     },
               stopType = Just "END",
-              stopAuthorization = Nothing
+              stopAuthorization = Nothing,
+              stopTime = Nothing
             }
         ]
 

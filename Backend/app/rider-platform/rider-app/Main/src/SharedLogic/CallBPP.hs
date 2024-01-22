@@ -109,7 +109,7 @@ selectV2 providerUrl req = do
 -- init ::
 --   ( MonadFlow m,
 --     CoreMetrics m,
---     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+--     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
 --   ) =>
 --   BaseUrl ->
 --   API.InitReq ->
@@ -146,7 +146,7 @@ confirm providerUrl req = do
 -- confirmV2 ::
 --   ( MonadFlow m,
 --     CoreMetrics m,
---     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+--     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
 --   ) =>
 --   BaseUrl ->
 --   ConfirmReqV2 ->
@@ -195,7 +195,7 @@ update providerUrl req = do
 -- updateV2 ::
 --   ( MonadFlow m,
 --     CoreMetrics m,
---     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+--     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
 --   ) =>
 --   BaseUrl ->
 --   UpdateReqV2 ->
@@ -283,7 +283,7 @@ callStatus providerUrl req = do
 callStatusV2 ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.Map BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
   StatusReqV2 ->

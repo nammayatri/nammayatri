@@ -25,7 +25,8 @@ mkStops origin destination =
                       locationId = Nothing
                     },
               stopType = Just "START",
-              stopAuthorization = Nothing
+              stopAuthorization = Nothing,
+              stopTime = Nothing
             },
           Spec.Stop
             { stopLocation =
@@ -40,7 +41,8 @@ mkStops origin destination =
                       locationId = Nothing
                     },
               stopType = Just "END",
-              stopAuthorization = Nothing
+              stopAuthorization = Nothing,
+              stopTime = Nothing
             }
         ]
   where

@@ -17,6 +17,7 @@ module API.Beckn.OnSearch (API, handler) where
 import qualified Beckn.ACL.OnSearch as TaxiACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
+import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Data.Aeson as A
 import Data.Text as T
 import Data.Text.Encoding as T

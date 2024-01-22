@@ -21,6 +21,7 @@ where
 import Beckn.ACL.Common (getTag)
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -272,21 +273,27 @@ parseRideAssignedEvent order = do
   vehicleColor <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleColor) & fromMaybeM (InvalidRequest "vehicleColor is not present in RideAssigned Event.")
   vehicleModel <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleModel) & fromMaybeM (InvalidRequest "vehicleModel is not present in RideAssigned Event.")
   vehicleNumber <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleRegistration) & fromMaybeM (InvalidRequest "vehicleNumber is not present in RideAssigned Event.")
-
+  let castToBool mbVar = case T.toLower <$> mbVar of
+        Just "true" -> True
+        _ -> False
+  let isDriverBirthDay = castToBool $ Utils.getTagV2 "driver_details" "is_driver_birthday" tagGroups
+      isFreeRide = castToBool $ Utils.getTagV2 "driver_details" "is_free_ride" tagGroups
   return
     DOnUpdate.RideAssignedReq
       { bppBookingId = Id bppBookingId,
         bppRideId = Id bppRideId,
-        otp = otp,
-        driverName = driverName,
-        driverMobileNumber = driverMobileNumber,
         driverMobileCountryCode = Just "+91", -----------TODO needs to be added in agent Tags------------
         driverRating = realToFrac <$> rating,
-        driverImage = driverImage,
         driverRegisteredAt = registeredAt,
-        vehicleNumber = vehicleNumber,
-        vehicleColor = vehicleColor,
-        vehicleModel = vehicleModel
+        otp,
+        driverName,
+        driverMobileNumber,
+        driverImage,
+        vehicleNumber,
+        vehicleColor,
+        vehicleModel,
+        isDriverBirthDay,
+        isFreeRide
       }
 
 parseRideStartedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -344,7 +351,7 @@ parseBookingCancelledEvent order = do
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id bppBookingId,
-        cancellationSource = castCancellationSourceV2 cancellationSource
+        cancellationSource = Utils.castCancellationSourceV2 cancellationSource
       }
 
 parseDriverArrivedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -385,7 +392,7 @@ parseEstimateRepetitionEvent transactionId order = do
         bppEstimateId = Id bppEstimateId,
         bppBookingId = Id bppBookingId,
         bppRideId = Id bppRideId,
-        cancellationSource = castCancellationSourceV2 cancellationSource
+        cancellationSource = Utils.castCancellationSourceV2 cancellationSource
       }
 
 parseSafetyAlertEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -393,27 +400,11 @@ parseSafetyAlertEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in SafetyAlert Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in SafetyAlert Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in SafetyAlert Event.")
-  reason <- Utils.getTagV2 "safety_alert" "reason" tagGroups & fromMaybeM (InvalidRequest "safety_alert tag is not present in SafetyAlert Event.")
+  deviation <- Utils.getTagV2 "safety_alert" "deviation" tagGroups & fromMaybeM (InvalidRequest "safety_alert tag is not present in SafetyAlert Event.")
   return $
     DOnUpdate.SafetyAlertReq
       { bppBookingId = Id bppBookingId,
         bppRideId = Id bppRideId,
-        reason = reason
+        reason = deviation,
+        code = "deviation"
       }
-
-_castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource
-_castCancellationSource = \case
-  OnUpdate.ByUser -> SBCR.ByUser
-  OnUpdate.ByDriver -> SBCR.ByDriver
-  OnUpdate.ByMerchant -> SBCR.ByMerchant
-  OnUpdate.ByAllocator -> SBCR.ByAllocator
-  OnUpdate.ByApplication -> SBCR.ByApplication
-
-castCancellationSourceV2 :: Text -> SBCR.CancellationSource
-castCancellationSourceV2 = \case
-  "ByUser" -> SBCR.ByUser
-  "ByDriver" -> SBCR.ByDriver
-  "ByMerchant" -> SBCR.ByMerchant
-  "ByAllocator" -> SBCR.ByAllocator
-  "ByApplication" -> SBCR.ByApplication
-  _ -> SBCR.ByUser
