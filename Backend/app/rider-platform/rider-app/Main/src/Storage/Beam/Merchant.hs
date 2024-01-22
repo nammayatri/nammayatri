@@ -51,6 +51,8 @@ data MerchantT f = MerchantT
     destinationRestriction :: B.C f GeoRestriction,
     gatewayUrl :: B.C f Text,
     registryUrl :: B.C f Text,
+    frfsGatewayUrl :: B.C f Text,
+    frfsRegistryUrl :: B.C f Text,
     driverOfferBaseUrl :: B.C f Text,
     driverOfferApiKey :: B.C f Text,
     driverOfferMerchantId :: B.C f Text,
