@@ -74,7 +74,7 @@ types:
     address: Maybe Text
     stationType: Maybe StationType
     color: Maybe Text
-    sequence: Maybe Int
+    sequenceNum: Maybe Int
 
 apis:
   # GET metro stops for the merchant city

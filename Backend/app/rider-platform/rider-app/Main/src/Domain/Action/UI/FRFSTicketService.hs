@@ -69,7 +69,7 @@ getFrfsStations _ vehicleType_ = do
           FRFSTicketService.FRFSStationAPI
             { color = Nothing,
               stationType = Nothing,
-              sequence = Nothing,
+              sequenceNum = Nothing,
               ..
             }
       )
