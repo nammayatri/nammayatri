@@ -113,8 +113,8 @@ data PersonDefaultEmergencyNumber = PersonDefaultEmergencyNumber
   { name :: Text,
     mobileCountryCode :: Text,
     mobileNumber :: Text,
-    priority :: Int,
-    enableForFollowing :: Bool
+    priority :: Maybe Int,
+    enableForFollowing :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -249,8 +249,8 @@ updateDefaultEmergencyNumbers personId merchantId req = do
             mobileCountryCode = defEmNum.mobileCountryCode,
             createdAt = now,
             contactPersonId = (.id) <$> mbEmNumPerson,
-            enableForFollowing = False,
-            priority = defEmNum.priority,
+            enableForFollowing = fromMaybe False defEmNum.enableForFollowing,
+            priority = fromMaybe 1 defEmNum.priority,
             ..
           }
     updateSettingReq enableEmergencySharing =
@@ -338,7 +338,7 @@ notifyEmergencyContacts person body title notificationType message useSmsAsBacku
               contactPersonEntity <- runInReplica $ QPerson.findById emergencyContactId >>= fromMaybeM (PersonNotFound (getId emergencyContactId))
               case contactPersonEntity.deviceToken of
                 Nothing -> sendMessageToContact emergencyContact
-                Just _ -> sendNotificationToEmergencyContact person body title notificationType
+                Just _ -> sendNotificationToEmergencyContact contactPersonEntity body title notificationType
       )
       emergencyContacts.defaultEmergencyNumbers
   where
