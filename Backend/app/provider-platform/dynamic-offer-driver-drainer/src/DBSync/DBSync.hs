@@ -17,6 +17,8 @@ import EulerHS.Language (runIO)
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (fail, id, succ)
 import qualified EulerHS.Types as ET
+import GHC.Float (int2Double)
+import Kafka.Producer as KafkaProd
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 import Types.Config
 import Types.DBSync
@@ -196,7 +198,16 @@ process dbStreamKey count = do
       pure 0
     Right Nothing -> do
       pure 0
-    Right (Just c) -> run c
+    Right (Just c) -> do
+      res <- run c
+      _afterProcess <- EL.getCurrentDateInMillis
+      void $ publishProcessLatency "QueryExecutionTime" (int2Double (_afterProcess - _beforeProcess))
+      Env {..} <- ask
+      _beforeFlush <- EL.getCurrentDateInMillis
+      EL.runIO $ KafkaProd.flushProducer _kafkaConnection
+      _afterFlush <- EL.getCurrentDateInMillis
+      void $ publishProcessLatency "KafkaFlushTime" (int2Double (_afterFlush - _beforeFlush))
+      pure res
   where
     {- Let's try to decode and run the commands -}
     {- time taken to process batch -}

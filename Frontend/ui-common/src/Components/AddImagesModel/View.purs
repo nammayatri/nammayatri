@@ -137,9 +137,6 @@ imageCardView push state index item =
       , cornerRadius 8.0
       , margin $ MarginBottom 16
       , gravity CENTER_VERTICAL
-      , afterRender (\action -> do
-                      runEffectFn1 displayBase64Image displayBase64ImageConfig {source =  item.image, id = getNewIDWithTag "add_image_component_image" <> (show index), scaleType =  "CENTER_CROP", inSampleSize = 2} 
-                    ) (const NoAction)
       , padding $ Padding 16 16 16 16
       ][ linearLayout
         [ width $ V 48
@@ -150,8 +147,10 @@ imageCardView push state index item =
         , onClick push $ case state.isLoading of
           false -> const $ OnClickView item.image item.imageName
           true  -> const NoAction
-        
         , id $ getNewIDWithTag "add_image_component_image" <> (show index)
+        , afterRender (\action -> do
+            runEffectFn1 displayBase64Image displayBase64ImageConfig {source =  item.image, id = getNewIDWithTag "add_image_component_image" <> (show index), scaleType =  "CENTER_CROP", inSampleSize = 2} 
+          ) (const NoAction)
         ][],
         textView
         [ text item.imageName

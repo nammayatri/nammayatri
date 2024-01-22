@@ -10,6 +10,17 @@ function waitTillSeviceLoad (cb,serives,statusChecker) {
   setTimeout(checkPP,10);
 }
 
+function ppInitiateStatus() {
+  if (JBridge.ppInitiateStatus) {
+    let _status = JBridge.ppInitiateStatus();
+    if (window.__OS === "IOS") {
+      _status = _status === "1" ? true : false;
+    }
+    return _status;
+  }
+  return false;
+}
+
 function getInitiatPayload () {
   const innerPayload = Object.assign({},window.__payload.payload);
   const initiatePayload = Object.assign({},window.__payload);
@@ -47,7 +58,7 @@ export const  killPP = function (services) {
 }
 
 export const initiatePP = function () {
-  if (JBridge.ppInitiateStatus && JBridge.ppInitiateStatus()) {
+  if (ppInitiateStatus()) {
     window.isPPInitiated = true;
     return;
   }
@@ -151,7 +162,7 @@ export const consumeBP = function (unit){
 }
 
 export const checkPPInitiateStatus = function (cb,services = microapps) {
-  if ((JBridge.ppInitiateStatus  && JBridge.ppInitiateStatus()) && window.isPPInitiated || (window.isPPInitiated && checkPPLoadStatus(services))) {
+  if (ppInitiateStatus() && window.isPPInitiated || (window.isPPInitiated && checkPPLoadStatus(services))) {
     cb()();
   } else {
     waitTillSeviceLoad(cb,services,checkPPInitiateStatus);
