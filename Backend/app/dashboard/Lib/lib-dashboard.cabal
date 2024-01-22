@@ -65,13 +65,6 @@ library
       Storage.Queries.RegistrationToken
       Storage.Queries.Role
       Storage.Queries.Transaction
-      Storage.Tabular.AccessMatrix
-      Storage.Tabular.Merchant
-      Storage.Tabular.MerchantAccess
-      Storage.Tabular.Person
-      Storage.Tabular.RegistrationToken
-      Storage.Tabular.Role
-      Storage.Tabular.Transaction
       Tools.Auth
       Tools.Auth.Api
       Tools.Auth.Common

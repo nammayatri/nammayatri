@@ -211,7 +211,6 @@ enable2fa Enable2FAReq {..} = do
   let city' = fromMaybe merchant.defaultOperatingCity city
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city' >>= fromMaybeM AccessDenied
   key <- L.runIO Utils.generateSecretKey
-  -- Esq.runTransaction $
   MA.updatePerson2faForMerchant person.id merchant.id key
   let qrCodeUri = Utils.generateAuthenticatorURI key email merchant.shortId
   pure $ Enable2FARes qrCodeUri
@@ -233,7 +232,6 @@ generateToken personId merchantId city = do
       regToken <- buildRegistrationToken personId merchantId city
       -- this function uses tokens from db, so should be called before transaction
       Auth.cleanCachedTokensByMerchantIdAndCity personId merchantId city
-      -- DB.runTransaction $ do
       QR.deleteAllByPersonIdAndMerchantIdAndCity personId merchantId city
       QR.create regToken
       pure $ regToken.token
@@ -301,7 +299,6 @@ registerFleetOwner req = do
   merchantServerAccessCheck merchant
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
-  -- Esq.runTransaction $ do
   QP.create fleetOwner
   QAccess.create merchantAccess
   return Success

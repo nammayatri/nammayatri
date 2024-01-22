@@ -103,12 +103,10 @@ validateToken sr = do
   let nominal = realToFrac . daysToSeconds $ registrationTokenExpiry
   expired <- Utils.isExpired nominal sr.createdAt
   when expired $ do
-    -- Esq.runTransaction $
     QR.deleteById sr.id
     Utils.throwError TokenExpired
   mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity sr.personId sr.merchantId sr.operatingCity
   when (isNothing mbMerchantAccess) $ do
-    -- Esq.runTransaction $
     QR.deleteById sr.id
     Utils.throwError AccessDenied
   return sr

@@ -58,7 +58,6 @@ createRole _ req = do
   mbExistingRole <- QRole.findByName req.name
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   role <- buildRole req
-  -- Esq.runTransaction $
   QRole.create role
   pure $ DRole.mkRoleAPIEntity role
 
@@ -89,12 +88,9 @@ assignAccessLevel _ roleId req = do
   _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   mbAccessMatrixItem <- QMatrix.findByRoleIdAndEntityAndActionType roleId req.apiEntity req.userActionType
   case mbAccessMatrixItem of
-    Just accessMatrixItem -> do
-      -- Esq.runTransaction $ do
-      QMatrix.updateUserAccessType accessMatrixItem.id req.userActionType req.userAccessType
+    Just accessMatrixItem -> QMatrix.updateUserAccessType accessMatrixItem.id req.userActionType req.userAccessType
     Nothing -> do
       accessMatrixItem <- buildAccessMatrixItem roleId req
-      -- Esq.runTransaction $ do
       void $ QMatrix.create accessMatrixItem
   pure Success
 
