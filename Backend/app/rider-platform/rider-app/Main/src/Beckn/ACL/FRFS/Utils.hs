@@ -32,10 +32,10 @@ buildContext ::
   Text ->
   Text ->
   Text ->
+  Text ->
   Maybe Text ->
   m Spec.Context
-buildContext action merchantId txnId msgId mTTL = do
-  let bapId = merchantId
+buildContext action merchantId bapId txnId msgId mTTL = do
   now <- getCurrentTime
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId) <&> showBaseUrlText
   return $

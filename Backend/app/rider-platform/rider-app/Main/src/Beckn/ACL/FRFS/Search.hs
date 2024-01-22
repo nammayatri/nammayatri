@@ -29,15 +29,16 @@ import Kernel.Utils.Common
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DSearch.FRFSSearch ->
+  Text ->
   DStation.Station ->
   DStation.Station ->
   m (Spec.SearchReq)
-buildSearchReq search fromStation toStation = do
+buildSearchReq search bapId fromStation toStation = do
   let transactionId = search.id.getId
       messageId = transactionId
 
   merchantId <- search.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
-  context <- Utils.buildContext Spec.SEARCH merchantId transactionId messageId Nothing
+  context <- Utils.buildContext Spec.SEARCH merchantId bapId transactionId messageId Nothing
 
   pure $
     Spec.SearchReq
