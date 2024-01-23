@@ -126,6 +126,7 @@ newtype GlobalState = GlobalState {
   , searchLocationScreen :: SearchLocationScreenState
   , globalProps :: GlobalProps
   , metroTicketBookingScreen :: MetroTicketBookingScreenState
+  , metroMyTicketsScreen :: MetroMyTicketsScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -164,7 +165,15 @@ defaultGlobalState = GlobalState {
   , searchLocationScreen : SearchLocationScreenData.initData
   , globalProps : defaultGlobalProps
   , metroTicketBookingScreen : MetroTicketBookingScreenData.initData
+  , metroMyTicketsScreen : MetroMyTicketsScreenData.initData
   }
+
+defaultGlobalProps :: GlobalProps 
+defaultGlobalProps = {
+  savedLocations : [] ,
+  recentSearches : [] ,
+  cachedSearches : []
+}
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
 

@@ -2774,10 +2774,10 @@ metroTicketBookingFlow = do
   flow <- UI.metroTicketBookingScreen
   case flow of
     GO_TO_HOME_SCREEN_FROM_METRO_TICKET state -> homeScreenFlow
-    GO_TO_METRO_STATION_SEARCH state -> do
-      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN}})
-      searchLocationFlow
+    GO_TO_METRO_STATION_SEARCH state -> metroTicketPaymentFlow
+      -- modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+      -- modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN}})
+      -- searchLocationFlow
     GO_TO_MY_METRO_TICKET_SCREEN state -> metroTicketDetailsFlow
     GO_TO_METRO_ROUTE_MAP -> do
       modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
@@ -2785,6 +2785,59 @@ metroTicketBookingFlow = do
       metroTicketDetailsFlow
       
 
+metroTicketPaymentFlow :: FlowBT String Unit
+metroTicketPaymentFlow = do
+  liftFlowBT $ initiatePaymentPage
+  -- let ticketPlaceID = maybe "" (\(TicketPlaceResp ticketPlaceResp) -> ticketPlaceResp.id) screenData.placeInfo
+  -- (CreateOrderRes orderResp) <- Remote.bookTicketsBT (Remote.mkBookingTicketReq screenData) ticketPlaceID
+  let (PaymentPagePayload sdk_payload) = sdkPayload
+      (PayPayload innerpayload) = sdk_payload.payload
+      finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
+      sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+      shortOrderID = "orderResp.order_id"
+  -- modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{shortOrderId = shortOrderID}, props{selectedBookingId = shortOrderID}})
+  lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+  _ <- paymentPageUI sdkPayload
+  void $ lift $ lift $ toggleLoader true
+  _ <- pure $ toggleBtnLoader "" false
+  -- (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT shortOrderID
+  -- modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
+  -- updatePaymentStatusData ticketStatus shortOrderID
+  -- void $ lift $ lift $ toggleLoader false
+  ticketStatusFlow
+
+
+sdkPayload :: PaymentPagePayload
+sdkPayload = PaymentPagePayload {
+  service : Just "in.juspay.hyperpay",
+  requestId : Just "743b1e7711cc4d1995633dbfcf4bb0e3",
+  payload : PayPayload {
+        returnUrl : Just "google.com",
+        orderId : Just "Test0100002",
+        options_getUpiDeepLinks : Nothing,
+        "options.createMandate" : Nothing,
+        merchantId : Just "yatrisathi",
+        "mandate.startDate" : Nothing,
+        "mandate.maxAmount" : Nothing,
+        "mandate.endDate" : Nothing,
+        lastName : Nothing,
+        language : Just "english",
+        -- issuingPsp : Just "YES_BIZ",
+        firstName : Just "Driverds",
+        environment : Just "sandbox",
+        description : Just "Complete your payment",
+        customerPhone : Nothing, -- This should be same as sim operator or null
+        customerId : Just "107006461",
+        -- customer_id  : Just "107006461",
+        customerEmail : Just"test@juspay.in",
+        currency : "INR",
+        clientId : Just "yatrisathi",
+        clientAuthTokenExpiry : "2023-12-22T11:00:25Z",
+        clientAuthToken : "tkn_a922265a98e04a7a9ce1964e19fa94ba",
+        amount : "10.0",
+        action : Just "paymentPage"
+  }
+}
 ticketListFlow :: FlowBT String Unit
 ticketListFlow = do
   (GlobalState currentState) <- getState
