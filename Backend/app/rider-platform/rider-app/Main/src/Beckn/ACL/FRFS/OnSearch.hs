@@ -75,7 +75,10 @@ parseFulfillments item fulfillments fulfillmentId = do
   fulfillment <- fulfillments & find (\fulfillment -> fulfillment.fulfillmentId == Just fulfillmentId) & fromMaybeM (InvalidRequest "Fulfillment not found")
   fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "FulfillmentStops not found")
 
-  stations <- fulfillmentStops & sequenceStops & mapWithIndex (\idx stop -> mkDStation stop (idx + 1))
+  stations <-
+    if isParentIdAvailable fulfillmentStops
+      then fulfillmentStops & sequenceStops & mapWithIndex (\idx stop -> mkDStation stop (Just $ idx + 1))
+      else traverse (\s -> mkDStation s Nothing) fulfillmentStops
   price <- item.itemPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Price not found")
   vehicleCategory <- fulfillment.fulfillmentVehicle >>= (.vehicleCategory) & fromMaybeM (InvalidRequest "VehicleType not found")
   vehicleType <- vehicleCategory & castVehicleVariant & fromMaybeM (InvalidRequest "VehicleType not found")
@@ -89,7 +92,7 @@ parseFulfillments item fulfillments fulfillmentId = do
         _type = quoteType
       }
 
-mkDStation :: (MonadFlow m) => Spec.Stop -> Int -> m Domain.DStation
+mkDStation :: (MonadFlow m) => Spec.Stop -> Maybe Int -> m Domain.DStation
 mkDStation stop seqNumber = do
   stationCode <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorCode) & fromMaybeM (InvalidRequest "Stop Location code not found")
   stationName <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorName) & fromMaybeM (InvalidRequest "Stop Location name not found")
@@ -125,7 +128,13 @@ sequenceStops stops = go Nothing []
     findFirstStop = stops & find (\stop -> stop.stopParentStopId == Nothing)
 
     findNextStop :: Spec.Stop -> Maybe Spec.Stop
-    findNextStop prevStop = stops & find (\stop -> prevStop.stopParentStopId == stop.stopId)
+    findNextStop prevStop = stops & find (\stop -> stop.stopParentStopId == prevStop.stopId)
+
+-- TODO: Remove this when ONDC makes parentStopId mandatory
+isParentIdAvailable :: [Spec.Stop] -> Bool
+isParentIdAvailable stops =
+  let lenMissingParentId = length $ filter (\stop -> stop.stopParentStopId == Nothing) stops
+   in lenMissingParentId == 1
 
 mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
 mapWithIndex f xs = go 0 xs
