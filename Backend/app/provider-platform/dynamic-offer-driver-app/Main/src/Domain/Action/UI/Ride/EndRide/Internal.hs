@@ -66,6 +66,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
@@ -330,9 +331,8 @@ createDriverFee ::
     EsqDBFlow m r,
     EncFlow m r,
     MonadFlow m,
-    HasField "schedulerSetName" r Text,
-    HasField "schedulerType" r SchedulerType,
-    HasField "jobInfoMap" r (M.Map Text Bool)
+    JobCreatorEnv r,
+    HasField "schedulerType" r SchedulerType
   ) =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -401,7 +401,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
           return $ Just newDriverPlan
         _ -> return Nothing
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> Int -> UTCTime -> m ()
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, JobCreatorEnv r, HasField "schedulerType" r SchedulerType) => TransporterConfig -> DF.DriverFee -> Id Merchant -> Id MerchantOperatingCity -> Int -> UTCTime -> m ()
 scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now = do
   void $
     case transporterConfig.driverFeeCalculationTime of

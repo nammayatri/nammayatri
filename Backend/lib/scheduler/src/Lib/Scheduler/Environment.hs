@@ -21,9 +21,11 @@ import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
 import Kernel.Beam.Connection.Flow (prepareConnectionDriver)
 import Kernel.Beam.Connection.Types
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Prelude
+import Kernel.Storage.Beam.SystemConfigs
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, HedisFlow, disconnectHedis)
 import Kernel.Storage.Queries.SystemConfigs as QSC
@@ -36,7 +38,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
-import Lib.Scheduler.JobStorageType.DB.Lib ()
 import Lib.Scheduler.Metrics
 import Lib.Scheduler.Types
 
@@ -103,6 +104,7 @@ data SchedulerEnv = SchedulerEnv
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     maxThreads :: Int,
+    maxShards :: Int,
     jobInfoMap :: JobInfoMap,
     kvConfigUpdateFrequency :: Int,
     cacheConfig :: CacheConfig
@@ -119,13 +121,15 @@ releaseSchedulerEnv SchedulerEnv {..} = do
 
 type SchedulerM = FlowR SchedulerEnv
 
-type JobCreator r m = (HasField "jobInfoMap" r (M.Map Text Bool), HasField "schedulerSetName" r Text, JobMonad r m)
+type JobCreatorEnv r = (HasField "jobInfoMap" r (M.Map Text Bool), HasField "maxShards" r Int, HasField "schedulerSetName" r Text)
 
-type JobExecutor r m = (HasField "streamName" r Text, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m)
+type JobCreator r m = (JobCreatorEnv r, JobMonad r m)
+
+type JobExecutor r m = (HasField "streamName" r Text, HasField "maxShards" r Int, HasField "groupName" r Text, HasField "schedulerSetName" r Text, JobMonad r m)
 
 type JobMonad r m = (HasField "schedulerType" r SchedulerType, MonadReader r m, HedisFlow m r, MonadFlow m)
 
-runSchedulerM :: SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
+runSchedulerM :: HasSchemaName SystemConfigsT => SchedulerConfig -> SchedulerEnv -> SchedulerM a -> IO a
 runSchedulerM schedulerConfig env action = do
   let loggerRt = L.getEulerLoggerRuntime Nothing env.loggerConfig
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do

@@ -23,7 +23,6 @@ import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
-import Kernel.External.Verification.Interface.Idfy
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration
 import Kernel.Storage.Queries.SystemConfigs as QSC
@@ -33,24 +32,14 @@ import Kernel.Utils.App (getPodName, handleLeft)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
-import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
-import SharedLogic.Allocator
-import SharedLogic.Allocator.Jobs.Document.VerificationRetry
-import SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
-import SharedLogic.Allocator.Jobs.DriverFeeUpdates.DriverFee
-import SharedLogic.Allocator.Jobs.Mandate.Execution (startMandateExecutionForDriver)
-import SharedLogic.Allocator.Jobs.Mandate.Notification (sendPDNNotificationToDriver)
-import SharedLogic.Allocator.Jobs.Mandate.OrderAndNotificationStatusUpdate (notificationAndOrderStatusUpdate)
-import SharedLogic.Allocator.Jobs.Overlay.SendOverlay (sendOverlayToDriver)
-import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestToDrivers)
-import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
+import SharedLogic.JobScheduler
+import "rider-app" SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.Merchant as Storage
 
-allocatorHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle AllocatorJobType
-allocatorHandle flowRt env =
+schedulerHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle RiderJobType
+schedulerHandle flowRt env =
   SchedulerHandle
     { getTasksById = QAllJ.getTasksById,
       getReadyTasks = QAllJ.getReadyTasks $ Just env.maxShards,
@@ -63,27 +52,18 @@ allocatorHandle flowRt env =
       reScheduleOnError = QAllJ.reScheduleOnError,
       jobHandlers =
         emptyJobHandlerList
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPaymentReminderToDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . unsubscribeDriverForPaymentOverdue)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateDriverFeeForDrivers)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPDNNotificationToDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . startMandateExecutionForDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . notificationAndOrderStatusUpdate)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendOverlayToDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . badDebtCalculation)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . retryDocumentVerificationJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . checkPNAndSendSMS)
     }
 
-runDriverOfferAllocator ::
+runRiderAppScheduler ::
   (HandlerCfg -> HandlerCfg) ->
   IO ()
-runDriverOfferAllocator configModifier = do
-  handlerCfg <- configModifier <$> readDhallConfigDefault "driver-offer-allocator"
+runRiderAppScheduler configModifier = do
+  handlerCfg <- configModifier <$> readDhallConfigDefault "rider-app-scheduler"
   handlerEnv <- buildHandlerEnv handlerCfg
   hostname <- getPodName
   let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.appCfg.loggerConfig
+
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
@@ -107,18 +87,8 @@ runDriverOfferAllocator configModifier = do
           findById "kv_configs" >>= pure . decodeFromText' @Tables
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
-        allProviders <-
-          try Storage.loadAllProviders
-            >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
-        let allSubscriberIds = map ((.subscriberId.getShortId) &&& (.uniqueKeyId)) allProviders
-        flowRt' <-
-          addAuthManagersToFlowRt
-            flowRt
-            $ catMaybes
-              [ Just (Nothing, prepareAuthManagers flowRt handlerEnv allSubscriberIds),
-                Just (Just 20000, prepareIdfyHttpManager 20000)
-              ]
-
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
-        pure flowRt'
-    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ allocatorHandle flowRt' handlerEnv
+        pure flowRt
+    managers <- managersFromManagersSettings handlerEnv.httpClientOptions.timeoutMs mempty -- default manager is created
+    let flowRt'' = flowRt' {R._httpClientManagers = managers}
+    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ schedulerHandle flowRt'' handlerEnv

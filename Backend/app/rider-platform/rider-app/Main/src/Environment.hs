@@ -17,7 +17,7 @@ module Environment
     FlowHandler,
     FlowServer,
     Flow,
-    AppCfg (),
+    AppCfg (..),
     AppEnv (..),
     BAPs (..),
     RideConfig (..),
@@ -55,9 +55,11 @@ import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Servant.Client (HttpClientOptions, RetryCfg)
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.GoogleTranslate
+import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import Storage.CachedQueries.Merchant as CM
 import Tools.Metrics
@@ -119,6 +121,10 @@ data AppCfg = AppCfg
     kvConfigUpdateFrequency :: Int,
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
+    maxShards :: Int,
+    jobInfoMapx :: M.Map RiderJobType Bool,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType,
     internalEndPointMap :: M.Map BaseUrl BaseUrl
   }
   deriving (Generic, FromDhall)
@@ -127,6 +133,9 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
+    jobInfoMap :: M.Map Text Bool,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType,
     webengageCfg :: WebengageConfig,
     hostName :: Text,
     searchRequestExpiry :: Maybe Seconds,
@@ -183,6 +192,7 @@ data AppEnv = AppEnv
     eventRequestCounter :: EventCounterMetric,
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
+    maxShards :: Int,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl
   }
   deriving (Generic)
@@ -200,6 +210,7 @@ buildAppEnv cfg@AppCfg {..} = do
   eventRequestCounter <- registerEventRequestCounterMetric
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
+  let jobInfoMap :: (M.Map Text Bool) = M.mapKeys show jobInfoMapx
   let nonCriticalModifierFunc = ("ab:n_c:" <>)
   hedisEnv <- connectHedis hedisCfg riderAppPrefix
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg nonCriticalModifierFunc

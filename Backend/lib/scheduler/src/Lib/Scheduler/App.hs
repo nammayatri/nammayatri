@@ -17,8 +17,10 @@ module Lib.Scheduler.App
   )
 where
 
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude hiding (mask, throwIO)
 import Kernel.Randomizer
+import Kernel.Storage.Beam.SystemConfigs
 import Kernel.Storage.Esqueleto.Config (prepareEsqDBEnv)
 import Kernel.Storage.Hedis (connectHedis, connectHedisCluster)
 import Kernel.Streaming.Kafka.Producer.Types
@@ -41,13 +43,14 @@ import System.Exit
 import UnliftIO
 
 runSchedulerService ::
-  (JobProcessor t, FromJSON t) =>
+  (JobProcessor t, FromJSON t, HasSchemaName SystemConfigsT) =>
   SchedulerConfig ->
   JobInfoMap ->
   Int ->
+  Int ->
   SchedulerHandle t ->
   IO ()
-runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency handle_ = do
+runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency maxShards handle_ = do
   hostname <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

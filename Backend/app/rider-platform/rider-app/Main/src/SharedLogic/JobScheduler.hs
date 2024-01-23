@@ -30,6 +30,7 @@ import Lib.Scheduler
 
 data RiderJobType
   = CheckPNAndSendSMS
+  | OtherJobTypes
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -38,6 +39,7 @@ showSingInstance ''RiderJobType
 instance JobProcessor RiderJobType where
   restoreAnyJobInfo :: Sing (e :: RiderJobType) -> Text -> Maybe (AnyJobInfo RiderJobType)
   restoreAnyJobInfo SCheckPNAndSendSMS jobData = AnyJobInfo <$> restoreJobInfo SCheckPNAndSendSMS jobData
+  restoreAnyJobInfo SOtherJobTypes jobData = AnyJobInfo <$> restoreJobInfo SOtherJobTypes jobData
 
 data CheckPNAndSendSMSJobData = CheckPNAndSendSMSJobData
   { bookingId :: Id Booking,
@@ -54,3 +56,19 @@ data CheckPNAndSendSMSJobData = CheckPNAndSendSMSJobData
 instance JobInfoProcessor 'CheckPNAndSendSMS
 
 type instance JobContent 'CheckPNAndSendSMS = CheckPNAndSendSMSJobData
+
+data OtherJobTypesJobData = OtherJobTypesJobData
+  { bookingId :: Id Booking,
+    emergencyContactPersonId :: Id Person,
+    emergencyContactNumber :: Text,
+    riderName :: Maybe Text,
+    merchantOpCityId :: Id DMOC.MerchantOperatingCity,
+    merchantId :: Id DM.Merchant,
+    trackLink :: Text,
+    redisKey :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'OtherJobTypes
+
+type instance JobContent 'OtherJobTypes = OtherJobTypesJobData
