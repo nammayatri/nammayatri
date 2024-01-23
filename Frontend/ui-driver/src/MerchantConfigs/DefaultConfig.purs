@@ -223,7 +223,7 @@ config =
   , enableImageUpload : true
   , enableGender: false
   , enableOtpRide: false
-  , enableSuggestions : false
+  , enableSuggestions : true
   }
   , showCorporateAddress : false
   , engilshInNative: "English"
