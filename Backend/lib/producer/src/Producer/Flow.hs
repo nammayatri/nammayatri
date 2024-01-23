@@ -37,6 +37,16 @@ producerLockKey = "Producer:Lock:key"
 reviverLockKey :: Text
 reviverLockKey = "Reviver:Lock:Key"
 
+myShardKey :: Text
+myShardKey = "MyShard:Key"
+
+getMyShardKey :: Flow Text
+getMyShardKey = do
+  setName <- asks (.schedulerSetName)
+  maxShards <- asks (.maxShards)
+  myShardId <- (`mod` maxShards) . fromIntegral <$> Hedis.incr myShardKey
+  return $ setName <> "{" <> show myShardId <> "}"
+
 runProducer :: Flow ()
 runProducer = do
   Hedis.whenWithLockRedis producerLockKey 10 $ do
@@ -46,14 +56,14 @@ runProducer = do
         producerTimestampKey <- asks (.producerTimestampKey)
         startTime <- getTime begTime producerTimestampKey
         endTime <- getCurrentTimestamp
-        setName <- asks (.schedulerSetName)
-        currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore setName startTime endTime
+        myShardKey <- getMyShardKey
+        currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore myShardKey startTime endTime
         logDebug $ "Jobs taken out of sortedset : " <> show currentJobs
         logDebug $ "Job chunks produced to be inserted into stream : " <> show currentJobs
         Hedis.set producerTimestampKey endTime
         result <- insertIntoStream currentJobs
         logDebug $ "Jobs inserted into stream with timeStamp :" <> show result
-        _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore setName startTime endTime
+        _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore myShardKey startTime endTime
         endTime <- getCurrentTimestamp
         let diff = endTime - begTime
         waitTimeMilliSec <- asks (.waitTimeMilliSec)

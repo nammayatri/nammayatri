@@ -37,6 +37,7 @@ in
         "dynamic-offer-driver-app-exe"
         "dynamic-offer-driver-drainer-exe"
         "rider-app-drainer-exe"
+        "rider-app-scheduler-exe"
         "image-api-helper-exe"
         "kafka-consumers-exe"
         "mock-fcm-exe"
@@ -109,7 +110,9 @@ in
                 set -x
                 pwd
                 rm -f ./*.log # Clean up the log files
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider myGroup_Rider  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
                 redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+                redis-cli XGROUP CREATE Available_Jobs_Rider myGroup_Rider 0 MKSTREAM
                 redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
               '';
             };

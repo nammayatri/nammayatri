@@ -7,6 +7,7 @@ packages:
   app/provider-platform/dynamic-offer-driver-app/Allocator
   app/rider-platform/rider-app-drainer
   app/rider-platform/rider-app/Main
+  app/rider-platform/rider-app/Scheduler
   app/rider-platform/rider-app/search-result-aggregator
   app/mocks/sms
   app/mocks/fcm

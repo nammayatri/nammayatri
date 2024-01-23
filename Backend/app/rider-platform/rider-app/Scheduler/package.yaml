@@ -1,4 +1,4 @@
-name: producer
+name: rider-app-scheduler
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
 license: AllRightsReserved
@@ -39,9 +39,7 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
-  - OverloadedLabels
   - OverloadedStrings
-  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
@@ -55,54 +53,58 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - StandaloneDeriving
+  - PackageImports
 
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - mobility-core
-  - hedis
-  - hashmap
-  - monad-control
-  - euler-hs
+  - generic-lens
   - bytestring
-  - record-dot-preprocessor
-  - record-hasfield
-  - text
-  - time
+  - cryptonite
+  - containers
+  - euler-hs
+  - exceptions
+  - hspec
+  - servant
+  - servant-client
+  - servant-client-core
   - servant-server
-  - persistent
-  - persistent-postgresql
-  - esqueleto
-  - template-haskell
-  - cereal
-  - beam-core
-  - beam-mysql
-  - beam-postgres
-  - template-haskell
-  - sequelize
-  - casing
-  - postgresql-simple
-  - random
-  - scheduler
+  - text
+  - wai
+  - warp
+  - time
+  - stm
+  - resource-pool
   - uuid
+  - prometheus-client
+  - record-hasfield
+  - record-dot-preprocessor
+  - servant-openapi3
+  - openapi3
+  - string-conversions
+  - either
+  - text-conversions
+  - scheduler
+  - safe
+  - extra
   - singletons
-  - dynamic-offer-driver-app
-  - rider-app
 
 ghc-options:
-  - -Wall
-  - -Wcompat
-  - -Werror
-  - -Widentities
-  - -Wunused-imports
-  - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
+  - -fplugin=RecordDotPreprocessor
 
 library:
-  source-dirs: src
+  source-dirs:
+    - src
   ghc-options:
-    - -Wincomplete-uni-patterns
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Werror
+    - -Wwarn=ambiguous-fields
   when:
     - condition: flag(Local)
       then:
@@ -117,16 +119,19 @@ library:
         ghc-options:
           - -O2
           - -j4
+  dependencies:
+    - rider-app
+    - mobility-core
+    - beckn-spec
 
 executables:
-  producer-exe:
+  rider-app-scheduler-exe:
     main: Main.hs
-    source-dirs: app
+    source-dirs: server
     ghc-options:
       - -threaded
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
-      - -Wincomplete-uni-patterns
     when:
     - condition: flag(Local)
       then:
@@ -142,5 +147,5 @@ executables:
           - -O2
           - -j4
     dependencies:
-      - producer
+      - rider-app-scheduler
       - mobility-core

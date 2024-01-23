@@ -162,6 +162,13 @@ let maxMessages
     : Text
     = "5000"
 
+let RiderJobType = < CheckPNAndSendSMS | OtherJobTypes >
+
+let jobInfoMapx =
+      [ { mapKey = RiderJobType.CheckPNAndSendSMS, mapValue = True }
+      , { mapKey = RiderJobType.OtherJobTypes, mapValue = False }
+      ]
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -223,5 +230,9 @@ in  { esqDBCfg
     , kvConfigUpdateFrequency
     , maxMessages
     , incomingAPIResponseTimeout = +15
+    , maxShards = +5
+    , jobInfoMapx
     , internalEndPointMap = common.internalEndPointMap
+    , schedulerSetName = "rider-scheduler-set"
+    , schedulerType = common.schedulerType.RedisBased
     }
