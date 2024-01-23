@@ -289,6 +289,9 @@ window.getMerchantConfig = function () {
   , "profile" : {
     "showBookingOption" : false
   }
+  , "waitTimeConfig" : {
+    "thresholdDist" : 0.03,
+  }
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true
   }
