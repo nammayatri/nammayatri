@@ -117,8 +117,6 @@ data AppCfg = AppCfg
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     kvConfigUpdateFrequency :: Int,
-    dontEnableForDb :: [Text],
-    dontEnableForKafka :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
     internalEndPointMap :: M.Map BaseUrl BaseUrl
@@ -183,8 +181,6 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     eventStreamMap :: [EventStreamMap],
     eventRequestCounter :: EventCounterMetric,
-    dontEnableForDb :: [Text],
-    dontEnableForKafka :: [Text],
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl
