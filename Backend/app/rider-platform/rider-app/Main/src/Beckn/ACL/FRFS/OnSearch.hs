@@ -16,7 +16,6 @@ module Beckn.ACL.FRFS.OnSearch where
 
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
-import qualified Data.Text as T
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import Domain.Types.FRFSTrip as DTrip
 import qualified Domain.Types.Station as Domain.DStation
@@ -73,7 +72,7 @@ parseFulfillments item fulfillments fulfillmentId = do
   fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "FulfillmentStops not found")
 
   stations <- fulfillmentStops & sequenceStops & mapWithIndex (\idx stop -> mkDStation stop (idx + 1))
-  price <- item.itemPrice >>= (.priceValue) >>= (readMaybe . T.unpack) & fromMaybeM (InvalidRequest "Price not found")
+  price <- item.itemPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Price not found")
   vehicleCategory <- fulfillment.fulfillmentVehicle >>= (.vehicleCategory) & fromMaybeM (InvalidRequest "VehicleType not found")
   vehicleType <- vehicleCategory & castVehicleVariant & fromMaybeM (InvalidRequest "VehicleType not found")
 
