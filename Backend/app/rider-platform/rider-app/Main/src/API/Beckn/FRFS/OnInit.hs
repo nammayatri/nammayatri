@@ -39,12 +39,11 @@ onInit ::
 onInit _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onInitReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   withTransactionIdLogTag' transaction_id $ do
-    message_id <- req.onInitReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
     onInitReq <- ACL.buildOnInitReq req
-    Redis.whenWithLockRedis (onInitLockKey message_id) 60 $ do
+    Redis.whenWithLockRedis (onInitLockKey onInitReq.messageId) 60 $ do
       (merchant, booking) <- DOnInit.validateRequest onInitReq
       fork "FRFS on_init processing" $ do
-        Redis.whenWithLockRedis (onInitProcessingLockKey message_id) 60 $
+        Redis.whenWithLockRedis (onInitProcessingLockKey onInitReq.messageId) 60 $
           DOnInit.onInit onInitReq merchant booking
   pure Utils.ack
 
