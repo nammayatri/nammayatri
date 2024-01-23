@@ -88,6 +88,9 @@ window.getMerchantConfig = function () {
       , "enableGender" : false
       , "enableOtpRide" : false
     }
+    , "features" : {
+      "enableSuggestions" : true
+    } 
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner"
       , "name" : "Yatri"
