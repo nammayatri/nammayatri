@@ -33,6 +33,7 @@ import qualified Storage.Queries.Station as QStation
 
 data DOnSearch = DOnSearch
   { bppSubscriberId :: Text,
+    bppSubscriberUrl :: Text,
     providerDescription :: Maybe Text,
     providerId :: Text,
     providerName :: Text,
@@ -92,7 +93,7 @@ mkQuotes dOnSearch search merchant DQuote {..} = do
       { Quote._type = _type,
         Quote.bppItemId,
         Quote.bppSubscriberId = dOnSearch.bppSubscriberId,
-        Quote.bppSubscriberUrl = dOnSearch.bppSubscriberId,
+        Quote.bppSubscriberUrl = dOnSearch.bppSubscriberUrl,
         Quote.fromStationId = startStation.id,
         Quote.id = uid,
         Quote.price,
