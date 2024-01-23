@@ -20,23 +20,22 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import Data.List (singleton)
+import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Utils.Common
 
 buildConfirmReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m) =>
   DBooking.FRFSTicketBooking ->
-  Text ->
+  BecknConfig ->
   Text ->
   m (Spec.ConfirmReq)
-buildConfirmReq booking txnId bapId = do
+buildConfirmReq booking bapConfig txnId = do
   let transactionId = booking.searchId.getId
   messageId <- generateGUID
 
-  merchantId <- booking.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
-  context <- Utils.buildContext Spec.CONFIRM merchantId bapId transactionId messageId Nothing
+  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId Nothing
 
   pure $
     Spec.ConfirmReq

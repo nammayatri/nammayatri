@@ -405,6 +405,7 @@ library
       API.Action.UI.TicketService
       API.Types.UI.FRFSTicketService
       API.Types.UI.TicketService
+      Domain.Types.BecknConfig
       Domain.Types.BusinessHour
       Domain.Types.FRFSQuote
       Domain.Types.FRFSSearch
@@ -426,6 +427,7 @@ library
       Domain.Types.TicketBookingServiceCategory
       Domain.Types.TicketPlace
       Domain.Types.TicketService
+      Storage.Beam.BecknConfig
       Storage.Beam.BusinessHour
       Storage.Beam.FRFSQuote
       Storage.Beam.FRFSSearch
@@ -447,6 +449,7 @@ library
       Storage.Beam.TicketBookingServiceCategory
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
+      Storage.Queries.BecknConfig
       Storage.Queries.BusinessHour
       Storage.Queries.FRFSQuote
       Storage.Queries.FRFSSearch
