@@ -309,6 +309,7 @@ library
       Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
       Storage.Beam.Webengage
+      Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FeedbackForm

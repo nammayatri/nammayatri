@@ -13,6 +13,7 @@ BecknConfig:
     subscriberUrl: BaseUrl
     gatewayUrl: BaseUrl
     registryUrl: BaseUrl
+    uniqueKeyId: Text
 
   queries:
     findByMerchantIdAndDomain:
