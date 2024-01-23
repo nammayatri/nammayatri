@@ -16,6 +16,7 @@ data BecknConfig = BecknConfig
     registryUrl :: Servant.Client.Core.BaseUrl,
     subscriberId :: Kernel.Prelude.Text,
     subscriberUrl :: Servant.Client.Core.BaseUrl,
+    uniqueKeyId :: Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
