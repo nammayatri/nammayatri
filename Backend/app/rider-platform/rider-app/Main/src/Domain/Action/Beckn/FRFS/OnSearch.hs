@@ -56,7 +56,7 @@ data DStation = DStation
     stationLat :: Maybe Double,
     stationLon :: Maybe Double,
     stationType :: DTrip.StationType,
-    stopSequence :: Int
+    stopSequence :: Maybe Int
   }
 
 validateRequest :: DOnSearch -> Flow (Merchant, Search.FRFSSearch)
@@ -128,5 +128,5 @@ castStationToAPI DStation {..} =
       API.lon = stationLon,
       API.name = stationName,
       API.stationType = Just stationType,
-      API.sequenceNum = Just stopSequence
+      API.sequenceNum = stopSequence
     }
