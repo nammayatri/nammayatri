@@ -32,11 +32,14 @@ findAll' ::
   m [BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection]
 findAll' farePolicyId = findAllWithOptionsKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId)] (Se.Asc BeamFPPDP.startDistance) Nothing Nothing
 
-updatePerExtraKmRate :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id DFP.FarePolicy -> HighPrecMoney -> m ()
-updatePerExtraKmRate farePolicyId' perExtraKmRate =
+findByIdAndStartDistance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id DFP.FarePolicy -> Meters -> m (Maybe BeamFPPDP.FullFarePolicyProgressiveDetailsPerExtraKmRateSection)
+findByIdAndStartDistance farePolicyId' startDistance = findOneWithKV [Se.And [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId'), Se.Is BeamFPPDP.startDistance $ Se.Eq startDistance]]
+
+updatePerExtraKmRate :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => KTI.Id DFP.FarePolicy -> Meters -> HighPrecMoney -> m ()
+updatePerExtraKmRate farePolicyId' startDistance perExtraKmRate =
   updateWithKV
     [Se.Set BeamFPPDP.perExtraKmRate perExtraKmRate]
-    [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId')]
+    [Se.And [Se.Is BeamFPPDP.farePolicyId $ Se.Eq (getId farePolicyId'), Se.Is BeamFPPDP.startDistance $ Se.Eq startDistance]]
 
 deleteAll' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DFP.FarePolicy -> m ()
 deleteAll' (Id farePolicyId) = deleteWithKV [Se.Is BeamFPPDP.farePolicyId $ Se.Eq farePolicyId]

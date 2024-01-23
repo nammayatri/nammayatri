@@ -633,6 +633,7 @@ type UpdateFPPerExtraKmRate =
   "config"
     :> "farePolicy"
     :> Capture "farePolicyId" (Id Common.FarePolicy)
+    :> Capture "startDistance" Meters
     :> "perExtraKmRate"
     :> "update"
     :> ReqBody '[JSON] UpdateFPPerExtraKmRateReq

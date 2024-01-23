@@ -156,7 +156,7 @@ data MerchantAPIs = MerchantAPIs
     verificationServiceConfigUpdate :: Merchant.VerificationServiceConfigUpdateReq -> Euler.EulerClient APISuccess,
     createFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
     updateFPDriverExtraFee :: Id Common.FarePolicy -> Meters -> Merchant.CreateFPDriverExtraFeeReq -> Euler.EulerClient APISuccess,
-    updateFPPerExtraKmRate :: Id Common.FarePolicy -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
+    updateFPPerExtraKmRate :: Id Common.FarePolicy -> Meters -> Merchant.UpdateFPPerExtraKmRateReq -> Euler.EulerClient APISuccess,
     schedulerTrigger :: Merchant.SchedulerTriggerReq -> Euler.EulerClient APISuccess
   }
 
