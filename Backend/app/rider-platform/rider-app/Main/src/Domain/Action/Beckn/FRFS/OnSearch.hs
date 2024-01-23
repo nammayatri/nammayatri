@@ -88,6 +88,8 @@ mkQuotes dOnSearch search merchant DQuote {..} = do
   let stationsJSON = stations & map castStationToAPI & encodeToText
   uid <- generateGUID
   now <- getCurrentTime
+
+  let validTill = fromMaybe (addUTCTime (intToNominalDiffTime 600) now) dOnSearch.validTill -- If validTill is not present, set it to 10 minutes from now
   return
     Quote.FRFSQuote
       { Quote._type = _type,
@@ -105,7 +107,7 @@ mkQuotes dOnSearch search merchant DQuote {..} = do
         Quote.searchId = search.id,
         Quote.stationsJson = stationsJSON,
         Quote.toStationId = endStation.id,
-        Quote.validTill = now, -- TODO: fix validTill
+        Quote.validTill,
         Quote.vehicleType,
         Quote.merchantId = Just merchant.id,
         Quote.merchantOperatingCityId = search.merchantOperatingCityId,
