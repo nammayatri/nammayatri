@@ -18,27 +18,25 @@ module Beckn.ACL.FRFS.Utils where
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
-import Control.Lens ((%~))
 import Data.Aeson as A
-import qualified Data.Text as T
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
+import Domain.Types.BecknConfig
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
-import Kernel.Utils.Servant.BaseUrl
 
 buildContext ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m) =>
   Spec.Action ->
-  Text ->
-  Text ->
+  BecknConfig ->
   Text ->
   Text ->
   Maybe Text ->
   m Spec.Context
-buildContext action merchantId bapId txnId msgId mTTL = do
+buildContext action bapConfig txnId msgId mTTL = do
   now <- getCurrentTime
-  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId) <&> showBaseUrlText
+  let bapUrl = showBaseUrl bapConfig.subscriberUrl
+  let bapId = bapConfig.subscriberId
   return $
     Spec.Context
       { contextAction = encodeToText' action,

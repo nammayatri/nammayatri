@@ -20,25 +20,24 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.Station as DStation
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Utils.Common
 
 buildSearchReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m) =>
   DSearch.FRFSSearch ->
-  Text ->
+  BecknConfig ->
   DStation.Station ->
   DStation.Station ->
   m (Spec.SearchReq)
-buildSearchReq search bapId fromStation toStation = do
+buildSearchReq search bapConfig fromStation toStation = do
   let transactionId = search.id.getId
       messageId = transactionId
 
-  merchantId <- search.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
-  context <- Utils.buildContext Spec.SEARCH merchantId bapId transactionId messageId Nothing
+  context <- Utils.buildContext Spec.SEARCH bapConfig transactionId messageId Nothing
 
   pure $
     Spec.SearchReq

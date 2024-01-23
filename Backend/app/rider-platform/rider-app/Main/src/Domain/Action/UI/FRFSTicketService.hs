@@ -9,8 +9,10 @@ import qualified Beckn.ACL.FRFS.Confirm as ACL
 import qualified Beckn.ACL.FRFS.Init as ACL
 import qualified Beckn.ACL.FRFS.Search as ACL
 import qualified Beckn.ACL.FRFS.Status as ACL
+import qualified BecknV2.FRFS.Enums as Spec
 import Control.Monad.Extra hiding (fromMaybeM)
 import Data.OpenApi (ToSchema)
+import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSSearch
@@ -46,6 +48,7 @@ import qualified SharedLogic.CallFRFSBPP as CallBPP
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerc
+import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
@@ -79,6 +82,7 @@ postFrfsSearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.
 postFrfsSearch (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..} = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  bapConfig <- QBC.findByMerchantIdAndDomain (Just merchant.id) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
   fromStation <- QStation.findByStationCode fromStationCode >>= fromMaybeM (InvalidRequest "Invalid from station id")
   toStation <- QStation.findByStationCode toStationCode >>= fromMaybeM (InvalidRequest "Invalid to station id")
 
@@ -100,8 +104,8 @@ postFrfsSearch (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..} = do
           }
   QFRFSSearch.create searchReq
   fork "FRFS SearchReq" $ do
-    bknSearchReq <- ACL.buildSearchReq searchReq merchant.bapId fromStation toStation
-    void $ CallBPP.search merchant.frfsGatewayUrl bknSearchReq
+    bknSearchReq <- ACL.buildSearchReq searchReq bapConfig fromStation toStation
+    void $ CallBPP.search bapConfig.gatewayUrl bknSearchReq
   return $ FRFSSearchAPIRes searchReqId
 
 getFrfsSearchQuote :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSQuoteAPIRes]
@@ -154,7 +158,8 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
 
   when (isNothing dConfirmRes.bppOrderId) $ do
     providerUrl <- dConfirmRes.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-    bknInitReq <- ACL.buildInitReq dConfirmRes merchant.bapId
+    bapConfig <- QBC.findByMerchantIdAndDomain (Just merchant.id) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
+    bknInitReq <- ACL.buildInitReq dConfirmRes bapConfig
     void $ CallBPP.init providerUrl bknInitReq
   return $ makeBookingStatusAPI dConfirmRes stations
   where
@@ -208,6 +213,7 @@ getFrfsBookingStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.P
 getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  bapConfig <- QBC.findByMerchantIdAndDomain (Just merchant.id) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
   booking' <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   unless (personId == booking'.riderId) $ throwError AccessDenied
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -221,7 +227,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     DFRFSTicketBooking.FAILED -> buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.CONFIRMING -> buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.CONFIRMED -> do
-      callBPPStatus booking merchant.bapId
+      callBPPStatus booking bapConfig
       buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.APPROVED -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
@@ -266,7 +272,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING
               fork "FRFS Confirm Req" $ do
                 providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-                bknConfirmReq <- ACL.buildConfirmReq booking txnId.getId merchant.bapId
+                bknConfirmReq <- ACL.buildConfirmReq booking bapConfig txnId.getId
                 void $ CallBPP.confirm providerUrl bknConfirmReq
               buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
             else do
@@ -366,11 +372,11 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         [transaction] -> return transaction.id
         _ -> throwError $ InvalidRequest "Multiple successful transactions found"
 
-callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> Text -> Environment.Flow ()
-callBPPStatus booking bapId = do
+callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environment.Flow ()
+callBPPStatus booking bapConfig = do
   fork "FRFS Init Req" $ do
     providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-    bknStatusReq <- ACL.buildStatusReq booking bapId
+    bknStatusReq <- ACL.buildStatusReq booking bapConfig
     void $ CallBPP.status providerUrl bknStatusReq
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]

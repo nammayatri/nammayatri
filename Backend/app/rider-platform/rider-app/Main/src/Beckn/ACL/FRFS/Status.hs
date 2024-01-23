@@ -19,22 +19,22 @@ module Beckn.ACL.FRFS.Status (buildStatusReq) where
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
+import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 
 buildStatusReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  (MonadFlow m) =>
   DBooking.FRFSTicketBooking ->
-  Text ->
+  BecknConfig ->
   m (Spec.StatusReq)
-buildStatusReq booking bapId = do
+buildStatusReq booking bapConfig = do
   let transactionId = booking.searchId.getId
   messageId <- generateGUID
 
-  merchantId <- booking.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
-  context <- Utils.buildContext Spec.INIT merchantId bapId transactionId messageId Nothing
+  context <- Utils.buildContext Spec.INIT bapConfig transactionId messageId Nothing
 
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "bppOrderId not found")
   pure $
