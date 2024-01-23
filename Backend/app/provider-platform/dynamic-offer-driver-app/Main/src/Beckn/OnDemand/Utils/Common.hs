@@ -45,7 +45,9 @@ lastStop :: [Spec.Stop] -> Maybe Spec.Stop
 lastStop = find (\stop -> Spec.stopType stop == Just "END")
 
 mkStops :: LatLong -> LatLong -> Maybe [Spec.Stop]
-mkStops originGps destinationGps =
+mkStops origin destination = do
+  let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
+      destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
   Just
     [ Spec.Stop
         { stopLocation =

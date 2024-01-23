@@ -37,6 +37,7 @@ import Domain.Types.Estimate
 import EulerHS.Prelude hiding (id, view, (^?))
 import GHC.Float (double2Int)
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
+import qualified Kernel.Types.Beckn.Gps as Gps
 
 mkProviderLocations :: [EstimateInfo] -> [Spec.Location]
 mkProviderLocations estimatesList =
@@ -44,17 +45,19 @@ mkProviderLocations estimatesList =
 
 mkProviderLocation :: EstimateInfo -> [Spec.Location]
 mkProviderLocation EstimateInfo {..} = do
-  let locationGps = A.decode $ A.encode driverLatLongs
-  [ Spec.Location
-      { locationAddress = Nothing,
-        locationAreaCode = Nothing,
-        locationCity = Nothing,
-        locationCountry = Nothing,
-        locationGps = locationGps,
-        locationId = Nothing,
-        locationState = Nothing
-      }
-    ]
+  let driverLocations = toList driverLatLongs
+      driverGps = map (\loc -> Gps.Gps {lat = loc.lat, lon = loc.lon}) driverLocations
+  flip map driverGps $
+    \gps ->
+      Spec.Location
+        { locationAddress = Nothing,
+          locationAreaCode = Nothing,
+          locationCity = Nothing,
+          locationCountry = Nothing,
+          locationGps = A.decode $ A.encode gps,
+          locationId = Nothing,
+          locationState = Nothing
+        }
 
 mkItemTags :: EstimateInfo -> [Spec.TagGroup]
 mkItemTags estInfo = do
