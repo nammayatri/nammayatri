@@ -99,7 +99,7 @@ FRFSQuote:
 
   types:
     FRFSQuoteType:
-      enum: "SingleJourney, ReturnJourney, Pass"
+      enum: "SingleJourney, ReturnJourney, Pass, SpecialFareSingleJourney"
 
   queries:
     findById:

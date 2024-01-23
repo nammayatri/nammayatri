@@ -17,6 +17,7 @@ module Beckn.ACL.FRFS.OnSearch where
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
+import qualified Domain.Types.FRFSQuote as DQuote
 import Domain.Types.FRFSTrip as DTrip
 import qualified Domain.Types.Station as Domain.DStation
 import Kernel.Prelude
@@ -68,6 +69,9 @@ parseItems fulfillments item = do
 parseFulfillments :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> Text -> m Domain.DQuote
 parseFulfillments item fulfillments fulfillmentId = do
   itemId <- item.itemId & fromMaybeM (InvalidRequest "ItemId not found")
+  itemCode <- item.itemDescriptor >>= (.descriptorCode) & fromMaybeM (InvalidRequest "ItemCode not found")
+  quoteType <- castQuoteType itemCode
+
   fulfillment <- fulfillments & find (\fulfillment -> fulfillment.fulfillmentId == Just fulfillmentId) & fromMaybeM (InvalidRequest "Fulfillment not found")
   fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "FulfillmentStops not found")
 
@@ -81,7 +85,8 @@ parseFulfillments item fulfillments fulfillmentId = do
       { bppItemId = itemId,
         price,
         vehicleType,
-        stations
+        stations,
+        _type = quoteType
       }
 
 mkDStation :: (MonadFlow m) => Spec.Stop -> Int -> m Domain.DStation
@@ -144,3 +149,10 @@ castStationType = \case
   "TRANSIT_STOP" -> Just DTrip.TRANSIT
   "INTERMEDIATE_STOP" -> Just DTrip.INTERMEDIATE
   _ -> Nothing
+
+castQuoteType :: MonadFlow m => Text -> m DQuote.FRFSQuoteType
+castQuoteType "SJT" = return DQuote.SingleJourney
+castQuoteType "SFSJT" = return DQuote.SpecialFareSingleJourney
+castQuoteType "RJT" = return DQuote.ReturnJourney
+castQuoteType "PASS" = return DQuote.Pass
+castQuoteType _ = throwError $ InvalidRequest "Invalid quote type"

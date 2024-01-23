@@ -46,7 +46,8 @@ data DQuote = DQuote
   { bppItemId :: Text,
     price :: HighPrecMoney,
     vehicleType :: DStation.FRFSVehicleType,
-    stations :: [DStation]
+    stations :: [DStation],
+    _type :: Quote.FRFSQuoteType
   }
 
 data DStation = DStation
@@ -88,7 +89,7 @@ mkQuotes dOnSearch search merchant DQuote {..} = do
   now <- getCurrentTime
   return
     Quote.FRFSQuote
-      { Quote._type = Quote.SingleJourney,
+      { Quote._type = _type,
         Quote.bppItemId,
         Quote.bppSubscriberId = dOnSearch.bppSubscriberId,
         Quote.bppSubscriberUrl = dOnSearch.bppSubscriberId,
