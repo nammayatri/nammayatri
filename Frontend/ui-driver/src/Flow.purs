@@ -1306,6 +1306,7 @@ goToLocationFlow = do
             case getLocations of
               Right locData -> modifyScreenState $ HomeScreenStateType (\ screenState -> screenState { data { driverGotoState {savedLocationsArray = getLocationArray locData}}})
               Left errorPayload -> pure $ toast $ Remote.getCorrespondingErrorMessage errorPayload
+            void $ pure $ hideKeyboardOnNavigation true
             homeScreenFlow 
           else do
             modifyScreenState $ DriverSavedLocationScreenStateType (\_ ->  defaultEpassState.driverSavedLocationScreen)

@@ -1365,27 +1365,27 @@ gotoCounterStrings :: GoToPopUpType -> PopupReturn
 gotoCounterStrings popupType = case popupType of 
   MORE_GOTO_RIDES -> PopupReturn { primaryText : getString MORE_GOTO_RIDE_COMING
                             , secondaryText : getString MORE_GOTO_RIDE_COMING_DESC
-                            , imageURL : "ny_ic_goto_more_rides,"
+                            , imageURL : fetchImage FF_ASSET "ny_ic_goto_more_rides"
                             , buttonText : getString OKAY
                             }
   REDUCED 0 -> PopupReturn { primaryText : getString GOTO_REDUCED_TO_ZERO
                             , secondaryText : getString DUE_TO_MULTIPLE_CANCELLATIONS <> " 0."
-                            , imageURL : "ny_ic_gotodriver_zero,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                            , imageURL : fetchImage FF_ASSET "ny_ic_gotodriver_zero"
                             , buttonText : getString OK_GOT_IT
                             }
   REDUCED n -> PopupReturn { primaryText : getString GOTO_REDUCED_TO <> " " <> show n
                             , secondaryText : getString DUE_TO_MULTIPLE_CANCELLATIONS <> " " <> show  n <> "."
-                            , imageURL : "ny_ic_gotodriver_one"
+                            , imageURL : fetchImage FF_ASSET "ny_ic_gotodriver_one"
                             , buttonText : getString OK_GOT_IT
                             }
   VALIDITY_EXPIRED -> PopupReturn { primaryText : getString VALIDITY_EXPIRED_STR
                             , secondaryText : getString VALIDITY_EXPIRED_DESC
-                            , imageURL : "ny_ic_validity_expired,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                            , imageURL : fetchImage FF_ASSET "ny_ic_validity_expired"
                             , buttonText : getString OK_GOT_IT
                             }
   REACHED_HOME -> PopupReturn { primaryText : getString GOTO_LOC_REACHED
                             , secondaryText : getString YOU_ARE_ALMOST_AT_LOCATION
-                            , imageURL : "ny_ic_goto_arrived,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_driver_near.png"
+                            , imageURL : fetchImage FF_ASSET "ny_ic_goto_arrived"
                             , buttonText : getString OK_GOT_IT
                             }
   NO_POPUP_VIEW -> PopupReturn { primaryText : "" , secondaryText : "" , imageURL : "" , buttonText : "" }
