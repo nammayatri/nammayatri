@@ -33,7 +33,7 @@ buildConfirmReq ::
   m (Spec.ConfirmReq)
 buildConfirmReq booking txnId bapId = do
   let transactionId = booking.searchId.getId
-  messageId <- generateGUID
+      messageId = booking.id.getId
 
   merchantId <- booking.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
   context <- Utils.buildContext Spec.CONFIRM merchantId bapId transactionId messageId Nothing

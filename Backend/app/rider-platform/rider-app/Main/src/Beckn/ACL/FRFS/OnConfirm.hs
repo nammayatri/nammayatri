@@ -41,6 +41,7 @@ buildOnConfirmReq onConfirmReq = do
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
   totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Invalid quotationPrice")
+  bppOrderId <- order.orderId & fromMaybeM (InvalidRequest "BppOrderId not found")
 
   fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
 
@@ -54,6 +55,7 @@ buildOnConfirmReq onConfirmReq = do
         totalPrice,
         fareBreakUp = fareBreakUp,
         bppItemId,
+        bppOrderId,
         bppBookingId,
         transactionId,
         messageId,

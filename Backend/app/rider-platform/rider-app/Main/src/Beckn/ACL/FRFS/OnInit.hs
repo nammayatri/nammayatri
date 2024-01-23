@@ -37,7 +37,7 @@ buildOnInitReq onInitReq = do
 
   item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
   bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
-  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "BppBookingId not found")
+  -- bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "BppBookingId not found")
 
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
@@ -52,7 +52,7 @@ buildOnInitReq onInitReq = do
         fareBreakUp = fareBreakUp,
         bppItemId,
         transactionId,
-        bppBookingId,
+        -- bppBookingId,
         messageId,
         validTill = Nothing -- TODO: fix me
       }

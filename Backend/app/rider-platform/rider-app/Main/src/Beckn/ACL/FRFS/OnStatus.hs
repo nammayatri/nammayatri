@@ -41,6 +41,7 @@ buildOnStatusReq onStatusReq = do
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
   totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Invalid quotationPrice")
+  bppOrderId <- order.orderId & fromMaybeM (InvalidRequest "BppOrderId not found")
 
   fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
 
@@ -57,5 +58,6 @@ buildOnStatusReq onStatusReq = do
         bppBookingId,
         transactionId,
         messageId,
+        bppOrderId,
         tickets
       }

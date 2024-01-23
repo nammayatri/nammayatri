@@ -51,6 +51,12 @@ findByQuoteId (Kernel.Types.Id.Id quoteId) = do
     [ Se.Is Beam.quoteId $ Se.Eq quoteId
     ]
 
+findByBPPOrderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> m (Maybe (Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
+findByBPPOrderId quoteId = do
+  findOneWithKV
+    [ Se.Is Beam.bppOrderId $ Se.Eq quoteId
+    ]
+
 updateBPPOrderIdAndStatusById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
 updateBPPOrderIdAndStatusById bppOrderId status (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime

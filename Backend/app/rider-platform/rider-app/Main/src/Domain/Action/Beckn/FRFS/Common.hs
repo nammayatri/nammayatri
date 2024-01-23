@@ -32,6 +32,7 @@ data DOrder = DOrder
     bppItemId :: Text,
     transactionId :: Text,
     messageId :: Text,
+    bppOrderId :: Text,
     tickets :: [DTicket]
   }
 

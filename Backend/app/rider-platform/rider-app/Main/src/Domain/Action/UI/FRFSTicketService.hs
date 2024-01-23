@@ -153,6 +153,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
 
   when (isNothing dConfirmRes.bppOrderId) $ do
+    QFRFSTicketBooking.create dConfirmRes
     providerUrl <- dConfirmRes.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
     bknInitReq <- ACL.buildInitReq dConfirmRes merchant.bapId
     void $ CallBPP.init providerUrl bknInitReq
@@ -168,8 +169,8 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
       _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
       unless (personId == quote.riderId) $ throwError AccessDenied
-      now <- getCurrentTime
-      unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
+      -- now <- getCurrentTime
+      -- unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
       maybeM (buildBooking quote) (\booking -> return booking) (QFRFSTicketBooking.findByQuoteId quoteId)
 
     buildBooking DFRFSQuote.FRFSQuote {..} = do
@@ -246,39 +247,45 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                     }
           buildFRFSTicketBookingStatusAPIRes updatedBooking paymentObj
     DFRFSTicketBooking.PAYMENT_PENDING -> do
-      paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-      paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
-      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
-      let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
-      if (paymentBookingStatus == FRFSTicketService.FAILURE)
-        then do
-          QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
-          QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.FAILED booking.id
-          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED
-          buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
-        else
-          if (paymentBookingStatus == FRFSTicketService.SUCCESS)
-            then do
-              void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
-              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING booking.id
-              transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
-              txnId <- getSuccessTransactionId transactions
-              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING
-              fork "FRFS Confirm Req" $ do
-                providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-                bknConfirmReq <- ACL.buildConfirmReq booking txnId.getId merchant.bapId
-                void $ CallBPP.confirm providerUrl bknConfirmReq
-              buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
-            else do
-              paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
-              let paymentObj =
-                    Just
-                      FRFSTicketService.FRFSBookingPaymentAPI
-                        { status = paymentBookingStatus,
-                          paymentOrder = Just paymentOrder_
-                        }
-              buildFRFSTicketBookingStatusAPIRes booking paymentObj
+      -- paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+      -- fork "FRFS Confirm Req" $ do
+      providerUrl <- "http://localhost:5500" & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+      bknConfirmReq <- ACL.buildConfirmReq booking "123" merchant.bapId
+      void $ CallBPP.confirm providerUrl bknConfirmReq
+      buildFRFSTicketBookingStatusAPIRes booking Nothing
   where
+    -- paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
+    -- paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+    -- let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
+    -- if (paymentBookingStatus == FRFSTicketService.FAILURE)
+    --   then do
+    --     QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
+    --     QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.FAILED booking.id
+    --     let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED
+    --     buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
+    --   else
+    --     if (paymentBookingStatus == FRFSTicketService.SUCCESS)
+    --       then do
+    --         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
+    --         void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING booking.id
+    --         transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
+    --         txnId <- getSuccessTransactionId transactions
+    --         let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING
+    --         fork "FRFS Confirm Req" $ do
+    --           providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+    --           bknConfirmReq <- ACL.buildConfirmReq booking txnId.getId merchant.bapId
+    --           void $ CallBPP.confirm providerUrl bknConfirmReq
+    --         buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
+    --       else do
+    --         paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
+    --         let paymentObj =
+    --               Just
+    --                 FRFSTicketService.FRFSBookingPaymentAPI
+    --                   { status = paymentBookingStatus,
+    --                     paymentOrder = Just paymentOrder_
+    --                   }
+    --         buildFRFSTicketBookingStatusAPIRes booking paymentObj
+
     -- callBPPStatus booking
     -- (paymentBooking :: Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment) <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId
     -- payment <- case paymentBooking of
@@ -359,12 +366,13 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId_
 
     makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus = DFRFSTicketBooking.FRFSTicketBooking {status = updatedStatus, ..}
-    getSuccessTransactionId transactions = do
-      let successTransactions = filter (\transaction -> transaction.status == Payment.CHARGED) transactions
-      case successTransactions of
-        [] -> throwError $ InvalidRequest "No successful transaction found"
-        [transaction] -> return transaction.id
-        _ -> throwError $ InvalidRequest "Multiple successful transactions found"
+
+-- getSuccessTransactionId transactions = do
+--   let successTransactions = filter (\transaction -> transaction.status == Payment.CHARGED) transactions
+--   case successTransactions of
+--     [] -> throwError $ InvalidRequest "No successful transaction found"
+--     [transaction] -> return transaction.id
+--     _ -> throwError $ InvalidRequest "Multiple successful transactions found"
 
 callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> Text -> Environment.Flow ()
 callBPPStatus booking bapId = do

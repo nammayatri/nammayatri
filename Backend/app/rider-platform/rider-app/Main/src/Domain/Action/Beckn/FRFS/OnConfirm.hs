@@ -42,7 +42,8 @@ onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onConfirm _merchant booking dOrder = do
   tickets <- traverse (mkTicket booking) dOrder.tickets
   void $ QTicket.createMany tickets
-  void $ QTBooking.updateStatusById Booking.CONFIRMED booking.id
+  void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+  -- void $ QTBooking.updateStatusById Booking.CONFIRMED booking.id
   return ()
 
 mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Flow Ticket.FRFSTicket

@@ -34,7 +34,7 @@ buildStatusReq booking bapId = do
   messageId <- generateGUID
 
   merchantId <- booking.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
-  context <- Utils.buildContext Spec.INIT merchantId bapId transactionId messageId Nothing
+  context <- Utils.buildContext Spec.STATUS merchantId bapId transactionId messageId Nothing
 
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "bppOrderId not found")
   pure $

@@ -32,7 +32,7 @@ buildInitReq ::
   m (Spec.InitReq)
 buildInitReq tBooking bapId = do
   let transactionId = tBooking.searchId.getId
-  messageId <- generateGUID
+      messageId = tBooking.id.getId
 
   merchantId <- tBooking.merchantId <&> (.getId) & fromMaybeM (InternalError "MerchantId not found")
   context <- Utils.buildContext Spec.INIT merchantId bapId transactionId messageId Nothing
