@@ -40,15 +40,15 @@ onConfirm _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   withTransactionIdLogTag' transaction_id $ do
     dOnConfirmReq <- ACL.buildOnConfirmReq req
-    Redis.whenWithLockRedis (onConfirmLockKey dOnConfirmReq.bppBookingId) 60 $ do
+    Redis.whenWithLockRedis (onConfirmLockKey dOnConfirmReq.bppOrderId) 60 $ do
       (merchant, booking) <- DOnConfirm.validateRequest dOnConfirmReq
       fork "onConfirm request processing" $
-        Redis.whenWithLockRedis (onConfirmProcessingLockKey dOnConfirmReq.bppBookingId) 60 $
+        Redis.whenWithLockRedis (onConfirmProcessingLockKey dOnConfirmReq.bppOrderId) 60 $
           DOnConfirm.onConfirm merchant booking dOnConfirmReq
   pure Utils.ack
 
 onConfirmLockKey :: Text -> Text
-onConfirmLockKey id = "FRFS:OnConfirm:BppBookingId-" <> id
+onConfirmLockKey id = "FRFS:OnConfirm:bppOrderId-" <> id
 
 onConfirmProcessingLockKey :: Text -> Text
-onConfirmProcessingLockKey id = "FRFS:OnConfirm:Processing:BppBookingId-" <> id
+onConfirmProcessingLockKey id = "FRFS:OnConfirm:Processing:bppOrderId-" <> id

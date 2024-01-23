@@ -34,7 +34,7 @@ buildStatusReq booking bapConfig = do
   let transactionId = booking.searchId.getId
   messageId <- generateGUID
 
-  context <- Utils.buildContext Spec.INIT bapConfig transactionId messageId Nothing
+  context <- Utils.buildContext Spec.STATUS bapConfig transactionId messageId Nothing
 
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "bppOrderId not found")
   pure $

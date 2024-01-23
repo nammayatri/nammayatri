@@ -39,6 +39,12 @@ findAllByStatus status = do
     [ Se.Is Beam.status $ Se.Eq status
     ]
 
+findByBppOrderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe (Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
+findByBppOrderId bppOrderId = do
+  findOneWithKV
+    [ Se.Is Beam.bppOrderId $ Se.Eq bppOrderId
+    ]
+
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m (Maybe (Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
 findById (Kernel.Types.Id.Id id) = do
   findOneWithKV

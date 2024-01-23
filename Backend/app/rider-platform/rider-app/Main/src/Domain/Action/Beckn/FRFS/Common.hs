@@ -28,7 +28,7 @@ data DOrder = DOrder
   { providerId :: Text,
     totalPrice :: HighPrecMoney,
     fareBreakUp :: [DFareBreakUp],
-    bppBookingId :: Text,
+    bppOrderId :: Text,
     bppItemId :: Text,
     transactionId :: Text,
     messageId :: Text,

@@ -33,7 +33,7 @@ buildConfirmReq ::
   m (Spec.ConfirmReq)
 buildConfirmReq booking bapConfig txnId = do
   let transactionId = booking.searchId.getId
-  messageId <- generateGUID
+      messageId = booking.id.getId
 
   context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId Nothing
 
