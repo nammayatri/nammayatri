@@ -72,7 +72,8 @@ data FulfillmentInfo = FulfillmentInfo
     agent :: Maybe Agent,
     _type :: FulfillmentType,
     vehicle :: Maybe Vehicle,
-    tags :: Maybe T.TagGroups
+    tags :: Maybe T.TagGroups,
+    person :: Person
   }
   deriving (Generic, Show)
 
@@ -109,6 +110,14 @@ data Vehicle = Vehicle
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema Vehicle where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype Person = Person
+  { tags :: Maybe T.TagGroups
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Person where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 newtype Location = Location
