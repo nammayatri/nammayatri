@@ -2,6 +2,7 @@ module BecknV2.FRFS.Utils where
 
 import qualified BecknV2.FRFS.Types as Spec
 import qualified Data.Text as T
+import Data.Time.Format (defaultTimeLocale, parseTimeM)
 import Kernel.Prelude
 import Kernel.Types.Common
 
@@ -81,3 +82,6 @@ parseGPS gps = do
   lat' <- readMaybe $ T.unpack lat
   lon' <- readMaybe $ T.unpack $ T.drop 1 lon
   return (lat', lon')
+
+getUTCTime :: Text -> Maybe UTCTime
+getUTCTime txt = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" (T.unpack txt)
