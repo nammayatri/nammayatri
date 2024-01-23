@@ -21,7 +21,7 @@ import Data.Aeson.Types
 import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.GenericPretty
-import Kernel.Utils.JSON
+import Kernel.Utils.JSON (constructorsToLowerOptions, constructorsWithHyphens)
 
 data Domain
   = FRFS
@@ -75,7 +75,19 @@ data StopType = START | END | INTERMEDIATE_STOP
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
 
 data PaymentType = PRE_ORDER | PRE_FULFILLMENT | ON_FULFILLMENT | POST_FULFILLMENT | ON_ORDER
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+  deriving (Eq, Ord, Show, Read, Generic)
+
+instance FromJSON PaymentType where
+  parseJSON = genericParseJSON constructorsWithHyphens
+
+instance ToJSON PaymentType where
+  toJSON = genericToJSON constructorsWithHyphens
 
 data PaymentStatus = PAID | NOT_PAID
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON)
+  deriving (Eq, Ord, Show, Read, Generic)
+
+instance FromJSON PaymentStatus where
+  parseJSON = genericParseJSON constructorsWithHyphens
+
+instance ToJSON PaymentStatus where
+  toJSON = genericToJSON constructorsWithHyphens
