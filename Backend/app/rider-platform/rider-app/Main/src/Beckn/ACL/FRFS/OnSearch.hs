@@ -35,6 +35,7 @@ buildOnSearchReq onSearchReq = do
   messageId <- context.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   bppSubscriberId <- context.contextBppId & fromMaybeM (InvalidRequest "BppSubscriberId not found")
   bppSubscriberUrl <- context.contextBppUri & fromMaybeM (InvalidRequest "BppSubscriberUrl not found")
+  let ttl = context.contextTtl >>= Utils.getUTCTime
 
   message <- onSearchReq.onSearchReqMessage & fromMaybeM (InvalidRequest "Message not found")
   provider <- message.onSearchReqMessageCatalog.catalogProviders >>= listToMaybe & fromMaybeM (InvalidRequest "Provider not found")
@@ -56,7 +57,7 @@ buildOnSearchReq onSearchReq = do
         quotes,
         bppSubscriberId,
         bppSubscriberUrl,
-        validTill = Nothing,
+        validTill = ttl,
         transactionId,
         messageId
       }
