@@ -70,7 +70,7 @@ data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> m (),
-    notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> m (),
+    notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> Maybe LatLong -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
@@ -165,7 +165,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
-    withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride
+    withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride (Just point)
 
   pure APISuccess.Success
   where

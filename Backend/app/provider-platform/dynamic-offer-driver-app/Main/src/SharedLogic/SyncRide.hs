@@ -94,7 +94,7 @@ fetchNewRideInfo ride booking = do
 syncInProgressRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncInProgressRide ride booking = do
   handle (errHandler (Just ride.status) booking.status "ride started") $
-    CallBAP.sendRideStartedUpdateToBAP booking ride
+    CallBAP.sendRideStartedUpdateToBAP booking ride Nothing
   pure $ Common.RideSyncRes Common.RIDE_INPROGRESS "Success. Sent ride started update to bap"
 
 -- CANCELLED --
@@ -157,7 +157,7 @@ syncCompletedRide :: DRide.Ride -> DB.Booking -> Flow Common.RideSyncRes
 syncCompletedRide ride booking = do
   RideCompletedInfo {..} <- fetchRideCompletedInfo ride booking
   handle (errHandler (Just ride.status) booking.status "ride completed") $
-    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl
+    CallBAP.sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl Nothing
   pure $ Common.RideSyncRes Common.RIDE_COMPLETED "Success. Sent ride completed update to bap"
 
 fetchRideCompletedInfo :: DRide.Ride -> DB.Booking -> Flow RideCompletedInfo
