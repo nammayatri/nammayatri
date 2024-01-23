@@ -15,8 +15,8 @@
 
 module Domain.Action.Beckn.FRFS.OnStatus where
 
+import qualified Beckn.ACL.FRFS.Utils as Utils
 import Domain.Action.Beckn.FRFS.Common
-import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import Domain.Types.Merchant as Merchant
 import Environment
@@ -40,26 +40,8 @@ validateRequest DOrder {..} = do
 
 onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onStatus _merchant booking dOrder = do
-  statuses <- traverse getTicketStatus dOrder.tickets
+  statuses <- traverse Utils.getTicketStatus dOrder.tickets
   void $ traverse updateTicket statuses
   where
     updateTicket (ticketNumber, status) =
       void $ QTicket.updateStatusByTBookingIdAndTicketNumber status booking.id ticketNumber
-
-type TicketNumber = Text
-
-getTicketStatus :: DTicket -> Flow (TicketNumber, Ticket.FRFSTicketStatus)
-getTicketStatus dTicket = do
-  let validTill = dTicket.validTill
-  now <- getCurrentTime
-
-  if now > validTill
-    then return (dTicket.ticketNumber, Ticket.EXPIRED)
-    else do
-      status <- castTicketStatus dTicket.status
-      return (dTicket.ticketNumber, status)
-
-castTicketStatus :: (MonadFlow m) => Text -> m Ticket.FRFSTicketStatus
-castTicketStatus "UNCLAIMED" = return Ticket.ACTIVE
-castTicketStatus "CLAIMED" = return Ticket.USED
-castTicketStatus _ = throwError $ InternalError "Invalid ticket status"

@@ -19,8 +19,10 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.Aeson as A
+import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Domain.Types.BecknConfig
+import qualified Domain.Types.FRFSTicket as Ticket
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -221,3 +223,21 @@ mkSettlementTagGroup mAmount =
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode
+
+type TicketNumber = Text
+
+getTicketStatus :: (MonadFlow m) => DTicket -> m (TicketNumber, Ticket.FRFSTicketStatus)
+getTicketStatus dTicket = do
+  let validTill = dTicket.validTill
+  now <- getCurrentTime
+
+  if now > validTill
+    then return (dTicket.ticketNumber, Ticket.EXPIRED)
+    else do
+      status <- castTicketStatus dTicket.status
+      return (dTicket.ticketNumber, status)
+
+castTicketStatus :: (MonadFlow m) => Text -> m Ticket.FRFSTicketStatus
+castTicketStatus "UNCLAIMED" = return Ticket.ACTIVE
+castTicketStatus "CLAIMED" = return Ticket.USED
+castTicketStatus _ = throwError $ InternalError "Invalid ticket status"
