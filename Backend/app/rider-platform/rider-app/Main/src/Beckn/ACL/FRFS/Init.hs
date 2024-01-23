@@ -32,7 +32,7 @@ buildInitReq ::
   m (Spec.InitReq)
 buildInitReq tBooking bapConfig = do
   let transactionId = tBooking.searchId.getId
-  messageId <- generateGUID
+  let messageId = tBooking.id.getId
 
   context <- Utils.buildContext Spec.INIT bapConfig transactionId messageId Nothing
 
