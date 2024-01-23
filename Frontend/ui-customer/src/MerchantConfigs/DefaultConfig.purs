@@ -149,7 +149,7 @@ config =
   , features : {
     enableAutoReadOtp : true,
     enableZooTicketBookingFlow : false,
-    enableSuggestions : false
+    enableSuggestions : true
   }
 
   , rideCompletedCardConfig : {
