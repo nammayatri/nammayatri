@@ -31,6 +31,8 @@ buildOnInitReq onInitReq = do
   transactionId <- onInitReq.onInitReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   messageId <- onInitReq.onInitReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
 
+  _ <- onInitReq.onInitReqContext.contextTimestamp & fromMaybeM (InvalidRequest "Timestamp not found")
+
   order <- onInitReq.onInitReqMessage <&> (.confirmReqMessageOrder) & fromMaybeM (InvalidRequest "Order not found")
 
   providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
