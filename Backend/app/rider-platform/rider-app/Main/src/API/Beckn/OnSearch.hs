@@ -48,24 +48,29 @@ onSearch ::
 onSearch _ _ reqBS = withFlowHandlerBecknAPI do
   req <- decodeReq reqBS
 
-  (mbDOnSearchReq, messageId) <- case req of
+  (mbDOnSearchReq, messageId, txnId) <- case req of
     Right reqV2 -> do
       transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
       mbDOnSearchReq <- Utils.withTransactionIdLogTag transactionId $ TaxiACL.buildOnSearchReqV2 reqV2
       messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
-      pure (mbDOnSearchReq, messageId)
+      txnId <- Utils.getTransactionId reqV2.onSearchReqContext
+      pure (mbDOnSearchReq, messageId, txnId)
     Left reqV1 -> do
       mbDOnSearchReq <- withTransactionIdLogTag reqV1 $ TaxiACL.buildOnSearchReq reqV1
       let messageId = reqV1.context.message_id
-      pure (mbDOnSearchReq, messageId)
+      txnId <- reqV1.context.transaction_id & fromMaybeM (InvalidRequest "Transaction Id not found in OnSearch request context.")
+      pure (mbDOnSearchReq, messageId, txnId)
 
-  whenJust mbDOnSearchReq $ \request -> do
-    Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
-      validatedRequest <- DOnSearch.validateRequest request
-      fork "on search processing" $ do
-        Redis.whenWithLockRedis (onSearchProcessingLockKey messageId) 60 $
-          DOnSearch.onSearch messageId validatedRequest
-  pure Ack
+  Utils.withTransactionIdLogTag txnId $ do
+    logInfo $ "OnSearch received:-" <> T.decodeUtf8 reqBS
+
+    whenJust mbDOnSearchReq $ \request -> do
+      Redis.whenWithLockRedis (onSearchLockKey messageId) 60 $ do
+        validatedRequest <- DOnSearch.validateRequest request
+        fork "on search processing" $ do
+          Redis.whenWithLockRedis (onSearchProcessingLockKey messageId) 60 $
+            DOnSearch.onSearch messageId validatedRequest
+    pure Ack
 
 onSearchLockKey :: Text -> Text
 onSearchLockKey id = "Customer:OnSearch:MessageId-" <> id

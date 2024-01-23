@@ -19,7 +19,6 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import Data.Data (Data, gmapQ)
 import Data.Generics.Aliases (ext1Q)
-import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.UUID as UUID
@@ -48,12 +47,10 @@ getTagV2 tagGroupCode tagCode tagGroups = do
     descriptorCode Nothing = Nothing
 
 getStartLocation :: [Spec.Stop] -> Maybe Spec.Stop
-getStartLocation stops =
-  filter (\stop -> stop.stopType == Just "START") stops & listToMaybe
+getStartLocation = find (\stop -> stop.stopType == Just "START")
 
 getDropLocation :: [Spec.Stop] -> Maybe Spec.Stop
-getDropLocation stops =
-  filter (\stop -> stop.stopType == Just "END") stops & listToMaybe
+getDropLocation = find (\stop -> stop.stopType == Just "END")
 
 getTransactionId :: (MonadFlow m) => Spec.Context -> m Text
 getTransactionId context = context.contextTransactionId <&> UUID.toText & fromMaybeM (InvalidRequest "Transaction Id not found")
