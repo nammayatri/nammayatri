@@ -315,6 +315,7 @@
       "ny_ic_goto_arrived" : true,
       "ny_ic_goto_home_tag" : true,
       "ny_ic_goto_icon_map_pin_check" : true,
+      "ny_ic_goto_more_rides" : true,
       "ny_ic_goto_special_pullout" : true,
       "ny_ic_gotodriver_one" : true,
       "ny_ic_gotodriver_zero" : true,

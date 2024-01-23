@@ -256,5 +256,8 @@ window.getMerchantConfig = function () {
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true
   }
+  , "waitTimeConfig" : {
+    "enableWaitTime" : false
+  }
   })
 }
