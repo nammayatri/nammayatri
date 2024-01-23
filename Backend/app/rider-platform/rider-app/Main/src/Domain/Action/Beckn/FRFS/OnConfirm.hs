@@ -14,6 +14,7 @@
 
 module Domain.Action.Beckn.FRFS.OnConfirm where
 
+import qualified Beckn.ACL.FRFS.Utils as Utils
 import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
@@ -49,7 +50,7 @@ mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Flow Ticket.FRFSTicket
 mkTicket booking dTicket = do
   now <- getCurrentTime
   ticketId <- generateGUID
-  status <- castTicketStatus dTicket.status
+  (_, status) <- Utils.getTicketStatus dTicket
 
   return
     Ticket.FRFSTicket
@@ -65,8 +66,3 @@ mkTicket booking dTicket = do
         Ticket.createdAt = now,
         Ticket.updatedAt = now
       }
-
-castTicketStatus :: (MonadFlow m) => Text -> m Ticket.FRFSTicketStatus
-castTicketStatus "UNCLAIMED" = return Ticket.ACTIVE
-castTicketStatus "CLAIMED" = return Ticket.USED
-castTicketStatus _ = throwError $ InternalError "Invalid ticket status"
