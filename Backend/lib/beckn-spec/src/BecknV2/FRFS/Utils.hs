@@ -19,7 +19,6 @@ tfDescriptor mCode mName = do
 parseMoney :: Spec.Price -> Maybe HighPrecMoney
 parseMoney price =
   price.priceValue >>= (readMaybe . T.unpack)
-    >>= return . HighPrecMoney
 
 ack :: Spec.AckResponse
 ack =
