@@ -32,11 +32,11 @@ buildOnConfirmReq onConfirmReq = do
   messageId <- onConfirmReq.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
 
   order <- onConfirmReq.onConfirmReqMessage <&> (.confirmReqMessageOrder) & fromMaybeM (InvalidRequest "Order not found")
-  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "BppBookingId not found")
   providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
 
   item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
   bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
+  bppOrderId <- order.orderId & fromMaybeM (InvalidRequest "BppOrderId not found")
 
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
@@ -54,8 +54,8 @@ buildOnConfirmReq onConfirmReq = do
         totalPrice,
         fareBreakUp = fareBreakUp,
         bppItemId,
-        bppBookingId,
         transactionId,
+        bppOrderId,
         messageId,
         tickets
       }

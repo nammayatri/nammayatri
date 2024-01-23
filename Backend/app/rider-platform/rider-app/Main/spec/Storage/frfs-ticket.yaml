@@ -169,6 +169,9 @@ FRFSTicketBooking:
     findByQuoteId:
       kvFunction: findOneWithKV
       where: quoteId
+    findByBppOrderId:
+      kvFunction: findOneWithKV
+      where: bppOrderId
     findAllByStatus:
       kvFunction: findAllWithKV
       where: status
