@@ -38,7 +38,7 @@ data FRFSQuote = FRFSQuote
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data FRFSQuoteType = SingleJourney | ReturnJourney | Pass
+data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''FRFSQuoteType)
