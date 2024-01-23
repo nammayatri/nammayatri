@@ -29,7 +29,7 @@ BecknConfig:
     registryUrl: Text
 
   toTType:
-    subscriberUrl: ~_showBaseUrl
+    subscriberUrl: showBaseUrl
     gatewayUrl: showBaseUrl
     registryUrl: showBaseUrl
 
