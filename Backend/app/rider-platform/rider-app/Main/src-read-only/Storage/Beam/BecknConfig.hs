@@ -23,6 +23,7 @@ data BecknConfigT f = BecknConfigT
     registryUrl :: B.C f Kernel.Prelude.Text,
     subscriberId :: B.C f Kernel.Prelude.Text,
     subscriberUrl :: B.C f Kernel.Prelude.Text,
+    uniqueKeyId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
