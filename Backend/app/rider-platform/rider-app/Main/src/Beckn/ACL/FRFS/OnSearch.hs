@@ -30,8 +30,11 @@ buildOnSearchReq ::
   m Domain.DOnSearch
 buildOnSearchReq onSearchReq = do
   -- validate context
-  transactionId <- onSearchReq.onSearchReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
-  messageId <- onSearchReq.onSearchReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
+  let context = onSearchReq.onSearchReqContext
+  transactionId <- context.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  messageId <- context.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
+  bppSubscriberId <- context.contextBppId & fromMaybeM (InvalidRequest "BppSubscriberId not found")
+  bppSubscriberUrl <- context.contextBppUri & fromMaybeM (InvalidRequest "BppSubscriberUrl not found")
 
   message <- onSearchReq.onSearchReqMessage & fromMaybeM (InvalidRequest "Message not found")
   provider <- message.onSearchReqMessageCatalog.catalogProviders >>= listToMaybe & fromMaybeM (InvalidRequest "Provider not found")
@@ -51,7 +54,8 @@ buildOnSearchReq onSearchReq = do
         providerId,
         providerName,
         quotes,
-        bppSubscriberId = "",
+        bppSubscriberId,
+        bppSubscriberUrl,
         validTill = Nothing,
         transactionId,
         messageId
