@@ -2,7 +2,8 @@ module BecknV2.FRFS.Utils where
 
 import qualified BecknV2.FRFS.Types as Spec
 import qualified Data.Text as T
-import Data.Time.Format (defaultTimeLocale, parseTimeM)
+import Data.Time
+import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Kernel.Prelude
 import Kernel.Types.Common
 
@@ -20,6 +21,21 @@ tfDescriptor mCode mName = do
 parseMoney :: Spec.Price -> Maybe HighPrecMoney
 parseMoney price =
   price.priceValue >>= (readMaybe . T.unpack)
+
+getQuoteValidTill :: UTCTime -> Text -> Maybe UTCTime
+getQuoteValidTill contextTime time = do
+  valid <- parseISO8601Duration time
+  Just $ addDurationToUTCTime contextTime valid
+
+-- Parse ISO8601 duration and return the number of seconds
+parseISO8601Duration :: Text -> Maybe NominalDiffTime
+parseISO8601Duration durationStr = do
+  (calenderDiffernceTime :: CalendarDiffTime) <- iso8601ParseM $ T.unpack durationStr
+  Just $ ctTime calenderDiffernceTime
+
+-- Add the parsed duration to a given UTCTime
+addDurationToUTCTime :: UTCTime -> NominalDiffTime -> UTCTime
+addDurationToUTCTime time duration = addUTCTime duration time
 
 ack :: Spec.AckResponse
 ack =

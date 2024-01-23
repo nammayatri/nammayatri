@@ -89,7 +89,7 @@ mkQuotes dOnSearch search merchant DQuote {..} = do
   uid <- generateGUID
   now <- getCurrentTime
 
-  let validTill = fromMaybe (addUTCTime (intToNominalDiffTime 600) now) dOnSearch.validTill -- If validTill is not present, set it to 10 minutes from now
+  let validTill = fromMaybe (addUTCTime (intToNominalDiffTime 900) now) dOnSearch.validTill -- If validTill is not present, set it to 15 minutes from now
   return
     Quote.FRFSQuote
       { Quote._type = _type,
