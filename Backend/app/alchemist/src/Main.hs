@@ -42,6 +42,7 @@ applyDirectory dirPath processFile = do
 
 main :: IO ()
 main = do
+  putStrLn ("Version " ++ NammaDSL.version)
   currentDir <- getCurrentDirectory
   maybeGitRoot <- findGitRoot currentDir
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
@@ -56,10 +57,11 @@ main = do
 
     processStorageDSL rootDir appPath appName inputFile = do
       let readOnlySrc = rootDir </> appPath </> "src-read-only/"
+      let src = rootDir </> appPath </> "src"
       let readOnlyMigration = rootDir </> sqlOutputPathPrefix </> appName
 
       NammaDSL.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
-      NammaDSL.mkBeamQueries (readOnlySrc </> "Storage/Queries") inputFile
+      NammaDSL.mkBeamQueries (readOnlySrc </> "Storage/Queries") (Just (src </> "Storage/Queries")) inputFile
       NammaDSL.mkDomainType (readOnlySrc </> "Domain/Types") inputFile
       NammaDSL.mkSQLFile readOnlyMigration inputFile
 
