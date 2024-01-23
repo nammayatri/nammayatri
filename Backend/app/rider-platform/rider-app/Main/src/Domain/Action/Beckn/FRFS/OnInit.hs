@@ -43,7 +43,6 @@ data DOnInit = DOnInit
     totalPrice :: HighPrecMoney,
     fareBreakUp :: [DFareBreakUp],
     bppItemId :: Text,
-    bppBookingId :: Text,
     validTill :: Maybe UTCTime,
     transactionId :: Text,
     messageId :: Text
