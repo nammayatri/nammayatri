@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSQuote where
 
@@ -11,7 +12,7 @@ import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
 data FRFSQuote = FRFSQuote
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
@@ -41,4 +42,4 @@ data FRFSQuote = FRFSQuote
 data FRFSQuoteType = SingleJourney | ReturnJourney | Pass | SpecialFareSingleJourney
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''FRFSQuoteType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSQuoteType)

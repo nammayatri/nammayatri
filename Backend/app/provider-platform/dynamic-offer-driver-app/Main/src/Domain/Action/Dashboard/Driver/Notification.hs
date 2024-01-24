@@ -84,14 +84,14 @@ mkDummyNotificationEntityData :: UTCTime -> DVeh.Variant -> DLoc.DummyLocationIn
 mkDummyNotificationEntityData now driverVehicle fromLocData toLocData =
   let searchRequestValidTill = addUTCTime 30 now
       fromLocation = mkDummySearchReqFromLocation now fromLocData
-      toLocation = mkDummySearchReqToLocation now toLocData
+      toLocation = Just $ mkDummySearchReqToLocation now toLocData
       newFromLocation = mkDummyFromLocation now fromLocData
-      newToLocation = mkDummyToLocation now toLocData
+      newToLocation = Just $ mkDummyToLocation now toLocData
    in DSearchReq.SearchRequestForDriverAPIEntity
         { searchRequestId = Id fromLocData.dummyId,
           searchTryId = Id fromLocData.dummyId,
           startTime = now,
-          distance = fromLocData.distance,
+          distance = Just fromLocData.distance,
           distanceToPickup = Meters 149,
           durationToPickup = Seconds 65,
           baseFare = Money fromLocData.baseFare,

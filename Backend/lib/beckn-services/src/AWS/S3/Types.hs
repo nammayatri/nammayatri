@@ -11,17 +11,29 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module AWS.S3.Types where
 
 import Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text.Encoding as T
+import Data.Text as T
+import qualified Data.Text.Encoding as DTE
+import Data.Time.Format.ISO8601 (iso8601Show)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude hiding (show)
+import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import qualified Network.HTTP.Media as M
 import Network.HTTP.Types as HttpTypes
 import Servant
+
+data FileType = Audio | Video | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
+  deriving stock (Eq, Show, Read, Ord, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''FileType)
 
 data S3OctetStream = S3OctetStream deriving (Typeable)
 
@@ -29,10 +41,10 @@ instance Accept S3OctetStream where
   contentType _ = "application" M.// "octet-stream"
 
 instance MimeRender S3OctetStream Text where
-  mimeRender _ = BSL.fromStrict . T.encodeUtf8
+  mimeRender _ = BSL.fromStrict . DTE.encodeUtf8
 
 instance MimeUnrender S3OctetStream Text where
-  mimeUnrender _ = pure . T.decodeUtf8 . BSL.toStrict
+  mimeUnrender _ = pure . DTE.decodeUtf8 . BSL.toStrict
 
 data S3ImageData = S3ImageData deriving (Typeable)
 
@@ -40,10 +52,10 @@ instance Accept S3ImageData where
   contentType _ = "image" M.// "png"
 
 instance MimeRender S3ImageData Text where
-  mimeRender _ = BSL.fromStrict . T.encodeUtf8
+  mimeRender _ = BSL.fromStrict . DTE.encodeUtf8
 
 instance MimeUnrender S3ImageData Text where
-  mimeUnrender _ = pure . T.decodeUtf8 . BSL.toStrict
+  mimeUnrender _ = pure . DTE.decodeUtf8 . BSL.toStrict
 
 data S3Config = S3AwsConf S3AwsConfig | S3MockConf S3MockConfig
   deriving (Generic, FromDhall)
@@ -78,6 +90,28 @@ data S3Env m = S3Env
     getH :: String -> m Text,
     putH :: String -> Text -> m ()
   }
+
+createFilePath ::
+  ( MonadTime m,
+    MonadReader r m,
+    HasField "s3Env" r (S3Env m)
+  ) =>
+  Text ->
+  Text ->
+  FileType ->
+  Text ->
+  m Text
+createFilePath domain identifier fileType validatedFileExtention = do
+  pathPrefix <- asks (.s3Env.pathPrefix)
+  now <- getCurrentTime
+  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
+  return
+    ( pathPrefix <> domain <> identifier <> "/"
+        <> show fileType
+        <> "/"
+        <> fileName
+        <> validatedFileExtention
+    )
 
 get :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> m Text
 get path = do

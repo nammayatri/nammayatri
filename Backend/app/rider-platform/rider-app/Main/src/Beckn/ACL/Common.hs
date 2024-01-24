@@ -20,7 +20,7 @@ import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.Common.Vehicle as Common
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
-import qualified Domain.Action.UI.Search.Common as DSearchCommon
+import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.VehicleVariant as Variant
@@ -64,7 +64,7 @@ castPaymentInstrument Payment.UPI = DMPM.UPI
 castPaymentInstrument Payment.NetBanking = DMPM.NetBanking
 castPaymentInstrument Payment.Cash = DMPM.Cash
 
-mkLocation :: DSearchCommon.SearchReqLocation -> Search.Location
+mkLocation :: DSearch.SearchReqLocation -> Search.Location
 mkLocation info =
   Search.Location
     { gps =

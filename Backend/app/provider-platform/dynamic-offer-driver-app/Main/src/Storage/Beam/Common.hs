@@ -37,7 +37,7 @@ import Storage.Beam.Message.MessageReport
 import Storage.Beam.Message.MessageTranslation
 import Storage.Beam.Notification
 import Storage.Beam.Person
-import Storage.Beam.QuoteSpecialZone
+import Storage.Beam.Quote
 import Storage.Beam.Rating (RatingT, ratingTable)
 import Storage.Beam.Ride.Table
 import Storage.Beam.RideDetails
@@ -63,7 +63,7 @@ atlasDB =
         rideDetails = rideDetailsTable,
         rDetails = riderDetailsTable,
         callStatus = callStatusTable,
-        quoteSpecialZone = quoteSpecialZoneTable,
+        quote = quoteTable,
         messageReport = messageReportTable,
         bookingCancellationReason = bookingCancellationReasonTable,
         driverFee = driverFeeTable,
@@ -93,7 +93,7 @@ data AtlasDB f = AtlasDB
     rideDetails :: f (B.TableEntity RideDetailsT),
     rDetails :: f (B.TableEntity RiderDetailsT),
     callStatus :: f (B.TableEntity CallStatusT),
-    quoteSpecialZone :: f (B.TableEntity QuoteSpecialZoneT),
+    quote :: f (B.TableEntity QuoteT),
     messageReport :: f (B.TableEntity MessageReportT),
     bookingCancellationReason :: f (B.TableEntity BookingCancellationReasonT),
     rating :: f (B.TableEntity RatingT),

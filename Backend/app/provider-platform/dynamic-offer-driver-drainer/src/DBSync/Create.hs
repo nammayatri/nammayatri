@@ -85,7 +85,7 @@ runCreateCommands cmds streamKey = do
     |::| runCreateInKafkaAndDb dbConf streamKey ("MessageTranslation" :: Text) [(obj, val, entryId, MessageTranslationObject obj) | (CreateDBCommand entryId _ _ _ _ (MessageTranslationObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("MetaData" :: Text) [(obj, val, entryId, MetaDataObject obj) | (CreateDBCommand entryId _ _ _ _ (MetaDataObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Person" :: Text) [(obj, val, entryId, PersonObject obj) | (CreateDBCommand entryId _ _ _ _ (PersonObject obj), val) <- cmds]
-    |::| runCreateInKafkaAndDb dbConf streamKey ("QuoteSpecialZone" :: Text) [(obj, val, entryId, QuoteSpecialZoneObject obj) | (CreateDBCommand entryId _ _ _ _ (QuoteSpecialZoneObject obj), val) <- cmds]
+    |::| runCreateInKafkaAndDb dbConf streamKey ("Quote" :: Text) [(obj, val, entryId, QuoteSpecialZoneObject obj) | (CreateDBCommand entryId _ _ _ _ (QuoteSpecialZoneObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Rating" :: Text) [(obj, val, entryId, RatingObject obj) | (CreateDBCommand entryId _ _ _ _ (RatingObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("Ride" :: Text) [(obj, val, entryId, RideObject obj) | (CreateDBCommand entryId _ _ _ _ (RideObject obj), val) <- cmds]
     |::| runCreateInKafkaAndDb dbConf streamKey ("RideDetails" :: Text) [(obj, val, entryId, RideDetailsObject obj) | (CreateDBCommand entryId _ _ _ _ (RideDetailsObject obj), val) <- cmds]

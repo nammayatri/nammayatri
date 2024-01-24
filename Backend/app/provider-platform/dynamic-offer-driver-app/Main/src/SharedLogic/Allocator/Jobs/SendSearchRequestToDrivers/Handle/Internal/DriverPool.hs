@@ -24,11 +24,12 @@ import qualified Control.Monad as CM
 import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
+import Domain.Types.Common
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
+import Domain.Types.DriverPoolConfig
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
-import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.Merchant.TransporterConfig (TransporterConfig)
 import Domain.Types.Person (Driver)
@@ -97,7 +98,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
       return $ (.driverPoolResult.driverId) <$> batches
 
     prepareDriverPoolBatch' previousBatchesDrivers doGoHomePooling merchantOpCityId_ = do
-      radiusStep <- getPoolRadiusStep searchReq.id
+      radiusStep <- getPoolRadiusStep searchTry.id
       transporterConfig <- TC.findByMerchantOpCityId merchantOpCityId_ >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId_.getId)
       intelligentPoolConfig <- DIP.findByMerchantOpCityId merchantOpCityId_ >>= fromMaybeM (InternalError "Intelligent Pool Config not found")
       blockListedDrivers <- Redis.withCrossAppRedis $ Redis.getList (mkBlockListedDriversKey searchReq.id)
@@ -150,7 +151,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
           let onlyNewNormalDrivers = filter (\dpr -> dpr.driverPoolResult.driverId `notElem` previousBatchesDrivers) allNearbyDrivers
           if length onlyNewNormalDrivers < batchSize && not (isAtMaxRadiusStep radiusStep)
             then do
-              incrementPoolRadiusStep searchReq.id
+              incrementPoolRadiusStep searchTry.id
               (batch, _) <- prepareDriverPoolBatch' previousBatchesDrivers False mOCityId
               pure batch
             else do
@@ -208,20 +209,23 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
               driverPoolCfg.distanceBasedBatchSplit
 
         calcGoHomeDriverPool specialDrivers opCityId = do
-          calculateGoHomeDriverPoolBatch <-
-            calculateGoHomeDriverPool
-              ( CalculateGoHomeDriverPoolReq
-                  { poolStage = DriverSelection,
-                    driverPoolCfg = driverPoolCfg,
-                    goHomeCfg = goHomeConfig,
-                    variant = Just searchTry.vehicleVariant,
-                    fromLocation = searchReq.fromLocation,
-                    toLocation = searchReq.toLocation, -- last or all ?
-                    merchantId = searchReq.providerId
-                  }
-              )
-              opCityId
-          return $ filterSpecialDrivers specialDrivers calculateGoHomeDriverPoolBatch
+          case (searchReq.toLocation, isGoHomeAvailable searchTry.tripCategory) of
+            (Just toLoc, True) -> do
+              calculateGoHomeDriverPoolBatch <-
+                calculateGoHomeDriverPool
+                  ( CalculateGoHomeDriverPoolReq
+                      { poolStage = DriverSelection,
+                        driverPoolCfg = driverPoolCfg,
+                        goHomeCfg = goHomeConfig,
+                        variant = Just searchTry.vehicleVariant,
+                        fromLocation = searchReq.fromLocation,
+                        toLocation = toLoc, -- last or all ?
+                        merchantId = searchReq.providerId
+                      }
+                  )
+                  opCityId
+              return $ filterSpecialDrivers specialDrivers calculateGoHomeDriverPoolBatch
+            _ -> return []
 
         calcDriverPool radiusStep merchantOpCityId = do
           let vehicleVariant = searchTry.vehicleVariant
@@ -438,20 +442,8 @@ randomizeAndLimitSelection = randomizeList
 poolBatchNumKey :: Id DST.SearchTry -> Text
 poolBatchNumKey searchTryId = "Driver-Offer:Allocator:PoolBatchNum:SearchTryId-" <> searchTryId.getId
 
-poolRadiusStepKey :: Id DSR.SearchRequest -> Text
-poolRadiusStepKey searchReqId = "Driver-Offer:Allocator:PoolRadiusStep:SearchReqId-" <> searchReqId.getId
-
--- cleanupDriverPoolBatches ::
---   ( Redis.HedisFlow m r
---   ) =>
---   Id DSR.SearchRequest ->
---   m ()
--- cleanupDriverPoolBatches searchReqId = do
---   Redis.withCrossAppRedis $ do
---     Redis.delByPattern (previouslyAttemptedDriversKey searchReqId <> "*")
---     Redis.del (poolRadiusStepKey searchReqId)
---     Redis.del (poolBatchNumKey searchReqId)
---   logInfo "Cleanup redis."
+poolRadiusStepKey :: Id DST.SearchTry -> Text
+poolRadiusStepKey searchTryId = "Driver-Offer:Allocator:PoolRadiusStep:SearchTryId-" <> searchTryId.getId
 
 getNextDriverPoolBatch ::
   ( EncFlow m r,
@@ -490,23 +482,23 @@ incrementBatchNum searchTryId = do
   logInfo $ "Increment batch num to " <> show res <> "."
   return ()
 
-getPoolRadiusStep :: (Redis.HedisFlow m r) => Id DSR.SearchRequest -> m PoolRadiusStep
-getPoolRadiusStep searchReqId = do
-  res <- Redis.withCrossAppRedis $ Redis.get (poolRadiusStepKey searchReqId)
+getPoolRadiusStep :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolRadiusStep
+getPoolRadiusStep searchTryId = do
+  res <- Redis.withCrossAppRedis $ Redis.get (poolRadiusStepKey searchTryId)
   case res of
     Just i -> return i
     Nothing -> do
       let expTime = 600
-      Redis.withCrossAppRedis $ Redis.setExp (poolRadiusStepKey searchReqId) (0 :: Integer) expTime
+      Redis.withCrossAppRedis $ Redis.setExp (poolRadiusStepKey searchTryId) (0 :: Integer) expTime
       return 0
 
 incrementPoolRadiusStep ::
   ( Redis.HedisFlow m r
   ) =>
-  Id DSR.SearchRequest ->
+  Id DST.SearchTry ->
   m ()
-incrementPoolRadiusStep searchReqId = do
-  res <- Redis.withCrossAppRedis $ Redis.incr (poolRadiusStepKey searchReqId)
+incrementPoolRadiusStep searchTryId = do
+  res <- Redis.withCrossAppRedis $ Redis.incr (poolRadiusStepKey searchTryId)
   logInfo $ "Increment radius step to " <> show res <> "."
   return ()
 

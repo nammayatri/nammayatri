@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSTicket where
 
@@ -9,7 +10,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
 data FRFSTicket = FRFSTicket
   { frfsTicketBookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
@@ -29,4 +30,4 @@ data FRFSTicket = FRFSTicket
 data FRFSTicketStatus = ACTIVE | EXPIRED | USED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''FRFSTicketStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketStatus)

@@ -19,6 +19,7 @@ module SharedLogic.CallBAP
     sendRideCompletedUpdateToBAP,
     sendBookingCancelledUpdateToBAP,
     sendDriverArrivalUpdateToBAP,
+    sendStopArrivalUpdateToBAP,
     sendEstimateRepetitionUpdateToBAP,
     sendNewMessageToBAP,
     sendDriverOffer,
@@ -104,7 +105,7 @@ callOnSelect transporter searchRequest searchTry content = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  let msgId = searchTry.estimateId.getId
+  let msgId = searchTry.estimateId
   context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False
   logDebug $ "on_select request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV1 bapUri internalEndPointHashMap (BecknCallbackReq context $ Right content)
@@ -128,7 +129,7 @@ callOnSelectV2 transporter searchRequest searchTry content = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  let msgId = searchTry.estimateId.getId
+  let msgId = searchTry.estimateId
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry)
   logDebug $ "on_selectV2 request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))
@@ -500,6 +501,32 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
     else do
       driverArrivedMsg <- ACL.buildOnUpdateMessage driverArrivedBuildReq
       void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId driverArrivedMsg retryConfig
+
+sendStopArrivalUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  m ()
+sendStopArrivalUpdateToBAP booking ride = do
+  transporter <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  let stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
+  stopArrivedMsg <- ACL.buildOnUpdateMessage stopArrivedBuildReq
+  let mbCity = booking.bapCity
+  let mbCountry = booking.bapCountry
+  stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry stopArrivedBuildReq
+  retryConfig <- asks (.shortDurationRetryCfg)
+  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+  if isBecknSpecVersion2
+    then void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig
+    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId stopArrivedMsg retryConfig
 
 sendNewMessageToBAP ::
   ( CacheFlow m r,

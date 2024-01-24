@@ -6,6 +6,7 @@ module IssueManagement.Common.UI.Issue
   )
 where
 
+import AWS.S3 (FileType (..))
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T hiding (count, map)
@@ -98,10 +99,6 @@ data MediaFile_ = MediaFile_
     url :: Text
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FileType = Audio | Image
-  deriving stock (Eq, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 -------------------------------------------------------------------------

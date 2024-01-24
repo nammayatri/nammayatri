@@ -40,6 +40,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
+import qualified SharedLogic.Booking as SBooking
 import Storage.Beam.SystemConfigs ()
 
 type API =
@@ -77,17 +78,23 @@ init transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBec
         logTagInfo "Init API Flow" "Reached"
         dInitReq <- ACL.buildInitReq subscriber reqV1
         pure (dInitReq, reqV1.context.bap_uri, reqV1.context.bap_id, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id, reqV1.context.bpp_id, reqV1.context.bpp_uri)
-  Redis.whenWithLockRedis (initLockKey dInitReq.estimateId) 60 $ do
+
+  let initFulfillmentId =
+        case dInitReq.fulfillmentId of
+          DInit.EstimateId (Id fId) -> fId
+          DInit.QuoteId (Id fId) -> fId
+
+  Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
     validatedRes <- DInit.validateRequest transporterId dInitReq
     fork "init request processing" $ do
-      Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
+      Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
         dInitRes <- DInit.handler transporterId dInitReq validatedRes
         internalEndPointHashMap <- asks (.internalEndPointHashMap)
         isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
         if isBecknSpecVersion2
           then do
             context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
-            void . handle (errHandler dInitRes.booking) $
+            void . handle (errHandler dInitRes.booking dInitRes.transporter) $
               Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
                 pure $
                   Spec.OnInitReq
@@ -97,14 +104,14 @@ init transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBec
                     }
           else do
             context <- buildTaxiContext Context.ON_SELECT msgId txnId bapId bapUri bppId bppUri city country False
-            void . handle (errHandler dInitRes.booking) $
+            void . handle (errHandler dInitRes.booking dInitRes.transporter) $
               CallBAP.withCallback dInitRes.transporter Context.INIT OnInit.onInitAPIV1 context context.bap_uri internalEndPointHashMap $
                 pure $ ACL.mkOnInitMessage dInitRes
   pure Ack
   where
-    errHandler booking exc
-      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DInit.cancelBooking booking transporterId
-      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DInit.cancelBooking booking transporterId
+    errHandler booking transporter exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking booking Nothing transporter >> pure Ack
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking booking Nothing transporter >> pure Ack
       | otherwise = throwM exc
 
 initLockKey :: Text -> Text
@@ -132,8 +139,8 @@ initProcessingLockKey id = "Driver:Init:Processing:DriverQuoteId-" <> id
 --     pure Ack
 --   where
 --     errHandler booking exc
---       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DInit.cancelBooking booking transporterId
---       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DInit.cancelBooking booking transporterId
+--       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking booking transporterId
+--       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking booking transporterId
 --       | otherwise = throwM exc
 
 -- _initV2Flow :: Id DM.Merchant -> SignatureAuthResult -> Init.InitReqV2 -> FlowHandler AckResponse
@@ -156,8 +163,8 @@ initProcessingLockKey id = "Driver:Init:Processing:DriverQuoteId-" <> id
 --     pure Ack
 --   where
 --     errHandler booking exc
---       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DInit.cancelBooking booking transporterId
---       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DInit.cancelBooking booking transporterId
+--       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking booking transporterId
+--       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking booking transporterId
 --       | otherwise = throwM exc
 
 decodeReq :: MonadFlow m => ByteString -> m (Either Init.InitReq Init.InitReqV2)

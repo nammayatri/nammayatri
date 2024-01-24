@@ -39,12 +39,12 @@ where
 
 import Control.Applicative
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as Common
+import qualified Domain.Types.DriverPoolConfig as DDPC
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.FarePolicy as FarePolicy
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DFPEFB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.DriverIntelligentPoolConfig as DDIPC
-import qualified Domain.Types.Merchant.DriverPoolConfig as DDPC
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
@@ -265,13 +265,16 @@ driverPoolConfigUpdate ::
   Context.City ->
   Meters ->
   Maybe Common.Variant ->
+  Maybe Text ->
   Common.DriverPoolConfigUpdateReq ->
   Flow APISuccess
-driverPoolConfigUpdate merchantShortId opCity tripDistance variant req = do
+driverPoolConfigUpdate merchantShortId opCity tripDistance mbVariant mbTripCategory req = do
   runRequestValidation Common.validateDriverPoolConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance (castVehicleVariant <$> variant) >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
+  let tripCategory = fromMaybe "All" mbTripCategory
+  let variant = maybe "All" (show . castVehicleVariant) mbVariant
+  config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant tripCategory >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
   let updConfig =
         config{minRadiusOfSearch = maybe config.minRadiusOfSearch (.value) req.minRadiusOfSearch,
                maxRadiusOfSearch = maybe config.maxRadiusOfSearch (.value) req.maxRadiusOfSearch,
@@ -286,8 +289,7 @@ driverPoolConfigUpdate merchantShortId opCity tripDistance variant req = do
                maxParallelSearchRequests = maybe config.maxParallelSearchRequests (.value) req.maxParallelSearchRequests,
                poolSortingType = maybe config.poolSortingType (castPoolSortingType . (.value)) req.poolSortingType,
                singleBatchProcessTime = maybe config.singleBatchProcessTime (.value) req.singleBatchProcessTime,
-               distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit,
-               vehicleVariant = castVehicleVariant <$> variant
+               distanceBasedBatchSplit = maybe config.distanceBasedBatchSplit (map castBatchSplitByPickupDistance . (.value)) req.distanceBasedBatchSplit
               }
   _ <- CQDPC.update updConfig
   CQDPC.clearCache merchantOpCityId
@@ -308,15 +310,18 @@ driverPoolConfigCreate ::
   Context.City ->
   Meters ->
   Maybe Common.Variant ->
+  Maybe Text ->
   Common.DriverPoolConfigCreateReq ->
   Flow APISuccess
-driverPoolConfigCreate merchantShortId opCity tripDistance variant req = do
+driverPoolConfigCreate merchantShortId opCity tripDistance mbVariant mbTripCategory req = do
   runRequestValidation Common.validateDriverPoolConfigCreateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance (castVehicleVariant <$> variant)
+  let tripCategory = fromMaybe "All" mbTripCategory
+  let variant = maybe "All" (show . castVehicleVariant) mbVariant
+  mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant tripCategory
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchantOpCityId.getId tripDistance)
-  newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance variant req
+  newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance variant tripCategory req
   _ <- CQDPC.create newConfig
   -- We should clear cache here, because cache contains list of all configs for current merchantId
   CQDPC.clearCache merchantOpCityId
@@ -328,22 +333,21 @@ buildDriverPoolConfig ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Meters ->
-  Maybe Common.Variant ->
+  Text ->
+  Text ->
   Common.DriverPoolConfigCreateReq ->
   m DDPC.DriverPoolConfig
-buildDriverPoolConfig merchantId merchantOpCityId tripDistance vehicleVariant Common.DriverPoolConfigCreateReq {..} = do
+buildDriverPoolConfig merchantId merchantOpCityId tripDistance vehicleVariant tripCategory Common.DriverPoolConfigCreateReq {..} = do
   now <- getCurrentTime
-  uid <- generateGUID
   pure
     DDPC.DriverPoolConfig
-      { id = Id uid,
-        merchantId,
+      { merchantId,
         merchantOperatingCityId = merchantOpCityId,
         poolSortingType = castPoolSortingType poolSortingType,
         distanceBasedBatchSplit = map castBatchSplitByPickupDistance distanceBasedBatchSplit,
+        scheduleTryTimes = [],
         updatedAt = now,
         createdAt = now,
-        vehicleVariant = castVehicleVariant <$> vehicleVariant,
         ..
       }
 

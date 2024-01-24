@@ -16,19 +16,13 @@
 
 module IssueManagement.Domain.Types.MediaFile where
 
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
+import AWS.S3 (FileType (..))
 import Kernel.Prelude
 import Kernel.Types.Id
 
-data MediaType = Video | Audio | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
-  deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON, ToSchema)
-
-$(mkBeamInstancesForEnum ''MediaType)
-
 data MediaFile = MediaFile
   { id :: Id MediaFile,
-    _type :: MediaType,
+    _type :: FileType,
     url :: Text,
     createdAt :: UTCTime
   }

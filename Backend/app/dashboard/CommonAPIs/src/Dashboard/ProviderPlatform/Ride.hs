@@ -93,8 +93,9 @@ type RideStartAPI =
     :> ReqBody '[JSON] StartRideReq
     :> Post '[JSON] APISuccess
 
-newtype StartRideReq = StartRideReq
-  { point :: Maybe LatLong
+data StartRideReq = StartRideReq
+  { point :: Maybe LatLong,
+    odometerReadingValue :: Maybe Centesimal
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -111,8 +112,9 @@ type RideEndAPI =
     :> ReqBody '[JSON] EndRideReq
     :> Post '[JSON] APISuccess
 
-newtype EndRideReq = EndRideReq
-  { point :: Maybe LatLong
+data EndRideReq = EndRideReq
+  { point :: Maybe LatLong,
+    odometerReadingValue :: Maybe Centesimal
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -252,7 +254,9 @@ data RideInfoRes = RideInfoRes
     bookingToRideStartDuration :: Maybe Minutes,
     distanceCalculationFailed :: Maybe Bool,
     driverDeviatedFromRoute :: Maybe Bool,
-    vehicleVariant :: Maybe Variant
+    vehicleVariant :: Maybe Variant,
+    nextStopLocation :: Maybe LocationAPIEntity,
+    lastStopLocation :: Maybe LocationAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

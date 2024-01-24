@@ -38,6 +38,7 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationCharges as DCC
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
@@ -351,6 +352,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
   let (platformFee, cgst, sgst) = case newFareParams.fareParametersDetails of
         DFare.ProgressiveDetails _ -> (0, 0, 0)
         DFare.SlabDetails fpDetails -> (fromMaybe 0 fpDetails.platformFee, fromMaybe 0 fpDetails.cgst, fromMaybe 0 fpDetails.sgst)
+        DFare.RentalDetails _ -> (0, 0, 0)
   let totalDriverFee = fromIntegral govtCharges + platformFee + cgst + sgst
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   lastDriverFee <- QDF.findLatestFeeByDriverId driverId
@@ -373,9 +375,11 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
     fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides
     scheduleJobs transporterConfig driverFee merchantId merchantOpCityId maxShards now
   where
-    isEligibleForCharge transporterConfig freeTrialDaysLeft = case booking.bookingType of
-      SRB.SpecialZoneBooking -> transporterConfig.considerSpecialZoneRideChargesInFreeTrial || freeTrialDaysLeft <= 0
-      _ -> freeTrialDaysLeft <= 0
+    isEligibleForCharge transporterConfig freeTrialDaysLeft =
+      if DTC.isRideOtpBooking booking.tripCategory
+        then transporterConfig.considerSpecialZoneRideChargesInFreeTrial || freeTrialDaysLeft <= 0
+        else freeTrialDaysLeft <= 0
+
     getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Int -> m (Maybe DriverPlan)
     getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft' = do
       mbDriverPlan' <- findByDriverId (cast driverId)
@@ -385,8 +389,8 @@ createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxS
           isEligibleForDefaultPlanBeforeFreeTrial = freeTrialDaysLeft' > 0 && chargeSPZRides && planMandatory
       if isNothing mbDriverPlan'
         then do
-          case (booking.bookingType, isEligibleForDefaultPlanBeforeFreeTrial, isEligibleForDefaultPlanAfterFreeTrial) of
-            (SRB.SpecialZoneBooking, True, _) -> assignDefaultPlan
+          case (DTC.isRideOtpBooking booking.tripCategory, isEligibleForDefaultPlanBeforeFreeTrial, isEligibleForDefaultPlanAfterFreeTrial) of
+            (True, True, _) -> assignDefaultPlan
             (_, _, True) -> assignDefaultPlan
             _ -> return mbDriverPlan'
         else return mbDriverPlan'
@@ -510,10 +514,7 @@ mkDriverFee now merchantId driverId rideFare govtCharges platformFee cgst sgst t
         ..
       }
   where
-    specialZoneMetricsIntialization totalFee' = do
-      case booking.bookingType of
-        SRB.SpecialZoneBooking -> (1, totalFee')
-        _ -> (0, 0)
+    specialZoneMetricsIntialization totalFee' = if DTC.isRideOtpBooking booking.tripCategory then (1, totalFee') else (0, 0)
 
 getPlan :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe DriverPlan -> Id Merchant -> m (Maybe Plan)
 getPlan mbDriverPlan merchantId = do

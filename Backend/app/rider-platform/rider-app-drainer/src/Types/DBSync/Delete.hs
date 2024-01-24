@@ -49,7 +49,7 @@ import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
 import qualified "rider-app" Storage.Beam.Quote as Quote
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken
-import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
+import qualified "rider-app" Storage.Beam.RentalDetails as RentalDetails
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
@@ -95,7 +95,7 @@ data DeleteModel
   | PersonFlowStatusDelete
   | QuoteDelete
   | RegistrationTokenDelete
-  | RentalSlabDelete
+  | RentalDetailsDelete
   | RideDelete
   | SavedReqLocationDelete
   | SearchRequestDelete
@@ -147,7 +147,7 @@ getTagDelete PersonDefaultEmergencyNumberDelete = "PersonDefaultEmergencyNumberO
 getTagDelete PersonFlowStatusDelete = "PersonFlowStatusOptions"
 getTagDelete QuoteDelete = "QuoteOptions"
 getTagDelete RegistrationTokenDelete = "RegistrationTokenOptions"
-getTagDelete RentalSlabDelete = "RentalSlabOptions"
+getTagDelete RentalDetailsDelete = "RentalDetailsOptions"
 getTagDelete RideDelete = "RideOptions"
 getTagDelete SavedReqLocationDelete = "SavedReqLocationOptions"
 getTagDelete SearchRequestDelete = "SearchRequestOptions"
@@ -198,7 +198,7 @@ parseTagDelete "PersonDefaultEmergencyNumberOptions" = return PersonDefaultEmerg
 parseTagDelete "PersonFlowStatusOptions" = return PersonFlowStatusDelete
 parseTagDelete "QuoteOptions" = return QuoteDelete
 parseTagDelete "RegistrationTokenOptions" = return RegistrationTokenDelete
-parseTagDelete "RentalSlabOptions" = return RentalSlabDelete
+parseTagDelete "RentalDetailsOptions" = return RentalDetailsDelete
 parseTagDelete "RideOptions" = return RideDelete
 parseTagDelete "SavedReqLocationOptions" = return SavedReqLocationDelete
 parseTagDelete "SearchRequestOptions" = return SearchRequestDelete
@@ -250,7 +250,7 @@ data DBDeleteObject
   | PersonFlowStatusDeleteOptions DeleteModel (Where Postgres PersonFlowStatus.PersonFlowStatusT)
   | QuoteDeleteOptions DeleteModel (Where Postgres Quote.QuoteT)
   | RegistrationTokenDeleteOptions DeleteModel (Where Postgres RegistrationToken.RegistrationTokenT)
-  | RentalSlabDeleteOptions DeleteModel (Where Postgres RentalSlab.RentalSlabT)
+  | RentalDetailsDeleteOptions DeleteModel (Where Postgres RentalDetails.RentalDetailsT)
   | RideDeleteOptions DeleteModel (Where Postgres Ride.RideT)
   | SavedReqLocationDeleteOptions DeleteModel (Where Postgres SavedReqLocation.SavedReqLocationT)
   | SearchRequestDeleteOptions DeleteModel (Where Postgres SearchRequest.SearchRequestT)
@@ -378,9 +378,9 @@ instance FromJSON DBDeleteObject where
       RegistrationTokenDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ RegistrationTokenDeleteOptions deleteModel whereClause
-      RentalSlabDelete -> do
+      RentalDetailsDelete -> do
         whereClause <- parseDeleteCommandValues contents
-        return $ RentalSlabDeleteOptions deleteModel whereClause
+        return $ RentalDetailsDeleteOptions deleteModel whereClause
       RideDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ RideDeleteOptions deleteModel whereClause

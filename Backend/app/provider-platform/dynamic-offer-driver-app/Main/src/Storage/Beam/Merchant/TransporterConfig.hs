@@ -83,6 +83,7 @@ data TransporterConfigT f = TransporterConfigT
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
     canSuvDowngradeToTaxi :: B.C f Bool,
+    canSwitchToRental :: B.C f Bool,
     aadhaarImageResizeConfig :: B.C f (Maybe A.Value),
     enableFaceVerification :: B.C f Bool,
     specialZoneBookingOtpExpiry :: B.C f Int,
@@ -138,6 +139,8 @@ data TransporterConfigT f = TransporterConfigT
     kaptureDisposition :: B.C f Text,
     dummyFromLocation :: B.C f (Maybe A.Value),
     dummyToLocation :: B.C f (Maybe A.Value)
+    scheduleRideBufferTime :: B.C f Seconds,
+    considerDriversForSearch :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

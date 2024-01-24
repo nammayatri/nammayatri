@@ -22,7 +22,6 @@ import Domain.Types.Merchant
 import Domain.Types.Person
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSearchRequest
-import qualified Domain.Types.SearchRequestSpecialZone as SpSearchRequest
 import Domain.Types.SearchTry
 import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
@@ -44,7 +43,7 @@ data Payload
         uAt :: UTCTime -- UpdatedAtTime
       }
   | Search
-      { sId :: Either (Id DSearchRequest.SearchRequest) (Id SpSearchRequest.SearchRequestSpecialZone),
+      { sId :: Id DSearchRequest.SearchRequest,
         cAt :: UTCTime
       }
   | Quote
@@ -92,7 +91,7 @@ newtype QuoteEventData = QuoteEventData
   }
 
 data SearchEventData = SearchEventData
-  { searchRequest :: Either DSearchRequest.SearchRequest SpSearchRequest.SearchRequestSpecialZone,
+  { searchRequest :: DSearchRequest.SearchRequest,
     merchantId :: Id Merchant
   }
 
@@ -183,13 +182,8 @@ triggerSearchEvent ::
   SearchEventData ->
   m ()
 triggerSearchEvent searchData = do
-  envt <- case searchData.searchRequest of
-    Left searchReq -> do
-      let searchPayload = Search {sId = Left searchReq.id, cAt = searchReq.createdAt}
-      createEvent Nothing (getId searchData.merchantId) SearchRequest DYNAMIC_OFFER_DRIVER_APP System (Just searchPayload) (Just $ getId searchReq.id) (Just $ getId searchReq.merchantOperatingCityId)
-    Right searchReqSpecialZone -> do
-      let searchPayload = Search {sId = Right searchReqSpecialZone.id, cAt = searchReqSpecialZone.createdAt}
-      createEvent Nothing (getId searchData.merchantId) SearchRequest DYNAMIC_OFFER_DRIVER_APP System (Just searchPayload) (Just $ getId searchReqSpecialZone.id) (Just $ getId searchReqSpecialZone.merchantOperatingCityId)
+  let searchPayload = Search {sId = searchData.searchRequest.id, cAt = searchData.searchRequest.createdAt}
+  envt <- createEvent Nothing (getId searchData.merchantId) SearchRequest DYNAMIC_OFFER_DRIVER_APP System (Just searchPayload) (Just $ getId searchData.searchRequest.id) (Just $ getId searchData.searchRequest.merchantOperatingCityId)
   triggerEvent envt
 
 triggerRideEvent ::

@@ -49,7 +49,7 @@ import qualified "rider-app" Storage.Beam.Person.PersonDefaultEmergencyNumber as
 import qualified "rider-app" Storage.Beam.Person.PersonFlowStatus as PersonFlowStatus
 import qualified "rider-app" Storage.Beam.Quote as Quote
 import qualified "rider-app" Storage.Beam.RegistrationToken as RegistrationToken
-import qualified "rider-app" Storage.Beam.RentalSlab as RentalSlab
+import qualified "rider-app" Storage.Beam.RentalDetails as RentalDetails
 import qualified "rider-app" Storage.Beam.Ride as Ride
 import qualified "rider-app" Storage.Beam.SavedReqLocation as SavedReqLocation
 import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
@@ -98,7 +98,7 @@ data UpdateModel
   | PersonFlowStatusUpdate
   | QuoteUpdate
   | RegistrationTokenUpdate
-  | RentalSlabUpdate
+  | RentalDetailsUpdate
   | RideUpdate
   | SavedReqLocationUpdate
   | SearchRequestUpdate
@@ -150,7 +150,7 @@ getTagUpdate PersonDefaultEmergencyNumberUpdate = "PersonDefaultEmergencyNumberO
 getTagUpdate PersonFlowStatusUpdate = "PersonFlowStatusOptions"
 getTagUpdate QuoteUpdate = "QuoteOptions"
 getTagUpdate RegistrationTokenUpdate = "RegistrationTokenOptions"
-getTagUpdate RentalSlabUpdate = "RentalSlabOptions"
+getTagUpdate RentalDetailsUpdate = "RentalDetailsOptions"
 getTagUpdate RideUpdate = "RideOptions"
 getTagUpdate SavedReqLocationUpdate = "SavedReqLocationOptions"
 getTagUpdate SearchRequestUpdate = "SearchRequestOptions"
@@ -201,7 +201,7 @@ parseTagUpdate "PersonDefaultEmergencyNumberOptions" = return PersonDefaultEmerg
 parseTagUpdate "PersonFlowStatusOptions" = return PersonFlowStatusUpdate
 parseTagUpdate "QuoteOptions" = return QuoteUpdate
 parseTagUpdate "RegistrationTokenOptions" = return RegistrationTokenUpdate
-parseTagUpdate "RentalSlabOptions" = return RentalSlabUpdate
+parseTagUpdate "RentalDetailsOptions" = return RentalDetailsUpdate
 parseTagUpdate "RideOptions" = return RideUpdate
 parseTagUpdate "SavedReqLocationOptions" = return SavedReqLocationUpdate
 parseTagUpdate "SearchRequestOptions" = return SearchRequestUpdate
@@ -253,7 +253,7 @@ data DBUpdateObject
   | PersonFlowStatusOptions UpdateModel [Set Postgres PersonFlowStatus.PersonFlowStatusT] (Where Postgres PersonFlowStatus.PersonFlowStatusT)
   | QuoteOptions UpdateModel [Set Postgres Quote.QuoteT] (Where Postgres Quote.QuoteT)
   | RegistrationTokenOptions UpdateModel [Set Postgres RegistrationToken.RegistrationTokenT] (Where Postgres RegistrationToken.RegistrationTokenT)
-  | RentalSlabOptions UpdateModel [Set Postgres RentalSlab.RentalSlabT] (Where Postgres RentalSlab.RentalSlabT)
+  | RentalDetailsOptions UpdateModel [Set Postgres RentalDetails.RentalDetailsT] (Where Postgres RentalDetails.RentalDetailsT)
   | RideOptions UpdateModel [Set Postgres Ride.RideT] (Where Postgres Ride.RideT)
   | SavedReqLocationOptions UpdateModel [Set Postgres SavedReqLocation.SavedReqLocationT] (Where Postgres SavedReqLocation.SavedReqLocationT)
   | SearchRequestOptions UpdateModel [Set Postgres SearchRequest.SearchRequestT] (Where Postgres SearchRequest.SearchRequestT)
@@ -383,9 +383,9 @@ instance FromJSON DBUpdateObject where
       RegistrationTokenUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ RegistrationTokenOptions updateModel updVals whereClause
-      RentalSlabUpdate -> do
+      RentalDetailsUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ RentalSlabOptions updateModel updVals whereClause
+        return $ RentalDetailsOptions updateModel updVals whereClause
       RideUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ RideOptions updateModel updVals whereClause

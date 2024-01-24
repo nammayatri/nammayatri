@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSSearch where
 
@@ -9,6 +10,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
 
 data FRFSSearch = FRFSSearch
   { fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,

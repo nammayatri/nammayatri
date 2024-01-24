@@ -28,51 +28,54 @@ import Kernel.Types.Common (HighPrecMeters)
 mkStops :: Location.Location -> Maybe Location.Location -> Maybe Text -> Maybe [Spec.Stop]
 mkStops origin mDestination mStartOtp =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
-   in Just
-        [ Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = Just $ mkAddress origin.address,
-                      locationAreaCode = origin.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing origin.address.city,
-                      locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                      locationGps = A.decode $ A.encode originGps,
-                      locationState = Just $ Spec.State origin.address.state,
-                      locationId = Nothing
-                    },
-              stopType = Just "START",
-              stopAuthorization =
-                if isNothing mStartOtp
-                  then Nothing
-                  else
-                    Just $
-                      Spec.Authorization
-                        { authorizationType = Just "OTP",
-                          authorizationToken = mStartOtp
-                        },
-              stopTime = Nothing
-            },
-          Spec.Stop
-            { stopLocation =
-                mDestination
-                  >>= \destination -> do
-                    let destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
+      destinationGps d = Gps.Gps {lat = d.lat, lon = d.lon}
+   in Just $
+        catMaybes
+          [ Just $
+              Spec.Stop
+                { stopLocation =
                     Just $
                       Spec.Location
-                        { locationAddress = Just $ mkAddress destination.address,
-                          locationAreaCode = destination.address.areaCode,
-                          locationCity = Just $ Spec.City Nothing destination.address.city,
-                          locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                          locationGps = A.decode $ A.encode destinationGps,
-                          locationState = Just $ Spec.State destination.address.state,
+                        { locationAddress = Just $ mkAddress origin.address,
+                          locationAreaCode = origin.address.areaCode,
+                          locationCity = Just $ Spec.City Nothing origin.address.city,
+                          locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                          locationGps = A.decode $ A.encode originGps,
+                          locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing
                         },
-              stopType = Just "END",
-              stopAuthorization = Nothing,
-              stopTime = Nothing
-            }
-        ]
+                  stopType = Just "START",
+                  stopAuthorization =
+                    if isNothing mStartOtp
+                      then Nothing
+                      else
+                        Just $
+                          Spec.Authorization
+                            { authorizationType = Just "OTP",
+                              authorizationToken = mStartOtp
+                            },
+                  stopTime = Nothing
+                },
+            ( \destination ->
+                Spec.Stop
+                  { stopLocation =
+                      Just $
+                        Spec.Location
+                          { locationAddress = Just $ mkAddress destination.address,
+                            locationAreaCode = destination.address.areaCode,
+                            locationCity = Just $ Spec.City Nothing destination.address.city,
+                            locationCountry = Just $ Spec.Country Nothing destination.address.country,
+                            locationGps = A.decode $ A.encode (destinationGps destination),
+                            locationState = Just $ Spec.State destination.address.state,
+                            locationId = Nothing
+                          },
+                    stopType = Just "END",
+                    stopAuthorization = Nothing,
+                    stopTime = Nothing
+                  }
+            )
+              <$> mDestination
+          ]
   where
     mkAddress :: LocationAddress.LocationAddress -> Text
     mkAddress LocationAddress.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]

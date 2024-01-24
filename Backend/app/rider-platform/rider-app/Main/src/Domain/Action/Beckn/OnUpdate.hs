@@ -134,6 +134,9 @@ data OnUpdateReq
         reason :: Text,
         code :: Text
       }
+  | StopArrivedReq
+      { bppRideId :: Id SRide.BPPRide
+      }
 
 data ValidatedOnUpdateReq
   = ValidatedRideAssignedReq
@@ -218,6 +221,10 @@ data ValidatedOnUpdateReq
         ride :: SRide.Ride,
         code :: Text,
         reason :: Text
+      }
+  | ValidatedStopArrivedReq
+      { booking :: SRB.Booking,
+        ride :: SRide.Ride
       }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
@@ -462,6 +469,9 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   Notify.notifyOnEstimatedReallocated booking estimate.id
 onUpdate ValidatedSafetyAlertReq {..} = do
   Notify.notifySafetyAlert booking code
+onUpdate ValidatedStopArrivedReq {..} = do
+  QRB.updateStop booking Nothing
+  Notify.notifyOnStopReached booking ride
 
 validateRequest ::
   ( CacheFlow m r,
@@ -539,6 +549,17 @@ validateRequest SafetyAlertReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (ride.status == SRide.INPROGRESS) $ throwError (BookingInvalidStatus "$ show booking.status")
   return ValidatedSafetyAlertReq {..}
+validateRequest StopArrivedReq {..} = do
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> ride.bookingId.getId)
+  unless (ride.status == SRide.INPROGRESS) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress")
+  case booking.bookingDetails of
+    SRB.OneWayDetails _ -> throwError $ InvalidRequest "Stops are not present in static offer on demand rides"
+    SRB.DriverOfferDetails _ -> throwError $ InvalidRequest "Stops are not present in dynamic offer on demand rides"
+    SRB.OneWaySpecialZoneDetails _ -> throwError $ InvalidRequest "Stops are not present in on ride otp rides"
+    SRB.RentalDetails SRB.RentalBookingDetails {..} -> do
+      unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
+      return $ ValidatedStopArrivedReq {..}
 
 mkBookingCancellationReason ::
   Id SRB.Booking ->
