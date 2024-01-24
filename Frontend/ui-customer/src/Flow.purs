@@ -2313,12 +2313,15 @@ fetchAndModifyLocationLists savedLocationResp = do
       
       isLocationWithinXDist :: LocationListItemState -> HomeScreenState -> Number -> Boolean
       isLocationWithinXDist item state thresholdDist = 
-        getDistanceBwCordinates 
-          (fromMaybe 0.0 item.lat) 
-          (fromMaybe 0.0 item.lon) 
-          state.props.sourceLat 
-          state.props.sourceLong 
-          <= thresholdDist
+        let sourceLat = if state.props.sourceLat == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT else state.props.sourceLat
+            sourceLong = if state.props.sourceLong == 0.0 then fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON else state.props.sourceLong
+        in
+          getDistanceBwCordinates 
+            (fromMaybe 0.0 item.lat) 
+            (fromMaybe 0.0 item.lon) 
+            sourceLat 
+            sourceLong 
+            <= thresholdDist
       
       getHelperLists savedLocationLists recentPredictionsObject state = 
         let suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig

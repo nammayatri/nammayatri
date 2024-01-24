@@ -3971,8 +3971,8 @@ suggestedDestinationCard push state index suggestion =
             ] <> FontStyle.body3 TypoGraphy
         ]
       , linearLayout
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
+          [ height $ V 40
+          , width $ V 40
           , orientation VERTICAL
           , layoutGravity "center_vertical"
           , gravity CENTER
@@ -4043,8 +4043,8 @@ repeatRideCard push state index trip =
             ] <> FontStyle.body3 TypoGraphy
         ]
       , linearLayout
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
+          [ height $ V 40
+          , width $ V 40
           , orientation VERTICAL
           , layoutGravity "center_vertical"
           , gravity CENTER
