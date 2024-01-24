@@ -50,7 +50,8 @@ data DriversInfo = DriversInfo
 
 data LeaderBoardRes = LeaderBoardRes
   { driverList :: [DriversInfo],
-    lastUpdatedAt :: Maybe UTCTime
+    lastUpdatedAt :: Maybe UTCTime,
+    totalEligibleDrivers :: Int
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -91,6 +92,7 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
       )
       ([], False)
       (zip driversWithScoresMap [1, 2 ..])
+  totalEligibleDrivers <- Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeDailyDriverLeaderBoardKey merchantId day)
   if not isCurrentDriverInTop && dateDiff == 0
     then do
       person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -104,8 +106,8 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
       let (currPersonTotalRides, currPersonTotalDistance) = RideEndInt.getRidesAndDistancefromZscore currentDriverScore dailyLeaderBoardConfig.zScoreBase
       currPersonFullName <- getPersonFullName person & fromMaybeM (PersonFieldNotPresent "firstName")
       let currDriverInfo = DriversInfo (currPersonRank + 1) currPersonFullName currPersonTotalRides currPersonTotalDistance True (Just person.gender)
-      return $ LeaderBoardRes (currDriverInfo : drivers') (Just now)
-    else return $ LeaderBoardRes drivers' (Just now)
+      return $ LeaderBoardRes (currDriverInfo : drivers') (Just now) (fromIntegral totalEligibleDrivers)
+    else return $ LeaderBoardRes drivers' (Just now) (fromIntegral totalEligibleDrivers)
 
 getYearFromDay :: Day -> Integer
 getYearFromDay day = let (year, _, _) = toGregorian day in year
@@ -156,6 +158,7 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
       )
       ([], False)
       (zip driversWithScoresMap [1, 2 ..])
+  totalEligibleDrivers <- Redis.withNonCriticalRedis $ Redis.zCard (RideEndInt.makeWeeklyDriverLeaderBoardKey merchantId fromDate toDate)
   if not isCurrentDriverInTop && weekDiff == 0
     then do
       person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
@@ -169,5 +172,5 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
       let (currPersonTotalRides, currPersonTotalDistance) = RideEndInt.getRidesAndDistancefromZscore currDriverZscore weeklyLeaderBoardConfig.zScoreBase
       currPersonFullName <- getPersonFullName person & fromMaybeM (PersonFieldNotPresent "firstName")
       let currDriverInfo = DriversInfo (currPersonRank + 1) currPersonFullName currPersonTotalRides currPersonTotalDistance True (Just person.gender)
-      return $ LeaderBoardRes (currDriverInfo : drivers') (Just now)
-    else return $ LeaderBoardRes drivers' (Just now)
+      return $ LeaderBoardRes (currDriverInfo : drivers') (Just now) (fromIntegral totalEligibleDrivers)
+    else return $ LeaderBoardRes drivers' (Just now) (fromIntegral totalEligibleDrivers)

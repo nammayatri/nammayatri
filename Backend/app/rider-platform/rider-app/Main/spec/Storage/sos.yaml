@@ -1,0 +1,45 @@
+imports:
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+
+Sos:
+  tableName: sos
+
+  fields:
+    id : Id Sos
+    personId : Id Person
+    rideId : Id Ride
+    flow : SosType
+    status : SosStatus
+    ticketId : Maybe Text
+
+  types:
+    EmergencyContactId:
+      enum: "EmergencyContactId Text"
+
+    SosType:
+      enum: "Police,CustomerCare,EmergencyContact EmergencyContactId,SafetyFlow"
+
+    SosStatus:
+      enum: "Resolved,NotResolved,Pending"
+
+  queries:
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status]
+      where: id
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByRideIdAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [rideId, status]
+    findByRideIdinStatusList:
+      kvFunction: findOneWithKV
+      where:
+        and:
+           - in : [status]
+           - eq: [rideId]

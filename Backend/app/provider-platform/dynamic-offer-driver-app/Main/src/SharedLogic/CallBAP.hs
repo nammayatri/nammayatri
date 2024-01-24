@@ -61,6 +61,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Vehicle as DVeh
 import qualified EulerHS.Types as ET
+import Kernel.External.Maps.Types as Maps
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Prelude
 import Kernel.Storage.Hedis as Redis
@@ -262,8 +263,9 @@ sendRideStartedUpdateToBAP ::
   ) =>
   DRB.Booking ->
   SRide.Ride ->
+  Maybe Maps.LatLong ->
   m ()
-sendRideStartedUpdateToBAP booking ride = do
+sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
@@ -290,8 +292,9 @@ sendRideCompletedUpdateToBAP ::
   Fare.FareParameters ->
   Maybe DMPM.PaymentMethodInfo ->
   Maybe Text ->
+  Maybe Maps.LatLong ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl = do
+sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUrl tripEndLocation = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)

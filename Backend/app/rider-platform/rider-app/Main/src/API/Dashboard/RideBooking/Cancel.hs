@@ -33,7 +33,7 @@ import SharedLogic.Merchant
 import Storage.Beam.SystemConfigs ()
 
 data RideCancelEndPoint = RideBookingCancelEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "RideCancelEndPoint"
 

@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.Transaction where
 
@@ -42,6 +43,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServerName as DSN
 import qualified IssueManagement.Common.Dashboard.Issue as Common
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -86,4 +88,6 @@ data Endpoint
   | OverlayAPI BPP.OverlayEndpoint
   | TicketsAPI ADT.TicketBookingEndpoint
   | MapAPI BPP.MapEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON)
+
+$(mkBeamInstancesForEnum ''Endpoint)

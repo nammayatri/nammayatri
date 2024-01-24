@@ -11,65 +11,81 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Queries.AccessMatrix where
 
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Role as DRole
+import Kernel.Beam.Functions
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.Tabular.AccessMatrix
+import Sequelize as Se
+import qualified Storage.Beam.AccessMatrix as BeamAM
+import Storage.Beam.BeamFlow
 
-create :: DMatrix.AccessMatrixItem -> SqlDB ()
-create = Esq.create
+create :: BeamFlow m r => DMatrix.AccessMatrixItem -> m ()
+create = createWithKV
 
 findByRoleIdAndEntityAndActionType ::
-  (Transactionable m) =>
+  BeamFlow m r =>
   Id DRole.Role ->
   DMatrix.ApiEntity ->
   DMatrix.UserActionType ->
   m (Maybe DMatrix.AccessMatrixItem)
-findByRoleIdAndEntityAndActionType roleId apiEntity userActionType = findOne $ do
-  accessMatrix <- from $ table @AccessMatrixT
-  where_ $
-    accessMatrix ^. AccessMatrixRoleId ==. val (toKey roleId)
-      &&. accessMatrix ^. AccessMatrixApiEntity ==. val apiEntity
-      &&. accessMatrix ^. AccessMatrixUserActionType ==. val userActionType
-  return accessMatrix
+findByRoleIdAndEntityAndActionType roleId apiEntity userActionType =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamAM.roleId $ Se.Eq $ getId roleId,
+          Se.Is BeamAM.apiEntity $ Se.Eq apiEntity,
+          Se.Is BeamAM.userActionType $ Se.Eq userActionType
+        ]
+    ]
 
 findAllByRoles ::
-  Transactionable m =>
+  BeamFlow m r =>
   [DRole.Role] ->
   m [DMatrix.AccessMatrixItem]
 findAllByRoles roles = do
-  let roleKeys = map (toKey . (.id)) roles
-  Esq.findAll $ do
-    accessMatrix <- from $ table @AccessMatrixT
-    where_ $
-      accessMatrix ^. AccessMatrixRoleId `in_` valList roleKeys
-    return accessMatrix
+  let roleKeys = map (getId . (.id)) roles
+  findAllWithKV [Se.Is BeamAM.roleId $ Se.In roleKeys]
 
 findAllByRoleId ::
-  Transactionable m =>
+  BeamFlow m r =>
   Id DRole.Role ->
   m [DMatrix.AccessMatrixItem]
-findAllByRoleId roleId = do
-  Esq.findAll $ do
-    accessMatrix <- from $ table @AccessMatrixT
-    where_ $
-      accessMatrix ^. AccessMatrixRoleId ==. val (toKey roleId)
-    return accessMatrix
+findAllByRoleId roleId = findAllWithKV [Se.Is BeamAM.roleId $ Se.Eq $ getId roleId]
 
-updateUserAccessType :: Id DMatrix.AccessMatrixItem -> DMatrix.UserActionType -> DMatrix.UserAccessType -> SqlDB ()
+updateUserAccessType ::
+  BeamFlow m r =>
+  Id DMatrix.AccessMatrixItem ->
+  DMatrix.UserActionType ->
+  DMatrix.UserAccessType ->
+  m ()
 updateUserAccessType accessMatrixItemId userActionType userAccessType = do
   now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ AccessMatrixUserActionType =. val userActionType,
-        AccessMatrixUserAccessType =. val userAccessType,
-        AccessMatrixUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. AccessMatrixTId ==. val (toKey accessMatrixItemId)
+  updateWithKV
+    [ Se.Set BeamAM.userActionType userActionType,
+      Se.Set BeamAM.userAccessType userAccessType,
+      Se.Set BeamAM.updatedAt now
+    ]
+    [Se.Is BeamAM.id $ Se.Eq $ getId accessMatrixItemId]
+
+instance FromTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
+  fromTType' BeamAM.AccessMatrixT {..} = do
+    return $
+      Just
+        DMatrix.AccessMatrixItem
+          { id = Id id,
+            roleId = Id roleId,
+            ..
+          }
+
+instance ToTType' BeamAM.AccessMatrix DMatrix.AccessMatrixItem where
+  toTType' DMatrix.AccessMatrixItem {..} =
+    BeamAM.AccessMatrixT
+      { id = getId id,
+        roleId = getId roleId,
+        ..
+      }

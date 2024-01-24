@@ -25,11 +25,9 @@ import qualified Domain.Types.Person.API as AP
 import qualified Domain.Types.Person.Type as SP
 import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
+import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
-import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Storage.Esqueleto.Transactionable (runInReplica)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.City as City
@@ -40,6 +38,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import Storage.Beam.BeamFlow
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
@@ -128,7 +127,7 @@ data GetProductSpecInfoResp = GetProductSpecInfoResp
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 registerRelease ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     EncFlow m r
   ) =>
   TokenInfo ->
@@ -150,7 +149,7 @@ registerRelease _ ReleaseRegisterReq {..} = do
       }
 
 getProductSpecInfo ::
-  EsqDBReplicaFlow m r =>
+  BeamFlow m r =>
   Maybe Text ->
   m GetProductSpecInfoResp
 getProductSpecInfo _ = do
@@ -181,7 +180,7 @@ newtype CreatePersonRes = CreatePersonRes
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 createPerson ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   CreatePersonReq ->
   m CreatePersonRes
@@ -194,11 +193,11 @@ createPerson _ personEntity = do
   let roleId = personEntity.roleId
   role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
   let personAPIEntity = AP.makePersonAPIEntity decPerson role [] Nothing
-  Esq.runTransaction $ QP.create person
+  QP.create person
   return $ CreatePersonRes personAPIEntity
 
 listPerson ::
-  (EsqDBReplicaFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   Maybe Text ->
   Maybe Integer ->
@@ -207,7 +206,7 @@ listPerson ::
   m ListPersonRes
 listPerson _ mbSearchString mbLimit mbOffset mbPersonId = do
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  personAndRoleList <- runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
+  personAndRoleList <- B.runInReplica $ QP.findAllWithLimitOffset mbSearchString mbSearchStrDBHash mbLimit mbOffset mbPersonId
   res <- forM personAndRoleList $ \(encPerson, role, merchantAccessList, merchantCityAccessList) -> do
     decPerson <- decrypt encPerson
     let availableCitiesForMerchant = makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList
@@ -227,7 +226,7 @@ makeAvailableCitiesForMerchant merchantAccessList merchantCityAccessList = do
       merchantAccesslistWithCity
 
 assignRole ::
-  EsqDBFlow m r =>
+  BeamFlow m r =>
   TokenInfo ->
   Id DP.Person ->
   Id DRole.Role ->
@@ -235,12 +234,11 @@ assignRole ::
 assignRole _ personId roleId = do
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   _role <- QRole.findById roleId >>= fromMaybeM (RoleDoesNotExist roleId.getId)
-  Esq.runTransaction $
-    QP.updatePersonRole personId roleId
+  QP.updatePersonRole personId roleId
   pure Success
 
 assignMerchantCityAccess ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]
   ) =>
   TokenInfo ->
@@ -260,12 +258,11 @@ assignMerchantCityAccess _ personId req = do
   whenJust mbMerchantAccess $ \_ -> do
     throwError $ InvalidRequest "Merchant access already assigned."
   merchantAccess <- buildMerchantAccess personId merchant.id merchant.shortId req.operatingCity
-  Esq.runTransaction $
-    QAccess.create merchantAccess
+  QAccess.create merchantAccess
   pure Success
 
 resetMerchantAccess ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
@@ -286,13 +283,12 @@ resetMerchantAccess _ personId req = do
     (x : _) -> do
       -- this function uses tokens from db, so should be called before transaction
       Auth.cleanCachedTokensByMerchantId personId merchant.id
-      Esq.runTransaction $ do
-        QAccess.deleteById x.id
-        QReg.deleteAllByPersonIdAndMerchantId personId merchant.id
+      QAccess.deleteById x.id
+      QReg.deleteAllByPersonIdAndMerchantId personId merchant.id
       pure Success
 
 resetMerchantCityAccess ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
@@ -313,13 +309,12 @@ resetMerchantCityAccess _ personId req = do
     Just merchantAccess -> do
       -- this function uses tokens from db, so should be called before transaction
       Auth.cleanCachedTokensByMerchantIdAndCity personId merchant.id req.operatingCity
-      Esq.runTransaction $ do
-        QAccess.deleteById merchantAccess.id
-        QReg.deleteAllByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
+      QAccess.deleteById merchantAccess.id
+      QReg.deleteAllByPersonIdAndMerchantIdAndCity personId merchant.id req.operatingCity
       pure Success
 
 changePassword ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   ChangePasswordReq ->
   m APISuccess
@@ -329,8 +324,7 @@ changePassword tokenInfo req = do
   let oldActual = encPerson.passwordHash
   oldProvided <- getDbHash req.oldPassword
   unless (oldActual == Just oldProvided) . throwError $ InvalidRequest "Old password is incorrect."
-  Esq.runTransaction $
-    QP.updatePersonPassword tokenInfo.personId newHash
+  QP.updatePersonPassword tokenInfo.personId newHash
   pure Success
 
 buildMerchantAccess :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> ShortId DMerchant.Merchant -> City.City -> m DAccess.MerchantAccess
@@ -350,13 +344,13 @@ buildMerchantAccess personId merchantId merchantShortId city = do
       }
 
 profile ::
-  (EsqDBReplicaFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   m DP.PersonAPIEntity
 profile tokenInfo = do
-  encPerson <- runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  role <- runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-  merchantAccessList <- runInReplica $ QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
+  encPerson <- B.runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  role <- B.runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId tokenInfo.personId
   decPerson <- decrypt encPerson
   case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
@@ -367,28 +361,28 @@ profile tokenInfo = do
       pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity)
 
 getCurrentMerchant ::
-  EsqDBReplicaFlow m r =>
+  BeamFlow m r =>
   TokenInfo ->
   m MerchantAccessRes
 getCurrentMerchant tokenInfo = do
   merchant <-
-    runInReplica $
+    B.runInReplica $
       QMerchant.findById tokenInfo.merchantId
         >>= fromMaybeM (MerchantNotFound tokenInfo.merchantId.getId)
   pure $ MerchantCityAccessReq merchant.shortId tokenInfo.city
 
 getAccessMatrix ::
-  EsqDBReplicaFlow m r =>
+  BeamFlow m r =>
   TokenInfo ->
   m DMatrix.AccessMatrixRowAPIEntity
 getAccessMatrix tokenInfo = do
-  encPerson <- runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-  role <- runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
-  accessMatrixItems <- runInReplica $ QMatrix.findAllByRoleId encPerson.roleId
+  encPerson <- B.runInReplica $ QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  role <- B.runInReplica $ QRole.findById encPerson.roleId >>= fromMaybeM (RoleNotFound encPerson.roleId.getId)
+  accessMatrixItems <- B.runInReplica $ QMatrix.findAllByRoleId encPerson.roleId
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
 
 changePasswordByAdmin ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   Id DP.Person ->
   ChangePasswordByAdminReq ->
@@ -396,12 +390,11 @@ changePasswordByAdmin ::
 changePasswordByAdmin _ personId req = do
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   newHash <- getDbHash req.newPassword
-  Esq.runTransaction $
-    QP.updatePersonPassword personId newHash
+  QP.updatePersonPassword personId newHash
   pure Success
 
 changeMobileNumberByAdmin ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   Id DP.Person ->
   ChangeMobileNumberByAdminReq ->
@@ -410,11 +403,11 @@ changeMobileNumberByAdmin _ personId req = do
   runRequestValidation validateChangeMobileNumberReq req
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   encMobileNum <- encrypt req.newMobileNumber
-  Esq.runTransaction $ QP.updatePersonMobile personId encMobileNum
+  QP.updatePersonMobile personId encMobileNum
   pure Success
 
 changeEmailByAdmin ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r) =>
   TokenInfo ->
   Id DP.Person ->
   ChangeEmailByAdminReq ->
@@ -422,7 +415,7 @@ changeEmailByAdmin ::
 changeEmailByAdmin _ personId req = do
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   encEmail <- encrypt $ T.toLower req.newEmail
-  Esq.runTransaction $ QP.updatePersonEmail personId encEmail
+  QP.updatePersonEmail personId encEmail
   pure Success
 
 buildPerson :: (EncFlow m r) => CreatePersonReq -> m SP.Person

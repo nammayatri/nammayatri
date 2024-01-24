@@ -50,6 +50,7 @@ library
       App
       RiderPlatformClient.RiderApp.Operations
       RiderPlatformClient.RiderApp.RideBooking
+      Storage.Beam.CommonInstances
   other-modules:
       Paths_rider_dashboard
   hs-source-dirs:

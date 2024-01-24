@@ -50,7 +50,7 @@ buildOnStatusMessage (DStatus.NewBookingBuildReq {bookingId}) = do
 buildOnStatusMessage (DStatus.RideAssignedBuildReq {newRideInfo}) = do
   let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) False False
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
   return $
     OnStatus.OnStatusMessage
       { order =
@@ -64,7 +64,7 @@ buildOnStatusMessage (DStatus.RideAssignedBuildReq {newRideInfo}) = do
 buildOnStatusMessage (DStatus.RideStartedBuildReq {newRideInfo}) = do
   let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) False False
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
   return $
     OnStatus.OnStatusMessage
       { order =
@@ -80,7 +80,7 @@ buildOnStatusMessage (DStatus.RideCompletedBuildReq {newRideInfo, rideCompletedI
   let SyncRide.RideCompletedInfo {fareParams, paymentMethodInfo, paymentUrl} = rideCompletedInfo
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
   distanceTagGroup <- Common.buildDistanceTagGroup ride
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup)) False False
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup)) Nothing False False
   quote <- Common.buildRideCompletedQuote ride fareParams
   return $
     OnStatus.OnStatusMessage
@@ -99,7 +99,7 @@ buildOnStatusMessage DStatus.BookingCancelledBuildReq {bookingCancelledInfo, mbN
   fulfillment <- forM mbNewRideInfo $ \newRideInfo -> do
     let SyncRide.NewRideInfo {driver, image, vehicle, ride} = newRideInfo
     let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-    Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) False False
+    Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
   pure
     OnStatus.OnStatusMessage
       { order =
@@ -115,7 +115,7 @@ buildOnStatusMessage DStatus.BookingReallocationBuildReq {bookingReallocationInf
   let SyncRide.BookingCancelledInfo {booking, cancellationSource} = bookingReallocationInfo
   let SyncRide.NewRideInfo {driver, image, vehicle, ride} = newRideInfo
   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) False False
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False
   pure
     OnStatus.OnStatusMessage
       { order =

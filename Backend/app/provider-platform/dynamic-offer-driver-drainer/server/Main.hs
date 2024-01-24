@@ -9,7 +9,6 @@ import qualified DBSync.DBSync as DBSync
 import qualified Data.HashSet as HS
 import qualified "unordered-containers" Data.HashSet as HashSet
 import qualified Data.Text as T
-import Environment
 import qualified Euler.Events.Network as NW
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Interpreters as R
@@ -30,7 +29,7 @@ import Utils.Utils
 
 main :: IO ()
 main = do
-  appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "dynamic-offer-driver-app"
+  appCfg <- (id :: AppCfg -> AppCfg) <$> readDhallConfigDefault "driver-drainer"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   kafkaProducerTools <- buildKafkaProducerTools' appCfg.kafkaProducerCfg appCfg.maxMessages
@@ -51,7 +50,7 @@ main = do
             )
           dbSyncMetric <- Event.mkDBSyncMetric
           threadPerPodCount <- Env.getThreadPerPodCount
-          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer appCfg.dontEnableForDb
+          let environment = Env (T.pack C.kvRedis) dbSyncMetric kafkaProducerTools.producer appCfg.dontEnableForDb appCfg.dontEnableForKafka
           spawnDrainerThread threadPerPodCount flowRt environment
           R.runFlow flowRt (runReaderT DBSync.startDBSync environment)
       )

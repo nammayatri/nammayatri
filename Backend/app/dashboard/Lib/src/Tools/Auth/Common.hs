@@ -18,7 +18,6 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RegistrationToken as DR
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.City as City
@@ -26,12 +25,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Common as Utils
+import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
 import qualified Storage.Queries.RegistrationToken as QR
 
 type AuthFlow m r =
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     HasFlowEnv m r ["authTokenCacheExpiry" ::: Seconds, "registrationTokenExpiry" ::: Days],
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   )
@@ -82,7 +82,7 @@ authTokenCacheKey regToken = do
   pure $ authTokenCacheKeyPrefix <> regToken
 
 verifyToken ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     HasFlowEnv m r '["registrationTokenExpiry" ::: Days]
   ) =>
   RegToken ->
@@ -93,7 +93,7 @@ verifyToken regToken = do
     >>= validateToken
 
 validateToken ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     HasFlowEnv m r '["registrationTokenExpiry" ::: Days]
   ) =>
   DR.RegistrationToken ->
@@ -103,18 +103,16 @@ validateToken sr = do
   let nominal = realToFrac . daysToSeconds $ registrationTokenExpiry
   expired <- Utils.isExpired nominal sr.createdAt
   when expired $ do
-    Esq.runTransaction $
-      QR.deleteById sr.id
+    QR.deleteById sr.id
     Utils.throwError TokenExpired
   mbMerchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity sr.personId sr.merchantId sr.operatingCity
   when (isNothing mbMerchantAccess) $ do
-    Esq.runTransaction $
-      QR.deleteById sr.id
+    QR.deleteById sr.id
     Utils.throwError AccessDenied
   return sr
 
 cleanCachedTokens ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
@@ -127,7 +125,7 @@ cleanCachedTokens personId = do
     void $ Redis.del key
 
 cleanCachedTokensByMerchantId ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>
@@ -141,7 +139,7 @@ cleanCachedTokensByMerchantId personId merchantId = do
     void $ Redis.del key
 
 cleanCachedTokensByMerchantIdAndCity ::
-  ( EsqDBFlow m r,
+  ( BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text]
   ) =>

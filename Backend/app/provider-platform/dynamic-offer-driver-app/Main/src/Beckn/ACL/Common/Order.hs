@@ -18,6 +18,7 @@ module Beckn.ACL.Common.Order
     mkArrivalTimeTagGroup,
     buildRideCompletedQuote,
     mkRideCompletedPayment,
+    mkLocationTagGroup,
   )
 where
 
@@ -33,6 +34,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
+import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Utils.Common
@@ -48,10 +50,11 @@ mkFulfillment ::
   Maybe SVeh.Vehicle ->
   Maybe Text ->
   Maybe Tags.TagGroups ->
+  Maybe Tags.TagGroups ->
   Bool ->
   Bool ->
   m RideFulfillment.FulfillmentInfo
-mkFulfillment mbDriver ride booking mbVehicle mbImage tags isDriverBirthDay isFreeRide = do
+mkFulfillment mbDriver ride booking mbVehicle mbImage tags personTags isDriverBirthDay isFreeRide = do
   agent <-
     forM mbDriver $ \driver -> do
       let agentTags =
@@ -89,6 +92,10 @@ mkFulfillment mbDriver ride booking mbVehicle mbImage tags isDriverBirthDay isFr
         RideFulfillment.Authorization
           { _type = "OTP",
             token = ride.otp
+          }
+  let person =
+        RideFulfillment.Person
+          { tags = personTags
           }
   pure $
     RideFulfillment.FulfillmentInfo
@@ -136,6 +143,19 @@ buildDistanceTagGroup ride = do
             ]
         }
     ]
+
+mkLocationTagGroup :: Maybe Maps.LatLong -> [Tags.TagGroup]
+mkLocationTagGroup location =
+  [ Tags.TagGroup
+      { display = False,
+        code = "current_location",
+        name = "Current Location",
+        list =
+          [ Tags.Tag (Just False) (Just "current_location_lat") (Just "Current Location Lat") ((\loc -> Just $ show loc.lat) =<< location),
+            Tags.Tag (Just False) (Just "current_location_lon") (Just "Current Location Lon") ((\loc -> Just $ show loc.lon) =<< location)
+          ]
+      }
+  ]
 
 mkArrivalTimeTagGroup :: Maybe UTCTime -> [Tags.TagGroup]
 mkArrivalTimeTagGroup arrivalTime =

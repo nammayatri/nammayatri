@@ -516,16 +516,17 @@ earningHistoryItemsListTransformer list =
   )
 
 getTagImages :: RidesInfo -> Array String
-getTagImages (RidesInfo ride) = do
+getTagImages (RidesInfo ride) =
   let
-    a = maybe [] (\_ -> [ "ny_ic_tip_ride_tag" ]) ride.customerExtraFee
-
-    b = maybe [] (\_ -> [ "ny_ic_disability_tag" ]) ride.disabilityTag
-
-    c = maybe [] (\_ -> [ "ny_ic_special_location_tag" ]) ride.specialLocationTag
-
-    d = maybe [] (\_ -> [ "ny_ic_goto_home_tag" ]) ride.driverGoHomeRequestId
-  (a <> b <> c <> d)
+    tag = getRequiredTag ride.specialLocationTag
+    conditionsAndTags = 
+      [ {condition: isJust ride.customerExtraFee, tag: "ny_ic_tip_ride_tag"}
+      , {condition: isJust ride.disabilityTag, tag: "ny_ic_disability_tag"}
+      , {condition: isJust ride.specialLocationTag && isJust tag, tag: "ny_ic_star"}
+      , {condition: isJust ride.driverGoHomeRequestId, tag: "ny_ic_goto_home_tag"}
+      ]
+  in
+    DA.concatMap (\{condition, tag} -> if condition then [tag] else []) conditionsAndTags
 
 getTotalCurrentWeekData :: Array ST.WeeklyEarning -> ST.TotalEarningsData
 getTotalCurrentWeekData barGraphData = do

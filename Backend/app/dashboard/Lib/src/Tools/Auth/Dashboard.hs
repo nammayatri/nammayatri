@@ -28,6 +28,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Kernel.Utils.Servant.HeaderAuth
 import Servant hiding (throwError)
+import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Role as QRole
 import qualified Tools.Auth.Common as Common
@@ -84,7 +85,7 @@ instance
   where
   toPayloadType _ = fromSing (sing @at)
 
-verifyDashboardAccess :: EsqDBFlow m r => DRole.DashboardAccessType -> Id DP.Person -> m (Id DP.Person)
+verifyDashboardAccess :: BeamFlow m r => DRole.DashboardAccessType -> Id DP.Person -> m (Id DP.Person)
 verifyDashboardAccess requiredAccessType personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   case requiredAccessType of

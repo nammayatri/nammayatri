@@ -14,15 +14,21 @@ module Types.DBSync
     CreateDBCommand (..),
     UpdateDBCommand (..),
     DeleteDBCommand (..),
+    AppCfg (..),
   )
 where
 
 import EulerHS.KVConnector.DBSync
 import EulerHS.KVConnector.Types
-import EulerHS.Language as EL
+import qualified EulerHS.Language as EL
 import EulerHS.Prelude
-import EulerHS.Types as ET hiding (Tag)
+import qualified EulerHS.Types as ET hiding (Tag)
 import Kafka.Producer as Producer
+import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis.Config
+import Kernel.Streaming.Kafka.Producer.Types
+import Kernel.Types.Logging
+import Kernel.Utils.Dhall (FromDhall)
 import Types.Config
 import Types.DBSync.Create as X
 import Types.DBSync.Delete as X
@@ -33,8 +39,23 @@ data Env = Env
   { _streamRedisInfo :: Text,
     _counterHandles :: Event.DBSyncCounterHandler,
     _kafkaConnection :: Producer.KafkaProducer,
-    _dontEnableDbTables :: [Text]
+    _dontEnableDbTables :: [Text],
+    _dontEnableForKafka :: [Text]
   }
+
+data AppCfg = AppCfg
+  { esqDBCfg :: EsqDBConfig,
+    esqDBReplicaCfg :: EsqDBConfig,
+    hedisCfg :: HedisCfg,
+    hedisClusterCfg :: HedisCfg,
+    kvConfigUpdateFrequency :: Int,
+    kafkaProducerCfg :: KafkaProducerCfg,
+    maxMessages :: Text,
+    loggerConfig :: LoggerConfig,
+    dontEnableForDb :: [Text],
+    dontEnableForKafka :: [Text]
+  }
+  deriving (Generic, FromDhall)
 
 type Flow = EL.ReaderFlow Env
 

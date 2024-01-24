@@ -55,7 +55,9 @@ data PersonDefaultEmergencyNumberAPIEntity = PersonDefaultEmergencyNumberAPIEnti
     name :: Text,
     mobileCountryCode :: Text,
     mobileNumber :: Text,
-    priority :: Int
+    priority :: Int,
+    contactPersonId :: Maybe (Id Person),
+    enableForFollowing :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

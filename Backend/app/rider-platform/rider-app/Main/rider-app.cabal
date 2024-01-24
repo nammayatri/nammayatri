@@ -215,7 +215,6 @@ library
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
-      Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
       Domain.Types.VehicleVariant
@@ -285,7 +284,6 @@ library
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
-      Storage.Beam.Sos
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
@@ -308,6 +306,7 @@ library
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
+      Storage.CachedQueries.Sos
       Storage.Queries.AadhaarVerification.AadhaarOtp
       Storage.Queries.AadhaarVerification.AadhaarVerification
       Storage.Queries.AppInstalls
@@ -352,7 +351,6 @@ library
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
-      Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
@@ -377,8 +375,10 @@ library
       Tools.Ticket
       Tools.Whatsapp
       API.Action.UI.FollowRide
+      API.Action.UI.Sos
       API.Action.UI.TicketService
       API.Types.UI.FollowRide
+      API.Types.UI.Sos
       API.Types.UI.TicketService
       Domain.Types.BusinessHour
       Domain.Types.MerchantOperatingCity
@@ -386,6 +386,7 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
+      Domain.Types.Sos
       Domain.Types.SpecialOccasion
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
@@ -399,6 +400,7 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
+      Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
@@ -412,6 +414,7 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
+      Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory

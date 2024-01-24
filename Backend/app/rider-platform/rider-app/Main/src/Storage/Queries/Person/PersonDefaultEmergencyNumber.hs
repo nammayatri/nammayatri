@@ -43,6 +43,14 @@ findAllByPersonId (Id personId) = findAllWithKV [Se.Is BeamPDEN.personId $ Se.Eq
 findAllByContactPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [PersonDefaultEmergencyNumber]
 findAllByContactPersonId (Id contactPersonId) = findAllWithKV [Se.Is BeamPDEN.contactPersonId $ Se.Eq (Just contactPersonId)]
 
+updateEmergencyContactPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Id Person -> m ()
+updateEmergencyContactPersonId dbHash (Id personId) = do
+  updateWithKV
+    [ Se.Set BeamPDEN.contactPersonId (Just personId)
+    ]
+    [ Se.Is BeamPDEN.mobileNumberHash $ Se.Eq dbHash
+    ]
+
 instance FromTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNumber where
   fromTType' BeamPDEN.PersonDefaultEmergencyNumberT {..} = do
     pure $
@@ -51,6 +59,7 @@ instance FromTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergency
           { personId = Id personId,
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
             contactPersonId = Id <$> contactPersonId,
+            priority = priority,
             ..
           }
 

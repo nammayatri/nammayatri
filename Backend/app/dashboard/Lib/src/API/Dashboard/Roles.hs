@@ -22,6 +22,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.BeamFlow
 import Tools.Auth
 
 type API =
@@ -44,20 +45,20 @@ type API =
              :> Get '[JSON] DRoles.ListRoleRes
        )
 
-handler :: FlowServer API
+handler :: BeamFlow' => FlowServer API
 handler =
   createRole
     :<|> assignAccessLevel
     :<|> listRoles
 
-createRole :: TokenInfo -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
+createRole :: BeamFlow' => TokenInfo -> DRoles.CreateRoleReq -> FlowHandler DRole.RoleAPIEntity
 createRole tokenInfo =
   withFlowHandlerAPI' . DRoles.createRole tokenInfo
 
-assignAccessLevel :: TokenInfo -> Id DRole.Role -> DRoles.AssignAccessLevelReq -> FlowHandler APISuccess
+assignAccessLevel :: BeamFlow' => TokenInfo -> Id DRole.Role -> DRoles.AssignAccessLevelReq -> FlowHandler APISuccess
 assignAccessLevel tokenInfo roleId =
   withFlowHandlerAPI' . DRoles.assignAccessLevel tokenInfo roleId
 
-listRoles :: TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
+listRoles :: BeamFlow' => TokenInfo -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DRoles.ListRoleRes
 listRoles mbsearchstr mblimit mboffset =
   withFlowHandlerAPI' . DRoles.listRoles mbsearchstr mblimit mboffset

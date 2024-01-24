@@ -702,9 +702,9 @@ updateFPDriverExtraFee _ _ farePolicyId startDistance req = do
   CQFP.clearCacheById farePolicyId
   pure Success
 
-updateFPPerExtraKmRate :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFPPerExtraKmRateReq -> Flow APISuccess
-updateFPPerExtraKmRate _ _ farePolicyId req = do
-  _ <- QFPPDEKM.findById' farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
-  _ <- QFPPDEKM.updatePerExtraKmRate farePolicyId req.perExtraKmRate
+updateFPPerExtraKmRate :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> Flow APISuccess
+updateFPPerExtraKmRate _ _ farePolicyId startDistance req = do
+  _ <- QFPPDEKM.findByIdAndStartDistance farePolicyId startDistance >>= fromMaybeM (InvalidRequest "Fare Policy Parameters Per Extra Km Section with given id and start distance not found")
+  _ <- QFPPDEKM.updatePerExtraKmRate farePolicyId startDistance req.perExtraKmRate
   CQFP.clearCacheById farePolicyId
   pure Success

@@ -4,31 +4,14 @@
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:background="@drawable/ny_ic_splash_bg"
+    android:background="@color/black"
+    android:visibility="gone"
     android:id="@+id/splash">
-
-    <com.airbnb.lottie.LottieAnimationView
-        android:id="@+id/splash_lottie"
+    <ImageView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:lottie_autoPlay="false"
-        app:lottie_repeatMode="restart"
-        android:visibility="gone"
-        app:lottie_rawRes="@raw/splash_lottie" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical">
-
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="90dp"
-            android:layout_gravity="center"
-            android:src="@drawable/ny_splash_scn_logo_with_text"/>
-
-    </LinearLayout>
+        android:layout_gravity="center"
+        android:src="@drawable/ny_ic_splash_bg_trans" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -64,5 +47,13 @@
                 android:src="@drawable/ondc_logo"/>
         </LinearLayout>
     </LinearLayout>
+    <com.airbnb.lottie.LottieAnimationView
+        android:id="@+id/splash_lottie"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:lottie_repeatMode="restart"
+        android:tag="autoStart"
+        android:visibility="gone"
+        app:lottie_rawRes="@raw/splash_lottie" />
 
 </RelativeLayout>

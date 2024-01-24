@@ -16,7 +16,6 @@ module Tools.Notifications where
 
 import Data.Aeson (object)
 import qualified Data.Text as T
-import qualified Domain.Action.UI.FollowRide as DFollowRide
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Estimate (Estimate)
@@ -31,14 +30,14 @@ import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.SearchRequest as SearchRequest
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude as Prelude
 import Kernel.Sms.Config (SmsConfig)
-import Kernel.Storage.Esqueleto hiding (runInReplica)
+import Kernel.Storage.Esqueleto hiding (count, runInReplica)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -237,8 +236,24 @@ notifyOnRideCompleted booking ride = do
             driverName,
             "Total Fare " <> show (fromMaybe booking.estimatedFare totalFare)
           ]
-  DFollowRide.updateFollowsRideCount personId
+  updateFollowsRideCount personId
   notifyPerson person.merchantId merchantOperatingCityId notificationData
+  where
+    updateFollowsRideCount personId = do
+      emContacts <- QPDEN.findAllByPersonId personId
+      let followingContacts = filter (.enableForFollowing) emContacts
+      mapM_
+        ( \contact -> case contact.contactPersonId of
+            Just id -> updateFollowRideCount id
+            Nothing -> return ()
+        )
+        followingContacts
+      where
+        updateFollowRideCount emPersonId = do
+          count <- CQFollowRide.decrementFollowRideCount emPersonId
+          when (count <= 0) $ do
+            CQFollowRide.clearFollowsRideCounter emPersonId
+            Person.updateFollowsRide emPersonId False
 
 notifyOnExpiration ::
   ServiceFlow m r =>
@@ -612,7 +627,7 @@ notifyDriverBirthDay personId driverName = do
           ]
   notifyPerson person.merchantId merchantOperatingCityId notificationData
 
-notifyEmergencyContacts ::
+notifyRideStartToEmergencyContacts ::
   ( EsqDBFlow m r,
     EncFlow m r,
     CacheFlow m r,
@@ -622,7 +637,7 @@ notifyEmergencyContacts ::
   SRB.Booking ->
   SRide.Ride ->
   m ()
-notifyEmergencyContacts booking ride = do
+notifyRideStartToEmergencyContacts booking ride = do
   merchantConfig <- CQM.findById (booking.merchantId) >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   let trackLink = merchantConfig.trackingShortUrlPattern <> ride.shortId.getShortId
   emContacts <- QPDEN.findAllByPersonId booking.riderId

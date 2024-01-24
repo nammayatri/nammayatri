@@ -20,16 +20,16 @@ import qualified API.UI.Search as SH
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
+import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import SharedLogic.Merchant
 import Storage.Beam.SystemConfigs ()
-import Prelude
 
 data RideSearchEndPoint = SearchEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "RideSearchEndPoint"
 

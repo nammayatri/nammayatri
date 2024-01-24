@@ -23,8 +23,8 @@ import Data.List (nub, sort)
 import qualified Domain.Types.ServerName as DSN
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import Kernel.Beam.Functions as B
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Utils.Common (MonadFlow, decodeFromText, fork, logTagInfo, throwError, withFlowHandlerAPI')
@@ -32,6 +32,7 @@ import qualified ProviderPlatformClient.DynamicOfferDriver.Exotel as Client
 import qualified RiderPlatformClient.RiderApp as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import qualified Storage.Queries.Transaction as QT
 
 type API =
@@ -62,7 +63,7 @@ exotelHeartbeat incomingExotelToken req = withFlowHandlerAPI' $ do
     throwError $ InvalidToken incomingExotelToken
   let serverNames = [DSN.APP_BACKEND_MANAGEMENT, DSN.DRIVER_OFFER_BPP_MANAGEMENT]
   needToCallApps <- forM serverNames $ \serverName -> do
-    mbLastTransaction <- Esq.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName
+    mbLastTransaction <- B.runInReplica $ QT.fetchLastTransaction (DT.ExotelAPI Common.ExotelHeartbeatEndpoint) serverName
     let mbLastReq =
           mbLastTransaction
             >>= (.request)

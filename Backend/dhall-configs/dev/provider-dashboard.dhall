@@ -32,6 +32,11 @@ let rcfg =
       , connectTimeout = None Integer
       }
 
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
 let apiRateLimitOptions = { limit = +4, limitResetTimeInSec = +600 }
 
 let shareRideApiRateLimitOptions = { limit = +20, limitResetTimeInSec = +60 }
@@ -78,6 +83,8 @@ let specialZone =
       , token = sec.specialZoneToken
       }
 
+let cacheConfig = { configsExpTime = +86400 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -86,6 +93,7 @@ in  { esqDBCfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = True
     , cutOffHedisCluster = True
+    , kafkaProducerCfg
     , port = +8018
     , migrationPath =
       [   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text
@@ -112,4 +120,6 @@ in  { esqDBCfg
     , slackToken = sec.slackToken
     , slackChannel = "CXXXXXXXXXF"
     , internalEndPointMap = common.internalEndPointMap
+    , cacheConfig
+    , kvConfigUpdateFrequency = +60
     }

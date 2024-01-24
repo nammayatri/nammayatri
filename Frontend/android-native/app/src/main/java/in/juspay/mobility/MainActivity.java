@@ -14,6 +14,7 @@ import static in.juspay.mobility.app.Utils.minimizeApp;
 import static in.juspay.mobility.app.Utils.setCleverTapUserProp;
 
 import android.animation.Animator;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.ActivityManager;
@@ -46,6 +47,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.work.WorkManager;
 
 import com.airbnb.lottie.LottieAnimationView;
+import com.airbnb.lottie.LottieDrawable;
 import com.clevertap.android.pushtemplates.PushTemplateNotificationHandler;
 import com.clevertap.android.sdk.CleverTapAPI;
 import com.clevertap.android.sdk.interfaces.NotificationHandler;
@@ -298,33 +300,10 @@ public class MainActivity extends AppCompatActivity {
         if (MERCHANT_TYPE.equals("DRIVER")) {
             widgetService = new Intent(this, WidgetService.class);
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-            Utils.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
-        } else {
-            LottieAnimationView splashLottieView = findViewById(R.id.splash_lottie);
-            try {
-                if (Settings.Global.getFloat(getContentResolver(), Settings.Global.ANIMATOR_DURATION_SCALE) == 0f) {
-                    isSystemAnimEnabled = false;
-                } else {
-                    splashLottieView.addAnimatorListener(new Animator.AnimatorListener() {
-                        @Override
-                        public void onAnimationEnd(Animator animation) {
-                            if (isHideSplashEventCalled) hideSplash();
-                                else splashLottieView.playAnimation();
-                        }
-
-                        @Override
-                        public void onAnimationCancel(Animator animation) {}
-                        @Override
-                        public void onAnimationRepeat(Animator animation) {}
-                        @Override
-                        public void onAnimationStart(Animator animation) {}
-                    });
-                }
-            } catch (Settings.SettingNotFoundException e) {
-                isSystemAnimEnabled = false;
+            if (sharedPref != null) {
+                Utils.updateLocaleResource(sharedPref.getString(getResources().getString(R.string.LANGUAGE_KEY), "null"),context);
             }
         }
-
         MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
         MobilityAppUpdate mobilityAppUpdate = new MobilityAppUpdate(this);
         mobilityAppUpdate.checkAndUpdateApp(remoteConfigs);
@@ -365,12 +344,27 @@ public class MainActivity extends AppCompatActivity {
     private void handleSplashScreen() {
         try {
             setContentView(R.layout.activity_main);
-            String city = sharedPref != null ? sharedPref.getString("DRIVER_LOCATION", "__failed") : "_failed";
-            if (!city.equals("__failed")) {
-                View splash = findViewById(R.id.splash);
-                LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
-                setSplashAnimAndStart(splashLottie,city.toLowerCase());
+            boolean skipDefaultSplash = false;
+            String city = "__failed";
+            if (sharedPref != null) {
+                city = sharedPref.getString("DRIVER_LOCATION", "__failed");
+                if (city.equals("__failed")) {
+                    city = sharedPref.getString("CUSTOMER_LOCATION", "__failed");
+                }
             }
+            View splash = findViewById(R.id.splash);
+            LottieAnimationView splashLottie = splash.findViewById(R.id.splash_lottie);
+            if (!city.equals("__failed")) {
+                skipDefaultSplash = setSplashAnimAndStart(splashLottie,city.toLowerCase());
+            }
+            if (!skipDefaultSplash) {
+                if ((splashLottie.getTag() != null) && splashLottie.getTag().equals("autoStart")) {
+                    splashLottie.setVisibility(View.VISIBLE);
+                    splashLottie.setRepeatCount(ValueAnimator.INFINITE);
+                    splashLottie.playAnimation();
+                }
+            }
+            splash.setVisibility(View.VISIBLE);
         } catch (Exception e){
             Bundle bundle = new Bundle();
             bundle.putString("Exception",e.toString());
@@ -380,14 +374,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void setSplashAnimAndStart (LottieAnimationView view ,String city) {
+    private boolean setSplashAnimAndStart (LottieAnimationView view ,String city) {
         ResourceHandler resourceHandler = new ResourceHandler(this);
-        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, false);
-        String splashScreenTemp = remoteConfigs.getString("splash_screen_" + city);
         @Nullable
         String animationFile = null;
         try {
-            JSONObject cityConfig = new JSONObject(splashScreenTemp);
+            JSONObject cityConfig = getCityConfig(city);
             String file = cityConfig.optString("file_name","");
             if  (resourceHandler.isResourcePresent("raw",file) && !cityConfig.optBoolean("force_remote",false)) {
                 animationFile = resourceHandler.getRawResource(file);
@@ -398,18 +390,41 @@ public class MainActivity extends AppCompatActivity {
             Bundle bundle = new Bundle();
             bundle.putString("Exception",e.toString());
             FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-            mFirebaseAnalytics.logEvent("exception_while_reading_splash_config",bundle);
+            mFirebaseAnalytics.logEvent("exception_while_reading_city_config",bundle);
         }
         resourceHandler.close();
-        if (animationFile != null) {
+        if (animationFile != null && !animationFile.equals("")) {
             if (animationFile.startsWith("http")) {
                 view.setAnimationFromUrl(animationFile);
             } else {
                 view.setAnimationFromJson(animationFile,null);
             }
             view.setVisibility(View.VISIBLE);
+            if ((view.getTag() != null) && view.getTag().equals("autoStart")) view.setRepeatCount(ValueAnimator.INFINITE);
             view.playAnimation();
+            return true;
+        } else {
+            return false;
         }
+    }
+
+    @NonNull
+    private JSONObject getCityConfig(String city) {
+        MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, false);
+        String splashScreenConfig = remoteConfigs.getString("splash_screen_" + city);
+        JSONObject config = new JSONObject();
+        JSONObject cityConfig = new JSONObject();
+        try {
+            cityConfig = new JSONObject(splashScreenConfig);
+            String merchant = MERCHANT_TYPE.toLowerCase();
+            config = cityConfig.optJSONObject(merchant);
+        } catch (Exception e) {
+            Bundle bundle = new Bundle();
+            bundle.putString("Exception",e.toString());
+            FirebaseAnalytics mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+            mFirebaseAnalytics.logEvent("exception_while_reading_splash_config",bundle);
+        }
+        return config != null ? config : cityConfig ;
     }
 
     private void registerCallBack() {
@@ -511,12 +526,7 @@ public class MainActivity extends AppCompatActivity {
                         break;
                     case "hide_loader":
                     case "hide_splash":
-                        String key = getResources().getString(R.string.service);
-                        if (key.equals("nammayatri") && isSystemAnimEnabled) {
-                            isHideSplashEventCalled = true;
-                        } else {
-                            hideSplash();
-                        }
+                        hideSplash();
                         break;
                     case "show_splash":
                         View v = findViewById(R.id.splash);

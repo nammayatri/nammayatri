@@ -35,6 +35,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import com.clevertap.android.sdk.CleverTapAPI;
 import com.google.firebase.analytics.FirebaseAnalytics;
 
 import org.json.JSONException;
@@ -48,10 +49,19 @@ import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.net.ssl.HttpsURLConnection;
+
+import in.juspay.hyper.core.ExecutorManager;
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 
 
 public class RideRequestUtils {
@@ -59,6 +69,7 @@ public class RideRequestUtils {
     private final static String RIDE_REQUEST_CHANNEL = "in.juspay.mobility.riderequest";
     private final static int rideReqNotificationReqCode = 6032023;
     private static final String LOG_TAG = "RideRequestUtils";
+    private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
 
     public static Boolean driverRespondApi(String searchRequestId, double offeredPrice, boolean isAccept, Context context, int slotNumber) {
         Handler mainLooper = new Handler(Looper.getMainLooper());
@@ -403,6 +414,55 @@ public class RideRequestUtils {
             catch (Exception error)
             {
                 Log.d(LOG_TAG, "Catch in updateDriverStatus : "+error);
+            }
+        });
+    }
+
+    public static void addRideReceivedEvent(JSONObject entity_payload, Bundle rideRequestBundle, SheetModel model, String event, Context context) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                if (!remoteConfigs.hasKey("enable_clevertap_events")) return;
+                String merchantId = context.getResources().getString(R.string.merchant_id);
+                JSONObject clevertapConfig = new JSONObject(remoteConfigs.getString("enable_clevertap_events"));
+                SharedPreferences sharedPref = context.getApplicationContext().getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+                if (clevertapConfig.has(merchantId)) {
+                    boolean enableCleverTapEvents = clevertapConfig.getBoolean(merchantId);
+                    if (enableCleverTapEvents) {
+                        HashMap<String, Object> cleverTapParams = new HashMap<>();
+                        if (entity_payload != null) {
+                            cleverTapParams.put("searchRequestId", entity_payload.getString("searchRequestId"));
+                            cleverTapParams.put("rideRequestPopupDelayDuration", entity_payload.has("rideRequestPopupDelayDuration") ? entity_payload.getInt("rideRequestPopupDelayDuration") : 0);
+                            cleverTapParams.put("keepHiddenForSeconds", (entity_payload.has("keepHiddenForSeconds") && !entity_payload.isNull("keepHiddenForSeconds") ? entity_payload.getInt("keepHiddenForSeconds") : 0));
+                            cleverTapParams.put("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? NotificationUtils.getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NotificationUtils.NO_VARIANT);
+                        } else if (rideRequestBundle != null) {
+                            cleverTapParams.put("searchRequestId", rideRequestBundle.getString("searchRequestId"));
+                            cleverTapParams.put("rideRequestPopupDelayDuration", rideRequestBundle.getInt("rideRequestPopupDelayDuration"));
+                            cleverTapParams.put("keepHiddenForSeconds", rideRequestBundle.getInt("keepHiddenForSeconds", 0));
+                            cleverTapParams.put("requestedVehicleVariant", rideRequestBundle.getString("requestedVehicleVariant"));
+                        } else if (model != null) {
+                            cleverTapParams.put("searchRequestId", model.getSearchRequestId());
+                            cleverTapParams.put("rideRequestPopupDelayDuration", model.getRideRequestPopupDelayDuration());
+                            cleverTapParams.put("vehicleVariant", sharedPref.getString("VEHICLE_VARIANT", "null"));
+                        }
+                        cleverTapParams.put("driverId", sharedPref.getString("DRIVER_ID", "null"));
+                        clevertapConfig.put("driverMode", sharedPref.getString("DRIVER_STATUS_N", ""));
+                        clevertapConfig.put("overlayNotAvailable", NotificationUtils.overlayFeatureNotAvailable(context));
+                        CleverTapAPI clevertapDefaultInstance = CleverTapAPI.getDefaultInstance(context);
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                            LocalDateTime utcDateTime = LocalDateTime.now(ZoneOffset.UTC);
+                            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+                            String formattedDateTime = utcDateTime.format(formatter);
+                            long millisecondsSinceEpoch = Instant.now().toEpochMilli();
+                            cleverTapParams.put("timeStampString", formattedDateTime);
+                            cleverTapParams.put("timeStamp", millisecondsSinceEpoch);
+                        }
+                        if (clevertapDefaultInstance != null) {
+                            clevertapDefaultInstance.pushEvent(event, cleverTapParams);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                firebaseLogEventWithParams("exception_in_logging_ride_req_event", "exception", Objects.requireNonNull(e.getMessage()).substring(0, 40), context);
             }
         });
     }

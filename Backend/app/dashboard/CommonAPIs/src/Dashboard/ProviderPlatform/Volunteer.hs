@@ -34,7 +34,7 @@ import Servant hiding (Summary)
 
 data VolunteerEndpoint
   = AssignCreateAndStartOtpRideEndpoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "VolunteerEndpoint"
 
