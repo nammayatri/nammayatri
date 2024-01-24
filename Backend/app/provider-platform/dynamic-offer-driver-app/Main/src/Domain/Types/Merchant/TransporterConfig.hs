@@ -167,6 +167,7 @@ data TransporterConfigD u = TransporterConfig
     driverAutoPayExecutionTimeFallBack :: NominalDiffTime,
     orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime,
     kaptureDisposition :: Text,
+    kaptureQueue :: Text,
     dummyFromLocation :: DummyLocationInfo,
     dummyToLocation :: DummyLocationInfo,
     scheduleRideBufferTime :: NominalDiffTime,

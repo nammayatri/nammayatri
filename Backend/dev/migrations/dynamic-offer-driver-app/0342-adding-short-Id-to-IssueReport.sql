@@ -1,6 +1,6 @@
 ALTER TABLE atlas_driver_offer_bpp.issue_report ADD short_id character varying(36);
 
-UPDATE atlas_driver_offer_bpp.issue_report SET short_id = SUBSTRING(md5(random()::text)::text, 1, 9) || floor(random() * 10)::int IS NULL;
+UPDATE atlas_driver_offer_bpp.issue_report SET short_id = SUBSTRING(md5(random()::text)::text, 1, 9) || floor(random() * 10)::int WHERE short_id IS NULL;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN kapture_disposition text;
 

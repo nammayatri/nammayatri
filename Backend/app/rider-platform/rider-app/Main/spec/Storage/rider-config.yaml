@@ -22,6 +22,7 @@ RiderConfig:
     distanceWeightage: Int
     collectMMIRouteData: Maybe Bool
     isAvoidToll: Bool
+    kaptureQueue: Text
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -39,6 +40,7 @@ RiderConfig:
     specialZoneRadius: "150"
     distanceWeightage: "70"
     isAvoidToll: "true"
+    kaptureQueue: "''"
 
   queries:
     findByMerchantOperatingCityId:
