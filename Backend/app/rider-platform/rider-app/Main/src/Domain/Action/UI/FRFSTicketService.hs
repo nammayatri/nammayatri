@@ -217,12 +217,12 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   bapConfig <- QBC.findByMerchantIdAndDomain (Just merchant.id) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
   booking' <- B.runInReplica $ QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   unless (personId == booking'.riderId) $ throwError AccessDenied
-  person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  -- person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
   when ((booking'.status /= DFRFSTicketBooking.CONFIRMED || booking'.status /= DFRFSTicketBooking.FAILED) && booking'.validTill < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
+  -- let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
   case booking.status of
     DFRFSTicketBooking.NEW -> buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.FAILED -> buildFRFSTicketBookingStatusAPIRes booking Nothing
@@ -231,10 +231,10 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
       callBPPStatus booking bapConfig
       buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.APPROVED -> do
-      paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-      paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
-      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
-      let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
+      -- paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+      -- paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
+      -- paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+      let paymentBookingStatus = makeTicketBookingPaymentAPIStatus CHARGED
       if (paymentBookingStatus == FRFSTicketService.FAILURE)
         then do
           QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
@@ -244,19 +244,19 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         else do
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
           let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING
-          paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
+          -- paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
           let paymentObj =
                 Just $
                   FRFSTicketService.FRFSBookingPaymentAPI
                     { status = paymentBookingStatus,
-                      paymentOrder = Just paymentOrder_
+                      paymentOrder = Nothing --Just paymentOrder_
                     }
           buildFRFSTicketBookingStatusAPIRes updatedBooking paymentObj
     DFRFSTicketBooking.PAYMENT_PENDING -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
       paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
-      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
-      let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
+      -- paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+      let paymentBookingStatus = makeTicketBookingPaymentAPIStatus CHARGED
       if (paymentBookingStatus == FRFSTicketService.FAILURE)
         then do
           QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
@@ -277,12 +277,12 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 void $ CallBPP.confirm providerUrl bknConfirmReq
               buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
             else do
-              paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
+              -- paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
               let paymentObj =
                     Just
                       FRFSTicketService.FRFSBookingPaymentAPI
                         { status = paymentBookingStatus,
-                          paymentOrder = Just paymentOrder_
+                          paymentOrder = Nothing -- Just paymentOrder_
                         }
               buildFRFSTicketBookingStatusAPIRes booking paymentObj
   where
@@ -340,30 +340,30 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     --   Nothing -> return Nothing
     -- buildFRFSTicketBookingStatusAPIRes booking payment
 
-    buildCreateOrderResp paymentOrder person commonPersonId = do
-      personEmail <- mapM decrypt person.email
-      personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-      let createOrderReq =
-            Payment.CreateOrderReq
-              { orderId = paymentOrder.id.getId,
-                orderShortId = paymentOrder.shortId.getShortId,
-                amount = paymentOrder.amount,
-                customerId = person.id.getId,
-                customerEmail = fromMaybe "test@gmail.com" personEmail,
-                customerPhone = personPhone,
-                customerFirstName = person.firstName,
-                customerLastName = person.lastName,
-                createMandate = Nothing,
-                mandateMaxAmount = Nothing,
-                mandateFrequency = Nothing,
-                mandateEndDate = Nothing,
-                mandateStartDate = Nothing
-              }
-      DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrder.id.getId)
+    -- buildCreateOrderResp paymentOrder person commonPersonId = do
+    --   personEmail <- mapM decrypt person.email
+    --   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+    --   let _createOrderReq =
+    --         Payment.CreateOrderReq
+    --           { orderId = paymentOrder.id.getId,
+    --             orderShortId = paymentOrder.shortId.getShortId,
+    --             amount = paymentOrder.amount,
+    --             customerId = person.id.getId,
+    --             customerEmail = fromMaybe "test@gmail.com" personEmail,
+    --             customerPhone = personPhone,
+    --             customerFirstName = person.firstName,
+    --             customerLastName = person.lastName,
+    --             createMandate = Nothing,
+    --             mandateMaxAmount = Nothing,
+    --             mandateFrequency = Nothing,
+    --             mandateEndDate = Nothing,
+    --             mandateStartDate = Nothing
+    --           }
+    --   DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrder.id.getId)
 
-    createOrderCall = Payment.createOrder merchantId_
-    orderStatusCall = Payment.orderStatus merchantId_
-    commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId_
+    -- createOrderCall = Payment.createOrder merchantId_
+    -- orderStatusCall = Payment.orderStatus merchantId_
+    -- commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId_
 
     makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus = DFRFSTicketBooking.FRFSTicketBooking {status = updatedStatus, ..}
     getSuccessTransactionId transactions = do
