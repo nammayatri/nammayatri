@@ -20,6 +20,7 @@ module Storage.Queries.FareProduct
     #-}
 where
 
+import Domain.Types.Common
 import Domain.Types.FareProduct
 import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -35,22 +36,32 @@ import qualified Storage.Beam.FareProduct as BeamFP
 findAllFareProductForVariants ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
+  TripCategory ->
   Domain.Area ->
   m [Domain.FareProduct]
-findAllFareProductForVariants (Id merchantOpCityId) area = findAllWithKV [Se.And [Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId, Se.Is BeamFP.area $ Se.Eq area]]
+findAllFareProductForVariants (Id merchantOpCityId) tripCategory area =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+          Se.Is BeamFP.area $ Se.Eq area,
+          Se.Is BeamFP.tripCategory $ Se.Eq tripCategory
+        ]
+    ]
 
 findByMerchantOpCityIdVariantArea ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
+  TripCategory ->
   Variant ->
   Domain.Area ->
   m (Maybe Domain.FareProduct)
-findByMerchantOpCityIdVariantArea (Id merchantOpCityId) vehicleVariant area =
+findByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory vehicleVariant area =
   findOneWithKV
     [ Se.And
         [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
           Se.Is BeamFP.area $ Se.Eq area,
-          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant
+          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant,
+          Se.Is BeamFP.tripCategory $ Se.Eq tripCategory
         ]
     ]
 
@@ -61,9 +72,7 @@ instance ToTType' BeamFP.FareProduct FareProduct where
         merchantId = getId merchantId,
         merchantOperatingCityId = getId merchantOperatingCityId,
         farePolicyId = getId farePolicyId,
-        vehicleVariant = vehicleVariant,
-        area = area,
-        flow = flow
+        ..
       }
 
 instance FromTType' BeamFP.FareProduct FareProduct where
@@ -75,7 +84,5 @@ instance FromTType' BeamFP.FareProduct FareProduct where
             merchantId = Id merchantId,
             merchantOperatingCityId = Id merchantOperatingCityId,
             farePolicyId = Id farePolicyId,
-            vehicleVariant = vehicleVariant,
-            area = area,
-            flow = flow
+            ..
           }

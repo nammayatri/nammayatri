@@ -167,10 +167,11 @@ buildEstimateOrQuoteInfo provider item = do
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
   let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
   case fulfillment._type of
-    OnSearch.RIDE -> do
+    "RIDE" -> do
       estimateBreakupList <- buildEstimateBreakUpList item
       pure $ Left DOnSearch.EstimateInfo {bppEstimateId = Id fulfillment.id, ..}
-    OnSearch.RIDE_OTP -> do
+    _ -> do
+      -- "RIDE_OTP"
       quoteDetails <- DOnSearch.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails fulfillment
       pure $ Right DOnSearch.QuoteInfo {..}
   where

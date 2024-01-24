@@ -14,39 +14,41 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.QuoteSpecialZone where
+module Storage.Beam.Quote where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
-import Kernel.Types.Common hiding (id)
 import qualified Kernel.Types.Common as Common
 import Tools.Beam.UtilsTH
 
-data QuoteSpecialZoneT f = QuoteSpecialZoneT
+data QuoteT f = QuoteT
   { id :: B.C f Text,
     searchRequestId :: B.C f Text,
     providerId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
-    distance :: B.C f Meters,
-    validTill :: B.C f LocalTime,
+    estimatedFinishTime :: B.C f (Maybe UTCTime),
+    tripCategory :: B.C f (Maybe DTC.TripCategory),
+    distance :: B.C f (Maybe Common.Meters),
+    validTill :: B.C f UTCTime,
     estimatedFare :: B.C f Common.Money,
-    fareParametersId :: B.C f Text,
-    estimatedFinishTime :: B.C f UTCTime,
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f LocalTime,
-    updatedAt :: B.C f LocalTime
+    fareParametersId :: B.C f Text,
+    farePolicyId :: B.C f (Maybe Text),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table QuoteSpecialZoneT where
-  data PrimaryKey QuoteSpecialZoneT f
+instance B.Table QuoteT where
+  data PrimaryKey QuoteT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type QuoteSpecialZone = QuoteSpecialZoneT Identity
+type Quote = QuoteT Identity
 
-$(enableKVPG ''QuoteSpecialZoneT ['id] [['searchRequestId]])
+$(enableKVPG ''QuoteT ['id] [['searchRequestId]])
 
-$(mkTableInstances ''QuoteSpecialZoneT "quote_special_zone")
+$(mkTableInstances ''QuoteT "quote_special_zone")

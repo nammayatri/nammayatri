@@ -80,6 +80,7 @@ data DriverInformation = DriverInformation
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
+    canSwitchToRental :: Bool,
     mode :: Maybe DriverMode,
     aadhaarVerified :: Bool,
     autoPayStatus :: Maybe DriverAutoPayStatus,

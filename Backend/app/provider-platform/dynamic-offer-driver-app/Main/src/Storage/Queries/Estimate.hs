@@ -15,8 +15,7 @@
 
 module Storage.Queries.Estimate where
 
-import Data.Coerce (coerce)
-import Domain.Types.Common (UsageSafety (..))
+import Domain.Types.Common
 import Domain.Types.Estimate as Domain
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -25,9 +24,15 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
+import qualified Storage.CachedQueries.FarePolicy as BeamQFPolicy
+import qualified Storage.Queries.FareParameters as BeamQFP
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.Estimate -> m ()
-create = createWithKV
+create estimate = do
+  case estimate.fareParams of
+    Just params -> BeamQFP.create params
+    Nothing -> return ()
+  createWithKV estimate
 
 createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Estimate] -> m ()
 createMany = traverse_ create
@@ -37,43 +42,24 @@ findById (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId]
 
 instance FromTType' BeamE.Estimate Estimate where
   fromTType' BeamE.EstimateT {..} = do
+    farePolicy <- maybe (pure Nothing) (BeamQFPolicy.findById . Id) farePolicyId
+    fareParams <- maybe (pure Nothing) (BeamQFP.findById . Id) fareParamsId
     pure $
       Just
         Estimate
           { id = Id id,
             requestId = Id requestId,
-            vehicleVariant = vehicleVariant,
-            minFare = minFare,
-            maxFare = maxFare,
-            estimateBreakupList = coerce @[EstimateBreakupD 'Unsafe] @[EstimateBreakup] estimateBreakupList,
-            nightShiftInfo = NightShiftInfo <$> nightShiftCharge <*> oldNightShiftCharge <*> nightShiftStart' <*> nightShiftEnd',
-            waitingCharges = WaitingCharges waitingChargePerMin waitingOrPickupCharges,
-            specialLocationTag = specialLocationTag,
-            createdAt = createdAt
+            tripCategory = fromMaybe (OneWay OneWayOnDemandDynamicOffer) tripCategory,
+            ..
           }
-    where
-      nightShiftStart' = case nightShiftStart of
-        (Just (BeamE.TimeOfDayText nightShiftStart'')) -> Just nightShiftStart''
-        Nothing -> Nothing
-      nightShiftEnd' = case nightShiftEnd of
-        (Just (BeamE.TimeOfDayText nightShiftEnd'')) -> Just nightShiftEnd''
-        Nothing -> Nothing
 
 instance ToTType' BeamE.Estimate Estimate where
   toTType' Estimate {..} = do
     BeamE.EstimateT
       { id = getId id,
         requestId = getId requestId,
-        vehicleVariant = vehicleVariant,
-        minFare = minFare,
-        maxFare = maxFare,
-        estimateBreakupList = coerce @[EstimateBreakup] @[EstimateBreakupD 'Unsafe] estimateBreakupList,
-        nightShiftCharge = nightShiftCharge <$> nightShiftInfo,
-        oldNightShiftCharge = oldNightShiftCharge <$> nightShiftInfo,
-        nightShiftStart = BeamE.TimeOfDayText . nightShiftStart <$> nightShiftInfo,
-        nightShiftEnd = BeamE.TimeOfDayText . nightShiftEnd <$> nightShiftInfo,
-        waitingChargePerMin = waitingChargePerMin waitingCharges,
-        waitingOrPickupCharges = waitingOrPickupCharges waitingCharges,
-        specialLocationTag = specialLocationTag,
-        createdAt = createdAt
+        tripCategory = Just tripCategory,
+        farePolicyId = (getId . (.id)) <$> farePolicy,
+        fareParamsId = (getId . (.id)) <$> fareParams,
+        ..
       }

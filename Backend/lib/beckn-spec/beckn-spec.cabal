@@ -88,7 +88,6 @@ library
       Beckn.Types.Core.Taxi.Common.Descriptor
       Beckn.Types.Core.Taxi.Common.FareProductType
       Beckn.Types.Core.Taxi.Common.FulfillmentInfo
-      Beckn.Types.Core.Taxi.Common.FulfillmentType
       Beckn.Types.Core.Taxi.Common.Gps
       Beckn.Types.Core.Taxi.Common.ItemCode
       Beckn.Types.Core.Taxi.Common.Location

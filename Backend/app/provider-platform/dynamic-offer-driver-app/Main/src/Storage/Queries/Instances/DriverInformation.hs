@@ -60,6 +60,7 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.canDowngradeToSedan = canDowngradeToSedan,
         BeamDI.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamDI.canDowngradeToTaxi = canDowngradeToTaxi,
+        BeamDI.canSwitchToRental = canSwitchToRental,
         BeamDI.mode = mode,
         BeamDI.autoPayStatus = autoPayStatus,
         BeamDI.payerVpa = payerVpa,

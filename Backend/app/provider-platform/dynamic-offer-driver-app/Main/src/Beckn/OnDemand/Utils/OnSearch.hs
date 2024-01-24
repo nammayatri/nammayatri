@@ -14,24 +14,69 @@
 
 module Beckn.OnDemand.Utils.OnSearch where
 
-import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
 import qualified Data.Aeson as A
 import qualified Data.List as List
 import Domain.Action.Beckn.Search
+import qualified Domain.Types.Common as DTC
 import Domain.Types.Estimate
+import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.FareParameters as Params
+import qualified Domain.Types.FarePolicy as Policy
+import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.Vehicle.Variant as Variant
 import EulerHS.Prelude hiding (id, view, (^?))
 import GHC.Float (double2Int)
-import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import qualified Kernel.Types.Beckn.Gps as Gps
+import Kernel.Types.Common
+import SharedLogic.FareCalculator
+import SharedLogic.FarePolicy
 
-mkProviderLocations :: [EstimateInfo] -> [Spec.Location]
-mkProviderLocations estimatesList =
-  foldl (<>) [] $ map mkProviderLocation estimatesList
+data Pricing = Pricing
+  { pricingId :: Text,
+    pricingMaxFare :: Money,
+    pricingMinFare :: Money,
+    vehicleVariant :: Variant.Variant,
+    tripCategory :: DTC.TripCategory,
+    fareParams :: Maybe Params.FareParameters,
+    farePolicy :: Maybe Policy.FarePolicy,
+    estimatedDistance :: Maybe Meters,
+    specialLocationTag :: Maybe Text,
+    fulfillmentType :: Text,
+    distanceToNearestDriver :: Maybe Meters
+  }
 
-mkProviderLocation :: EstimateInfo -> [Spec.Location]
-mkProviderLocation EstimateInfo {..} = do
+convertEstimateToPricing :: (DEst.Estimate, Maybe NearestDriverInfo) -> Pricing
+convertEstimateToPricing (DEst.Estimate {..}, mbDriverLocations) =
+  Pricing
+    { pricingId = id.getId,
+      pricingMaxFare = maxFare,
+      pricingMinFare = minFare,
+      fulfillmentType = "RIDE",
+      distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
+      ..
+    }
+
+convertQuoteToPricing :: (DQuote.Quote, Maybe NearestDriverInfo) -> Pricing
+convertQuoteToPricing (DQuote.Quote {..}, mbDriverLocations) =
+  Pricing
+    { pricingId = id.getId,
+      pricingMaxFare = estimatedFare,
+      pricingMinFare = estimatedFare,
+      estimatedDistance = distance,
+      fareParams = Just fareParams,
+      fulfillmentType = "RIDE_OTP",
+      distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
+      ..
+    }
+
+mkProviderLocations :: [Maybe NearestDriverInfo] -> [Spec.Location]
+mkProviderLocations driverLocationsInfo =
+  foldl (<>) [] $ map mkProviderLocation (catMaybes driverLocationsInfo)
+
+mkProviderLocation :: NearestDriverInfo -> [Spec.Location]
+mkProviderLocation NearestDriverInfo {..} = do
   let driverLocations = toList driverLatLongs
       driverGps = map (\loc -> Gps.Gps {lat = loc.lat, lon = loc.lon}) driverLocations
   flip map driverGps $
@@ -46,14 +91,13 @@ mkProviderLocation EstimateInfo {..} = do
           locationState = Nothing
         }
 
-mkItemTags :: EstimateInfo -> [Spec.TagGroup]
-mkItemTags estInfo = do
-  let estimate = estInfo.estimate
-  [mkGeneralInfoTag estimate estInfo, mkFarePolicyTag estimate, mkRateCardTag estimate]
+mkItemTags :: Pricing -> [Spec.TagGroup]
+mkItemTags pricing =
+  [mkGeneralInfoTag pricing, mkFareParamsTag pricing, mkRateCardTag pricing]
 
-mkGeneralInfoTag :: Estimate -> EstimateInfo -> Spec.TagGroup
-mkGeneralInfoTag estimate estInfo =
-  let specialLocationTag = estimate.specialLocationTag
+mkGeneralInfoTag :: Pricing -> Spec.TagGroup
+mkGeneralInfoTag pricing =
+  let specialLocationTag = pricing.specialLocationTag
    in Spec.TagGroup
         { tagGroupDisplay = Just False,
           tagGroupDescriptor =
@@ -66,7 +110,7 @@ mkGeneralInfoTag estimate estInfo =
           tagGroupList =
             Just $
               specialLocationTagSingleton specialLocationTag
-                ++ distanceToNearestDriverTagSingleton estInfo.distanceToNearestDriver
+                ++ distanceToNearestDriverTagSingleton pricing.distanceToNearestDriver
         }
   where
     specialLocationTagSingleton specialLocationTag
@@ -84,7 +128,9 @@ mkGeneralInfoTag estimate estInfo =
                     },
               tagValue = specialLocationTag
             }
-    distanceToNearestDriverTagSingleton distanceToNearestDriver =
+
+    distanceToNearestDriverTagSingleton Nothing = []
+    distanceToNearestDriverTagSingleton (Just distanceToNearestDriver) =
       List.singleton $
         Spec.Tag
           { tagDisplay = Just False,
@@ -98,8 +144,8 @@ mkGeneralInfoTag estimate estInfo =
             tagValue = Just $ show . double2Int . realToFrac $ distanceToNearestDriver
           }
 
-buildEstimateBreakUpListTags :: EstimateBreakup -> Spec.Tag
-buildEstimateBreakUpListTags EstimateBreakup {..} = do
+buildFareParamsBreakupsTags :: FareParamsBreakupItem -> Spec.Tag
+buildFareParamsBreakupsTags FareParamsBreakupItem {..} = do
   Spec.Tag
     { tagDisplay = Just False,
       tagDescriptor =
@@ -109,12 +155,24 @@ buildEstimateBreakUpListTags EstimateBreakup {..} = do
               descriptorName = Just title,
               descriptorShortDesc = Nothing
             },
-      tagValue = Just $ show price.value.getMoney
+      tagValue = Just $ show price.getMoney
     }
 
-mkFarePolicyTag :: Estimate -> Spec.TagGroup
-mkFarePolicyTag estimate = do
-  let estimateBreakUpList = buildEstimateBreakUpListTags <$> estimate.estimateBreakupList
+mkPrice :: Money -> Money
+mkPrice a = a
+
+data FareParamsBreakupItem = FareParamsBreakupItem
+  { title :: Text,
+    price :: Money
+  }
+
+mkFareParamsBreakupItem :: Text -> Money -> FareParamsBreakupItem
+mkFareParamsBreakupItem = FareParamsBreakupItem
+
+mkFareParamsTag :: Pricing -> Spec.TagGroup
+mkFareParamsTag pricing = do
+  let fareParamsBreakups = maybe [] (mkFareParamsBreakups mkPrice mkFareParamsBreakupItem) pricing.fareParams
+      fareParamsBreakupsTags = buildFareParamsBreakupsTags <$> fareParamsBreakups
   Spec.TagGroup
     { tagGroupDisplay = Just False,
       tagGroupDescriptor =
@@ -124,106 +182,46 @@ mkFarePolicyTag estimate = do
               descriptorName = Just "Fare Breakup",
               descriptorShortDesc = Nothing
             },
-      tagGroupList = Just estimateBreakUpList
+      tagGroupList = Just fareParamsBreakupsTags
     }
 
-mkRateCardTag :: Estimate -> Spec.TagGroup
-mkRateCardTag estimate =
-  let nightShiftCharges = (estimate.nightShiftInfo <&> (.nightShiftCharge))
-      oldNightShiftCharges = (OS.DecimalValue . toRational <$> (estimate.nightShiftInfo <&> (.oldNightShiftCharge)))
-      nightShiftStart = (estimate.nightShiftInfo <&> (.nightShiftStart))
-      waitingChargePerMin = (estimate.waitingCharges.waitingChargePerMin)
-      nightShiftEnd = (estimate.nightShiftInfo <&> (.nightShiftEnd))
-   in Spec.TagGroup
-        { tagGroupDisplay = Just False,
-          tagGroupDescriptor =
-            Just
-              Spec.Descriptor
-                { descriptorCode = Just "rate_card",
-                  descriptorName = Just "Rate Card",
-                  descriptorShortDesc = Nothing
-                },
-          tagGroupList =
-            Just $
-              nightShiftChargesTagSingleton nightShiftCharges
-                ++ oldNightShiftChargesTagSingleton oldNightShiftCharges
-                ++ nightShiftStartTagSingleton nightShiftStart
-                ++ waitingChargePerMinTagSingleton waitingChargePerMin
-                ++ nightShiftEndTagSingleton nightShiftEnd
-        }
-  where
-    nightShiftChargesTagSingleton nightShiftCharges
-      | isNothing nightShiftCharges = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just "night_shift_charge",
-                      descriptorName = Just "Night Shift Charges",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = (\charges -> Just $ show charges.getMoney) =<< nightShiftCharges
-            }
-    oldNightShiftChargesTagSingleton oldNightShiftCharges
-      | isNothing oldNightShiftCharges = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just "old_night_shift_charge",
-                      descriptorName = Just "Old Night Shift Charges",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = (Just . DecimalValue.valueToString) =<< oldNightShiftCharges
-            }
-    nightShiftStartTagSingleton nightShiftStart
-      | isNothing nightShiftStart = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just "night_shift_start",
-                      descriptorName = Just "Night Shift Start Timings",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = (Just . show) =<< nightShiftStart
-            }
-    waitingChargePerMinTagSingleton waitingChargePerMin
-      | isNothing waitingChargePerMin = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just "waiting_charge_per_min",
-                      descriptorName = Just "Waiting Charges Per Min",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = (\charges -> Just $ show charges.getMoney) =<< waitingChargePerMin
-            }
-    nightShiftEndTagSingleton nightShiftEnd
-      | isNothing nightShiftEnd = []
-      | otherwise =
-        List.singleton $
-          Spec.Tag
-            { tagDisplay = Just False,
-              tagDescriptor =
-                Just
-                  Spec.Descriptor
-                    { descriptorCode = Just "night_shift_end",
-                      descriptorName = Just "Night Shift End Timings",
-                      descriptorShortDesc = Nothing
-                    },
-              tagValue = (Just . show) =<< nightShiftEnd
-            }
+buildRateCardTags :: RateCardBreakupItem -> Spec.Tag
+buildRateCardTags RateCardBreakupItem {..} = do
+  Spec.Tag
+    { tagDisplay = Just False,
+      tagDescriptor =
+        Just
+          Spec.Descriptor
+            { descriptorCode = Just title,
+              descriptorName = Just title,
+              descriptorShortDesc = Nothing
+            },
+      tagValue = Just value
+    }
+
+mkValue :: Text -> Text
+mkValue a = a
+
+data RateCardBreakupItem = RateCardBreakupItem
+  { title :: Text,
+    value :: Text
+  }
+
+mkRateCardBreakupItem :: Text -> Text -> RateCardBreakupItem
+mkRateCardBreakupItem = RateCardBreakupItem
+
+mkRateCardTag :: Pricing -> Spec.TagGroup
+mkRateCardTag pricing = do
+  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups mkValue mkRateCardBreakupItem pricing.estimatedDistance) pricing.farePolicy
+      farePolicyBreakupsTags = buildRateCardTags <$> farePolicyBreakups
+  Spec.TagGroup
+    { tagGroupDisplay = Just False,
+      tagGroupDescriptor =
+        Just
+          Spec.Descriptor
+            { descriptorCode = Just "rate_card",
+              descriptorName = Just "Rate Card",
+              descriptorShortDesc = Nothing
+            },
+      tagGroupList = Just farePolicyBreakupsTags
+    }

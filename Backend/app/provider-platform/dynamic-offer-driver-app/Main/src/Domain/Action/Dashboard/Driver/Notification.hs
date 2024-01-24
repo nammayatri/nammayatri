@@ -62,14 +62,14 @@ mkDummyNotificationEntityData :: UTCTime -> DSearchReq.SearchRequestForDriverAPI
 mkDummyNotificationEntityData now =
   let searchRequestValidTill = addUTCTime 30 now
       fromLocation = mkDummySearchReqFromLocation now
-      toLocation = mkDummySearchReqToLocation now
+      toLocation = Just $ mkDummySearchReqToLocation now
       newFromLocation = mkDummyFromLocation now
-      newToLocation = mkDummyToLocation now
+      newToLocation = Just $ mkDummyToLocation now
    in DSearchReq.SearchRequestForDriverAPIEntity
         { searchRequestId = Id dummyId,
           searchTryId = Id dummyId,
           startTime = now,
-          distance = Meters 713,
+          distance = Just $ Meters 713,
           distanceToPickup = Meters 149,
           durationToPickup = Seconds 65,
           baseFare = Money 40,

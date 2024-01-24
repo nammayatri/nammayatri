@@ -468,6 +468,7 @@ data DriverInfoRes = DriverInfoRes
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
+    canSwitchToRental :: Bool,
     vehicleNumber :: Maybe Text,
     driverLicenseDetails :: Maybe DriverLicenseAPIEntity,
     vehicleRegistrationDetails :: [DriverRCAssociationAPIEntity],

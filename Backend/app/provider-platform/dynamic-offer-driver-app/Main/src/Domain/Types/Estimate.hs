@@ -15,87 +15,27 @@
 
 module Domain.Types.Estimate where
 
-import qualified Data.Vector as V
-import qualified Database.Beam as B
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField (FromField (fromField))
-import Domain.Types.Common (UsageSafety (..))
+import Domain.Types.Common (TripCategory (..))
+import qualified Domain.Types.FareParameters as Params
+import qualified Domain.Types.FarePolicy as Policy
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.Common (encodeToText)
 
 data Estimate = Estimate
   { id :: Id Estimate,
     requestId :: Id DSR.SearchRequest,
     vehicleVariant :: Variant.Variant,
+    tripCategory :: TripCategory,
     minFare :: Money,
     maxFare :: Money,
-    estimateBreakupList :: [EstimateBreakup],
-    nightShiftInfo :: Maybe NightShiftInfo,
-    waitingCharges :: WaitingCharges,
+    estimatedDistance :: Maybe Meters,
+    fareParams :: Maybe Params.FareParameters,
+    farePolicy :: Maybe Policy.FarePolicy,
     specialLocationTag :: Maybe Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving (Generic)
-
-data WaitingCharges = WaitingCharges
-  { waitingChargePerMin :: Maybe Money,
-    waitingOrPickupCharges :: Maybe Money
-  }
-  deriving (Generic)
-
-data NightShiftInfo = NightShiftInfo
-  { nightShiftCharge :: Money,
-    oldNightShiftCharge :: Centesimal, -- TODO: Doesn't make sense, to be removed
-    nightShiftStart :: TimeOfDay,
-    nightShiftEnd :: TimeOfDay
-  }
-  deriving (Generic)
-
-data EstimateBreakupD (s :: UsageSafety) = EstimateBreakup
-  { title :: Text,
-    price :: EstimateBreakupPriceD s
-  }
-  deriving stock (Show, Eq, Read, Ord, Generic)
-
-type EstimateBreakup = EstimateBreakupD 'Safe
-
-instance FromBackendRow Postgres [EstimateBreakupD 'Unsafe]
-
-instance FromField [EstimateBreakupD 'Unsafe] where
-  fromField f mbValue = V.toList <$> fromField f mbValue
-
-instance FromField (EstimateBreakupD 'Unsafe) where
-  fromField = fromFieldJSON
-
-instance HasSqlValueSyntax be Text => HasSqlValueSyntax be (EstimateBreakupD 'Unsafe) where
-  sqlValueSyntax = sqlValueSyntax . encodeToText
-
-instance (HasSqlValueSyntax be (V.Vector Text)) => HasSqlValueSyntax be [EstimateBreakupD 'Unsafe] where
-  sqlValueSyntax unsafeEstimateBreakupList =
-    let x = encodeToText <$> unsafeEstimateBreakupList
-     in sqlValueSyntax (V.fromList x)
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be [EstimateBreakupD 'Unsafe]
-
--- We shouldn't define JSON instances for 'Safe version
-deriving instance FromJSON (EstimateBreakupD 'Unsafe)
-
-deriving instance ToJSON (EstimateBreakupD 'Unsafe)
-
-data EstimateBreakupPriceD (s :: UsageSafety) = EstimateBreakupPrice
-  { currency :: Text,
-    value :: Money
-  }
-  deriving stock (Generic, Show, Read, Eq, Ord)
-
-type EstimateBreakupPrice = EstimateBreakupPriceD 'Safe
-
--- We shouldn't define JSON instances for 'Safe version
-deriving instance FromJSON (EstimateBreakupPriceD 'Unsafe)
-
-deriving instance ToJSON (EstimateBreakupPriceD 'Unsafe)

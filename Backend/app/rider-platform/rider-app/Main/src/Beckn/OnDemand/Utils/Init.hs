@@ -27,50 +27,53 @@ mkStops :: Location.Location -> Maybe Location.Location -> Maybe Text -> Maybe [
 mkStops origin mDestination mStartOtp =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
       destinationGps d = Gps.Gps {lat = d.lat, lon = d.lon}
-   in Just
-        [ Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = origin.address.building, -- JAYPAL, Confirm if it is correct to put it here
-                      locationAreaCode = origin.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing origin.address.city,
-                      locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                      locationGps = A.decode $ A.encode originGps,
-                      locationState = Just $ Spec.State origin.address.state,
-                      locationId = Nothing -- JAYPAL, Not sure what to keep here
-                    },
-              stopType = Just "START",
-              stopAuthorization =
-                if isNothing mStartOtp
-                  then Nothing
-                  else
-                    Just $
-                      Spec.Authorization
-                        { authorizationType = Just "OTP",
-                          authorizationToken = mStartOtp
-                        },
-              stopTime = Nothing
-            },
-          Spec.Stop
-            { stopLocation =
-                mDestination
-                  >>= \destination ->
+   in Just $
+        catMaybes
+          [ Just $
+              Spec.Stop
+                { stopLocation =
                     Just $
                       Spec.Location
-                        { locationAddress = destination.address.building, -- JAYPAL, Confirm if it is correct to put it here
-                          locationAreaCode = destination.address.areaCode,
-                          locationCity = Just $ Spec.City Nothing destination.address.city,
-                          locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                          locationGps = A.decode $ A.encode (destinationGps destination),
-                          locationState = Just $ Spec.State destination.address.state,
+                        { locationAddress = origin.address.building, -- JAYPAL, Confirm if it is correct to put it here
+                          locationAreaCode = origin.address.areaCode,
+                          locationCity = Just $ Spec.City Nothing origin.address.city,
+                          locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                          locationGps = A.decode $ A.encode originGps,
+                          locationState = Just $ Spec.State origin.address.state,
                           locationId = Nothing -- JAYPAL, Not sure what to keep here
                         },
-              stopType = Just "END",
-              stopAuthorization = Nothing,
-              stopTime = Nothing
-            }
-        ]
+                  stopType = Just "START",
+                  stopAuthorization =
+                    if isNothing mStartOtp
+                      then Nothing
+                      else
+                        Just $
+                          Spec.Authorization
+                            { authorizationType = Just "OTP",
+                              authorizationToken = mStartOtp
+                            },
+                  stopTime = Nothing
+                },
+            ( \destination ->
+                Spec.Stop
+                  { stopLocation =
+                      Just $
+                        Spec.Location
+                          { locationAddress = destination.address.building, -- JAYPAL, Confirm if it is correct to put it here
+                            locationAreaCode = destination.address.areaCode,
+                            locationCity = Just $ Spec.City Nothing destination.address.city,
+                            locationCountry = Just $ Spec.Country Nothing destination.address.country,
+                            locationGps = A.decode $ A.encode (destinationGps destination),
+                            locationState = Just $ Spec.State destination.address.state,
+                            locationId = Nothing -- JAYPAL, Not sure what to keep here
+                          },
+                    stopType = Just "END",
+                    stopAuthorization = Nothing,
+                    stopTime = Nothing
+                  }
+            )
+              <$> mDestination
+          ]
 
 mkPayment :: Maybe DMPM.PaymentMethodInfo -> [Spec.Payment]
 mkPayment (Just DMPM.PaymentMethodInfo {..}) =

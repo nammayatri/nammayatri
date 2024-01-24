@@ -29,24 +29,26 @@ import qualified Tools.Maps as Maps
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
     transactionId :: Text,
+    messageId :: Maybe Text,
     providerId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     fromLocation :: DLoc.Location,
-    toLocation :: DLoc.Location,
     area :: Maybe FareProductD.Area,
     bapId :: Text,
     bapUri :: BaseUrl,
     bapCity :: Maybe Context.City,
     bapCountry :: Maybe Context.Country,
-    estimatedDistance :: Meters,
-    estimatedDuration :: Seconds,
     specialLocationTag :: Maybe Text,
     autoAssignEnabled :: Maybe Bool,
     device :: Maybe Text,
     customerLanguage :: Maybe Maps.Language,
     disabilityTag :: Maybe Text,
     customerCancellationDues :: HighPrecMoney,
-    createdAt :: UTCTime,
-    isReallocationEnabled :: Maybe Bool
+    isReallocationEnabled :: Maybe Bool,
+    toLocation :: Maybe DLoc.Location,
+    estimatedDistance :: Maybe Meters,
+    estimatedDuration :: Maybe Seconds,
+    startTime :: UTCTime,
+    createdAt :: UTCTime
   }
   deriving (Generic, PrettyShow, Show)

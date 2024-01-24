@@ -42,6 +42,7 @@ data DriverInformationT f = DriverInformationT
     canDowngradeToSedan :: B.C f Bool,
     canDowngradeToHatchback :: B.C f Bool,
     canDowngradeToTaxi :: B.C f Bool,
+    canSwitchToRental :: B.C f Bool,
     blockedReason :: B.C f (Maybe Text),
     blockExpiryTime :: B.C f (Maybe UTCTime),
     mode :: B.C f (Maybe Domain.DriverMode),

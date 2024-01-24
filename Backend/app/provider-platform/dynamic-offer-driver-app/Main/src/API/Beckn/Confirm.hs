@@ -23,11 +23,9 @@ import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude (ByteString)
-import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
@@ -37,12 +35,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
-import qualified Lib.DriverScore as DS
-import qualified Lib.DriverScore.Types as DST
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBAP as BP
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Queries.Person as QPerson
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -87,51 +82,33 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandler
       isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
       Redis.whenWithLockRedis (confirmProcessingLockKey dConfirmReq.bookingId.getId) 60 $ do
         dConfirmRes <- DConfirm.handler transporter dConfirmReq eitherQuote
-        case dConfirmRes.booking.bookingType of
-          DBooking.NormalBooking -> do
-            normalBookingInfo <- dConfirmRes.normalBookingInfo & fromMaybeM (RideNotFound dConfirmRes.booking.id.getId)
-            driverId <- dConfirmRes.driverId & fromMaybeM (InvalidRequest "driverId Not Found for Normal Booking")
-            --driverQuote <- QDQ.findById (Id dConfirmRes.booking.quoteId) >>= fromMaybeM (QuoteNotFound dConfirmRes.booking.quoteId)
-            driver <- runInReplica $ QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
-            -- driver <- QPerson.findById (Id driverId) >>= fromMaybeM (PersonNotFound driverId)
-            let booking = dConfirmRes.booking
+        case dConfirmRes.rideInfo of
+          Just rideInfo' -> do
             fork "on_confirm/on_update" $ do
-              handle (errHandler dConfirmRes transporter (Just driver)) $ do
-                if isBecknSpecVersion2
-                  then do
-                    context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
-                    onConfirmMessage <- ACL.buildOnConfirmMessageV2 dConfirmRes
-                    void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage
-                    void $ BP.sendRideAssignedUpdateToBAP dConfirmRes.booking normalBookingInfo.ride driver normalBookingInfo.vehicle
-                  else do
-                    context <- buildTaxiContext Context.CONFIRM msgId txnId bapId callbackUrl bppId bppUri city country False
-                    onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
-                    void $ BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
-                    void $ BP.sendRideAssignedUpdateToBAP dConfirmRes.booking normalBookingInfo.ride driver normalBookingInfo.vehicle
-            DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = transporterId, driverId = Id driverId}
-          DBooking.SpecialZoneBooking -> do
+              handle (errHandler dConfirmRes transporter (Just rideInfo'.driver)) $ do
+                callOnConfirm dConfirmRes isBecknSpecVersion2 msgId txnId bapId callbackUrl bppId bppUri city country
+                void $ BP.sendRideAssignedUpdateToBAP dConfirmRes.booking rideInfo'.ride rideInfo'.driver rideInfo'.vehicle
+          Nothing -> do
             fork "on_confirm/on_update" $ do
-              handle (errHandler' dConfirmRes transporter) $ do
-                if isBecknSpecVersion2
-                  then do
-                    context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
-                    onConfirmMessage <- ACL.buildOnConfirmMessageV2 dConfirmRes
-                    void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage
-                  else do
-                    context <- buildTaxiContext Context.CONFIRM msgId txnId bapId callbackUrl bppId bppUri city country False
-                    onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
-                    void $ BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
+              handle (errHandler dConfirmRes transporter Nothing) $ do
+                callOnConfirm dConfirmRes isBecknSpecVersion2 msgId txnId bapId callbackUrl bppId bppUri city country
   pure Ack
   where
-    errHandler dConfirmRes transporter driver exc
-      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking driver transporter
-      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking driver transporter
+    errHandler dConfirmRes transporter mbDriver exc
+      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking mbDriver transporter
+      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking mbDriver transporter
       | otherwise = throwM exc
 
-    errHandler' dConfirmRes transporter exc
-      | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking Nothing transporter
-      | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking dConfirmRes.booking Nothing transporter
-      | otherwise = throwM exc
+    callOnConfirm dConfirmRes isBecknSpecVersion2 msgId txnId bapId callbackUrl bppId bppUri city country = do
+      if isBecknSpecVersion2
+        then do
+          context <- ContextV2.buildContextV2 Context.CONFIRM Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
+          onConfirmMessage <- ACL.buildOnConfirmMessageV2 dConfirmRes
+          void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage
+        else do
+          context <- buildTaxiContext Context.CONFIRM msgId txnId bapId callbackUrl bppId bppUri city country False
+          onConfirmMessage <- ACL.buildOnConfirmMessage dConfirmRes
+          void $ BP.callOnConfirm dConfirmRes.transporter context onConfirmMessage
 
 confirmLockKey :: Text -> Text
 confirmLockKey id = "Driver:Confirm:BookingId-" <> id

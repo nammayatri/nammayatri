@@ -89,7 +89,7 @@ parseOrder (OnStatus.RideCompleted rcOrder) = do
           =<< getTag "driver_arrived_info" "arrival_time" tagsGroup
   newRideInfo <- buildNewRideInfo rcOrder.fulfillment
   rideStartTime <- fromMaybeM (InvalidRequest "fulfillment.start.time is not present in RideCompleted Order.") (rcOrder.fulfillment.start.time <&> (.timestamp))
-  rideEndTime <- fromMaybeM (InvalidRequest "fulfillment.end.time is not present in RideCompleted Order.") (rcOrder.fulfillment.end.time <&> (.timestamp))
+  rideEndTime <- fromMaybeM (InvalidRequest "fulfillment.end.time is not present in RideCompleted Order.") ((rcOrder.fulfillment.end >>= (.time)) <&> (.timestamp))
   let rideStartedInfo =
         DOnStatus.RideStartedInfo
           { rideStartTime,

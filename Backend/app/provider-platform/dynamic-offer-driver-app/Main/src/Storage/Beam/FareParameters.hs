@@ -34,7 +34,8 @@ data FareParametersT f = FareParametersT
     serviceCharge :: B.C f (Maybe Money),
     fareParametersType :: B.C f Domain.FareParametersType,
     govtCharges :: B.C f (Maybe Money),
-    customerCancellationDues :: B.C f (Maybe HighPrecMoney)
+    customerCancellationDues :: B.C f (Maybe HighPrecMoney),
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

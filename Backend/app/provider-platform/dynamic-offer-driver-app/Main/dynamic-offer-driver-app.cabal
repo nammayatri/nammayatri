@@ -240,6 +240,8 @@ library
       Domain.Types.FarePolicy.DriverExtraFeeBounds
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Domain.Types.FarePolicy.FarePolicyRentalDetails
+      Domain.Types.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffer
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.FareProduct
@@ -277,7 +279,7 @@ library
       Domain.Types.Person
       Domain.Types.Plan
       Domain.Types.PlanTranslation
-      Domain.Types.QuoteSpecialZone
+      Domain.Types.Quote
       Domain.Types.Rating
       Domain.Types.RegistrationToken
       Domain.Types.RegistryMapFallback
@@ -325,7 +327,6 @@ library
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
-      SharedLogic.Estimate
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide
       SharedLogic.External.LocationTrackingService.API.NearBy
@@ -343,7 +344,9 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.Payment
       SharedLogic.Person
+      SharedLogic.Ride
       SharedLogic.RiderDetails
+      SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       Storage.Beam.BapMetadata
@@ -381,11 +384,14 @@ library
       Storage.Beam.Exophone
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersProgressiveDetails
+      Storage.Beam.FareParameters.FareParametersRentalDetails
       Storage.Beam.FareParameters.FareParametersSlabDetails
       Storage.Beam.FarePolicy
       Storage.Beam.FarePolicy.DriverExtraFeeBounds
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails
       Storage.Beam.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Beam.FarePolicy.FarePolicyRentalDetails
+      Storage.Beam.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Beam.FarePolicy.FarePolicySlabDetails.FarePolicySlabDetailsSlab
       Storage.Beam.FarePolicy.RestrictedExtraFare
       Storage.Beam.FareProduct
@@ -424,7 +430,7 @@ library
       Storage.Beam.Person
       Storage.Beam.Plan
       Storage.Beam.PlanTranslation
-      Storage.Beam.QuoteSpecialZone
+      Storage.Beam.Quote
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
       Storage.Beam.RegistryMapFallback
@@ -506,11 +512,14 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareParameters
       Storage.Queries.FareParameters.FareParametersProgressiveDetails
+      Storage.Queries.FareParameters.FareParametersRentalDetails
       Storage.Queries.FareParameters.FareParametersSlabDetails
       Storage.Queries.FarePolicy
       Storage.Queries.FarePolicy.DriverExtraFeeBounds
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails
       Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection
+      Storage.Queries.FarePolicy.FarePolicyRentalDetails
+      Storage.Queries.FarePolicy.FarePolicyRentalDetails.FarePolicyRentalDetailsDistanceBuffers
       Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Storage.Queries.FareProduct
       Storage.Queries.Feedback.Feedback
@@ -552,7 +561,7 @@ library
       Storage.Queries.Person.Internal
       Storage.Queries.Plan
       Storage.Queries.PlanTranslation
-      Storage.Queries.QuoteSpecialZone
+      Storage.Queries.Quote
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
       Storage.Queries.RegistryMapFallback

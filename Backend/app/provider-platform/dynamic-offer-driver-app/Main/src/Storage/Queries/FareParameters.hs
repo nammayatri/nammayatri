@@ -25,6 +25,8 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.FareParameters as BeamFP
 import Storage.Queries.FareParameters.FareParametersProgressiveDetails as QFPPD
 import qualified Storage.Queries.FareParameters.FareParametersProgressiveDetails as BeamFPPD
+import Storage.Queries.FareParameters.FareParametersRentalDetails as QFPRD
+import qualified Storage.Queries.FareParameters.FareParametersRentalDetails as BeamFPRD
 import Storage.Queries.FareParameters.FareParametersSlabDetails as QFPSD
 import qualified Storage.Queries.FareParameters.FareParametersSlabDetails as BeamFPSD
 
@@ -34,12 +36,30 @@ create fareParameters = do
   case fareParameters.fareParametersDetails of
     ProgressiveDetails fppdt -> QFPPD.create (fareParameters.id, fppdt)
     SlabDetails fpsdt -> QFPSD.create (fareParameters.id, fpsdt)
+    RentalDetails fprdt -> QFPRD.create (fareParameters.id, fprdt)
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq fareParametersId]
 
 findAllIn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m [FareParameters]
 findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
+
+updateFareParameters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FareParameters -> m ()
+updateFareParameters FareParameters {..} = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamFP.driverSelectedFare driverSelectedFare,
+      Se.Set BeamFP.customerExtraFee customerExtraFee,
+      Se.Set BeamFP.serviceCharge serviceCharge,
+      Se.Set BeamFP.govtCharges govtCharges,
+      Se.Set BeamFP.nightShiftRateIfApplies nightShiftRateIfApplies,
+      Se.Set BeamFP.baseFare baseFare,
+      Se.Set BeamFP.waitingCharge waitingCharge,
+      Se.Set BeamFP.rideExtraTimeFare rideExtraTimeFare,
+      Se.Set BeamFP.nightShiftCharge nightShiftCharge,
+      Se.Set BeamFP.updatedAt now
+    ]
+    [Se.Is BeamFP.id (Se.Eq id.getId)]
 
 instance FromTType' BeamFP.FareParameters FareParameters where
   fromTType' BeamFP.FareParametersT {..} = do
@@ -54,6 +74,11 @@ instance FromTType' BeamFP.FareParameters FareParameters where
           mFullFPSD <- BeamFPSD.findById' (Id id)
           case mFullFPSD of
             Just (_, fPSD) -> return (Just $ SlabDetails fPSD)
+            Nothing -> return Nothing
+        Rental -> do
+          mFullFPRD <- BeamFPRD.findById' (Id id)
+          case mFullFPRD of
+            Just (_, fPRD) -> return (Just $ RentalDetails fPRD)
             Nothing -> return Nothing
     case mFareParametersDetails of
       Just fareParametersDetails -> do
@@ -71,7 +96,8 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 rideExtraTimeFare = rideExtraTimeFare,
                 nightShiftCharge = nightShiftCharge,
                 fareParametersDetails,
-                customerCancellationDues = fromMaybe 0 customerCancellationDues
+                customerCancellationDues = fromMaybe 0 customerCancellationDues,
+                updatedAt = updatedAt
               }
       Nothing -> return Nothing
 
@@ -89,7 +115,8 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.rideExtraTimeFare = rideExtraTimeFare,
         BeamFP.nightShiftCharge = nightShiftCharge,
         BeamFP.fareParametersType = getFareParametersType $ FareParameters {..},
-        BeamFP.customerCancellationDues = Just customerCancellationDues
+        BeamFP.customerCancellationDues = Just customerCancellationDues,
+        BeamFP.updatedAt = updatedAt
       }
 
 findAllLateNightRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m Int

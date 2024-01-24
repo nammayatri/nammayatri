@@ -190,7 +190,7 @@ translateSearchReq ::
   m DSR.SearchRequest
 translateSearchReq DSR.SearchRequest {..} language = do
   from <- buildTranslatedSearchReqLocation fromLocation (Just language)
-  to <- buildTranslatedSearchReqLocation toLocation (Just language)
+  to <- (\loc -> buildTranslatedSearchReqLocation loc (Just language)) `mapM` toLocation
   pure
     DSR.SearchRequest
       { fromLocation = from,
