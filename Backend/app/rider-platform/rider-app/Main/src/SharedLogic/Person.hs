@@ -18,30 +18,30 @@ import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.WeekDate
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
-import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonStats as DPS
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fromMaybeM, getCurrentTime)
-import qualified Storage.CachedQueries.Merchant as CQMerchant
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Person.PersonStats as QP
+import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
-backfillPersonStats :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m) => Id DP.Person -> Id Merchant.Merchant -> m ()
-backfillPersonStats personId merchantId = do
+backfillPersonStats :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, CoreMetrics m) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> m ()
+backfillPersonStats personId merchantOpCityid = do
   cancelledBookingIds <- runInReplica $ QBooking.findAllCancelledBookingIdsByRider personId
   userCancelledRides <- runInReplica $ QBCR.countCancelledBookingsByBookingIds cancelledBookingIds DBCR.ByUser
   driverCancelledRides <- runInReplica $ QBCR.countCancelledBookingsByBookingIds cancelledBookingIds DBCR.ByDriver
   completedBookings <- runInReplica $ QBooking.findByRiderIdAndStatus personId [DB.COMPLETED]
-  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
-  let minuteDiffFromUTC = (merchant.timeDiffFromUtc.getSeconds) `div` 60
+  riderConfig <- QRC.findByMerchantOperatingCityId merchantOpCityid >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
+  let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
   now <- getCurrentTime
   let completedRidesCnt = length completedBookings
   let (weekendRides, weekdayRides) = countWeekdaysAndWeekendsRide completedBookings minuteDiffFromUTC
@@ -103,3 +103,6 @@ isWeekend utcT minuteDiffFromUTC =
 
 convertTimeZone :: UTCTime -> Int -> LocalTime
 convertTimeZone timeInUTC minuteDiffFromUTC = utcToLocalTime (minutesToTimeZone minuteDiffFromUTC) timeInUTC
+
+getName :: DP.Person -> Text
+getName person = (fromMaybe "" person.firstName) <> " " <> (fromMaybe "" person.lastName)

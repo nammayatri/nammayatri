@@ -115,7 +115,7 @@ triggerEstimateEvent ::
   m ()
 triggerEstimateEvent estimateData = do
   let estimatePayload = Estimates {eId = estimateData.estimate.id, srId = estimateData.estimate.requestId, vehVar = estimateData.estimate.vehicleVariant, cAt = estimateData.estimate.createdAt}
-  estEnvt <- createEvent Nothing (getId estimateData.merchantId) Estimate DYNAMIC_OFFER_DRIVER_APP System (Just estimatePayload) (Just $ getId estimateData.estimate.id)
+  estEnvt <- createEvent Nothing (getId estimateData.merchantId) Estimate DYNAMIC_OFFER_DRIVER_APP System (Just estimatePayload) (Just $ getId estimateData.estimate.id) Nothing
   triggerEvent estEnvt
 
 triggerRideEndEvent ::
@@ -174,7 +174,7 @@ triggerQuoteEvent ::
   m ()
 triggerQuoteEvent quoteData = do
   let quotePayload = Quote {qId = quoteData.quote.id, st = quoteData.quote.status, searchReqId = quoteData.quote.requestId, searchTryId = quoteData.quote.searchTryId, cAt = quoteData.quote.createdAt}
-  envt <- createEvent (Just $ getId quoteData.quote.driverId) (getId quoteData.quote.providerId) Quotes DYNAMIC_OFFER_DRIVER_APP System (Just quotePayload) (Just $ getId quoteData.quote.id)
+  envt <- createEvent (Just $ getId quoteData.quote.driverId) (getId quoteData.quote.providerId) Quotes DYNAMIC_OFFER_DRIVER_APP System (Just quotePayload) (Just $ getId quoteData.quote.id) Nothing
   triggerEvent envt
 
 triggerSearchEvent ::
@@ -186,10 +186,10 @@ triggerSearchEvent searchData = do
   envt <- case searchData.searchRequest of
     Left searchReq -> do
       let searchPayload = Search {sId = Left searchReq.id, cAt = searchReq.createdAt}
-      createEvent Nothing (getId searchData.merchantId) SearchRequest DYNAMIC_OFFER_DRIVER_APP System (Just searchPayload) (Just $ getId searchReq.id)
+      createEvent Nothing (getId searchData.merchantId) SearchRequest DYNAMIC_OFFER_DRIVER_APP System (Just searchPayload) (Just $ getId searchReq.id) (Just $ getId searchReq.merchantOperatingCityId)
     Right searchReqSpecialZone -> do
       let searchPayload = Search {sId = Right searchReqSpecialZone.id, cAt = searchReqSpecialZone.createdAt}
-      createEvent Nothing (getId searchData.merchantId) SearchRequest DYNAMIC_OFFER_DRIVER_APP System (Just searchPayload) (Just $ getId searchReqSpecialZone.id)
+      createEvent Nothing (getId searchData.merchantId) SearchRequest DYNAMIC_OFFER_DRIVER_APP System (Just searchPayload) (Just $ getId searchReqSpecialZone.id) (Just $ getId searchReqSpecialZone.merchantOperatingCityId)
   triggerEvent envt
 
 triggerRideEvent ::
@@ -200,7 +200,7 @@ triggerRideEvent ::
   m ()
 triggerRideEvent eventType rideData = do
   let ridePayload = Ride {rId = rideData.ride.id, rs = rideData.ride.status, cAt = rideData.ride.createdAt, uAt = rideData.ride.updatedAt}
-  envt <- createEvent (Just $ getId rideData.personId) (getId rideData.merchantId) eventType DYNAMIC_OFFER_DRIVER_APP System (Just ridePayload) (Just $ getId rideData.ride.id)
+  envt <- createEvent (Just $ getId rideData.personId) (getId rideData.merchantId) eventType DYNAMIC_OFFER_DRIVER_APP System (Just ridePayload) (Just $ getId rideData.ride.id) (Just $ getId rideData.ride.merchantOperatingCityId)
   triggerEvent envt
 
 triggerBookingEvent ::
@@ -211,7 +211,7 @@ triggerBookingEvent ::
   m ()
 triggerBookingEvent eventType bookingData = do
   let bookingPayload = Booking {bId = bookingData.booking.id, bs = bookingData.booking.status, cAt = bookingData.booking.createdAt, uAt = bookingData.booking.updatedAt}
-  event <- createEvent (Just $ getId bookingData.personId) (getId bookingData.merchantId) eventType DYNAMIC_OFFER_DRIVER_APP System (Just bookingPayload) (Just $ getId bookingData.booking.id)
+  event <- createEvent (Just $ getId bookingData.personId) (getId bookingData.merchantId) eventType DYNAMIC_OFFER_DRIVER_APP System (Just bookingPayload) (Just $ getId bookingData.booking.id) (Just $ getId bookingData.booking.merchantOperatingCityId)
   triggerEvent event
 
 triggerExophoneEvent ::
@@ -221,5 +221,5 @@ triggerExophoneEvent ::
   m ()
 triggerExophoneEvent ExophoneEventData {..} = do
   let exophonePayload = Exophone {..}
-  exoevent <- createEvent (getId <$> personId) (maybe "" getId merchantId) ExophoneData DYNAMIC_OFFER_DRIVER_APP triggeredBy (Just exophonePayload) Nothing
+  exoevent <- createEvent (getId <$> personId) (maybe "" getId merchantId) ExophoneData DYNAMIC_OFFER_DRIVER_APP triggeredBy (Just exophonePayload) Nothing Nothing
   triggerEvent exoevent

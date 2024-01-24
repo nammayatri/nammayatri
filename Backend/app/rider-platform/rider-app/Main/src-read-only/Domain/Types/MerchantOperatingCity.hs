@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.MerchantOperatingCity where
 
@@ -7,6 +8,7 @@ import qualified Domain.Types.Merchant
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
 
 data MerchantOperatingCity = MerchantOperatingCity
   { city :: Kernel.Types.Beckn.Context.City,

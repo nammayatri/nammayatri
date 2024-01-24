@@ -15,6 +15,7 @@
 
 module Domain.Types.Person.PersonDefaultEmergencyNumber where
 
+import Domain.Types.Merchant as DM
 import Domain.Types.Person (Person)
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -28,6 +29,8 @@ data PersonDefaultEmergencyNumberE e = PersonDefaultEmergencyNumber
     createdAt :: UTCTime,
     contactPersonId :: Maybe (Id Person),
     enableForFollowing :: Bool,
+    enableForShareRide :: Bool,
+    merchantId :: Maybe (Id DM.Merchant),
     priority :: Int
   }
   deriving (Generic)
@@ -57,9 +60,11 @@ data PersonDefaultEmergencyNumberAPIEntity = PersonDefaultEmergencyNumberAPIEnti
     mobileNumber :: Text,
     priority :: Int,
     contactPersonId :: Maybe (Id Person),
-    enableForFollowing :: Bool
+    merchantId :: Maybe (Id DM.Merchant),
+    enableForFollowing :: Bool,
+    enableForShareRide :: Bool
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema, Eq)
 
 makePersonDefaultEmergencyNumberAPIEntity :: DecryptedPersonDefaultEmergencyNumber -> PersonDefaultEmergencyNumberAPIEntity
 makePersonDefaultEmergencyNumberAPIEntity PersonDefaultEmergencyNumber {..} =

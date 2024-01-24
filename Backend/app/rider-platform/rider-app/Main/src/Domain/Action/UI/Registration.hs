@@ -69,7 +69,6 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
-import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
@@ -401,9 +400,8 @@ verifyFlow person regToken whatsappNotificationEnroll deviceToken = do
   updPerson <- Person.findById (Id regToken.entityId) >>= fromMaybeM (PersonDoesNotExist regToken.entityId)
   decPerson <- decrypt updPerson
   customerDisability <- B.runInReplica $ PDisability.findByPersonId person.id
-  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId
   let tag = customerDisability <&> (.tag)
-  let personAPIEntity = SP.makePersonAPIEntity decPerson tag riderConfig
+  let personAPIEntity = SP.makePersonAPIEntity decPerson tag
   unless (decPerson.whatsappNotificationEnrollStatus == whatsappNotificationEnroll && isJust whatsappNotificationEnroll) $ do
     fork "whatsapp_opt_api_call" $ do
       case decPerson.mobileNumber of
@@ -483,7 +481,7 @@ createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion 
   _ <- Person.create person
   _ <- QDFS.create $ makeIdlePersonFlowStatus person
   _ <- QPS.create createPersonStats
-  fork "update emergency contact id" $ updatePersonIdForEmergencyContacts person.id mobileNumber
+  fork "update emergency contact id" $ updatePersonIdForEmergencyContacts person.id mobileNumber merchant.id
   pure person
   where
     makeIdlePersonFlowStatus person =
@@ -588,7 +586,7 @@ getPersonOTPChannel personId = do
     Nothing -> do
       pure SMS -- default otpChannel is SMS (for resend)
 
-updatePersonIdForEmergencyContacts :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBFlow m r) => Id SP.Person -> Text -> m ()
-updatePersonIdForEmergencyContacts personId mobileNumber = do
+updatePersonIdForEmergencyContacts :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBFlow m r) => Id SP.Person -> Text -> Id DMerchant.Merchant -> m ()
+updatePersonIdForEmergencyContacts personId mobileNumber merchantId = do
   dbHash <- getDbHash mobileNumber
-  QPDEN.updateEmergencyContactPersonId dbHash personId
+  QPDEN.updateEmergencyContactPersonId dbHash personId merchantId

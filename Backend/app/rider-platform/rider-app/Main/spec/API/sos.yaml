@@ -9,10 +9,10 @@ imports:
 module: Sos
 types:
   SosRes:
-    id: Id Sos
+    sosId: Id Sos
 
   SosDetailsRes:
-    sosId: Maybe (Id Sos)
+    sos: Maybe Sos
 
   SosReq:
     flow: SosType

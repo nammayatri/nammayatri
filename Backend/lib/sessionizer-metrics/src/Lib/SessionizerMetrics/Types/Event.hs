@@ -37,7 +37,8 @@ data Event p = Event
     primaryId :: Maybe Text, -- id of the primary entity involved in the event
     service :: Service, -- name of the service which generated this event
     triggeredBy :: EventTriggeredBy, -- who triggered the event
-    payload :: Maybe p -- payload of the event. Type of this payload should be defined at the application layer
+    payload :: Maybe p, -- payload of the event. Type of this payload should be defined at the application layer
+    merchantOperatingCityId :: Maybe Text -- id for merchant operating city
   }
   deriving (Show, Read, Eq, Ord, Generic, ToJSON, ToSchema)
 

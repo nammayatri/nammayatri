@@ -88,19 +88,18 @@ instance FromTType' BeamM.Merchant Merchant where
             distanceWeightage = distanceWeightage,
             signatureExpiry = signatureExpiry,
             createdAt = createdAt,
-            timeDiffFromUtc = timeDiffFromUtc,
             updatedAt = updatedAt,
             isAvoidToll = isAvoidToll,
             aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
             aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
             mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
             mediaFileUrlPattern = mediaFileUrlPattern,
-            trackingShortUrlPattern = trackingShortUrlPattern,
             editPickupDistanceThreshold = editPickupDistanceThreshold,
             driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
             numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
             publicMediaFileUrlPattern = publicMediaFileUrlPattern,
-            kaptureDisposition = kaptureDisposition
+            kaptureDisposition = kaptureDisposition,
+            ..
           }
 
 instance ToTType' BeamM.Merchant Merchant where
@@ -131,13 +130,11 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.signatureExpiry = signatureExpiry,
         BeamM.createdAt = createdAt,
         BeamM.updatedAt = updatedAt,
-        BeamM.timeDiffFromUtc = timeDiffFromUtc,
         BeamM.isAvoidToll = isAvoidToll,
         BeamM.aadhaarVerificationTryLimit = aadhaarVerificationTryLimit,
         BeamM.aadhaarKeyExpiryTime = aadhaarKeyExpiryTime,
         BeamM.mediaFileSizeUpperLimit = mediaFileSizeUpperLimit,
         BeamM.mediaFileUrlPattern = mediaFileUrlPattern,
-        BeamM.trackingShortUrlPattern = trackingShortUrlPattern,
         BeamM.editPickupDistanceThreshold = editPickupDistanceThreshold,
         BeamM.driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
         BeamM.numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,

@@ -127,7 +127,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
         if transportConfig.useWithSnapToRoadFallback
           then TMaps.snapToRoadWithFallback merchantId merchantOpCityId
           else snapToRoadWithService
-      enableNightSafety = checkTimeConstraint transportConfig now
+      enableNightSafety = checkNightSafetyTimeConstraint transportConfig now
   return $
     mkRideInterpolationHandler
       isEndRide
@@ -142,12 +142,9 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       resp <- TMaps.snapToRoad merchantId merchantOpCityId req
       return ([Google], Right resp)
 
-    checkTimeConstraint config now = do
-      let midnightTime = UTCTime (utctDay now) 0
-          nextMidNight = addUTCTime nominalDay midnightTime
-          startTime = addUTCTime (secondsToNominalDiffTime config.nightSafetyStartTime) midnightTime
-          endTime = addUTCTime (secondsToNominalDiffTime config.nightSafetyEndTime) midnightTime
-      now >= midnightTime && now <= endTime || now >= startTime && now <= nextMidNight
+    checkNightSafetyTimeConstraint config now = do
+      let time = timeToTimeOfDay $ utctDayTime now
+      isTimeWithinBounds (secondsToTimeOfDay config.nightSafetyStartTime) (secondsToTimeOfDay config.nightSafetyEndTime) time
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m () -> m ()
 whenWithLocationUpdatesLock driverId f = do

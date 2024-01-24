@@ -17,6 +17,7 @@ module Tools.Notifications where
 import Data.Aeson (object)
 import Data.Default.Class
 import qualified Data.Text as T
+import Data.Time hiding (secondsToNominalDiffTime)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Estimate (Estimate)
@@ -30,6 +31,7 @@ import Domain.Types.Quote (makeQuoteAPIEntity)
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
+import Domain.Types.RiderConfig as DRC
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -44,12 +46,13 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
-import Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.SearchRequest as QSearchReq
+import Tools.Error
 import qualified Tools.SMS as Sms
 
 data EmptyDynamicParam = EmptyDynamicParam
@@ -239,6 +242,7 @@ notifyOnRideCompleted booking ride = do
   notifyPerson person.merchantId merchantOperatingCityId notificationData
   where
     updateFollowsRideCount personId = do
+      void $ QPDEN.updateShareRideForAll personId $ Just False
       emContacts <- QPDEN.findAllByPersonId personId
       let followingContacts = filter (.enableForFollowing) emContacts
       mapM_
@@ -626,18 +630,23 @@ notifyRideStartToEmergencyContacts ::
   SRide.Ride ->
   m ()
 notifyRideStartToEmergencyContacts booking ride = do
-  merchantConfig <- CQM.findById (booking.merchantId) >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  let trackLink = merchantConfig.trackingShortUrlPattern <> ride.shortId.getShortId
-  emContacts <- QPDEN.findAllByPersonId booking.riderId
-  decEmContacts <- decrypt `mapM` emContacts
-  let followingContacts = filter (.enableForFollowing) decEmContacts
   rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  for_ followingContacts \contact -> do
-    case contact.contactPersonId of
-      Just personId -> do
-        updateFollowsRideCount personId
-        sendFCM personId rider.firstName
-      Nothing -> sendSMS contact rider.firstName trackLink
+  riderConfig <- QRC.findByMerchantOperatingCityId rider.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
+  now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
+  case (rider.shareTripWithEmergencyContacts == Just True && checkTimeConstraintForFollowRide riderConfig now) of
+    True -> do
+      unless (checkTimeConstraintForFollowRide riderConfig now) $ return ()
+      let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+      emContacts <- QPDEN.findAllByPersonId booking.riderId
+      decEmContacts <- decrypt `mapM` emContacts
+      let followingContacts = filter (.enableForFollowing) decEmContacts
+      for_ followingContacts \contact -> do
+        case contact.contactPersonId of
+          Just personId -> do
+            updateFollowsRideCount personId
+            sendFCM personId rider.firstName
+          Nothing -> sendSMS contact rider.firstName trackLink
+    False -> logInfo "Follow ride is not enabled"
   where
     updateFollowsRideCount emPersonId = do
       _ <- CQFollowRide.incrementFollowRideCount emPersonId
@@ -677,3 +686,8 @@ notifyRideStartToEmergencyContacts booking ride = do
       void $
         Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (Sms.SendSMSReq message emergencyContact.mobileNumber sender)
           >>= Sms.checkSmsResult
+
+checkTimeConstraintForFollowRide :: DRC.RiderConfig -> UTCTime -> Bool
+checkTimeConstraintForFollowRide config now = do
+  let time = timeToTimeOfDay $ utctDayTime now
+  isTimeWithinBounds (secondsToTimeOfDay config.safetyCheckStartTime) (secondsToTimeOfDay config.safetyCheckEndTime) time
