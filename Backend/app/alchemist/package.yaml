@@ -108,3 +108,6 @@ executables:
     dependencies:
       - mobility-core
       - namma-dsl
+      - haskell-cac
+    extra-libraries:
+      - cac_client
