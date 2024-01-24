@@ -154,25 +154,24 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId estDist pi
         Redis.setExp (onRideSnapToRoadStateKey driverId) currSnapToRoadState 21600 -- 6 hours
   where
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
+    continueCondition = if ending then pointsRemaining else atLeastBatchPlusOne
     atLeastBatchPlusOne = (> batchSize) <$> getWaypointsNumber driverId
 
-    recalcDistanceBatches' snapToRoad'@SnapToRoadState {..} snapToRoadCallFailed isBatchLeft = do
-      if isBatchLeft
+    recalcDistanceBatches' snapToRoad'@SnapToRoadState {..} snapToRoadCallFailed = do
+      batchLeft <- continueCondition
+      if batchLeft
         then do
           (dist, servicesUsed, snapCallFailed) <- recalcDistanceBatchStep h driverId
           let googleCalled = Google `elem` servicesUsed
               osrmCalled = OSRM `elem` servicesUsed
           if snapCallFailed
             then pure (SnapToRoadState distanceTravelled (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled), snapCallFailed)
-            else do
-              batchLeft <- atLeastBatchPlusOne
-              recalcDistanceBatches' (SnapToRoadState (distanceTravelled + dist) (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled)) snapCallFailed batchLeft
+            else recalcDistanceBatches' (SnapToRoadState (distanceTravelled + dist) (googleSnapToRoadCalls + fromBool googleCalled) (osrmSnapToRoadCalls + fromBool osrmCalled)) snapCallFailed
         else pure (snapToRoad', snapToRoadCallFailed)
 
     processSnapToRoadCall = do
       prevSnapToRoadState :: SnapToRoadState <- (Redis.safeGet $ onRideSnapToRoadStateKey driverId) >>= pure . fromMaybe (SnapToRoadState 0 0 0)
-      arePointsRemaining <- pointsRemaining
-      (currSnapToRoadState, snapToRoadCallFailed) <- recalcDistanceBatches' prevSnapToRoadState False arePointsRemaining
+      (currSnapToRoadState, snapToRoadCallFailed) <- recalcDistanceBatches' prevSnapToRoadState False
       when snapToRoadCallFailed $ do
         updateDistance driverId currSnapToRoadState.distanceTravelled currSnapToRoadState.googleSnapToRoadCalls currSnapToRoadState.osrmSnapToRoadCalls
         throwError $ InternalError $ "Snap to road call failed for driverId =" <> driverId.getId
