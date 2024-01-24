@@ -85,7 +85,6 @@ data Value = SqlNull | SqlString Text | SqlNum Double | SqlValue Text | SqlList 
 
 instance FromJSON Value where
   parseJSON (A.String "SqlNull") = pure SqlNull
-  -- parseJSON (A.String str) | T.length str >= 2 && T.isPrefixOf "\"" str && T.isSuffixOf "\"" str = pure . SqlString . T.take (T.length str - 2) $ T.drop 1 str
   parseJSON (A.String str) | T.length str >= 2 && T.isPrefixOf "\"" str && T.isSuffixOf "\"" str = do
     case readMaybe @Text $ T.unpack str of
       Just txt -> pure $ SqlString txt

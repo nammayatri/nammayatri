@@ -97,7 +97,6 @@ library
     , connection
     , containers
     , directory
-    , dynamic-offer-driver-app
     , errors
     , euler-events-hs >=2.0.0 && <2.1
     , euler-hs
@@ -112,7 +111,6 @@ library
     , juspay-extra
     , lens
     , mobility-core
-    , payment
     , pcg-random
     , postgresql-simple
     , record-dot-preprocessor
@@ -120,7 +118,6 @@ library
     , scientific
     , sequelize
     , servant-server
-    , shared-services
     , text
     , time
     , tinylog
@@ -191,7 +188,6 @@ executable dynamic-offer-driver-drainer-exe
     , connection
     , containers
     , directory
-    , dynamic-offer-driver-app
     , dynamic-offer-driver-drainer
     , errors
     , euler-events-hs >=2.0.0 && <2.1
@@ -214,7 +210,6 @@ executable dynamic-offer-driver-drainer-exe
     , scientific
     , sequelize
     , servant-server
-    , shared-services
     , text
     , time
     , tinylog
