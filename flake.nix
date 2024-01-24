@@ -72,7 +72,6 @@
 
   outputs = inputs:
     inputs.common.lib.mkFlake { inherit inputs; } {
-      debug = true;
       imports = [
         ./Backend/default.nix
         ./Frontend/default.nix
