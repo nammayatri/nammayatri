@@ -27,6 +27,12 @@ pipeline {
                             cachixUse 'nammayatri'
                         }
                     }
+                    stage ('nix eval') {
+                        steps {
+                            sh "nix --version"
+                            sh "nix eval .#nixci.default --json"
+                        }
+                    }
                     stage ('Nix Build All') {
                         steps {
                             nixCI system: env.SYSTEM
