@@ -601,6 +601,7 @@ getCityConfig cityConfig cityName = do
                           languageKey : "",
                           enableYatriCoins : false,
                           showDriverReferral : false,
+                          showCustomerReferral : false,
                           uploadRCandDL : true
                         }
   fromMaybe dummyCityConfig $ DA.find (\item -> item.cityName == cityName) cityConfig

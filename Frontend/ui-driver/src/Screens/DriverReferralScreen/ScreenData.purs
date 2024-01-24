@@ -16,20 +16,28 @@
 
 module Screens.DriverReferralScreen.ScreenData where
 
-
-import Screens.Types (DriverReferralScreenState)
+import Data.Maybe
+import Screens.Types (DriverReferralScreenState, DriverReferralType(..), ReferralInfoPopType(..))
 import Foreign.Object (empty)
 import ConfigProvider
+import Prelude
 
 initData :: DriverReferralScreenState
 initData = {
     data : { logField : empty 
          , config : getAppConfig appConfig
-         , referredDrivers : "--"
+         , totalReferredDrivers : 0
+         , totalActivatedCustomers : 0
+         , totalReferredCustomers : 0
          , referralCode : ""
+         , rank : Nothing
+         , totalEligibleDrivers : Nothing
         },
     props : {
       showDriverReferralQRCode : false,
-      showNewDriverReferralText : true
+      showNewDriverReferralText : true,
+      driverReferralType : DRIVER,
+      referralInfoPopType : NO_REFERRAL_POPUP
     }
 }
+

@@ -1341,7 +1341,8 @@ newtype GetPerformanceReq = GetPerformanceReq {}
 newtype GetPerformanceRes = GetPerformanceRes {
   referrals :: {
     totalActivatedCustomers :: Int,
-    totalReferredCustomers :: Int
+    totalReferredCustomers :: Int,
+    totalReferredDrivers :: Maybe Int
   }
 }
 
@@ -1791,6 +1792,7 @@ data LeaderBoardReq = DailyRequest String
 
 newtype LeaderBoardRes = LeaderBoardRes {
     lastUpdatedAt :: Maybe String
+  , totalEligibleDrivers :: Maybe Int
   , driverList :: Array DriversInfo
 }
 

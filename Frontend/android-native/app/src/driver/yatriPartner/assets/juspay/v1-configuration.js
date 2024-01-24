@@ -12,7 +12,7 @@ window.getMerchantConfig = function () {
     "USER_APP_LINK": "https://yatricustomer.page.link/pcJb",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8",
     "SPECIAL_ZONE_OTP_VIEW": "false",
-    "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CORPORATE_ADDRESS", "CORPORATE_ADDRESS_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "REGISTERED_ADDRESS", "REGISTERED_ADDRESS_DESCRIPTION", "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL"],
+    "StringKeys": ["WELCOME_TEXT", "ABOUT_TEXT", "NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CORPORATE_ADDRESS", "CORPORATE_ADDRESS_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "REGISTERED_ADDRESS", "REGISTERED_ADDRESS_DESCRIPTION", "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL", "REFERRED_DRIVERS_INFO", "REFERRED_CUSTOMERS_INFO", "DOWNLOAD_NAMMA_YATRI"],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -25,6 +25,8 @@ window.getMerchantConfig = function () {
     "showCorporateAddress" : false,
     "imageUploadOptional" : true,
     "showPaymentDetails" : false,
+    "enableDriverReferral": false,
+    "enableCustomerReferral": true,
     "BONUS_EARNED" : "false",
     "clientName" : "Yatri",
     "languageList": [{
@@ -54,7 +56,10 @@ window.getMerchantConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" :  "Website: <u>https://www.getyatri.com</u>",
       "REGISTERED_ADDRESS" : "Registered Address",
       "REGISTERED_ADDRESS_DESCRIPTION" : "Juspay Technologies Private Limited <br> Stallion Business Centre, No. 444, 3rd & 4th Floor, 18th Main, 6th Block, Koramangala Bengaluru, Karnataka- 560095, India.",
-      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://www.getyatri.com</u>"
+      "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "Website: <u>https://www.getyatri.com</u>",
+      "DOWNLOAD_NAMMA_YATRI": "Download Yatri",
+      "REFERRED_DRIVERS_INFO" : "Referred Drivers who have registered on Yatri",
+      "REFERRED_CUSTOMERS_INFO" : "Referred Customers who have registered on Yatri",
     },
     "malayalamStrings": {
       "WELCOME_TEXT": "Welcome to the Yatri Driver",
@@ -72,6 +77,9 @@ window.getMerchantConfig = function () {
       "REGISTERED_ADDRESS" : "രേഖപ്പെടുത്തിയ വിലാസം",
       "REGISTERED_ADDRESS_DESCRIPTION" : "ജസ്‌പേ ടെക്‌നോളജീസ് പ്രൈവറ്റ് ലിമിറ്റഡ് <br> സ്റ്റാലിയൻ ബിസിനസ് സെന്റർ, നമ്പർ 444, 3rd & 4th നിലകൾ, 18th മെയിൻ, 6th ബ്ലോക്ക്, കോറമംഗല ബെംഗളൂരു, കർണാടക- 560095, ഇന്ത്യ.",
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "വെബ്സൈറ്റ്: <u>https://www.getyatri.com</u>",
+      "DOWNLOAD_NAMMA_YATRI": "യാത്രാ ഡൗൺലോഡുചെയ്യുക",
+      "REFERRED_DRIVERS_INFO": "യാത്രിയിൽ രജിസ്റ്റർ ചെയ്ത പരാമർശിച്ച ഡ്രൈവേഴ്സ്",
+      "REFERRED_CUSTOMERS_INFO": "യാത്രിയിൽ രജിസ്റ്റർ ചെയ്ത പരാമർശിച്ച കസ്റ്റമേഴ്സ്",
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -88,6 +96,9 @@ window.getMerchantConfig = function () {
       , "enableGender" : false
       , "enableOtpRide" : false
     }
+    , "leaderBoard": {
+      "isMaskedName": false
+    }
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=net.openkochi.yatripartner"
       , "name" : "Yatri"
@@ -103,6 +114,7 @@ window.getMerchantConfig = function () {
       "autoPay" : false
     }
     , "referral": {
+      "type": "LeaderBoard",
       "link" : "https://yatricustomer.page.link/pcJb"
     }
     , "flowConfig" : {
@@ -117,6 +129,10 @@ window.getMerchantConfig = function () {
     , "bottomNavConfig" : {
       "subscription" :
         { "isVisible" : false
+        },
+        "referral" : 
+        { 
+          "showNew" : true
         }
     }
   , "profile" : {

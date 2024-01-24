@@ -652,7 +652,8 @@ type ReferralScreenStateData = {
   , driverPerformance :: {
       referrals :: {
         totalActivatedCustomers :: Int,
-        totalReferredCustomers :: Int
+        totalReferredCustomers :: Int,
+        totalReferredDrivers :: Int
       }
     }
   , logField :: Object Foreign
@@ -2312,14 +2313,32 @@ type DriverReferralScreenState = {
 type DriverReferralScreenData = {
     logField :: Object Foreign
   , config :: AppConfig
-  , referredDrivers :: String
+  , totalReferredDrivers :: Int
+  , totalActivatedCustomers :: Int
+  , totalReferredCustomers :: Int
   , referralCode :: String
+  , rank :: Maybe Int
+  , totalEligibleDrivers :: Maybe Int
 }
 
 type DriverReferralScreenProps = {
   showDriverReferralQRCode :: Boolean
 , showNewDriverReferralText :: Boolean
+, driverReferralType :: DriverReferralType
+, referralInfoPopType :: ReferralInfoPopType
 }
+
+data DriverReferralType = DRIVER | CUSTOMER
+
+derive instance genericDriverReferralType :: Generic DriverReferralType _
+instance showDriverReferralType :: Show DriverReferralType where show = genericShow
+instance eqDriverReferralType :: Eq DriverReferralType where eq = genericEq
+
+data ReferralInfoPopType = REFERRED_DRIVERS_POPUP | REFERRED_CUSTOMERS_POPUP | ACTIVATED_CUSTOMERS_POPUP | NO_REFERRAL_POPUP
+
+derive instance genericReferralInfoPopType :: Generic ReferralInfoPopType _
+instance showReferralInfoPopType :: Show ReferralInfoPopType where show = genericShow
+instance eqReferralInfoPopType :: Eq ReferralInfoPopType where eq = genericEq
 
 data GoBackToScreen = Earning | Home
 

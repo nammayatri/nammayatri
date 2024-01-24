@@ -61,6 +61,9 @@ red100 = "#FEF8F8"
 white900 :: Color
 white900 = "#FFFFFF"
 
+white300 :: Color
+white300 = "#FDD56B"
+
 white200 :: Color
 white200 = "#99FFFFFF"
 
@@ -130,6 +133,15 @@ almond = "#F0DCCA"
 
 frenchSkyBlue :: Color 
 frenchSkyBlue = "#80B2FF"
+
+frenchSkyBlue800 :: Color
+frenchSkyBlue800 = "#99c1ff"
+
+frenchSkyBlue400 :: Color
+frenchSkyBlue400 = "#a9cbff"
+
+green700 :: Color
+green700 = "#268C6E"
 
 blackLessTrans :: Color
 blackLessTrans = "#99000000"
@@ -205,6 +217,9 @@ yellow200 = "#33FCC32C"
 black200 :: Color
 black200 = "#1A2C2F3A"
 
+black80 :: Color
+black80 = "#142C2F3A"
+
 purple100 :: Color 
 purple100 = "#1A9747FF"
 
@@ -266,3 +281,4 @@ greenCoin = "#1A53BB6F"
 
 redCoin :: Color
 redCoin = "#1AE55454"
+

@@ -93,6 +93,7 @@ type CityConfig = {
   supportNumber :: String,
   languageKey :: String,
   showDriverReferral :: Boolean,
+  showCustomerReferral :: Boolean,
   uploadRCandDL :: Boolean,
   enableYatriCoins :: Boolean
 }

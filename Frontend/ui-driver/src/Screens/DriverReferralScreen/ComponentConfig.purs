@@ -15,29 +15,33 @@
 
 module Screens.DriverReferralScreen.ComponentConfig where
 
-import Components.GenericHeader as GenericHeader
-import Components.PrimaryEditText.Views as PrimaryEditText
-import Components.PrimaryButton as PrimaryButton
-import Components.PopUpModal as PopUpModal
-import Screens.ReferralScreen.Controller (Action(..), ScreenOutput, eval)
-import Effect (Effect)
 import Common.Types.App
 import Data.Maybe
 import Data.String
-import Font.Style as FontStyle
-import PrestoDOM.Types.DomAttributes (Corners(..))
-import Font.Size as FontSize
+import Helpers.Utils
 import Language.Strings
-import Language.Types (STR(..))
 import Prelude
 import PrestoDOM
-import Screens.Types as ST
-import Styles.Colors as Color
 
+import Components.GenericHeader as GenericHeader
+import Components.PopUpModal as PopUpModal
+import Components.PrimaryButton as PrimaryButton
+import Components.PrimaryEditText.Views as PrimaryEditText
+import Effect (Effect)
+import Font.Size as FontSize
+import Font.Style as FontStyle
+import Language.Types (STR(..))
+import PrestoDOM.Types.DomAttributes (Corners(..))
+import Screens.ReferralScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.Types as ST
+import Storage (KeyStore(..), getValueToLocalStore)
+import Styles.Colors as Color
 
 --------------------------------------------------- genericHeaderConfig -----------------------------------------------------
 genericHeaderConfig :: ST.DriverReferralScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
+  cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  bothReferralNotEnabled = not (cityConfig.showDriverReferral || state.data.config.enableDriverReferral || cityConfig.showCustomerReferral || state.data.config.enableCustomerReferral)
   config = GenericHeader.config
   genericHeaderConfig' = config
     {
@@ -52,7 +56,9 @@ genericHeaderConfig state = let
       }
     , padding = Padding 16 16 0 16
     , textConfig {
-        text = getString CONTEST
+        text = case bothReferralNotEnabled of
+          true -> getString RIDE_LEADERBOARD
+          false -> getString REFERRAL 
       , color = Color.darkCharcoal
       }
     , suffixImageConfig {
@@ -71,7 +77,8 @@ primaryButtonConfig state = let
       }
       , margin = Margin 10 10 10 10
       , background = Color.black900
-      , height = V 60
+      , height = V 48
+      , width = MATCH_PARENT
       , id = "DriverReferralScreenPrimaryButton"
       }
   in primaryButtonConfig'

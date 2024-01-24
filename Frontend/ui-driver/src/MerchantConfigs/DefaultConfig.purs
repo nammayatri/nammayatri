@@ -60,7 +60,8 @@ config =
     showFeeBreakup : true
   },
   showPaymentDetails : true,
-  enableDriverReferral: false,
+  enableDriverReferral : false,
+  enableCustomerReferral : false,
   rideActionModelConfig : {
     showVehicleVariant : true
   }
@@ -127,7 +128,8 @@ config =
               cityLong : 77.594566,
               supportNumber : "",
               languageKey : "KN_IN",
-              showDriverReferral : false,
+              showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : true
             },
@@ -141,6 +143,7 @@ config =
               supportNumber : "+918069724900",
               languageKey : "TE_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false
             },
@@ -154,6 +157,7 @@ config =
               supportNumber : "",
               languageKey : "KN_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false
             },
@@ -167,6 +171,7 @@ config =
               supportNumber : "+918069724848",
               languageKey : "HI_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false
             },
@@ -180,6 +185,7 @@ config =
               supportNumber : "08069724899",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : false,
               enableYatriCoins : false
             },
@@ -193,6 +199,7 @@ config =
               supportNumber : "",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false
             },
@@ -206,6 +213,7 @@ config =
               supportNumber : "08069724899",
               languageKey : "TA_IN",
               showDriverReferral : true,
+              showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false
             }--, For future use

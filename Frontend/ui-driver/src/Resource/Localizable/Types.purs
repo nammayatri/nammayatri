@@ -1219,3 +1219,16 @@ data STR = LETS_GET_STARTED
         | MAX
         | COINS
         | COINS_ADDED
+        | REFERRAL
+        | BENEFITS
+        | YOUR_DAILY_RANK
+        | CLICK_TO_EXPAND
+        | REFERRED
+        | ACTIVATED
+        | REFER_DRIVER
+        | REFER_CUSTOMER
+        | REFERRED_DRIVERS_INFO String
+        | REFERRED_CUSTOMERS_INFO String 
+        | ACTIVATED_CUSTOMERS_INFO
+        | CUSTOMER_REFERRAL_CODE
+        | ACCEPT_RIDE_TO_ENTER_LEADERBOARD

@@ -198,7 +198,7 @@ eval UpdateLeaderBoardFailed state = do
   _ <- pure $ setRefreshing (getNewIDWithTag "ReferralRefreshView") false
   continue state{ props{ showShimmer = false, noData = true } }
 
-eval (UpdateDriverPerformance (GetPerformanceRes performanceRes)) state = continue state {data {driverInfo {referralCode = Just (getValueToLocalStore REFERRAL_CODE)},driverPerformance{referrals = performanceRes.referrals}} , props{showShimmer =  if (getValueToLocalStore REFERRAL_CODE) /= "__failed" then false else state.props.showShimmer}}
+eval (UpdateDriverPerformance (GetPerformanceRes performanceRes)) state = continue state {data {driverInfo {referralCode = Just (getValueToLocalStore REFERRAL_CODE)},driverPerformance{referrals{totalActivatedCustomers = performanceRes.referrals.totalActivatedCustomers,totalReferredCustomers = performanceRes.referrals.totalReferredCustomers, totalReferredDrivers = fromMaybe 0 performanceRes.referrals.totalReferredDrivers}}} , props{showShimmer =  if (getValueToLocalStore REFERRAL_CODE) /= "__failed" then false else state.props.showShimmer}}
 
 eval (UpdateDriverPerformanceFailed) state = continue state {props{showShimmer= false}}
 

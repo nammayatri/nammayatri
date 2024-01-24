@@ -6,12 +6,12 @@ import Prelude (class Show, bind, pure, ($))
 import PrestoDOM (Eval, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
-import Screens.Types (DriverReferralScreenState)
+import Screens.Types 
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import Components.GenericHeader as GenericHeader
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
-import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, (-), (>), (/=), (<))
+import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, negate, (-), (>), (/=), (<))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Components.BottomNavBar as BottomNavBar
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, getValueToLocalStore)
@@ -23,13 +23,15 @@ import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Foreign (unsafeToForeign)
+import Data.Array (find)
+import Services.API 
 
 instance showAction :: Show Action where
   show _ = ""
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "DriverReferralScreen"
-    BackPressed -> trackAppBackPress appId (getScreen HOME_SCREEN)
+    BackPressed -> trackAppBackPress appId (getScreen REFERRAL_SCREEN)
     GenericHeaderActionController act -> case act of
       GenericHeader.PrefixImgOnClick -> do
         trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "back_icon"
@@ -43,10 +45,15 @@ instance loggableAction :: Loggable Action where
     LearnMore -> pure unit
     PrimaryButtonActionController state act -> case act of
       PrimaryButton.OnClick -> do
-        trackAppActionClick appId (getScreen CHOOSE_LANGUAGE_SCREEN) "primary_button_action" "next_on_click"
-        trackAppEndScreen appId (getScreen CHOOSE_LANGUAGE_SCREEN)
-      PrimaryButton.NoAction -> trackAppActionClick appId (getScreen CHOOSE_LANGUAGE_SCREEN) "primary_button_action" "no_action"
+        trackAppActionClick appId (getScreen REFERRAL_SCREEN) "primary_button_action" "next_on_click"
+        trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
+      PrimaryButton.NoAction -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "primary_button_action" "no_action"
     ReferredDriversAPIResponseAction val -> pure unit
+    ChangeTab tab -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "change_tab" (show tab)
+    ShowReferedInfo referralInfoPopType -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "change_tab" (show referralInfoPopType)
+    GoToLeaderBoard -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "change_tab" "leaderboard"
+    UpdateDriverPerformance _ -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "referral_screen_response_action" "referral_screen_response_action"
+    UpdateLeaderBoard _ -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "referral_screen_leaderboard_rank_action_action" "referral_screen_leaderboard_rank_action_action"
 
 data Action = BackPressed
             | AfterRender
@@ -57,21 +64,26 @@ data Action = BackPressed
             | LearnMore
             | PrimaryButtonActionController DriverReferralScreenState PrimaryButton.Action
             | ReferredDriversAPIResponseAction Int
-
+            | ChangeTab DriverReferralType
+            | ShowReferedInfo ReferralInfoPopType
+            | GoToLeaderBoard
+            | UpdateDriverPerformance GetPerformanceRes
+            | UpdateLeaderBoard LeaderBoardRes
 
 data ScreenOutput = GoToHomeScreen DriverReferralScreenState
-                  | GoToRidesScreen DriverReferralScreenState
                   | GoToNotifications DriverReferralScreenState
                   | SubscriptionScreen DriverReferralScreenState
                   | GoToDriverContestScreen DriverReferralScreenState
-                  | GoBack
-
+                  | EarningsScreen DriverReferralScreenState
+                  | GoBack 
 
 eval :: Action -> DriverReferralScreenState -> Eval Action ScreenOutput DriverReferralScreenState
 
 eval BackPressed state = 
   if state.props.showDriverReferralQRCode then 
     continue state{props{showDriverReferralQRCode = false}}
+  else if state.props.referralInfoPopType /= NO_REFERRAL_POPUP then 
+    continue state{props{referralInfoPopType = NO_REFERRAL_POPUP}}
   else exit $ GoBack
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick)) state = exit $ GoBack
@@ -94,7 +106,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   pure $ hideKeyboardOnNavigation true
   case item of
     "Home" -> exit $ GoToHomeScreen state
-    "Rides" -> exit $ GoToRidesScreen state
+    "Earnings" -> exit $ EarningsScreen state
     "Alert" -> do
       void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
@@ -108,9 +120,22 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       exit $ SubscriptionScreen state
     _ -> continue state
 
-eval (ReferredDriversAPIResponseAction val) state = do
-  void $ pure $ setCleverTapUserProp [{key : "Referral Count", value : unsafeToForeign val}]
-  continue state {data {referredDrivers = show val}, props {showNewDriverReferralText = val < 1}}
+eval (UpdateDriverPerformance (GetPerformanceRes resp)) state = do 
+  continue state {data {totalReferredDrivers = fromMaybe 0 resp.referrals.totalReferredDrivers, totalActivatedCustomers = resp.referrals.totalActivatedCustomers, totalReferredCustomers = resp.referrals.totalReferredCustomers}}
+
+eval (UpdateLeaderBoard (LeaderBoardRes resp)) state = do
+  let currentDriverRank = case find (\(DriversInfo driverInfo) -> driverInfo.isCurrentDriver && driverInfo.totalRides /= 0) resp.driverList of
+        Just (DriversInfo currentDriver) -> Just currentDriver.rank
+        _ -> Nothing
+  continue state {data {totalEligibleDrivers = resp.totalEligibleDrivers, rank = currentDriverRank}}
+
+eval (ChangeTab tab) state = 
+  continue state {props {driverReferralType = tab}}
+
+eval (ShowReferedInfo referralInfoPopType) state = 
+  continue state {props {referralInfoPopType = referralInfoPopType}}
+
+eval GoToLeaderBoard state = exit $ GoToDriverContestScreen state
 
 eval _ state = continue state
 

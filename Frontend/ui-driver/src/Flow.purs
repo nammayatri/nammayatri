@@ -3087,6 +3087,7 @@ driverReferralScreenFlow = do
     DRIVER_REFERRAL_SCREEN_NAV HomeScreenNav -> homeScreenFlow
     DRIVER_REFERRAL_SCREEN_NAV GoToRideHistory -> myRidesScreenFlow
     DRIVER_REFERRAL_SCREEN_NAV GoToAlerts -> notificationFlow
+    DRIVER_REFERRAL_SCREEN_NAV (GoToEarningsScreen _) -> driverEarningsFlow
     DRIVER_REFERRAL_SCREEN_NAV _ -> driverReferralScreenFlow
     DRIVER_CONTEST_SCREEN -> referralScreenFlow
 
@@ -3094,8 +3095,11 @@ referralFlow :: FlowBT String Unit
 referralFlow = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
   let cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
-  if cityConfig.showDriverReferral || appConfig.enableDriverReferral then driverReferralScreenFlow
-    else referralScreenFlow
+      referralType = case (cityConfig.showDriverReferral || appConfig.enableDriverReferral), (cityConfig.showCustomerReferral || appConfig.enableCustomerReferral) of
+                      false, true -> ST.CUSTOMER
+                      _, _ -> ST.DRIVER
+  modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> driverReferralScreen { props {driverReferralType = referralType}})
+  driverReferralScreenFlow
 
 driverEarningsFlow :: FlowBT String Unit
 driverEarningsFlow = do 
@@ -3110,7 +3114,7 @@ driverEarningsFlow = do
     EARNINGS_NAV GoToSubscription state -> do
        updateDriverStats state updateAvailableAppsAndGoToSubs  
     EARNINGS_NAV GoToContest state -> do
-       updateDriverStats state referralScreenFlow  
+       updateDriverStats state referralFlow  
     EARNINGS_NAV GoToAlerts state -> do
        updateDriverStats state notificationFlow  
     EARNINGS_NAV _ state -> do

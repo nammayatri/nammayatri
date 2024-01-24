@@ -92,7 +92,7 @@ view push state =
                     , text case item.text of
                               "Home"          -> getString HOME
                               "Rides"         -> getString RIDES
-                              "Rankings"      -> getString CONTEST
+                              "Rankings"      -> getString BENEFITS
                               "Earnings"      -> getString EARNINGS
                               "Profile"       -> getString PROFILE
                               "Alert"         -> getString MESSAGES

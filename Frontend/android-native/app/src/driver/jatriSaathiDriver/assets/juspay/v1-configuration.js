@@ -36,6 +36,8 @@ window.getMerchantConfig = function () {
       "NO_OPEN_MARKET_RIDES",
       "DOWNLOAD_NAMMA_YATRI",
       "START_TAKING_RIDES_AND_REFER",
+      "REFERRED_DRIVERS_INFO",
+      "REFERRED_CUSTOMERS_INFO"
     ],
     "leaderBoard": {
       "isMaskedName": false
@@ -101,6 +103,8 @@ window.getMerchantConfig = function () {
       "NO_OPEN_MARKET_RIDES" : "0 open market rides",
       "DOWNLOAD_NAMMA_YATRI" : "Download Yatri Sathi",
       "START_TAKING_RIDES_AND_REFER" : "Start taking rides and referring drivers to sign up on Yatri Sathi Driver App",
+      "REFERRED_DRIVERS_INFO" : "Referred Drivers who have registered on Yatri Sathi",
+      "REFERRED_CUSTOMERS_INFO" : "Referred Customers who have registered on Yatri Sathi",
     },
     "hindiStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -129,6 +133,8 @@ window.getMerchantConfig = function () {
       "NO_OPEN_MARKET_RIDES" : "0 ओपन मार्केट राइड",
       "DOWNLOAD_NAMMA_YATRI" : "यात्री साथी डाउनलोड करें",
       "START_TAKING_RIDES_AND_REFER" : "यात्री साथी ड्राइवर ऐप पर साइन अप करने के लिए सवारी लेना और ड्राइवरों को रेफर करना शुरू करें",
+      "REFERRED_DRIVERS_INFO" : "यात्री साथी पर पंजीकृत हुए सुझाए गए ड्राइवर्स",
+      "REFERRED_CUSTOMERS_INFO" : "यात्री साथी पर पंजीकृत हुए सुझाए गए ग्राहक",
     },
     "bengaliStrings": {
       "WELCOME_TEXT": "Welcome to Yatri Sathi Driver App",
@@ -157,6 +163,8 @@ window.getMerchantConfig = function () {
       "NO_OPEN_MARKET_RIDES" : "0 ওপেন মার্কেট রাইডস",
       "DOWNLOAD_NAMMA_YATRI" : "যাত্রী সাথী ডাউনলোড করুন",
       "START_TAKING_RIDES_AND_REFER" : "যাত্রী সাথী ড্রাইভার অ্যাপে সাইন আপ করতে রাইড করা এবং ড্রাইভারদের রেফার করা শুরু করুন",
+      "REFERRED_DRIVERS_INFO" : "যাত্রী সাথীতে নিবেশন করেছেন যাদেরকে সূচনা দেওয়া হয়েছে",
+      "REFERRED_CUSTOMERS_INFO" : "যাত্রী সাথীতে নিবেশন করেছেন যাদেরকে সূচনা দেওয়া হয়েছে",
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"
@@ -208,11 +216,16 @@ window.getMerchantConfig = function () {
       "subscription" : 
         { "isVisible" : true,
           "showNew" : true
+        },
+      "referral" : 
+        { 
+          "showNew" : true
         }
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "termsLink" : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4"
     , "enableDriverReferral": true
+    , "enableCustomerReferral": true
     , "privacyLink" : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E"
     , "feature" : {
       "enableBonus" : false
