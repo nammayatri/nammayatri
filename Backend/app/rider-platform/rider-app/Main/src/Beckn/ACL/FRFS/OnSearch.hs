@@ -14,6 +14,7 @@
 
 module Beckn.ACL.FRFS.OnSearch where
 
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
@@ -29,8 +30,8 @@ buildOnSearchReq ::
   Spec.OnSearchReq ->
   m Domain.DOnSearch
 buildOnSearchReq onSearchReq = do
-  -- validate context
   let context = onSearchReq.onSearchReqContext
+  Utils.validateContext Spec.ON_SEARCH context
   transactionId <- context.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   messageId <- context.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   bppSubscriberId <- context.contextBppId & fromMaybeM (InvalidRequest "BppSubscriberId not found")

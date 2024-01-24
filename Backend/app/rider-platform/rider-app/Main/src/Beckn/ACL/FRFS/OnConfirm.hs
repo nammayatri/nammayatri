@@ -15,6 +15,7 @@
 module Beckn.ACL.FRFS.OnConfirm (buildOnConfirmReq) where
 
 import qualified Beckn.ACL.FRFS.Utils as Utils
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
@@ -27,7 +28,7 @@ buildOnConfirmReq ::
   Spec.OnConfirmReq ->
   m Domain.DOrder
 buildOnConfirmReq onConfirmReq = do
-  -- validate context
+  Utils.validateContext Spec.ON_CONFIRM onConfirmReq.onConfirmReqContext
   transactionId <- onConfirmReq.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   messageId <- onConfirmReq.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
 

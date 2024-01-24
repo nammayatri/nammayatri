@@ -15,6 +15,7 @@
 module Beckn.ACL.FRFS.OnStatus where
 
 import qualified Beckn.ACL.FRFS.Utils as Utils
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
@@ -27,7 +28,7 @@ buildOnStatusReq ::
   Spec.OnStatusReq ->
   m Domain.DOrder
 buildOnStatusReq onStatusReq = do
-  -- validate context
+  Utils.validateContext Spec.ON_STATUS onStatusReq.onStatusReqContext
   transactionId <- onStatusReq.onStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   messageId <- onStatusReq.onStatusReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
 
