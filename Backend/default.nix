@@ -68,7 +68,6 @@
           rider-app.custom = cacConfig;
           search-result-aggregator.custom = cacConfig;
           rider-app-drainer.custom = cacConfig;
-          scheduler-example.custom = cacConfig;
           special-zone.custom = cacConfig;
           image-api-helper.custom = cacConfig;
           route-extractor.custom = cacConfig;
