@@ -229,7 +229,7 @@ eval (ChangeLeaderBoardtab tab) state = do
   let newState = state { props { leaderBoardType = tab, showShimmer = true } }
   updateAndExit newState $ Refresh newState
 
-eval BackPressed state = exit $ GoBack
+eval BackPressed state = exit $ GoToHomeScreen state
 
 eval RefreshScreen state = exit $ Refresh state
 

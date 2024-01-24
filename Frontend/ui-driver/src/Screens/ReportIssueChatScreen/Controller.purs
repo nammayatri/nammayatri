@@ -227,10 +227,14 @@ eval (AddAudioModelAction (AudioModel.OnClickCross)) state =
   ]
 
 eval (AddAudioModelAction (AudioModel.OnClickDone PrimaryButton.OnClick)) state =
-  continueWithCmd state { props { showAudioModel = false, isPopupModelOpen = false } } [do
-    void $ runEffectFn1 removeMediaPlayer ""
-    pure $ UpdateState state { props { showAudioModel = false, isPopupModelOpen = false }, data { recordedAudioUrl = Nothing, uploadedAudioId = Nothing } }
-  ]
+  if isJust state.data.addAudioState.audioFile then 
+    continueWithCmd state  [ pure $ AddAudioModelAction (AddAudioModel.OnClickCross) ] 
+  else continueWithCmd state { props  { showAudioModel = false, isPopupModelOpen = false } } [ do
+          void $ runEffectFn1 removeMediaPlayer ""
+          pure $ UpdateState state { 
+            props { showAudioModel = false, isPopupModelOpen = false }
+          , data { recordedAudioUrl = Nothing, uploadedAudioId = Nothing } }
+      ]
 
 eval (AddAudioModelAction (AudioModel.OnClickDelete)) state =
   continueWithCmd state { data { addAudioState { audioFile = Nothing, stateChanged = true }, recordAudioState { recordedFile = Nothing } } } [do
