@@ -35,7 +35,7 @@ import Data.Eq.Generic (genericEq)
 import Data.Foldable (or)
 import Data.Function.Uncurried (Fn2, runFn3, Fn1, Fn3)
 import Data.Generic.Rep (class Generic)
-import Data.Int (round, toNumber, fromString)
+import Data.Int (round, toNumber, fromString, ceil)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Number (pi, sin, cos, sqrt, asin, abs)
@@ -83,13 +83,14 @@ import Services.API (Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
 import Types.App (GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Data.Function.Uncurried (Fn1)
+import Data.Function.Uncurried
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
 import Data.Tuple(Tuple(..) ,snd, fst)
 import Data.Ord
 import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
+import Constants (defaultDensity)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -97,7 +98,7 @@ foreign import withinTimeRange :: String -> String -> String -> Boolean
 
 foreign import getNewTrackingId :: Unit -> String
 
-foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> Effect Unit
+foreign import storeCallBackCustomer :: forall action. (action -> Effect Unit) -> (String -> action) -> String -> Effect Unit
 
 foreign import getLocationName :: forall action. (action -> Effect Unit) -> Number -> Number -> String -> (Number -> Number -> String -> action) -> Effect Unit
 
@@ -181,6 +182,8 @@ foreign import getDeviceDefaultDensity ::Fn1 LazyCheck Number
 foreign import didDriverMessage :: Fn1 LazyCheck Boolean
 
 foreign import incrOrDecrTimeFrom :: Fn3 String Int Boolean String
+
+foreign import getMockFollowerName :: String -> String
 
 data TimeUnit
   = HOUR
@@ -760,3 +763,13 @@ getExistingTags savedLoc = map (\item -> DS.toLower $ item.tag) savedLoc
 getCityConfig :: Array CityConfig -> String -> CityConfig
 getCityConfig cityConfigs cityName = do
   fromMaybe defaultCityConfig $ find (\item -> item.cityName == cityName) cityConfigs
+  
+getDefaultPixelSize :: Int -> Int
+getDefaultPixelSize size =
+  let pixels = runFn1 getPixels FunctionCall
+      androidDensity = (runFn1 getDeviceDefaultDensity FunctionCall)/  defaultDensity
+      iosNativeScale = runFn1 getDefaultPixels ""
+      displayZoomFactor = iosNativeScale / pixels
+  in if os == "IOS" 
+    then ceil $ ((toNumber size) / displayZoomFactor) / pixels 
+    else ceil $ (toNumber size / pixels) * androidDensity

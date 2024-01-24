@@ -149,6 +149,7 @@ initData = {
       , currentPage : 0
     } 
     , contactList : []
+    , followers : Nothing
     },
     props: {
       rideRequestFlow : false
@@ -291,6 +292,7 @@ initData = {
     , enableChatWidget : false
     , showSosBanner : false
     , showShareRide : false
+    , followsRide: false
     }
 }
 
@@ -361,16 +363,16 @@ dummyPreviousRiderating = {
 dummyDriverInfo :: DriverInfoCard
 dummyDriverInfo =
   { otp : ""
-  , driverName : ""
+  , driverName : "Test Driver"
   , eta : Nothing
   , vehicleDetails : ""
   , currentSearchResultType : ESTIMATES
-  , registrationNumber : ""
-  , rating : 0.0
+  , registrationNumber : "XXXXXXXXXX"
+  , rating : 5.0
   , startedAt : ""
   , endedAt : ""
-  , source : ""
-  , destination : ""
+  , source : "NA"
+  , destination : "NA"
   , rideId : ""
   , price : 0
   , sourceLat : 0.0
@@ -499,7 +501,8 @@ dummyRideBooking = RideBookingRes
   fromLocation :  dummyBookingDetails,
   merchantExoPhone : "",
   specialLocationTag : Nothing,
-  hasDisability : Nothing
+  hasDisability : Nothing,
+  sosStatus: Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails

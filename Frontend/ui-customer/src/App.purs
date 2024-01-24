@@ -52,6 +52,7 @@ import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
 import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, RideSelectionScreenState, ReportIssueChatScreenState, IssueInfo, SearchLocationScreenState, GlobalProps ) 
+import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
@@ -90,6 +91,7 @@ newtype GlobalState = GlobalState {
   , ticketInfoScreen :: TicketInfoScreenState
   , searchLocationScreen :: SearchLocationScreenState
   , globalProps :: GlobalProps
+  , followRideScreen :: FollowRideScreenState
   , appConfig :: Maybe AppConfig
   , rideScheduledScreen :: RideScheduledScreenState
   , rideSelectionScreen :: RideSelectionScreenState
@@ -125,6 +127,7 @@ defaultGlobalState = GlobalState {
   , ticketInfoScreen : TicketInfoScreenData.initData
   , searchLocationScreen : SearchLocationScreenData.initData
   , globalProps : defaultGlobalProps
+  , followRideScreen : FollowRideScreenData.initData
   , appConfig : Nothing
   , rideScheduledScreen : RideScheduledScreenData.initData
   , rideSelectionScreen : RideSelectionScreenData.initData
@@ -223,6 +226,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | SAFETY_SUPPORT HomeScreenState Boolean
                         | GO_TO_SHARE_RIDE HomeScreenState
                         | GO_TO_NOTIFY_RIDE_SHARE HomeScreenState
+                        | EXIT_TO_FOLLOW_RIDE
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -257,6 +261,10 @@ data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreen
 data TICKETING_SCREEN_SCREEN_OUTPUT = EXIT_TO_HOME TicketingScreenState
                                     | EXIT_TO_MY_TICKETS TicketingScreenState
                                     | BOOK_TICKETS TicketingScreenState
+data FOLLOW_RIDE_SCREEN_OUTPUT 
+  = RESTART_TRACKING
+  | GO_TO_HS_FROM_FOLLOW_RIDE
+  | OPEN_GOOGLE_MAPS_FOLLOW_RIDE FollowRideScreenState
 
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
@@ -287,3 +295,4 @@ data ScreenType =
   | SearchLocationScreenStateType (SearchLocationScreenState -> SearchLocationScreenState)
   | GlobalPropsType (GlobalProps -> GlobalProps) 
   | NammaSafetyScreenStateType (NammaSafetyScreenState -> NammaSafetyScreenState)
+  | FollowRideScreenStateType (FollowRideScreenState -> FollowRideScreenState)

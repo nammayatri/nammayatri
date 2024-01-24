@@ -27,7 +27,8 @@ import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, PaymentStatus(..))
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
+import Domain.Payments (PaymentStatus(..))
 import Common.Types.Config (CityConfig(..))
 import Types.App (FlowBT, defaultGlobalState)
 import Control.Monad.Except (runExcept, runExceptT)

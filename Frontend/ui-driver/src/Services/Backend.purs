@@ -1154,7 +1154,7 @@ autoComplete searchVal lat lon language = do
         radius : 50000,
         input : searchVal,
         language : language,
-        strictbounds : Nothing,
+        strictbounds : Just true,
         origin : LatLong {
             lat : fromMaybe 0.0 (Number.fromString lat),
             lon : fromMaybe 0.0 (Number.fromString lon)

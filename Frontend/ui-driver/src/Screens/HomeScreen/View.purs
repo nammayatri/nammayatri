@@ -19,7 +19,8 @@ import Screens.HomeScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (LazyCheck(..), APIPaymentStatus(..))
+import Common.Types.App (LazyCheck(..))
+import Domain.Payments (APIPaymentStatus(..))
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
 import Components.ChatView as ChatView
