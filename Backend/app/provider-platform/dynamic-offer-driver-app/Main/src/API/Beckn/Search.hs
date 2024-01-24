@@ -59,7 +59,7 @@ search ::
   FlowHandler AckResponse
 search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) reqBS = withFlowHandlerBecknAPI $ do
   req <- decodeReq reqBS
-  (dSearchReq, bapId, msgId, city, country, txnId) <-
+  (dSearchReq, bapId, bapUri, msgId, city, country, txnId) <-
     case req of
       Right reqV2 -> do
         transactionId <- Utils.getTransactionId reqV2.searchReqContext
@@ -69,14 +69,15 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
           let context = reqV2.searchReqContext
           messageId <- Utils.getMessageId context
           bapId <- Utils.getContextBapId context
+          bapUri <- Utils.getContextBapUri context
           city <- Utils.getContextCity context
           country <- Utils.getContextCountry context
-          pure (dSearchReq, bapId, messageId, city, country, Just transactionId)
+          pure (dSearchReq, bapId, bapUri, messageId, city, country, Just transactionId)
       Left reqV1 ->
         withTransactionIdLogTag reqV1 $ do
           logTagInfo "Search API Flow" "Reached"
           dSearchReq <- ACL.buildSearchReqV1 transporterId subscriber reqV1
-          pure (dSearchReq, reqV1.context.bap_id, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id)
+          pure (dSearchReq, reqV1.context.bap_id, reqV1.context.bap_uri, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id)
 
   Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
     merchant <- DSearch.validateRequest transporterId dSearchReq
@@ -90,14 +91,14 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
         isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
         if isBecknSpecVersion2
           then do
-            onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId callbackUrl (Just bppId) (Just bppUri) city country
+            onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country
             let context = onSearchReq.onSearchReqContext
-            logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> (TL.toStrict $ A.encodeToLazyText onSearchReq)
+            logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
             void $
               Callback.withCallback dSearchRes.provider "SEARCH" OnSearch.onSearchAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
                 pure onSearchReq
           else do
-            context <- buildTaxiContext Context.SEARCH msgId txnId bapId callbackUrl (Just bppId) (Just bppUri) city country False
+            context <- buildTaxiContext Context.SEARCH msgId txnId bapId bapUri (Just bppId) (Just bppUri) city country False
             logTagInfo "Search API Flow" "Sending OnSearch"
             void $
               CallBAP.withCallback dSearchRes.provider Context.SEARCH OnSearch.onSearchAPIV1 context callbackUrl internalEndPointHashMap $ do

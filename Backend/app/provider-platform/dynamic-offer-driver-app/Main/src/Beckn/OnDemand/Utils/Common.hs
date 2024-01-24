@@ -153,7 +153,7 @@ castVariant Variant.TAXI = "TAXI"
 castVariant Variant.TAXI_PLUS = "TAXI_PLUS"
 
 rationaliseMoney :: Money -> Text
-rationaliseMoney fare = T.pack $ show $ OS.DecimalValue (toRational fare)
+rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
 
 castDPaymentType :: DMPM.PaymentType -> Text
 castDPaymentType DMPM.PREPAID = "ON_ORDER"

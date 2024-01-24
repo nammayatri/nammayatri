@@ -14,19 +14,6 @@
 
 module Beckn.OnDemand.Utils.OnSearch where
 
--- import Beckn.ACL.Common (getTagV2)
-
--- import Data.Aeson
--- import qualified Data.Text as T
--- import qualified EulerHS.Language as L
-
--- import Kernel.External.Maps as Maps
--- import qualified Kernel.Types.Beckn.Context as Context
--- import Kernel.Types.Common
--- import qualified Kernel.Types.Error as Error
--- import Kernel.Utils.Common
--- import Tools.Error
-
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens

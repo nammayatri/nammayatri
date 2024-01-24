@@ -24,7 +24,7 @@ import Domain.Types.Estimate as Estimate
 import Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
-import Kernel.Prelude (TimeOfDay)
+import Kernel.Prelude (TimeOfDay, roundToIntegral)
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -74,8 +74,8 @@ getEstimatedFare :: Spec.Item -> Money
 getEstimatedFare item = do
   let price = item.itemPrice & fromMaybe (error "Missing Price")
   let value = price.priceValue
-  let tagValue = (readMaybe . T.unpack =<< value) & fromMaybe (error "Missing fare breakup item: tagValue")
-  Money tagValue
+  let tagValue = (DecimalValue.valueFromString =<< value) & fromMaybe (error "Missing fare breakup item: tagValue")
+  Money $ roundToIntegral tagValue
 
 getItemId :: Spec.Item -> Text
 getItemId item = do
@@ -85,12 +85,12 @@ getTotalFareRange :: Spec.Item -> Estimate.FareRange
 getTotalFareRange item = do
   let price = item.itemPrice & fromMaybe (error "Missing Price")
   let mini = price.priceMinimumValue
-  let minValue = (readMaybe . T.unpack =<< mini) & fromMaybe (error "Missing Minimum Value")
+  let minValue = (DecimalValue.valueFromString =<< mini) & fromMaybe (error "Missing Minimum Value")
   let maxi = price.priceMaximumValue
-  let maxValue = (readMaybe . T.unpack =<< maxi) & fromMaybe (error "Missing Maximum Value")
+  let maxValue = (DecimalValue.valueFromString =<< maxi) & fromMaybe (error "Missing Maximum Value")
   Estimate.FareRange
-    { Estimate.minFare = Money minValue,
-      Estimate.maxFare = Money maxValue
+    { Estimate.minFare = Money $ roundToIntegral minValue,
+      Estimate.maxFare = Money $ roundToIntegral maxValue
     }
 
 buildEstimateBreakupList :: MonadFlow m => Spec.Item -> m [OnSearch.EstimateBreakupInfo]
@@ -114,7 +114,7 @@ buildEstimateBreakUpItem ::
 buildEstimateBreakUpItem currency tag = do
   descriptor <- tag.tagDescriptor & fromMaybeM (InvalidRequest "Missing fare breakup item: tagDescriptor")
   let value = tag.tagValue
-  tagValue <- (readMaybe . T.unpack =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: tagValue")
+  tagValue <- (DecimalValue.valueFromString =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: tagValue")
   title <- descriptor.descriptorCode & fromMaybeM (InvalidRequest "Missing fare breakup item")
   pure
     OnSearch.EstimateBreakupInfo
@@ -122,7 +122,7 @@ buildEstimateBreakUpItem currency tag = do
         price =
           OnSearch.BreakupPriceInfo
             { currency = currency,
-              value = Money tagValue
+              value = Money $ roundToIntegral tagValue
             }
       }
 
@@ -142,8 +142,8 @@ buildNightShiftInfo item = do
 getNightShiftCharge :: [Spec.TagGroup] -> Maybe Money
 getNightShiftCharge tagGroup = do
   tagValue <- getTagV2 "rate_card" "night_shift_charge" tagGroup
-  nightShiftCharge <- readMaybe $ T.unpack tagValue
-  Just $ Money nightShiftCharge
+  nightShiftCharge <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral nightShiftCharge
 
 getOldNightShiftCharge :: [Spec.TagGroup] -> Maybe DecimalValue
 getOldNightShiftCharge tagGroups = do
@@ -163,8 +163,8 @@ getNightShiftEnd tagGroups = do
 buildWaitingChargeInfo' :: [Spec.TagGroup] -> Maybe Money
 buildWaitingChargeInfo' tagGroups = do
   tagValue <- getTagV2 "rate_card" "waiting_charge_per_min" tagGroups
-  waitingChargeValue <- readMaybe $ T.unpack tagValue
-  Just $ Money waitingChargeValue
+  waitingChargeValue <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral waitingChargeValue
 
 buildWaitingChargeInfo :: Spec.Item -> Maybe OnSearch.WaitingChargesInfo
 buildWaitingChargeInfo item = do
