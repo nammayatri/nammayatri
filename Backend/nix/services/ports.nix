@@ -1,3 +1,5 @@
+# We decouple ports information on this file, so that 
+# the `kill-svc-ports` script can use it.
 {
   db-primary = 5434;
   db-primary-replica = 5435;
