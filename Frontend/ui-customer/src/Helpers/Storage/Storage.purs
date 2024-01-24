@@ -94,6 +94,7 @@ data KeyStore
   | IS_SOS_ACTIVE
   | SAFETY_ALERT_TYPE
   | SOS_TYPE
+  | SOS_ALARM_STATUS
 
 derive instance genericKeyStore :: Generic KeyStore _
 

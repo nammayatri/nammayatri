@@ -2,7 +2,8 @@ module Screens.SubscriptionScreen.Controller where
 
 import Debug
 
-import Common.Types.App (APIPaymentStatus, LazyCheck(..))
+import Common.Types.App (LazyCheck(..))
+import Domain.Payments (APIPaymentStatus)
 import Components.Banner as Banner
 import Components.BottomNavBar as BottomNavBar
 import Components.DueDetailsList.Controller (Action(..)) as DueDetailsListController

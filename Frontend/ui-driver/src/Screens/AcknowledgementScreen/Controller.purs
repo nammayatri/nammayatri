@@ -7,7 +7,7 @@ import PrestoDOM (Eval, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (getScreen, ScreenName(..))
 import Screens.Types (AcknowledgementScreenState)
-import Common.Types.App as Common
+import Domain.Payments as PP
 
 instance showAction :: Show Action where
   show _ = ""
@@ -33,7 +33,7 @@ eval BackPressed state = continue state
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = do
   case state.props.paymentStatus of
-    Common.Failed -> exit RetryPayment
+    PP.Failed -> exit RetryPayment
     _             -> exit HomeScreen
 
 eval _ state = continue state

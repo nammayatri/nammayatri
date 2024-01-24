@@ -177,7 +177,9 @@ export const storeCallBackForNotification = function (cb) {
     return function () {
       try {
         const callback = callbackMapper.map(function (notificationType) {
-          cb(action(notificationType))();
+          if (window.whitelistedNotification.includes(notificationType)) {
+            cb(action(notificationType))();
+          }
         });
         window.onResumeListeners = [];
         JBridge.storeCallBackForNotification(callback);

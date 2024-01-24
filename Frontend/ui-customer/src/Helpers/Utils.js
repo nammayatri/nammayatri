@@ -17,6 +17,7 @@
 import { callbackMapper } from "presto-ui";
 
 const JBridge = window.JBridge;
+const notificationCallBacks = {};
 let tracking_id = 0;
 export const getNewTrackingId = function (unit) {
   tracking_id += 1;
@@ -139,24 +140,38 @@ export const requestKeyboardShow = function (id) {
 export const storeCallBackCustomer = function (cb) {
 
   return function (action) {
-    return function () {
-      try {
-        const callback = callbackMapper.map(function (notificationType) {
-          cb(action(notificationType))();
-        });
-        const notificationCallBack = function (notificationType) {
-          cb(action(notificationType))();
-        };
-        window.callNotificationCallBack = notificationCallBack;
-        console.log("In storeCallBackCustomer ---------- + " + action);
-        JBridge.storeCallBackCustomer(callback);
-      }
-      catch (error) {
-        console.log("Error occurred in storeCallBackCustomer ------", error);
+    return function(screenName){
+      return function () {
+        try {
+          notificationCallBacks[screenName] = function(notificationType){
+            cb(action(notificationType))();
+          }
+          const callback = callbackMapper.map(function (notificationType) {
+            console.log("notificationType ->", notificationType);
+            if (window.whitelistedNotification.includes(notificationType)) {
+              Object.keys(notificationCallBacks).forEach((key) => {
+                notificationCallBacks[key](notificationType);
+              })
+            }
+          });
+          const notificationCallBack = function (notificationType) {
+            console.log("notificationType ->", notificationType);
+            if (window.whitelistedNotification.includes(notificationType)) {
+              Object.keys(notificationCallBacks).forEach((key) => {
+                notificationCallBacks[key](notificationType);
+              })
+            }
+          };
+          window.callNotificationCallBack = notificationCallBack;
+          console.log("In storeCallBackCustomer ---------- + " + action);
+          JBridge.storeCallBackCustomer(callback);
+        }
+        catch (error) {
+          console.log("Error occurred in storeCallBackCustomer ------", error);
+        }
       }
     }
   }
-
 }
 
 export const storeCallBackContacts = function (cb) {
@@ -481,4 +496,13 @@ export const incrOrDecrTimeFrom = function (inputTime, minutesToAddOrSubtract, i
   else date.setMinutes(date.getMinutes() - minutesToAddOrSubtract);
   const newTime = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
   return newTime;
+}
+
+export const getMockFollowerName = function() {
+  let currentMockName = "Test User"
+  if (window.__payload && window.__payload.payload && window.__payload.payload.fullNotificationBody && window.__payload.payload.fullNotificationBody.msg) {
+    const msg = window.__payload.payload.fullNotificationBody.msg;
+    currentMockName = msg.split("")[0];
+  }
+  return currentMockName;
 }

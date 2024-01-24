@@ -15,7 +15,7 @@
 
 module Screens.TicketBookingFlow.TicketBooking.ScreenData where
 
-import Common.Types.App as Common
+import Domain.Payments as PP
 import Data.Maybe (Maybe(..))
 import ConfigProvider
 import Screens.Types (TicketBookingScreenState(..), TicketBookingScreenStage(..), TicketBookings(..), TicketItem(..), TicketBookingPeopleCategoryDetails(..), TicketBookingCategoryDetails(..), TicketBookingServiceDetails(..))
@@ -41,7 +41,7 @@ initData =
       termsAndConditionsSelected : true,
       validDate : true,
       showShimmer : true,
-      paymentStatus : Common.Scheduled,
+      paymentStatus : PP.Scheduled,
       previousStage : DescriptionStage,
       ticketBookingList : dummyData,
       selectedBookingId : "",

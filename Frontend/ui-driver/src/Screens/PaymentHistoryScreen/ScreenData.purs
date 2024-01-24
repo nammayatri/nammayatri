@@ -15,7 +15,7 @@
 
 module Screens.PaymentHistoryScreen.ScreenData where
 
-import Common.Types.App (PaymentStatus(..))
+import Domain.Payments (PaymentStatus(..))
 import Data.Maybe as Mb
 import Screens.Types (PaymentHistoryScreenState, PaymentHistorySubview(..), PaymentListItem, PlanCardConfig, TransactionListItem, PromoConfig)
 import Services.API (AutopayPaymentStage(..), FeeType(..))

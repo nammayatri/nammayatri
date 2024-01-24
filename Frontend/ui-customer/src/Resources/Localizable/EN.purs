@@ -2,6 +2,7 @@ module Resources.Localizable.EN where
 
 import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getEN :: STR -> String
 getEN stringKey =
@@ -923,3 +924,16 @@ getEN stringKey =
         TEST_DRILL_DESC -> "Taking part in the test drill helps you to understand how to act in a real emergency. Take the test drill now, to avoid panic during an emergency."
         SOS_WILL_BE_DISABLED -> "SOS feature will be disabled if misused thrice"
         DIAL_NOW -> "Dial Now"
+        FOLLOWING name -> "Following " <> name
+        TURN_OFF_ALARM -> "Turn off the alarm"
+        CHOOSE_A_PERSON_TO_FOLLOW -> "Choose a person to follow"
+        IS_IN_SOS_SITUATION name -> name <> " is in a SOS Situation!"
+        MARKED_RIDE_SAFE name -> name <> " marked the ride Safe!"
+        STAY_CALM_KEEP_TRACKING name -> "Stay calm. Keep tracking " <> name <> "'s location Take necessary actions if needed"
+        YOU_WILL_BE_NOTIFIED -> "You'll be notified once the ride is completed"
+        TAP_HERE_TO_FOLLOW name ->  "Tap here to follow " <> name
+        HAVE_SHARED_RIDE_WITH_YOU name -> name <> " have shared their rides with you"
+        SOS_LOCATION -> "SOS Location"
+        THIS_IS_A_TEST_MOCK_DRILL name -> "This is a Test Drill for " <> name
+        THIS_IS_NOT_REAL_DRILL -> "This is NOT a real drill, it simply illustrates how the app will respond in emergency situations."
+        REACHED_DESTINATION_SAFELY name -> name <> " has reached the destination safely!"

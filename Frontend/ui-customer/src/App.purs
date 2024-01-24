@@ -50,7 +50,8 @@ import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
-import Screens.Types 
+import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
+import Screens.Types
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
@@ -87,6 +88,7 @@ newtype GlobalState = GlobalState {
   , loaderOverlay :: LoaderScreenScreenData.LoaderOverlayState
   , ticketBookingScreen :: TicketBookingScreenState
   , ticketInfoScreen :: TicketInfoScreenState
+  , followRideScreen :: FollowRideScreenState
   , appConfig :: Maybe AppConfig
   , rideScheduledScreen :: RideScheduledScreenState
   , rideSelectionScreen :: RideSelectionScreenState
@@ -120,6 +122,7 @@ defaultGlobalState = GlobalState {
   , loaderOverlay : LoaderScreenScreenData.initData
   , ticketBookingScreen : TicketBookingScreenData.initData
   , ticketInfoScreen : TicketInfoScreenData.initData
+  , followRideScreen : FollowRideScreenData.initData
   , appConfig : Nothing
   , rideScheduledScreen : RideScheduledScreenData.initData
   , rideSelectionScreen : RideSelectionScreenData.initData
@@ -207,6 +210,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | SAFETY_SUPPORT HomeScreenState Boolean
                         | GO_TO_SHARE_RIDE HomeScreenState
                         | GO_TO_NOTIFY_RIDE_SHARE HomeScreenState
+                        | EXIT_TO_FOLLOW_RIDE
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -240,6 +244,10 @@ data TICKET_BOOKING_SCREEN_OUTPUT =  GET_BOOKING_INFO_SCREEN TicketBookingScreen
 data TICKETING_SCREEN_SCREEN_OUTPUT = EXIT_TO_HOME TicketingScreenState
                                     | EXIT_TO_MY_TICKETS TicketingScreenState
                                     | BOOK_TICKETS TicketingScreenState
+data FOLLOW_RIDE_SCREEN_OUTPUT 
+  = RESTART_TRACKING
+  | GO_TO_HS_FROM_FOLLOW_RIDE
+  | OPEN_GOOGLE_MAPS_FOLLOW_RIDE FollowRideScreenState
 
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
@@ -268,3 +276,4 @@ data ScreenType =
   | RideSelectionScreenStateType (RideSelectionScreenState -> RideSelectionScreenState)
   | ReportIssueChatScreenStateType (ReportIssueChatScreenState -> ReportIssueChatScreenState)
   | NammaSafetyScreenStateType (NammaSafetyScreenState -> NammaSafetyScreenState)
+  | FollowRideScreenStateType (FollowRideScreenState -> FollowRideScreenState)
