@@ -43,6 +43,7 @@ data ScreenName = SPLASH_SCREEN
                 | RIDE_SCHEDULED_SCREEN
                 | RIDE_SELECTION_SCREEN
                 | REPORT_ISSUE_CHAT_SCREEN
+                | RENTAL_SCREEN
 
 getScreen :: ScreenName -> String
 getScreen str = case str of 
@@ -74,3 +75,4 @@ getScreen str = case str of
         WELCOME_SCREEN                -> "welcome_screen"
         TICKET_BOOKING_SCREEN         -> "ticket_booking_screen"
         RIDE_SCHEDULED_SCREEN         -> "ride_scheduled_screen" 
+        RENTAL_SCREEN                 -> "rental_screen"

@@ -1851,7 +1851,9 @@ type ReAllocationProp =
   { showPopUp :: Boolean
   }
 
+
 -- ######################################### RideScheduledState ####################################################
+
 type RideScheduledScreenState = {
     primaryButtonText :: String
   , source :: String
@@ -1867,3 +1869,58 @@ data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | REPORTED_ISSUES_MODAL | RE
 
 derive instance genericIssueModalType :: Generic IssueModalType _
 instance eqIssueModalType :: Eq IssueModalType where eq = genericEq
+
+
+-- ######################################### RentalScreenState ####################################################
+
+type RentalScreenState = {
+  data :: RentalScreenData,
+  props :: RentalScreenProps
+}
+
+type RentalScreenData = {
+    rentalBookingData :: RentalBookingConfig
+  , currentTime :: String
+  , currentStage :: RentalScreenStage
+  , quoteList :: Array ChooseVehicle.Config
+  , endOTP :: Maybe String
+  , nextStop :: Maybe String
+  , selectedDateTimeConfig :: DateTimeConfig
+}
+
+data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION
+
+derive instance genericRentalScreenStage :: Generic RentalScreenStage _
+instance showRentalScreenStage :: Show RentalScreenStage where show = genericShow
+instance eqRentalScreenStage :: Eq RentalScreenStage where eq = genericEq
+
+type RentalScreenProps = {
+    minDuration :: Int
+  , maxDuration :: Int
+  , minDistance :: Int
+  , maxDistance :: Int
+  , farePerKm :: String
+  , maxDateBooking :: Int
+}
+
+type RentalBookingConfig = {
+    selectedDate :: String
+  , selectedTime :: String
+  , baseDuration :: Int
+  , baseDistance :: Int
+  , finalDuration :: Int
+  , finalDistance :: Int
+  , startOdometer :: String
+  , endOdometer :: String
+  , estimatedFare :: Int
+  , finalFare :: Int
+  , nightCharge :: String
+}
+
+type DateTimeConfig = {
+    year :: Int
+  , month :: Int
+  , day :: Int
+  , hour :: Int
+  , minute :: Int
+}

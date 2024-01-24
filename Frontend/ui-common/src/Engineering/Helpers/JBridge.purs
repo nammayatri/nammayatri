@@ -38,8 +38,8 @@ import Engineering.Helpers.Commons (screenHeight, screenWidth, parseFloat)
 import Effect.Uncurried
 import Data.Maybe (Maybe(..))
 -- import LoaderOverlay.Handler as UI
--- import Effect.Aff (launchAff)
--- import Effect.Class (liftEffect)
+import Effect.Aff (Aff, makeAff, nonCanceler, launchAff)
+import Effect.Class (liftEffect)
 -- import PrestoDOM.Core(terminateUI)
 import Presto.Core.Types.Language.Flow
 import Engineering.Helpers.Commons (screenHeight, screenWidth, os)
@@ -51,6 +51,9 @@ import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2)
 import Foreign.Class (encode)
+import Common.Styles.Colors as Color
+import Data.Eq.Generic (genericEq)
+import Data.Show.Generic (genericShow)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -263,10 +266,43 @@ foreign import storeOnResumeCallback :: forall action. Fn2 (action -> Effect Uni
 foreign import getLocationNameV2 :: Fn2 Number Number String
 foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitude :: Number }
 foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
+foreign import datePickerImpl :: forall action. EffectFn3 (action -> Effect Unit) (String -> Int -> Int -> Int -> action) Int Unit
+foreign import timePickerImpl :: forall action. EffectFn2 (action -> Effect Unit) ( Int -> Int -> String -> action) Unit
 
 foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
 
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
+
+foreign import renderSliderImpl :: forall action. EffectFn3 (action -> Effect Unit) (Int -> action) SliderConfig Unit
+
+type SliderConfig = { 
+  id :: String,
+  sliderConversionRate :: Number,
+  sliderMinValue :: Int,
+  sliderMaxValue :: Int,
+  sliderDefaultValue :: Int,
+  toolTipId :: String,
+  enableToolTip :: Boolean,
+  progressColor :: String,
+  thumbColor :: String,
+  bgColor :: String,
+  bgAlpha :: Int 
+}
+
+sliderConfig :: SliderConfig
+sliderConfig = {
+  id : "",
+  sliderConversionRate : 1.0,
+  sliderMinValue : 0,
+  sliderMaxValue : 100,
+  sliderDefaultValue : 0,
+  toolTipId : "",
+  enableToolTip : false,
+  progressColor : Color.white900,
+  thumbColor : Color.blue800,
+  bgColor : Color.black,
+  bgAlpha : 50
+}
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
@@ -407,6 +443,12 @@ setKeyInSharedPrefKeys key val = liftFlow (setKeyInSharedPrefKeysImpl key val)
 
 setEnvInNativeSharedPrefKeys :: forall st. String -> String -> Flow st Unit
 setEnvInNativeSharedPrefKeys key val = liftFlow (setEnvInNativeSharedPrefKeysImpl key val)
+
+datePickerWithTimeout :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> Int -> action) -> Int -> Effect Unit
+datePickerWithTimeout = runEffectFn3 datePickerImpl
+
+timePickerWithTimeout :: forall action. (action -> Effect Unit) -> ( Int -> Int -> String -> action) -> Effect Unit
+timePickerWithTimeout = runEffectFn2 timePickerImpl
 
 -- onEventWithCB :: Foreign -> Flow GlobalState (Either String String)
 -- onEventWithCB obj = doAff do
@@ -565,3 +607,25 @@ displayBase64ImageConfig = {
   , scaleType : "CENTER_CROP"
   , inSampleSize : 1
 }
+
+data DatePicker = DatePicker String Int Int Int
+
+data TimePicker = TimePicker Int Int String
+
+data CloseAction = SELECTED | DISMISSED | CANCELLED
+
+derive instance genericCloseAction :: Generic CloseAction _
+instance showCloseAction :: Show CloseAction where show = genericShow
+
+showDateTimePicker ∷ forall action. (action → Effect Unit) → (String → Int → Int → Int → String → Int → Int → action) → Aff Unit
+showDateTimePicker push action = do
+  datePicker <- makeAff \cb -> datePickerWithTimeout (cb <<< Right) DatePicker 30000 $> nonCanceler
+  let (DatePicker dateResp year month day) = datePicker
+  if dateResp == show SELECTED then do
+    timePicker <- makeAff \cb -> timePickerWithTimeout (cb <<< Right) TimePicker $> nonCanceler
+    let (TimePicker hour minute timeResp) = timePicker
+    liftEffect $ push $ action dateResp year month day timeResp hour minute
+  else liftEffect $ push $ action dateResp year month day "" 0 0
+
+renderSlider :: forall action. (action -> Effect Unit) -> (Int -> action) -> SliderConfig -> Effect Unit
+renderSlider = runEffectFn3 renderSliderImpl
