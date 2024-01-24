@@ -591,41 +591,19 @@ export const parseAddress = function (json) {
   return JSON.parse(json);
 };
 
-export const drawRoute = function (data) {
-  return function (style) {
-    return function (trackColor) {
-      return function (isActual) {
-        return function (sourceMarker) {
-          return function (destMarker) {
-            return function (polylineWidth) {
-              return function (type) {
-                return function (sourceName) {
-                  return function (destinationName) {
-                    return function (mapRouteConfig) {
-                      return function () {
-                        console.log("I AM HERE ------------------ IN DRAW ROUTE");
-
-                        try {
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(mapRouteConfig));
-                        } catch (err) {
-                          /*
-                           * This Function is deprecated on 10 Jul- 2023
-                           * Remove this function once it is not begin used.
-                           */
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName);
-                        }
-                      }
-                    };
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-};
+const drawRoute = function (data, style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, mapRouteConfig) {
+  console.log("I AM HERE ------------------ IN DRAW ROUTE");
+  try {
+    return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(mapRouteConfig));
+  } catch (err) {
+    /*
+        * This Function is deprecated on 10 Jul- 2023
+        * Remove this function once it is not begin used.
+        */
+    return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName);
+  }
+}
+                   
 
 export const updateRouteMarker = function (data) {
   return function () {
@@ -690,6 +668,23 @@ export const storeCallBackMessageUpdated = function (cb) {
     };
   };
 };
+
+
+export const drawRouteV2 = function (drawRouteConfig){
+  return function() {
+    try{
+      const { locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig } = drawRouteConfig.routes.normalRoute;
+      if (window.JBridge.drawRouteV2){
+        return window.JBridge.drawRouteV2(JSON.stringify(drawRouteConfig));
+      } else {
+        return drawRoute(locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig);
+      }
+    } catch (err) {
+      console.log("error in drawRouteV2----------------------------------", err);
+    }
+  };
+};
+
 
 export const storeKeyBoardCallback = function (cb, action) {
   const keyBoardCallback = function (state) {

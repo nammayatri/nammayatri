@@ -678,7 +678,7 @@ homeScreenFlow = do
             srcMarker = (Remote.normalRoute "").srcMarker
             destMarker = (Remote.normalRoute "").destMarker
         case state.props.routeEndPoints of
-          Just points -> lift $ lift $ liftFlow $ updateRouteMarker $ updateRouteMarkerConfig (Remote.walkCoordinate points.source.lat points.source.lng points.destination.lat points.destination.lng) points.source.place points.destination.place srcMarker destMarker (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig)
+          Just points -> lift $ lift $ liftFlow $ updateRouteMarker $ updateRouteMarkerConfig (Remote.walkCoordinate points.source.lat points.source.lng points.destination.lat points.destination.lng) points.source.place points.destination.place srcMarker destMarker (specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig) (getNewIDWithTag "CustomerHomeScreen")
           Nothing -> pure unit
         homeScreenFlow
     GET_SELECT_LIST state -> do
@@ -1995,7 +1995,7 @@ savedLocationFlow = do
       addNewAddressScreenFlow "edit Location"
 
     GO_BACK_FROM_SAVED_LOCATION -> do
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
       homeScreenFlow
   pure unit
 
@@ -2047,7 +2047,7 @@ addNewAddressScreenFlow input = do
         else pure $ toast (getString STR.FAVOURITE_ADDED_SUCCESSFULLY)
 
       setValueToLocalStore RELOAD_SAVED_LOCATION "true"
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
       if state.props.fromHome then do
         (GlobalState globalState) <- getState
         (savedLocationResp )<- lift $ lift $ Remote.getSavedLocationList ""
@@ -2100,7 +2100,7 @@ addNewAddressScreenFlow input = do
                                                                                                       } )
         addNewAddressScreenFlow ""
     GO_TO_FAVOURITES -> do
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
       savedLocationFlow
 
     CHECK_LOCATION_SERVICEABILITY state locItemType-> do
@@ -2173,7 +2173,7 @@ addNewAddressScreenFlow input = do
                 } )
         updateDistanceInfo state recentItem.lat recentItem.lon
     GO_TO_HOME_SCREEN_FLOW -> do
-      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreenMap")
+      _ <- lift $ lift $ liftFlow $ reallocateMapFragment (getNewIDWithTag "CustomerHomeScreen")
       homeScreenFlow
 
   pure unit
@@ -2214,7 +2214,7 @@ drawDottedRoute state = do
       srcLng = state.data.driverInfoCardState.driverLng
       destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
       destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-  lift $ lift $ liftFlow $ drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false srcMarker destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" (specialLocationConfig "" "" false getPolylineAnimationConfig) 
+  lift $ lift $ liftFlow $ drawRoute (Remote.walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false srcMarker destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" (specialLocationConfig "" "" false getPolylineAnimationConfig) (getNewIDWithTag "CustomerHomeScreen") 
 
 isForLostAndFound :: Boolean
 isForLostAndFound = true

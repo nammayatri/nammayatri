@@ -251,70 +251,76 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     @JavascriptInterface
     public void updateRoute(String _payload) {
         ExecutorManager.runOnMainThread(() -> {
-            if (googleMap != null) {
-                try {
-                    JSONObject payload = new JSONObject(_payload);
-                    String json = payload.optString("json", "");
-                    String dest = payload.optString("destMarker", "");
-                    String eta = payload.optString("eta", "");
-                    String src = payload.optString("srcMarker", "");
-                    String specialLocation = payload.optString("specialLocation", "");
-                    float zoomLevel = (float)payload.optDouble("zoomLevel", 17.0);
-                    ArrayList<LatLng> path = new ArrayList<>();
-                    JSONObject jsonObject = new JSONObject(json);
-                    JSONArray coordinates = jsonObject.getJSONArray("points");
-                    for (int i = coordinates.length() - 1; i >= 0; i--) {
-                        JSONObject coordinate = (JSONObject) coordinates.get(i);
-                        double lng = coordinate.getDouble("lng");
-                        double lat = coordinate.getDouble("lat");
-                        LatLng tempPoint = new LatLng(lat, lng);
-                        path.add(tempPoint);
-                    }
-                    Marker currMarker = (Marker) markers.get(src);
-                    currMarker.setTitle("Vehicle Icon On Map");
-                    Marker destMarker = (Marker) markers.get(dest);   
-                    JSONObject specialLocationObject = new JSONObject(specialLocation);
-                    String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
+            try {
+                JSONObject payload = new JSONObject(_payload);
+                String pureScriptID = payload.optString("pureScriptID","");
+                GoogleMap gMap = pureScriptID.equals("") ? googleMap : googleMapInstance.get(pureScriptID);
+                if (gMap != null) {
+                    try {
+                        String json = payload.optString("json", "");
+                        String dest = payload.optString("destMarker", "");
+                        String eta = payload.optString("eta", "");
+                        String src = payload.optString("srcMarker", "");
+                        String specialLocation = payload.optString("specialLocation", "");
+                        float zoomLevel = (float)payload.optDouble("zoomLevel", 17.0);
+                        ArrayList<LatLng> path = new ArrayList<>();
+                        JSONObject jsonObject = new JSONObject(json);
+                        JSONArray coordinates = jsonObject.getJSONArray("points");
+                        for (int i = coordinates.length() - 1; i >= 0; i--) {
+                            JSONObject coordinate = (JSONObject) coordinates.get(i);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            LatLng tempPoint = new LatLng(lat, lng);
+                            path.add(tempPoint);
+                        }
+                        Marker currMarker = (Marker) markers.get(src);
+                        currMarker.setTitle("Vehicle Icon On Map");
+                        Marker destMarker = (Marker) markers.get(dest);
+                        JSONObject specialLocationObject = new JSONObject(specialLocation);
+                        String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
 
-                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER))));
-                    destMarker.setTitle("Driver is " + eta);
-                    if (polyline != null) {
-                        polyline.setEndCap(new ButtCap());
-                        if (path.size() == 0) {
-                            LatLng destination = destMarker.getPosition();
-                            animateMarkerNew(src, destination, currMarker);
-                            polyline.remove();
-                            if(overlayPolylines != null)
-                                overlayPolylines.remove();
-                            if(polylineAnimatorSet != null){
-                                polylineAnimatorSet.cancel();
-                            }
-                            polyline = null;
-                            currMarker.setAnchor(0.5f, 0);
-                            animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
-                        } else {
-                            double destinationLat = path.get(0).latitude;
-                            double destinationLon = path.get(0).longitude;
-                            double sourceLat = path.get(path.size() - 1).latitude;
-                            double sourceLong = path.get(path.size() - 1).longitude;
-                            LatLng destination = path.get(path.size() - 1);
-                            animateMarkerNew(src, destination, currMarker);
-                            PatternItem DASH = new Dash(1);
-                            List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Collections.singletonList(DASH);
-                            polyline.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
-                            polyline.setPoints(path);
-                            if (debounceAnimateCameraCounter != 0) {
-                                debounceAnimateCameraCounter--;
+                        destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER))));
+                        destMarker.setTitle("Driver is " + eta);
+                        if (polyline != null) {
+                            polyline.setEndCap(new ButtCap());
+                            if (path.size() == 0) {
+                                LatLng destination = destMarker.getPosition();
+                                animateMarkerNew(src, destination, currMarker);
+                                polyline.remove();
+                                if(overlayPolylines != null)
+                                    overlayPolylines.remove();
+                                if(polylineAnimatorSet != null){
+                                    polylineAnimatorSet.cancel();
+                                }
+                                polyline = null;
+                                currMarker.setAnchor(0.5f, 0);
+                                animateCamera(destMarker.getPosition().latitude, destMarker.getPosition().longitude, zoomLevel, ZoomType.ZOOM);
                             } else {
-                                moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
-                                debounceAnimateCameraCounter = 10;
+                                double destinationLat = path.get(0).latitude;
+                                double destinationLon = path.get(0).longitude;
+                                double sourceLat = path.get(path.size() - 1).latitude;
+                                double sourceLong = path.get(path.size() - 1).longitude;
+                                LatLng destination = path.get(path.size() - 1);
+                                animateMarkerNew(src, destination, currMarker);
+                                PatternItem DASH = new Dash(1);
+                                List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Collections.singletonList(DASH);
+                                polyline.setPattern(PATTERN_POLYLINE_DOTTED_DASHED);
+                                polyline.setPoints(path);
+                                if (debounceAnimateCameraCounter != 0) {
+                                    debounceAnimateCameraCounter--;
+                                } else {
+                                    moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                                    debounceAnimateCameraCounter = 10;
+                                }
                             }
                         }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
-                } catch (JSONException e) {
-                    e.printStackTrace();
                 }
-            }
+            } catch (JSONException e) {
+                    throw new RuntimeException(e);
+                }
         });
     }
 
