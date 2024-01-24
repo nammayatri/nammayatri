@@ -32,7 +32,9 @@ buildOnInitReq onInitReq = do
   transactionId <- onInitReq.onInitReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   messageId <- onInitReq.onInitReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
 
-  _ <- onInitReq.onInitReqContext.contextTimestamp & fromMaybeM (InvalidRequest "Timestamp not found")
+  timeStamp <- onInitReq.onInitReqContext.contextTimestamp & fromMaybeM (InvalidRequest "Timestamp not found")
+
+  let ttl = onInitReq.onInitReqContext.contextTtl >>= Utils.getQuoteValidTill timeStamp
 
   order <- onInitReq.onInitReqMessage <&> (.confirmReqMessageOrder) & fromMaybeM (InvalidRequest "Order not found")
 
@@ -55,5 +57,5 @@ buildOnInitReq onInitReq = do
         bppItemId,
         transactionId,
         messageId,
-        validTill = Nothing -- TODO: fix me
+        validTill = ttl -- TODO: fix me
       }

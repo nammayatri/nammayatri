@@ -152,12 +152,12 @@ postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.P
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   dConfirmRes <- confirm
-  QFRFSTicketBooking.create dConfirmRes
   -- handle (errHandler dConfirmRes.booking) $
   --   void $ withShortRetry $ CallBPP.init dConfirmRes.bppSubscriberUrl becknInitReq
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
+  now <- getCurrentTime
 
-  when (isNothing dConfirmRes.bppOrderId) $ do
+  when (dConfirmRes.status == DFRFSTicketBooking.NEW && dConfirmRes.validTill > now) $ do
     providerUrl <- dConfirmRes.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
     bapConfig <- QBC.findByMerchantIdAndDomain (Just merchant.id) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
     bknInitReq <- ACL.buildInitReq dConfirmRes bapConfig
@@ -176,22 +176,24 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
       unless (personId == quote.riderId) $ throwError AccessDenied
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
-      maybeM (buildBooking quote) (\booking -> return booking) (QFRFSTicketBooking.findByQuoteId quoteId)
+      maybeM (buildAndCreateBooking quote) (\booking -> return booking) (QFRFSTicketBooking.findByQuoteId quoteId)
 
-    buildBooking DFRFSQuote.FRFSQuote {..} = do
+    buildAndCreateBooking DFRFSQuote.FRFSQuote {..} = do
       uuid <- generateGUID
       now <- getCurrentTime
-      return $
-        DFRFSTicketBooking.FRFSTicketBooking
-          { id = uuid,
-            bppOrderId = Nothing,
-            quoteId = id,
-            status = DFRFSTicketBooking.NEW,
-            createdAt = now,
-            updatedAt = now,
-            merchantId = Just merchantId_,
-            ..
-          }
+      let booking =
+            DFRFSTicketBooking.FRFSTicketBooking
+              { id = uuid,
+                bppOrderId = Nothing,
+                quoteId = id,
+                status = DFRFSTicketBooking.NEW,
+                createdAt = now,
+                updatedAt = now,
+                merchantId = Just merchantId_,
+                ..
+              }
+      QFRFSTicketBooking.create booking
+      return booking
 
     makeBookingStatusAPI booking stations =
       FRFSTicketService.FRFSTicketBookingStatusAPIRes
