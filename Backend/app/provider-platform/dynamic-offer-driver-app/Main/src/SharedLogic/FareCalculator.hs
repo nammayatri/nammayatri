@@ -26,9 +26,7 @@ where
 import qualified Data.List.NonEmpty as NE
 import Data.Time
   ( LocalTime (localTimeOfDay),
-    TimeOfDay (..),
     TimeZone,
-    midnight,
     minutesToTimeZone,
     utcToLocalTime,
   )
@@ -330,11 +328,3 @@ isNightShift nightShiftBounds time = do
 
 timeZoneIST :: TimeZone
 timeZoneIST = minutesToTimeZone 330 -- TODO: Should be configurable. Hardcoded to IST +0530
-
-isTimeWithinBounds :: TimeOfDay -> TimeOfDay -> TimeOfDay -> Bool
-isTimeWithinBounds startTime endTime time =
-  if startTime >= endTime
-    then do
-      let midnightBeforeTimeleap = TimeOfDay 23 59 60
-      (startTime < time && time < midnightBeforeTimeleap) || (midnight <= time && time < endTime)
-    else startTime < time && time < endTime

@@ -43,8 +43,8 @@ triggerEvent event = do
         fork "updating in prometheus" $ incrementCounter merchantId eventType deploymentVersion
       _ -> logDebug "Default stream"
 
-createEvent :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2) => Maybe Text -> Text -> EventType -> Service -> EventTriggeredBy -> Maybe p -> Maybe Text -> m (Event p)
-createEvent personId merchantId eventType service triggredBy payload primaryId = do
+createEvent :: (MonadReader r1 m, MonadGuid m, MonadTime m, HasField "getDeploymentVersion" r2 Text, HasField "version" r1 r2) => Maybe Text -> Text -> EventType -> Service -> EventTriggeredBy -> Maybe p -> Maybe Text -> Maybe Text -> m (Event p)
+createEvent personId merchantId eventType service triggredBy payload primaryId merchantOperatingCityId = do
   version <- asks (.version)
   uid <- generateGUID
   now <- getCurrentTime
@@ -62,6 +62,7 @@ createEvent personId merchantId eventType service triggredBy payload primaryId =
             primaryId = primaryId,
             service = service,
             triggeredBy = triggredBy,
-            payload = payload
+            payload = payload,
+            ..
           }
   return ev

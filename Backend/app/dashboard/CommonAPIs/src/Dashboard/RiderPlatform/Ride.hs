@@ -67,7 +67,8 @@ data ShareRideInfoRes = ShareRideInfoRes
     userFirstName :: Maybe Text,
     userLastName :: Maybe Text,
     fromLocation :: Location,
-    toLocation :: Maybe Location
+    toLocation :: Maybe Location,
+    sosStatus :: Maybe SosStatus
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
@@ -115,6 +116,12 @@ data RideStatus
   | INPROGRESS
   | COMPLETED
   | CANCELLED
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+data SosStatus
+  = NotResolved
+  | Pending
+  | Resolved
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data Location = Location

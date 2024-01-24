@@ -17,7 +17,7 @@ import Servant
 import Tools.Auth
 
 data SosDetailsRes = SosDetailsRes
-  { sosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Sos.Sos)
+  { sos :: Kernel.Prelude.Maybe Domain.Types.Sos.Sos
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -28,7 +28,7 @@ data SosReq = SosReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data SosRes = SosRes
-  { id :: Kernel.Types.Id.Id Domain.Types.Sos.Sos
+  { sosId :: Kernel.Types.Id.Id Domain.Types.Sos.Sos
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

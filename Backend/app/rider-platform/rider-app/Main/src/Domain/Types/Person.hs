@@ -18,7 +18,6 @@ module Domain.Types.Person where
 
 import Data.Aeson
 import qualified Domain.Types.Merchant as DMerchant
-import qualified Domain.Types.Merchant.RiderConfig as DRC
 import qualified Domain.Types.MerchantConfig as DMC
 import Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.External.Encryption
@@ -147,7 +146,7 @@ data PersonAPIEntity = PersonAPIEntity
     disability :: Maybe Text,
     gender :: Gender,
     hasCompletedSafetySetup :: Bool,
-    enableLocalPoliceSupport :: Maybe Bool,
+    hasCompletedMockSafetyDrill :: Maybe Bool,
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     followsRide :: Bool
@@ -161,12 +160,11 @@ data PersonCityInformation = PersonCityInformation
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-makePersonAPIEntity :: DecryptedPerson -> Maybe Text -> Maybe DRC.RiderConfig -> PersonAPIEntity
-makePersonAPIEntity Person {..} disability riderConfig =
+makePersonAPIEntity :: DecryptedPerson -> Maybe Text -> PersonAPIEntity
+makePersonAPIEntity Person {..} disability =
   PersonAPIEntity
     { maskedMobileNumber = maskText <$> mobileNumber,
       maskedDeviceToken = maskText <$> deviceToken,
       hasTakenRide = hasTakenValidRide,
-      enableLocalPoliceSupport = (.enableLocalPoliceSupport) <$> riderConfig,
       ..
     }

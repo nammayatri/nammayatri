@@ -1,0 +1,38 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+RiderConfig:
+  tableName: rider_config
+
+  fields:
+    merchantOperatingCityId: Id MerchantOperatingCity
+    enableLocalPoliceSupport: Bool
+    localPoliceNumber: Maybe Text
+    enableSupportForSafety: Bool
+    videoFileSizeUpperLimit: Int
+    timeDiffFromUtc : Seconds
+    enableEmergencyContactAddedMessage: Bool
+    safetyCheckStartTime: Seconds
+    safetyCheckEndTime: Seconds
+    trackingShortUrlPattern: Text
+    appUrl: Text
+
+  constraints:
+    merchantOperatingCityId: PrimaryKey
+
+  default:
+    enableLocalPoliceSupport: "false"
+    enableSupportForSafety: "false"
+    videoFileSizeUpperLimit: "15000000"
+    enableEmergencyContactAddedMessage: "true"
+    appUrl: "'nammayatri.in/link/rider/rmxw'"
+    timeDiffFromUtc: "19800"
+    safetyCheckStartTime: "75600"
+    safetyCheckEndTime: "21600"
+    trackingShortUrlPattern: "'nammayatri.in/t/'"
+
+  queries:
+    findByMerchantOperatingCityId:
+      kvFunction: findOneWithKV
+      where: merchantOperatingCityId

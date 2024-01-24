@@ -40,6 +40,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.Sos as DSos
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -55,6 +56,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCReason
 import qualified Storage.Queries.Person as QP
@@ -122,6 +124,7 @@ shareRideInfo merchantId rideId = do
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
         DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
         _ -> Nothing
+  sosDetails <- CQSos.findByRideIdAndStatus ride.id [DSos.Pending, DSos.Resolved]
   return $
     Common.ShareRideInfoRes
       { id = cast ride.id,
@@ -139,8 +142,15 @@ shareRideInfo merchantId rideId = do
         userFirstName = person.firstName,
         userLastName = person.lastName,
         fromLocation = mkCommonBookingLocation booking.fromLocation,
-        toLocation = mbtoLocation
+        toLocation = mbtoLocation,
+        sosStatus = castSosStatus . (.status) <$> sosDetails
       }
+
+castSosStatus :: DSos.SosStatus -> Common.SosStatus
+castSosStatus = \case
+  DSos.Pending -> Common.Pending
+  DSos.Resolved -> Common.Resolved
+  DSos.NotResolved -> Common.NotResolved
 
 ---------------------------------------------------------------------
 

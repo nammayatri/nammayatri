@@ -15,8 +15,7 @@
 module Storage.CachedQueries.Sos
   ( findByRideIdAndStatus,
     clearCache,
-    findByRideIdAndStatusList,
-    clearCacheList,
+    cacheSosIdByRideId,
   )
 where
 
@@ -28,38 +27,20 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Sos as Queries
 
-findByRideIdAndStatus :: (CacheFlow m r, EsqDBFlow m r) => Id Ride -> DSos.SosStatus -> m (Maybe DSos.Sos)
+findByRideIdAndStatus :: (CacheFlow m r, EsqDBFlow m r) => Id Ride -> [DSos.SosStatus] -> m (Maybe DSos.Sos)
 findByRideIdAndStatus rideId status = do
-  Hedis.safeGet (makeIdKey rideId status) >>= \case
+  Hedis.safeGet (makeIdKey rideId) >>= \case
     Just a -> pure a
-    Nothing -> flip whenJust (cacheSosIdByRideIdAndStatus rideId status) /=<< Queries.findByRideIdAndStatus rideId status
+    Nothing -> flip whenJust (cacheSosIdByRideId rideId) /=<< (listToMaybe <$> Queries.findByRideIdinStatusList (Just 1) (Just 0) status rideId)
 
-cacheSosIdByRideIdAndStatus :: (CacheFlow m r) => Id Ride -> DSos.SosStatus -> DSos.Sos -> m ()
-cacheSosIdByRideIdAndStatus rideId status sos = do
+cacheSosIdByRideId :: (CacheFlow m r) => Id Ride -> DSos.Sos -> m ()
+cacheSosIdByRideId rideId sos = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeIdKey rideId status
+  let idKey = makeIdKey rideId
   Hedis.setExp idKey sos expTime
 
-makeIdKey :: Id Ride -> DSos.SosStatus -> Text
-makeIdKey rideId status = "CachedQueries:Sos:RideId-" <> rideId.getId <> "Status-" <> show status
+makeIdKey :: Id Ride -> Text
+makeIdKey rideId = "CachedQueries:Sos:RideId-" <> rideId.getId
 
-clearCache :: (CacheFlow m r) => Id Ride -> DSos.SosStatus -> m ()
-clearCache rideId status = Hedis.del $ makeIdKey rideId status
-
-findByRideIdAndStatusList :: (CacheFlow m r, EsqDBFlow m r) => [DSos.SosStatus] -> Id Ride -> m (Maybe DSos.Sos)
-findByRideIdAndStatusList status rideId = do
-  Hedis.safeGet (makeIdKeyList rideId status) >>= \case
-    Just a -> pure a
-    Nothing -> flip whenJust (cacheSosIdByRideIdAndStatusList rideId status) /=<< Queries.findByRideIdinStatusList status rideId
-
-cacheSosIdByRideIdAndStatusList :: (CacheFlow m r) => Id Ride -> [DSos.SosStatus] -> DSos.Sos -> m ()
-cacheSosIdByRideIdAndStatusList rideId status sos = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  let idKey = makeIdKeyList rideId status
-  Hedis.setExp idKey sos expTime
-
-makeIdKeyList :: Id Ride -> [DSos.SosStatus] -> Text
-makeIdKeyList rideId status = "CachedQueries:Sos:RideId-" <> rideId.getId <> "Status-" <> show status
-
-clearCacheList :: (CacheFlow m r) => Id Ride -> [DSos.SosStatus] -> m ()
-clearCacheList rideId status = Hedis.del $ makeIdKeyList rideId status
+clearCache :: (CacheFlow m r) => Id Ride -> m ()
+clearCache rideId = Hedis.del $ makeIdKey rideId
