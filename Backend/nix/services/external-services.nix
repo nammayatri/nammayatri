@@ -1,5 +1,8 @@
 { inputs, inputs', self' }:
 { lib, pkgs, ... }:
+let
+  ports = import ./ports.nix;
+in
 {
   services = {
     postgres-with-replica.db-primary = {
@@ -34,37 +37,59 @@
           CREATE USER repl_user replication;
           CREATE USER atlas WITH PASSWORD 'atlas';
         '';
-        port = 5434;
+        port = ports.db-primary;
       };
-      extraReplicaDBSettings.port = 5435;
+      extraReplicaDBSettings = {
+        listen_addresses = "127.0.0.1";
+        port = ports.db-primary-replica;
+      };
     };
 
-    redis."redis".enable = true;
+    redis."redis" = {
+      enable = true;
+      port = ports.redis;
+    };
 
-    redis-cluster."cluster1".enable = true;
+    redis-cluster."cluster1" = {
+      enable = true;
+      nodes = {
+        n1 = { port = ports.redis-cluster-n1; };
+        n2 = { port = ports.redis-cluster-n2; };
+        n3 = { port = ports.redis-cluster-n3; };
+        n4 = { port = ports.redis-cluster-n4; };
+        n5 = { port = ports.redis-cluster-n5; };
+        n6 = { port = ports.redis-cluster-n6; };
+      };
+    };
 
-    zookeeper."zookeeper".enable = true;
+    zookeeper."zookeeper" = {
+      enable = true;
+      port = ports.zookeeper;
+    };
 
     apache-kafka."kafka" = {
       enable = true;
-      port = 29092;
+      port = ports.kafka;
       settings = {
         # Since the available brokers are only 1
         "offsets.topic.replication.factor" = 1;
-        "zookeeper.connect" = [ "localhost:2181" ];
+        "zookeeper.connect" = [ "localhost:${builtins.toString ports.zookeeper}" ];
       };
     };
 
 
-    nginx."nginx".enable = true;
+    nginx."nginx" = {
+      enable = true;
+      port = ports.nginx;
+    };
   };
   # kafka should start only after zookeeper is healthy
   settings.processes.kafka.depends_on."zookeeper".condition = "process_healthy";
 
   services.passetto = {
     enable = true;
-    port = 8021;
-    extraDbSettings.port = 5422;
+    port = ports.passetto-service;
+    extraDbSettings.port = ports.passetto-db;
     # FIXME: https://github.com/juspay/passetto/issues/2
     package = lib.getBin
       (if pkgs.stdenv.isDarwin
