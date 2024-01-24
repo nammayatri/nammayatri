@@ -1,11 +1,15 @@
 module BecknV2.FRFS.Utils where
 
-import qualified BecknV2.FRFS.Types as Spec
+import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.FRFS.Types as Spec hiding (Domain)
+import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Kernel.Prelude
 import Kernel.Types.Common
+import qualified Kernel.Types.Error as Error
+import Kernel.Utils.Error
 
 tfDescriptor :: Maybe Text -> Maybe Text -> Maybe Spec.Descriptor
 tfDescriptor mCode mName = do
@@ -101,3 +105,34 @@ parseGPS gps = do
 
 getUTCTime :: Text -> Maybe UTCTime
 getUTCTime txt = parseTimeM True defaultTimeLocale "%Y-%m-%dT%H:%M:%S%QZ" (T.unpack txt)
+
+validateContext :: MonadFlow m => Spec.Action -> Spec.Context -> m ()
+validateContext action context = do
+  validateDomain Spec.FRFS context
+  validateContextCommons action context
+
+validateDomain :: MonadFlow m => Spec.Domain -> Spec.Context -> m ()
+validateDomain expectedDomain context = do
+  domainText <- context.contextDomain & fromMaybeM (Error.InvalidRequest "Missing contextDomain")
+  domain <- A.decode (A.encode domainText) & fromMaybeM (Error.InvalidRequest $ "Error in parsing contextDomain: " <> domainText)
+  unless (domain == expectedDomain) $
+    throwError Error.InvalidDomain
+
+validateContextCommons :: MonadFlow m => Spec.Action -> Spec.Context -> m ()
+validateContextCommons expectedAction context = do
+  validateAction expectedAction context
+  validateCoreVersion context
+
+validateAction :: MonadFlow m => Spec.Action -> Spec.Context -> m ()
+validateAction expectedAction context = do
+  actionText <- context.contextAction & fromMaybeM (Error.InvalidRequest "Missing contextAction")
+  action <- A.decode (A.encode actionText) & fromMaybeM (Error.InvalidRequest $ "Error in parsing contextAction: " <> actionText)
+  unless (action == expectedAction) $
+    throwError Error.InvalidAction
+
+validateCoreVersion :: MonadFlow m => Spec.Context -> m ()
+validateCoreVersion context = do
+  let supportedVersion = "2.0.0"
+  version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
+  unless (version == supportedVersion) $
+    throwError Error.UnsupportedCoreVer

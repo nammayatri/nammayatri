@@ -15,6 +15,7 @@
 module Beckn.ACL.FRFS.OnInit where
 
 import qualified Beckn.ACL.FRFS.Utils as Utils
+import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnInit as Domain
@@ -27,7 +28,7 @@ buildOnInitReq ::
   Spec.OnInitReq ->
   m Domain.DOnInit
 buildOnInitReq onInitReq = do
-  -- validate context
+  Utils.validateContext Spec.ON_INIT onInitReq.onInitReqContext
   transactionId <- onInitReq.onInitReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   messageId <- onInitReq.onInitReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
 
