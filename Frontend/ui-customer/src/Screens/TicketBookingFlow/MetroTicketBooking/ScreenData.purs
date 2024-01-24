@@ -8,6 +8,8 @@ initData = {
   data: {
     ticketType : ST.ONE_WAY
   , ticketCount : 1
+  , srcLoc : ""
+  , destLoc : ""
   },
   props: {
     isLimitExceeded : false

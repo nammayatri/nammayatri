@@ -453,7 +453,10 @@ locationTagsView state push globalProps =
     
 predictionsView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
 predictionsView push state globalProps = let 
-  viewVisibility = boolToVisibility $ not $ DA.null state.data.locationList
+  viewVisibility = boolToVisibility $ 
+    case state.props.actionType of 
+      MetroStationSelectionAction -> not $ DA.null state.data.updatedMetroStations
+      _ ->  not $ DA.null state.data.locationList
   headerText = spy "Header Text ::" $ if state.props.isAutoComplete then "Search Results" 
     else if state.props.actionType == MetroStationSelectionAction then "Metro Stations"
     else 
@@ -476,7 +479,7 @@ predictionsView push state globalProps = let
               , color Color.black700
               , margin $ MarginVertical 14 8
               ] <> FontStyle.body3 TypoGraphy
-          , predictionArrayView if state.props.actionType == MetroStationSelectionAction then metroStationsArray state.data.updatedMetroStations else state.data.locationList
+          , predictionArrayView $ metroStationsArray state.data.updatedMetroStations --if state.props.actionType == MetroStationSelectionAction then metroStationsArray state.data.updatedMetroStations else state.data.locationList
           , footerView
         ]
       ]
@@ -528,6 +531,7 @@ predictionsView push state globalProps = let
               , recencyDate : MB.Nothing
               , locationScore : MB.Nothing
               }) metroStations
+
     locationListItemView :: LocationListItemState -> Int -> PrestoDOM (Effect Unit) w
     locationListItemView item index = let 
       enableErrorFeedback = 
@@ -594,7 +598,10 @@ saveFavCardView push state globalProps =
 
 findPlacesIllustration :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> PrestoDOM (Effect Unit) w
 findPlacesIllustration push state = let 
-  viewVisibility = boolToVisibility $ DA.null state.data.locationList
+  viewVisibility = boolToVisibility $ 
+    case state.props.actionType of 
+        MetroStationSelectionAction -> DA.null state.data.updatedMetroStations
+        _ -> DA.null state.data.locationList
   in
   linearLayout
     [ height MATCH_PARENT

@@ -62,6 +62,7 @@ screen initialState =
   { initialState
   , view
   , name : "TicketBookingScreen"
+  -- , globalEvents : [if initialState.props.actionType == ST.ZooTicketToPaymentStatusEntry then getPlaceDataEvent else  pure (pure unit)]
   , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
@@ -72,7 +73,10 @@ screen initialState =
   where
   getPlaceDataEvent push = do
     void $ runEffectFn1 consumeBP unit
-    void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.shortOrderId  5 3000.0 initialState push PaymentStatusAction
+    if initialState.props.actionType == ST.ZooTicketToPaymentStatusEntry then
+      void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.shortOrderId  5 3000.0 initialState push PaymentStatusAction
+    else
+      pure unit
     pure $ pure unit
 --------------------------------------------------------------------------------------------
 

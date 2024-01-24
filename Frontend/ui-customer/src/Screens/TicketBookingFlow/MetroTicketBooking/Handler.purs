@@ -19,8 +19,12 @@ metroTicketBookingScreen = do
         GoBack updatedState -> do
             App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN_FROM_METRO_TICKET updatedState)
         UpdateAction updatedState -> do
-            App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH updatedState)
+            App.BackT $ App.NoBack <$> (pure $ METRO_FARE_AND_PAYMENT updatedState)
         MyMetroTicketScreen updatedState -> do
             App.BackT $ App.NoBack <$> (pure $ GO_TO_MY_METRO_TICKET_SCREEN updatedState)
         GoToMetroRouteMap -> do
             App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_ROUTE_MAP)
+        SelectSrcDest updatedState -> do
+            App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH updatedState)
+        -- SelectDest updatedState -> do
+        --     App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH updatedState)

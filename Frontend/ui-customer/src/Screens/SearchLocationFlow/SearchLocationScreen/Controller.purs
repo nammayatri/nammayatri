@@ -43,6 +43,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Mobility.Prelude
+import Components.LocationListItem.Controller ( dummyAddress)
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -101,15 +102,24 @@ eval (LocationListItemAC savedLocations (LocationListItemController.FavClick ite
     else exit $ SaveFavLoc state{data{saveFavouriteCard{ address = item.description , selectedItem = item, tag = "", tagExists = false, isBtnActive = false }}} savedLocations
 
 eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do 
-  void $ pure $ hideKeyboardOnNavigation true
-  MB.maybe (continue state) (\currTextField -> predictionClicked currTextField ) state.props.focussedTextField
-  where 
-    predictionClicked currTextField = do 
-      let updatedLoc = {placeId : item.placeId, address : item.description, lat : item.lat, lon : item.lon, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress, metroInfo : MB.Nothing}
-          newState = if currTextField == SearchLocPickup then 
-                      state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false }} 
-                      else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false} }
+  void $ pure $ spy "LocationListItemAC"  item
+  if state.props.actionType == MetroStationSelectionAction then do
+      let metroLocInfo = {stationName: item.title, stationCode : "080" }
+      let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : MB.Nothing, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo}
+          newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
+                          state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false }} 
+                          else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false} }
       updateAndExit newState $ PredictionClicked item newState
+    else do
+      void $ pure $ hideKeyboardOnNavigation true
+      MB.maybe (continue state) (\currTextField -> predictionClicked currTextField ) state.props.focussedTextField
+      where 
+        predictionClicked currTextField = do 
+          let updatedLoc = {placeId : item.placeId, address : item.description, lat : item.lat, lon : item.lon, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress, metroInfo : MB.Nothing}
+              newState = if currTextField == SearchLocPickup then 
+                          state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false }} 
+                          else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false} }
+          updateAndExit newState $ PredictionClicked item newState
 
 eval (InputViewAC globalProps (InputViewController.ClearTextField textField)) state = do 
   pure $ setText (getNewIDWithTag textField) $ ""
@@ -147,11 +157,14 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
         "SearchLocDrop" -> MB.Just SearchLocDrop
         _ -> MB.Nothing
 
-eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state =   
-  autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
+eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state = do
+  if state.props.actionType == MetroStationSelectionAction then continue state
+    else    
+      autoCompleteAPI state value $ if pickUpchanged then SearchLocPickup else SearchLocDrop
 
 eval (InputViewAC _ (InputViewController.InputChanged value)) state = do 
   if state.props.actionType == MetroStationSelectionAction && not (STR.null value) then do
+    void $ pure $ spy "InputChanged" value
     let newArray = findStationWithPrefix value state.data.metroStations
         canClearText = STR.length value > 2
     continueWithCmd state{ data { updatedMetroStations = newArray},props { canClearText = canClearText, isAutoComplete = canClearText} } [ do
@@ -166,7 +179,7 @@ eval (InputViewAC _ (InputViewController.InputChanged value)) state = do
       ]
 
 eval (UpdateLocAndLatLong recentSearches lat lng) state = do 
-  let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "Current Location" , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing}
+  let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "" , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing}
   continue state{ data 
                     { srcLoc = MB.Just updatedLoc
                     , currentLoc = MB.Just updatedLoc

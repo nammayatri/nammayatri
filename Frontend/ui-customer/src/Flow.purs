@@ -2774,10 +2774,13 @@ metroTicketBookingFlow = do
   flow <- UI.metroTicketBookingScreen
   case flow of
     GO_TO_HOME_SCREEN_FROM_METRO_TICKET state -> homeScreenFlow
-    GO_TO_METRO_STATION_SEARCH state -> metroTicketPaymentFlow
-      -- modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-      -- modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN}})
-      -- searchLocationFlow
+    GO_TO_METRO_STATION_SEARCH state -> do
+      -- let updatedSrcLoc = {placeId : Nothing, city : Nothing, addressComponents : dummyAddress , address : state.data.srcLoc , lat : Nothing , lon : Nothing, metroInfo : Nothing}
+      --     updatedDestLoc = {placeId : Nothing, city : Nothing, addressComponents : dummyAddress , address : state.data.destLoc , lat : Nothing , lon : Nothing, metroInfo : Nothing}
+      modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
+      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN}})--, srcLoc = Just updatedSrcLoc, destLoc = Just updatedDestLoc }})
+      searchLocationFlow
+    METRO_FARE_AND_PAYMENT state -> metroTicketPaymentFlow
     GO_TO_MY_METRO_TICKET_SCREEN state -> metroTicketDetailsFlow
     GO_TO_METRO_ROUTE_MAP -> do
       modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
@@ -3270,6 +3273,20 @@ predictionClickedFlow prediction state = do
       (pure unit) 
       (\ currTextField -> onPredictionClicked placeLat placeLon currTextField prediction) 
       state.props.focussedTextField
+    else if state.props.actionType == MetroStationSelectionAction then do
+      if isJust state.data.srcLoc && isJust state.data.destLoc then do
+        -- TicketBookingScreenStateType
+        let src = maybe "" (\(loc) -> loc.address) state.data.srcLoc
+            dest = maybe "" (\(loc) -> loc.address) state.data.destLoc
+        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ srcLoc = src, destLoc = dest }})
+        metroTicketBookingFlow
+      else do
+        void $ pure $ spy "else do" state
+        modifyScreenState 
+          $ SearchLocationScreenStateType 
+              (\slsScreen -> slsScreen{data { updatedMetroStations = state.data.metroStations }})
+        -- modifyScreenState $ SearchLocationScreenStateType (\state -> state{data{ updatedMetroStations = state.data.metroStations}})
+        searchLocationFlow
     else do 
       searchLocationFlow
 

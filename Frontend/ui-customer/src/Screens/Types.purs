@@ -2060,7 +2060,7 @@ type LocationInfo =
     address :: String ,
     addressComponents :: Address ,
     city :: Maybe City,
-    metroInfo :: Maybe MetroStation
+    metroInfo :: Maybe Station
   }
 
 type MetroStation = {
@@ -2082,6 +2082,8 @@ type MetroTicketBookingScreenState = {
 type MetroTicketBookingScreenData = {
   ticketType :: TicketType
   , ticketCount :: Int
+  , srcLoc :: String
+  , destLoc :: String
 }
 
 type MetroTicketBookingScreenProps = {

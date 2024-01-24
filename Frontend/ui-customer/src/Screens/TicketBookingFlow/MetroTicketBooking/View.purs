@@ -25,6 +25,7 @@ import Animation.Config
 import JBridge as JB
 import Data.Array
 import Font.Size as FontSize
+import Data.Maybe (maybe)
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
@@ -365,7 +366,7 @@ srcTextView push state =
       textView $ 
         [ height MATCH_PARENT
         , width WRAP_CONTENT
-        , text "Starting From?"
+        , text state.data.srcLoc  -- $ maybe "Starting From?" (_.stationName) state.data.srcLoc 
         , color Color.black800
         , gravity CENTER_VERTICAL
         , lineHeight "28"
@@ -407,7 +408,7 @@ destTextView push state =
       textView $ 
         [ height MATCH_PARENT
         , width WRAP_CONTENT
-        , text "Where to?"
+        , text state.data.destLoc  -- $ maybe "Where to?" (_.stationName) state.data.destLoc 
         , color Color.black800
         , gravity CENTER_VERTICAL
         , lineHeight "28"

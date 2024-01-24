@@ -40,6 +40,8 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
                   | MyMetroTicketScreen ST.MetroTicketBookingScreenState
                   | GoToMetroRouteMap
+                  | SelectSrcDest ST.MetroTicketBookingScreenState
+                  -- | SelectDest ST.MetroTicketBookingScreenState
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
@@ -65,8 +67,8 @@ eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSel
 
 eval (ChangeTicketTab ticketType) state = continue state { data {ticketType = ticketType }}
 
-eval SelectSource state = updateAndExit state $ UpdateAction state
+eval SelectSource state = updateAndExit state $ SelectSrcDest state
 
-eval SelectDestination state = updateAndExit state $ UpdateAction state
+eval SelectDestination state = updateAndExit state $ SelectSrcDest state
 
 eval _ state = continue state

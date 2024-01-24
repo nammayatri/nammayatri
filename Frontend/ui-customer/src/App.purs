@@ -126,7 +126,6 @@ newtype GlobalState = GlobalState {
   , searchLocationScreen :: SearchLocationScreenState
   , globalProps :: GlobalProps
   , metroTicketBookingScreen :: MetroTicketBookingScreenState
-  , metroMyTicketsScreen :: MetroMyTicketsScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -165,7 +164,6 @@ defaultGlobalState = GlobalState {
   , searchLocationScreen : SearchLocationScreenData.initData
   , globalProps : defaultGlobalProps
   , metroTicketBookingScreen : MetroTicketBookingScreenData.initData
-  , metroMyTicketsScreen : MetroMyTicketsScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -300,6 +298,7 @@ data METRO_MY_TICKETS_SCREEN_OUTPUT = METRO_MY_TICKETS_SCREEN_OUTPUT_NO_OUTPUT
 
 data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicketBookingScreenState
                                  | GO_TO_METRO_STATION_SEARCH MetroTicketBookingScreenState 
+                                 | METRO_FARE_AND_PAYMENT MetroTicketBookingScreenState
                                  | GO_TO_MY_METRO_TICKET_SCREEN MetroTicketBookingScreenState
                                  | GO_TO_METRO_ROUTE_MAP
 data ScreenType =
@@ -333,3 +332,4 @@ data ScreenType =
   | MetroTicketDetailsScreenStateType (MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState)
   | MetroMyTicketsScreenStateType (MetroMyTicketsScreenState -> MetroMyTicketsScreenState)
   | TicketStatusScreenStateType (TicketStatusScreenState -> TicketStatusScreenState)
+  | MetroTicketBookingScreenStateType (MetroTicketBookingScreenState -> MetroTicketBookingScreenState)
