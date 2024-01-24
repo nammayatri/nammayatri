@@ -26,8 +26,7 @@ import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..), Fee
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), maybe, fromMaybe, isJust)
-import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC)
-import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion, isInvalidUrl)
+import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC, isPreviousVersion, isInvalidUrl, getNewIDWithTag)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
 import Helpers.Utils (decodeError, getTime)
@@ -720,10 +719,10 @@ drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddr
             case route of
                 Just (Route routes) ->
                     if (routes.distance <= 50000) then do
-                      lift $ lift $ liftFlow $ drawRoute (walkCoordinates routes.points) "LineString" "#323643" true markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation
+                      lift $ lift $ liftFlow $ drawRoute (walkCoordinates routes.points) "LineString" "#323643" true markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation (getNewIDWithTag "CustomerHomeScreen")
                       pure route
                     else do
-                      lift $ lift $ liftFlow $ drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation
+                      lift $ lift $ liftFlow $ drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation (getNewIDWithTag "CustomerHomeScreen")
                       pure route 
                 Nothing -> pure route
 

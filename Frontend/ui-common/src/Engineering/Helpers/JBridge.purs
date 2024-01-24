@@ -53,6 +53,7 @@ import Foreign.Class (encode)
 import Effect.Aff (makeAff, nonCanceler, Fiber,  launchAff)
 import Prelude((<<<))
 import Effect.Class (liftEffect)
+import Constants.Configs (getPolylineAnimationConfig)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -114,7 +115,6 @@ foreign import renderBase64Image :: String -> String -> Boolean -> String -> Eff
 foreign import storeCallBackUploadMultiPartData :: forall action. EffectFn2 (action -> Effect Unit)  (String -> String -> action) Unit
 foreign import setScaleType :: String -> String -> String -> Effect Unit
 foreign import copyToClipboard :: String -> Unit
-foreign import drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> Effect Unit
 foreign import updateRouteMarker :: UpdateRouteMarker -> Effect Unit
 foreign import isCoordOnPath :: Locations -> Number -> Number -> Int -> Effect IsLocationOnPath
 foreign import updateRoute :: EffectFn1 UpdateRouteConfig Unit
@@ -271,8 +271,17 @@ foreign import timePickerImpl :: forall action. EffectFn2 (action -> Effect Unit
 
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 
+foreign import drawRouteV2 :: DrawRouteConfig -> Effect Unit 
+
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
+
+
+drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> String -> Effect Unit
+drawRoute locations style routeColor isActual startMarker endMarker routeWidth routeType startMarkerLabel endMarkerLabel mapRouteConfig pureScriptID = do
+  let routeConfig = mkRouteConfig locations startMarker endMarker routeType startMarkerLabel endMarkerLabel style isActual mapRouteConfig
+      drawRouteConfig = mkDrawRouteConfig routeConfig pureScriptID
+  drawRouteV2 drawRouteConfig
 
 getCurrentPositionWithTimeout :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Int -> Boolean -> Effect Unit
 getCurrentPositionWithTimeout = runEffectFn4 getCurrentPositionWithTimeoutImpl
@@ -486,6 +495,7 @@ type UpdateRouteMarker = {
   , sourceIcon :: String
   , destIcon :: String
   , mapRouteConfig :: MapRouteConfig
+  , pureScriptID :: String
 }
 
 type Suggestions = Array
@@ -507,6 +517,7 @@ type UpdateRouteConfig = {
   , srcMarker :: String
   , specialLocation :: MapRouteConfig
   , zoomLevel :: Number
+  , pureScriptID :: String
 }
 
 updateRouteConfig :: UpdateRouteConfig
@@ -528,6 +539,7 @@ updateRouteConfig = {
       } 
   }
   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+  , pureScriptID : ""
 }
 
 -- type Point = Array Number
@@ -586,3 +598,73 @@ showDatePicker push action= do
   liftEffect $ push $ action dateResp year month day timeResp hour minute
   
   
+
+---------- ################################### DRAW ROUTE CONFIG ################################### ----------
+
+type DrawRouteConfig = {
+  routes :: {
+    normalRoute :: RouteConfig
+  },
+  pureScriptID :: String
+}
+
+type RouteConfig = {
+  locations :: Locations,
+  style :: String,
+  routeColor :: String,
+  isActual :: Boolean,
+  startMarker :: String,
+  endMarker :: String,
+  routeWidth :: Int,
+  routeType :: String,
+  startMarkerLabel :: String,
+  endMarkerLabel :: String,
+  mapRouteConfig :: MapRouteConfig
+}
+
+mkRouteConfig :: Locations -> String -> String -> String -> String -> String -> String -> Boolean -> MapRouteConfig -> RouteConfig
+mkRouteConfig normalRoute startMarker endMarker routeType startMarkerLabel endMarkerLabel style isActual mapRouteConfig = 
+  routeConfig{
+    locations = normalRoute,
+    startMarker = startMarker,
+    endMarker = endMarker,
+    routeType = routeType,
+    startMarkerLabel = startMarkerLabel,
+    endMarkerLabel = endMarkerLabel,
+    style = style,
+    isActual = isActual,
+    mapRouteConfig = mapRouteConfig
+  }
+
+mkDrawRouteConfig :: RouteConfig -> String -> DrawRouteConfig
+mkDrawRouteConfig normalRouteConfig pureScriptID = 
+  { routes : {
+      normalRoute : normalRouteConfig
+    },
+    pureScriptID : pureScriptID
+  }
+
+
+routeConfig :: RouteConfig 
+routeConfig = {
+  locations : {points: []},
+  style : "LineString",
+  routeColor : "#323643",
+  isActual : true,
+  startMarker : "",
+  endMarker : "",
+  routeWidth : 8,
+  routeType : "",
+  startMarkerLabel : "",
+  endMarkerLabel : "",
+  mapRouteConfig : defaultMapRouteConfig
+}
+
+defaultMapRouteConfig :: MapRouteConfig
+defaultMapRouteConfig = {
+  sourceSpecialTagIcon : "",
+  destSpecialTagIcon : "",
+  vehicleSizeTagIcon : 90,
+  isAnimation : false,
+  polylineAnimationConfig : getPolylineAnimationConfig
+}

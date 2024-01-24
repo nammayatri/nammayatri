@@ -1245,14 +1245,15 @@ specialLocationConfig srcIcon destIcon isAnim animConfig = {
   , polylineAnimationConfig : animConfig
 }
 
-updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.MapRouteConfig -> JB.UpdateRouteMarker
-updateRouteMarkerConfig locations sourceName destName sourceIcon destIcon mapRouteConfig = {
+updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.MapRouteConfig -> String -> JB.UpdateRouteMarker
+updateRouteMarkerConfig locations sourceName destName sourceIcon destIcon mapRouteConfig pureScriptID = {
     locations : locations
   , sourceName : sourceName
   , destName : destName
   , sourceIcon : sourceIcon
   , destIcon : destIcon
   , mapRouteConfig : mapRouteConfig
+  , pureScriptID : pureScriptID
 }
 
 setTipViewData :: Encode TipViewData => TipViewData -> Effect Unit
