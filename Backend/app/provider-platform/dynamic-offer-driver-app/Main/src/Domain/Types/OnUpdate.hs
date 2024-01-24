@@ -36,6 +36,7 @@ data OnUpdateBuildReq
   | EstimateRepetitionBuildReq DEstimateRepetitionReq
   | NewMessageBuildReq DNewMessageReq
   | SafetyAlertBuildReq DSafetyAlertReq
+  | StopArrivedBuildReq DStopArrivedBuildReq
 
 data DRideAssignedReq = DRideAssignedReq
   { driver :: SP.Person,
@@ -45,6 +46,11 @@ data DRideAssignedReq = DRideAssignedReq
     image :: Maybe Text,
     isDriverBirthDay :: Bool,
     isFreeRide :: Bool
+  }
+
+data DStopArrivedBuildReq = DStopArrivedBuildReq
+  { ride :: DRide.Ride,
+    booking :: DRB.Booking
   }
 
 data DRideStartedReq = DRideStartedReq

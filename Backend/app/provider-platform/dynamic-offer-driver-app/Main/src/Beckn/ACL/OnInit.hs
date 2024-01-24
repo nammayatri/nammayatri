@@ -19,7 +19,6 @@ import qualified Beckn.OnDemand.Utils.Common as Utils hiding (mkStops)
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import qualified BecknV2.OnDemand.Types as Spec
 import Domain.Action.Beckn.Init as DInit
-import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DL
 import Kernel.Prelude
@@ -34,7 +33,7 @@ mkOnInitMessage res = do
       fareDecimalValue = fromIntegral rb.estimatedFare
       currency = "INR"
       breakup_ =
-        mkBreakupList (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
+        mkFareParamsBreakups (OnInit.BreakupItemPrice currency . fromIntegral) OnInit.BreakupItem rb.fareParams
           & filter (Common.filterRequiredBreakups $ DFParams.getFareParametersType rb.fareParams) -- TODO: Remove after roll out
   OnInit.OnInitMessage
     { order =
@@ -59,7 +58,7 @@ mkOnInitMessage res = do
             fulfillment =
               OnInit.FulfillmentInfo
                 { id = res.booking.quoteId,
-                  _type = buildFulfillmentType res.booking.bookingType,
+                  _type = Common.mkFulfillmentType res.booking.tripCategory,
                   start =
                     OnInit.StartInfo
                       { location =
@@ -74,18 +73,20 @@ mkOnInitMessage res = do
                         authorization = Nothing
                       },
                   end =
-                    Just
-                      OnInit.StopInfo
-                        { location =
-                            OnInit.Location
-                              { gps =
-                                  OnInit.Gps
-                                    { lat = res.booking.toLocation.lat,
-                                      lon = res.booking.toLocation.lon
-                                    },
-                                address = castAddress res.booking.toLocation.address
-                              }
-                        },
+                    ( \toLocation ->
+                        OnInit.StopInfo
+                          { location =
+                              OnInit.Location
+                                { gps =
+                                    OnInit.Gps
+                                      { lat = toLocation.lat,
+                                        lon = toLocation.lon
+                                      },
+                                  address = castAddress toLocation.address
+                                }
+                          }
+                    )
+                      <$> res.booking.toLocation,
                   vehicle =
                     OnInit.Vehicle
                       { category = vehicleVariant
@@ -134,9 +135,6 @@ mkOnInitMessage res = do
     }
   where
     castAddress DL.LocationAddress {..} = OnInit.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
-    buildFulfillmentType = \case
-      DRB.NormalBooking -> OnInit.RIDE
-      DRB.SpecialZoneBooking -> OnInit.RIDE_OTP
 
 mkOnInitMessageV2 :: DInit.InitRes -> Spec.ConfirmReqMessage
 mkOnInitMessageV2 res =
@@ -169,14 +167,10 @@ tfFulfillments res =
           fulfillmentState = Nothing,
           fulfillmentStops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation Nothing,
           fulfillmentTags = Nothing,
-          fulfillmentType = Just $ mkFulfillmentType res.booking.bookingType,
+          fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
           fulfillmentVehicle = tfVehicle res
         }
     ]
-  where
-    mkFulfillmentType = \case
-      DRB.NormalBooking -> "RIDE"
-      DRB.SpecialZoneBooking -> "RIDE_OTP"
 
 tfItems :: DInit.InitRes -> Maybe [Spec.Item]
 tfItems res =
@@ -275,8 +269,7 @@ tfQuotationPrice res =
 mkQuotationBreakup :: DInit.InitRes -> Maybe [Spec.QuotationBreakupInner]
 mkQuotationBreakup res =
   let rb = res.booking
-      -- TODO::Beckn, breakupTitles are not according to spec.
-      fareParams = mkBreakupList mkPrice mkQuotationBreakupInner rb.fareParams
+      fareParams = mkFareParamsBreakups mkPrice mkQuotationBreakupInner rb.fareParams
    in Just $ filter (filterRequiredBreakups $ DFParams.getFareParametersType rb.fareParams) fareParams -- TODO: Remove after roll out
   where
     mkPrice money =
@@ -320,6 +313,17 @@ mkQuotationBreakup res =
             || breakup.quotationBreakupInnerTitle == Just "CUSTOMER_SELECTED_FARE"
             || breakup.quotationBreakupInnerTitle == Just "TOTAL_FARE"
             || breakup.quotationBreakupInnerTitle == Just "NIGHT_SHIFT_CHARGE"
+            || breakup.quotationBreakupInnerTitle == Just "EXTRA_TIME_FARE"
+        DFParams.Rental ->
+          breakup.quotationBreakupInnerTitle == Just "BASE_FARE"
+            || breakup.quotationBreakupInnerTitle == Just "SERVICE_CHARGE"
+            || breakup.quotationBreakupInnerTitle == Just "DEAD_KILOMETER_FARE"
+            || breakup.quotationBreakupInnerTitle == Just "EXTRA_DISTANCE_FARE"
+            || breakup.quotationBreakupInnerTitle == Just "TIME_BASED_FARE"
+            || breakup.quotationBreakupInnerTitle == Just "DRIVER_SELECTED_FARE"
+            || breakup.quotationBreakupInnerTitle == Just "CUSTOMER_SELECTED_FARE"
+            || breakup.quotationBreakupInnerTitle == Just "TOTAL_FARE"
+            || breakup.quotationBreakupInnerTitle == Just "WAITING_OR_PICKUP_CHARGES"
             || breakup.quotationBreakupInnerTitle == Just "EXTRA_TIME_FARE"
 
 tfVehicle :: DInit.InitRes -> Maybe Spec.Vehicle

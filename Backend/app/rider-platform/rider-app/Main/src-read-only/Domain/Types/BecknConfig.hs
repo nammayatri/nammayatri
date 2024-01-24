@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.BecknConfig where
 
@@ -8,6 +9,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Servant.Client.Core
+import qualified Tools.Beam.UtilsTH
 
 data BecknConfig = BecknConfig
   { domain :: Kernel.Prelude.Text,

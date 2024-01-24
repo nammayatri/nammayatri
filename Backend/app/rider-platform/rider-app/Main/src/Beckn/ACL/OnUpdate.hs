@@ -240,6 +240,11 @@ parseEvent _ (OnUpdate.SafetyAlert saEvent) = do
         reason = deviation,
         code = "deviation"
       }
+parseEvent _ (OnUpdate.StopArrived saEvent) = do
+  return $
+    DOnUpdate.StopArrivedReq
+      { bppRideId = Id saEvent.fulfillment.id
+      }
 
 parseEventV2 :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
 parseEventV2 transactionId order = do
@@ -261,6 +266,7 @@ parseEventV2 transactionId order = do
     "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
     "NEW_MESSAGE" -> parseNewMessageEvent order
     "SAFETY_ALERT" -> parseSafetyAlertEvent order
+    "STOP_ARRIVED" -> parseStopArrivedEvent order
     _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseRideAssignedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -420,4 +426,12 @@ parseSafetyAlertEvent order = do
         bppRideId = Id bppRideId,
         reason = deviation,
         code = "deviation"
+      }
+
+parseStopArrivedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseStopArrivedEvent order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in StopArrived Event.")
+  return $
+    DOnUpdate.StopArrivedReq
+      { bppRideId = Id bppRideId
       }

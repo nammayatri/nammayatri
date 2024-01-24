@@ -24,7 +24,9 @@ where
 import qualified Beckn.ACL.Common as Common
 import Beckn.Types.Core.Taxi.Common.Location
 import qualified Beckn.Types.Core.Taxi.Update as Update
+import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.AddStopEvent as AddStopU
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent as EditLocationU
+import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.EditStopEvent as EditStopU
 import qualified Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent as PaymentCompletedU
 import Control.Lens ((%~))
 import qualified Data.Text as T
@@ -55,6 +57,22 @@ data UpdateBuildReq
         bppRideId :: Id DRide.BPPRide,
         origin :: Maybe Location,
         destination :: Maybe Location,
+        bppId :: Text,
+        bppUrl :: BaseUrl,
+        transactionId :: Text,
+        merchant :: DM.Merchant
+      }
+  | AddStopBuildReq
+      { bppBookingId :: Id DBooking.BPPBooking,
+        stops :: [Location],
+        bppId :: Text,
+        bppUrl :: BaseUrl,
+        transactionId :: Text,
+        merchant :: DM.Merchant
+      }
+  | EditStopBuildReq
+      { bppBookingId :: Id DBooking.BPPBooking,
+        stops :: [Location],
         bppId :: Text,
         bppUrl :: BaseUrl,
         transactionId :: Text,
@@ -107,8 +125,33 @@ mkUpdateMessage req@EditLocationBuildReq {..} = do
                     { location = origin
                     },
                 destination =
-                  EditLocationU.EndInfo
-                    { location = destination
-                    }
+                  Just $
+                    EditLocationU.EndInfo
+                      { location = destination
+                      }
+              }
+        }
+mkUpdateMessage req@AddStopBuildReq {} = do
+  Update.UpdateMessage $
+    Update.AddStop
+      AddStopU.AddStopEvent
+        { id = req.bppBookingId.getId,
+          update_target = "fulfillment.state.code,fufillment.stops",
+          fulfillment =
+            AddStopU.FulfillmentInfo
+              { id = req.bppRideId.getId,
+                stops = req.stops
+              }
+        }
+mkUpdateMessage req@EditStopBuildReq {} = do
+  Update.UpdateMessage $
+    Update.EditStop
+      EditStopU.EditStopEvent
+        { id = req.bppBookingId.getId,
+          update_target = "fulfillment.state.code,fufillment.stops",
+          fulfillment =
+            EditStopU.FulfillmentInfo
+              { id = req.bppRideId.getId,
+                stops = req.stops
               }
         }

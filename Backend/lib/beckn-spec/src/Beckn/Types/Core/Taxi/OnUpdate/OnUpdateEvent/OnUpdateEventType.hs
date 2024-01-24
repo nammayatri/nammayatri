@@ -26,4 +26,5 @@ data OnUpdateEventType
   | ESTIMATE_REPETITION
   | NEW_MESSAGE
   | SAFETY_ALERT
+  | STOP_ARRIVED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

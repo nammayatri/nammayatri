@@ -17,7 +17,8 @@ module Beckn.ACL.Metro.Search where
 
 import qualified Beckn.Types.Core.Metro.Search as Search
 import Control.Lens ((?~))
-import qualified Domain.Action.UI.Search.OneWay as DSearch
+import Data.Maybe (listToMaybe)
+import qualified Domain.Action.UI.Search as DSearch
 import EulerHS.Prelude hiding (state)
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -47,10 +48,10 @@ buildContextMetro action message_id bapId bapUri = do
         ..
       }
 
-mkIntent :: DSearch.OneWaySearchRes -> Search.Intent
+mkIntent :: DSearch.SearchRes -> Search.Intent
 mkIntent req = do
   let from = stopToLoc req.origin
-  let to = stopToLoc req.destination
+  let to = stopToLoc <$> (listToMaybe req.stops)
   Search.emptyIntent
     & #fulfillment
       ?~ ( Search.emptyFulFillmentInfo
@@ -61,7 +62,7 @@ mkIntent req = do
                  }
              & #end
                ?~ Search.LocationAndTime
-                 { location = Just to,
+                 { location = to,
                    time = Nothing
                  }
          )

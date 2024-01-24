@@ -52,7 +52,7 @@ mkRideCompletedQuote ride fareParams = do
             priceOfferedValue = Nothing
           }
       breakup =
-        Fare.mkBreakupList (mkPrice currency) mkBreakupItem fareParams
+        Fare.mkFareParamsBreakups (mkPrice currency) mkBreakupItem fareParams
           & filter (filterRequiredBreakups $ DFParams.getFareParametersType fareParams)
   pure
     Spec.Quotation
@@ -106,6 +106,20 @@ mkRideCompletedQuote ride fareParams = do
                      Just "TOTAL_FARE",
                      Just "CUSTOMER_SELECTED_FARE",
                      Just "NIGHT_SHIFT_CHARGE",
+                     Just "EXTRA_TIME_FARE",
+                     Just "CUSTOMER_CANCELLATION_DUES"
+                   ]
+        DFParams.Rental ->
+          title
+            `elem` [ Just "BASE_FARE",
+                     Just "SERVICE_CHARGE",
+                     Just "DEAD_KILOMETER_FARE",
+                     Just "EXTRA_DISTANCE_FARE",
+                     Just "TIME_BASED_FARE",
+                     Just "DRIVER_SELECTED_FARE",
+                     Just "CUSTOMER_SELECTED_FARE",
+                     Just "TOTAL_FARE",
+                     Just "WAITING_OR_PICKUP_CHARGES",
                      Just "EXTRA_TIME_FARE",
                      Just "CUSTOMER_CANCELLATION_DUES"
                    ]

@@ -14,10 +14,12 @@
 
 module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 
+import qualified Data.HashMap.Strict as HM
+import qualified Data.Map as M
+import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry (SearchTry)
 import qualified Kernel.Beam.Functions as B
@@ -32,6 +34,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified SharedLogic.SearchTry as SST
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.SearchRequest as QSR
@@ -49,7 +52,16 @@ sendSearchRequestToDrivers ::
     Log m,
     MonadFlow m,
     LT.HasLocationService m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool,
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -57,11 +69,9 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   let jobData = jobInfo.jobData
   let searchTryId = jobData.searchTryId
   searchTry <- B.runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-  -- searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-  -- searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
-  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId (Just searchTry.vehicleVariant) jobData.estimatedRideDistance
+  driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleVariant searchTry.tripCategory jobData.estimatedRideDistance
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
   (res, _) <- sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant jobData.driverExtraFeeBounds goHomeCfg
   return res
@@ -75,7 +85,16 @@ sendSearchRequestToDrivers' ::
     EsqDBFlow m r,
     Log m,
     LT.HasLocationService m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "maxShards" r Int,
+    HasField "schedulerSetName" r Text,
+    HasField "schedulerType" r SchedulerType,
+    HasField "jobInfoMap" r (M.Map Text Bool),
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool,
+    HasHttpClientOptions r c,
+    HasLongDurationRetryCfg r c,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   DriverPoolConfig ->
   SearchRequest ->
@@ -103,5 +122,7 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
                 putTaskDuration = Metrics.putTaskDuration merchant.name
               },
           isSearchTryValid = I.isSearchTryValid searchTry.id,
+          initiateDriverSearchBatch = SST.initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq searchTry.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId,
+          isScheduledBooking = searchTry.isScheduled,
           cancelSearchTry = I.cancelSearchTry searchTry.id
         }

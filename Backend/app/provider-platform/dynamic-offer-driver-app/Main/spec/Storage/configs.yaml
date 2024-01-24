@@ -1,0 +1,58 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  BatchSplitByPickupDistance: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
+  Seconds: Kernel.Types.Common
+
+DriverPoolConfig:
+  tableName: driver_pool_config
+
+  fields:
+    merchantId : Id Merchant
+    merchantOperatingCityId : Id MerchantOperatingCity
+    minRadiusOfSearch : Meters
+    maxRadiusOfSearch : Meters
+    radiusStepSize : Meters
+    driverPositionInfoExpiry : Maybe Seconds
+    actualDistanceThreshold : Maybe Meters
+    maxDriverQuotesRequired : Int
+    driverQuoteLimit : Int
+    driverRequestCountLimit : Int
+    driverBatchSize : Int
+    distanceBasedBatchSplit : '[BatchSplitByPickupDistance]'
+    maxNumberOfBatches : Int
+    maxParallelSearchRequests : Int
+    poolSortingType : PoolSortingType
+    singleBatchProcessTime : Seconds
+    tripDistance : Meters
+    radiusShrinkValueForDriversOnRide : Meters
+    driverToDestinationDistanceThreshold : Meters
+    driverToDestinationDuration : Seconds
+    scheduleTryTimes : '[Int]'
+    createdAt : UTCTime
+    updatedAt : UTCTime
+    vehicleVariant : Text
+    tripCategory : Text
+
+  constraints:
+    tripDistance: PrimaryKey
+    merchantOperatingCityId: PrimaryKey
+    vehicleVariant: PrimaryKey
+    tripCategory: PrimaryKey
+
+  sqlType:
+    distanceBasedBatchSplit: text[]
+    scheduleTryTimes: integer[]
+
+  default:
+    vehicleVariant: "'All'"
+    tripCategory: "'All'"
+    distanceBasedBatchSplit: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
+    scheduleTryTimes: "'{}'"
+
+  queries:
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithOptionsKV
+      where: merchantOperatingCityId
+      orderBy: tripDistance

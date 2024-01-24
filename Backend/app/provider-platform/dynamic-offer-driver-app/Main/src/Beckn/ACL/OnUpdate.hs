@@ -34,6 +34,7 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpda
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent as SafetyAlertDU
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.StopArrivedEvent as StopArrivedOU
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.OnUpdate as Reexport
@@ -176,6 +177,18 @@ buildOnUpdateMessage (SafetyAlertBuildReq DSafetyAlertReq {..}) = do
                 fulfillment = fulfillment
               },
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
+      }
+buildOnUpdateMessage (StopArrivedBuildReq DStopArrivedBuildReq {..}) = do
+  fulfillment <- Common.mkFulfillment Nothing ride booking Nothing Nothing Nothing Nothing False False
+  return $
+    OnUpdate.OnUpdateMessage
+      { order =
+          OnUpdate.StopArrived $
+            StopArrivedOU.StopArrivedEvent
+              { id = booking.id.getId,
+                ..
+              },
+        update_target = "order.fufillment.state.code"
       }
 
 buildOnUpdateMessageV2 ::

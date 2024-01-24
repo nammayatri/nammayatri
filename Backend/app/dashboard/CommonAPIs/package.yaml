@@ -80,6 +80,7 @@ dependencies:
   - deriving-aeson
   - extra
   - servant-multipart
+  - beckn-services
 
 ghc-options:
   - -Wall

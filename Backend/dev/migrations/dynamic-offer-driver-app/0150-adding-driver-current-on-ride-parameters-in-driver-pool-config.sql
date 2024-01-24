@@ -1,4 +1,1 @@
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN radius_shrink_value_for_drivers_on_ride bigint DEFAULT 300;
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN driver_to_destination_distance_threshold bigint DEFAULT 300;
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN driver_to_destination_duration bigint DEFAULT 10;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN include_driver_currently_on_ride boolean DEFAULT true;

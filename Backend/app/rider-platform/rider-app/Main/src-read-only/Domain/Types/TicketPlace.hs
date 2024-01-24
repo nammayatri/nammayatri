@@ -8,7 +8,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
 data TicketPlace = TicketPlace
   { closeTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
@@ -34,4 +34,4 @@ data TicketPlace = TicketPlace
 data PlaceType = Museum | ThemePark | AmusementPark | WaterPark | WildLifeSanctuary | ArtGallery | HeritageSite | ReligiousSite | Other
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''PlaceType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PlaceType)

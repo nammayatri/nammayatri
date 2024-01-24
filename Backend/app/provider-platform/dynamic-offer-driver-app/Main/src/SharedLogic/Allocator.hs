@@ -64,7 +64,7 @@ instance JobProcessor AllocatorJobType where
 
 data SendSearchRequestToDriverJobData = SendSearchRequestToDriverJobData
   { searchTryId :: Id DST.SearchTry,
-    estimatedRideDistance :: Meters,
+    estimatedRideDistance :: Maybe Meters,
     driverExtraFeeBounds :: Maybe DFP.DriverExtraFeeBounds
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)

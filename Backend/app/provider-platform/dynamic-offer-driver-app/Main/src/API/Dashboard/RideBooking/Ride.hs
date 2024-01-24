@@ -52,22 +52,24 @@ handler merchantId city =
     :<|> bookingWithVehicleNumberAndPhone merchantId city
 
 rideStart :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.StartRideReq -> FlowHandler APISuccess
-rideStart merchantShortId opCity reqRideId Common.StartRideReq {point} = withFlowHandlerAPI $ do
+rideStart merchantShortId opCity reqRideId Common.StartRideReq {point, odometerReadingValue} = withFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
   merchantOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let dashboardReq = SHandler.DashboardStartRideReq {point, merchantId, merchantOperatingCityId}
+  let odometer = (\value -> DRide.OdometerReading value Nothing) <$> odometerReadingValue
+  let dashboardReq = SHandler.DashboardStartRideReq {point, merchantId, merchantOperatingCityId, odometer}
   shandle <- SHandler.buildStartRideHandle merchantId merchantOperatingCityId
   SHandler.dashboardStartRide shandle rideId dashboardReq
 
 rideEnd :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.EndRideReq -> FlowHandler APISuccess
-rideEnd merchantShortId opCity reqRideId Common.EndRideReq {point} = withFlowHandlerAPI $ do
+rideEnd merchantShortId opCity reqRideId Common.EndRideReq {point, odometerReadingValue} = withFlowHandlerAPI $ do
   merchant <- findMerchantByShortId merchantShortId
   merchantOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   let merchantId = merchant.id
-  let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId, merchantOperatingCityId}
+  let odometer = (\value -> DRide.OdometerReading value Nothing) <$> odometerReadingValue
+  let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId, merchantOperatingCityId, odometer}
   shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId
   EHandler.dashboardEndRide shandle rideId dashboardReq
 

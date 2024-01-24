@@ -29,6 +29,7 @@ data SearchRequestT f = SearchRequestT
   { id :: B.C f Text,
     transactionId :: B.C f Text,
     providerId :: B.C f Text,
+    messageId :: B.C f (Maybe Text),
     merchantOperatingCityId :: B.C f (Maybe Text),
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
@@ -37,16 +38,19 @@ data SearchRequestT f = SearchRequestT
     bapUri :: B.C f Text,
     bapCity :: B.C f (Maybe Context.City),
     bapCountry :: B.C f (Maybe Context.Country),
-    estimatedDistance :: B.C f Meters,
-    estimatedDuration :: B.C f Seconds,
+    estimatedDistance :: B.C f (Maybe Meters),
+    estimatedDuration :: B.C f (Maybe Seconds),
     customerLanguage :: B.C f (Maybe Maps.Language),
     disabilityTag :: B.C f (Maybe Text),
     device :: B.C f (Maybe Text),
     autoAssignEnabled :: B.C f (Maybe Bool),
     specialLocationTag :: B.C f (Maybe Text),
     customerCancellationDues :: B.C f (Maybe HighPrecMoney),
-    createdAt :: B.C f UTCTime,
-    isReallocationEnabled :: B.C f (Maybe Bool)
+    isReallocationEnabled :: B.C f (Maybe Bool),
+    isScheduled :: B.C f (Maybe Bool),
+    startTime :: B.C f (Maybe UTCTime),
+    validTill :: B.C f (Maybe UTCTime),
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 

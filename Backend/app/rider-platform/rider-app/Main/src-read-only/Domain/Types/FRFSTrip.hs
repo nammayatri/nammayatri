@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSTrip where
 
@@ -8,7 +9,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
 data FRFSTrip = FRFSTrip
   { bppFulfillmentId :: Kernel.Prelude.Text,
@@ -28,4 +29,4 @@ data FRFSTrip = FRFSTrip
 data StationType = START | END | TRANSIT | INTERMEDIATE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''StationType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''StationType)
