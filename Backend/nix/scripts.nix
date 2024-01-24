@@ -99,7 +99,7 @@ _:
 
               # Check if lsof returned any process ID
               if [ -n "$pid" ]; then
-                echo "Sending SIGTERM to processes running on ${builtins.toString port}:"
+                echo "Sending SIGKILL to processes running on ${builtins.toString port}:"
                 echo "$pid"
                 echo "$pid" | ${pkgs.findutils}/bin/xargs kill -9
               else
