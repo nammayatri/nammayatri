@@ -77,16 +77,17 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just person.id.getId) (Just "driverId") >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let reasons = catMaybes $ mapMaybe toMsg errs
   let description = T.intercalate ", " reasons
-  _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig.kaptureDisposition)
+  _ <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig)
   return ()
   where
     toMsg e = toMessage <$> e
 
-    mkTicket description disposition =
+    mkTicket description transporterConfig =
       Ticket.CreateTicketReq
         { category = "GENERAL",
           subCategory = Just "DRIVER ONBOARDING ISSUE",
-          disposition = disposition,
+          disposition = transporterConfig.kaptureDisposition,
+          queue = transporterConfig.kaptureQueue,
           issueId = Nothing,
           issueDescription = description,
           mediaFiles = Nothing,
