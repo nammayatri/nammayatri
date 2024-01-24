@@ -15,7 +15,6 @@ import EulerHS.Language as EL
 import EulerHS.Prelude
 import Kernel.Beam.Lib.Utils as KBLU
 import Text.Casing (pascal)
-import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
 import Types.DBSync.Create
 import Types.Event as Event
@@ -33,9 +32,6 @@ runCreate createDataEntry streamName = do
     Right createDBModel -> do
       EL.logDebug ("DB OBJECT" :: Text) (show createDBModel)
       let tableName = createDBModel.dbModel
-      -- uncomment for debug purposes
-      -- writeDebugFile "create" tableName entryId "streamData.json" streamData
-      -- writeDebugFile "create" tableName entryId "dbObject.txt" $ show createDBModel
       if shouldPushToDbOnly tableName _dontEnableForKafka || not isPushToKafka'
         then runCreateQuery createDataEntry createDBModel
         else do
@@ -63,7 +59,6 @@ runCreateQuery createDataEntry dbCreateObject = do
     then return $ Right entryId
     else do
       let insertQuery = generateInsertForTable dbCreateObject
-
       case insertQuery of
         Just query -> do
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
@@ -71,19 +66,15 @@ runCreateQuery createDataEntry dbCreateObject = do
             Left (QueryError errorMsg) -> do
               void $ publishDBSyncMetric $ Event.QueryExecutionFailure "Create" dbModel.getDBModel
               EL.logError ("QUERY INSERT FAILED" :: Text) (errorMsg <> " for query :: " <> query)
-              -- uncomment for debug purposes
-              -- writeDebugFile "create" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
             Right _ -> do
-              EL.logInfo ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
-              -- uncomment for debug purposes
-              -- writeDebugFile "create" dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
+              EL.logDebug ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
               return $ Right entryId
         Nothing -> do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
           return $ Left entryId
 
--- | Generate an insert query for the rider_app schema
+-- | Generate an insert query for a given table and schema
 generateInsertForTable :: DBCreateObject -> Maybe Text
 generateInsertForTable DBCreateObject {dbModel, contents, mappings} = do
   let DBCreateObjectContent termWarps = contents

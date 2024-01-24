@@ -8,6 +8,9 @@ import qualified Database.PostgreSQL.Simple as Pg
 import EulerHS.Prelude hiding (id)
 import Text.Casing (quietSnake)
 
+currentSchemaName :: String
+currentSchemaName = "atlas_driver_offer_bpp"
+
 generateInsertQuery :: InsertQuery -> Maybe Text
 generateInsertQuery InsertQuery {..} = do
   let schemaName = schema.getSchemaName
@@ -87,9 +90,8 @@ valueToText value = case value of
     valueToText' (SqlString t) = show t -- quote' t
     valueToText' (SqlNum n) = show n
     valueToText' (SqlValue t) = show t -- quote' t
-    valueToText' (SqlList a) = "[" <> T.intercalate "," (map valueToText' a) <> "]" -- why different brackets [] an {}?
+    valueToText' (SqlList a) = "[" <> T.intercalate "," (map valueToText' a) <> "]"
 
--- TODO test for empty lists, list with one or more values
 valueToTextForInConditions :: [Value] -> T.Text
 valueToTextForInConditions values = "(" <> T.intercalate "," (map valueToText values) <> ")"
 
@@ -122,7 +124,7 @@ makeWhereCondition whereClause mappings = do
         Not (Eq value) -> columnText <> " != " <> valueToText value
         Not (In values) -> columnText <> " NOT IN " <> valueToTextForInConditions values
         Not Null -> columnText <> " IS NOT NULL"
-        Not term' -> " NOT " <> "(" <> makeTermCondition column term' <> ")" -- TODO test this
+        Not term' -> " NOT " <> "(" <> makeTermCondition column term' <> ")"
 
 getArrayConditionText :: [Clause] -> Text -> Mapping -> Text
 getArrayConditionText clauses cnd mappings = case clauses of

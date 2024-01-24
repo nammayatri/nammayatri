@@ -8,6 +8,9 @@ import qualified Database.PostgreSQL.Simple as Pg
 import EulerHS.Prelude hiding (id)
 import Text.Casing (quietSnake)
 
+currentSchemaName :: String
+currentSchemaName = "atlas_app"
+
 generateInsertQuery :: InsertQuery -> Maybe Text
 generateInsertQuery InsertQuery {..} = do
   let schemaName = schema.getSchemaName
@@ -32,7 +35,7 @@ generateUpdateQuery UpdateQuery {..} = do
       setQuery = makeSetConditions
       table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
   if T.null correctWhereClauseText
-    then Nothing -- why?
+    then Nothing
     else Just $ "UPDATE " <> table <> " SET " <> setQuery <> " WHERE " <> correctWhereClauseText <> ";"
   where
     makeSetConditions :: Text
@@ -46,7 +49,7 @@ generateDeleteQuery DeleteQuery {..} = do
       correctWhereClauseText = makeWhereCondition whereClause mappings
       table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
   if T.null correctWhereClauseText
-    then Nothing -- why?
+    then Nothing
     else Just $ "DELETE FROM " <> table <> " WHERE " <> correctWhereClauseText <> ";"
 
 executeQuery :: Pg.Connection -> Pg.Query -> IO ()
@@ -87,9 +90,8 @@ valueToText value = case value of
     valueToText' (SqlString t) = show t -- quote' t
     valueToText' (SqlNum n) = show n
     valueToText' (SqlValue t) = show t -- quote' t
-    valueToText' (SqlList a) = "[" <> T.intercalate "," (map valueToText' a) <> "]" -- why different brackets [] an {}?
+    valueToText' (SqlList a) = "[" <> T.intercalate "," (map valueToText' a) <> "]"
 
--- TODO test for empty lists, list with one or more values
 valueToTextForInConditions :: [Value] -> T.Text
 valueToTextForInConditions values = "(" <> T.intercalate "," (map valueToText values) <> ")"
 
@@ -98,7 +100,7 @@ makeWhereCondition whereClause mappings = do
   case whereClause of
     [] -> "true" -- TODO test this
     [clause] -> makeClauseCondition clause
-    clauses -> makeClauseCondition (And clauses) -- is it correct?
+    clauses -> makeClauseCondition (And clauses)
   where
     makeClauseCondition :: Clause -> Text
     makeClauseCondition clause = do
@@ -122,7 +124,7 @@ makeWhereCondition whereClause mappings = do
         Not (Eq value) -> columnText <> " != " <> valueToText value
         Not (In values) -> columnText <> " NOT IN " <> valueToTextForInConditions values
         Not Null -> columnText <> " IS NOT NULL"
-        Not term' -> " NOT " <> "(" <> makeTermCondition column term' <> ")" -- TODO test this
+        Not term' -> " NOT " <> "(" <> makeTermCondition column term' <> ")"
 
 getArrayConditionText :: [Clause] -> Text -> Mapping -> Text
 getArrayConditionText clauses cnd mappings = case clauses of

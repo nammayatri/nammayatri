@@ -131,10 +131,7 @@ library:
           - -O2
           - -j4
   dependencies:
-    - rider-app
     - mobility-core
-    - payment
-    - shared-services
 
 executables:
   rider-app-drainer-exe:
@@ -161,6 +158,4 @@ executables:
           - -j4
     dependencies:
       - rider-app-drainer
-      - rider-app
       - mobility-core
-      - shared-services
