@@ -77,7 +77,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslat
 import qualified "dynamic-offer-driver-app" Storage.Beam.MetaData as MetaData
 import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
-import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
+import qualified "dynamic-offer-driver-app" Storage.Beam.Quote as Quote
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistryMapFallback as RegistryMapFallback
@@ -407,7 +407,7 @@ data DBUpdateObject
   | MessageTranslationOptions UpdateModel [Set Postgres MessageTranslation.MessageTranslationT] (Where Postgres MessageTranslation.MessageTranslationT)
   | MetaDataOptions UpdateModel [Set Postgres MetaData.MetaDataT] (Where Postgres MetaData.MetaDataT)
   | PersonOptions UpdateModel [Set Postgres Person.PersonT] (Where Postgres Person.PersonT)
-  | QuoteSpecialZoneOptions UpdateModel [Set Postgres QuoteSpecialZone.QuoteSpecialZoneT] (Where Postgres QuoteSpecialZone.QuoteSpecialZoneT)
+  | QuoteSpecialZoneOptions UpdateModel [Set Postgres Quote.QuoteT] (Where Postgres Quote.QuoteT)
   | RatingOptions UpdateModel [Set Postgres Rating.RatingT] (Where Postgres Rating.RatingT)
   | RegistrationTokenOptions UpdateModel [Set Postgres RegistrationToken.RegistrationTokenT] (Where Postgres RegistrationToken.RegistrationTokenT)
   | RideOptions UpdateModel [Set Postgres Ride.RideT] (Where Postgres Ride.RideT)

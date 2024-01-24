@@ -32,13 +32,13 @@ getPickUpLocation req = do
   let pickUp = firstStop stops & fromMaybe (error "Missing Pickup")
   pickUp.stopLocation & fromMaybe (error "Missing Location")
 
-getDropOffLocation :: Spec.SearchReqMessage -> Spec.Location
+getDropOffLocation :: Spec.SearchReqMessage -> Maybe Spec.Location
 getDropOffLocation req = do
   let intent = req.searchReqMessageIntent & fromMaybe (error "Missing Intent")
   let fulfillment = intent.intentFulfillment & fromMaybe (error "Missing Fulfillment")
   let stops = fulfillment.fulfillmentStops & fromMaybe (error "Missing Stops")
-  let dropOff = lastStop stops & fromMaybe (error "Missing DropOff")
-  dropOff.stopLocation & fromMaybe (error "Missing Location")
+  let dropOff = lastStop stops
+  dropOff >>= (.stopLocation)
 
 getPickUpLocationGps :: Spec.SearchReqMessage -> Text
 getPickUpLocationGps req = do
@@ -49,14 +49,14 @@ getPickUpLocationGps req = do
   let location = pickUp.stopLocation & fromMaybe (error "Missing Location")
   location.locationGps & fromMaybe (error "Missing GPS")
 
-getDropOffLocationGps :: Spec.SearchReqMessage -> Text
+getDropOffLocationGps :: Spec.SearchReqMessage -> Maybe Text
 getDropOffLocationGps req = do
   let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
   let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
   let stops = fromMaybe (error "Missing Stops") $ fulfillment.fulfillmentStops
-  let dropOff = lastStop stops & fromMaybe (error "Missing DropOff")
-  let location = dropOff.stopLocation & fromMaybe (error "Missing Location")
-  location.locationGps & fromMaybe (error "Missing GPS")
+  let dropOff = lastStop stops
+  let location = dropOff >>= (.stopLocation)
+  location >>= (.locationGps)
 
 getDistance :: Spec.SearchReqMessage -> Maybe Meters
 getDistance req = do

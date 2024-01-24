@@ -107,8 +107,9 @@ mkUpdateMessage req@EditLocationBuildReq {..} = do
                     { location = origin
                     },
                 destination =
-                  EditLocationU.EndInfo
-                    { location = destination
-                    }
+                  Just $
+                    EditLocationU.EndInfo
+                      { location = destination
+                      }
               }
         }

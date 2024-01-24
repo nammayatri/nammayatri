@@ -86,12 +86,13 @@ buildOrder res = do
                   { location = start
                   },
               end =
-                Select.StopInfo
-                  { location = end
-                  },
+                Just $
+                  Select.StopInfo
+                    { location = end
+                    },
               id = res.estimate.bppEstimateId.getId,
               vehicle = Select.Vehicle {category = variant},
-              _type = Select.RIDE
+              _type = "RIDE"
             }
       }
   where

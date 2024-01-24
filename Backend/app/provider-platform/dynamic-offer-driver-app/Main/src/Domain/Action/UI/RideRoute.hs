@@ -12,7 +12,6 @@ module Domain.Action.UI.RideRoute
   )
 where
 
-import Domain.Action.Beckn.Search
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -23,6 +22,7 @@ import Kernel.Storage.Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Ride
 
 rideRoute :: (EncFlow m r, HedisFlow m r) => Id Ride -> (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> m RouteInfo
 rideRoute rideId (_, _, _) = do

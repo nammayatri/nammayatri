@@ -20,6 +20,7 @@ import Data.Ord
 import qualified Data.Text as T
 import Domain.Types.Booking
 import qualified Domain.Types.Booking.BookingLocation as DBBL
+import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverQuote as DDQ
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -49,15 +50,18 @@ createBooking' = createWithKV
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
 create dBooking = do
-  _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create dBooking.fromLocation
-  _ <- whenNothingM_ (QL.findById dBooking.toLocation.id) $ do QL.create dBooking.toLocation
+  void $ whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create dBooking.fromLocation
+  whenJust dBooking.toLocation $ \toLocation -> whenNothingM_ (QL.findById toLocation.id) $ do QL.create toLocation
   createBooking' dBooking
 
 createBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
 createBooking booking = do
   fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
-  toLocationMaps <- SLM.buildDropLocationMapping booking.toLocation.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
-  QLM.create fromLocationMap >> QLM.create toLocationMaps >> create booking
+  QLM.create fromLocationMap
+  whenJust booking.toLocation $ \toLocation -> do
+    toLocationMaps <- SLM.buildDropLocationMapping toLocation.id booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId)
+    QLM.create toLocationMaps
+  create booking
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
@@ -66,6 +70,9 @@ findBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry ->
 findBySTId searchTryId = do
   mbDriverQuote <- QDQuote.findDriverQuoteBySTId searchTryId
   maybe (pure Nothing) (\dQ -> findOneWithKV [Se.Is BeamB.quoteId $ Se.Eq $ getId $ DDQ.id dQ]) mbDriverQuote
+
+findByQuoteId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Booking)
+findByQuoteId quoteId = findOneWithKV [Se.Is BeamB.quoteId $ Se.Eq quoteId]
 
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
@@ -155,9 +162,17 @@ instance FromTType' BeamB.Booking Booking where
   fromTType' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => BeamB.Booking -> m (Maybe Booking)
   fromTType' BeamB.BookingT {..} = do
     mappings <- QLM.findByEntityId id
+    let tripCategory' = case tripCategory of
+          Just cat -> cat
+          Nothing -> do
+            case bookingType of
+              NormalBooking -> DTC.OneWay DTC.OneWayOnDemandDynamicOffer
+              SpecialZoneBooking -> DTC.OneWay DTC.OneWayRideOtp
+
     (fl, tl) <-
-      if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-        then do
+      case (mappings, tripCategory) of
+        ([], Nothing) -> do
+          -- HANDLING OLD DATA : ONLY IF TripCategory is Nothing as for older cases
           logInfo "Accessing Booking Location Table"
           pickupLoc <- upsertLocationForOldData (Id <$> fromLocationId) id
           pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.BOOKING (Just $ Id providerId) (Id <$> merchantOperatingCityId)
@@ -166,18 +181,21 @@ instance FromTType' BeamB.Booking Booking where
           dropLoc <- upsertLocationForOldData (Id <$> toLocationId) id
           dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.BOOKING (Just $ Id providerId) (Id <$> merchantOperatingCityId)
           QLM.create dropLocMapping
-          return (pickupLoc, dropLoc)
-        else do
+          return (pickupLoc, Just dropLoc)
+        _ -> do
           let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-              toLocationMappings = filter (\loc -> loc.order /= 0) mappings
-
           fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
           fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
 
-          when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-          let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-          tl <- QL.findById toLocMap.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLocMap.locationId.getId)
+          tl <- do
+            let toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+            if (null toLocationMappings)
+              then return Nothing
+              else do
+                let toLocMap = maximumBy (comparing (.order)) toLocationMappings
+                QL.findById toLocMap.locationId
           return (fl, tl)
+
     fp <- QueriesFP.findById (Id fareParametersId)
     pUrl <- parseBaseUrl bapUri
     merchant <- CQM.findById (Id providerId) >>= fromMaybeM (MerchantNotFound providerId)
@@ -191,7 +209,7 @@ instance FromTType' BeamB.Booking Booking where
                 transactionId = transactionId,
                 quoteId = quoteId,
                 status = status,
-                bookingType = bookingType,
+                tripCategory = tripCategory',
                 specialLocationTag = specialLocationTag,
                 specialZoneOtpCode = specialZoneOtpCode,
                 disabilityTag = disabilityTag,
@@ -225,13 +243,19 @@ instance FromTType' BeamB.Booking Booking where
         pure Nothing
 
 instance ToTType' BeamB.Booking Booking where
-  toTType' Booking {..} =
+  toTType' Booking {..} = do
+    -- This booking type is just for backward compatibility (We don't have it in Domain Type)
+    let bookingType = case tripCategory of
+          DTC.OneWay DTC.OneWayRideOtp -> SpecialZoneBooking
+          _ -> NormalBooking
+
     BeamB.BookingT
       { BeamB.id = getId id,
         BeamB.transactionId = transactionId,
         BeamB.quoteId = quoteId,
         BeamB.status = status,
         BeamB.bookingType = bookingType,
+        BeamB.tripCategory = Just tripCategory,
         BeamB.specialLocationTag = specialLocationTag,
         BeamB.disabilityTag = disabilityTag,
         BeamB.specialZoneOtpCode = specialZoneOtpCode,
@@ -246,7 +270,7 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.bapCity = bapCity,
         BeamB.bapCountry = bapCountry,
         BeamB.fromLocationId = Just $ getId fromLocation.id,
-        BeamB.toLocationId = Just $ getId toLocation.id,
+        BeamB.toLocationId = (getId . (.id)) <$> toLocation,
         BeamB.vehicleVariant = vehicleVariant,
         BeamB.estimatedDistance = estimatedDistance,
         BeamB.maxEstimatedDistance = maxEstimatedDistance,

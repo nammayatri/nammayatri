@@ -77,10 +77,16 @@ init transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBec
         logTagInfo "Init API Flow" "Reached"
         dInitReq <- ACL.buildInitReq subscriber reqV1
         pure (dInitReq, reqV1.context.bap_uri, reqV1.context.bap_id, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id, reqV1.context.bpp_id, reqV1.context.bpp_uri)
-  Redis.whenWithLockRedis (initLockKey dInitReq.estimateId) 60 $ do
+
+  let initFulfillmentId =
+        case dInitReq.fulfillmentId of
+          DInit.EstimateId (Id fId) -> fId
+          DInit.QuoteId (Id fId) -> fId
+
+  Redis.whenWithLockRedis (initLockKey initFulfillmentId) 60 $ do
     validatedRes <- DInit.validateRequest transporterId dInitReq
     fork "init request processing" $ do
-      Redis.whenWithLockRedis (initProcessingLockKey dInitReq.estimateId) 60 $ do
+      Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
         dInitRes <- DInit.handler transporterId dInitReq validatedRes
         internalEndPointHashMap <- asks (.internalEndPointHashMap)
         isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)

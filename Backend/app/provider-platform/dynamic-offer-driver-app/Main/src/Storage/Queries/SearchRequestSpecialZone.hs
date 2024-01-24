@@ -33,7 +33,6 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
-import qualified Storage.Queries.SearchRequest as QSL
 
 createSearchRequestSpecialZone' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequestSpecialZone -> m ()
 createSearchRequestSpecialZone' = createWithKV
@@ -72,29 +71,17 @@ getValidTill (Id searchRequestId) = do
 instance FromTType' BeamSRSZ.SearchRequestSpecialZone SearchRequestSpecialZone where
   fromTType' BeamSRSZ.SearchRequestSpecialZoneT {..} = do
     mappings <- QLM.findByEntityId id
-    (fl, tl) <-
-      if null mappings -- HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME
-        then do
-          logInfo "Accessing Search Request Location Table"
-          pickupLoc <- QSL.upsertLocationForOldData (Id <$> fromLocationId) id
-          pickupLocMapping <- SLM.buildPickUpLocationMapping pickupLoc.id id DLM.SEARCH_REQUEST (Just $ Id providerId) (Id <$> merchantOperatingCityId)
-          QLM.create pickupLocMapping
+    (fl, tl) <- do
+      let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
+          toLocationMappings = filter (\loc -> loc.order /= 0) mappings
 
-          dropLoc <- QSL.upsertLocationForOldData (Id <$> toLocationId) id
-          dropLocMapping <- SLM.buildDropLocationMapping dropLoc.id id DLM.SEARCH_REQUEST (Just $ Id providerId) (Id <$> merchantOperatingCityId)
-          QLM.create dropLocMapping
-          return (pickupLoc, dropLoc)
-        else do
-          let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-              toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+      fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+      fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
 
-          fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-          fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
-
-          when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-          let toLoc = maximumBy (comparing (.order)) toLocationMappings
-          tl <- QL.findById toLoc.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLoc.locationId.getId)
-          return (fl, tl)
+      when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
+      let toLoc = maximumBy (comparing (.order)) toLocationMappings
+      tl <- QL.findById toLoc.locationId >>= fromMaybeM (InternalError $ "ToLocation not found in booking for toLocationId: " <> toLoc.locationId.getId)
+      return (fl, tl)
     pUrl <- parseBaseUrl bapUri
     merchant <- CQM.findById (Id providerId) >>= fromMaybeM (MerchantNotFound providerId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing

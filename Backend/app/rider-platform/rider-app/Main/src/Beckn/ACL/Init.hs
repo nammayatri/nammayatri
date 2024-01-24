@@ -52,22 +52,22 @@ buildInitReqV2 ::
 buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
-        SConfirm.ConfirmOneWayDetails -> (Init.RIDE, Nothing, Nothing)
-        SConfirm.ConfirmRentalDetails _ -> (Init.RIDE, Nothing, Nothing)
-        SConfirm.ConfirmAutoDetails estimateId driverId -> (Init.RIDE, Just estimateId, driverId)
-        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
+        SConfirm.ConfirmOneWayDetails -> ("RIDE", Nothing, Nothing)
+        SConfirm.ConfirmRentalDetails _ -> ("RIDE", Nothing, Nothing)
+        SConfirm.ConfirmAutoDetails estimateId driverId -> ("RIDE", Just estimateId, driverId)
+        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> ("RIDE_OTP", Just quoteId, Nothing) --need to be  checked
   let action = Context.INIT
   let domain = Context.MOBILITY
 
-  TF.buildInitReq res bapUrl action domain (encodeToText fulfillmentType) mbBppFullfillmentId mbDriverId
+  TF.buildInitReq res bapUrl action domain fulfillmentType mbBppFullfillmentId mbDriverId
 
 buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessage
 buildInitMessage res = do
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
-        SConfirm.ConfirmOneWayDetails -> (Init.RIDE, Nothing, Nothing)
-        SConfirm.ConfirmRentalDetails _ -> (Init.RIDE, Nothing, Nothing)
-        SConfirm.ConfirmAutoDetails estimateId driverId -> (Init.RIDE, Just estimateId, driverId)
-        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
+        SConfirm.ConfirmOneWayDetails -> ("RIDE", Nothing, Nothing)
+        SConfirm.ConfirmRentalDetails _ -> ("RIDE", Nothing, Nothing)
+        SConfirm.ConfirmAutoDetails estimateId driverId -> ("RIDE", Just estimateId, driverId)
+        SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> ("RIDE_OTP", Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
   pure
     Init.InitMessage
@@ -117,7 +117,7 @@ mkOrderItem itemId mbBppFullfillmentId =
       fulfillment_id = mbBppFullfillmentId
     }
 
-mkFulfillmentInfo :: Init.FulfillmentType -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfo
+mkFulfillmentInfo :: Text -> Maybe Text -> DL.Location -> Maybe DL.Location -> Maybe HighPrecMeters -> Init.VehicleVariant -> Init.FulfillmentInfo
 mkFulfillmentInfo fulfillmentType mbBppFullfillmentId fromLoc mbToLoc mbMaxDistance vehicleVariant =
   Init.FulfillmentInfo
     { id = mbBppFullfillmentId,

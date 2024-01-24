@@ -16,6 +16,7 @@
 module Storage.Queries.DriverQuote where
 
 import qualified Data.Time as T
+import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverQuote
 import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Estimate as DEstimate
@@ -80,6 +81,7 @@ instance FromTType' BeamDQ.DriverQuote DriverQuote where
             requestId = Id requestId,
             searchTryId = Id searchTryId,
             searchRequestForDriverId = Id <$> searchRequestForDriverId,
+            tripCategory = fromMaybe (DTC.OneWay DTC.OneWayOnDemandDynamicOffer) tripCategory,
             driverId = Id driverId,
             estimateId = Id estimateId,
             driverName = driverName,
@@ -108,6 +110,7 @@ instance ToTType' BeamDQ.DriverQuote DriverQuote where
         BeamDQ.searchRequestForDriverId = getId <$> searchRequestForDriverId,
         BeamDQ.driverId = getId driverId,
         BeamDQ.estimateId = getId estimateId,
+        BeamDQ.tripCategory = Just tripCategory,
         BeamDQ.driverName = driverName,
         BeamDQ.driverRating = driverRating,
         BeamDQ.status = status,

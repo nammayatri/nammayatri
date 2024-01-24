@@ -104,7 +104,7 @@ callOnSelect transporter searchRequest searchTry content = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  let msgId = searchTry.estimateId.getId
+  let msgId = searchTry.estimateId
   context <- buildTaxiContext Context.ON_SELECT msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry) False
   logDebug $ "on_select request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV1 bapUri internalEndPointHashMap (BecknCallbackReq context $ Right content)
@@ -128,7 +128,7 @@ callOnSelectV2 transporter searchRequest searchTry content = do
       authKey = getHttpManagerKey bppSubscriberId
   bppUri <- buildBppUrl (transporter.id)
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  let msgId = searchTry.estimateId.getId
+  let msgId = searchTry.estimateId
   context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId (Just searchRequest.transactionId) bapId bapUri (Just bppSubscriberId) (Just bppUri) (fromMaybe transporter.city searchRequest.bapCity) (fromMaybe Context.India searchRequest.bapCountry)
   logDebug $ "on_selectV2 request bpp: " <> show content
   void $ withShortRetry $ Beckn.callBecknAPI (Just $ ET.ManagerSelector authKey) Nothing (show Context.ON_SELECT) API.onSelectAPIV2 bapUri internalEndPointHashMap (Spec.OnSelectReq context Nothing (Just content))

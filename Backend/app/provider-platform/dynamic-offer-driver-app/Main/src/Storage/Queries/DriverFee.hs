@@ -17,6 +17,7 @@ module Storage.Queries.DriverFee where
 
 import Data.Time (Day, UTCTime (UTCTime, utctDay), addDays, fromGregorian, toGregorian)
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverFee
 import qualified Domain.Types.DriverFee as Domain
 import Domain.Types.Merchant
@@ -308,10 +309,7 @@ updateFee driverFeeId mbFare govtCharges platformFee cgst sgst now isRideEnd boo
         [Se.Is BeamDF.id (Se.Eq (getId driverFeeId))]
     Nothing -> pure ()
   where
-    toUpdateSpecialZoneMetricsInDriverFee = do
-      case booking.bookingType of
-        SRB.SpecialZoneBooking -> True
-        _ -> False
+    toUpdateSpecialZoneMetricsInDriverFee = DTC.isRideOtpBooking booking.tripCategory
 
 resetFee :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> Money -> Domain.PlatformFee -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> UTCTime -> m ()
 resetFee driverFeeId govtCharges platformFee mbFeeWithoutDiscount mbAmountPaidByCoin now = do

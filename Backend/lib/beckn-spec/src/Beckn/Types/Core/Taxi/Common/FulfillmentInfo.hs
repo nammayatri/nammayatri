@@ -59,18 +59,12 @@ instance FromJSON Authorization where
 instance ToJSON Authorization where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
-data FulfillmentType
-  = RIDE
-  | RIDE_OTP
-  deriving
-    (Generic, ToSchema, Show, FromJSON, ToJSON, Read)
-
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text, -- bppRideId
     start :: StartInfo,
-    end :: EndInfo,
+    end :: Maybe EndInfo,
     agent :: Maybe Agent,
-    _type :: FulfillmentType,
+    _type :: Text,
     vehicle :: Maybe Vehicle,
     tags :: Maybe T.TagGroups
   }

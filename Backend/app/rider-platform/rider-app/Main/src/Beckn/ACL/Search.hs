@@ -162,7 +162,7 @@ mkIntent origin destination customerLanguage disabilityTag distance duration mbP
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,
-            end = endLocation,
+            end = Just endLocation,
             tags =
               if isJust distance || isJust duration
                 then

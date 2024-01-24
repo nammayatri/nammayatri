@@ -29,6 +29,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Field
+import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Error.Throwing
 
@@ -46,9 +47,13 @@ buildInitReq subscriber req = do
   _ <- case order.items of
     [it] -> pure it
     _ -> throwError $ InvalidRequest "There must be exactly one item in init request"
-  fulfillmentId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
+  fulfillmentId <- do
+    fId <- order.fulfillment.id & fromMaybeM (InvalidRequest "FulfillmentId not found. It should either be estimateId or quoteId")
+    case order.fulfillment._type of
+      "RIDE" -> pure $ DInit.EstimateId (Id fId)
+      "RIDE_OTP" -> pure $ DInit.QuoteId (Id fId)
+      _ -> pure $ DInit.QuoteId (Id fId)
   let maxEstimatedDistance = getMaxEstimateDistance =<< order.fulfillment.tags
-  let initTypeReq = buildInitTypeReq order.fulfillment._type
   -- should we check start time and other details?
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
@@ -57,8 +62,7 @@ buildInitReq subscriber req = do
 
   pure
     DInit.InitReq
-      { estimateId = fulfillmentId,
-        bapId = subscriber.subscriber_id,
+      { bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         bapCity = context.city,
         bapCountry = context.country,
@@ -68,9 +72,6 @@ buildInitReq subscriber req = do
         ..
       }
   where
-    buildInitTypeReq = \case
-      Init.RIDE_OTP -> DInit.InitSpecialZoneReq
-      Init.RIDE -> DInit.InitNormalReq
     castVehicleVariant = \case
       Init.SEDAN -> VehVar.SEDAN
       Init.SUV -> VehVar.SUV

@@ -20,7 +20,6 @@ module Lib.LocationUpdates
 where
 
 import Data.Time hiding (secondsToNominalDiffTime)
-import Domain.Action.Beckn.Search
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Merchant.TransporterConfig
@@ -37,6 +36,7 @@ import Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
 import "location-updates" Lib.LocationUpdates as Reexport
 import qualified SharedLogic.CallBAP as BP
+import SharedLogic.Ride
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as MTC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide

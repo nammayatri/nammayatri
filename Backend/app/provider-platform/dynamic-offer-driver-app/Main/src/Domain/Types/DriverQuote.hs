@@ -16,6 +16,7 @@
 
 module Domain.Types.DriverQuote where
 
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.Estimate
 import qualified Domain.Types.FareParameters as Params
@@ -42,13 +43,14 @@ data DriverQuote = DriverQuote
     requestId :: Id SearchRequest,
     searchTryId :: Id SearchTry,
     searchRequestForDriverId :: Maybe (Id SearchRequestForDriver),
+    tripCategory :: DTC.TripCategory,
     estimateId :: Id Estimate,
     driverId :: Id Person,
     driverName :: Text,
     driverRating :: Maybe Centesimal,
     status :: DriverQuoteStatus,
     vehicleVariant :: Variant.Variant,
-    distance :: Meters,
+    distance :: Maybe Meters,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     validTill :: UTCTime,

@@ -29,7 +29,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator
 
-buildOnConfirmMessage :: MonadFlow m => DConfirm.DConfirmRes -> m OnConfirm.OnConfirmMessage
+buildOnConfirmMessage :: MonadFlow m => DConfirm.DConfirmResp -> m OnConfirm.OnConfirmMessage
 buildOnConfirmMessage res = do
   let booking = res.booking
   let vehicleVariant = Common.castVariant res.booking.vehicleVariant
@@ -37,11 +37,7 @@ buildOnConfirmMessage res = do
       fareParams = booking.fareParams
       totalFareDecimal = fromIntegral booking.estimatedFare
       currency = "INR"
-  fulfillmentDetails <- case booking.bookingType of
-    DConfirm.SpecialZoneBooking -> do
-      otpCode <- booking.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
-      return $ mkSpecialZoneFulfillmentInfo res.fromLocation res.toLocation otpCode booking.quoteId OnConfirm.RIDE_OTP res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
-    DConfirm.NormalBooking -> return $ mkFulfillmentInfo res.fromLocation res.toLocation booking.quoteId OnConfirm.RIDE res.driverName res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
+  fulfillmentDetails <- mkFulfillmentInfo booking res.quoteType res.fromLocation res.toLocation booking.quoteId booking.specialZoneOtpCode res.rideInfo res.riderPhoneNumber res.riderMobileCountryCode res.riderName vehicleVariant
   return $
     OnConfirm.OnConfirmMessage
       { order =
@@ -60,16 +56,16 @@ buildOnConfirmMessage res = do
                         },
                     breakup =
                       Just $
-                        mkBreakupList
+                        mkFareParamsBreakups
                           (OnConfirm.BreakupItemPrice currency . fromIntegral)
                           OnConfirm.BreakupItem
                           fareParams
                   },
               provider =
-                res.driverId >>= \dId ->
+                res.rideInfo >>= \rideInfo ->
                   Just $
                     OnConfirm.Provider
-                      { id = dId
+                      { id = rideInfo.driver.id.getId
                       },
               payment =
                 OnConfirm.Payment
@@ -116,116 +112,85 @@ mklocation loc =
   where
     castAddress DL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, locality = area, ward = Nothing, ..}
 
-mkFulfillmentInfo :: DL.Location -> DL.Location -> Text -> OnConfirm.FulfillmentType -> Maybe Text -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
-mkFulfillmentInfo fromLoc toLoc fulfillmentId fulfillmentType driverName riderPhoneNumber riderMobileCountryCode mbRiderName vehicleVariant =
-  OnConfirm.FulfillmentInfo
-    { id = fulfillmentId,
-      _type = fulfillmentType,
-      state =
-        OnConfirm.FulfillmentState
-          { descriptor =
-              OnConfirm.Descriptor
-                { short_desc = Nothing,
-                  code = Just "TRIP_ASSIGNED"
-                }
-          },
-      start =
-        OnConfirm.StartInfo
-          { location = mklocation fromLoc,
-            authorization = Nothing
-          },
-      end =
-        Just
-          OnConfirm.StopInfo
-            { location = mklocation toLoc
-            },
-      vehicle =
-        OnConfirm.Vehicle
-          { category = vehicleVariant
-          },
-      customer =
-        OnConfirm.Customer
-          { contact =
-              OnConfirm.Contact
-                { phone =
-                    OnConfirm.Phone
-                      { phoneNumber = riderPhoneNumber,
-                        phoneCountryCode = riderMobileCountryCode
-                      }
-                },
-            person =
-              mbRiderName <&> \riderName ->
-                OnConfirm.OrderPerson
-                  { name = riderName,
-                    tags = Nothing
-                  }
-          },
-      agent =
-        driverName >>= \dName ->
+mkFulfillmentInfo :: MonadFlow m => DConfirm.Booking -> DConfirm.ValidatedQuote -> DL.Location -> Maybe DL.Location -> Text -> Maybe Text -> Maybe DConfirm.RideInfo -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> m OnConfirm.FulfillmentInfo
+mkFulfillmentInfo booking quoteType fromLoc mbToLoc fulfillmentId mbOtp mbRideInfo riderPhoneNumber riderMobileCountryCode mbRiderName vehicleVariant = do
+  authorization <-
+    case quoteType of
+      DConfirm.DriverQuote _ _ -> pure Nothing
+      DConfirm.StaticQuote _ -> pure Nothing
+      DConfirm.RideOtpQuote _ -> do
+        otp <- mbOtp & fromMaybeM (OtpNotFoundForSpecialZoneBooking booking.id.getId)
+        pure $
+          Just $
+            OnConfirm.Authorization
+              { _type = "OTP",
+                token = otp
+              }
+
+  let agent =
+        mbRideInfo >>= \rideInfo ->
           Just
             OnConfirm.Agent
-              { name = dName,
+              { name = rideInfo.driver.firstName,
                 rateable = True,
                 tags = Nothing,
                 phone = Nothing,
                 image = Nothing
               }
-    }
-
-mkSpecialZoneFulfillmentInfo :: DL.Location -> DL.Location -> Text -> Text -> OnConfirm.FulfillmentType -> Text -> Text -> Maybe Text -> OnConfirm.VehicleVariant -> OnConfirm.FulfillmentInfo
-mkSpecialZoneFulfillmentInfo fromLoc toLoc otp fulfillmentId fulfillmentType riderPhoneNumber riderMobileCountryCode mbRiderName vehicleVariant = do
-  let authorization =
-        Just $
-          OnConfirm.Authorization
-            { _type = "OTP",
-              token = otp
-            }
-  OnConfirm.FulfillmentInfo
-    { id = fulfillmentId,
-      _type = fulfillmentType,
-      state =
-        OnConfirm.FulfillmentState
-          { descriptor =
-              OnConfirm.Descriptor
-                { code = Just "NEW",
-                  short_desc = Nothing
-                }
-          },
-      start =
-        OnConfirm.StartInfo
-          { location = mklocation fromLoc,
-            authorization = authorization
-          },
-      end =
-        Just
-          OnConfirm.StopInfo
-            { location = mklocation toLoc
-            },
-      vehicle =
-        OnConfirm.Vehicle
-          { category = vehicleVariant
-          },
-      customer =
-        OnConfirm.Customer
-          { contact =
-              OnConfirm.Contact
-                { phone =
-                    OnConfirm.Phone
-                      { phoneNumber = riderPhoneNumber,
-                        phoneCountryCode = riderMobileCountryCode
-                      }
-                },
-            person =
-              mbRiderName <&> \riderName ->
-                OnConfirm.OrderPerson
-                  { name = riderName,
-                    tags = Nothing
+  return $
+    OnConfirm.FulfillmentInfo
+      { id = fulfillmentId,
+        _type = Common.mkFulfillmentType booking.tripCategory,
+        state =
+          OnConfirm.FulfillmentState
+            { descriptor =
+                OnConfirm.Descriptor
+                  { short_desc = Nothing,
+                    code = Just (bookingStatusCode quoteType)
                   }
-          },
-      agent = Nothing
-    }
+            },
+        start =
+          OnConfirm.StartInfo
+            { location = mklocation fromLoc,
+              authorization = authorization
+            },
+        end =
+          ( \toLoc ->
+              OnConfirm.StopInfo
+                { location = mklocation toLoc
+                }
+          )
+            <$> mbToLoc,
+        vehicle =
+          OnConfirm.Vehicle
+            { category = vehicleVariant
+            },
+        customer =
+          OnConfirm.Customer
+            { contact =
+                OnConfirm.Contact
+                  { phone =
+                      OnConfirm.Phone
+                        { phoneNumber = riderPhoneNumber,
+                          phoneCountryCode = riderMobileCountryCode
+                        }
+                  },
+              person =
+                mbRiderName <&> \riderName ->
+                  OnConfirm.OrderPerson
+                    { name = riderName,
+                      tags = Nothing
+                    }
+            },
+        agent = agent
+      }
 
-buildOnConfirmMessageV2 :: MonadFlow m => DConfirm.DConfirmRes -> m Spec.ConfirmReqMessage
+bookingStatusCode :: DConfirm.ValidatedQuote -> Text
+bookingStatusCode (DConfirm.DriverQuote _ _) = "TRIP_ASSIGNED"
+bookingStatusCode (DConfirm.StaticQuote _) = "NEW"
+bookingStatusCode (DConfirm.RideOtpQuote _) = "NEW"
+
+buildOnConfirmMessageV2 :: MonadFlow m => DConfirm.DConfirmResp -> m Spec.ConfirmReqMessage
 buildOnConfirmMessageV2 res = do
   order <- tfOrder res
   return $
@@ -233,7 +198,7 @@ buildOnConfirmMessageV2 res = do
       { confirmReqMessageOrder = order
       }
 
-tfOrder :: MonadFlow m => DConfirm.DConfirmRes -> m Spec.Order
+tfOrder :: MonadFlow m => DConfirm.DConfirmResp -> m Spec.Order
 tfOrder res = do
   fulfillments <- tfFulfillments res
   return $
@@ -250,58 +215,36 @@ tfOrder res = do
         orderStatus = Just "ACTIVE"
       }
 
-tfFulfillments :: MonadFlow m => DConfirm.DConfirmRes -> m (Maybe [Spec.Fulfillment])
+tfFulfillments :: MonadFlow m => DConfirm.DConfirmResp -> m (Maybe [Spec.Fulfillment])
 tfFulfillments res = do
-  stops <- mkStops res.booking.bookingType
+  let stops = Utils.mkStops' res.booking.fromLocation res.booking.toLocation res.booking.specialZoneOtpCode
   return $
     Just $
       [ Spec.Fulfillment
           { fulfillmentAgent = tfAgent res,
             fulfillmentCustomer = tfCustomer res,
             fulfillmentId = Just res.booking.quoteId,
-            fulfillmentState = mkFulfillmentState res.booking.bookingType,
+            fulfillmentState = mkFulfillmentState res.quoteType,
             fulfillmentStops = stops,
             fulfillmentTags = Nothing,
-            fulfillmentType = Just $ mkFulfillmentType res.booking.bookingType,
+            fulfillmentType = Just $ Common.mkFulfillmentType res.booking.tripCategory,
             fulfillmentVehicle = tfVehicle res
           }
       ]
   where
-    mkFulfillmentType = \case
-      DConfirm.NormalBooking -> "RIDE"
-      DConfirm.SpecialZoneBooking -> "RIDE_OTP"
+    mkFulfillmentState quoteType =
+      Just $
+        Spec.FulfillmentState
+          { fulfillmentStateDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just (bookingStatusCode quoteType),
+                    descriptorShortDesc = Nothing,
+                    descriptorName = Nothing
+                  }
+          }
 
-    mkFulfillmentState = \case
-      DConfirm.NormalBooking ->
-        Just $
-          Spec.FulfillmentState
-            { fulfillmentStateDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just "TRIP_ASSIGNED",
-                      descriptorShortDesc = Nothing,
-                      descriptorName = Nothing
-                    }
-            }
-      DConfirm.SpecialZoneBooking ->
-        Just $
-          Spec.FulfillmentState
-            { fulfillmentStateDescriptor =
-                Just $
-                  Spec.Descriptor
-                    { descriptorCode = Just "NEW",
-                      descriptorShortDesc = Nothing,
-                      descriptorName = Nothing
-                    }
-            }
-
-    mkStops = \case
-      DConfirm.NormalBooking -> return $ Utils.mkStops' res.booking.fromLocation res.booking.toLocation Nothing
-      DConfirm.SpecialZoneBooking -> do
-        otpCode <- res.booking.specialZoneOtpCode & fromMaybeM (OtpNotFoundForSpecialZoneBooking res.booking.id.getId)
-        return $ Utils.mkStops' res.booking.fromLocation res.booking.toLocation (Just otpCode)
-
-tfItems :: DConfirm.DConfirmRes -> Maybe [Spec.Item]
+tfItems :: DConfirm.DConfirmResp -> Maybe [Spec.Item]
 tfItems res =
   Just $
     [ Spec.Item
@@ -315,7 +258,7 @@ tfItems res =
         }
     ]
 
-tfItemDescriptor :: DConfirm.DConfirmRes -> Maybe Spec.Descriptor
+tfItemDescriptor :: DConfirm.DConfirmResp -> Maybe Spec.Descriptor
 tfItemDescriptor res =
   Just $
     Spec.Descriptor
@@ -324,7 +267,7 @@ tfItemDescriptor res =
         descriptorName = Nothing
       }
 
-tfItemPrice :: DConfirm.DConfirmRes -> Maybe Spec.Price
+tfItemPrice :: DConfirm.DConfirmResp -> Maybe Spec.Price
 tfItemPrice res =
   Just $
     Spec.Price
@@ -337,7 +280,7 @@ tfItemPrice res =
       }
 
 -- TODO: Discuss payment info transmission with ONDC
-tfPayments :: DConfirm.DConfirmRes -> Maybe [Spec.Payment]
+tfPayments :: DConfirm.DConfirmResp -> Maybe [Spec.Payment]
 tfPayments res =
   Just $
     [ Spec.Payment
@@ -360,20 +303,20 @@ tfPayments res =
             paymentParamsVirtualPaymentAddress = Nothing
           }
 
-tfProvider :: DConfirm.DConfirmRes -> Maybe Spec.Provider
+tfProvider :: DConfirm.DConfirmResp -> Maybe Spec.Provider
 tfProvider res = do
-  driverId <- res.driverId
+  rideInfo <- res.rideInfo
   return $
     Spec.Provider
       { providerDescriptor = Nothing,
         providerFulfillments = Nothing,
-        providerId = Just driverId,
+        providerId = Just rideInfo.driver.id.getId,
         providerItems = Nothing,
         providerLocations = Nothing,
         providerPayments = Nothing
       }
 
-tfQuotation :: DConfirm.DConfirmRes -> Maybe Spec.Quotation
+tfQuotation :: DConfirm.DConfirmResp -> Maybe Spec.Quotation
 tfQuotation res =
   Just $
     Spec.Quotation
@@ -382,7 +325,7 @@ tfQuotation res =
         quotationTtl = Nothing
       }
 
-tfQuotationPrice :: DConfirm.DConfirmRes -> Maybe Spec.Price
+tfQuotationPrice :: DConfirm.DConfirmResp -> Maybe Spec.Price
 tfQuotationPrice res =
   Just $
     Spec.Price
@@ -394,10 +337,10 @@ tfQuotationPrice res =
         priceValue = Just $ encodeToText res.booking.estimatedFare
       }
 
-mkQuotationBreakup :: DConfirm.DConfirmRes -> Maybe [Spec.QuotationBreakupInner]
+mkQuotationBreakup :: DConfirm.DConfirmResp -> Maybe [Spec.QuotationBreakupInner]
 mkQuotationBreakup res =
   Just $
-    mkBreakupList mkPrice mkQuotationBreakupInner res.booking.fareParams
+    mkFareParamsBreakups mkPrice mkQuotationBreakupInner res.booking.fareParams
   where
     mkPrice money =
       Just $
@@ -416,7 +359,7 @@ mkQuotationBreakup res =
           quotationBreakupInnerTitle = Just title
         }
 
-tfVehicle :: DConfirm.DConfirmRes -> Maybe Spec.Vehicle
+tfVehicle :: DConfirm.DConfirmResp -> Maybe Spec.Vehicle
 tfVehicle res =
   Just $
     Spec.Vehicle
@@ -436,9 +379,9 @@ tfVehicle res =
       VehVar.TAXI -> "TAXI"
       VehVar.TAXI_PLUS -> "TAXI_PLUS"
 
-tfAgent :: DConfirm.DConfirmRes -> Maybe Spec.Agent
+tfAgent :: DConfirm.DConfirmResp -> Maybe Spec.Agent
 tfAgent res = do
-  driverName <- res.driverName
+  rideInfo <- res.rideInfo
   return $
     Spec.Agent
       { agentContact = Nothing,
@@ -447,12 +390,12 @@ tfAgent res = do
             Spec.Person
               { personId = Nothing,
                 personImage = Nothing,
-                personName = Just driverName,
+                personName = Just rideInfo.driver.firstName,
                 personTags = Nothing
               }
       }
 
-tfCustomer :: DConfirm.DConfirmRes -> Maybe Spec.Customer
+tfCustomer :: DConfirm.DConfirmResp -> Maybe Spec.Customer
 tfCustomer res =
   return $
     Spec.Customer

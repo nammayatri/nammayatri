@@ -24,11 +24,8 @@ module Domain.Action.UI.Ride
 where
 
 import qualified Data.HashMap.Strict as HM
-import Data.String.Conversions
-import qualified Data.Text as T
 import Data.Time (Day)
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Action.Beckn.Search as BS
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
@@ -38,53 +35,41 @@ import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.RideDetails as DRD
 import qualified Domain.Types.RideDetails as RD
-import qualified Domain.Types.RideRoute as RI
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
-import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
-import qualified Lib.DriverScore as DS
-import qualified Lib.DriverScore.Types as DST
 import qualified SharedLogic.CallBAP as BP
-import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.FareCalculator (fareSum)
+import SharedLogic.Ride
 import qualified Storage.CachedQueries.BapMetadata as CQSM
-import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
-import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
-import Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
-import qualified Storage.Queries.RideDetails as QRideD
 import Storage.Queries.Vehicle as QVeh
 import Tools.Error
-import Tools.Event
-import qualified Tools.Notifications as Notify
 
 data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,
     shortRideId :: ShortId DRide.Ride,
     status :: DRide.RideStatus,
     fromLocation :: DLoc.LocationAPIEntity,
-    toLocation :: DLoc.LocationAPIEntity,
+    toLocation :: Maybe DLoc.LocationAPIEntity,
     driverName :: Text,
     driverNumber :: Maybe Text,
     vehicleVariant :: DVeh.Variant,
@@ -94,7 +79,7 @@ data DriverRideRes = DriverRideRes
     vehicleNumber :: Text,
     computedFare :: Maybe Money,
     estimatedBaseFare :: Money,
-    estimatedDistance :: Meters,
+    estimatedDistance :: Maybe Meters,
     driverSelectedFare :: Money,
     actualRideDistance :: HighPrecMeters,
     rideRating :: Maybe Int,
@@ -177,7 +162,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       shortRideId = ride.shortId,
       status = ride.status,
       fromLocation = DLoc.makeLocationAPIEntity booking.fromLocation,
-      toLocation = DLoc.makeLocationAPIEntity booking.toLocation,
+      toLocation = DLoc.makeLocationAPIEntity <$> booking.toLocation,
       driverName = rideDetails.driverName,
       driverNumber,
       vehicleNumber = rideDetails.vehicleNumber,
@@ -239,32 +224,10 @@ otpRideCreate driver otpCode booking = do
   unless (driverInfo.subscribed) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.onRide $ throwError DriverOnRide
-  ghrId <- CQDGR.setDriverGoHomeIsOnRideStatus driver.id booking.merchantOperatingCityId True
-  ride <- buildRide otpCode driver.id (Just transporter.id) booking.merchantOperatingCityId ghrId
-  rideDetails <- buildRideDetails ride
 
-  -- moving route from booking id to ride id
-  routeInfo :: Maybe RI.RouteInfo <- Redis.safeGet (BS.searchRequestKey $ getId booking.id)
-  case routeInfo of
-    Just route -> Redis.setExp (BS.searchRequestKey $ getId ride.id) route 14400
-    Nothing -> logDebug "Unable to get the key"
-
-  QBooking.updateStatus booking.id DRB.TRIP_ASSIGNED
-  QRide.createRide ride
-  QDI.updateOnRide (cast driver.id) True
-  void $ LF.rideDetails ride.id DRide.NEW transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon
-
-  QRideD.create rideDetails
-
-  QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
-  triggerRideCreatedEvent RideEventData {ride = ride, personId = driver.id, merchantId = transporter.id}
-
+  (ride, rideDetails, _) <- initializeRide transporter.id driver booking (Just otpCode) booking.id.getId
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
-  Notify.notifyDriver booking.merchantOperatingCityId notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
-
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle
-
-  DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = transporter.id, driverId = driver.id}
 
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
@@ -276,83 +239,6 @@ otpRideCreate driver otpCode booking = do
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = DConfirm.cancelBooking uBooking (Just driver) transporter >> throwM exc
       | otherwise = throwM exc
 
-    notificationType = FCM.DRIVER_ASSIGNMENT
-    notificationTitle = "Driver has been assigned the ride!"
-    message uBooking =
-      cs $
-        unwords
-          [ "You have been assigned a ride for",
-            cs (showTimeIst uBooking.startTime) <> ".",
-            "Check the app for more details."
-          ]
-    buildRide otp driverId merchantId merchantOpCityId ghrId = do
-      guid <- Id <$> generateGUID
-      shortId <- generateShortId
-      now <- getCurrentTime
-      trackingUrl <- buildTrackingUrl guid
-      return
-        DRide.Ride
-          { id = guid,
-            pickupDropOutsideOfThreshold = Nothing,
-            bookingId = booking.id,
-            shortId = shortId,
-            merchantId = merchantId,
-            merchantOperatingCityId = merchantOpCityId,
-            status = DRide.NEW,
-            driverId = cast driverId,
-            otp = otp,
-            trackingUrl = trackingUrl,
-            fare = Nothing,
-            traveledDistance = 0,
-            chargeableDistance = Nothing,
-            driverArrivalTime = Nothing,
-            tripStartTime = Nothing,
-            tripEndTime = Nothing,
-            tripStartPos = Nothing,
-            fromLocation = booking.fromLocation,
-            toLocation = booking.toLocation,
-            tripEndPos = Nothing,
-            fareParametersId = Nothing,
-            distanceCalculationFailed = Nothing,
-            createdAt = now,
-            updatedAt = now,
-            driverDeviatedFromRoute = Just False,
-            numberOfSnapToRoadCalls = Nothing,
-            numberOfOsrmSnapToRoadCalls = Nothing,
-            numberOfDeviation = Nothing,
-            uiDistanceCalculationWithAccuracy = Nothing,
-            uiDistanceCalculationWithoutAccuracy = Nothing,
-            isFreeRide = Nothing,
-            driverGoHomeRequestId = ghrId,
-            safetyAlertTriggered = False
-          }
-
-    buildTrackingUrl rideId = do
-      (bppUIUrl :: BaseUrl) <- asks (.selfUIUrl)
-      let rideid = T.unpack (getId rideId)
-      return $
-        bppUIUrl
-          { baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
-          }
-
-    buildRideDetails ride = do
-      vehicle <-
-        QVeh.findById ride.driverId
-          >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-      vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
-      return
-        DRD.RideDetails
-          { id = ride.id,
-            driverName = driver.firstName,
-            driverNumber = driver.mobileNumber,
-            driverCountryCode = driver.mobileCountryCode,
-            vehicleNumber = vehicle.registrationNo,
-            vehicleColor = Just vehicle.color,
-            vehicleVariant = Just vehicle.variant,
-            vehicleModel = Just vehicle.model,
-            vehicleClass = Nothing,
-            fleetOwnerId = vehicleRegCert >>= (.fleetOwnerId)
-          }
     isNotAllowedVehicleVariant driverVehicle bookingVehicle =
       (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
         && driverVehicle == DVeh.TAXI

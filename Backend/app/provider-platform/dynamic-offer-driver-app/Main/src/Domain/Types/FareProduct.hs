@@ -18,6 +18,7 @@ module Domain.Types.FareProduct where
 
 import qualified Data.List as List
 import qualified Data.Text as T
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -28,11 +29,6 @@ import Kernel.Utils.GenericPretty
 import Lib.Types.SpecialLocation (SpecialLocation (..))
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
-
-data FlowType
-  = RIDE_OTP
-  | NORMAL
-  deriving (Show, Read, Generic, Eq, ToSchema, FromJSON, ToJSON, Ord)
 
 data Area
   = Pickup (Id SpecialLocation)
@@ -66,6 +62,8 @@ instance Show Area where
   show (Drop specialLocationId) = "Drop_" <> T.unpack specialLocationId.getId
   show Default = "Default"
 
+$(mkBeamInstancesForEnum ''Area)
+
 data FareProduct = FareProduct
   { id :: Id FareProduct,
     merchantId :: Id Merchant,
@@ -73,10 +71,6 @@ data FareProduct = FareProduct
     farePolicyId :: Id FarePolicyD.FarePolicy,
     vehicleVariant :: Variant.Variant,
     area :: Area,
-    flow :: FlowType
+    tripCategory :: DTC.TripCategory
   }
   deriving (Generic, Show, Eq, ToSchema, FromJSON, ToJSON)
-
-$(mkBeamInstancesForEnum ''FlowType)
-
-$(mkBeamInstancesForEnum ''Area)

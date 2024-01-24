@@ -110,6 +110,7 @@ data TransporterConfigD u = TransporterConfig
     canDowngradeToHatchback :: Bool,
     canDowngradeToTaxi :: Bool,
     canSuvDowngradeToTaxi :: Bool,
+    canSwitchToRental :: Bool,
     rcLimit :: Int,
     automaticRCActivationCutOff :: Seconds,
     languagesToBeTranslated :: [Language],
@@ -159,6 +160,8 @@ data TransporterConfigD u = TransporterConfig
     notificationRetryTimeGap :: NominalDiffTime,
     driverAutoPayExecutionTimeFallBack :: NominalDiffTime,
     orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime,
+    scheduleRideBufferTime :: NominalDiffTime,
+    considerDriversForSearch :: Bool,
     kaptureDisposition :: Text
   }
   deriving (Generic, Show)

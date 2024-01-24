@@ -24,6 +24,7 @@ import qualified Control.Monad as CM
 import Data.Foldable.Extra (notNull)
 import qualified Data.HashMap as HM
 import qualified Data.List as DL
+import Domain.Types.Common
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
 import Domain.Types.GoHomeConfig (GoHomeConfig)
@@ -208,6 +209,13 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
               driverPoolCfg.distanceBasedBatchSplit
 
         calcGoHomeDriverPool specialDrivers opCityId = do
+          case (searchReq.toLocation, searchTry.tripCategory) of
+            (Just toLoc, OneWay OneWayOnDemandDynamicOffer) -> calcGoHomeDriverPool' toLoc specialDrivers opCityId
+            (Just toLoc, OneWay OneWayOnDemandStaticOffer) -> calcGoHomeDriverPool' toLoc specialDrivers opCityId
+            (Just toLoc, OneWay OneWayRideOtp) -> calcGoHomeDriverPool' toLoc specialDrivers opCityId
+            _ -> return []
+
+        calcGoHomeDriverPool' toLoc specialDrivers opCityId = do
           calculateGoHomeDriverPoolBatch <-
             calculateGoHomeDriverPool
               ( CalculateGoHomeDriverPoolReq
@@ -216,7 +224,7 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
                     goHomeCfg = goHomeConfig,
                     variant = Just searchTry.vehicleVariant,
                     fromLocation = searchReq.fromLocation,
-                    toLocation = searchReq.toLocation, -- last or all ?
+                    toLocation = toLoc, -- last or all ?
                     merchantId = searchReq.providerId
                   }
               )

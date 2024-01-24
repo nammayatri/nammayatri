@@ -77,7 +77,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslat
 import qualified "dynamic-offer-driver-app" Storage.Beam.MetaData as MetaData
 import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
-import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
+import qualified "dynamic-offer-driver-app" Storage.Beam.Quote as Quote
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistryMapFallback as RegistryMapFallback
@@ -402,7 +402,7 @@ data DBDeleteObject
   | MessageTranslationDeleteOptions DeleteModel (Where Postgres MessageTranslation.MessageTranslationT)
   | MetaDataDeleteOptions DeleteModel (Where Postgres MetaData.MetaDataT)
   | PersonDeleteOptions DeleteModel (Where Postgres Person.PersonT)
-  | QuoteSpecialZoneDeleteOptions DeleteModel (Where Postgres QuoteSpecialZone.QuoteSpecialZoneT)
+  | QuoteSpecialZoneDeleteOptions DeleteModel (Where Postgres Quote.QuoteT)
   | RatingDeleteOptions DeleteModel (Where Postgres Rating.RatingT)
   | RideDeleteOptions DeleteModel (Where Postgres Ride.RideT)
   | RideDetailsDeleteOptions DeleteModel (Where Postgres RideDetails.RideDetailsT)
