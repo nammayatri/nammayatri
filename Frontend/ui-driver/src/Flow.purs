@@ -2966,6 +2966,7 @@ updateBannerAndPopupFlags = do
                   { totalPendingManualDues = pendingTotalManualDues
                   , autoPayStatus = autoPayStatus
                   , showShimmer = false
+                  , subscribed = getDriverInfoResp.subscribed
                   },
                   driverGotoState 
                   { savedLocationCount = fromMaybe 0 $ fromString $ getValueToLocalStore SAVED_GOTO_COUNT
@@ -3087,6 +3088,7 @@ driverReferralScreenFlow = do
     DRIVER_REFERRAL_SCREEN_NAV HomeScreenNav -> homeScreenFlow
     DRIVER_REFERRAL_SCREEN_NAV GoToRideHistory -> myRidesScreenFlow
     DRIVER_REFERRAL_SCREEN_NAV GoToAlerts -> notificationFlow
+    DRIVER_REFERRAL_SCREEN_NAV (GoToEarningsScreen _) -> driverEarningsFlow
     DRIVER_REFERRAL_SCREEN_NAV _ -> driverReferralScreenFlow
     DRIVER_CONTEST_SCREEN -> referralScreenFlow
 

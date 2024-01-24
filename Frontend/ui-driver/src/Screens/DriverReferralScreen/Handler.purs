@@ -34,3 +34,6 @@ driverReferralScreen = do
     GoToDriverContestScreen updatedState -> do
       modifyScreenState $ DriverReferralScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ DRIVER_CONTEST_SCREEN)
+    EarningsScreen updatedState -> do
+      modifyScreenState $ DriverReferralScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV $ GoToEarningsScreen false )

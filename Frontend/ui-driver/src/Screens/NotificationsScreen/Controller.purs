@@ -102,7 +102,7 @@ eval BackPressed state = do
   else if state.notificationDetailModelState.addCommentModelVisibility == VISIBLE then
     continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing} }
   else
-    exit $ if state.deepLinkActivated then GoToCurrentRideFlow else GoBack
+    exit $ if state.deepLinkActivated then GoToCurrentRideFlow else GoToHomeScreen
 
 
 eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do

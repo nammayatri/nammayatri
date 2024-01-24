@@ -340,9 +340,15 @@ public class ChatService extends Service {
     private void startOverlayService(String message, String timestamp) {
         if ((merchantType.equals("DRIVER")) && Settings.canDrawOverlays(getApplicationContext()) && !sharedPrefs.getString(getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && (sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPrefs.getString(getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"))) {
             try {
+                SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.ENGLISH);
+                inputFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+                SimpleDateFormat finalOutputFormat = new SimpleDateFormat("h:mm a", Locale.ENGLISH);
+                finalOutputFormat.setTimeZone(TimeZone.getTimeZone("Asia/Kolkata"));
+                Date date = inputFormat.parse(timestamp);
+                String finalOutputDate = date !=null ? finalOutputFormat.format(date) : timestamp;
                 Intent intent = new Intent(context, MessageOverlayService.class);
                 intent.putExtra("message", message);
-                intent.putExtra("timestamp", timestamp);
+                intent.putExtra("timestamp", finalOutputDate);
                 context.startService(intent);
                 startMediaPlayer(context, R.raw.new_message, false);
             } catch (Exception e) {
