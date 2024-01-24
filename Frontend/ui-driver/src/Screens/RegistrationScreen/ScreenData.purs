@@ -80,6 +80,7 @@ dummyCityConfig = {
                     supportNumber : "",
                     languageKey : "",
                     showDriverReferral : false,
+                    showCustomerReferral : false,
                     uploadRCandDL : true,
                     enableYatriCoins : false
                   }

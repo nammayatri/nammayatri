@@ -406,7 +406,8 @@ golden = "#E9BE4D"
 greenGrey :: Color
 greenGrey = "#268C6E"
 
-
+greenGrey100 :: Color
+greenGrey100 = "#29268C6E"
 
 greenDull :: Color
 greenDull = "#5FAF9E"

@@ -151,6 +151,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
       let _ = unsafePerformEffect $ logEvent state.logField "ny_driver_alert_click"
       exit $ GoToNotification
     "Rankings" -> do
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
       _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
       exit $ GoToReferralScreen
     "Join" -> do

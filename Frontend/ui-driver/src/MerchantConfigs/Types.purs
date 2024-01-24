@@ -35,6 +35,7 @@ type AppConfigDriver a =
     banners :: BannerConfig,
     referral :: ReferralConfig,
     enableDriverReferral :: Boolean,
+    enableCustomerReferral :: Boolean,
     rideRequest :: RideRequestConfig,
     coinsConfig :: CoinsConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,

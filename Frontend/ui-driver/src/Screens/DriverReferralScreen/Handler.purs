@@ -22,15 +22,16 @@ driverReferralScreen = do
     GoToHomeScreen updatedState -> do
       modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV HomeScreenNav)
-    GoToRidesScreen updatedState -> do
-      modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV GoToRideHistory)
     GoToNotifications updatedState -> do
       modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV GoToAlerts)
     SubscriptionScreen updatedState -> do
       modifyScreenState $ DriverReferralScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV GoToSubscription)
+    EarningsScreen updatedState -> do
+      modifyScreenState $ DriverReferralScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV $ GoToEarningsScreen false)
     GoToDriverContestScreen updatedState -> do
       modifyScreenState $ DriverReferralScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ DRIVER_CONTEST_SCREEN)
+    

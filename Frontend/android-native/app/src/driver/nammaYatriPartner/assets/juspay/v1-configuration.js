@@ -152,7 +152,11 @@ window.getMerchantConfig = function () {
     , "bottomNavConfig" : {
       "subscription" : 
             { "isVisible" : true
-            }
+            },
+      "referral" : 
+      { 
+        "showNew" : true
+      }
     }
     , "purpleRideConfig" : {
       "showPurpleVideos" : false,
@@ -187,6 +191,7 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : true
       },
@@ -200,6 +205,7 @@ window.getMerchantConfig = function () {
         "supportNumber" : "+918069724900",
         "languageKey" : "TE_IN",
         "showDriverReferral" : true,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false
       },
@@ -212,7 +218,8 @@ window.getMerchantConfig = function () {
         "cityLong" : 76.639381,
         "supportNumber" : "",
         "languageKey" : "KN_IN",
-        "showDriverReferral" : true,
+        "showDriverReferral" : false,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false
       },
@@ -226,6 +233,7 @@ window.getMerchantConfig = function () {
         "supportNumber" : "+918069724848",
         "languageKey" : "HI_IN",
         "showDriverReferral" : true,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false
       },
@@ -239,6 +247,7 @@ window.getMerchantConfig = function () {
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : false,
         "enableYatriCoins" : false
       },
@@ -252,6 +261,7 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false
       },
@@ -265,6 +275,7 @@ window.getMerchantConfig = function () {
         "supportNumber" : "08069724899",
         "languageKey" : "TA_IN",
         "showDriverReferral" : true,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false
       },
@@ -278,6 +289,7 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
+        "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false
       }

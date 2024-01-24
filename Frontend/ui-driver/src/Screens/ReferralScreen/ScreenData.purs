@@ -38,7 +38,8 @@ initData =  {
   , driverPerformance : {
       referrals : {
         totalActivatedCustomers : 0,
-        totalReferredCustomers : 0
+        totalReferredCustomers : 0,
+        totalReferredDrivers : 0
     }
 }
   , logField : empty

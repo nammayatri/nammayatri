@@ -253,6 +253,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
       void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit GoToProfileScreen
     "Rankings" -> do
+      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
       void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
       exit $ GoToReferralScreen
     "Join" -> do 
