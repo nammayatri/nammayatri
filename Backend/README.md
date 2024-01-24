@@ -278,6 +278,10 @@ Run `nix run github:nix-community/nix-melt` to navigate and find that transitive
 [cabal]: https://cabal.readthedocs.io/
 [nix-shell]: https://nixos.wiki/wiki/Development_environment_with_nix-shell
 
+### `, run-svc` not responding to `Ctrl-C` or [external-services](running-external-services) running in the background even after exiting `, run-svc`
+
+Run `, kill-svc-ports`
+
 ## Running Load Test
 
 See Documentation [README.md](load-test/README.md)

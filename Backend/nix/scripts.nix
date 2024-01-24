@@ -3,6 +3,7 @@
 # We use https://github.com/Platonic-Systems/mission-control
 _:
 {
+  debug = true;
   perSystem = { config, self', pkgs, lib, ... }: {
     mission-control.scripts = {
       ghcid = {
@@ -70,6 +71,34 @@ _:
         exec = ''
           nix run .#run-mobility-stack-dev -- "$@"
         '';
+      };
+
+      kill-svc-ports = {
+        category = "Backend";
+        description = ''
+          Free up ports by killing all the external-services.
+        '';
+        exec =
+          let
+            ports = import ./services/ports.nix;
+          in
+          lib.concatMapStrings
+            (port: ''
+              # Get the process ID using lsof for the specified port
+              set +e
+              pid=$(${lib.getExe pkgs.lsof} -ti:${builtins.toString port})
+              set -e
+
+              # Check if lsof returned any process ID
+              if [ -n "$pid" ]; then
+                echo "Sending SIGKILL to processes running on ${builtins.toString port}:"
+                echo "$pid"
+                echo "$pid" | ${pkgs.findutils}/bin/xargs kill -9
+              else
+                echo "No processes found on port ${builtins.toString port}"
+              fi
+            '')
+            (lib.attrValues ports);
       };
 
       backend-new-service = {
