@@ -22,7 +22,6 @@ import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Domain.Payments (APIPaymentStatus(..))
 import Components.BottomNavBar as BottomNavBar
-import Components.BottomNavBar.Controller (navData)
 import Components.ChatView as ChatView
 import Components.GoToLocationModal as GoToLocationModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
@@ -1643,7 +1642,7 @@ waitTimeInfoPopUp push state =
 
 bottomNavBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBar push state =
-    BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.HOME_SCREEN state.data.config.bottomNavConfig)
+    BottomNavBar.view (push <<< BottomNavBarAction) (HU.getBottomNavBarConfig (ScreenNames.getScreen ScreenNames.HOME_SCREEN) state.data.config.bottomNavConfig)
 
 rideActionModelView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 rideActionModelView push state =

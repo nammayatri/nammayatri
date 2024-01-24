@@ -64,10 +64,10 @@ import Screens.UploadDrivingLicenseScreen.ScreenData as UploadDrivingLicenseScre
 import Screens.VehicleDetailsScreen.ScreenData as VehicleDetailsScreenData
 import Screens.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.WriteToUsScreen.ScreenData as WriteToUsScreenData
-import Data.Maybe (Maybe(..))
 import MerchantConfig.Types (AppConfig(..))
 import Screens.DriverReferralScreen.ScreenData as DriverReferralScreenData
 import Common.Types.App (CategoryListType)
+import Screens (ScreenName)
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -234,9 +234,9 @@ data MY_RIDES_SCREEN_OUTPUT = HOME_SCREEN
                             | NOTIFICATION_FLOW
                             | SELECTED_TAB RideHistoryScreenState
                             | OPEN_PAYMENT_HISTORY RideHistoryScreenState
-                            | RIDE_HISTORY_NAV NAVIGATION_ACTIONS
+                            | RIDE_HISTORY_NAV ScreenName
 
-data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV NAVIGATION_ACTIONS DriverEarningsScreenState
+data DRIVER_EARNINGS_SCREEN_OUTPUT = EARNINGS_NAV ScreenName DriverEarningsScreenState
                                    | CHANGE_SUB_VIEW DriverEarningsSubView DriverEarningsScreenState
                                    | CONVERT_COIN_TO_CASH DriverEarningsScreenState
                                    | REFRESH_EARNINGS_SCREEN DriverEarningsScreenState
@@ -251,7 +251,7 @@ data REFERRAL_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_NOTIFICATION_SCREEN_FROM_REFERRAL_SCREEN
                             | GO_TO_FLOW_AND_COME_BACK ReferralScreenState
                             | REFRESH_LEADERBOARD
-                            | REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
+                            | REFERRAL_SCREEN_NAV ScreenName
 
 data RIDES_SELECTION_SCREEN_OUTPUT = REFRESH_RIDES RideSelectionScreenState
                                    | LOADER_RIDES_OUTPUT RideSelectionScreenState
@@ -283,6 +283,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | SUBCRIPTION 
                                     | SAVED_LOCATIONS_SCREEN
                                     | GO_HOME DriverProfileScreenState
+                                    | DRIVER_PROFILE_SCREEN_NAV ScreenName
 
 
 data DRIVER_DETAILS_SCREEN_OUTPUT = VERIFY_OTP DriverDetailsScreenState
@@ -350,7 +351,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | GO_TO_START_ZONE_RIDE {otp :: String, lat :: String, lon :: String, ts :: String}
                           | ON_CALL HomeScreenState String
                           | OPEN_PAYMENT_PAGE HomeScreenState
-                          | HOMESCREEN_NAV NAVIGATION_ACTIONS
+                          | HOMESCREEN_NAV ScreenName Boolean
                           | GO_TO_VEHICLE_DETAILS_SCREEN
                           | GO_TO_RIDE_DETAILS_SCREEN 
                           | POST_RIDE_FEEDBACK HomeScreenState
@@ -387,7 +388,7 @@ data NOTIFICATIONS_SCREEN_OUTPUT = REFRESH_SCREEN NotificationsScreenState
                                     | GO_PROFILE_SCREEN
                                     | GO_EARNINGS_SCREEN
                                     | CHECK_RIDE_FLOW_STATUS
-                                    | NOTIFICATION_SCREEN_NAV NAVIGATION_ACTIONS
+                                    | NOTIFICATION_SCREEN_NAV ScreenName
 
 data BOOKING_OPTIONS_SCREEN_OUTPUT = SELECT_CAB BookingOptionsScreenState Boolean | GO_TO_PROFILE
 
@@ -401,7 +402,7 @@ data AADHAAR_VERIFICATION_SCREEN_OUTPUT = ENTER_AADHAAR_OTP AadhaarVerificationS
   | LOGOUT_FROM_AADHAAR
 
 data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
-                                  | NAV NAVIGATION_ACTIONS
+                                  | NAV ScreenName
                                   | MAKE_PAYMENT SubscriptionScreenState
                                   | GOTO_PAYMENT_HISTORY SubscriptionScreenState
                                   | CANCEL_AUTOPAY SubscriptionScreenState
@@ -417,13 +418,6 @@ data SUBSCRIPTION_SCREEN_OUTPUT = GOTO_HOMESCREEN
                                   | REFRESH_HELP_CENTRE SubscriptionScreenState
                                   | CLEAR_DUES_ACT
                                   | SUBSCRIBE_API SubscriptionScreenState
-
-data NAVIGATION_ACTIONS = HomeScreenNav
-                          | GoToRideHistory
-                          | GoToSubscription
-                          | GoToContest
-                          | GoToAlerts
-                          | GoToEarningsScreen Boolean
 
 data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
                                     | EntityDetailsAPI PaymentHistoryScreenState String
@@ -448,5 +442,5 @@ data CHOOSE_CITY_SCREEN_OUTPUT = GoToWelcomeScreen
                                   | DETECT_CITY Number Number ChooseCityScreenState
 
 data CHOOSE_LANG_SCREEN_OUTPUT = LOGIN_FLOW
-data DRIVER_REFERRAL_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
+data DRIVER_REFERRAL_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV ScreenName
                                    | DRIVER_CONTEST_SCREEN

@@ -15,12 +15,12 @@
 
 module Screens.ReferralScreen.ScreenData where
 
-import Screens.Types (ReferralScreenState, BottomNavBarState, ReferralType(..), LeaderBoardType(..), RankCardData)
+import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), RankCardData)
 import PrestoDOM.Types.Core (toPropValue)
 import Data.Maybe (Maybe(..))
 import Foreign.Object (empty)
 import ConfigProvider
-import Common.Types.App (CalendarDate, CalendarWeek)
+import Common.Types.App (CalendarDate, CalendarWeek, BottomNavBarState)
 
 initData :: ReferralScreenState
 initData =  {

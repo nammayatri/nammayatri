@@ -21,6 +21,8 @@ import Data.Maybe as Mb
 import ConfigProvider
 import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)
 import Services.API (AutopayPaymentStage(..), DriverDuesEntity(..), FeeType(..), InvoiceStatus(..), OfferEntity(..), PaymentBreakUp(..))
+import Data.Maybe(Maybe(..))
+import Screens (ScreenName(..))
 
 initData :: SubscriptionScreenState
 initData = 
@@ -95,7 +97,7 @@ initData =
         prevSubView : NoSubView,
         noKioskLocation : false,
         optionsMenuState : ALL_COLLAPSED,
-        redirectToNav : "",
+        redirectToNav : HOME_SCREEN,
         lastPaymentType : Mb.Nothing,
         offerBannerProps : {
           showOfferBanner : config.subscriptionConfig.offerBannerConfig.showDUOfferBanner,

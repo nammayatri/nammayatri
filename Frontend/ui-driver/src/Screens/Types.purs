@@ -33,7 +33,7 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
-import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig)
+import MerchantConfig.Types (AppConfig, GradientConfig, SubscriptionConfig)
 import Prelude (class Eq, class Show)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
@@ -1149,21 +1149,6 @@ data LocationType = LATITUDE | LONGITUDE
 derive instance genericLocationType :: Generic LocationType _
 instance eqLocationType :: Eq LocationType where eq = genericEq
 
--- ############################################################# BottomNavBarState ################################################################################
-
-type BottomNavBarState = {
-  activeIndex :: Int,
-  navButton :: Array NavIcons
-}
-
-type NavIcons = {
-  activeIcon :: String,
-  defaultIcon :: String,
-  text :: String,
-  screenName :: ScreenName,
-  showNewBanner :: Boolean,
-  isVisible :: Boolean
-}
  -- ######################################  TripDetailsScreenState   ######################################
 
 type TripDetailsScreenState =
@@ -1825,7 +1810,7 @@ type SubscriptionScreenProps = {
   prevSubView :: SubscriptionSubview,
   noKioskLocation :: Boolean,
   optionsMenuState :: OptionsMenuState,
-  redirectToNav :: String,
+  redirectToNav :: ScreenName,
   lastPaymentType :: Maybe LastPaymentType,
   offerBannerProps :: OfferBanner,
   isEndRideModal :: Boolean

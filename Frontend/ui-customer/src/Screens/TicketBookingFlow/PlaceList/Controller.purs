@@ -26,6 +26,7 @@ import JBridge as JB
 import MerchantConfig.Utils as MU
 import Engineering.Helpers.Commons as EHC
 import Services.API as API
+import Components.BottomNavBar.Controller as BottomNavBarController
 
 instance showAction :: Show Action where
   show _ = ""
@@ -40,6 +41,7 @@ data Action = HamburgerClick
             | SelectPlace API.TicketPlaceResp
             | NoAction
             | UpdatePlacesData API.TicketPlaceResponse
+            | BottomNavBarAction BottomNavBarController.Action
 
 data ScreenOutput = GoBack
                   | ExitToHomeScreen TicketingScreenState
@@ -66,5 +68,10 @@ eval (SelectPlace item) state = exit $ BookTickets state item
 eval (UpdatePlacesData placesData) state = do
   let API.TicketPlaceResponse ticketPlaceResp = placesData
   continue state { data { placeInfoArray = ticketPlaceResp} }
+
+eval (BottomNavBarAction (BottomNavBarController.OnNavigate screenName)) state = 
+  case screenName of
+    "home_screen" -> exit $ ExitToHomeScreen state
+    _ -> continue state
 
 eval _ state = continue state

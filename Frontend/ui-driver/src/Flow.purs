@@ -81,7 +81,7 @@ import Presto.Core.Types.Language.Flow (delay, setLogField, getLogFields, doAff,
 import PrestoDOM (initUI)
 import Resource.Constants (decodeAddress)
 import Resource.Constants as RC
-import Screens (ScreenName(..)) as ScreenNames
+import Screens (ScreenName(..), getScreen) as ScreenNames
 import Screens.AddVehicleDetailsScreen.ScreenData (initData) as AddVehicleDetailsScreenData
 import Screens.BookingOptionsScreen.Controller (downgradeOptionsConfig)
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
@@ -119,7 +119,7 @@ import Services.Backend as Remote
 import Services.Events as Events
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
-import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), DRIVER_REFERRAL_SCREEN_OUTPUT(..))
+import Types.App (REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), DRIVER_REFERRAL_SCREEN_OUTPUT(..))
 import Types.App as TA
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import ConfigProvider
@@ -127,6 +127,7 @@ import Timers (clearTimerWithId)
 import RemoteConfig as RC
 import Locale.Utils
 import Data.Array as DA
+import Effect.Unsafe (unsafePerformEffect)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> FlowBT String Unit
@@ -1173,6 +1174,7 @@ driverProfileFlow = do
       let (GlobalState defaultEpassState') = defaultGlobalState
       modifyScreenState $ DriverSavedLocationScreenStateType (\_ ->  defaultEpassState'.driverSavedLocationScreen)
       goToLocationFlow  
+    DRIVER_PROFILE_SCREEN_NAV screenName -> screenNavigationFlow screenName
 
 driverDetailsFlow :: FlowBT String Unit
 driverDetailsFlow = do
@@ -1539,8 +1541,7 @@ myRidesScreenFlow = do
           modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{props {showPaymentHistory = true},data{paymentHistory {paymentHistoryList = paymentHistoryArray}}})
         Left err -> pure unit
       myRidesScreenFlow
-    RIDE_HISTORY_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
-    RIDE_HISTORY_NAV _ -> myRidesScreenFlow
+    RIDE_HISTORY_NAV screenName -> screenNavigationFlow screenName
 
 rideSelectionScreenFlow :: FlowBT String Unit
 rideSelectionScreenFlow = do
@@ -1670,8 +1671,8 @@ referralScreenFlow = do
           referralScreenFlow
       referralScreenFlow
     REFRESH_LEADERBOARD -> referralScreenFlow
-    REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
-    REFERRAL_SCREEN_NAV (GoToEarningsScreen _) -> driverEarningsFlow
+    REFERRAL_SCREEN_NAV ScreenNames.SUBSCRIPTION_SCREEN -> updateAvailableAppsAndGoToSubs
+    REFERRAL_SCREEN_NAV ScreenNames.DRIVER_EARNINGS_SCREEN -> driverEarningsFlow
     REFERRAL_SCREEN_NAV _ -> referralScreenFlow
     _ -> referralScreenFlow
 
@@ -2186,13 +2187,11 @@ homeScreenFlow = do
       (OnCallRes resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
       homeScreenFlow
     OPEN_PAYMENT_PAGE state -> ysPaymentFlow
-    HOMESCREEN_NAV GoToSubscription -> do
-      let (GlobalState defGlobalState) = defaultGlobalState
-      updateAvailableAppsAndGoToSubs
-    HOMESCREEN_NAV (GoToEarningsScreen showCoinsView) -> do
+    HOMESCREEN_NAV ScreenNames.DRIVER_EARNINGS_SCREEN showCoinsView -> do
       modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen { props { subView = if showCoinsView then ST.YATRI_COINS_VIEW else ST.EARNINGS_VIEW }})
       driverEarningsFlow
-    HOMESCREEN_NAV _ -> homeScreenFlow
+    -- HOMESCREEN_NAV _ _-> homeScreenFlow
+    HOMESCREEN_NAV screenName _ -> screenNavigationFlow screenName
     GO_TO_AADHAAR_VERIFICATION -> do
       modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
       aadhaarVerificationFlow
@@ -2537,12 +2536,8 @@ subScriptionFlow = do
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
   case uiAction of
-    NAV HomeScreenNav -> homeScreenFlow
-    NAV GoToRideHistory -> myRidesScreenFlow
-    NAV GoToContest -> referralFlow
-    NAV GoToAlerts -> notificationFlow
+    NAV screenName -> screenNavigationFlow screenName
     GOTO_HOMESCREEN -> homeScreenFlow
-    NAV (GoToEarningsScreen _) -> driverEarningsFlow
     MAKE_PAYMENT state -> do
       case state.props.joinPlanProps.selectedPlanItem of 
         Just selectedPlan -> do
@@ -2786,8 +2781,7 @@ notificationFlow = do
     GO_RIDE_HISTORY_SCREEN -> myRidesScreenFlow
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow Nothing
-    NOTIFICATION_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
-    NOTIFICATION_SCREEN_NAV _ -> notificationFlow
+    NOTIFICATION_SCREEN_NAV screenName -> screenNavigationFlow screenName
 
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do
@@ -3138,12 +3132,9 @@ driverReferralScreenFlow = do
   modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> driverReferralScreen { data {referralCode = referralCode}})
   driverReferralScreen <- UI.driverReferralScreen
   case driverReferralScreen of
-    DRIVER_REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
-    DRIVER_REFERRAL_SCREEN_NAV HomeScreenNav -> homeScreenFlow
-    DRIVER_REFERRAL_SCREEN_NAV GoToRideHistory -> myRidesScreenFlow
-    DRIVER_REFERRAL_SCREEN_NAV GoToAlerts -> notificationFlow
-    DRIVER_REFERRAL_SCREEN_NAV (GoToEarningsScreen _) -> driverEarningsFlow
-    DRIVER_REFERRAL_SCREEN_NAV _ -> driverReferralScreenFlow
+    DRIVER_REFERRAL_SCREEN_NAV screenName ->
+      let _ = spy "DRIVER_REFERRAL_SCREEN_NAV" screenName
+      in screenNavigationFlow screenName
     DRIVER_CONTEST_SCREEN -> referralScreenFlow
 
 referralFlow :: FlowBT String Unit
@@ -3165,16 +3156,11 @@ driverEarningsFlow = do
   modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
   uiAction <- UI.driverEarningsScreen
   case uiAction of
-    EARNINGS_NAV HomeScreenNav state -> do
-       updateDriverStats state homeScreenFlow  
-    EARNINGS_NAV GoToSubscription state -> do
-       updateDriverStats state updateAvailableAppsAndGoToSubs  
-    EARNINGS_NAV GoToContest state -> do
-       updateDriverStats state referralFlow  
-    EARNINGS_NAV GoToAlerts state -> do
-       updateDriverStats state notificationFlow  
-    EARNINGS_NAV _ state -> do
-       updateDriverStats state driverEarningsFlow
+    EARNINGS_NAV screenName state -> do
+      when (state.props.subView == ST.YATRI_COINS_VIEW) $ do
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = (<$>) (\(DriverProfileStatsResp stats) -> DriverProfileStatsResp stats{ coinBalance = state.data.coinBalance }) globalProps.driverRideStats}
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{coinBalance = state.data.coinBalance}})
+      screenNavigationFlow screenName
     CHANGE_SUB_VIEW subView state -> do
       modifyScreenState $ DriverEarningsScreenStateType (\state -> state{props{subView = subView, date = getCurrentUTC ""}})
       driverEarningsFlow
@@ -3245,3 +3231,27 @@ activateReferralCode state code = do
       modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = true, referralCodeSubmitted = true, enterReferralCodeModal = false}})
       setValueToLocalStore REFERRER_URL ""
       setValueToLocalStore REFERRAL_CODE_ADDED "true"
+
+screenNavigationFlow :: ScreenNames.ScreenName -> FlowBT String Unit
+screenNavigationFlow screenName= do
+  logField_ <- lift $ lift $ getLogFields
+  liftFlowBT $ logEvent logField_ "screenNavigationFlow"
+  case screenName of
+    ScreenNames.SUBSCRIPTION_SCREEN -> do 
+      void $ pure $ HU.incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
+      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
+      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
+      updateAvailableAppsAndGoToSubs
+    ScreenNames.HOME_SCREEN -> homeScreenFlow
+    ScreenNames.RIDE_HISTORY_SCREEN -> myRidesScreenFlow
+    ScreenNames.ALERTS_SCREEN -> do
+      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      notificationFlow
+    ScreenNames.REFERRAL_SCREEN -> do
+      void $ pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+      driverReferralScreenFlow
+    ScreenNames.DRIVER_PROFILE_SCREEN -> driverProfileFlow
+    ScreenNames.DRIVER_EARNINGS_SCREEN -> driverEarningsFlow
+    _ -> pure unit

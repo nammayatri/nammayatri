@@ -27,10 +27,11 @@ import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.ReferralScreen.View as ReferralScreen
 import Screens.Types (ReferralType(..))
-import Types.App (FlowBT, GlobalState(..), NAVIGATION_ACTIONS(..), REFERRAL_SCREEN_OUTPUT(..), ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), REFERRAL_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
+import Screens (ScreenName(..))
 
 referralScreen:: FlowBT String REFERRAL_SCREEN_OUTPUT
 referralScreen = do
@@ -40,17 +41,6 @@ referralScreen = do
     GoBack -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> ReferralScreenData.initData)
       App.BackT $ pure App.GoBack
-    GoToHomeScreen updatedState -> do
-      modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_SCREEN_FROM_REFERRAL_SCREEN)
-    GoToRidesScreen updatedState -> do
-      modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDES_SCREEN_FROM_REFERRAL_SCREEN)
-    EarningsScreen -> do
-      App.BackT $ App.BackPoint <$> (pure $ REFERRAL_SCREEN_NAV $ GoToEarningsScreen false)
-    GoToProfileScreen updatedState -> do
-      modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_PROFILE_SCREEN_FROM_REFERRAL_SCREEN)
     GoToNotifications updatedState -> do
       modifyScreenState $ ReferralScreenStateType (\referralScreen -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_NOTIFICATION_SCREEN_FROM_REFERRAL_SCREEN)
@@ -60,4 +50,5 @@ referralScreen = do
       App.BackT $ App.NoBack <$> (pure $ REFRESH_LEADERBOARD)
     SubscriptionScreen updatedState -> do
       modifyScreenState $ ReferralScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ REFERRAL_SCREEN_NAV GoToSubscription)
+      App.BackT $ App.NoBack <$> (pure $ REFERRAL_SCREEN_NAV SUBSCRIPTION_SCREEN)
+    BottomNavBarFlow screenName -> App.BackT $ App.NoBack <$> (pure $ REFERRAL_SCREEN_NAV screenName)

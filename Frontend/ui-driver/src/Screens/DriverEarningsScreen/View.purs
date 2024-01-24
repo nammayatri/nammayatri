@@ -22,8 +22,7 @@ import Animation (fadeIn, translateInYAnim)
 import Animation as Anim
 import Animation.Config (Direction(..), animConfig)
 import Components.BottomNavBar as BottomNavBar
-import Components.BottomNavBar.Controller (navData)
-import Data.Function.Uncurried (runFn1, runFn2, runFn5)
+import Data.Function.Uncurried (runFn1, runFn2, runFn5, runFn3)
 import Components.Calendar.View as Calendar
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader.Controller as GenericHeaderConfig
@@ -229,7 +228,7 @@ view push state =
         , alignParentBottom "true,-1"
         , visibility $ boolToVisibility (any (_ == state.props.subView) [ ST.YATRI_COINS_VIEW, ST.EARNINGS_VIEW ])
         ]
-        [ BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.DRIVER_EARNINGS_SCREEN state.data.config.bottomNavConfig) ]
+        [ BottomNavBar.view (push <<< BottomNavBarAction) (getBottomNavBarConfig (ScreenNames.getScreen ScreenNames.DRIVER_EARNINGS_SCREEN) state.data.config.bottomNavConfig) ]
     ]
   where
   cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)

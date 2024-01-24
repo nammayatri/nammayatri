@@ -17,7 +17,6 @@ module Screens.RideSelectionScreen.View where
 
 import Common.Types.App
 import Animation (screenAnimation, screenAnimationFadeInOut)
-import Components.BottomNavBar.Controller (navData)
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)

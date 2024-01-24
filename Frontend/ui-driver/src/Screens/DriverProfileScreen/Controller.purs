@@ -14,8 +14,7 @@
 -}
 module Screens.DriverProfileScreen.Controller where
 
-import Common.Types.App (CheckBoxOptions)
-import Common.Types.App (LazyCheck(..), ShareImageConfig (..))
+import Common.Types.App (LazyCheck(..), ShareImageConfig (..), CheckBoxOptions)
 import Components.BottomNavBar.Controller as BottomNavBar
 import Components.CheckListView as CheckList
 import Components.GenericHeader.Controller as GenericHeaderController
@@ -43,7 +42,7 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import Prelude (class Show, pure, unit, ($), discard, bind, (==), map, not, (/=), (<>), void, (>=), (>), (-), (+), (<=), (||), (&&))
 import PrestoDOM (Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Screens (ScreenName(..), getScreen)
+import Screens (ScreenName(..), getScreen, getScreenType)
 import Screens.DriverProfileScreen.Transformer (getAnalyticsData)
 import Screens.Types (DriverProfileScreenState, VehicleP, DriverProfileScreenType(..), UpdateType(..), EditRc(..), VehicleDetails(..), EditRc(..), MenuOptions(..), MenuOptions(LIVE_STATS_DASHBOARD), Listtype(..))
 import Screens.Types as ST
@@ -177,17 +176,13 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToBookingOptions DriverProfileScreenState
                     | GoToSelectLanguageScreen DriverProfileScreenState
                     | GoToHelpAndSupportScreen DriverProfileScreenState
-                    | GoToDriverHistoryScreen DriverProfileScreenState
                     | ResendAlternateNumberOTP DriverProfileScreenState
                     | VerifyAlternateNumberOTP DriverProfileScreenState
                     | RemoveAlternateNumber DriverProfileScreenState
                     | ValidateAlternateNumber DriverProfileScreenState
                     | UpdateGender DriverProfileScreenState
-                    | GoToNotifications
                     | GoToAboutUsScreen
                     | OnBoardingFlow
-                    | GoToHomeScreen DriverProfileScreenState
-                    | GoToReferralScreen
                     | GoToLogout
                     | GoBack DriverProfileScreenState
                     | ActivatingOrDeactivatingRC DriverProfileScreenState
@@ -197,6 +192,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | UpdateLanguages DriverProfileScreenState (Array String)
                     | SubscriptionScreen
                     | GoToDriverSavedLocationScreen DriverProfileScreenState
+                    | BottomNavBarFlow ScreenName
 
 data Action = BackPressed
             | NoAction
@@ -282,18 +278,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                 else exit $ GoBack state
 
 
-eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
-  case screen of
-    "Home" -> exit $ GoToHomeScreen state
-    "Rides" -> exit $ GoToDriverHistoryScreen state
-    "Alert" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
-      exit $ GoToNotifications
-    "Rankings" -> do
-      _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-      exit $ GoToReferralScreen
-    _ -> continue state
+eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = exit $ BottomNavBarFlow $ getScreenType screen
 
 eval (UpdateValue value) state = do
   case value of

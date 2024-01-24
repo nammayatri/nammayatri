@@ -24,7 +24,8 @@ import Foreign.Object (empty)
 import Language.Types (STR(..)) as STR
 import ConfigProvider
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
-import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..))
+import Screens.Types (DriverProfileScreenState, DriverProfileScreenType(..),AutoPayStatus(..))
+import Common.Types.App (BottomNavBarState)
 import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
 
 initData :: DriverProfileScreenState

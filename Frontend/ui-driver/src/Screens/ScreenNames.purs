@@ -17,7 +17,10 @@ module Screens where
 
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
-import Prelude (class Eq, class Show)
+import Prelude (class Eq, class Show, (==), ($))
+import Data.Tuple(Tuple(..) ,snd, fst)
+import Data.Maybe (fromMaybe, Maybe(..), maybe)
+import Data.Array (find)
 
 
 data ScreenName = SPLASH_SCREEN
@@ -64,45 +67,53 @@ data ScreenName = SPLASH_SCREEN
 derive instance genericScreenName :: Generic ScreenName _
 instance eqScreenName :: Eq ScreenName where eq = genericEq
 
+
+screenNameMap :: Array (Tuple String ScreenName)
+screenNameMap =
+  [Tuple "splash_screen" SPLASH_SCREEN
+  , Tuple "choose_langauge_screen" CHOOSE_LANGUAGE_SCREEN
+  , Tuple "enter_mobile_screen" ENTER_MOBILE_NUMBER_SCREEN
+  , Tuple "enter_otp_number_screen" ENTER_OTP_NUMBER_SCREEN
+  , Tuple "registration_screen" REGISTRATION_SCREEN
+  , Tuple "upload_driving_license_screen" UPLOAD_DRIVING_LICENSE_SCREEN
+  , Tuple "upload_aadhar_screen" UPLOAD_AADHAR_SCREEN
+  , Tuple "add_vehicle_details_screen" ADD_VEHICLE_DETAILS_SCREEN
+  , Tuple "bank_details_screen" BANK_DETAILS_SCREEN
+  , Tuple "application_status_screen" APPLICATION_STATUS_SCREEN
+  , Tuple "need_access_screen" NEED_ACCESS_SCREEN
+  , Tuple "home_screen" HOME_SCREEN
+  , Tuple "driver_profile_screen" DRIVER_PROFILE_SCREEN
+  , Tuple "report_issue_chat_screen" REPORT_ISSUE_CHAT_SCREEN
+  , Tuple "driver_details_screen" DRIVER_DETAILS_SCREEN
+  , Tuple "ride_history_screen" RIDE_HISTORY_SCREEN
+  , Tuple "ride_selection_screen" RIDE_SELECTION_SCREEN
+  , Tuple "select_langauge_screen" SELECT_LANGUAGE_SCREEN
+  , Tuple "help_and_support_screen" HELP_AND_SUPPORT_SCREEN
+  , Tuple "vehicle_details_screen" VEHICLE_DETAILS_SCREEN
+  , Tuple "ride_details_screen" RIDE_DETAILS_SCREEN
+  , Tuple "edit_bank_details_screen" EDIT_BANK_DETAILS_SCREEN
+  , Tuple "edit_aadhar_details_screen" EDIT_AADHAR_DETAILS_SCREEN
+  , Tuple "trip_details_screen" TRIP_DETAILS_SCREEN
+  , Tuple "write_to_us_screen" WRITE_TO_US_SCREEN
+  , Tuple "about_us_screen" ABOUT_US_SCREEN
+  , Tuple "driver_ride_rating_screen" DRIVER_RIDE_RATING_SCREEN
+  , Tuple "referral_screen" REFERRAL_SCREEN
+  , Tuple "app_update_popup_screen" APP_UPDATE_POPUP_SCREEN
+  , Tuple "no_internet_screen" NO_INTERNET_SCREEN
+  , Tuple "popup_screen" POPUP_SCREEEN
+  , Tuple "alerts_screen" ALERTS_SCREEN
+  , Tuple "acknowledgement_screen" ACKNOWLEDGEMENT_SCREEN
+  , Tuple "aadhaar_verification_screen" AADHAAR_VERIFICATION_SCREEN
+  , Tuple "subscription_screen" SUBSCRIPTION_SCREEN
+  , Tuple "onboarding_subscription_screen" ONBOARDING_SUBSCRIPTION_SCREEN
+  , Tuple "driver_saved_location_screen" DRIVER_SAVED_LOCATION_SCREEN
+  , Tuple "welcome_screen" WELCOME_SCREEN
+  , Tuple "choose_city_screen" CHOOSE_CITY_SCREEN
+  , Tuple "driver_earnings_screen" DRIVER_EARNINGS_SCREEN
+  ]
+
 getScreen :: ScreenName -> String
-getScreen str = case str of
-    SPLASH_SCREEN -> "splash_screen"
-    CHOOSE_LANGUAGE_SCREEN          -> "choose_langauge_screen"
-    ENTER_MOBILE_NUMBER_SCREEN      -> "enter_mobile_screen"
-    ENTER_OTP_NUMBER_SCREEN         -> "enter_otp_number_screen"
-    REGISTRATION_SCREEN             -> "registration_screen"
-    UPLOAD_DRIVING_LICENSE_SCREEN   -> "upload_driving_license_screen"
-    UPLOAD_AADHAR_SCREEN            -> "upload_aadhar_screen"
-    ADD_VEHICLE_DETAILS_SCREEN      -> "add_vehicle_details_screen"
-    BANK_DETAILS_SCREEN             -> "bank_details_screen"
-    APPLICATION_STATUS_SCREEN       -> "application_status_screen"
-    NEED_ACCESS_SCREEN              -> "need_access_screen"
-    HOME_SCREEN                     -> "home_screen"
-    DRIVER_PROFILE_SCREEN           -> "driver_profile_screen"
-    REPORT_ISSUE_CHAT_SCREEN        -> "report_issue_chat_screen"
-    DRIVER_DETAILS_SCREEN           -> "driver_details_screen"
-    RIDE_HISTORY_SCREEN             -> "ride_history_screen"
-    RIDE_SELECTION_SCREEN           -> "ride_selection_screen"
-    SELECT_LANGUAGE_SCREEN          -> "select_langauge_screen"
-    HELP_AND_SUPPORT_SCREEN         -> "help_and_support_screen"
-    VEHICLE_DETAILS_SCREEN          -> "vehicle_details_screen"
-    RIDE_DETAILS_SCREEN             -> "ride_details_screen"
-    EDIT_BANK_DETAILS_SCREEN        -> "edit_bank_details_screen"
-    EDIT_AADHAR_DETAILS_SCREEN      -> "edit_aadhar_details_screen"
-    TRIP_DETAILS_SCREEN             -> "trip_details_screen"
-    WRITE_TO_US_SCREEN              -> "write_to_us_screen"
-    ABOUT_US_SCREEN                 -> "about_us_screen"
-    DRIVER_RIDE_RATING_SCREEN       -> "driver_ride_rating_screen"
-    REFERRAL_SCREEN                 -> "referral_screen"
-    APP_UPDATE_POPUP_SCREEN         -> "app_update_popup_screen"
-    NO_INTERNET_SCREEN              -> "no_internet_screen"
-    POPUP_SCREEEN                  -> "popup_screen"
-    ALERTS_SCREEN                  -> "alerts_screen"
-    ACKNOWLEDGEMENT_SCREEN         -> "acknowledgement_screen"
-    AADHAAR_VERIFICATION_SCREEN    -> "aadhaar_verification_screen"
-    SUBSCRIPTION_SCREEN            -> "subscription_screen"
-    ONBOARDING_SUBSCRIPTION_SCREEN -> "onboarding_subscription_screen"
-    DRIVER_SAVED_LOCATION_SCREEN   -> "driver_saved_location_screen"
-    WELCOME_SCREEN                 -> "welcome_screen"
-    CHOOSE_CITY_SCREEN             -> "choose_city_screen"
-    DRIVER_EARNINGS_SCREEN          -> "driver_earnings_screen"
+getScreen screenName = maybe ("") (\val -> (fst val)) $ find (\x -> (snd x) == screenName) screenNameMap
+
+getScreenType :: String -> ScreenName
+getScreenType str = maybe HOME_SCREEN (\val -> (snd val)) $ find (\x -> (fst x) == str) screenNameMap

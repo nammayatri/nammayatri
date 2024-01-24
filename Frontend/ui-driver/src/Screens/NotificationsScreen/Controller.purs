@@ -54,6 +54,7 @@ import Data.Function.Uncurried (runFn3)
 import Common.Types.App(YoutubeData)
 import PrestoDOM.List as PrestoList
 import Common.Styles.Colors as Color
+import Screens (ScreenName(..), getScreenType)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -66,13 +67,8 @@ data ScreenOutput
   = RefreshScreen NotificationsScreenState
   | GoBack
   | LoaderOutput NotificationsScreenState
-  | GoToHomeScreen
-  | GoToRidesScreen
-  | GoToReferralScreen
-  | GoToProfileScreen
   | GoToCurrentRideFlow
-  | SubscriptionScreen NotificationsScreenState
-  | EarningsScreen
+  | BottomNavBarFlow ScreenName
 
 data Action
   = OnFadeComplete String
@@ -105,7 +101,7 @@ eval BackPressed state = do
   else if state.notificationDetailModelState.addCommentModelVisibility == VISIBLE then
     continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing} }
   else
-    exit $ if state.deepLinkActivated then GoToCurrentRideFlow else GoToHomeScreen
+    exit $ if state.deepLinkActivated then GoToCurrentRideFlow else BottomNavBarFlow HOME_SCREEN
 
 
 eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do
@@ -241,33 +237,7 @@ eval (MessageListResAction (MessageListRes notificationArray)) state = do
 eval LoadMore state = do
   exit $ LoaderOutput state{loadMore = true}
 
-eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
-  case item of
-    "Home" -> do
-      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToHomeScreen
-    "Rides" -> do
-      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToRidesScreen
-    "Earnings" -> do
-      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit EarningsScreen
-    "Profile" -> do
-      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit GoToProfileScreen
-    "Rankings" -> do
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
-      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit $ GoToReferralScreen
-    "Join" -> do 
-      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
-    _ -> continue state
+eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = exit $ BottomNavBarFlow $ getScreenType screen
 
 eval _ state = continue state
 

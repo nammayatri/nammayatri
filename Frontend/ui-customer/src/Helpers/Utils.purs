@@ -22,11 +22,11 @@ module Helpers.Utils
 import ConfigProvider
 import DecodeUtil
 import Accessor (_deeplinkOptions, _distance_meters, _payload, _search_type, _paymentMethod)
-import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, DeeplinkOptions(..))
+import Common.Types.App (EventPayload(..), GlobalPayload(..), LazyCheck(..), Payload(..), InnerPayload, DeeplinkOptions(..), BottomNavBarState, NavIcons)
 import Components.LocationListItem.Controller (locationListStateObj)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Free (resume, runFree)
-import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find)
+import Data.Array (cons, deleteAt, drop, filter, head, length, null, sortBy, sortWith, tail, (!!), reverse, find, findIndex)
 import Data.Array.NonEmpty (fromArray)
 import Data.Boolean (otherwise)
 import Data.Date (Date)
@@ -91,6 +91,7 @@ import Data.Ord
 import MerchantConfig.Types (CityConfig)
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Constants (defaultDensity)
+import Screens (ScreenName(..), getScreen, getScreenType) as ScreenNames
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -766,3 +767,34 @@ getDefaultPixelSize size =
   in if os == "IOS" 
     then size
     else ceil $ (toNumber size / pixels) * androidDensity
+    
+getBottomNavBarConfig :: String -> BottomNavBarState
+getBottomNavBarConfig screenName =
+  let navdata = [
+        {
+          -- activeIcon: fetchImage FF_ASSET "ny_ic_home_active",
+          activeIcon: "",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_car_unfilled",
+          text: "Mobility",
+          showNewBanner : false,
+          isVisible : true,
+          screenName : ScreenNames.getScreen ScreenNames.HOME_SCREEN
+        },
+        {
+          -- activeIcon: fetchImage FF_ASSET "ny_ic_earnings_active",
+          activeIcon: "",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_tabler_icon_ticket",
+          text: "Ticketing",
+          isVisible : true,
+          showNewBanner : false,
+          screenName : ScreenNames.getScreen ScreenNames.TICKET_BOOKING_SCREEN
+        }
+      ]
+      processedNavOptions = filter (_.isVisible) navdata
+  in
+    { activeIndex : getActiveIndex screenName processedNavOptions
+    , navButton: processedNavOptions
+    }
+  where 
+    getActiveIndex :: String -> Array NavIcons -> Int
+    getActiveIndex screenName navstate = fromMaybe 0 $ findIndex (\item -> item.screenName == screenName) navstate

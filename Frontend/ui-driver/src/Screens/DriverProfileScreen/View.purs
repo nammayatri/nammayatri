@@ -23,7 +23,6 @@ import Screens.SubscriptionScreen.Transformer
 import Animation as Anim
 import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
-import Components.BottomNavBar.Controller (navData)
 import Components.BottomNavBar.View as BottomNavBar
 import Components.CheckListView.View as CheckListView
 import Components.GenericHeader.View as GenericHeader

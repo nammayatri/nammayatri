@@ -16,7 +16,6 @@ import Font.Style as FontStyle
 import Common.Types.App
 import Helpers.Utils
 import Components.BottomNavBar as BottomNavBar
-import Components.BottomNavBar.Controller (navData)
 import Screens as ScreenNames
 import Language.Strings (getString, getStringEnToHi)
 import Language.Types (STR(..))
@@ -525,8 +524,7 @@ bottomNavBarView push state =
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    ]
-    [ BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.REFERRAL_SCREEN state.data.config.bottomNavConfig) ]
+    ][BottomNavBar.view (push <<< BottomNavBarAction) (getBottomNavBarConfig (ScreenNames.getScreen ScreenNames.REFERRAL_SCREEN) state.data.config.bottomNavConfig)]
 
 dummyView :: forall w. PrestoDOM (Effect Unit) w
 dummyView = linearLayout [ visibility GONE ] []

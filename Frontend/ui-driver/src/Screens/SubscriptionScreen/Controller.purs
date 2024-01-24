@@ -36,7 +36,7 @@ import Presto.Core.Types.API (ErrorResponse)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants as Const
-import Screens (getScreen, ScreenName(..))
+import Screens (getScreen, ScreenName(..), getScreenType)
 import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, introductoryPlanConfig, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), LastPaymentType(..))
@@ -95,9 +95,6 @@ data Action = BackPressed
             | EnableIntroductoryView
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
-                    | RideHistory SubscriptionScreenState
-                    | Contest SubscriptionScreenState
-                    | Alerts SubscriptionScreenState
                     | JoinPlanExit SubscriptionScreenState
                     | PaymentHistory SubscriptionScreenState
                     | CancelAutoPayPlan SubscriptionScreenState
@@ -112,7 +109,8 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RetryPayment SubscriptionScreenState String
                     | ClearDues SubscriptionScreenState
                     | SubscribeAPI SubscriptionScreenState
-                    | EarningsScreen SubscriptionScreenState 
+                    -- | EarningsScreen SubscriptionScreenState 
+                    | BottomNavBarFlow SubscriptionScreenState ScreenName
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
 eval BackPressed state = 
@@ -193,18 +191,9 @@ eval (PopUpModalAC (PopUpModal.OnButton1Click)) state = case state.props.popUpSt
                   Mb.Just PaymentSuccessPopup -> updateAndExit state { props{showShimmer = true, popUpState = Mb.Nothing}} $ Refresh
                   Mb.Nothing -> continue state
 
-eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = case state.props.redirectToNav of
-            "Home" -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            "Rides" -> exit $ RideHistory state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            "Earnings" -> exit $ EarningsScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            "Alert" -> do
-              _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-              _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
-              exit $ Alerts state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            "Rankings" -> do
-              _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-              exit $ Contest state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
-            _ -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = 
+  let screenName = state.props.redirectToNav
+  in exit $ BottomNavBarFlow state{props { popUpState = Mb.Nothing, redirectToNav = HOME_SCREEN}} screenName
 
 eval (PopUpModalAC (PopUpModal.OptionWithHtmlClick)) state = continueWithCmd state [pure CallSupport]
 
@@ -238,21 +227,10 @@ eval ViewAutopayDetails state = continue state{props {subView = PlanDetails }}
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   let newState = state{props{optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
-  if screen == "Join" then continue state
-  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && state.data.config.subscriptionConfig.enableSubscriptionSupportPopup then do 
-    continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = screen, optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
-  else do case screen of
-            "Home" -> exit $ HomeScreen newState
-            "Earnings" -> exit $ EarningsScreen newState
-            "Rides" -> exit $ RideHistory newState
-            "Alert" -> do
-              _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-              _ <- pure $ firebaseLogEvent "ny_driver_alert_click"
-              exit $ Alerts newState
-            "Rankings" -> do
-              _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-              exit $ Contest newState
-            _ -> continue state
+  if screen == getScreen SUBSCRIPTION_SCREEN then continue state
+  else if state.data.myPlanData.autoPayStatus == MANDATE_FAILED && state.data.config.subscriptionConfig.enableSubscriptionSupportPopup then do
+    continue state{props {popUpState = Mb.Just SupportPopup, redirectToNav = getScreenType screen, optionsMenuState = ALL_COLLAPSED, myPlanProps{ isDueViewExpanded = false }}}
+  else exit $ BottomNavBarFlow state $ getScreenType screen
 
 eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuState = ALL_COLLAPSED}}
 

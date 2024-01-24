@@ -36,9 +36,10 @@ import Services.Events as Events
 import Screens.HomeScreen.Controller (ScreenOutput(..))
 import Screens.HomeScreen.View as HomeScreen
 import Screens.Types (KeyboardModalType(..))
-import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
+import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Debug
+import Screens (ScreenName(..)) as ScreenNames
 
 homeScreen :: FlowBT String HOME_SCREENOUTPUT
 homeScreen = do  
@@ -50,9 +51,6 @@ homeScreen = do
     GoToVehicleDetailScreen updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure GO_TO_VEHICLE_DETAILS_SCREEN
-    GoToProfileScreen updatedState-> do
-      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.BackPoint <$> pure GO_TO_PROFILE_SCREEN
     GoToHelpAndSupportScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.BackPoint <$> pure GO_TO_HELP_AND_SUPPORT_SCREEN
@@ -114,7 +112,7 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_AADHAAR_VERIFICATION)
     SubscriptionScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
-      App.BackT $ App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription)
+      App.BackT $ App.NoBack <$> (pure $ HOMESCREEN_NAV ScreenNames.SUBSCRIPTION_SCREEN false)
     GoToRideDetailsScreen updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_DETAILS_SCREEN)
@@ -142,4 +140,7 @@ homeScreen = do
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_GOTO updatedState)
     EarningsScreen updatedState showCoinsView -> do 
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV $ GoToEarningsScreen showCoinsView)
+      App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV ScreenNames.DRIVER_EARNINGS_SCREEN showCoinsView)
+    BottomNavBarFlow updatedState screenName -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV screenName false)

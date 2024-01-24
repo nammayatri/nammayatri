@@ -117,3 +117,17 @@ type BannerCarousalConfig = {
   autoScrollDelay :: Number
 , enableAutoScroll :: Boolean
 }
+
+type BottomNavConfig = {
+  home :: BottomNavItemConfig,
+  rideHistory :: BottomNavItemConfig,
+  subscription :: BottomNavItemConfig,
+  referral :: BottomNavItemConfig,
+  notifications :: BottomNavItemConfig,
+  driverEarnings :: BottomNavItemConfig
+}
+
+type BottomNavItemConfig = {
+  showNew :: Boolean,
+  isVisible :: Boolean
+}

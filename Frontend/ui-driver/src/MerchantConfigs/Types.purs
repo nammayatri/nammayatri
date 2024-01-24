@@ -135,20 +135,6 @@ type GotoConfig = {
   enableGoto :: Boolean
 }
 
-type BottomNavConfig = {
-  home :: BottomNavItemConfig,
-  rideHistory :: BottomNavItemConfig,
-  subscription :: BottomNavItemConfig,
-  referral :: BottomNavItemConfig,
-  notifications :: BottomNavItemConfig,
-  driverEarnings :: BottomNavItemConfig
-}
-
-type BottomNavItemConfig = {
-  showNew :: Boolean,
-  isVisible :: Boolean
-}
-
 type MapConfig = {
   animationDuration :: Int
 }

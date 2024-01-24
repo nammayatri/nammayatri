@@ -24,9 +24,10 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.SubscriptionScreen.Controller (ScreenOutput(..))
 import Screens.SubscriptionScreen.View as SubscriptionScreen
 import Screens.SubscriptionScreen.ScreenData as SubscriptionScreenData
-import Types.App (FlowBT, GlobalState(..), SUBSCRIPTION_SCREEN_OUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
+import Types.App (FlowBT, GlobalState(..), SUBSCRIPTION_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Debug
+import Screens (ScreenName(..)) as ScreenNames
 
 subscriptionScreen :: FlowBT String SUBSCRIPTION_SCREEN_OUTPUT
 subscriptionScreen = do
@@ -35,19 +36,7 @@ subscriptionScreen = do
   case act of
     HomeScreen updatedState -> do 
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ NAV HomeScreenNav)
-    RideHistory updatedState -> do 
-      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ NAV GoToRideHistory)
-    EarningsScreen updatedState -> do 
-      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ NAV $ GoToEarningsScreen false)
-    Contest updatedState -> do 
-      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ NAV GoToContest)
-    Alerts updatedState -> do 
-      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ NAV GoToAlerts)
+      App.BackT $ App.BackPoint <$> (pure $ NAV ScreenNames.HOME_SCREEN)
     JoinPlanExit updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ MAKE_PAYMENT updatedState)
@@ -88,3 +77,6 @@ subscriptionScreen = do
     SubscribeAPI updatedState -> do 
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ SUBSCRIBE_API updatedState)
+    BottomNavBarFlow updatedState screenName -> do
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ NAV screenName)

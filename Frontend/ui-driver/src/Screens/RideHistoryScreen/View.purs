@@ -22,7 +22,6 @@ import Screens.RideHistoryScreen.ComponentConfig
 import Animation (fadeIn, fadeInWithDelay, fadeOut)
 import Animation as Anim
 import Components.BottomNavBar as BottomNavBar
-import Components.BottomNavBar.Controller (navData)
 import Components.DatePickerModel as DatePickerModel
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader as GenericHeader
@@ -43,7 +42,7 @@ import Engineering.Helpers.Commons (flowRunner, getDateFromObj, getFormattedDate
 import Engineering.Helpers.Commons (safeMarginBottom, screenWidth)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (getcurrentdate, getPastDays, convertUTCtoISC, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (getcurrentdate, getPastDays, convertUTCtoISC, fetchImage, FetchImageFrom(..), getBottomNavBarConfig)
 import JBridge (horizontalScrollToPos)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -150,7 +149,7 @@ rideListView rideListItem push state =
   , linearLayout
     [ width MATCH_PARENT
     , background Color.white900
-    ][BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN state.data.config.bottomNavConfig)]
+    ][BottomNavBar.view (push <<< BottomNavBarAction) (getBottomNavBarConfig (ScreenNames.getScreen ScreenNames.RIDE_HISTORY_SCREEN) state.data.config.bottomNavConfig)]
   ]
 
 paymentHistoryModel :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
@@ -166,7 +165,7 @@ paymentHistoryModel push state =
   , clickable true
   , visibility $ if state.props.showPaymentHistory then VISIBLE else GONE
   ]$[ PaymentHistoryModel.view (push <<< PaymentHistoryModelAC) state.data.paymentHistory
-    ] <> if (length state.data.paymentHistory.paymentHistoryList) == 0 then [] else [BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.RIDE_HISTORY_SCREEN state.data.config.bottomNavConfig)]
+    ] <> if (length state.data.paymentHistory.paymentHistoryList) == 0 then [] else [BottomNavBar.view (push <<< BottomNavBarAction) (getBottomNavBarConfig (ScreenNames.getScreen ScreenNames.RIDE_HISTORY_SCREEN) state.data.config.bottomNavConfig)]
 
 headerView :: forall w . (Action -> Effect Unit) -> ST.RideHistoryScreenState -> PrestoDOM (Effect Unit) w
 headerView push state =

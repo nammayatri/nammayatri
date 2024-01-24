@@ -469,3 +469,18 @@ type RentalBookingConfig = {
   , nightCharge :: String
 }
 
+-- ############################################################# BottomNavBarState ################################################################################
+
+type BottomNavBarState = {
+  activeIndex :: Int,
+  navButton :: Array NavIcons
+}
+
+type NavIcons = {
+  activeIcon :: String,
+  defaultIcon :: String,
+  screenName :: String,
+  text :: String,
+  showNewBanner :: Boolean,
+  isVisible :: Boolean
+}

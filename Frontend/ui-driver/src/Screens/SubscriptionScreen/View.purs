@@ -24,7 +24,6 @@ import Animation.Config as AnimConfig
 import Common.Types.App (LazyCheck(..))
 import Domain.Payments (APIPaymentStatus(..), PaymentStatus(..))
 import Components.Banner as Banner
-import Components.BottomNavBar (navData)
 import Components.BottomNavBar as BottomNavBar
 import Components.DueDetailsList (DueDetailsListState)
 import Components.DueDetailsList as DueDetailsList
@@ -209,7 +208,7 @@ view push state =
           , onClick push $ const $ if state.props.myPlanProps.isDueViewExpanded then ToggleDueDetailsView else NoAction
           , gravity BOTTOM
           ][ duesView push state
-           , if any (_ == state.props.subView) [MyPlan, JoinPlan, NoSubView] && not state.props.isEndRideModal then BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.SUBSCRIPTION_SCREEN state.data.config.bottomNavConfig) else dummyView
+           , if any (_ == state.props.subView) [MyPlan, JoinPlan, NoSubView] && not state.props.isEndRideModal then BottomNavBar.view (push <<< BottomNavBarAction) (HU.getBottomNavBarConfig (ScreenNames.getScreen ScreenNames.SUBSCRIPTION_SCREEN) state.data.config.bottomNavConfig) else dummyView
           ]
           , if state.props.optionsMenuState /= ALL_COLLAPSED then
               linearLayout

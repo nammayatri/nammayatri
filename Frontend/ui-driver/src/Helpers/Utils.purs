@@ -22,14 +22,14 @@ module Helpers.Utils
 import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
-import Data.Array ((!!), elemIndex, length, slice, last, find) as DA
+import Data.Array ((!!), elemIndex, length, slice, last, find, findIndex) as DA
 import Data.String (Pattern(..), split) as DS
 import Data.Number (pi, sin, cos, asin, sqrt)
 import Data.String.Common as DSC
 import MerchantConfig.Utils
-import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek)
+import Common.Types.App (LazyCheck(..), CalendarDate, CalendarWeek, BottomNavBarState, NavIcons)
 import Domain.Payments (PaymentStatus(..))
-import Common.Types.Config (CityConfig(..))
+import Common.Types.Config (CityConfig(..), BottomNavConfig)
 import Types.App (FlowBT, defaultGlobalState)
 import Control.Monad.Except (runExcept, runExceptT)
 import Data.Array ((!!), fold, any, head, filter) as DA
@@ -90,6 +90,7 @@ import Screens.Types as ST
 import MerchantConfig.Types as MCT
 import Locale.Utils
 import Language.Types (STR(..))
+import Screens (ScreenName(..), getScreen) as ScreenNames
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -645,3 +646,65 @@ generateReferralLink source medium term content campaign driverReferralType doma
       <> "%26utm_content%3D" <> content 
       <> "%26utm_campaign%3D" <> campaign 
       <> "%26anid%3Dadmob&id=" <> packageId
+
+getBottomNavBarConfig :: String -> BottomNavConfig -> BottomNavBarState
+getBottomNavBarConfig screenName bottomNavConfig =
+  let showNewBannerOnSubscription = (fromMaybe 0 $ fromString $ getValueToLocalNativeStore TIMES_OPENED_NEW_SUBSCRIPTION) < 3
+      navdata = [
+        {
+          activeIcon: fetchImage FF_ASSET "ny_ic_home_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_home_inactive",
+          text: getString HOME,
+          showNewBanner : bottomNavConfig.home.showNew,
+          isVisible : bottomNavConfig.home.isVisible,
+          screenName : ScreenNames.getScreen ScreenNames.HOME_SCREEN
+        },
+        {
+          activeIcon: fetchImage FF_ASSET "ny_ic_earnings_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_earnings_inactive",
+          text: getString EARNINGS,
+          isVisible : bottomNavConfig.driverEarnings.isVisible,
+          showNewBanner : bottomNavConfig.driverEarnings.showNew,
+          screenName : ScreenNames.getScreen ScreenNames.DRIVER_EARNINGS_SCREEN
+        },
+        {
+          activeIcon: fetchImage FF_ASSET "ny_ic_rides_tab_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_rides_tab_inactive",
+          isVisible : bottomNavConfig.rideHistory.isVisible,
+          showNewBanner : bottomNavConfig.rideHistory.showNew,
+          text: getString RIDES,
+          screenName : ScreenNames.getScreen ScreenNames.RIDE_HISTORY_SCREEN
+        },
+        {
+          activeIcon: fetchImage FF_ASSET "ny_ic_join_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_join_inactive",
+          isVisible : bottomNavConfig.subscription.isVisible,
+          showNewBanner : bottomNavConfig.subscription.showNew && showNewBannerOnSubscription ,
+          text: getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS,
+          screenName : ScreenNames.getScreen ScreenNames.SUBSCRIPTION_SCREEN
+        },
+        {
+          activeIcon: fetchImage FF_ASSET "ic_referral_active",
+          defaultIcon: fetchImage FF_ASSET $ if (getValueToLocalNativeStore REFERRAL_ACTIVATED) == "true" then  "ny_ic_contest_alert" else "ic_referral_inactive",
+          isVisible : bottomNavConfig.referral.isVisible,
+          showNewBanner : bottomNavConfig.referral.showNew,
+          text: getString CONTEST,
+          screenName : ScreenNames.getScreen ScreenNames.REFERRAL_SCREEN
+        },
+        {
+          activeIcon: fetchImage FF_ASSET "ny_ic_alerts_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_alerts_inactive",
+          text: getString MESSAGES,
+          isVisible : bottomNavConfig.notifications.isVisible,
+          showNewBanner : bottomNavConfig.notifications.showNew,
+          screenName : ScreenNames.getScreen ScreenNames.ALERTS_SCREEN
+        }
+      ]
+      processedNavOptions = DA.filter (_.isVisible) navdata
+  in
+    { activeIndex : getActiveIndex screenName processedNavOptions
+    , navButton: processedNavOptions
+    }
+  where 
+    getActiveIndex :: String -> Array NavIcons -> Int
+    getActiveIndex screenName navstate = fromMaybe 0 $ DA.findIndex (\item -> item.screenName == screenName) navstate

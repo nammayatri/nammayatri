@@ -25,7 +25,7 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverEarningsScreen.Controller (ScreenOutput(..))
 import Screens.DriverEarningsScreen.ScreenData (initData) as DriverEarningsScreenData
 import Screens.DriverEarningsScreen.View as DriverEarningsScreen
-import Types.App (FlowBT, GlobalState(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), ScreenType(..), NAVIGATION_ACTIONS(..))
+import Types.App (FlowBT, GlobalState(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 
 driverEarningsScreen :: FlowBT String DRIVER_EARNINGS_SCREEN_OUTPUT
@@ -35,18 +35,18 @@ driverEarningsScreen = do
   act <- lift $ lift $ runScreen $ DriverEarningsScreen.screen state.driverEarningsScreen
   case act of
     GoBack -> App.BackT $ pure App.GoBack
-    HomeScreen updatedState -> do
-      modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ EARNINGS_NAV HomeScreenNav updatedState)
-    SubscriptionScreen updatedState -> do
-      modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ EARNINGS_NAV GoToSubscription updatedState)
-    Contest updatedState -> do
-      modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ EARNINGS_NAV GoToContest updatedState)
-    Alerts updatedState -> do
-      modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ EARNINGS_NAV GoToAlerts updatedState)
+    -- HomeScreen updatedState -> do
+    --   modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
+    --   App.BackT $ App.BackPoint <$> (pure $ EARNINGS_NAV HomeScreenNav updatedState)
+    -- SubscriptionScreen updatedState -> do
+    --   modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
+    --   App.BackT $ App.BackPoint <$> (pure $ EARNINGS_NAV GoToSubscription updatedState)
+    -- Contest updatedState -> do
+    --   modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
+    --   App.BackT $ App.BackPoint <$> (pure $ EARNINGS_NAV GoToContest updatedState)
+    -- Alerts updatedState -> do
+    --   modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
+    --   App.BackT $ App.BackPoint <$> (pure $ EARNINGS_NAV GoToAlerts updatedState)
     ChangeDriverEarningsTab subView updatedState -> do
       modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ CHANGE_SUB_VIEW subView updatedState)
@@ -63,4 +63,6 @@ driverEarningsScreen = do
     LoaderOutput updatedState -> do
       modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ LOAD_MORE_HISTORY updatedState)
-
+    BottomNavBarFlow updatedState screenName -> do
+      modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ EARNINGS_NAV screenName updatedState)

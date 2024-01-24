@@ -26,13 +26,13 @@ import Effect.Aff (launchAff)
 import Types.App (defaultGlobalState)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons (flowRunner, safeMarginBottom, screenHeight)
 import Effect.Class (liftEffect)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Effect (Effect)
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage)
-import PrestoDOM (scrollBarY, scrollView, lineHeight, Gravity(..), Length(..), Margin(..), maxLines, ellipsize, Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl, alignParentBottom)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, getBottomNavBarConfig)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), maxLines, ellipsize, Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, linearLayout, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, shimmerFrameLayout, imageUrl, alignParentBottom, layoutGravity, scrollBarY, scrollView, lineHeight, scrollBarY, scrollView, lineHeight)
 import Screens.TicketBookingFlow.PlaceList.Controller (Action(..), eval, ScreenOutput(..))
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -43,6 +43,8 @@ import Font.Size as FontSize
 import Mobility.Prelude
 import Debug
 import Engineering.Helpers.Commons as EHC
+import Components.BottomNavBar as BottomNavBar
+import Screens (ScreenName(..), getScreen) as ScreenNames
 
 screen :: ST.TicketingScreenState -> Screen Action ST.TicketingScreenState ScreenOutput
 screen initialState =
@@ -66,31 +68,36 @@ screen initialState =
     lift $ lift $ doAff do liftEffect $ push $ UpdatePlacesData placesResp
 
 view :: forall w. (Action -> Effect Unit) -> ST.TicketingScreenState -> PrestoDOM (Effect Unit) w
-view push state =
-  Anim.screenAnimation $
-     relativeLayout
-        [ width MATCH_PARENT
-        , height MATCH_PARENT
-        , background Color.white900
-        , onBackPressed push $ const BackPressed
-        , padding $ PaddingVertical EHC.safeMarginTop EHC.safeMarginBottom
+view push state = 
+  relativeLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.white900
+  , orientation VERTICAL
+  , onBackPressed push $ const BackPressed
+  ]
+  [ Anim.screenAnimation $ ticketingListView push state
+  , bottomNavBarView push state
+  ]
+  where
+    ticketingListView :: forall w. (Action -> Effect Unit) -> ST.TicketingScreenState -> PrestoDOM (Effect Unit) w
+    ticketingListView push state =
+      linearLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , gravity CENTER
+      , background Color.white900
+      , padding $ PaddingBottom $ safeMarginBottom + 64
+      ]
+      [ headerView push state
+      , scrollView
+        [ weight 1.0
+        , width MATCH_PARENT
+        , scrollBarY false
         ]
-        [ linearLayout
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , gravity CENTER
-            , background Color.white900
-            ]
-            [ headerView push state
-            , scrollView
-                [ weight 1.0
-                , width MATCH_PARENT
-                , scrollBarY false
-                ]
-                [ ticketingList push state ]
-            ]
-        ]
+        [ ticketingList push state ]
+      ]
 
 headerView :: forall w. (Action -> Effect Unit) -> ST.TicketingScreenState -> PrestoDOM (Effect Unit) w
 headerView push state =
@@ -288,3 +295,15 @@ sfl height' =
         , cornerRadius 8.0
         ][]
     ]
+
+bottomNavBarView :: forall w. (Action -> Effect Unit) -> ST.TicketingScreenState -> PrestoDOM (Effect Unit) w
+bottomNavBarView push state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , weight 1.0
+  , background Color.white900
+  , layoutGravity "bottom"
+  , alignParentBottom "true,-1"
+  ]
+  [ BottomNavBar.view (push <<< BottomNavBarAction) (getBottomNavBarConfig (ScreenNames.getScreen ScreenNames.TICKET_BOOKING_SCREEN) ) ]

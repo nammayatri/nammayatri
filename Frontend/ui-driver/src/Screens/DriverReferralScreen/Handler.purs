@@ -7,7 +7,7 @@ import Prelude (bind, ($), pure, (<$>), discard)
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.DriverReferralScreen.Controller (ScreenOutput(..))
 import Screens.DriverReferralScreen.View as DriverReferralScreen
-import Types.App (FlowBT, GlobalState(..), DRIVER_REFERRAL_SCREEN_OUTPUT(..), ScreenType(..), NAVIGATION_ACTIONS(..))
+import Types.App (FlowBT, GlobalState(..), DRIVER_REFERRAL_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Screens.DriverReferralScreen.ScreenData as DriverReferralScreenData
 
@@ -19,21 +19,7 @@ driverReferralScreen = do
     GoBack -> do
       modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> DriverReferralScreenData.initData)
       App.BackT $ pure App.GoBack
-    GoToHomeScreen updatedState -> do
-      modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV HomeScreenNav)
-    GoToNotifications updatedState -> do
-      modifyScreenState $ DriverReferralScreenStateType (\driverReferralScreen -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV GoToAlerts)
-    SubscriptionScreen updatedState -> do
-      modifyScreenState $ DriverReferralScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV GoToSubscription)
-    EarningsScreen updatedState -> do
-      modifyScreenState $ DriverReferralScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV $ GoToEarningsScreen false)
     GoToDriverContestScreen updatedState -> do
       modifyScreenState $ DriverReferralScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ DRIVER_CONTEST_SCREEN)
-    EarningsScreen updatedState -> do
-      modifyScreenState $ DriverReferralScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV $ GoToEarningsScreen false )
+    BottomNavBarFlow screenName -> App.BackT $ App.NoBack <$> (pure $ DRIVER_REFERRAL_SCREEN_NAV screenName)

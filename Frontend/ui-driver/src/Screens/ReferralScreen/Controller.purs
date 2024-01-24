@@ -37,7 +37,7 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&&), not, (+), show, void, (<>), when, map, (-), (>), (/=))
 import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
-import Screens (ScreenName(..), getScreen)
+import Screens (ScreenName(..), getScreen, getScreenType)
 import Screens.ReferralScreen.ScreenData as RSD
 import Screens.Types (ReferralScreenState, ReferralType(..), LeaderBoardType(..), DateSelector(..), RankCardData)
 import Services.API (LeaderBoardRes(..), DriversInfo(..), GetPerformanceRes(..), GenerateReferralCodeRes(..))
@@ -162,15 +162,12 @@ data Action = BottomNavBarAction BottomNavBar.Action
             | UpdateReferralCodeFailed
 
 
-data ScreenOutput = GoToHomeScreen ReferralScreenState
-                  | GoBack
-                  | GoToRidesScreen ReferralScreenState
-                  | GoToProfileScreen ReferralScreenState
+data ScreenOutput = GoBack
                   | GoToNotifications ReferralScreenState
                   | LinkReferralApi ReferralScreenState
                   | Refresh ReferralScreenState
                   | SubscriptionScreen ReferralScreenState
-                  | EarningsScreen
+                  | BottomNavBarFlow ScreenName
 
 eval :: Action -> ReferralScreenState -> Eval Action ScreenOutput ReferralScreenState
 
@@ -231,7 +228,7 @@ eval (ChangeLeaderBoardtab tab) state = do
   let newState = state { props { leaderBoardType = tab, showShimmer = true } }
   updateAndExit newState $ Refresh newState
 
-eval BackPressed state = exit $ GoToHomeScreen state
+eval BackPressed state = exit $ BottomNavBarFlow HOME_SCREEN
 
 eval RefreshScreen state = exit $ Refresh state
 
@@ -292,25 +289,9 @@ eval (SuccessScreenExpireCountDwon seconds status timerId) state = if status == 
   _ <- pure $ clearTimerWithId timerId
   continue state{props {stage = QRScreen}} else continue state
 
-eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
+eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   pure $ hideKeyboardOnNavigation true
-  case item of
-    "Home" -> exit $ GoToHomeScreen state
-    "Rides" -> exit $ GoToRidesScreen state
-    "Profile" -> exit $ GoToProfileScreen state
-    "Earnings" -> exit $ EarningsScreen
-    "Alert" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
-      exit $ GoToNotifications state
-    "Join" -> do
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
-      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
-    _ -> continue state
+  exit $ BottomNavBarFlow $ getScreenType screen
 
 eval (ReferralQrRendered id) state = 
   continueWithCmd state [ do

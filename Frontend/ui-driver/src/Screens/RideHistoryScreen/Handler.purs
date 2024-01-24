@@ -30,8 +30,9 @@ import Screens.RideHistoryScreen.ScreenData (initData) as RideHistoryScreenData
 import Screens.RideHistoryScreen.View as RideHistoryScreen
 import Screens.Types (IndividualRideCardState, AnimationState(..))
 import Services.API (RidesInfo(..), Status(..))
-import Types.App (FlowBT, GlobalState(..), MY_RIDES_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), ScreenType(..))
+import Types.App (FlowBT, GlobalState(..), MY_RIDES_SCREEN_OUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
+import Screens (ScreenName(..)) as ScreenNames
 
 
 rideHistory :: FlowBT String MY_RIDES_SCREEN_OUTPUT
@@ -68,4 +69,5 @@ rideHistory = do
       App.BackT $ App.NoBack <$> (pure $ OPEN_PAYMENT_HISTORY updatedState)
     SubscriptionScreen updatedState -> do
       modifyScreenState $ RideHistoryScreenStateType (\_ -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ (RIDE_HISTORY_NAV GoToSubscription))
+      App.BackT $ App.NoBack <$> (pure $ (RIDE_HISTORY_NAV ScreenNames.SUBSCRIPTION_SCREEN))
+    BottomNavBarFlow screenName -> App.BackT $ App.NoBack <$> (pure $ RIDE_HISTORY_NAV screenName)

@@ -44,7 +44,7 @@ import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackA
 import PrestoDOM (Eval, ScrollState(..), continue, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress, tripDatesCount)
-import Screens (ScreenName(..), getScreen)
+import Screens (ScreenName(..), getScreen, getScreenType)
 import Screens.Types (RideHistoryScreenState, AnimationState(..), ItemState(..), IndividualRideCardState(..), DisabilityType(..))
 import Services.API (RidesInfo(..), Status(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -99,6 +99,7 @@ data ScreenOutput = GoBack
                     | SelectedTab RideHistoryScreenState
                     | OpenPaymentHistoryScreen RideHistoryScreenState
                     | SubscriptionScreen RideHistoryScreenState
+                    | BottomNavBarFlow ScreenName
 
 data Action = Dummy
             | OnFadeComplete String
@@ -142,26 +143,7 @@ eval (ScrollStateChanged scrollState) state = do
 
 eval (SelectTab tab) state = updateAndExit state $ SelectedTab state{currentTab = tab, datePickerState { activeIndex = tripDatesCount - 1 , selectedItem {date = 0, month = "", year = 0}}} 
 
-eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
-  case screen of
-    "Home" -> exit $ HomeScreen
-    "Profile" -> exit $ ProfileScreen
-    "Alert" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.logField "ny_driver_alert_click"
-      exit $ GoToNotification
-    "Rankings" -> do
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
-      _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-      exit $ GoToReferralScreen
-    "Join" -> do
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
-      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
-    _ -> continue state
+eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = exit $ BottomNavBarFlow $ getScreenType screen
 
 eval (IndividualRideCardAction (IndividualRideCardController.Select index)) state = do
   let filteredRideList = rideListFilter state.currentTab state.rideList

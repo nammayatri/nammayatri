@@ -18,7 +18,6 @@ module Screens.ReferralScreen.View where
 
 import Animation (screenAnimationFadeInOut)
 import Components.BottomNavBar as BottomNavBar
-import Components.BottomNavBar.Controller (navData)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryEditText.Views as PrimaryEditText
 import Components.PrimaryButton as PrimaryButton
@@ -54,7 +53,7 @@ import Effect.Class (liftEffect)
 import Control.Monad.Except.Trans (runExceptT , lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Presto.Core.Types.Language.Flow (doAff)
-import Helpers.Utils (setRefreshing, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (setRefreshing, getPastWeeks, convertUTCtoISC, getPastDays, getPastWeeks, getcurrentdate, fetchImage, FetchImageFrom(..), getBottomNavBarConfig)
 import Screens.ReferralScreen.ComponentConfig
 import Screens as ScreenNames
 import Data.Either (Either(..))
@@ -760,7 +759,7 @@ bottomNavBarView push state =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  ][BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.REFERRAL_SCREEN state.data.config.bottomNavConfig)]
+  ][BottomNavBar.view (push <<< BottomNavBarAction) (getBottomNavBarConfig (ScreenNames.getScreen ScreenNames.REFERRAL_SCREEN) state.data.config.bottomNavConfig)]
 
 
 commonView :: forall w . (Action -> Effect Unit) -> String -> String -> String -> ST.ReferralScreenState -> PrestoDOM (Effect Unit) w

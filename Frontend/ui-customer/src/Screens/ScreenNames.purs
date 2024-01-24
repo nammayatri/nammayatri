@@ -15,6 +15,13 @@
 
 module Screens where
 
+import Data.Array (find)
+import Data.Eq.Generic (genericEq)
+import Data.Generic.Rep (class Generic)
+import Data.Maybe (maybe)
+import Data.Tuple (Tuple(..), snd, fst)
+import Prelude (class Eq, (==), ($))
+
 data ScreenName = SPLASH_SCREEN
                 | CHOOSE_LANGUAGE_SCREEN
                 | ENTER_MOBILE_NUMBER_SCREEN
@@ -48,37 +55,44 @@ data ScreenName = SPLASH_SCREEN
                 | METRO_TICKET_BOOKING_SCREEN
                 | RENTAL_SCREEN
 
+derive instance genericScreenName :: Generic ScreenName _
+instance eqScreenName :: Eq ScreenName where eq = genericEq
+
+
+screenNameMap :: Array (Tuple String ScreenName)
+screenNameMap =
+  [ Tuple "report_issue_chat_screen" REPORT_ISSUE_CHAT_SCREEN
+  , Tuple "ride_selection_screen" RIDE_SELECTION_SCREEN
+  , Tuple "splash_screen" SPLASH_SCREEN
+  , Tuple "choose_language_screen" CHOOSE_LANGUAGE_SCREEN
+  , Tuple "enter_mobile_number_screen" ENTER_MOBILE_NUMBER_SCREEN
+  , Tuple "home_screen" HOME_SCREEN
+  , Tuple "permission_screen" PERMISSION_SCREEN
+  , Tuple "my_profile_screen" MY_PROFILE_SCREEN
+  , Tuple "my_rides_screen" MY_RIDES_SCREEN
+  , Tuple "select_language_screen" SELECT_LANGUAGE_SCREEN
+  , Tuple "help_and_support_screen" HELP_AND_SUPPORT_SCREEN
+  , Tuple "about_us_screen" ABOUT_US_SCREEN
+  , Tuple "emergency_contacts_screen" EMERGENCY_CONTACS_SCREEN
+  , Tuple "account_set_up_screen" ACCOUNT_SET_UP_SCREEN
+  , Tuple "contact_us_screen" CONTACT_US_SCREEN
+  , Tuple "trip_details_screen" TRIP_DETAILS_SCREEN
+  , Tuple "invoice_screen" INVOICE_SCREEN
+  , Tuple "ride_rating_screen" RIDE_RATING_SCREEN
+  , Tuple "edit_profile_screen" EDIT_PROFILE_SCREEN
+  , Tuple "add_new_address_screen" ADD_NEW_ADDRESS_SCREEN
+  , Tuple "saved_location_screen" SAVED_LOCATION_SCREEN
+  , Tuple "success_screen" SUCCESS_SCREEN
+  , Tuple "referral_screen" REFERRAL_SCREEN
+  , Tuple "app_update_popup_screen" APP_UPDATE_POPUP_SCREEN
+  , Tuple "enter_otp_number_screen" ENTER_OTP_NUMBER_SCREEN
+  , Tuple "welcome_screen" WELCOME_SCREEN
+  , Tuple "ticket_booking_screen" TICKET_BOOKING_SCREEN
+  , Tuple "ride_scheduled_screen" RIDE_SCHEDULED_SCREEN
+  ]
+
 getScreen :: ScreenName -> String
-getScreen str = case str of 
-        REPORT_ISSUE_CHAT_SCREEN      -> "report_issue_chat_screen"
-        RIDE_SELECTION_SCREEN         -> "ride_selection_screen"
-        SPLASH_SCREEN                 -> "splash_screen"
-        CHOOSE_LANGUAGE_SCREEN        -> "choose_language_screen"
-        ENTER_MOBILE_NUMBER_SCREEN    -> "enter_mobile_number_screen"
-        HOME_SCREEN                   -> "home_screen"
-        PERMISSION_SCREEN             -> "permission_screen"
-        MY_PROFILE_SCREEN             -> "my_profile_screen"
-        MY_RIDES_SCREEN               -> "my_rides_screen"
-        SELECT_LANGUAGE_SCREEN        -> "select_language_screen"
-        HELP_AND_SUPPORT_SCREEN       -> "help_and_support_screen"
-        ABOUT_US_SCREEN               -> "about_us_screen"
-        EMERGENCY_CONTACS_SCREEN      -> "emergency_contacts_screen"
-        ACCOUNT_SET_UP_SCREEN         -> "account_set_up_screen"
-        CONTACT_US_SCREEN             -> "contact_us_screen"
-        TRIP_DETAILS_SCREEN           -> "trip_details_screen"
-        INVOICE_SCREEN                -> "invoice_screen"
-        RIDE_RATING_SCREEN            -> "ride_rating_screen"
-        EDIT_PROFILE_SCREEN           -> "edit_profile_screen"
-        ADD_NEW_ADDRESS_SCREEN        -> "add_new_address_screen"
-        SAVED_LOCATION_SCREEN         -> "saved_location_screen"
-        SUCCESS_SCREEN                -> "success_screen"
-        REFERRAL_SCREEN               -> "referral_screen"
-        APP_UPDATE_POPUP_SCREEN       -> "app_update_popup_screen"
-        ENTER_OTP_NUMBER_SCREEN       -> "enter_otp_number_screen"
-        WELCOME_SCREEN                -> "welcome_screen"
-        TICKET_BOOKING_SCREEN         -> "ticket_booking_screen"
-        RIDE_SCHEDULED_SCREEN         -> "ride_scheduled_screen" 
-        SEARCH_LOCATION_SCREEN        -> "search_location_screen"
-        NAMMASAFETY_SCREEN            -> "nammasafety_screen"
-        METRO_TICKET_BOOKING_SCREEN   -> "metro_ticket_booking_screen"
-        RENTAL_SCREEN                 -> "rental_screen"
+getScreen screenName = maybe ("") (\val -> (fst val)) $ find (\x -> (snd x) == screenName) screenNameMap
+
+getScreenType :: String -> ScreenName
+getScreenType str = maybe HOME_SCREEN (\val -> (snd val)) $ find (\x -> (fst x) == str) screenNameMap

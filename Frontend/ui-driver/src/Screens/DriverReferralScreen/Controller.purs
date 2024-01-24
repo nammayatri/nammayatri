@@ -5,7 +5,7 @@ import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
 import Prelude (class Show, bind, pure, ($))
 import PrestoDOM (Eval, continue, exit)
 import PrestoDOM.Types.Core (class Loggable)
-import Screens (getScreen, ScreenName(..))
+import Screens (getScreen, ScreenName(..), getScreenType)
 import Screens.Types 
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithMultipleParams)
@@ -73,12 +73,10 @@ data Action = BackPressed
             | UpdateLeaderBoard LeaderBoardRes
             | RenderQRCode
 
-data ScreenOutput = GoToHomeScreen DriverReferralScreenState
-                  | GoToNotifications DriverReferralScreenState
-                  | SubscriptionScreen DriverReferralScreenState
-                  | GoToDriverContestScreen DriverReferralScreenState
-                  | EarningsScreen DriverReferralScreenState
-                  | GoBack 
+data ScreenOutput = GoToDriverContestScreen DriverReferralScreenState
+                  | GoBack
+                  | BottomNavBarFlow ScreenName
+
 
 eval :: Action -> DriverReferralScreenState -> Eval Action ScreenOutput DriverReferralScreenState
 
@@ -105,24 +103,7 @@ eval LearnMore state = exit $ GoToDriverContestScreen state
 
 eval (PrimaryButtonActionController primaryButtonState (PrimaryButton.OnClick) ) state = continue state {props {showDriverReferralQRCode = false}}
 
-eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
-  pure $ hideKeyboardOnNavigation true
-  case item of
-    "Home" -> exit $ GoToHomeScreen state
-    "Earnings" -> exit $ EarningsScreen state
-    "Alert" -> do
-      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
-      exit $ GoToNotifications state
-    "Join" -> do
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
-      void $ pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
-    "Earnings" -> exit $ EarningsScreen state
-    _ -> continue state
+eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = exit $ BottomNavBarFlow $ getScreenType screen
 
 eval (UpdateDriverPerformance (GetPerformanceRes resp)) state = do 
   continue state {data {totalReferredDrivers = fromMaybe 0 resp.referrals.totalReferredDrivers, totalActivatedCustomers = resp.referrals.totalActivatedCustomers, totalReferredCustomers = resp.referrals.totalReferredCustomers}}

@@ -72,7 +72,7 @@ import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), decodeError, fetchAndUpdateCurrentLocation, getAssetsBaseUrl, getCurrentLocationMarker, getLocationName, getNewTrackingId, getSearchType, parseFloat, storeCallBackCustomer, didDriverMessage, getPixels, getDefaultPixels, getDeviceDefaultDensity, getBottomNavBarConfig)
 import Language.Strings (getString, getVarString)
 import JBridge (addMarker, animateCamera, clearChatMessages, drawRoute, enableMyLocation, firebaseLogEvent, generateSessionId, getArray, getCurrentPosition, getExtendedPath, getHeightFromPercent, getLayoutBounds, initialWebViewSetUp, isCoordOnPath, isInternetAvailable, isMockLocation, lottieAnimationConfig, removeAllPolylines, removeMarker, requestKeyboardShow, scrollOnResume, showMap, startChatListenerService, startLottieProcess, stopChatListenerService, storeCallBackMessageUpdated, storeCallBackOpenChatScreen, storeKeyBoardCallback, toast, updateRoute, addCarousel, updateRouteConfig, addCarouselWithVideoExists, storeCallBackLocateOnMap, storeOnResumeCallback, setMapPadding, differenceBetweenTwoUTC)
 import Language.Types (STR(..))
@@ -128,6 +128,8 @@ import Components.MessagingView.Common.View
 import Data.FoldableWithIndex
 import Effect.Unsafe (unsafePerformEffect)
 import Screens.Types (FareProductType(..)) as FPT
+import Components.BottomNavBar as BottomNavBar
+import Screens (ScreenName(..), getScreen) as ScreenNames
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -454,48 +456,48 @@ view push state =
   where
     showSafetyAlertPopup = Arr.notElem (getValueToLocalNativeStore SAFETY_ALERT_TYPE) ["__failed", "false", "(null)"]
 
-bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
-bottomNavBarView push state = let 
-  viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen 
-  in
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , background Color.transparent
-    , alignParentBottom "true,-1"
-    , visibility viewVisibility
-    , gravity BOTTOM
-    , orientation VERTICAL
-    ][  separator (V 1) Color.grey900 state.props.currentStage
-      , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , background Color.white900
-          , padding $ PaddingVertical 10 10
-          ](map (\item -> 
-              linearLayout
-              [ height WRAP_CONTENT
-              , weight 1.0 
-              , gravity CENTER 
-              , onClick push $ const $ BottomNavBarAction item.id
-              , orientation VERTICAL
-              , alpha if (state.props.focussedBottomIcon == item.id) then 1.0 else 0.5
-              ][  imageView
-                    [ height $ V 24 
-                    , width $ V 24 
-                    , imageWithFallback $ fetchImage FF_ASSET $ item.image
-                    ]
-                , textView $
-                    [ text item.text 
-                    , height WRAP_CONTENT
-                    , width WRAP_CONTENT
-                    , color $ Color.black800
-                    ] <> FontStyle.body9 TypoGraphy
+-- bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+-- bottomNavBarView push state = let 
+--   viewVisibility = boolToVisibility $ state.props.currentStage == HomeScreen 
+--   in
+--   linearLayout
+--     [ height MATCH_PARENT
+--     , width MATCH_PARENT
+--     , background Color.transparent
+--     , alignParentBottom "true,-1"
+--     , visibility viewVisibility
+--     , gravity BOTTOM
+--     , orientation VERTICAL
+--     ][  separator (V 1) Color.grey900 state.props.currentStage
+--       , linearLayout
+--           [ height WRAP_CONTENT
+--           , width MATCH_PARENT
+--           , background Color.white900
+--           , padding $ PaddingVertical 10 10
+--           ](map (\item -> 
+--               linearLayout
+--               [ height WRAP_CONTENT
+--               , weight 1.0 
+--               , gravity CENTER 
+--               , onClick push $ const $ BottomNavBarAction1 item.id
+--               , orientation VERTICAL
+--               , alpha if (state.props.focussedBottomIcon == item.id) then 1.0 else 0.5
+--               ][  imageView
+--                     [ height $ V 24 
+--                     , width $ V 24 
+--                     , imageWithFallback $ fetchImage FF_ASSET $ item.image
+--                     ]
+--                 , textView $
+--                     [ text item.text 
+--                     , height WRAP_CONTENT
+--                     , width WRAP_CONTENT
+--                     , color $ Color.black800
+--                     ] <> FontStyle.body9 TypoGraphy
 
-              ]
-            ) ([  {text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}
-                , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
-    ]
+--               ]
+--             ) ([  {text : "Mobility" , image : "ny_ic_vehicle_unfilled_black", id : MOBILITY}
+--                 , {text : "Ticketing" , image : "ny_ic_ticket_black", id : TICKETING }]))
+--     ]
 getMapHeight :: HomeScreenState -> Length
 getMapHeight state = V (if state.data.fareProductType == FPT.ONE_WAY_SPECIAL_ZONE then (((screenHeight unit)/ 4)*3) 
                             else if (state.props.currentStage == RideAccepted || state.props.currentStage == ChatWithDriver) then ((screenHeight unit) - (getInfoCardPeekHeight state)) + 50
@@ -3174,8 +3176,10 @@ homeScreenView push state =
 homeScreenViewV2 :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 homeScreenViewV2 push state = 
   relativeLayout
-    [ height $ V (screenHeight unit)
-    , width $ V (screenWidth unit)
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    --   height $ V (screenHeight unit)
+    -- , width $ V (screenWidth unit)
     ][ linearLayout
         [ height $ V ((screenHeight unit)/ 3)
         , width MATCH_PARENT
@@ -3248,6 +3252,7 @@ homeScreenViewV2 push state =
                     ]  
                 ]
             ]
+      , bottomNavBarView push state
       ]
   where
     checkoutRentalBannerView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -4383,3 +4388,15 @@ intercityInSpecialZonePopupView push state =
   [ height MATCH_PARENT
   , width MATCH_PARENT
   ][PopUpModal.view (push <<< IntercitySpecialZone) (intercityInSpecialZonePopupConfig state)]
+
+bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+bottomNavBarView push state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , weight 1.0
+  , background Color.white900
+  , layoutGravity "bottom"
+  , alignParentBottom "true,-1"
+  ]
+  [ BottomNavBar.view (push <<< BottomNavBarAction) (getBottomNavBarConfig (ScreenNames.getScreen ScreenNames.HOME_SCREEN) ) ]

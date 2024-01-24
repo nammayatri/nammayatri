@@ -47,7 +47,7 @@ import Log
 import PrestoDOM (Eval, continue, exit, ScrollState(..), updateAndExit, continueWithCmd)
 import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Resource.Constants (decodeAddress)
-import Screens (ScreenName(..), getScreen)
+import Screens (ScreenName(..), getScreen, getScreenType)
 import Screens.DriverEarningsScreen.Transformer (getEventName)
 import Screens.Types (DriverEarningsScreenState, DriverEarningsSubView(..), AnimationState(..), IndividualRideCardState(..), IndividualRideCardState(..), DisabilityType(..))
 import Screens.Types as ST
@@ -71,7 +71,7 @@ instance loggableAction :: Loggable Action where
     NoAction -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "no_action" "no_action"
     (ChangeTab subView) -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "change_tab" (show subView)
     (BottomNavBarAction act) -> case act of
-      BottomNavBar.OnNavigate screen -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "bottom_nav_bar_action" screen
+      BottomNavBar.OnNavigate _ -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "bottom_nav_bar_action" "bottom_nav_bar_action"
     (RideHistoryAPIResponseAction _) -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "ride_history_api_response_action" "ride_history_api_response_action"
     (RideSummaryAPIResponseAction _ _ _) -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "ride_summary_api_response_action" "ride_summary_api_response_action"
     (UpdateRidesEver _) -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "update_rides_ever" "update_rides_ever"
@@ -103,16 +103,17 @@ instance loggableAction :: Loggable Action where
 
 data ScreenOutput
   = GoBack
-  | HomeScreen DriverEarningsScreenState
-  | Alerts DriverEarningsScreenState
-  | Contest DriverEarningsScreenState
-  | SubscriptionScreen DriverEarningsScreenState
+  -- | HomeScreen DriverEarningsScreenState
+  -- | Alerts DriverEarningsScreenState
+  -- | Contest DriverEarningsScreenState
+  -- | SubscriptionScreen DriverEarningsScreenState
   | ChangeDriverEarningsTab DriverEarningsSubView DriverEarningsScreenState
   | PurchasePlan DriverEarningsScreenState
   | RefreshScreen DriverEarningsScreenState
   | PaymentHistory
   | TripDetails DriverEarningsScreenState
   | LoaderOutput DriverEarningsScreenState
+  | BottomNavBarFlow DriverEarningsScreenState ScreenName
 
 data Action
   = NoAction
@@ -162,24 +163,27 @@ eval BackPressed state =
       FAQ_QUESTON_VIEW -> do
         void $ pure $ pauseYoutubeVideo unit
         exit $ ChangeDriverEarningsTab FAQ_VIEW state
-      _ -> exit $ HomeScreen (updateToState state)
+      _ -> exit $ BottomNavBarFlow state HOME_SCREEN
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
   let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_convert_coins_click" $ [{key : "Number of Coins", value : unsafeToForeign state.data.coinsToUse}]
   exit $ PurchasePlan state
 
-eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
-  case screen of
-    "Home" -> exit $ HomeScreen (updateToState state)
-    "Alert" -> do
-      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      exit $ Alerts (updateToState state)
-    "Rankings" -> do
-      void $ pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-      exit $ Contest (updateToState state)
-    "Join" -> do
-      exit $ SubscriptionScreen (updateToState state)
-    _ -> continue (updateToState state)
+eval (BottomNavBarAction (BottomNavBar.OnNavigate screenName)) state = do
+  if(DA.any (_ == screenName) (map getScreen [HOME_SCREEN, ALERTS_SCREEN, REFERRAL_SCREEN, SUBSCRIPTION_SCREEN])) 
+    then exit $ BottomNavBarFlow state $ getScreenType screenName
+    else continue state
+  -- case screen of
+  --   "Home" -> exit $ HomeScreen (updateToState state)
+  --   "Alert" -> do
+  --     void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+  --     exit $ Alerts (updateToState state)
+  --   "Rankings" -> do
+  --     void $ pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
+  --     exit $ Contest (updateToState state)
+  --   "Join" -> do
+  --     exit $ SubscriptionScreen (updateToState state)
+  --   _ -> continue (updateToState state)
 
 eval (ChangeTab subView') state = do
   let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_earnings_scn_change_tab" $ [{key : "Tab", value : unsafeToForeign (show subView')}]

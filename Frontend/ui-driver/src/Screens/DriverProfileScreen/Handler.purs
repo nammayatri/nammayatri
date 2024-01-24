@@ -62,18 +62,10 @@ driverProfileScreen = do
     GoToHelpAndSupportScreen state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
       App.BackT $ App.BackPoint <$> pure HELP_AND_SUPPORT_SCREEN
-    GoToHomeScreen state-> do
-      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
-      App.BackT $ App.BackPoint <$> pure GO_TO_HOME_FROM_PROFILE
-    GoToReferralScreen -> App.BackT $ App.BackPoint <$> pure GO_TO_REFERRAL_SCREEN_FROM_DRIVER_PROFILE_SCREEN
-    GoToDriverHistoryScreen state -> do
-      modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
-      App.BackT $ App.BackPoint <$> pure GO_TO_DRIVER_HISTORY_SCREEN
     GoToSelectLanguageScreen state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
       App.BackT $ App.BackPoint <$> pure SELECT_LANGUAGE_SCREEN
     OnBoardingFlow -> App.BackT $ App.BackPoint <$> pure ON_BOARDING_FLOW
-    GoToNotifications -> App.BackT $ App.BackPoint <$> pure NOTIFICATIONS_SCREEN
     GoToBookingOptions state -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> state)
       App.BackT $ App.BackPoint <$> pure (GO_TO_BOOKING_OPTIONS_SCREEN state)
@@ -101,3 +93,4 @@ driverProfileScreen = do
                                                 , vehicleSelected = driverDetailsScreen.data.vehicleSelected
                                                 , profileImg = driverDetailsScreen.data.profileImg}})
       App.BackT $ App.NoBack <$> pure (GO_HOME updatedState)
+    BottomNavBarFlow screenName -> App.BackT $ App.NoBack <$> pure (DRIVER_PROFILE_SCREEN_NAV screenName)

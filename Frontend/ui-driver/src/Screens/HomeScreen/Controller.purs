@@ -60,7 +60,7 @@ import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, voi
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
-import Screens (ScreenName(..), getScreen)
+import Screens (ScreenName(..), getScreen, getScreenType)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..))
 import Services.Accessor (_lat, _lon)
@@ -235,7 +235,6 @@ instance loggableAction :: Loggable Action where
 
 data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToHelpAndSupportScreen ST.HomeScreenState
-                    | GoToProfileScreen ST.HomeScreenState
                     | GoToRidesScreen ST.HomeScreenState
                     | GoToReferralScreen
                     | StartRide ST.HomeScreenState
@@ -265,6 +264,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
                     | EarningsScreen ST.HomeScreenState Boolean
+                    | BottomNavBarFlow ST.HomeScreenState ScreenName
 
 data Action = NoAction
             | BackPressed
@@ -519,27 +519,7 @@ eval (ShowMap key lat lon) state = continueWithCmd state [ do
   id <- checkPermissionAndUpdateDriverMarker state
   pure AfterRender
   ]
-eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
-  case item of
-    "Rides" -> exit $ GoToRidesScreen state
-    "Profile" -> exit $ GoToProfileScreen state
-    "Earnings" ->  exit $ EarningsScreen state false
-    "Alert" -> do
-      _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
-      let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_alert_click"
-      exit $ GoToNotifications state
-    "Rankings" -> do
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_BENEFITS
-      _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
-      exit $ GoToReferralScreen
-    "Join" -> do
-      let driverSubscribed = getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true"
-      void $ pure $ incrementValueOfLocalStoreKey TIMES_OPENED_NEW_SUBSCRIPTION
-      _ <- pure $ cleverTapCustomEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
-      exit $ SubscriptionScreen state
-    _ -> continue state
+eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = exit $ BottomNavBarFlow state $ getScreenType screen
 
 eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ setValueToLocalNativeStore SHOW_JOIN_NAMMAYATRI "__failed"
@@ -921,7 +901,7 @@ eval (PopUpModalSilentAction (PopUpModal.OnButton2Click)) state = exit (DriverAv
 eval GoToProfile state =  do
   _ <- pure $ setValueToLocalNativeStore PROFILE_DEMO "false"
   _ <- pure $ hideKeyboardOnNavigation true
-  exit $ GoToProfileScreen state
+  exit $ BottomNavBarFlow state DRIVER_PROFILE_SCREEN
 
 eval ClickAddAlternateButton state = do
     if state.props.showlinkAadhaarPopup then

@@ -49,9 +49,8 @@ import Services.API (MessageListRes(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Components.BottomNavBar.View as BottomNavBar
-import Components.BottomNavBar.Controller (navData)
 import Screens as ScreenNames
-import Helpers.Utils(fetchImage, FetchImageFrom(..))
+import Helpers.Utils(fetchImage, FetchImageFrom(..), getBottomNavBarConfig)
 
 
 screen :: NotificationsScreenState -> PrestoList.ListItem -> Screen Action NotificationsScreenState ScreenOutput
@@ -107,7 +106,7 @@ view notificationListItem push state =
                     ]
                   , loadMoreView push state
                 ]
-          , BottomNavBar.view (push <<< BottomNavBarAction) (navData ScreenNames.ALERTS_SCREEN state.config.bottomNavConfig)
+          , BottomNavBar.view (push <<< BottomNavBarAction) (getBottomNavBarConfig (ScreenNames.getScreen ScreenNames.ALERTS_SCREEN) state.config.bottomNavConfig)
           ]
       ] <> (if (state.notifsDetailModelVisibility == VISIBLE) then [ notificationDetailModel push state ] else [])
 
