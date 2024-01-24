@@ -15,7 +15,6 @@ import EulerHS.Language as EL
 import EulerHS.Prelude
 import Kernel.Beam.Lib.Utils as KBLU
 import Text.Casing (pascal)
-import "rider-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -63,7 +62,6 @@ runCreateQuery createDataEntry dbCreateObject = do
       let insertQuery = generateInsertForTable dbCreateObject
       case insertQuery of
         Just query -> do
-          EL.logDebug ("QUERY" :: Text) query -- TODO redundant
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
           case result of
             Left (QueryError errorMsg) -> do
@@ -73,7 +71,7 @@ runCreateQuery createDataEntry dbCreateObject = do
               -- writeDebugFile "create" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
             Right _ -> do
-              EL.logInfo ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+              EL.logDebug ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
               -- uncomment for debug purposes
               -- writeDebugFile "create" dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
               return $ Right entryId

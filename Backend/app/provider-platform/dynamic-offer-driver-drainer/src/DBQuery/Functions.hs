@@ -8,6 +8,9 @@ import qualified Database.PostgreSQL.Simple as Pg
 import EulerHS.Prelude hiding (id)
 import Text.Casing (quietSnake)
 
+currentSchemaName :: String
+currentSchemaName = "atlas_driver_offer_bpp"
+
 generateInsertQuery :: InsertQuery -> Maybe Text
 generateInsertQuery InsertQuery {..} = do
   let schemaName = schema.getSchemaName

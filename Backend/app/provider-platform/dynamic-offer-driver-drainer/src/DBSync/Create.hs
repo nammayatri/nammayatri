@@ -15,7 +15,6 @@ import EulerHS.Language as EL
 import EulerHS.Prelude
 import Kernel.Beam.Lib.Utils as KBLU
 import Text.Casing (pascal)
-import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
 import Types.DBSync.Create
 import Types.Event as Event
@@ -75,7 +74,7 @@ runCreateQuery createDataEntry dbCreateObject = do
               -- writeDebugFile "create" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
             Right _ -> do
-              EL.logInfo ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+              EL.logDebug ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
               -- uncomment for debug purposes
               -- writeDebugFile "create" dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
               return $ Right entryId

@@ -12,7 +12,6 @@ import Database.PostgreSQL.Simple.Types (Query (..))
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id)
 import Text.Casing (pascal)
-import "rider-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
@@ -46,7 +45,6 @@ runDeleteQuery deleteEntries dbDeleteObject = do
   let deleteQuery = getDeleteQueryForTable dbDeleteObject
   case deleteQuery of
     Just query -> do
-      EL.logDebug ("QUERY" :: Text) query
       result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
       case result of
         Left (QueryError errorMsg) -> do
@@ -56,7 +54,7 @@ runDeleteQuery deleteEntries dbDeleteObject = do
           -- writeDebugFile "delete" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
           return $ Left entryId
         Right _ -> do
-          EL.logInfo ("QUERY DELETE SUCCESSFUL" :: Text) (" Delete successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+          EL.logDebug ("QUERY DELETE SUCCESSFUL" :: Text) (" Delete successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
           -- uncomment for debug purposes
           -- writeDebugFile "delete" dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
           return $ Right entryId

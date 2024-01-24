@@ -110,16 +110,13 @@ library
     , juspay-extra
     , lens
     , mobility-core
-    , payment
     , pcg-random
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
-    , rider-app
     , scientific
     , sequelize
     , servant-server
-    , shared-services
     , text
     , time
     , tinylog
@@ -208,12 +205,10 @@ executable rider-app-drainer-exe
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
-    , rider-app
     , rider-app-drainer
     , scientific
     , sequelize
     , servant-server
-    , shared-services
     , text
     , time
     , tinylog

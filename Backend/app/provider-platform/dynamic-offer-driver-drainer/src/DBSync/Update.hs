@@ -15,7 +15,6 @@ import qualified EulerHS.Language as EL
 import EulerHS.Prelude hiding (id, try)
 import Kernel.Beam.Lib.Utils as KBLU
 import Text.Casing (pascal)
-import "dynamic-offer-driver-app" Tools.Beam.UtilsTH (currentSchemaName)
 import Types.DBSync
 import Types.DBSync.Update
 import Types.Event as Event
@@ -63,7 +62,6 @@ runUpdateQuery updateDataEntries dbUpdateObject = do
       let updateQuery = getUpdateQueryForTable dbUpdateObject
       case updateQuery of
         Just query -> do
-          EL.logDebug ("QUERY" :: Text) query
           result <- EL.runIO $ try $ executeQuery _pgConnection (Query $ TE.encodeUtf8 query)
           case result of
             Left (QueryError errorMsg) -> do
@@ -73,7 +71,7 @@ runUpdateQuery updateDataEntries dbUpdateObject = do
               -- writeDebugFile "update" dbModel entryId "queryFailed.sql" $ encodeUtf8 query
               return $ Left entryId
             Right _ -> do
-              EL.logInfo ("QUERY UPDATE SUCCESSFUL" :: Text) (" Update successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+              EL.logDebug ("QUERY UPDATE SUCCESSFUL" :: Text) (" Update successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
               -- uncomment for debug purposes
               -- writeDebugFile "update" dbModel entryId "querySuccessful.sql" $ encodeUtf8 query
               return $ Right entryId
