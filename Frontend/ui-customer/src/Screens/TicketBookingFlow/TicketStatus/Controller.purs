@@ -21,7 +21,7 @@ import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUT
 import Resources.Constants
 import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), BusinessHoursResp(..), TicketServiceResp(..), PeopleCategoriesResp(..), BookingStatus(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), PlaceType(..))
 import Data.Int (ceil)
-import Common.Types.App as Common
+import Domain.Payments as PP
 import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketBookingScreenData
 import Data.Function.Uncurried as Uncurried
 import Engineering.Helpers.Commons as EHC
@@ -75,14 +75,14 @@ eval (GetBookingInfo bookingShortId bookingStatus) state = do
 
 eval (ViewTicketAC (PrimaryButton.OnClick)) state = 
   case state.props.paymentStatus of
-   Common.Success -> continueWithCmd state [do pure (GetBookingInfo state.props.selectedBookingId Booked)]
-   Common.Failed -> exit $ GoToHomeScreen state
+   PP.Success -> continueWithCmd state [do pure (GetBookingInfo state.props.selectedBookingId Booked)]
+   PP.Failed -> exit $ GoToHomeScreen state
    _ -> continue state
 
 eval (PaymentStatusAction status) state =
   case status of 
-    "Booked" -> continue state{props{paymentStatus = Common.Success}}
-    "Failed" -> continue state{props{paymentStatus = Common.Failed}}
+    "Booked" -> continue state{props{paymentStatus = PP.Success}}
+    "Failed" -> continue state{props{paymentStatus = PP.Failed}}
     _ -> continue state
 
 eval (RefreshStatusAC (PrimaryButton.OnClick)) state = exit $ RefreshPaymentStatus state

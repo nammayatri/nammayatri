@@ -19,7 +19,8 @@ import Helpers.Utils
 import Screens.SubscriptionScreen.Controller
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Common.Styles.Colors as Color
-import Common.Types.App (OptionButtonList, APIPaymentStatus(..), PaymentStatus(..), LazyCheck(..)) as Common
+import Common.Types.App (OptionButtonList, LazyCheck(..)) as Common
+import Domain.Payments (APIPaymentStatus(..), PaymentStatus(..)) as PP
 import Components.Banner as Banner
 import Components.BottomNavBar as BottomNavBar
 import Components.ChatView as ChatView
@@ -317,7 +318,7 @@ data Action = NoAction
             | WaitTimerCallback String String Int
             | MakePaymentModalAC MakePaymentModal.Action
             | RateCardAC RateCard.Action
-            | PaymentStatusAction Common.APIPaymentStatus
+            | PaymentStatusAction PP.APIPaymentStatus
             | RemovePaymentBanner
             | KeyboardCallback String
             | OfferPopupAC PopUpModal.Action
@@ -1007,9 +1008,9 @@ eval RemoveGenderBanner state = do
 
 eval (PaymentStatusAction status) state =
   case status of
-    Common.CHARGED -> continue state { data { paymentState { paymentStatusBanner = false}}}
+    PP.CHARGED -> continue state { data { paymentState { paymentStatusBanner = false}}}
     _ -> continue state { data { paymentState {
-                  paymentStatus = Common.Failed,
+                  paymentStatus = PP.Failed,
                   bannerBG = Color.pearl,
                   bannerTitle = getString YOUR_PREVIOUS_PAYMENT_IS_PENDING,
                   bannerTitleColor = Color.dustyRed,

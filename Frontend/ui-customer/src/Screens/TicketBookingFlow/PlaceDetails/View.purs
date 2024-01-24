@@ -5,7 +5,7 @@ import Screens.TicketBookingFlow.PlaceDetails.ComponentConfig
 
 import Animation as Anim
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
-import Common.Types.App as Common
+import Domain.Payments as PP
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
@@ -1280,13 +1280,13 @@ headerBannerView push state message =
      ] <> FontStyle.subHeading1 TypoGraphy
   ]
 
-getTransactionConfig :: Common.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
+getTransactionConfig :: PP.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
 getTransactionConfig status = 
   case status of
-    Common.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : "Your ticket has been generated below", title : "Your booking is Confirmed!"}
-    Common.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : "Please check back in a few minutes.", title : "Your booking is Pending!"}
-    Common.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : "Please retry booking.", title : "Booking Failed!"}
-    Common.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}
+    PP.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : "Your ticket has been generated below", title : "Your booking is Confirmed!"}
+    PP.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : "Please check back in a few minutes.", title : "Your booking is Pending!"}
+    PP.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : "Please retry booking.", title : "Booking Failed!"}
+    PP.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}
 
 convertTimeSlotsToGroupedArray :: Array ST.SlotInterval -> Array (Array ST.SlotInterval)
 convertTimeSlotsToGroupedArray slots = groupAdjacent slots

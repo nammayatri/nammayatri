@@ -274,6 +274,7 @@ body6 typography = [
 body7 ::  LazyCheck -> forall properties. (Array (Prop properties))
 body7 typography = [
   textSize FontSize.a_16
+, lineHeight "20"
 ]  <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 700]
 
 body8 ::  LazyCheck -> forall properties. (Array (Prop properties))
