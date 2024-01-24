@@ -57,8 +57,6 @@ instance FromTType' BeamM.Merchant Merchant where
   fromTType' BeamM.MerchantT {..} = do
     gwUrl <- parseBaseUrl gatewayUrl
     regUrl <- parseBaseUrl registryUrl
-    frfsGwUrl <- parseBaseUrl frfsGatewayUrl
-    frfsRegUrl <- parseBaseUrl frfsRegistryUrl
     doBaseUrl <- parseBaseUrl driverOfferBaseUrl
     let geofencingConfig =
           Geo.GeofencingConfig
@@ -80,8 +78,6 @@ instance FromTType' BeamM.Merchant Merchant where
             geofencingConfig = geofencingConfig,
             gatewayUrl = gwUrl,
             registryUrl = regUrl,
-            frfsGatewayUrl = frfsGwUrl,
-            frfsRegistryUrl = frfsRegUrl,
             driverOfferBaseUrl = doBaseUrl,
             driverOfferApiKey = driverOfferApiKey,
             driverOfferMerchantId = driverOfferMerchantId,
@@ -124,8 +120,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.destinationRestriction = destination,
         BeamM.gatewayUrl = showBaseUrl gatewayUrl,
         BeamM.registryUrl = showBaseUrl registryUrl,
-        BeamM.frfsGatewayUrl = showBaseUrl frfsGatewayUrl,
-        BeamM.frfsRegistryUrl = showBaseUrl frfsRegistryUrl,
         BeamM.driverOfferBaseUrl = showBaseUrl driverOfferBaseUrl,
         BeamM.driverOfferApiKey = driverOfferApiKey,
         BeamM.driverOfferMerchantId = driverOfferMerchantId,
