@@ -3,10 +3,8 @@
 module IssueManagement.Domain.Action.UI.Issue where
 
 import qualified AWS.S3 as S3
-import AWS.S3.Types (S3Env)
 import qualified Data.ByteString as BS
 import Data.Text as T hiding (last, map, null)
-import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
 import EulerHS.Types (base64Encode)
@@ -207,44 +205,19 @@ issueReportList (personId, merchantId, merchantOpCityId) mbLanguage issueHandle 
             createdAt = issueReport.createdAt
           }
 
-createFilePath ::
-  ( BeamFlow m r,
-    MonadTime m,
-    MonadReader r m,
-    HasField "s3Env" r (S3Env m)
-  ) =>
-  Text ->
-  Common.FileType ->
-  Text ->
-  m Text
-createFilePath personId fileType validatedFileExtention = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
-  now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> "issue-media/" <> "driver-" <> personId <> "/"
-        <> show fileType
-        <> "/"
-        <> fileName
-        <> validatedFileExtention
-    )
-
-createMediaEntry :: BeamFlow m r => Text -> Common.FileType -> m Common.IssueMediaUploadRes
+createMediaEntry :: BeamFlow m r => Text -> S3.FileType -> m Common.IssueMediaUploadRes
 createMediaEntry url fileType = do
   fileEntity <- mkFile url
   _ <- QMF.create fileEntity
   return $ Common.IssueMediaUploadRes {fileId = cast $ fileEntity.id}
   where
-    mapToMediaFileType = \case
-      Common.Audio -> D.Audio
-      Common.Image -> D.Image
     mkFile fileUrl = do
       id <- generateGUID
       now <- getCurrentTime
       return $
         D.MediaFile
           { id,
-            _type = mapToMediaFileType fileType,
+            _type = fileType,
             url = fileUrl,
             createdAt = now
           }
@@ -253,7 +226,7 @@ issueMediaUpload ::
   ( BeamFlow m r,
     MonadTime m,
     MonadReader r m,
-    HasField "s3Env" r (S3Env m)
+    HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id Person, Id Merchant) ->
   Common.IssueMediaUploadReq ->
@@ -266,7 +239,7 @@ issueMediaUpload (personId, _) Common.IssueMediaUploadReq {..} issueMediaUploadC
   when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- createFilePath personId.getId fileType contentType
+  filePath <- S3.createFilePath "issue-media/" ("driver-" <> personId.getId) fileType contentType
   let fileUrl =
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "issue"
@@ -276,14 +249,14 @@ issueMediaUpload (personId, _) Common.IssueMediaUploadReq {..} issueMediaUploadC
   where
     validateContentType = do
       case fileType of
-        Common.Audio | reqContentType == "audio/wave" -> pure "wav"
-        Common.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
-        Common.Audio | reqContentType == "audio/mp4" -> pure "mp4"
-        Common.Image | reqContentType == "image/png" -> pure "png"
-        Common.Image | reqContentType == "image/jpeg" -> pure "jpg"
+        S3.Audio | reqContentType == "audio/wave" -> pure "wav"
+        S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+        S3.Audio | reqContentType == "audio/mp4" -> pure "mp4"
+        S3.Image | reqContentType == "image/png" -> pure "png"
+        S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
-fetchMedia :: (HasField "s3Env" r (S3Env m), MonadReader r m, BeamFlow m r) => (Id Person, Id Merchant) -> Text -> m Text
+fetchMedia :: (HasField "s3Env" r (S3.S3Env m), MonadReader r m, BeamFlow m r) => (Id Person, Id Merchant) -> Text -> m Text
 fetchMedia _personId filePath =
   S3.get $ T.unpack filePath
 
@@ -626,10 +599,10 @@ mkIssueChats issueReport language identifier =
     )
     issueReport.chats
   where
-    mediaTypeToMessageType :: D.MediaType -> MessageType
+    mediaTypeToMessageType :: S3.FileType -> MessageType
     mediaTypeToMessageType = \case
-      D.Audio -> Audio
-      D.Image -> Image
+      S3.Audio -> Audio
+      S3.Image -> Image
       _ -> Text
 
     mkIssueMessage :: (D.IssueMessage, Maybe D.IssueTranslation) -> Text
@@ -645,8 +618,8 @@ mkMediaFiles =
   foldr'
     ( \mediaFile mediaFileList -> do
         case mediaFile._type of
-          D.Audio -> Common.MediaFile_ Common.Audio mediaFile.url : mediaFileList
-          D.Image -> Common.MediaFile_ Common.Image mediaFile.url : mediaFileList
+          S3.Audio -> Common.MediaFile_ S3.Audio mediaFile.url : mediaFileList
+          S3.Image -> Common.MediaFile_ S3.Image mediaFile.url : mediaFileList
           _ -> mediaFileList
     )
     []

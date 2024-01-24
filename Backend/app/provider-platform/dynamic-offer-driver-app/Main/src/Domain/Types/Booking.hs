@@ -18,6 +18,7 @@ module Domain.Types.Booking where
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
+import qualified Domain.Types.Common as DTC
 import Domain.Types.FareParameters (FareParameters)
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Location as DLoc
@@ -50,7 +51,7 @@ data Booking = Booking
     transactionId :: Text,
     quoteId :: Text,
     status :: BookingStatus,
-    bookingType :: BookingType,
+    tripCategory :: DTC.TripCategory,
     specialZoneOtpCode :: Maybe Text,
     specialLocationTag :: Maybe Text,
     disabilityTag :: Maybe Text,
@@ -65,19 +66,21 @@ data Booking = Booking
     startTime :: UTCTime,
     riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.Location,
-    toLocation :: DLoc.Location,
+    toLocation :: Maybe DLoc.Location,
     vehicleVariant :: DVeh.Variant,
-    estimatedDistance :: Meters,
+    estimatedDistance :: Maybe Meters,
     maxEstimatedDistance :: Maybe HighPrecMeters,
     estimatedFare :: Money,
-    estimatedDuration :: Seconds,
+    estimatedDuration :: Maybe Seconds,
     fareParams :: FareParameters,
     riderName :: Maybe Text,
     paymentMethodId :: Maybe (Id DMPM.MerchantPaymentMethod),
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     paymentUrl :: Maybe Text,
-    distanceToPickup :: Maybe Meters
+    stopLocationId :: Maybe (Id DLoc.Location),
+    distanceToPickup :: Maybe Meters,
+    isScheduled :: Bool
   }
   deriving (Generic)
 

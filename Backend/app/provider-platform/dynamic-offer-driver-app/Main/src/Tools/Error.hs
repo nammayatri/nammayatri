@@ -918,3 +918,24 @@ instance IsHTTPError CustomerCancellationDuesError where
   toHttpCode _ = E400
 
 instance IsAPIError CustomerCancellationDuesError
+
+data RentalError
+  = OdometerReadingRequired Text
+  | EndRideOtpRequired Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RentalError
+
+instance IsBaseError RentalError where
+  toMessage = \case
+    OdometerReadingRequired tripCategory -> Just $ "Odometer Readings are required for " <> tripCategory <> " ride."
+    EndRideOtpRequired tripCategory -> Just $ "End Ride OTP is required to end a " <> tripCategory <> " ride."
+
+instance IsHTTPError RentalError where
+  toErrorCode = \case
+    OdometerReadingRequired _ -> "ODOMETER_READING_REQUIRED"
+    EndRideOtpRequired _ -> "END_RIDE_OTP_REQUIRED"
+
+  toHttpCode _ = E400
+
+instance IsAPIError RentalError

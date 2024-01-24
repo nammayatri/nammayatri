@@ -26,7 +26,7 @@ import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Prelude
 import Kernel.Types.Id (ShortId)
 import Kernel.Utils.Common (encodeToText)
-import SharedLogic.FareCalculator (mkBreakupList)
+import SharedLogic.FareCalculator (mkFareParamsBreakups)
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,
@@ -94,7 +94,7 @@ mkOnSelectMessageV2 req@DOnSelectReq {..} = do
 mkFulfillment :: DOnSelectReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
 mkFulfillment dReq quote = do
   let fromLocation = dReq.searchRequest.fromLocation
-  let toLocation = dReq.searchRequest.toLocation -- have to take last or all ?
+  let mbToLocation = dReq.searchRequest.toLocation -- have to take last or all ?
   OS.FulfillmentInfo
     { id = quote.estimateId.getId,
       start =
@@ -102,14 +102,17 @@ mkFulfillment dReq quote = do
           { location = makeLocation fromLocation
           },
       end =
-        OS.StopInfo
-          { location = makeLocation toLocation
-          },
+        ( \toLocation ->
+            OS.StopInfo
+              { location = makeLocation toLocation
+              }
+        )
+          <$> mbToLocation,
       vehicle =
         OS.Vehicle
           { category = castVariant quote.vehicleVariant
           },
-      _type = OS.RIDE,
+      _type = "RIDE",
       agent =
         OS.Agent
           { name = Just quote.driverName,
@@ -363,7 +366,7 @@ mkQuote :: DQuote.DriverQuote -> UTCTime -> OS.Quote
 mkQuote driverQuote now = do
   let currency = "INR"
       breakup_ =
-        mkBreakupList (OS.Price currency . fromIntegral) OS.PriceBreakup driverQuote.fareParams
+        mkFareParamsBreakups (OS.Price currency . fromIntegral) OS.PriceBreakup driverQuote.fareParams
           & filter filterRequiredBreakups'
   let nominalDifferenceTime = diffUTCTime driverQuote.validTill now
   OS.Quote
@@ -405,7 +408,7 @@ mkQuoteV2 quote now = do
 
 mkQuoteBreakupInner :: DQuote.DriverQuote -> [Spec.QuotationBreakupInner]
 mkQuoteBreakupInner quote = do
-  let fareParams = mkBreakupList mkBreakupPrice mkQuotationBreakupInner quote.fareParams
+  let fareParams = mkFareParamsBreakups mkBreakupPrice mkQuotationBreakupInner quote.fareParams
    in filter filterRequiredBreakups fareParams
   where
     mkBreakupPrice money =

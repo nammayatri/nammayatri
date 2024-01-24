@@ -55,7 +55,17 @@ parseEvent (Update.EditLocation elEvent) = do
     { bookingId = Id elEvent.id,
       rideId = Id elEvent.fulfillment.id,
       origin = elEvent.fulfillment.origin.location,
-      destination = elEvent.fulfillment.destination.location
+      destination = elEvent.fulfillment.destination >>= (.location)
+    }
+parseEvent (Update.AddStop asEvent) = do
+  DUpdate.AddStopReq
+    { bookingId = Id asEvent.id,
+      stops = asEvent.fulfillment.stops
+    }
+parseEvent (Update.EditStop esEvent) = do
+  DUpdate.EditStopReq
+    { bookingId = Id esEvent.id,
+      stops = esEvent.fulfillment.stops
     }
 
 mkPaymentMethodInfo :: Update.Payment -> DMPM.PaymentMethodInfo

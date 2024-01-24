@@ -17,35 +17,27 @@
 
 module Storage.Beam.Estimate where
 
-import qualified Data.Aeson as A
 import qualified Database.Beam as B
-import Domain.Types.Common (UsageSafety (..))
-import qualified Domain.Types.Estimate as Domain
+import Domain.Types.Common (TripCategory (..))
 import qualified Domain.Types.Vehicle as Variant
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
 
-newtype TimeOfDayText = TimeOfDayText TimeOfDay
-  deriving newtype (Eq, Read, Show, Ord, A.FromJSON, A.ToJSON)
-
-$(mkBeamInstancesForEnum ''TimeOfDayText)
-
 data EstimateT f = EstimateT
   { id :: B.C f Text,
     requestId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
+    tripCategory :: B.C f (Maybe TripCategory),
     minFare :: B.C f Money,
     maxFare :: B.C f Money,
-    estimateBreakupList :: B.C f [Domain.EstimateBreakupD 'Unsafe],
-    nightShiftCharge :: B.C f (Maybe Money),
-    oldNightShiftCharge :: B.C f (Maybe Centesimal),
-    nightShiftStart :: B.C f (Maybe TimeOfDayText),
-    nightShiftEnd :: B.C f (Maybe TimeOfDayText),
-    waitingChargePerMin :: B.C f (Maybe Money),
-    waitingOrPickupCharges :: B.C f (Maybe Money),
+    estimatedDistance :: B.C f (Maybe Meters),
+    fareParamsId :: B.C f (Maybe Text),
+    farePolicyId :: B.C f (Maybe Text),
     specialLocationTag :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime
+    isScheduled :: B.C f (Maybe Bool),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f (Maybe UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -59,4 +51,4 @@ type Estimate = EstimateT Identity
 
 $(enableKVPG ''EstimateT ['id] [])
 
-$(mkTableInstancesWithTModifier ''EstimateT "estimate" [("oldNightShiftCharge", "night_shift_multiplier")])
+$(mkTableInstancesWithTModifier ''EstimateT "estimate" [])

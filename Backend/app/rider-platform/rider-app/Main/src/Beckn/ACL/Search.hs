@@ -14,9 +14,8 @@
 {-# LANGUAGE OverloadedLabels #-}
 
 module Beckn.ACL.Search
-  ( buildRentalSearchReq,
-    buildOneWaySearchReq,
-    buildOneWaySearchReqV2,
+  ( buildSearchReqV1,
+    buildSearchReqV2,
   )
 where
 
@@ -27,12 +26,11 @@ import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
 import Data.Aeson (encode)
+import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import qualified Data.Text.Lazy.Encoding as TE
-import qualified Domain.Action.UI.Search.Common as DSearchCommon
-import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
-import qualified Domain.Action.UI.Search.Rental as DRentalSearch
+import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.SearchRequest as DSearchReq
 import EulerHS.Prelude hiding (state, (%~))
@@ -43,18 +41,18 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Tools.Maps as Maps
 
-buildOneWaySearchReq ::
+buildSearchReqV1 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  DOneWaySearch.OneWaySearchRes ->
+  DSearch.SearchRes ->
   m (BecknReq Search.SearchMessage)
-buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
+buildSearchReqV1 DSearch.SearchRes {..} =
   buildSearchReq
     origin
-    destination
+    stops
     searchId
     device
-    (shortestRouteInfo >>= (.distance))
-    (shortestRouteInfo >>= (.duration))
+    distance
+    duration
     customerLanguage
     disabilityTag
     merchant
@@ -65,20 +63,20 @@ buildOneWaySearchReq DOneWaySearch.OneWaySearchRes {..} =
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
-buildOneWaySearchReqV2 ::
+buildSearchReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  DOneWaySearch.OneWaySearchRes ->
+  DSearch.SearchRes ->
   m Spec.SearchReq
-buildOneWaySearchReqV2 DOneWaySearch.OneWaySearchRes {..} = do
+buildSearchReqV2 DSearch.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
   Search.buildBecknSearchReqV2
     Context.SEARCH
     Context.MOBILITY
     origin
-    destination
+    stops
     searchId
-    (shortestRouteInfo >>= (.distance))
-    (shortestRouteInfo >>= (.duration))
+    distance
+    duration
     customerLanguage
     disabilityTag
     merchant
@@ -89,30 +87,10 @@ buildOneWaySearchReqV2 DOneWaySearch.OneWaySearchRes {..} = do
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 
-buildRentalSearchReq ::
-  (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  DRentalSearch.RentalSearchRes ->
-  m (BecknReq Search.SearchMessage)
-buildRentalSearchReq DRentalSearch.RentalSearchRes {..} =
-  buildSearchReq
-    origin
-    origin
-    searchId
-    Nothing
-    Nothing
-    Nothing
-    Nothing
-    Nothing
-    merchant
-    city
-    Nothing
-    phoneNumber
-    Nothing
-
 buildSearchReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
-  DSearchCommon.SearchReqLocation ->
-  DSearchCommon.SearchReqLocation ->
+  DSearch.SearchReqLocation ->
+  [DSearch.SearchReqLocation] ->
   Id DSearchReq.SearchRequest ->
   Maybe Text ->
   Maybe Meters ->
@@ -125,20 +103,20 @@ buildSearchReq ::
   Maybe Text ->
   Maybe Bool ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin destination searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber mbIsReallocationEnabled = do
+buildSearchReq origin stops searchId _ distance duration customerLanguage disabilityTag merchant _city mbPoints mbPhoneNumber mbIsReallocationEnabled = do
   let transactionId = getId searchId
       messageId = transactionId
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- buildTaxiContext Context.SEARCH messageId (Just transactionId) merchant.bapId bapUrl Nothing Nothing _city merchant.country False
-  let intent = mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled
+  let intent = mkIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled
   let searchMessage = Search.SearchMessage intent
 
   pure $ BecknReq context searchMessage
 
 mkIntent ::
-  DSearchCommon.SearchReqLocation ->
-  DSearchCommon.SearchReqLocation ->
+  DSearch.SearchReqLocation ->
+  [DSearch.SearchReqLocation] ->
   Maybe Maps.Language ->
   Maybe Text ->
   Maybe Meters ->
@@ -147,20 +125,24 @@ mkIntent ::
   Maybe Text ->
   Maybe Bool ->
   Search.Intent
-mkIntent origin destination customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled = do
-  let startLocation =
+mkIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber mbIsReallocationEnabled = do
+  let mbDestination = listToMaybe stops
+      startLocation =
         Search.StartInfo
           { location = mkLocation origin
           }
-      endLocation =
-        Search.StopInfo
-          { location = mkLocation destination
-          }
+      mbEndLocation =
+        ( \destination ->
+            Search.StopInfo
+              { location = mkLocation destination
+              }
+        )
+          <$> mbDestination
 
       fulfillment =
         Search.FulfillmentInfo
           { start = startLocation,
-            end = endLocation,
+            end = mbEndLocation,
             tags =
               if isJust distance || isJust duration
                 then

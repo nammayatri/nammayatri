@@ -23,7 +23,7 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import qualified Data.Text as T
-import qualified Domain.Action.UI.Search.Common as DSearchCommon
+import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Location as Location
 import qualified Domain.Types.LocationAddress as LocationAddress
@@ -63,9 +63,9 @@ buildSelectReqV2 dSelectRes = do
 
 buildOrder :: (Monad m, Log m, MonadThrow m) => DSelect.DSelectRes -> m Select.Order
 buildOrder res = do
-  let start = mkLocation $ DSearchCommon.makeSearchReqLoc' res.searchRequest.fromLocation
+  let start = mkLocation $ DSearch.makeSearchReqLoc' res.searchRequest.fromLocation
   toLocation <- res.searchRequest.toLocation & fromMaybeM (InternalError "To location address not found")
-  let end = mkLocation $ DSearchCommon.makeSearchReqLoc' toLocation
+  let end = mkLocation $ DSearch.makeSearchReqLoc' toLocation
   let variant = castVariant res.variant
   let item =
         Select.OrderItem
@@ -87,12 +87,13 @@ buildOrder res = do
                   { location = start
                   },
               end =
-                Select.StopInfo
-                  { location = end
-                  },
+                Just $
+                  Select.StopInfo
+                    { location = end
+                    },
               id = res.estimate.bppEstimateId.getId,
               vehicle = Select.Vehicle {category = variant},
-              _type = Select.RIDE
+              _type = "RIDE"
             }
       }
   where

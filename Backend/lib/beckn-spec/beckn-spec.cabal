@@ -88,7 +88,6 @@ library
       Beckn.Types.Core.Taxi.Common.Descriptor
       Beckn.Types.Core.Taxi.Common.FareProductType
       Beckn.Types.Core.Taxi.Common.FulfillmentInfo
-      Beckn.Types.Core.Taxi.Common.FulfillmentType
       Beckn.Types.Core.Taxi.Common.Gps
       Beckn.Types.Core.Taxi.Common.ItemCode
       Beckn.Types.Core.Taxi.Common.Location
@@ -172,6 +171,7 @@ library
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
       Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent
+      Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.StopArrivedEvent
       Beckn.Types.Core.Taxi.Rating
       Beckn.Types.Core.Taxi.Rating.FeedbackForm
       Beckn.Types.Core.Taxi.Search
@@ -191,7 +191,9 @@ library
       Beckn.Types.Core.Taxi.Track.Order
       Beckn.Types.Core.Taxi.Update
       Beckn.Types.Core.Taxi.Update.UpdateEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.AddStopEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.EditLocationEvent
+      Beckn.Types.Core.Taxi.Update.UpdateEvent.EditStopEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent
       Beckn.Types.Core.Taxi.Update.UpdateEvent.PaymentCompletedEvent.Payment
       Beckn.Types.Core.Taxi.Update.UpdateEvent.UpdateEventType

@@ -20,7 +20,7 @@ import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import qualified Data.List as List
 import qualified Data.Text as T
-import qualified Domain.Action.UI.Search.Common as DSearchCommon
+import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationAddress as DLoc
@@ -39,44 +39,49 @@ import Tools.Error
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
-mkStops :: DSearchCommon.SearchReqLocation -> DSearchCommon.SearchReqLocation -> Maybe [Spec.Stop]
-mkStops origin destination =
+mkStops :: DSearch.SearchReqLocation -> [DSearch.SearchReqLocation] -> Maybe [Spec.Stop]
+mkStops origin stops =
   let originGps = Gps.Gps {lat = origin.gps.lat, lon = origin.gps.lon}
-      destinationGps = Gps.Gps {lat = destination.gps.lat, lon = destination.gps.lon}
+      destinationGps dest = Gps.Gps {lat = dest.gps.lat, lon = dest.gps.lon}
    in Just
-        [ Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = Just $ mkAddress origin.address,
-                      locationAreaCode = origin.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing origin.address.city,
-                      locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                      locationGps = A.decode $ A.encode originGps,
-                      locationState = Just $ Spec.State origin.address.state,
-                      locationId = Nothing
-                    },
-              stopType = Just "START",
-              stopAuthorization = Nothing,
-              stopTime = Nothing
-            },
-          Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = Just $ mkAddress destination.address,
-                      locationAreaCode = destination.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing destination.address.city,
-                      locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                      locationGps = A.decode $ A.encode destinationGps,
-                      locationState = Just $ Spec.State destination.address.state,
-                      locationId = Nothing
-                    },
-              stopType = Just "END",
-              stopAuthorization = Nothing,
-              stopTime = Nothing
-            }
-        ]
+        ( [ Spec.Stop
+              { stopLocation =
+                  Just $
+                    Spec.Location
+                      { locationAddress = Just $ mkAddress origin.address,
+                        locationAreaCode = origin.address.areaCode,
+                        locationCity = Just $ Spec.City Nothing origin.address.city,
+                        locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                        locationGps = A.decode $ A.encode originGps,
+                        locationState = Just $ Spec.State origin.address.state,
+                        locationId = Nothing
+                      },
+                stopType = Just "START",
+                stopAuthorization = Nothing,
+                stopTime = Nothing
+              }
+          ]
+            <> ( ( \stop ->
+                     Spec.Stop
+                       { stopLocation =
+                           Just $
+                             Spec.Location
+                               { locationAddress = Just $ mkAddress stop.address,
+                                 locationAreaCode = stop.address.areaCode,
+                                 locationCity = Just $ Spec.City Nothing stop.address.city,
+                                 locationCountry = Just $ Spec.Country Nothing stop.address.country,
+                                 locationGps = A.decode $ A.encode $ destinationGps stop,
+                                 locationState = Just $ Spec.State stop.address.state,
+                                 locationId = Nothing
+                               },
+                         stopType = Just "END",
+                         stopAuthorization = Nothing,
+                         stopTime = Nothing
+                       }
+                 )
+                   <$> stops
+               )
+        )
   where
     mkAddress :: DLoc.LocationAddress -> Text
     mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]

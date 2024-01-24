@@ -101,6 +101,7 @@ library
     , text
     , text-conversions
     , time
+    , unordered-containers
     , uuid
     , wai
     , warp
@@ -183,6 +184,7 @@ executable driver-offer-allocator-exe
     , text
     , text-conversions
     , time
+    , unordered-containers
     , uuid
     , wai
     , warp

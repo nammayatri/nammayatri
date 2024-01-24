@@ -116,18 +116,20 @@ driverPoolConfigUpdate ::
   Context.City ->
   Meters ->
   Maybe Common.Variant ->
+  Maybe Text ->
   Common.DriverPoolConfigUpdateReq ->
   FlowHandler APISuccess
-driverPoolConfigUpdate merchantShortId opCity tripDistance variant = withFlowHandlerAPI . DMerchant.driverPoolConfigUpdate merchantShortId opCity tripDistance variant
+driverPoolConfigUpdate merchantShortId opCity tripDistance variant tripCategory = withFlowHandlerAPI . DMerchant.driverPoolConfigUpdate merchantShortId opCity tripDistance variant tripCategory
 
 driverPoolConfigCreate ::
   ShortId DM.Merchant ->
   Context.City ->
   Meters ->
   Maybe Common.Variant ->
+  Maybe Text ->
   Common.DriverPoolConfigCreateReq ->
   FlowHandler APISuccess
-driverPoolConfigCreate merchantShortId opCity tripDistance variant = withFlowHandlerAPI . DMerchant.driverPoolConfigCreate merchantShortId opCity tripDistance variant
+driverPoolConfigCreate merchantShortId opCity tripDistance variant tripCategory = withFlowHandlerAPI . DMerchant.driverPoolConfigCreate merchantShortId opCity tripDistance variant tripCategory
 
 driverIntelligentPoolConfig ::
   ShortId DM.Merchant ->

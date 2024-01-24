@@ -35,14 +35,13 @@ getPickUpLocation req =
     >>= (.stopLocation)
     & fromMaybeM (InvalidRequest "Missing Pickup Location")
 
-getDropOffLocation :: MonadFlow m => Spec.SearchReqMessage -> m Spec.Location
-getDropOffLocation req =
+getDropOffLocation :: Spec.SearchReqMessage -> Maybe Spec.Location
+getDropOffLocation req = do
   req.searchReqMessageIntent
     >>= (.intentFulfillment)
     >>= (.fulfillmentStops)
     >>= lastStop
     >>= (.stopLocation)
-    & fromMaybeM (InvalidRequest "Missing DropOff Location")
 
 getPickUpLocationGps :: MonadFlow m => Spec.SearchReqMessage -> m Text
 getPickUpLocationGps req =
@@ -54,15 +53,14 @@ getPickUpLocationGps req =
     >>= (.locationGps)
     & fromMaybeM (InvalidRequest "Missing Pickup Location GPS")
 
-getDropOffLocationGps :: MonadFlow m => Spec.SearchReqMessage -> m Text
-getDropOffLocationGps req =
+getDropOffLocationGps :: Spec.SearchReqMessage -> Maybe Text
+getDropOffLocationGps req = do
   req.searchReqMessageIntent
     >>= (.intentFulfillment)
     >>= (.fulfillmentStops)
     >>= lastStop
     >>= (.stopLocation)
     >>= (.locationGps)
-    & fromMaybeM (InvalidRequest "Missing DropOff Location GPS")
 
 getDistance :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Meters)
 getDistance req = do

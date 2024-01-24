@@ -3,7 +3,6 @@ module Beckn.OnDemand.Utils.Init where
 import Beckn.ACL.Common (getTagV2)
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Text as T
-import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM (PaymentCollector (..), PaymentInstrument (..), PaymentMethodInfo (..), PaymentType (..))
 import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
@@ -36,12 +35,6 @@ castPaymentInstrument params = do
   if isJust $ params.paymentParamsVirtualPaymentAddress
     then return DMPM.UPI
     else return DMPM.Cash -- TODO: add other payment instruments supported by ONDC
-
-buildInitTypeReq :: MonadFlow m => Text -> m DInit.InitTypeReq
-buildInitTypeReq = \case
-  "RIDE_OTP" -> return DInit.InitSpecialZoneReq
-  "RIDE" -> return DInit.InitNormalReq
-  _ -> throwM $ InvalidRequest "Unknown init type"
 
 getMaxEstimateDistance :: [Spec.TagGroup] -> Maybe HighPrecMeters
 getMaxEstimateDistance tagGroups = do

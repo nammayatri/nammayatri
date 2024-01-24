@@ -23,7 +23,6 @@ import qualified Domain.Types.Message.Message as Domain
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified IssueManagement.Domain.Types.MediaFile as MF
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQ
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Types (Language (ENGLISH))
@@ -39,7 +38,7 @@ import Tools.Error
 
 data MediaFileApiResponse = MediaFileApiResponse
   { url :: Text,
-    fileType :: MF.MediaType
+    fileType :: S3.FileType
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 

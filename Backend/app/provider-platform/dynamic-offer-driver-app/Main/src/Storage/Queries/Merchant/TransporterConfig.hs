@@ -142,6 +142,7 @@ instance FromTType' BeamTC.TransporterConfig TransporterConfig where
             orderAndNotificationStatusCheckFallBackTime = secondsToNominalDiffTime orderAndNotificationStatusCheckFallBackTime,
             dummyFromLocation = fromMaybe dummyFromLocationData (valueToMaybe =<< dummyFromLocation),
             dummyToLocation = fromMaybe dummyToLocationData (valueToMaybe =<< dummyToLocation),
+            scheduleRideBufferTime = secondsToNominalDiffTime scheduleRideBufferTime,
             ..
           }
     where
@@ -215,6 +216,7 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.useOfferListCache = useOfferListCache,
         BeamTC.canDowngradeToSedan = canDowngradeToSedan,
         BeamTC.canDowngradeToHatchback = canDowngradeToHatchback,
+        BeamTC.canSwitchToRental = canSwitchToRental,
         BeamTC.canDowngradeToTaxi = canDowngradeToTaxi,
         BeamTC.canSuvDowngradeToTaxi = canSuvDowngradeToTaxi,
         BeamTC.avgSpeedOfVehicle = toJSON <$> avgSpeedOfVehicle,
@@ -261,6 +263,8 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.notificationRetryTimeGap = nominalDiffTimeToSeconds notificationRetryTimeGap,
         BeamTC.driverAutoPayExecutionTimeFallBack = nominalDiffTimeToSeconds driverAutoPayExecutionTimeFallBack,
         BeamTC.orderAndNotificationStatusCheckFallBackTime = nominalDiffTimeToSeconds orderAndNotificationStatusCheckFallBackTime,
+        BeamTC.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
+        BeamTC.considerDriversForSearch = considerDriversForSearch,
         BeamTC.createdAt = createdAt,
         BeamTC.updatedAt = updatedAt,
         BeamTC.specialDrivers = specialDrivers,

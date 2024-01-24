@@ -13,33 +13,33 @@
 -}
 {-# LANGUAGE DerivingVia #-}
 
-module Domain.Types.SearchRequestSpecialZone where
+module Domain.Types.Quote where
 
-import qualified Domain.Types.FareProduct as FareProductD
-import qualified Domain.Types.Location as DLoc
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.FareParameters as Params
+import qualified Domain.Types.FarePolicy as Policy
+import qualified Domain.Types.Merchant as DMerchant
+import Domain.Types.SearchRequest
+import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Utils.GenericPretty
 
-data SearchRequestSpecialZone = SearchRequestSpecialZone
-  { id :: Id SearchRequestSpecialZone,
-    transactionId :: Text,
-    messageId :: Text,
-    startTime :: UTCTime,
+data Quote = Quote
+  { id :: Id Quote,
+    searchRequestId :: Id SearchRequest,
+    providerId :: Id DMerchant.Merchant,
+    vehicleVariant :: Variant.Variant,
+    estimatedFinishTime :: Maybe UTCTime,
+    tripCategory :: DTC.TripCategory,
     validTill :: UTCTime,
-    providerId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
-    fromLocation :: DLoc.Location,
-    toLocation :: DLoc.Location,
-    area :: Maybe FareProductD.Area,
-    bapId :: Text,
-    bapUri :: BaseUrl,
-    estimatedDistance :: Meters,
-    estimatedDuration :: Seconds,
+    estimatedFare :: Money,
+    distance :: Maybe Meters,
+    specialLocationTag :: Maybe Text,
+    fareParams :: Params.FareParameters,
+    farePolicy :: Maybe Policy.FarePolicy,
+    isScheduled :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, PrettyShow, Show)
+  deriving (Generic, Show)

@@ -99,10 +99,10 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     baseFare :: Money,
     customerExtraFee :: Maybe Money,
     fromLocation :: DSSL.SearchReqLocation,
-    toLocation :: DSSL.SearchReqLocation,
+    toLocation :: Maybe DSSL.SearchReqLocation,
     newFromLocation :: DLoc.Location,
-    newToLocation :: DLoc.Location, -- we need to show all requests or last one ?
-    distance :: Meters,
+    newToLocation :: Maybe DLoc.Location, -- we need to show all requests or last one ?
+    distance :: Maybe Meters,
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
@@ -131,7 +131,7 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       baseFare = searchTry.baseFare,
       customerExtraFee = searchTry.customerExtraFee,
       fromLocation = convertDomainType searchRequest.fromLocation,
-      toLocation = convertDomainType searchRequest.toLocation,
+      toLocation = convertDomainType <$> searchRequest.toLocation,
       newFromLocation = searchRequest.fromLocation,
       newToLocation = searchRequest.toLocation,
       distance = searchRequest.estimatedDistance,

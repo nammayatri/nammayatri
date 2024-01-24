@@ -32,6 +32,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.IdfyVe
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.Image as Image
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverOnboarding.VehicleRegistrationCertificate as VehicleRegistrationCertificate
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPlan as DriverPlan
+import qualified "dynamic-offer-driver-app" Storage.Beam.DriverPoolConfig as DriverPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverQuote as DriverQuote
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverReferral as DriverReferral
 import qualified "dynamic-offer-driver-app" Storage.Beam.DriverStats as DriverStats
@@ -60,7 +61,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Mandate as Mandate
 import qualified "dynamic-offer-driver-app" Storage.Beam.Maps.PlaceNameCache as PlaceNameCache
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant as Merchant
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverIntelligentPoolConfig as DriverIntelligentPoolConfig
-import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.DriverPoolConfig as DriverPoolConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.LeaderBoardConfig as MerchantLeaderBoardConfig
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantMessage as MerchantMessage
 import qualified "dynamic-offer-driver-app" Storage.Beam.Merchant.MerchantPaymentMethod as MerchantPaymentMethod
@@ -74,7 +74,7 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.Message.MessageTranslat
 import qualified "dynamic-offer-driver-app" Storage.Beam.MetaData as MetaData
 import "dynamic-offer-driver-app" Storage.Beam.Payment ()
 import qualified "dynamic-offer-driver-app" Storage.Beam.Person as Person
-import qualified "dynamic-offer-driver-app" Storage.Beam.QuoteSpecialZone as QuoteSpecialZone
+import qualified "dynamic-offer-driver-app" Storage.Beam.Quote as Quote
 import qualified "dynamic-offer-driver-app" Storage.Beam.Rating as Rating
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistrationToken as RegistrationToken
 import qualified "dynamic-offer-driver-app" Storage.Beam.RegistryMapFallback as RegistryMapFallback
@@ -147,7 +147,7 @@ data DBCreateObject
   | MessageTranslationObject MessageTranslation.MessageTranslation
   | MetaDataObject MetaData.MetaData
   | PersonObject Person.Person
-  | QuoteSpecialZoneObject QuoteSpecialZone.QuoteSpecialZone
+  | QuoteSpecialZoneObject Quote.Quote
   | RatingObject Rating.Rating
   | RideObject Ride.Ride
   | RideDetailsObject RideDetails.RideDetails
@@ -235,7 +235,7 @@ modelName (MessageReportObject _) = "MessageReport"
 modelName (MessageTranslationObject _) = "MessageTranslation"
 modelName (MetaDataObject _) = "MetaData"
 modelName (PersonObject _) = "Person"
-modelName (QuoteSpecialZoneObject _) = "QuoteSpecialZone"
+modelName (QuoteSpecialZoneObject _) = "Quote"
 modelName (RatingObject _) = "Rating"
 modelName (RideObject _) = "Ride"
 modelName (RideDetailsObject _) = "RideDetails"

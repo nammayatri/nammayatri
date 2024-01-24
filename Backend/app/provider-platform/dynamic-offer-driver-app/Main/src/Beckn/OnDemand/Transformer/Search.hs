@@ -37,16 +37,17 @@ buildSearchReq messageId city subscriber req context = do
   routeDuration_ <- Beckn.OnDemand.Utils.Search.getDuration req
   routePoints_ <- Beckn.OnDemand.Utils.Search.buildRoutePoints req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
-  dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req >>= tfAddress
-  dropLocation_ <- Beckn.OnDemand.Utils.Search.getDropOffLocationGps req >>= tfLatLong
-  pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= tfAddress
+  dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
+  dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
+  pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (tfAddress . Just)
   pickupLocation_ <- Beckn.OnDemand.Utils.Search.getPickUpLocationGps req >>= tfLatLong
   pickupTime_ <- Kernel.Types.Common.getCurrentTime
   transactionId_ <- Beckn.OnDemand.Utils.Common.getTransactionId context
   pure $ Domain.Action.Beckn.Search.DSearchReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, customerLanguage = customerLanguage_, customerPhoneNum = customerPhoneNum_, device = device_, disabilityTag = disabilityTag_, dropAddrress = dropAddrress_, dropLocation = dropLocation_, isReallocationEnabled = isReallocationEnabled_, messageId = messageId_, pickupAddress = pickupAddress_, pickupLocation = pickupLocation_, pickupTime = pickupTime_, routeDistance = routeDistance_, routeDuration = routeDuration_, routePoints = routePoints_, transactionId = transactionId_}
 
-tfAddress :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => BecknV2.OnDemand.Types.Location -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
-tfAddress location = do
+tfAddress :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Maybe BecknV2.OnDemand.Types.Location -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
+tfAddress Nothing = pure Nothing
+tfAddress (Just location) = do
   let area_code_ = Nothing
   let building_ = Nothing
   let city_ = Nothing

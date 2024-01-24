@@ -18,6 +18,7 @@ module API.ProviderPlatform.DynamicOfferDriver.Message
   )
 where
 
+import AWS.S3 (FileType (..))
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.Text as DT
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
@@ -105,7 +106,7 @@ buildTransaction endpoint apiTokenInfo =
 addLinkAsMedia :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AddLinkAsMedia -> FlowHandler Common.UploadFileResponse
 addLinkAsMedia merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  unless (((req.fileType == Common.VideoLink || req.fileType == Common.PortraitVideoLink) && checkIfYoutubeLink req.url) || req.fileType == Common.ImageLink) $
+  unless (((req.fileType == VideoLink || req.fileType == PortraitVideoLink) && checkIfYoutubeLink req.url) || req.fileType == ImageLink) $
     throwError $ InvalidRequest "Only support youtube video links and image links. For Audio use uploadFile API."
   transaction <- buildTransaction Common.AddLinkEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
@@ -117,7 +118,7 @@ addLinkAsMedia merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ d
 uploadFile :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UploadFileRequest -> FlowHandler Common.UploadFileResponse
 uploadFile merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  unless (req.fileType `elem` [Common.Audio, Common.Image]) $
+  unless (req.fileType `elem` [Audio, Image]) $
     throwError $ InvalidRequest "Only support Audio/Image media type. For Video/MediaLinks use AddLink API."
   transaction <- buildTransaction Common.UploadFileEndpoint apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $
