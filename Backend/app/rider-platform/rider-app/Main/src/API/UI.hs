@@ -18,9 +18,9 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Sos as SosApi
-import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.UI.AadhaarVerification as AadhaarVerification
 import qualified API.UI.AppInstalls as AppInstalls

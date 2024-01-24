@@ -398,12 +398,12 @@ library
       Tools.Ticket
       Tools.Whatsapp
       API.Action.UI.FollowRide
-      API.Action.UI.Sos
-      API.Types.UI.FollowRide
-      API.Types.UI.Sos
       API.Action.UI.FRFSTicketService
+      API.Action.UI.Sos
       API.Action.UI.TicketService
+      API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
+      API.Types.UI.Sos
       API.Types.UI.TicketService
       Domain.Types.BecknConfig
       Domain.Types.BusinessHour
