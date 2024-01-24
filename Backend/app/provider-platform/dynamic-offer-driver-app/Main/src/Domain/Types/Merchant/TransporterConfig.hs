@@ -176,6 +176,7 @@ data TransporterConfigD u = TransporterConfig
     acStatusCheckGap :: Int,
     bookAnyVehicleDowngradeLevel :: Int,
     kaptureDisposition :: Text,
+    kaptureQueue :: Text,
     dummyFromLocation :: DummyLocationInfo,
     dummyToLocation :: DummyLocationInfo,
     scheduleRideBufferTime :: NominalDiffTime,

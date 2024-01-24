@@ -136,7 +136,7 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
           res -> do
             let description = encodeToText res
             logInfo $ "Success: " <> show description
-            ticket <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig.kaptureDisposition)
+            ticket <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig)
             logInfo $ "Ticket: " <> show ticket
             return ()
 
@@ -162,11 +162,12 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
         throwError (ImageInvalidType (show DTO.DriverLicense) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
 
-    mkTicket description disposition =
+    mkTicket description tConfig =
       Ticket.CreateTicketReq
         { category = "BlackListPortal",
           subCategory = Just "Onboarding Dl Verification",
-          disposition = disposition,
+          disposition = tConfig.kaptureDisposition,
+          queue = tConfig.kaptureQueue,
           issueId = Nothing,
           issueDescription = description,
           mediaFiles = Nothing,

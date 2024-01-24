@@ -145,6 +145,7 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckFallBackTime :: B.C f Seconds,
     acStatusCheckGap :: B.C f Int,
     kaptureDisposition :: B.C f Text,
+    kaptureQueue :: B.C f Text,
     dummyFromLocation :: B.C f (Maybe A.Value),
     arrivedStopThreshold :: B.C f (Maybe HighPrecMeters),
     arrivedPickupThreshold :: B.C f (Maybe HighPrecMeters),

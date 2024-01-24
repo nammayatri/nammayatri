@@ -48,3 +48,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN place_name_cache_expiry_days integ
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN booking_sync_status_call_seconds_diff_threshold integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN kapture_queue text NOT NULL default '';

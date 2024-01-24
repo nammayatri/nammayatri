@@ -82,18 +82,18 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
     DAT.Success (resp :: SafetyWebhookReq) -> do
       logInfo $ "Success: " <> show resp
       let description = encodeToText resp.suspectList
-      ticket <- TT.createTicket merchant.id merchanOperatingCityId (mkTicket description transporterConfig.kaptureDisposition)
+      ticket <- TT.createTicket merchant.id merchanOperatingCityId (mkTicket description transporterConfig)
       logInfo $ "Ticket: " <> show ticket
       pure Ack
     DAT.Error err -> do
       logInfo $ "Error 2: " <> show err
       pure Ack
   where
-    mkTicket description disposition =
+    mkTicket description tConfig =
       Ticket.CreateTicketReq
         { category = "BlackListPortal",
           subCategory = Just "SUSPECTED DRIVER LIST",
-          disposition = disposition,
+          disposition = tConfig.kaptureDisposition,
           issueId = Nothing,
           issueDescription = description,
           mediaFiles = Nothing,
@@ -101,5 +101,6 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
           phoneNo = Nothing,
           personId = "SUSPECTED DRIVER LIST",
           classification = Ticket.DRIVER,
-          rideDescription = Nothing
+          rideDescription = Nothing,
+          queue = tConfig.kaptureQueue
         }

@@ -24,6 +24,8 @@ import Servant
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
@@ -54,9 +56,11 @@ customerIssueHandle =
   Common.ServiceHandle
     { findPersonById = castPersonById,
       findRideById = castRideById,
+      findMOCityById = castMOCityById,
       getRideInfo = castRideInfo,
       createTicket = castCreateTicket,
-      updateTicket = castUpdateTicket
+      updateTicket = castUpdateTicket,
+      findMerchantConfig = buildMerchantConfig
     }
 
 castPersonById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Person -> m (Maybe Common.Person)
@@ -75,12 +79,27 @@ castPersonById personId = do
           merchantOperatingCityId = cast person.merchantOperatingCityId
         }
 
-castRideById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Ride -> m (Maybe Common.Ride)
-castRideById rideId = do
+castRideById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.Ride -> Id Common.Merchant -> m (Maybe Common.Ride)
+castRideById rideId merchantId = do
   ride <- runInReplica $ QR.findById (cast rideId)
-  return $ fmap castRide ride
+  merchantOpCityId <- case (.merchantOperatingCityId) =<< ride of
+    Just moCityId -> return moCityId
+    Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (fromMaybe (cast merchantId) ((.merchantId) =<< ride))
+  return $ fmap (castRide merchantOpCityId) ride
   where
-    castRide ride = Common.Ride (cast ride.id) (ShortId $ show ride.shortId) ride.createdAt
+    castRide moCityId ride = Common.Ride (cast ride.id) (ShortId ride.shortId.getShortId) (cast moCityId) ride.createdAt
+
+castMOCityById :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Common.MerchantOperatingCity -> m (Maybe Common.MerchantOperatingCity)
+castMOCityById moCityId = do
+  moCity <- CQMOC.findById (cast moCityId)
+  return $ fmap castMOCity moCity
+  where
+    castMOCity moCity =
+      Common.MerchantOperatingCity
+        { id = cast moCity.id,
+          merchantId = cast moCity.merchantId,
+          city = moCity.city
+        }
 
 castRideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Ride -> m Common.RideInfoRes
 castRideInfo merchantId _ rideId = do
@@ -96,6 +115,8 @@ castRideInfo merchantId _ rideId = do
           driverName = res.driverName,
           driverPhoneNo = res.driverPhoneNo,
           vehicleNo = res.vehicleNo,
+          vehicleVariant = Just $ show res.vehicleVariant,
+          vehicleServiceTier = res.vehicleServiceTierName,
           actualFare = res.actualFare,
           bookingStatus = Nothing
         }
@@ -119,14 +140,16 @@ castCreateTicket merchantId merchantOperatingCityId = TT.createTicket (cast merc
 castUpdateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT.UpdateTicketReq -> m TIT.UpdateTicketResp
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
-buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id DM.Merchant -> m MerchantConfig
-buildMerchantConfig merchantId = do
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+buildMerchantConfig :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Person -> m MerchantConfig
+buildMerchantConfig merchantId merchantOpCityId _personId = do
+  merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  riderConfig <- CQRC.findByMerchantOperatingCityId (cast merchantOpCityId) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   return
     MerchantConfig
       { mediaFileSizeUpperLimit = merchant.mediaFileSizeUpperLimit,
         mediaFileUrlPattern = merchant.mediaFileUrlPattern,
-        kaptureDisposition = merchant.kaptureDisposition
+        kaptureDisposition = merchant.kaptureDisposition,
+        kaptureQueue = riderConfig.kaptureQueue
       }
 
 issueReportCustomerList :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> FlowHandler Common.IssueReportListRes
@@ -138,12 +161,10 @@ fetchMedia :: (Id SP.Person, Id DM.Merchant) -> Text -> FlowHandler Text
 fetchMedia (personId, merchantId) = withFlowHandlerAPI . Common.fetchMedia (cast personId, cast merchantId)
 
 createIssueReport :: (Id SP.Person, Id DM.Merchant) -> Maybe Language -> Common.IssueReportReq -> FlowHandler Common.IssueReportRes
-createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Common.createIssueReport (cast personId, cast merchantId, cast person.merchantOperatingCityId) mbLanguage req (buildMerchantConfig merchantId) customerIssueHandle CUSTOMER
+createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ Common.createIssueReport (cast personId, cast merchantId) mbLanguage req customerIssueHandle CUSTOMER
 
 issueMediaUpload :: (Id SP.Person, Id DM.Merchant) -> Common.IssueMediaUploadReq -> FlowHandler Common.IssueMediaUploadRes
-issueMediaUpload (personId, merchantId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast personId, cast merchantId) req (buildMerchantConfig merchantId)
+issueMediaUpload (personId, merchantId) req = withFlowHandlerAPI $ Common.issueMediaUpload (cast personId, cast merchantId) customerIssueHandle req
 
 issueInfo :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> Maybe Language -> FlowHandler Common.IssueInfoRes
 issueInfo (personId, merchantId) issueReportId language = withFlowHandlerAPI $ Common.issueInfo issueReportId (cast personId, cast merchantId) language customerIssueHandle CUSTOMER
