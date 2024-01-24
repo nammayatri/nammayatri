@@ -1,4 +1,4 @@
-# We decouple ports information on this file, so that 
+# We decouple ports information on this file, so that
 # the `kill-svc-ports` script can use it.
 {
   db-primary = 5434;
