@@ -38,9 +38,20 @@
         namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
       };
       settings = {
-        dynamic-offer-driver-app.custom = p: p.overrideAttrs (oa: {
-          DYLD_LIBRARY_PATH = "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib";
-        });
+        alchemist = {
+          custom =
+            p: p.overrideAttrs (oa: {
+              inherit (config.haskellProjects.default.outputs.finalPackages) cac_client;
+              preBuild = ''
+                export ${if pkgs.stdenv.isLinux then "LD_LIBRARY_PATH" else "DYLD_LIBRARY_PATH"}="$cac_client/lib";
+              '';
+              nativeBuildInputs = (oa.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper ];
+              postFixup = (oa.postFixup or "") + ''
+                wrapProgram $bin/bin/* \
+                  --set ${if pkgs.stdenv.isLinux then "LD_LIBRARY_PATH" else "DYLD_LIBRARY_PATH"} "$cac_client/lib"
+              '';
+            });
+        };
         namma-dsl.libraryProfiling = false;
         location-updates.check = false;
         beckn-test.check = false;
