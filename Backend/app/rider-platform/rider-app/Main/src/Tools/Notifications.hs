@@ -30,18 +30,26 @@ import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.SearchRequest as SearchRequest
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (ServiceFlow)
-import Kernel.Storage.Esqueleto hiding (runInReplica)
+import qualified Kernel.Prelude as Prelude
+import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Esqueleto hiding (count, runInReplica)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified Storage.CachedQueries.FollowRide as CQFollowRide
+import Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.Queries.Person as Person
+import Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.SearchRequest as QSearchReq
+import qualified Tools.SMS as Sms
 
 data EmptyDynamicParam = EmptyDynamicParam
 
@@ -228,7 +236,24 @@ notifyOnRideCompleted booking ride = do
             driverName,
             "Total Fare " <> show (fromMaybe booking.estimatedFare totalFare)
           ]
+  updateFollowsRideCount personId
   notifyPerson person.merchantId merchantOperatingCityId notificationData
+  where
+    updateFollowsRideCount personId = do
+      emContacts <- QPDEN.findAllByPersonId personId
+      let followingContacts = filter (.enableForFollowing) emContacts
+      mapM_
+        ( \contact -> case contact.contactPersonId of
+            Just id -> updateFollowRideCount id
+            Nothing -> return ()
+        )
+        followingContacts
+      where
+        updateFollowRideCount emPersonId = do
+          count <- CQFollowRide.decrementFollowRideCount emPersonId
+          when (count <= 0) $ do
+            CQFollowRide.clearFollowsRideCounter emPersonId
+            Person.updateFollowsRide emPersonId False
 
 notifyOnExpiration ::
   ServiceFlow m r =>
@@ -601,3 +626,66 @@ notifyDriverBirthDay personId driverName = do
           [ "Today is your driver " <> driverName <> "'s birthday, your warm wishes will make their day even more special!"
           ]
   notifyPerson person.merchantId merchantOperatingCityId notificationData
+
+notifyRideStartToEmergencyContacts ::
+  ( EsqDBFlow m r,
+    EncFlow m r,
+    CacheFlow m r,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    ServiceFlow m r
+  ) =>
+  SRB.Booking ->
+  SRide.Ride ->
+  m ()
+notifyRideStartToEmergencyContacts booking ride = do
+  merchantConfig <- CQM.findById (booking.merchantId) >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  let trackLink = merchantConfig.trackingShortUrlPattern <> ride.shortId.getShortId
+  emContacts <- QPDEN.findAllByPersonId booking.riderId
+  decEmContacts <- decrypt `mapM` emContacts
+  let followingContacts = filter (.enableForFollowing) decEmContacts
+  rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  for_ followingContacts \contact -> do
+    case contact.contactPersonId of
+      Just personId -> do
+        updateFollowsRideCount personId
+        sendFCM personId rider.firstName
+      Nothing -> sendSMS contact rider.firstName trackLink
+  where
+    updateFollowsRideCount emPersonId = do
+      _ <- CQFollowRide.incrementFollowRideCount emPersonId
+      Person.updateFollowsRide emPersonId True
+
+    sendFCM personId name = do
+      person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      let notificationData =
+            Notification.NotificationReq
+              { category = Notification.FOLLOW_RIDE,
+                subCategory = Nothing,
+                showNotification = Notification.SHOW,
+                messagePriority = Nothing,
+                entity = Notification.Entity Notification.Product personId.getId (),
+                body = body,
+                title = title,
+                dynamicParams = EmptyDynamicParam,
+                auth = Notification.Auth personId.getId person.deviceToken person.notificationToken,
+                ttl = Nothing
+              }
+          title = T.pack "Follow Ride"
+          body =
+            unwords
+              [ fromMaybe "" name,
+                " wants you to follow their ride"
+              ]
+      notifyPerson booking.merchantId booking.merchantOperatingCityId notificationData
+    sendSMS emergencyContact name trackLink = do
+      smsCfg <- asks (.smsCfg)
+      let sender = smsCfg.sender
+      message <-
+        MessageBuilder.buildFollowRideStartedMessage booking.merchantOperatingCityId $
+          MessageBuilder.BuildFollowRideMessageReq
+            { userName = fromMaybe "" name,
+              rideLink = trackLink
+            }
+      void $
+        Sms.sendSMS booking.merchantId booking.merchantOperatingCityId (Sms.SendSMSReq message emergencyContact.mobileNumber sender)
+          >>= Sms.checkSmsResult

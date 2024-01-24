@@ -26,6 +26,7 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
+import Domain.Types.Sos as DSos
 import EulerHS.Prelude hiding (id, null)
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -34,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
+import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Issues as QIssue
 import qualified Storage.Queries.Person as QP
@@ -63,9 +65,10 @@ data BookingAPIEntity = BookingAPIEntity
     specialLocationTag :: Maybe Text,
     paymentMethod :: Maybe DMPM.PaymentMethodAPIEntity,
     paymentUrl :: Maybe Text,
+    hasDisability :: Maybe Bool,
+    sosStatus :: Maybe DSos.SosStatus,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    hasDisability :: Maybe Bool
+    updatedAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -108,8 +111,9 @@ makeBookingAPIEntity ::
   Maybe DMPM.MerchantPaymentMethod ->
   Maybe Bool ->
   Bool ->
+  Maybe DSos.SosStatus ->
   BookingAPIEntity
-makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue = do
+makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPaymentMethod hasDisability hasNightIssue mbSosStatus = do
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
   BookingAPIEntity
     { id = booking.id,
@@ -134,7 +138,8 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       paymentUrl = booking.paymentUrl,
       createdAt = booking.createdAt,
       updatedAt = booking.updatedAt,
-      hasDisability = hasDisability
+      hasDisability = hasDisability,
+      sosStatus = mbSosStatus
     }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -163,6 +168,14 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
               ..
             }
 
+getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> m (Maybe DSos.SosStatus)
+getActiveSos mbRide = do
+  case mbRide of
+    Nothing -> return Nothing
+    Just ride -> do
+      sosDetails <- CQSos.findByRideIdAndStatusList [DSos.Pending, DSos.Resolved] ride.id
+      return $ (.status) <$> sosDetails
+
 buildBookingAPIEntity :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Booking -> Id Person.Person -> m BookingAPIEntity
 buildBookingAPIEntity booking personId = do
   mbActiveRide <- runInReplica $ QRide.findActiveByRBId booking.id
@@ -171,8 +184,9 @@ buildBookingAPIEntity booking personId = do
   fareBreakups <- runInReplica $ QFareBreakup.findAllByBookingId booking.id
   mbExoPhone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   let merchantOperatingCityId = booking.merchantOperatingCityId
+  mbSosStatus <- getActiveSos mbActiveRide
   mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
     CQMPM.findByIdAndMerchantOperatingCityId paymentMethodId merchantOperatingCityId
       >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
   person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability $ isJust nightIssue
+  return $ makeBookingAPIEntity booking mbActiveRide (maybeToList mbRide) fareBreakups mbExoPhone mbPaymentMethod person.hasDisability (isJust nightIssue) mbSosStatus

@@ -157,10 +157,6 @@ let kafkaProducerCfg =
 
 let kvConfigUpdateFrequency = +10
 
-let dontEnableForDb = [] : List Text
-
-let dontEnableForKafka = [] : List Text
-
 let appBackendBapInternal =
       { name = "APP_BACKEND"
       , url = "http://localhost:8013/"
@@ -289,7 +285,7 @@ in  { esqDBCfg
     , kafkaProducerCfg
     , snapToRoadSnippetThreshold = +300
     , droppedPointsThreshold = +2000
-    , snapToRoadPostCheckThreshold = +500
+    , osrmMatchPreCheckThreshold = +1500
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
     , enableRedisLatencyLogging = False
@@ -302,8 +298,6 @@ in  { esqDBCfg
     , schedulerSetName = "Scheduled_Jobs"
     , schedulerType = common.schedulerType.RedisBased
     , ltsCfg = LocationTrackingeServiceConfig
-    , dontEnableForDb
-    , dontEnableForKafka
     , maxMessages
     , modelNamesMap
     , incomingAPIResponseTimeout = +15

@@ -158,10 +158,6 @@ let hccfg =
 
 let kvConfigUpdateFrequency = +10
 
-let dontEnableForDb = [] : List Text
-
-let dontEnableForKafka = [] : List Text
-
 let maxMessages
     : Text
     = "5000"
@@ -225,8 +221,6 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
-    , dontEnableForDb
-    , dontEnableForKafka
     , maxMessages
     , incomingAPIResponseTimeout = +15
     , internalEndPointMap = common.internalEndPointMap

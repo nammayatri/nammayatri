@@ -20,12 +20,17 @@ where
 import API
 import qualified Data.HashMap.Strict as HMS
 import "lib-dashboard" Environment
+import EulerHS.Language as L
 import qualified EulerHS.Runtime as R
+import Kernel.Beam.Connection.Flow (prepareConnectionDashboard)
+import Kernel.Beam.Connection.Types (ConnectionConfigDashboard (..))
+import Kernel.Beam.Types (KafkaConn (..), Tables (..))
 import Kernel.Exit
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Kernel.Types.Flow
 import Kernel.Utils.App
+import qualified Kernel.Utils.Common as KUC
 import Kernel.Utils.Dhall (readDhallConfigDefault)
 import Kernel.Utils.Servant.Server (runServerWithHealthCheckAndSlackNotification)
 import Servant (Context (..))
@@ -37,6 +42,16 @@ runService configModifier = do
   appEnv <- buildAppEnv authTokenCacheKeyPrefix appCfg
   -- Metrics.serve (appCfg.metricsPort) --  do we need it?
   runServerWithHealthCheckAndSlackNotification appEnv (Proxy @API) handler identity identity context releaseAppEnv \flowRt -> do
+    prepareConnectionDashboard
+      ( ConnectionConfigDashboard
+          { esqDBCfg = appCfg.esqDBCfg,
+            esqDBReplicaCfg = appCfg.esqDBReplicaCfg,
+            hedisClusterCfg = appCfg.hedisClusterCfg
+          }
+      )
+      appCfg.kvConfigUpdateFrequency
+    L.setOption KafkaConn appEnv.kafkaProducerTools
+    L.setOption Tables (KUC.Tables [] [])
     migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
     let flowRt' = flowRt {R._httpClientManagers = HMS.singleton "default" (R._defaultHttpClientManager flowRt)}

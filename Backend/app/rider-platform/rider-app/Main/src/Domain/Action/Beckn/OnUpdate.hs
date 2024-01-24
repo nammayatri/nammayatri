@@ -46,6 +46,7 @@ import Environment ()
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -87,7 +88,8 @@ data OnUpdateReq
       }
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
-        bppRideId :: Id SRide.BPPRide
+        bppRideId :: Id SRide.BPPRide,
+        tripStartLocation :: Maybe LatLong
       }
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -97,7 +99,8 @@ data OnUpdateReq
         fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: HighPrecMeters,
         traveledDistance :: HighPrecMeters,
-        paymentUrl :: Maybe Text
+        paymentUrl :: Maybe Text,
+        tripEndLocation :: Maybe LatLong
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -154,7 +157,8 @@ data ValidatedOnUpdateReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         booking :: SRB.Booking,
-        ride :: SRide.Ride
+        ride :: SRide.Ride,
+        tripStartLocation :: Maybe LatLong
       }
   | ValidatedRideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -166,7 +170,8 @@ data ValidatedOnUpdateReq
         booking :: SRB.Booking,
         ride :: SRide.Ride,
         person :: DP.Person,
-        paymentUrl :: Maybe Text
+        paymentUrl :: Maybe Text,
+        tripEndLocation :: Maybe LatLong
       }
   | ValidatedBookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -255,7 +260,7 @@ data BreakupPriceInfo = BreakupPriceInfo
   }
 
 onUpdate ::
-  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
@@ -326,7 +331,9 @@ onUpdate ValidatedRideAssignedReq {..} = do
           }
 onUpdate ValidatedRideStartedReq {..} = do
   fork "ride start geohash frequencyUpdater" $ do
-    frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) (Just booking.fromLocation.address) TripStart
+    case tripStartLocation of
+      Just location -> frequencyUpdator booking.merchantId location Nothing TripStart
+      Nothing -> return ()
   rideStartTime <- getCurrentTime
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
@@ -337,10 +344,13 @@ onUpdate ValidatedRideStartedReq {..} = do
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
   _ <- QPFS.updateStatus booking.riderId DPFS.RIDE_STARTED {rideId = ride.id, bookingId = booking.id, trackingUrl = ride.trackingUrl, driverLocation = Nothing}
   QPFS.clearCache booking.riderId
+  fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
   Notify.notifyOnRideStarted booking ride
 onUpdate ValidatedRideCompletedReq {..} = do
   fork "ride end geohash frequencyUpdater" $ do
-    frequencyUpdator booking.merchantId (Maps.LatLong booking.fromLocation.lat booking.fromLocation.lon) (Just booking.fromLocation.address) TripEnd
+    case tripEndLocation of
+      Just location -> frequencyUpdator booking.merchantId location Nothing TripEnd
+      Nothing -> return ()
   SMC.updateTotalRidesCounters booking.riderId
   merchantConfigs <- CMC.findAllByMerchantOperatingCityId booking.merchantOperatingCityId
   SMC.updateTotalRidesInWindowCounters booking.riderId merchantConfigs

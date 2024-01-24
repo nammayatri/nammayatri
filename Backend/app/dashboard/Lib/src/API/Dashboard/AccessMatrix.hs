@@ -22,6 +22,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.BeamFlow
 import Tools.Auth
 
 type API =
@@ -39,20 +40,20 @@ type API =
              :> Get '[JSON] [DMatrix.MerchantCityList]
        )
 
-handler :: FlowServer API
+handler :: BeamFlow' => FlowServer API
 handler =
   getAccessMatrix
     :<|> getAccessMatrixByRole
     :<|> getMerchantWithCityList
 
-getAccessMatrix :: TokenInfo -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
+getAccessMatrix :: BeamFlow' => TokenInfo -> Maybe Integer -> Maybe Integer -> FlowHandler AccessMatrixAPIEntity
 getAccessMatrix tokenInfo mbLimit =
   withFlowHandlerAPI' . DAccessMatrix.getAccessMatrix tokenInfo mbLimit
 
-getAccessMatrixByRole :: TokenInfo -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
+getAccessMatrixByRole :: BeamFlow' => TokenInfo -> Id DRole.Role -> FlowHandler AccessMatrixRowAPIEntity
 getAccessMatrixByRole tokenInfo =
   withFlowHandlerAPI' . DAccessMatrix.getAccessMatrixByRole tokenInfo
 
-getMerchantWithCityList :: FlowHandler [DMatrix.MerchantCityList]
+getMerchantWithCityList :: BeamFlow' => FlowHandler [DMatrix.MerchantCityList]
 getMerchantWithCityList =
   withFlowHandlerAPI' DAccessMatrix.getMerchantWithCityList

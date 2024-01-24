@@ -1,0 +1,32 @@
+imports:
+  Text: Data.Text
+  Booking: Domain.Types.Booking
+  PersonDefaultEmergencyNumber: Domain.Types.Person.PersonDefaultEmergencyNumber
+
+module: FollowRide
+types:
+  Followers:
+    name: Maybe Text
+    bookingId: Id Booking
+    mobileNumber: Text
+    priority: Int
+
+  ShareRideReq:
+    emergencyContactNumbers: [Text]
+
+apis:
+  # GET /follow/ride
+  - GET:
+      endpoint: /follow/ride
+      auth: TokenAuth
+      response:
+        type: "[API.Types.UI.FollowRide.Followers]"
+
+  # POST /share/ride
+  - POST:
+      endpoint: /share/ride
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FollowRide.ShareRideReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

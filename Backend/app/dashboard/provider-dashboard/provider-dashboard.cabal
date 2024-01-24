@@ -53,6 +53,7 @@ library
       ProviderPlatformClient.DynamicOfferDriver.RideBooking
       ProviderPlatformClient.SpecialZone
       RiderPlatformClient.RiderApp
+      Storage.Beam.CommonInstances
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:

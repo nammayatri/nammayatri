@@ -1183,7 +1183,8 @@ type TripDetailsScreenData =
     specialZoneLayoutBackground :: String,
     specialZoneImage :: String,
     specialZoneText :: String,
-    config :: AppConfig
+    config :: AppConfig,
+    goBackTo :: GoBackToScreen
   }
 
 type TripDetailsScreenProps =
@@ -2319,3 +2320,11 @@ type DriverReferralScreenProps = {
   showDriverReferralQRCode :: Boolean
 , showNewDriverReferralText :: Boolean
 }
+
+data GoBackToScreen = Earning | Home
+
+derive instance genericGoBackToScreen :: Generic GoBackToScreen _
+instance showGoBackToScreen :: Show GoBackToScreen where show = genericShow
+instance eqGoBackToScreen :: Eq GoBackToScreen where eq = genericEq
+instance encodeGoBackToScreen :: Encode GoBackToScreen where encode = defaultEnumEncode
+instance decodeGoBackToScreen :: Decode GoBackToScreen where decode = defaultEnumDecode

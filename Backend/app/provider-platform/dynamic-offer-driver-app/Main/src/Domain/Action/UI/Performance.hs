@@ -10,12 +10,15 @@ import Kernel.Storage.Esqueleto (EsqDBFlow, EsqDBReplicaFlow)
 import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fromMaybeM)
+import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderDetails as QRD
+import Tools.Error (DriverInformationError (..))
 
 data Results = Results
   { totalReferredCustomers :: Int,
-    totalActivatedCustomers :: Int
+    totalActivatedCustomers :: Int,
+    totalReferredDrivers :: Int
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -29,4 +32,6 @@ getDriverPerformance (driverId, _, _) = do
   _ <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   allRefferedCustomers <- QRD.findAllReferredByDriverId driverId
   let ridesTakenList = filter (.hasTakenValidRide) allRefferedCustomers
-  pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList))
+  di <- B.runInReplica (DriverInformation.findById driverId) >>= fromMaybeM DriverInfoNotFound
+  let totalReferredDrivers = fromMaybe 0 di.totalReferred
+  pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList) totalReferredDrivers)

@@ -73,6 +73,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QDFS
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.Person.PersonDefaultEmergencyNumber as QPDEN
 import qualified Storage.Queries.Person.PersonDisability as PDisability
 import qualified Storage.Queries.Person.PersonStats as QPS
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
@@ -346,11 +347,13 @@ buildPerson req mobileNumber notificationToken bundleVersion clientVersion merch
         clientVersion = clientVersion,
         whatsappNotificationEnrollStatus = Nothing,
         shareEmergencyContacts = False,
-        triggerSupport = True,
+        shareTripWithEmergencyContacts = Nothing,
+        hasCompletedMockSafetyDrill = Nothing,
         nightSafetyChecks = True,
         hasCompletedSafetySetup = False,
         registrationLat = req.registrationLat,
-        registrationLon = req.registrationLon
+        registrationLon = req.registrationLon,
+        followsRide = False
       }
 
 -- FIXME Why do we need to store always the same authExpiry and tokenExpiry from config? info field is always Nothing
@@ -480,6 +483,7 @@ createPerson req mobileNumber notificationToken mbBundleVersion mbClientVersion 
   _ <- Person.create person
   _ <- QDFS.create $ makeIdlePersonFlowStatus person
   _ <- QPS.create createPersonStats
+  fork "update emergency contact id" $ updatePersonIdForEmergencyContacts person.id mobileNumber
   pure person
   where
     makeIdlePersonFlowStatus person =
@@ -583,3 +587,8 @@ getPersonOTPChannel personId = do
     Just a -> pure a
     Nothing -> do
       pure SMS -- default otpChannel is SMS (for resend)
+
+updatePersonIdForEmergencyContacts :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBFlow m r) => Id SP.Person -> Text -> m ()
+updatePersonIdForEmergencyContacts personId mobileNumber = do
+  dbHash <- getDbHash mobileNumber
+  QPDEN.updateEmergencyContactPersonId dbHash personId

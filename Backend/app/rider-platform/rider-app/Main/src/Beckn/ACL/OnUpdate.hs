@@ -16,10 +16,12 @@ module Beckn.ACL.OnUpdate (buildOnUpdateReq) where
 
 import Beckn.ACL.Common (getTag)
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import EulerHS.Prelude hiding (state)
+import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Product.Validation.Context (validateContext)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -52,6 +54,12 @@ handleError etr action =
     Left err -> do
       logTagError "on_update req" $ "on_update error: " <> show err
       pure Nothing
+
+getLocationFromTag :: Maybe Tags.TagGroups -> Text -> Text -> Text -> Maybe Maps.LatLong
+getLocationFromTag tagGroup key latKey lonKey =
+  let tripStartLat :: Maybe Double = readMaybe . T.unpack =<< getTag key latKey =<< tagGroup
+      tripStartLon :: Maybe Double = readMaybe . T.unpack =<< getTag key lonKey =<< tagGroup
+   in Maps.LatLong <$> tripStartLat <*> tripStartLon
 
 parseEvent :: (MonadFlow m) => Text -> OnUpdate.OnUpdateEvent -> m DOnUpdate.OnUpdateReq
 parseEvent _ (OnUpdate.RideAssigned taEvent) = do
@@ -92,13 +100,18 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
         vehicleModel = vehicle.model
       }
 parseEvent _ (OnUpdate.RideStarted rsEvent) = do
+  let personTagsGroup = rsEvent.fulfillment.person.tags
+  let tripStartLocation = getLocationFromTag personTagsGroup "current_location" "current_location_lat" "current_location_lon"
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
-        bppRideId = Id rsEvent.fulfillment.id
+        bppRideId = Id rsEvent.fulfillment.id,
+        ..
       }
 parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideCompleted Event.") rcEvent.fulfillment.tags
+  let personTagsGroup = rcEvent.fulfillment.person.tags
+  let tripEndLocation = getLocationFromTag personTagsGroup "current_location" "current_location_lat" "current_location_lon"
   chargeableDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "chargeable_distance is not present.") $
       readMaybe . T.unpack
@@ -116,7 +129,8 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
         chargeableDistance = chargeableDistance,
         traveledDistance = traveledDistance,
         fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup,
-        paymentUrl = rcEvent.payment >>= (.uri)
+        paymentUrl = rcEvent.payment >>= (.uri),
+        ..
       }
   where
     mkOnUpdateFareBreakup breakup =

@@ -34,7 +34,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 data MapEndPoint
   = AutoCompleteEndPoint
   | GetPlaceNameEndPoint
-  deriving (Show, Read)
+  deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "MapEndPoint"
 

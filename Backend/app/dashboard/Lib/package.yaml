@@ -1,3 +1,13 @@
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
+# hpack defaults
+# Ref: https://github.com/sol/hpack#defaults
+
+# Workaround for segfault on macOS
+# https://github.com/NixOS/nixpkgs/issues/149692#issuecomment-1587564664
 name: lib-dashboard
 version: 0.1.0.0
 github: "nammayatri/nammayatri"
@@ -87,6 +97,14 @@ dependencies:
   - random
   - base32
   - cryptonite
+  - containers
+  - unordered-containers
+  - cereal
+  - beam-core
+  - beam-mysql
+  - beam-postgres
+  - postgresql-simple
+  - sequelize
 ghc-options:
   - -Wall
   - -Wcompat

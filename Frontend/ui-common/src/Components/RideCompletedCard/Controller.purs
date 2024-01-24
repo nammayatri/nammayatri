@@ -48,8 +48,8 @@ type Config = {
   viewsByOrder :: Array RideCompletedElements,
   enableContactSupport :: Boolean,
   isFreeRide :: Boolean,
-  lottieQRAnim :: Boolean,
-  needHelpText :: String
+  needHelpText :: String,
+  lottieQRAnim :: LottieQRAnim
 }
 
 data Theme = DARK | LIGHT
@@ -156,7 +156,10 @@ config = {
   bannerConfig : Banner.config,
   viewsByOrder : [],
   enableContactSupport : true,
-  lottieQRAnim : false,
+  lottieQRAnim : {
+    visible : false,
+    url : ""
+  },
   needHelpText : ""
 }
 
@@ -252,4 +255,9 @@ type TopPill = {
   background :: String,
   text :: String,
   textColor :: String
+}
+
+type LottieQRAnim = {
+  visible :: Boolean,
+  url :: String
 }

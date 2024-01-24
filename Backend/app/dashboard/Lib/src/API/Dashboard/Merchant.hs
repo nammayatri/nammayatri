@@ -21,6 +21,7 @@ import Environment
 import Kernel.Prelude
 import Kernel.Utils.Common
 import Servant
+import Storage.Beam.BeamFlow
 import Tools.Auth
 
 type API =
@@ -40,20 +41,20 @@ type API =
              :> Post '[JSON] DPerson.CreatePersonRes
        )
 
-handler :: FlowServer API
+handler :: BeamFlow' => FlowServer API
 handler =
   createMerchant
     :<|> listMerchants
     :<|> createUserForMerchant
 
-createMerchant :: TokenInfo -> DMerchant.CreateMerchantReq -> FlowHandler DMerchant.MerchantAPIEntity
+createMerchant :: BeamFlow' => TokenInfo -> DMerchant.CreateMerchantReq -> FlowHandler DMerchant.MerchantAPIEntity
 createMerchant tokenInfo =
   withFlowHandlerAPI' . DMerchant.createMerchant tokenInfo
 
-listMerchants :: TokenInfo -> FlowHandler [DMerchant.MerchantAPIEntity]
+listMerchants :: BeamFlow' => TokenInfo -> FlowHandler [DMerchant.MerchantAPIEntity]
 listMerchants tokenInfo =
   withFlowHandlerAPI' $ DMerchant.listMerchants tokenInfo
 
-createUserForMerchant :: TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
+createUserForMerchant :: BeamFlow' => TokenInfo -> DPerson.CreatePersonReq -> FlowHandler DPerson.CreatePersonRes
 createUserForMerchant tokenInfo req =
   withFlowHandlerAPI' $ DMerchant.createUserForMerchant tokenInfo req

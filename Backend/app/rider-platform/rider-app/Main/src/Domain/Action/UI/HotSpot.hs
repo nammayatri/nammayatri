@@ -41,11 +41,11 @@ frequencyUpdator ::
   Maybe LA.LocationAddress ->
   TypeOfMovement ->
   m ()
-frequencyUpdator merchantId latLong _address movement = do
+frequencyUpdator merchantId latLong _ movement = do
   hotSpotConfig <- QHotSpotConfig.findConfigByMerchantId merchantId
   case hotSpotConfig of
     Just HotSpotConfig {..} -> when shouldTakeHotSpot do
-      mbHotSpot <- convertToHotSpot latLong _address merchantId
+      mbHotSpot <- convertToHotSpot latLong Nothing merchantId
       now <- getCurrentTime
       case mbHotSpot of
         Just HotSpot {..} -> do
@@ -81,7 +81,7 @@ frequencyUpdator merchantId latLong _address movement = do
         & geoHash .~ _geoHash
         & centroidLatLong .~ _centroidLatLong
         & movementLens movement %~ (+ 1)
-        & address .~ _address
+        & address .~ Nothing
         & updatedAt ?~ now
 
 filterAndUpdateHotSpotWithExpiry ::

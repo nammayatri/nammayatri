@@ -1,0 +1,71 @@
+imports:
+  Text: Data.Text
+  Person: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  SosType : Domain.Types.Sos
+  SosStatus : Domain.Types.Sos
+  Sos : Domain.Types.Sos
+
+module: Sos
+types:
+  SosRes:
+    id: Id Sos
+
+  SosDetailsRes:
+    sosId: Maybe (Id Sos)
+
+  SosReq:
+    flow: SosType
+    rideId: Id Ride
+
+  SosUpdateReq:
+    status: SosStatus
+    comment: Maybe Text
+
+
+
+apis:
+  # GET /sos/getDetails
+  - GET:
+      endpoint: /sos/getDetails/{rideId}
+      auth: TokenAuth
+      params:
+        rideId: Id Ride
+      response:
+        type: API.Types.UI.Sos.SosDetailsRes
+
+  # # POST /sos/create
+  - POST:
+      endpoint: /sos/create
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.Sos.SosReq
+      response:
+        type: API.Types.UI.Sos.SosRes
+
+  # # POST /sos/{sosId}/status
+  - POST:
+      endpoint: /sos/{sosId}/status
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      request:
+        type: API.Types.UI.Sos.SosUpdateReq
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # # POST /sos/markRideAsSafe/{sosId}
+  - POST:
+      endpoint: /sos/markRideAsSafe/{sosId}
+      auth: TokenAuth
+      params:
+        sosId: Id Sos
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  # # POST /sos/createMockSos
+  - POST:
+      endpoint: /sos/createMockSos
+      auth: TokenAuth
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

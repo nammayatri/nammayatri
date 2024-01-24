@@ -30,6 +30,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified ProviderPlatformClient.DynamicOfferDriver.Fleet as Client
 import Servant hiding (throwError)
+import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
 import "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth.Merchant

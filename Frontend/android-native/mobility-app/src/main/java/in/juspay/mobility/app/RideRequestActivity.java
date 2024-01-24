@@ -134,6 +134,7 @@ public class RideRequestActivity extends AppCompatActivity {
             sheetAdapter.notifyItemInserted(sheetArrayList.indexOf(sheetModel));
             updateIndicators();
             updateProgressBars(false);
+            RideRequestUtils.addRideReceivedEvent(null,rideRequestBundle,null,"ride_request_popped_in_activity", this);
         });
     }
 

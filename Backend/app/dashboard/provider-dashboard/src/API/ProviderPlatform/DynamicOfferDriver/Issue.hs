@@ -37,6 +37,7 @@ import Kernel.Utils.Error (fromMaybeM)
 import qualified ProviderPlatformClient.DynamicOfferDriver.Operations as Client
 import Servant hiding (throwError)
 import qualified SharedLogic.Transaction as T
+import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant

@@ -144,6 +144,7 @@ library
       Domain.Action.UI.Disability
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
+      Domain.Action.UI.FollowRide
       Domain.Action.UI.Frontend
       Domain.Action.UI.HotSpot
       Domain.Action.UI.Maps
@@ -214,7 +215,6 @@ library
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
-      Domain.Types.Sos
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
       Domain.Types.VehicleVariant
@@ -225,6 +225,7 @@ library
       SharedLogic.CallBPPInternal
       SharedLogic.Confirm
       SharedLogic.GoogleTranslate
+      SharedLogic.JobScheduler
       SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
@@ -232,6 +233,7 @@ library
       SharedLogic.MetroOffer
       SharedLogic.Person
       SharedLogic.PublicTransport
+      SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       Storage.Beam.AadhaarVerification.AadhaarOtpReq
       Storage.Beam.AadhaarVerification.AadhaarOtpVerify
       Storage.Beam.AadhaarVerification.AadhaarVerification
@@ -282,7 +284,6 @@ library
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
-      Storage.Beam.Sos
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
@@ -290,6 +291,7 @@ library
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FeedbackForm
+      Storage.CachedQueries.FollowRide
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
@@ -304,6 +306,7 @@ library
       Storage.CachedQueries.Person
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
+      Storage.CachedQueries.Sos
       Storage.Queries.AadhaarVerification.AadhaarOtp
       Storage.Queries.AadhaarVerification.AadhaarVerification
       Storage.Queries.AppInstalls
@@ -348,7 +351,6 @@ library
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
-      Storage.Queries.Sos
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
       Storage.Queries.Webengage
@@ -372,7 +374,11 @@ library
       Tools.Streaming.Kafka
       Tools.Ticket
       Tools.Whatsapp
+      API.Action.UI.FollowRide
+      API.Action.UI.Sos
       API.Action.UI.TicketService
+      API.Types.UI.FollowRide
+      API.Types.UI.Sos
       API.Types.UI.TicketService
       Domain.Types.BusinessHour
       Domain.Types.MerchantOperatingCity
@@ -380,6 +386,7 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
+      Domain.Types.Sos
       Domain.Types.SpecialOccasion
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
@@ -393,6 +400,7 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
+      Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
@@ -406,6 +414,7 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
+      Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory
@@ -493,6 +502,7 @@ library
     , raw-strings-qq
     , record-dot-preprocessor
     , record-hasfield
+    , scheduler
     , sequelize
     , servant
     , servant-client
@@ -501,6 +511,8 @@ library
     , servant-server
     , sessionizer-metrics
     , shared-services
+    , singletons
+    , singletons-th
     , special-zone
     , special-zone-a
     , template-haskell
@@ -603,12 +615,15 @@ executable rider-app-exe
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
+    , scheduler
     , sequelize
     , servant
     , servant-client
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , singletons
+    , singletons-th
     , template-haskell
     , text
     , text-conversions

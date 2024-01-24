@@ -101,10 +101,12 @@ data PersonE e = Person
     clientVersion :: Maybe Version,
     shareEmergencyContacts :: Bool,
     nightSafetyChecks :: Bool,
-    triggerSupport :: Bool,
+    shareTripWithEmergencyContacts :: Maybe Bool,
+    hasCompletedMockSafetyDrill :: Maybe Bool,
     hasCompletedSafetySetup :: Bool,
     registrationLat :: Maybe Double,
-    registrationLon :: Maybe Double
+    registrationLon :: Maybe Double,
+    followsRide :: Bool
   }
   deriving (Generic)
 
@@ -147,7 +149,8 @@ data PersonAPIEntity = PersonAPIEntity
     hasCompletedSafetySetup :: Bool,
     enableLocalPoliceSupport :: Maybe Bool,
     bundleVersion :: Maybe Version,
-    clientVersion :: Maybe Version
+    clientVersion :: Maybe Version,
+    followsRide :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

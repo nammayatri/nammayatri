@@ -49,6 +49,15 @@ library
       Domain.Types.Transaction
       Environment
       SharedLogic.Transaction
+      Storage.Beam.AccessMatrix
+      Storage.Beam.BeamFlow
+      Storage.Beam.Common
+      Storage.Beam.Merchant
+      Storage.Beam.MerchantAccess
+      Storage.Beam.Person
+      Storage.Beam.RegistrationToken
+      Storage.Beam.Role
+      Storage.Beam.Transaction
       Storage.Queries.AccessMatrix
       Storage.Queries.Merchant
       Storage.Queries.MerchantAccess
@@ -56,13 +65,6 @@ library
       Storage.Queries.RegistrationToken
       Storage.Queries.Role
       Storage.Queries.Transaction
-      Storage.Tabular.AccessMatrix
-      Storage.Tabular.Merchant
-      Storage.Tabular.MerchantAccess
-      Storage.Tabular.Person
-      Storage.Tabular.RegistrationToken
-      Storage.Tabular.Role
-      Storage.Tabular.Transaction
       Tools.Auth
       Tools.Auth.Api
       Tools.Auth.Common
@@ -117,8 +119,12 @@ library
       aeson
     , base >=4.7 && <5
     , base32
+    , beam-core
+    , beam-mysql
+    , beam-postgres
     , beckn-spec
     , bytestring
+    , cereal
     , containers
     , cryptonite
     , dashboard-helper-api
@@ -129,10 +135,12 @@ library
     , mobility-core
     , persistent
     , persistent-postgresql
+    , postgresql-simple
     , random
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
+    , sequelize
     , servant-client
     , servant-openapi3
     , servant-server

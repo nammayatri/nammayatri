@@ -32,6 +32,7 @@ data MessageKey
   | SEND_BOOKING_OTP
   | SEND_SOS_ALERT
   | MARK_RIDE_AS_SAFE
+  | FOLLOW_RIDE
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''MessageKey)

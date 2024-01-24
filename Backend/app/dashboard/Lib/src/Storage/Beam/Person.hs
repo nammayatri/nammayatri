@@ -14,33 +14,38 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Beam.Sos where
+module Storage.Beam.Person where
 
+import qualified Data.Time as Time
 import qualified Database.Beam as B
-import qualified Domain.Types.Sos as Domain
+import Kernel.Beam.Lib.UtilsTH
+import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
-import Tools.Beam.UtilsTH
 
-data SosT f = SosT
+data PersonT f = PersonT
   { id :: B.C f Text,
-    personId :: B.C f Text,
-    rideId :: B.C f Text,
-    flow :: B.C f Domain.SosType,
-    status :: B.C f Domain.SosStatus,
-    createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime,
-    ticketId :: B.C f (Maybe Text)
+    firstName :: B.C f Text,
+    lastName :: B.C f Text,
+    roleId :: B.C f Text,
+    emailEncrypted :: B.C f (Maybe Text),
+    emailHash :: B.C f (Maybe DbHash),
+    mobileNumberEncrypted :: B.C f Text,
+    mobileNumberHash :: B.C f DbHash,
+    mobileCountryCode :: B.C f Text,
+    passwordHash :: B.C f (Maybe DbHash),
+    createdAt :: B.C f Time.UTCTime,
+    updatedAt :: B.C f Time.UTCTime
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table SosT where
-  data PrimaryKey SosT f
+instance B.Table PersonT where
+  data PrimaryKey PersonT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type Sos = SosT Identity
+type Person = PersonT Identity
 
-$(enableKVPG ''SosT ['id] [])
+$(enableKVPG ''PersonT ['id] [])
 
-$(mkTableInstances ''SosT "sos")
+$(mkTableInstancesGenericSchema ''PersonT "person")
