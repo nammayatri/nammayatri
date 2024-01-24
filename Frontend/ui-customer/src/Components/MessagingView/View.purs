@@ -140,7 +140,7 @@ headerNameView config push =
   , width $ V (((screenWidth unit)/10)* 6)
   , orientation VERTICAL
   , margin $ MarginLeft 8
-  ][linearLayout
+  ] $ [linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , accessibilityHint $ "Chat With : " <> config.userConfig.userName
@@ -162,70 +162,73 @@ headerNameView config push =
       , margin $ MarginBottom 8
       ] <> if lang == "HI_IN" then FontStyle.tags TypoGraphy else FontStyle.body15 TypoGraphy
     ]
-   , horizontalScrollView
-     [ height WRAP_CONTENT
-     , width MATCH_PARENT
-     , scrollBarX false
-     , accessibility DISABLE
-     , disableKeyboardAvoidance true
-     ][ linearLayout
+  ] <> if config.feature.showVehicleDetails then [vehicleAndOTPAndPriceView config] else []
+
+vehicleAndOTPAndPriceView :: forall w. Config -> PrestoDOM (Effect Unit) w
+vehicleAndOTPAndPriceView config = 
+  horizontalScrollView
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , scrollBarX false
+  , accessibility DISABLE
+  , disableKeyboardAvoidance true
+  ][ linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , accessibility DISABLE
+    ][ linearLayout
         [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , accessibility DISABLE
-        ][ linearLayout
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , cornerRadius 4.0
-            , margin $ MarginRight 6
-            , stroke $ "1,"<> Color.black900
-            , background Color.yellow900
-            , accessibilityHint $ "Vehicle Number : " <> (splitString config.vehicleNo)
-            , accessibility ENABLE
-            , padding $ Padding 4 2 4 2
-            ][ textView $ 
-              [ text config.vehicleNo
-              , color Color.black800
-              , accessibility DISABLE
-              ] <> FontStyle.tags TypoGraphy
-            ]
-          , linearLayout
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , background Color.white900
-            , cornerRadius 4.0
-            , accessibility ENABLE
-            , accessibilityHint $ "O T P : " <> (splitString config.otp)
-            , margin $ MarginRight 6
-            , padding $ Padding 4 2 4 2
-            ][ textView $
-              [ text $ "OTP "
-              , color Color.black700
-              , accessibility DISABLE
-              ] <> FontStyle.tags TypoGraphy
-            , textView $
-              [ text $ config.otp
-              , color Color.black700
-              , letterSpacing $ PX 1.0
-              , accessibility DISABLE
-              ] <> FontStyle.body15 TypoGraphy
-            ]
-          , linearLayout
-            [ height WRAP_CONTENT
-            , width WRAP_CONTENT
-            , background Color.white900
-            , cornerRadius 4.0
-            , margin $ MarginRight 6
-            , padding $ Padding 4 2 4 2
-            , accessibility ENABLE
-            , accessibilityHint $ "Fare : " <> config.config.currency <> config.fareAmount
-            ][ textView $
-              [ text $ "Fare: " <> config.config.currency <> config.fareAmount
-              , color Color.black700
-              , accessibility DISABLE
-              ] <> FontStyle.tags TypoGraphy
-           ]
+        , width WRAP_CONTENT
+        , cornerRadius 4.0
+        , margin $ MarginRight 6
+        , stroke $ "1,"<> Color.black900
+        , background Color.yellow900
+        , accessibilityHint $ "Vehicle Number : " <> (splitString config.vehicleNo)
+        , accessibility ENABLE
+        , padding $ Padding 4 2 4 2
+        ][ textView $ 
+          [ text config.vehicleNo
+          , color Color.black800
+          , accessibility DISABLE
+          ] <> FontStyle.tags TypoGraphy
         ]
-     ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , background Color.white900
+        , cornerRadius 4.0
+        , accessibility ENABLE
+        , accessibilityHint $ "O T P : " <> (splitString config.otp)
+        , margin $ MarginRight 6
+        , padding $ Padding 4 2 4 2
+        ][ textView $
+          [ text $ "OTP "
+          , color Color.black700
+          , accessibility DISABLE
+          ] <> FontStyle.tags TypoGraphy
+        , textView $
+          [ text $ config.otp
+          , color Color.black700
+          , letterSpacing $ PX 1.0
+          , accessibility DISABLE
+          ] <> FontStyle.body15 TypoGraphy
+        ]
+      , linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , background Color.white900
+        , cornerRadius 4.0
+        , margin $ MarginRight 6
+        , padding $ Padding 4 2 4 2
+        , accessibility ENABLE
+        , accessibilityHint $ "Fare : " <> config.config.currency <> config.fareAmount
+        ][ textView $
+          [ text $ "Fare: " <> config.config.currency <> config.fareAmount
+          , color Color.black700
+          , accessibility DISABLE
+          ] <> FontStyle.tags TypoGraphy
+        ]
+    ]
   ]
 
 headerActionView ::forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

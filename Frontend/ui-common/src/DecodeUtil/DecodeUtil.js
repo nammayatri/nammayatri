@@ -9,10 +9,14 @@ export const getFromWindow = function (key,nothing,just) {
 
 export const getFromWindowString = getFromWindow;
 
+export const getAnyFromWindow = getFromWindow;
+
 export const setInWindow = function (key,value) {
   window[key] = value;
   return value;
 }
+
+export const setAnyInWindow = setInWindow;
 
 // JSON UTILS
 export function parseJSON(param) {

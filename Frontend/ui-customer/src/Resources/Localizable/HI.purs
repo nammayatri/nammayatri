@@ -2,6 +2,7 @@ module Resources.Localizable.HI where
 
 import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getHI :: STR -> String
 getHI stringKey =
@@ -767,6 +768,19 @@ getHI stringKey =
         CONFIRM_STOP_LOCATION -> "Confirm stop location"
         CONFIRM_DROP -> "Confirm Drop"
         BOOK_METRO_WITH_NY_NOW -> "नम्मा यात्री के साथ अभी \nमेट्रो टिकट बुक करें!"
+        FOLLOWING name -> name <> " का अनुसरण कर रहा हूँ"
+        TURN_OFF_ALARM -> "अलार्म बंद करें"
+        CHOOSE_A_PERSON_TO_FOLLOW -> "अनुसरण करने के लिए एक व्यक्ति चुनें"
+        IS_IN_SOS_SITUATION name -> name <> " SOS स्थिति में है!"
+        MARKED_RIDE_SAFE name -> name <> " सवारी को सुरक्षित चिह्नित किया गया!"
+        STAY_CALM_KEEP_TRACKING name -> "शांत रहें। " <> name <> " के स्थान को ट्रैक करते रहें, यदि आवश्यक हो तो आवश्यक कार्रवाई करें"
+        YOU_WILL_BE_NOTIFIED -> "सवारी पूरी होने पर आपको सूचित किया जाएगा"
+        TAP_HERE_TO_FOLLOW name ->  name <> " को फ़ॉलो करने के लिए यहां टैप करें"
+        HAVE_SHARED_RIDE_WITH_YOU name -> name <> " ने आपके साथ अपनी यात्राएँ साझा की हैं"
+        SOS_LOCATION -> "एसओएस स्थान"
+        THIS_IS_A_TEST_MOCK_DRILL name -> "यह " <> name <> " के लिए एक परीक्षण ड्रिल है"
+        THIS_IS_NOT_REAL_DRILL -> "यह कोई वास्तविक ड्रिल नहीं है, यह बस यह दर्शाता है कि ऐप आपातकालीन स्थितियों में कैसे प्रतिक्रिया देगा।"
+        REACHED_DESTINATION_SAFELY name -> name <> " सुरक्षित पहुंच गया मंजिल पर!"
         LEARN_MORE -> "और जानें"
         LEARN_ABOUT_NAMMA_SAFETY -> "सुरक्षा मोड के बारे में जानें"
         NAMMA_SAFETY_WILL_ENABLE_ACCESS -> "सुरक्षा मोड सवारी के दौरान निम्नलिखित सुविधाओं का उपयोग करने की सुविधा प्रदान करेगा!"

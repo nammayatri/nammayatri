@@ -15,20 +15,24 @@
 
 module Services.Backend where
 
+import Locale.Utils
 import Services.API
 
 import Accessor (_deviceToken)
+import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..), FeedbackAnswer)
+import ConfigProvider as CP
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe)
-import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck (..), FeedbackAnswer)
 import Data.Either (Either(..), either)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), maybe, fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
+import Data.String as DS
 import Engineering.Helpers.Commons (liftFlow, os, convertUTCtoISC)
 import Engineering.Helpers.Commons (liftFlow, os, isPreviousVersion, isInvalidUrl)
 import Engineering.Helpers.Utils as EHU
 import Foreign.Generic (encode)
+import Foreign.Object (empty)
 import Helpers.Utils (decodeError, getTime)
 import JBridge (Locations, factoryResetApp, setKeyInSharedPrefKeys, toast, drawRoute, toggleBtnLoader)
 import JBridge (factoryResetApp, setKeyInSharedPrefKeys, toast, removeAllPolylines, stopChatListenerService, MapRouteConfig)
@@ -39,7 +43,7 @@ import Log (printLog)
 import ModifyScreenState (modifyScreenState)
 import Prelude (Unit, bind, discard, map, pure, unit, void, identity, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
-import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS) 
+import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
 import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, City(..), PeopleCategoriesRespData)
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
@@ -1028,11 +1032,10 @@ getTicketStatusBT shortId = do
     errorHandler errorPayload = do
             BackT $ pure GoBack
 
+getTicketStatus :: String -> Flow GlobalState (Either ErrorResponse GetTicketStatusResp)
 getTicketStatus shortId = do
   headers <- getHeaders "" false
-  withAPIResult (EP.ticketStatus shortId) unwrapResponse $ callAPI headers (GetTicketStatusReq shortId)
-  where
-  unwrapResponse x = x
+  withAPIResult (EP.ticketStatus shortId) identity $ callAPI headers (GetTicketStatusReq shortId)
  
 
 ----------------------------------- fetchIssueList ----------------------------------------
@@ -1140,3 +1143,8 @@ shareRide (ShareRideReq req) = do
         withAPIResult (EP.shareRide "") unwrapResponse $ callAPI headers (ShareRideReq req)
     where
         unwrapResponse (x) = x
+
+getFollowRide :: String -> Flow GlobalState (Either ErrorResponse FollowRideRes)
+getFollowRide _ = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.followRide "") identity $ callAPI headers FollowRideReq
