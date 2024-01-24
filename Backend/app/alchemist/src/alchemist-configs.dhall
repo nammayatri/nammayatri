@@ -12,46 +12,16 @@ let riderAppPath = "Backend/app/rider-platform/${rideAppName}/Main"
 
 let driverAppPath = "Backend/app/provider-platform/${driverAppName}/Main"
 
-in  { riderApp =
-      { inputFileConfigs =
-        { storageYaml = "${riderAppPath}/spec/Storage"
-        , apiYaml = "${riderAppPath}/spec/API"
-        }
-      , outputFileConfigs =
-        { beamTableOutputFilePath =
-            "${riderAppPath}/${readOnlySrcFolder}/Storage/Beam"
-        , beamQueriesOutputFilePath =
-            "${riderAppPath}/${readOnlySrcFolder}/Storage/Queries"
-        , domainTypeOutputFilePath =
-            "${riderAppPath}/${readOnlySrcFolder}/Domain/Types"
-        , sqlOutputFilePath = "${sqlOutputPathPrefix}/${rideAppName}"
-        , servantAPIOutputFilePath =
-            "${riderAppPath}/${readOnlySrcFolder}/API/Action/UI"
-        , apiTypesOutputFilePath =
-            "${riderAppPath}/${readOnlySrcFolder}/API/Types/UI"
-        , domainHandlerOutputFilePath =
-            "${riderAppPath}/${srcFolder}/Domain/Action/UI"
-        }
+in  { api =
+      { inputPath = "${riderAppPath}/spec/API"
+      , outputPath = "${riderAppPath}/${readOnlySrcFolder}"
+      , enabled = True
+      , output = {}
       }
-    , driverApp =
-      { inputFileConfigs =
-        { storageYaml = "${driverAppPath}/Storage"
-        , apiYaml = "${riderAppPath}/API"
-        }
-      , outputFileConfigs =
-        { beamTableOutputFilePath =
-            "${driverAppPath}/${readOnlySrcFolder}/Storage/Beam"
-        , beamQueriesOutputFilePath =
-            "${driverAppPath}/${readOnlySrcFolder}/Storage/Queries"
-        , domainTypeOutputFilePath =
-            "${driverAppPath}/${readOnlySrcFolder}/Domain/Types"
-        , sqlOutputFilePath = "${sqlOutputPathPrefix}/${rideAppName}"
-        , servantAPIOutputFilePath =
-            "${driverAppPath}/${readOnlySrcFolder}/API/Action/UI"
-        , apiTypesOutputFilePath =
-            "${driverAppPath}/${readOnlySrcFolder}/API/Types/UI"
-        , domainHandlerOutputFilePath =
-            "${driverAppPath}/${srcFolder}/Domain/Action/UI"
-        }
+    , storage =
+      { inputPath = "${riderAppPath}/spec/Storage"
+      , outputPath = "${riderAppPath}/${readOnlySrcFolder}"
+      , sqlOutputPath = "${sqlOutputPathPrefix}/${rideAppName}"
+      , enabled = True
       }
     }
