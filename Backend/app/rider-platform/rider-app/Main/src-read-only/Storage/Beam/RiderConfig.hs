@@ -23,6 +23,7 @@ data RiderConfigT f = RiderConfigT
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,
     isAvoidToll :: B.C f Kernel.Prelude.Bool,
+    kaptureQueue :: B.C f Kernel.Prelude.Text,
     localPoliceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

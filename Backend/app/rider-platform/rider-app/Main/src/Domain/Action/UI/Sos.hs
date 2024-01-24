@@ -115,7 +115,7 @@ postSosCreate (mbPersonId, merchantId) req = do
   merchantConfig <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
-  sosId <- createTicketForNewSos person ride riderConfig trackLink req merchantConfig.kaptureDisposition
+  sosId <- createTicketForNewSos person ride riderConfig trackLink req merchantConfig.kaptureDisposition riderConfig.kaptureQueue
   message <-
     MessageBuilder.buildSOSAlertMessage person.merchantOperatingCityId $
       MessageBuilder.BuildSOSAlertMessageReq
@@ -149,8 +149,8 @@ enableFollowRideInSos emergencyContacts = do
     )
     emergencyContacts
 
-createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Text -> Flow (Id DSos.Sos)
-createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition = do
+createTicketForNewSos :: Person.Person -> DRide.Ride -> DRC.RiderConfig -> Text -> SosReq -> Text -> Text -> Flow (Id DSos.Sos)
+createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition kaptureQueue = do
   sosRes <- CQSos.findByRideId ride.id
   case sosRes of
     Just sosDetails -> do
@@ -164,7 +164,7 @@ createTicketForNewSos person ride riderConfig trackLink req kaptureDisposition =
       ticketId <- do
         if riderConfig.enableSupportForSafety
           then do
-            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow kaptureDisposition))
+            ticketResponse <- try @_ @SomeException (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink] rideInfo req.flow kaptureDisposition kaptureQueue))
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
               Left _ -> return Nothing
@@ -266,7 +266,7 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
       let rideInfo = buildRideInfo ride person phoneNumber
           trackLink = riderConfig.trackingShortUrlPattern <> ride.shortId.getShortId
       when riderConfig.enableSupportForSafety $
-        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow merchantConfig.kaptureDisposition))
+        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.SafetyFlow merchantConfig.kaptureDisposition riderConfig.kaptureQueue))
       createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType}
   where
     validateContentType = do
@@ -298,11 +298,14 @@ buildRideInfo :: DRide.Ride -> Person.Person -> Maybe Text -> Ticket.RideInfo
 buildRideInfo ride person phoneNumber =
   Ticket.RideInfo
     { rideShortId = ride.shortId.getShortId,
+      rideCity = show person.currentCity,
       customerName = Just $ SLP.getName person,
       customerPhoneNo = phoneNumber,
       driverName = Just ride.driverName,
       driverPhoneNo = Just ride.driverMobileNumber,
       vehicleNo = ride.vehicleNumber,
+      vehicleCategory = Just $ show ride.vehicleVariant,
+      vehicleServiceTier = show <$> ride.vehicleServiceTierType,
       status = show ride.status,
       rideCreatedAt = ride.createdAt,
       pickupLocation = castLocationAPIEntity ride.fromLocation,
@@ -332,8 +335,8 @@ callUpdateTicket person sosDetails mbComment = do
       pure APISuccess.Success
     Nothing -> pure APISuccess.Success
 
-mkTicket :: Person.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> DSos.SosType -> Text -> Ticket.CreateTicketReq
-mkTicket person phoneNumber mediaLinks info flow disposition = do
+mkTicket :: Person.Person -> Maybe Text -> [Text] -> Ticket.RideInfo -> DSos.SosType -> Text -> Text -> Ticket.CreateTicketReq
+mkTicket person phoneNumber mediaLinks info flow disposition queue = do
   Ticket.CreateTicketReq
     { category = "Code Red",
       subCategory = Just "SOS Alert (follow-back)",
@@ -345,7 +348,8 @@ mkTicket person phoneNumber mediaLinks info flow disposition = do
       personId = person.id.getId,
       classification = Ticket.CUSTOMER,
       rideDescription = Just info,
-      disposition
+      disposition,
+      queue
     }
   where
     issueDescription = case flow of

@@ -25,6 +25,7 @@ RiderConfig:
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
+    kaptureQueue: Text
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -43,6 +44,7 @@ RiderConfig:
     distanceWeightage: "70"
     isAvoidToll: "true"
     autoUnblockSafetyCenterAfterDays: "14"
+    kaptureQueue: "''"
 
   queries:
     findByMerchantOperatingCityId:
