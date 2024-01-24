@@ -83,9 +83,6 @@
           direnv.required = true;
           system.min_ram = "24G";
         };
-        nixci.default = {
-          dir = ".";
-        };
       };
     };
 }
