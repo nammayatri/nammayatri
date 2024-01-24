@@ -65,6 +65,8 @@ executable alchemist-generator-exe
       TypeSynonymInstances
       UndecidableInstances
   ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
+  extra-libraries:
+      cac_client
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -72,6 +74,7 @@ executable alchemist-generator-exe
     , casing
     , directory
     , filepath
+    , haskell-cac
     , mobility-core
     , namma-dsl
     , record-dot-preprocessor
