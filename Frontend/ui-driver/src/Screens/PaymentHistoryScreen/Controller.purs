@@ -15,7 +15,7 @@
 
 module Screens.PaymentHistoryScreen.Controller where
 
-import Common.Types.App (PaymentStatus(..))
+import Domain.Payments (PaymentStatus(..))
 import Components.DueDetailsList.Controller (Action(..)) as DueDetailsListController
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButtonController

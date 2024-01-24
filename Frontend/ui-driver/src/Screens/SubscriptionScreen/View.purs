@@ -21,7 +21,8 @@ import Screens.SubscriptionScreen.ComponentConfig
 
 import Animation as Anim
 import Animation.Config as AnimConfig
-import Common.Types.App (APIPaymentStatus(..), LazyCheck(..), PaymentStatus(..))
+import Common.Types.App (LazyCheck(..))
+import Domain.Payments (APIPaymentStatus(..), PaymentStatus(..))
 import Components.Banner as Banner
 import Components.BottomNavBar (navData)
 import Components.BottomNavBar as BottomNavBar

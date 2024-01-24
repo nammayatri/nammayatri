@@ -58,6 +58,8 @@ import Data.Int(toNumber)
 import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
+import Components.DriverInfoCard.Common.View
+import Components.DriverInfoCard.Common.Types
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -113,7 +115,7 @@ driverInfoViewSpecialZone push state =
                  ][]
                ]
               , titleAndETA push state
-              , driverDetailsView push state "SpecialDriverDetailsView"
+              , driverDetailsView (getDriverDetails state) "SpecialDriverDetailsView"
               , navigateView push state
               , paymentMethodView push state (getString FARE_ESTIMATE) true "SpecialPaymentMethodView"
             ]
@@ -122,7 +124,7 @@ driverInfoViewSpecialZone push state =
             , height WRAP_CONTENT
             , orientation VERTICAL
             , background Color.grey700
-            ][if not state.data.config.showPickUpandDrop then dummyView push else sourceDestinationView push state
+            ][if not state.data.config.showPickUpandDrop then dummyView push else sourceDestinationView push (getTripDetails state)
               , cancelRideLayout push state
               , brandingBannerView state.data.config.driverInfoConfig INVISIBLE Nothing
             ]
@@ -293,7 +295,7 @@ driverInfoView push state =
                   ][]
                   , contactView push state
                   , if state.props.currentStage == RideStarted then distanceView push state else dummyView push
-                  , driverDetailsView push state "DriverDetailsView"
+                  , driverDetailsView (getDriverDetails state) "DriverDetailsView"
                   , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
                 ]
               ]
@@ -302,7 +304,7 @@ driverInfoView push state =
                 , height WRAP_CONTENT
                 , orientation VERTICAL
                 , background Color.grey700
-                ][if not state.data.config.showPickUpandDrop then dummyView push else sourceDestinationView push state
+                ][if not state.data.config.showPickUpandDrop then dummyView push else sourceDestinationView push (getTripDetails state)
                 , cancelRideLayout push state
                 , brandingBannerView state.data.config.driverInfoConfig INVISIBLE Nothing
                 ]
@@ -468,158 +470,6 @@ contactView push state =
     ]
 
 
----------------------------------- driverDetailsView ---------------------------------------
-
-
-driverDetailsView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> String -> PrestoDOM (Effect Unit) w
-driverDetailsView push state uid =
- linearLayout
-  [ orientation HORIZONTAL
-  , height $ V 150
-  , padding $ PaddingHorizontal 16 16
-  , width MATCH_PARENT
-  , id $ getNewIDWithTag uid
-  , margin $ Margin 16 (if state.props.currentSearchResultType == QUOTES then 12 else 0) 16 0
-  , background Color.white900
-  , cornerRadius 8.0
-  , visibility if state.props.currentSearchResultType == QUOTES then (if state.props.currentStage == RideStarted then VISIBLE else GONE) else VISIBLE
-  , gravity BOTTOM
-  ][  linearLayout
-      [ orientation VERTICAL
-      , height MATCH_PARENT
-      , width WRAP_CONTENT
-      , gravity CENTER_VERTICAL
-      , alignParentLeft "true,-1"
-      ][linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , gravity LEFT
-        ][ frameLayout
-          [ orientation VERTICAL
-          , height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , margin $ MarginBottom 12
-          ][imageView
-            [ height $ V 50
-            , width $ V 50
-            , padding $ Padding 2 3 2 1
-            , accessibility if state.data.rating == 0.0 then DISABLE else ENABLE
-            , accessibilityHint $ "Driver : Rated " <> show state.data.rating <> " stars"
-            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_driver"
-            ]
-            , ratingView push state
-            ]
-          ]
-        , textView $
-          [ text state.data.driverName
-          , maxLines 1
-          , ellipsize true
-          , accessibility DISABLE
-          , color Color.black800
-          , width MATCH_PARENT
-          , height WRAP_CONTENT
-          , gravity LEFT
-          ] <> FontStyle.body9 TypoGraphy
-        , textView (
-          [ text $ state.data.vehicleDetails <> " " 
-                    <> case getMerchant FunctionCall of
-                          YATRISATHI -> "· " <> getVariantRideType state.data.vehicleVariant
-                          _          -> case state.data.vehicleVariant of
-                                          "TAXI_PLUS" -> " (" <> (getString AC_TAXI) <> ")"
-                                          "TAXI" -> " (" <> (getString NON_AC_TAXI) <> ")"
-                                          _ -> ""
-          , color Color.black700
-          , accessibilityHint $ "Driver : " <> state.data.driverName <> " : Vehicle : " <> getVehicleType
-          , accessibility ENABLE
-          , width $ V ((screenWidth unit) /2 - 20)
-          , maxLines 2
-          , singleLine false
-          , height WRAP_CONTENT
-          , gravity LEFT
-          ] <> FontStyle.captions TypoGraphy)
-      ]
-    , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , accessibility DISABLE
-      , gravity RIGHT
-      ][  frameLayout
-          [ height MATCH_PARENT
-          , width $ V 144
-          , gravity BOTTOM
-          , margin $ MarginBottom 16
-          , accessibility DISABLE 
-          ][  imageView
-              [ imageWithFallback (getVehicleImage state.data.vehicleVariant state.data.vehicleDetails state.props.merchantCity)
-              , height $ V 125
-              , gravity RIGHT
-              , width MATCH_PARENT
-              , margin $ MarginBottom 15
-              , accessibility DISABLE_DESCENDANT
-              ]
-            , linearLayout
-              [ height $ V 134
-              , width MATCH_PARENT
-              , gravity BOTTOM
-              , accessibility ENABLE
-              , accessibilityHint $ "Vehicle Number " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") state.data.registrationNumber)
-              ][  linearLayout
-                  [ height $ V 38
-                  , width MATCH_PARENT
-                  , background state.data.config.driverInfoConfig.numberPlateBackground
-                  , cornerRadius 4.0
-                  , orientation HORIZONTAL
-                  , gravity BOTTOM
-                  , padding $ Padding 2 2 2 2
-                  , alignParentBottom "true,-1"
-                  ][
-                    linearLayout
-                    [ height $ V 34
-                    , width MATCH_PARENT
-                    , stroke $ "2," <> Color.black
-                    , cornerRadius 4.0
-                    , orientation HORIZONTAL
-                    ][  imageView
-                        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_number_plate"
-                        , gravity LEFT
-                        , visibility if state.data.config.driverInfoConfig.showNumberPlatePrefix then VISIBLE else GONE
-                        , background "#1C4188"
-                        , height MATCH_PARENT
-                        , width $ V 22
-                        ]
-                        , textView $
-                        [ margin $ Margin 2 2 2 2
-                        , weight 1.0
-                        , height MATCH_PARENT
-                        , text $ (makeNumber state.data.registrationNumber)
-                        , color Color.black800
-                        , fontStyle $ FontStyle.feFont LanguageStyle
-                        , gravity CENTER
-                        , textSize FontSize.a_14
-                        ]
-                        , imageView
-                        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_number_plate_suffix"
-                        , gravity RIGHT
-                        , visibility if state.data.config.driverInfoConfig.showNumberPlateSuffix then VISIBLE else GONE
-                        , height MATCH_PARENT
-                        , width $ V 13
-                        ]
-                      ]
-                    ]
-                ]
-            ]
-        ]
-    ]
-  where getVehicleType = case getMerchant FunctionCall of
-                          YATRISATHI -> case state.data.vehicleVariant of
-                                          "TAXI" -> getEN NON_AC_TAXI
-                                          "SUV"  -> getEN AC_SUV
-                                          _      -> getEN AC_CAB
-                          _          -> case state.data.vehicleVariant of
-                                        "TAXI_PLUS" -> (getEN AC_TAXI)
-                                        "TAXI" -> (getEN NON_AC_TAXI)
-                                        _ -> ""
 
 ---------------------------------- ratingView ---------------------------------------
 
@@ -707,87 +557,6 @@ paymentMethodView push state title shouldShowIcon uid =
             ]
     ]
 
----------------------------------- tripDetailsView ---------------------------------------
-
-sourceDestinationView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-sourceDestinationView push state =
-  PrestoAnim.animationSet [ scaleYAnimWithDelay (getAnimationDelay FunctionCall)] $ 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , margin $ Margin 16 0 16 (if os == "IOS" && state.props.currentStage == RideStarted then safeMarginBottom + 36 else 12)
-  , background Color.white900
-  , onAnimationEnd push $ const $ NoAction
-  , cornerRadius 8.0
-  , padding $ Padding 16 12 16 12
-  ][linearLayout
-    [ orientation VERTICAL
-    , height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity LEFT
-    , accessibility ENABLE
-    , accessibilityHint $ "Pickup : " <> state.data.source
-    ][linearLayout
-      [ orientation HORIZONTAL
-      , gravity CENTER
-      ][imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
-        , height $ V 8
-        , width $ V 8
-        ]
-        ,textView $
-         [ text $ getString PICKUP
-         , margin $ MarginLeft 6
-         , color Color.black700
-         ] <> FontStyle.body3 TypoGraphy
-        ]
-       , textView $
-         [ text state.data.source
-         , maxLines 1
-         , ellipsize true
-         , width $ V ((screenWidth unit) / 10 * 8)
-         , height MATCH_PARENT
-         , gravity LEFT
-         , color Color.black900
-         , margin $ MarginTop 3
-         ] <> FontStyle.body1 TypoGraphy
-      ]
-    , separator (MarginVertical 12 12) (V 1) Color.ghostWhite true
-    ,linearLayout
-    [ orientation VERTICAL
-      , height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , gravity LEFT
-      , accessibility ENABLE
-      , accessibilityHint $ "Drop : " <> state.data.destination
-    ][linearLayout
-      [ orientation HORIZONTAL
-      , gravity CENTER
-      ][imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
-        , height $ V 8
-        , width $ V 8
-        ]
-      , textView $ 
-        [ text $ getString DROP
-        , margin $ MarginLeft 6
-        , color Color.black700
-        ] <> FontStyle.body3 TypoGraphy
-      ]
-      , textView $
-        [ text state.data.destination
-        , maxLines 1
-        , ellipsize true
-        , width $ V ((screenWidth unit) / 10 * 8)
-        , height MATCH_PARENT
-        , gravity LEFT
-        , margin $ MarginTop 3
-        , color Color.black900
-        ] <> FontStyle.body1 TypoGraphy
-     ]
-  ]
-
 specialZoneShimmerView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 specialZoneShimmerView push state = 
   linearLayout
@@ -824,9 +593,9 @@ specialZoneShimmerView push state =
         , stroke $ "1," <> Color.grey900
         , gravity CENTER
         ][ customTextView 20 ((screenWidth unit) / 10 * 6) 0]
-      , if state.props.currentStage == RideStarted then driverInfoShimmer push state else dummyView push
+      , if state.props.currentStage == RideStarted then driverInfoShimmer else dummyView push
       , paymentMethodShimmer push state
-      , addressShimmerView push state
+      , addressShimmerView
       , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -876,9 +645,9 @@ shimmerView push state =
            ][]
          ]
       ]
-      , driverInfoShimmer push state
+      , driverInfoShimmer
       , paymentMethodShimmer push state
-      , addressShimmerView push state
+      , addressShimmerView
       , linearLayout
         [ width MATCH_PARENT
         , height WRAP_CONTENT
@@ -914,54 +683,6 @@ sfl height' width' radius' =
     ][]
   ]
 
-driverInfoShimmer :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-driverInfoShimmer push state = 
-  linearLayout
-  [ height $ WRAP_CONTENT
-  , width MATCH_PARENT
-  , margin $ MarginVertical 12 12
-  , cornerRadius 8.0
-  , stroke $ "1," <> Color.grey900
-  , background Color.white900
-  ][linearLayout
-    [ width $ MATCH_PARENT
-    , height $ V 130
-    , padding $ Padding 16 16 16 20
-    , cornerRadius 8.0
-    ][linearLayout
-      [ width $ MATCH_PARENT
-      , height $ MATCH_PARENT
-      , gravity LEFT
-      ][linearLayout
-        [ height $ MATCH_PARENT
-        , gravity LEFT
-        , width $ V ((screenWidth unit) / 10 * 4)
-        , orientation VERTICAL
-        , cornerRadius 8.0
-        ][ sfl 40 40 52.0
-        , customTextView 16 ((screenWidth unit) / 10 * 4) 4
-        , customTextView 13 ((screenWidth unit) / 10 * 3) 0
-        ]
-      , linearLayout
-        [ height $ MATCH_PARENT
-        , width $ MATCH_PARENT
-        , gravity RIGHT
-        ][shimmerFrameLayout
-          [ height $ V 90
-          , width $ V 130
-          , cornerRadius 8.0
-          ][linearLayout
-            [ height $ V 90
-            , width $ V 130
-            , cornerRadius 8.0
-            , background Color.grey900
-            ][]
-          ]
-        ]
-      ]
-    ]
-  ]
-
 paymentMethodShimmer :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 paymentMethodShimmer push state = 
   linearLayout
@@ -982,53 +703,6 @@ paymentMethodShimmer push state =
     ]
    , linearLayout[weight 1.0][]
    , customTextView 16 120 4
-  ]
-
-addressShimmerView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
-addressShimmerView push state = 
-  linearLayout
-  [ height $ WRAP_CONTENT
-  , width $ MATCH_PARENT
-  , margin $ MarginBottom 12
-  , cornerRadius 8.0
-  , stroke $ "1," <> Color.grey900
-  , background Color.white900
-  , padding $ Padding 16 16 16 16
-  , orientation VERTICAL
-  ][linearLayout
-    [ height $ WRAP_CONTENT
-    , width $ MATCH_PARENT
-    , gravity CENTER_VERTICAL
-    ][linearLayout
-      [ height $ V 8
-      , width $ V 8
-      , cornerRadius 52.0
-      , background Color.grey900
-      , margin $ MarginRight 6
-      ][]
-    , customTextView 16 40 4
-    ]
-  , customTextView 20 ((screenWidth unit) / 10 * 6) 4
-  , linearLayout
-    [ height $ V 1
-    , width $ MATCH_PARENT
-    , margin $ MarginVertical 12 12
-    , background Color.grey900
-    ][]
-  , linearLayout
-    [ height $ WRAP_CONTENT
-    , width $ MATCH_PARENT
-    , gravity CENTER_VERTICAL
-    ][linearLayout
-      [ height $ V 8
-      , width $ V 8
-      , cornerRadius 52.0
-      , background Color.grey900
-      , margin $ MarginRight 6
-      ][]
-    , customTextView 16 40 4
-    ]
-  , customTextView 20 ((screenWidth unit) / 10 * 6) 4
   ]
 
 ---------------------------------- separator ---------------------------------------
@@ -1204,24 +878,27 @@ configurations =
               , paddingOTP : Padding 11 0 11 7
               }
 
-getVehicleImage :: String -> String -> City -> String
-getVehicleImage variant vehicleDetail city = do
-  let details = (toLower vehicleDetail)
-  fetchImage FF_ASSET $ 
-    if variant == "AUTO_RICKSHAW" then mkVehicleImage city
-    else
-      if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
-      else 
-        case (getMerchant FunctionCall) of
-          YATRISATHI -> case variant of
-                          "SUV" -> "ny_ic_suv_concept"
-                          _     -> "ny_ic_sedan_concept"
-          _          -> "ic_white_taxi"
-    where 
-      mkVehicleImage :: City -> String
-      mkVehicleImage city = 
-        if city == Hyderabad then "ic_auto_rickshaw_black_yellow"
-          else "ic_auto_rickshaw"
-
 getAnimationDelay :: LazyCheck -> Int
 getAnimationDelay dummy = 100
+
+getDriverDetails :: DriverInfoCardState -> DriverDetailsType
+getDriverDetails state = {
+  searchType : state.props.currentSearchResultType
+  , rating : state.data.rating
+  , driverName : state.data.driverName
+  , vehicleDetails : state.data.vehicleDetails
+  , vehicleVariant : state.data.vehicleVariant
+  , merchantCity : state.props.merchantCity
+  , registrationNumber : state.data.registrationNumber
+  , config : state.data.config
+  , rideStarted : state.props.currentStage == RideStarted
+}
+
+getTripDetails :: DriverInfoCardState -> TripDetails Action
+getTripDetails state = {
+  rideStarted : state.props.currentStage == RideStarted
+  , source : state.data.source
+  , destination : state.data.destination
+  , onAnimationEnd : NoAction
+  , backgroundColor : Color.white900
+}

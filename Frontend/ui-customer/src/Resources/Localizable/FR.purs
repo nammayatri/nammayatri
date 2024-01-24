@@ -2,6 +2,7 @@ module Resources.Localizable.FR where
 
 import Prelude ((<>))
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getFR :: STR -> String
 getFR stringKey =
@@ -924,3 +925,16 @@ getFR stringKey =
         TEST_SOS_TRIGGERED_DESC -> "Veuillez rester calme, votre position en temps réel est partagée avec vos contacts d'urgence."
         SOS_WILL_BE_DISABLED -> "La fonction SOS sera désactivée en cas de mauvais usage trois fois."
         DIAL_NOW -> "Appeler maintenant"
+        FOLLOWING name -> "Suivent " <> name
+        TURN_OFF_ALARM -> "Désactiver l'alarme"
+        CHOOSE_A_PERSON_TO_FOLLOW -> "Choisissez une personne à suivre"
+        IS_IN_SOS_SITUATION name -> name <> " est dans une situation SOS !"
+        MARKED_RIDE_SAFE name -> name <> " a marqué le trajet en toute sécurité !"
+        STAY_CALM_KEEP_TRACKING name -> "Restez calme. Continuez à suivre l'emplacement de " <> name <> " Prenez les mesures nécessaires si nécessaire"
+        YOU_WILL_BE_NOTIFIED -> "Vous serez averti une fois le trajet terminé"
+        TAP_HERE_TO_FOLLOW name ->  "Appuyez ici pour suivre " <> name
+        HAVE_SHARED_RIDE_WITH_YOU name -> name <> " ont partagé leurs balades avec vous"
+        SOS_LOCATION -> "Localisation SOS"
+        THIS_IS_A_TEST_MOCK_DRILL name -> "Ceci est un exercice de test pour " <> name
+        THIS_IS_NOT_REAL_DRILL -> "Ceci n'est PAS un véritable exercice, il illustre simplement comment l'application réagira en cas d'urgence."
+        REACHED_DESTINATION_SAFELY name -> name <> " a atteint sa destination en toute sécurité !"
