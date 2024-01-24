@@ -48,7 +48,8 @@ sendSearchRequestToDrivers ::
     EsqDBFlow m r,
     Log m,
     MonadFlow m,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -73,7 +74,8 @@ sendSearchRequestToDrivers' ::
     CacheFlow m r,
     EsqDBFlow m r,
     Log m,
-    LT.HasLocationService m r
+    LT.HasLocationService m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DriverPoolConfig ->
   SearchRequest ->

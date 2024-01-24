@@ -99,7 +99,8 @@ driverCancelRideHandler ::
     HasField
       "minTripDistanceForReferralCfg"
       r
-      (Maybe HighPrecMeters)
+      (Maybe HighPrecMeters),
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   ServiceHandle m ->
   Id DP.Person ->
@@ -120,7 +121,8 @@ dashboardCancelRideHandler ::
     HasField
       "minTripDistanceForReferralCfg"
       r
-      (Maybe HighPrecMeters)
+      (Maybe HighPrecMeters),
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   ServiceHandle m ->
   Id DM.Merchant ->
@@ -143,7 +145,8 @@ cancelRideHandler ::
     HasField
       "minTripDistanceForReferralCfg"
       r
-      (Maybe HighPrecMeters)
+      (Maybe HighPrecMeters),
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   ServiceHandle m ->
   RequestorId ->

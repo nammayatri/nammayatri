@@ -54,7 +54,8 @@ sendSearchRequestToDrivers ::
     Esq.EsqDBReplicaFlow m r,
     TranslateFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DSR.SearchRequest ->
   DST.SearchTry ->
