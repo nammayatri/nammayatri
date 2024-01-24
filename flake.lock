@@ -1359,6 +1359,7 @@
           "common"
         ],
         "nixpkgs": [
+          "haskell-cac",
           "common",
           "nixpkgs"
         ]
