@@ -19,13 +19,13 @@ module Storage.CachedQueries.Merchant.RiderConfig
   )
 where
 
-import Domain.Types.Merchant.RiderConfig
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.RiderConfig
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.Merchant.RiderConfig as Queries
+import qualified Storage.Queries.RiderConfig as Queries
 
 findByMerchantOperatingCityId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id MerchantOperatingCity -> m (Maybe RiderConfig)
 findByMerchantOperatingCityId id =

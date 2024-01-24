@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.ServiceCategory where
 
@@ -8,6 +9,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServicePeopleCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
 
 data ServiceCategory = ServiceCategory
   { allowedSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

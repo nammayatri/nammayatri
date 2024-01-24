@@ -19,19 +19,8 @@ ALTER TABLE atlas_app.person ADD COLUMN share_emergency_contacts boolean NOT NUL
 
 ALTER TABLE atlas_app.merchant ADD COLUMN tracking_short_url_pattern text DEFAULT 'nammayatri.in/t/' NOT NULL;
 
-CREATE TABLE atlas_app.rider_config (
-    merchant_operating_city_id character(36) REFERENCES atlas_app.merchant_operating_city (id),
-    enable_local_police_support boolean DEFAULT false NOT NULL,
-    local_police_number character(15),
-    enable_support_for_safety boolean DEFAULT false NOT NULL,
-    video_file_size_upper_limit int DEFAULT 50000000 NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    CONSTRAINT rider_config_pkey PRIMARY KEY (merchant_operating_city_id)
-);
-
-INSERT INTO atlas_app.rider_config (merchant_operating_city_id)
-  SELECT T1.id FROM atlas_app.merchant_operating_city as T1;
+INSERT INTO atlas_app.rider_config (merchant_operating_city_id, merchant_id)
+  SELECT T1.id, T1.merchant_id FROM atlas_app.merchant_operating_city as T1;
 
 -- For Yatri Sathi (Kolkata) and Yatri (Kochi) in master and prod env
 UPDATE atlas_app.merchant_message SET message = '{#userName#} has activated SOS/ emergency during YatriSathi ride. Ride Journey link here {#rideLink#}'

@@ -40,14 +40,17 @@ findByRideIdAndStatus (Kernel.Types.Id.Id rideId) status = do
         ]
     ]
 
-findByRideIdinStatusList :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Domain.Types.Sos.SosStatus] -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m (Maybe (Domain.Types.Sos.Sos))
-findByRideIdinStatusList status (Kernel.Types.Id.Id rideId) = do
-  findOneWithKV
+findByRideIdinStatusList :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> [Domain.Types.Sos.SosStatus] -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ([Domain.Types.Sos.Sos])
+findByRideIdinStatusList limit offset status (Kernel.Types.Id.Id rideId) = do
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.status $ Se.In status,
           Se.Is Beam.rideId $ Se.Eq rideId
         ]
     ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
 
 updateStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Sos.SosStatus -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ()
 updateStatus status (Kernel.Types.Id.Id id) = do

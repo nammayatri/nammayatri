@@ -44,6 +44,7 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
+import SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.CallbackRequest as QCallback
@@ -125,7 +126,7 @@ safetyCheckSupport (personId, merchantId) req = do
           issueId = Nothing,
           issueDescription = description,
           mediaFiles = Just [show ride.trackingUrl],
-          name = Just $ getName person,
+          name = Just $ SLP.getName person,
           phoneNo = phoneNumber,
           personId = person.id.getId,
           classification = Ticket.CUSTOMER,
@@ -135,7 +136,7 @@ safetyCheckSupport (personId, merchantId) req = do
     rideInfo ride person phoneNumber =
       Ticket.RideInfo
         { rideShortId = show ride.shortId,
-          customerName = Just $ getName person,
+          customerName = Just $ SLP.getName person,
           customerPhoneNo = phoneNumber,
           driverName = Just ride.driverName,
           driverPhoneNo = Just ride.driverMobileNumber,
@@ -159,8 +160,6 @@ safetyCheckSupport (personId, merchantId) req = do
           areaCode = ent.address.areaCode,
           area = ent.address.area
         }
-
-    getName person = fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> m DIssue.Issue
 buildDBIssue (Id customerId) SendIssueReq {..} = do

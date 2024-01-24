@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.SeatManagement where
 
@@ -9,6 +10,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceCategory
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
 
 data SeatManagement = SeatManagement
   { blocked :: Kernel.Prelude.Int,

@@ -33,6 +33,7 @@ data MessageKey
   | SEND_SOS_ALERT
   | MARK_RIDE_AS_SAFE
   | FOLLOW_RIDE
+  | ADDED_AS_EMERGENCY_CONTACT
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, Ord)
 
 $(mkBeamInstancesForEnum ''MessageKey)

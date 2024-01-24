@@ -219,7 +219,6 @@ library
       Domain.Types.Merchant.MerchantPaymentMethod
       Domain.Types.Merchant.MerchantServiceConfig
       Domain.Types.Merchant.MerchantServiceUsageConfig
-      Domain.Types.Merchant.RiderConfig
       Domain.Types.MerchantConfig
       Domain.Types.OnSearchEvent
       Domain.Types.Person
@@ -253,6 +252,7 @@ library
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
       SharedLogic.Person
+      SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       Storage.Beam.AadhaarVerification.AadhaarOtpReq
@@ -288,7 +288,6 @@ library
       Storage.Beam.Merchant.MerchantPaymentMethod
       Storage.Beam.Merchant.MerchantServiceConfig
       Storage.Beam.Merchant.MerchantServiceUsageConfig
-      Storage.Beam.Merchant.RiderConfig
       Storage.Beam.MerchantConfig
       Storage.Beam.OnSearchEvent
       Storage.Beam.Payment
@@ -358,7 +357,6 @@ library
       Storage.Queries.Merchant.MerchantPaymentMethod
       Storage.Queries.Merchant.MerchantServiceConfig
       Storage.Queries.Merchant.MerchantServiceUsageConfig
-      Storage.Queries.Merchant.RiderConfig
       Storage.Queries.MerchantConfig
       Storage.Queries.OnSearchEvent
       Storage.Queries.Person
@@ -415,6 +413,7 @@ library
       Domain.Types.FRFSTrip
       Domain.Types.MerchantOperatingCity
       Domain.Types.NextBillionData
+      Domain.Types.RiderConfig
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
@@ -437,6 +436,7 @@ library
       Storage.Beam.FRFSTrip
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.NextBillionData
+      Storage.Beam.RiderConfig
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
@@ -459,6 +459,7 @@ library
       Storage.Queries.FRFSTrip
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.NextBillionData
+      Storage.Queries.RiderConfig
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory

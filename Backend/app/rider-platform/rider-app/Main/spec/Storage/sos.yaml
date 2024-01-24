@@ -38,7 +38,7 @@ Sos:
       where:
         and: [rideId, status]
     findByRideIdinStatusList:
-      kvFunction: findOneWithKV
+      kvFunction: findAllWithOptionsKV
       where:
         and:
            - in : [status]

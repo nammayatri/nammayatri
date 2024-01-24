@@ -5,6 +5,7 @@ module API.Action.UI.Sos where
 
 import API.Types.UI.Sos (SosDetailsRes, SosReq, SosRes, SosUpdateReq)
 import qualified API.Types.UI.Sos
+import qualified Control.Lens
 import qualified Domain.Action.UI.Sos as Domain.Action.UI.Sos
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -36,16 +37,16 @@ handler =
     :<|> postSosCreateMockSos
 
 getSosGetDetails :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> Environment.FlowHandler API.Types.UI.Sos.SosDetailsRes
-getSosGetDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosGetDetails (Kernel.Prelude.first Kernel.Prelude.Just a2) a1
+getSosGetDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.getSosGetDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosCreate :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.Sos.SosReq -> Environment.FlowHandler API.Types.UI.Sos.SosRes
-postSosCreate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreate (Kernel.Prelude.first Kernel.Prelude.Just a2) a1
+postSosCreate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosStatus :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> API.Types.UI.Sos.SosUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-postSosStatus a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosStatus (Kernel.Prelude.first Kernel.Prelude.Just a3) a2 a1
+postSosStatus a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 postSosMarkRideAsSafe :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-postSosMarkRideAsSafe a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosMarkRideAsSafe (Kernel.Prelude.first Kernel.Prelude.Just a2) a1
+postSosMarkRideAsSafe a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosMarkRideAsSafe (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postSosCreateMockSos :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-postSosCreateMockSos a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreateMockSos (Kernel.Prelude.first Kernel.Prelude.Just a1)
+postSosCreateMockSos a1 = withFlowHandlerAPI $ Domain.Action.UI.Sos.postSosCreateMockSos (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

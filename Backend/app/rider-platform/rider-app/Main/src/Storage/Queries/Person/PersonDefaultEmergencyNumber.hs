@@ -15,6 +15,7 @@
 
 module Storage.Queries.Person.PersonDefaultEmergencyNumber where
 
+import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person
 import Domain.Types.Person.PersonDefaultEmergencyNumber
 import Kernel.Beam.Functions
@@ -43,12 +44,30 @@ findAllByPersonId (Id personId) = findAllWithKV [Se.Is BeamPDEN.personId $ Se.Eq
 findAllByContactPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m [PersonDefaultEmergencyNumber]
 findAllByContactPersonId (Id contactPersonId) = findAllWithKV [Se.Is BeamPDEN.contactPersonId $ Se.Eq (Just contactPersonId)]
 
-updateEmergencyContactPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Id Person -> m ()
-updateEmergencyContactPersonId dbHash (Id personId) = do
+updateEmergencyContactPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Id Person -> Id DMerchant.Merchant -> m ()
+updateEmergencyContactPersonId dbHash (Id personId) (Id merchantId) = do
   updateWithKV
     [ Se.Set BeamPDEN.contactPersonId (Just personId)
     ]
-    [ Se.Is BeamPDEN.mobileNumberHash $ Se.Eq dbHash
+    [ Se.Is BeamPDEN.mobileNumberHash $ Se.Eq dbHash,
+      Se.Is BeamPDEN.merchantId $ Se.Eq (Just merchantId)
+    ]
+
+updateShareRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Id Person -> Maybe Bool -> m ()
+updateShareRide dbHash (Id personId) enableForShareRide = do
+  updateWithKV
+    [ Se.Set BeamPDEN.enableForShareRide enableForShareRide
+    ]
+    [ Se.Is BeamPDEN.mobileNumberHash $ Se.Eq dbHash,
+      Se.Is BeamPDEN.personId $ Se.Eq personId
+    ]
+
+updateShareRideForAll :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Bool -> m ()
+updateShareRideForAll (Id personId) enableForShareRide = do
+  updateWithKV
+    [ Se.Set BeamPDEN.enableForShareRide enableForShareRide
+    ]
+    [ Se.Is BeamPDEN.personId $ Se.Eq personId
     ]
 
 instance FromTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNumber where
@@ -59,7 +78,9 @@ instance FromTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergency
           { personId = Id personId,
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
             contactPersonId = Id <$> contactPersonId,
+            merchantId = Id <$> merchantId,
             priority = priority,
+            enableForShareRide = fromMaybe False enableForShareRide,
             ..
           }
 
@@ -74,5 +95,7 @@ instance ToTType' BeamPDEN.PersonDefaultEmergencyNumber PersonDefaultEmergencyNu
         BeamPDEN.contactPersonId = getId <$> contactPersonId,
         BeamPDEN.enableForFollowing = enableForFollowing,
         BeamPDEN.priority = priority,
+        BeamPDEN.enableForShareRide = Just enableForShareRide,
+        BeamPDEN.merchantId = getId <$> merchantId,
         BeamPDEN.createdAt = createdAt
       }
