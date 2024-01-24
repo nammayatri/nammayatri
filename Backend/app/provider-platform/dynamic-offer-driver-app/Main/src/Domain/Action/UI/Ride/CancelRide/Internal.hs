@@ -80,7 +80,8 @@ cancelRideImpl ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "schedulerType" r SchedulerType,
     LT.HasLocationService m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DRide.Ride ->
   SBCR.BookingCancellationReason ->
@@ -175,7 +176,8 @@ repeatSearch ::
     CacheFlow m r,
     LT.HasLocationService m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   DMerc.Merchant ->
   DFP.FullFarePolicy ->

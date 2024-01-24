@@ -742,7 +742,8 @@ buildSendSearchRequestNotificationData driverId mbDeviceToken entityData dynamic
 sendSearchRequestToDriverNotification ::
   ( ServiceFlow m r,
     ToJSON a,
-    ToJSON b
+    ToJSON b,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

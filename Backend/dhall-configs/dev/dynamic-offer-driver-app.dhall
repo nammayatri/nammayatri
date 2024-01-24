@@ -288,6 +288,7 @@ in  { esqDBCfg
     , osrmMatchPreCheckThreshold = +1500
     , minTripDistanceForReferralCfg = Some +1000
     , maxShards = +5
+    , maxNotificationShards = +128
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , enableAPILatencyLogging = True

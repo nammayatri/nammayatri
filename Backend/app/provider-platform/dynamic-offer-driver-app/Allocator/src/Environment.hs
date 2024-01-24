@@ -75,6 +75,7 @@ data HandlerEnv = HandlerEnv
     coreMetrics :: CoreMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
+    maxNotificationShards :: Int,
     version :: DeploymentVersion,
     jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,
