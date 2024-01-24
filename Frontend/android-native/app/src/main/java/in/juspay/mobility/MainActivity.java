@@ -452,6 +452,8 @@ public class MainActivity extends AppCompatActivity {
         NotificationUtils.createNotificationChannel(this, NotificationUtils.CANCELLED_PRODUCT);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.DRIVER_HAS_REACHED);
         NotificationUtils.createNotificationChannel(this, NotificationUtils.TRIP_FINISHED);
+        NotificationUtils.createNotificationChannel(this, MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED);
+        NotificationUtils.createNotificationChannel(this, MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED);
     }
 
     public void updateConfigURL() {
@@ -514,7 +516,7 @@ public class MainActivity extends AppCompatActivity {
                         try {
                             JSONObject innerPayload = json.getJSONObject(PaymentConstants.PAYLOAD);
                             innerPayload.put("action", "process");
-                            if (getIntent().hasExtra("NOTIFICATION_DATA") || (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type"))) {
+                            if (getIntent().hasExtra("NOTIFICATION_DATA") || getIntent().hasExtra("notification_type")) {
                                 innerPayload.put("notificationData", getNotificationDataFromIntent());
                             }
                             json.put(PaymentConstants.PAYLOAD, innerPayload);
@@ -696,10 +698,15 @@ public class MainActivity extends AppCompatActivity {
         if (intent != null && intent.hasExtra("NOTIFICATION_DATA")) {
             try {
                 String data = intent.getExtras().getString("NOTIFICATION_DATA");
+                String fullNotificationString = intent.getExtras().getString("fullNotificationBody");
                 JSONObject proccessPayload = new JSONObject().put("service", getService())
                         .put("requestId", UUID.randomUUID());
-                JSONObject innerPayload = new JSONObject();
+                JSONObject innerPayload = new JSONObject().put("onNewIntent", true);
                 JSONObject jsonData = new JSONObject(data);
+                if (fullNotificationString != null) {
+                    JSONObject fullNotification = new  JSONObject(fullNotificationString);
+                    innerPayload.put("fullNotificationBody",fullNotification);
+                }
                 if (jsonData.has("notification_type") && jsonData.getString("notification_type").equals("CHAT_MESSAGE")) {
                     innerPayload = getInnerPayload("OpenChatScreen");
                     NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -709,6 +716,7 @@ public class MainActivity extends AppCompatActivity {
                 if (jsonData.has("notification_type") && jsonData.has("entity_ids")) {
                     String id = jsonData.getString("entity_ids");
                     String type = jsonData.getString("notification_type");
+                    innerPayload.put("notification_type", type);
                     if (type.equals("NEW_MESSAGE")) {
                         innerPayload = getInnerPayload("callDriverAlert");
                         innerPayload.put("id", id)
@@ -878,11 +886,9 @@ public class MainActivity extends AppCompatActivity {
             data = new JSONObject(bundle.getString("NOTIFICATION_DATA"));
         }
         //Handling background notifications
-        else if (getIntent().hasExtra("notification_type") && getIntent().hasExtra("entity_ids") && getIntent().hasExtra("entity_type")) {
+        else if (getIntent().hasExtra("notification_type")) {
             data = new JSONObject();
             data.put("notification_type", bundle.getString("notification_type"));
-            data.put("entity_ids", bundle.getString("entity_ids"));
-            data.put("entity_type", bundle.getString("entity_type"));
         } else {
             data = new JSONObject();
         }

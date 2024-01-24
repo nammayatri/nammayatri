@@ -92,7 +92,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.SuccessScreen.Handler as UI
 import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip)
-import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..))
+import Services.API
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
 import Storage (KeyStore(..), isLocalStageOn, updateLocalStage, getValueToLocalStore, setValueToLocalStore, getValueToLocalNativeStore, setValueToLocalNativeStore)
@@ -750,6 +750,7 @@ data ScreenOutput = LogoutUser
                   | SafetySupport HomeScreenState Boolean
                   | GoToShareRide HomeScreenState
                   | GoToNotifyRideShare HomeScreenState
+                  | ExitToFollowRide HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -900,6 +901,8 @@ data Action = NoAction
             | NotifyRideShare PrimaryButtonController.Action
             | ToggleShare Int
             | DismissShareRide
+            | UpdateFollowers FollowRideRes
+            | GoToFollowRide 
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -920,6 +923,16 @@ eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) s
 eval ShowMoreSuggestions state = continue state { props {suggestionsListExpanded = not state.props.suggestionsListExpanded} }
 
 eval RemoveShimmer state = continue state{props{showShimmer = false}}
+
+eval (UpdateFollowers (FollowRideRes resp)) state = do
+  let followers = map (\(Followers follower) -> follower) resp
+  continue state{
+    data{
+      followers = Just $ followers
+    }
+  }
+
+eval GoToFollowRide state = exit $ ExitToFollowRide state
 
 eval (UpdateRepeatTrips rideList) state = do
   void $ pure $ setValueToLocalStore UPDATE_REPEAT_TRIPS "false"
@@ -1105,7 +1118,7 @@ eval LoadMessages state = do
                             suggestions = getSuggestionsfromKey value.message
                             isChatNotificationDismissed = not state.props.isChatNotificationDismissed || state.data.lastMessage.message /= value.message
                             showNotification = isChatNotificationDismissed && unReadMessages
-                        updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
+                        updateMessagesWithCmd state {data {messages = allMessages, chatSuggestionsList = suggestions, lastMessage = value, lastSentMessage = MessagingView.dummyChatComponent, lastReceivedMessage = value}, props {unReadMessages = unReadMessages, showChatNotification = showNotification, canSendSuggestion = true, isChatNotificationDismissed = false, removeNotification = not showNotification, enableChatWidget = showNotification}}
       Nothing -> continue state {props {canSendSuggestion = true}}
 
 eval (OpenChatScreen) state = do
@@ -2448,9 +2461,6 @@ eval (ToggleShare index) state = continue state {data{contactList = mapWithIndex
 eval DismissShareRide state = continue state {props{showShareRide = false}}
 
 eval _ state = continue state
-
-dummyChatComponent :: MessagingView.ChatComponent
-dummyChatComponent = { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
 
 validateSearchInput :: HomeScreenState -> String -> Eval Action ScreenOutput HomeScreenState
 validateSearchInput state searchString =

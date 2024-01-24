@@ -263,3 +263,9 @@ _hasCompletedSafetySetup = lens (unwrap >>> _.hasCompletedSafetySetup) (\oldRec 
 
 _enableLocalPoliceSupport :: forall a b c. Newtype a { enableLocalPoliceSupport :: b | c } => Lens' a b
 _enableLocalPoliceSupport = lens (unwrap >>> _.enableLocalPoliceSupport) (\oldRec newVal -> wrap ((unwrap oldRec) { enableLocalPoliceSupport = newVal }))
+
+_followsRide :: forall a b c. Newtype a { followsRide :: b | c } => Lens' a b
+_followsRide = lens (unwrap >>> _.followsRide) (\oldRec newVal -> wrap ((unwrap oldRec) { followsRide = newVal }))
+
+_rideList :: forall a b c. Newtype a { _ideList :: b | c } => Lens' a b
+_rideList = lens (unwrap >>> _._ideList) (\oldRec newVal -> wrap ((unwrap oldRec) { _ideList = newVal }))

@@ -1,6 +1,7 @@
 module Resources.Localizable.ML where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getML :: STR -> String
 getML stringKey =
@@ -938,3 +939,15 @@ getML stringKey =
         ARE_YOU_READY_TO_START_DRILL -> "നിങ്ങൾ ഡ്രിൽ ആരംഭിക്കാൻ തയ്യാറാണോ?"
         TEST_DRILL_DESC -> "നിങ്ങൾ ഡ്രിൽ ആരംഭിക്കുന്നതിന് തയ്യാറാണോ? നിങ്ങൾ ആപത്കാല ബന്ധങ്ങൾക്ക് നമ്മായാത്രി ഇൻസ്റ്റാൾ ചെയ്യുന്നതിന് ശേഷം ഒരു വരുന്നത് എന്നെന്നേക്കും സുഗമമാക്കാനാണ് നങ്ങൾ സിഫറെ ചെയ്യുന്നത്"
         LEARN_ABOUT_SAFETY_MODE -> "സുരക്ഷ മോഡ് കുറിച്ച് അറിയുക"
+        FOLLOWING name -> name <> "യെ പിന്തുടരുന്നു"
+        TURN_OFF_ALARM -> "അലാറം ഓഫാക്കുക"
+        CHOOSE_A_PERSON_TO_FOLLOW -> "പിന്തുടരാൻ ഒരാളെ തിരഞ്ഞെടുക്കുക"
+        IS_IN_SOS_SITUATION name -> name <> " ഒരു SOS സാഹചര്യത്തിലാണ്!"
+        MARKED_RIDE_SAFE name -> name <> " യാത്ര സുരക്ഷിതമായി അടയാളപ്പെടുത്തി!"
+        STAY_CALM_KEEP_TRACKING name -> "ശാന്തത പാലിക്കുക. " <> name <> "ന്റെ സ്ഥാനം ട്രാക്ക് ചെയ്യുന്നത് തുടരുക, ആവശ്യമെങ്കിൽ ആവശ്യമായ നടപടികൾ കൈക്കൊള്ളുക"
+        YOU_WILL_BE_NOTIFIED -> "റൈഡ് പൂർത്തിയാകുമ്പോൾ നിങ്ങളെ അറിയിക്കും"
+        TAP_HERE_TO_FOLLOW name ->  name <> " പിന്തുടരാൻ ഇവിടെ ടാപ്പ് ചെയ്യുക"
+        HAVE_SHARED_RIDE_WITH_YOU name -> name <> " അവരുടെ റൈഡുകൾ നിങ്ങളുമായി പങ്കിട്ടു"
+        SOS_LOCATION -> "SOS ലൊക്കേഷൻ"
+        THIS_IS_A_TEST_MOCK_DRILL name -> "ഇത് " <> name <> " ഒരു ടെസ്റ്റ് ഡ്രില്ലാണ്"
+        THIS_IS_NOT_REAL_DRILL -> "ഇതൊരു യഥാർത്ഥ ഡ്രിൽ അല്ല, അടിയന്തിര സാഹചര്യങ്ങളിൽ ആപ്പ് എങ്ങനെ പ്രതികരിക്കുമെന്ന് ഇത് ലളിതമായി ചിത്രീകരിക്കുന്നു."

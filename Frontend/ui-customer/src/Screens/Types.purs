@@ -17,8 +17,8 @@ module Screens.Types where
 
 import MerchantConfig.Types
 
-import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer, CarouselModal, CategoryListType)
-import Common.Types.App as Common
+import Common.Types.App
+import Domain.Payments as PP
 import Components.ChatView.Controller (ChatComponentConfig, Config)
 import Components.ChooseVehicle.Controller as ChooseVehicle
 import Components.SettingSideBar.Controller (SettingSideBarState)
@@ -762,7 +762,15 @@ type HomeScreenStateData =
   , peekHeight :: Int
   , rideHistoryTrip :: Maybe Trip
   , contactList :: Array NewContacts
+  , followers :: Maybe (Array Followers)
   }
+
+type Followers = {
+  name :: Maybe String,
+  bookingId :: String,
+  mobileNumber :: String,
+  priority :: Int
+}
 
 type QuoteListItemState = 
   {
@@ -914,6 +922,7 @@ type HomeScreenStateProps =
   , showSosBanner :: Boolean
   , enableLocalPoliceSupport :: Boolean
   , showShareRide :: Boolean
+  , followsRide :: Boolean 
   }
 
 data City
@@ -1772,7 +1781,7 @@ type TicketBookingScreenProps = {
   termsAndConditionsSelected :: Boolean,
   validDate :: Boolean,
   showShimmer :: Boolean,
-  paymentStatus :: Common.PaymentStatus,
+  paymentStatus :: PP.PaymentStatus,
   ticketBookingList :: TicketBookings,
   selectedBookingId :: String,
   selectedBookingInfo :: IndividualBookingItem,
@@ -1952,3 +1961,59 @@ data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
 derive instance genericRecordingState :: Generic RecordingState _
 instance eqRecordingState :: Eq RecordingState where eq = genericEq
 instance showRecordingState :: Show RecordingState where show = genericShow
+
+data FollowRideScreenStage = PersonList | FollowingRide | ChatWithEM | MockFollowRide
+
+derive instance genericFollowRideScreenStage :: Generic FollowRideScreenStage _
+instance showFollowRideScreenStage :: Show FollowRideScreenStage where show = genericShow
+instance eqFollowRideScreenStage :: Eq FollowRideScreenStage where eq = genericEq
+
+type FollowRideScreenState = {
+  data :: FollowRideScreenData,
+  props :: FollowRideScreenProps
+}
+
+type FollowRideScreenData = {
+  driverInfoCardState :: Maybe DriverInfoCard
+, currentStage :: FollowRideScreenStage
+, currentFollower :: Maybe Followers
+, followers :: Array Followers
+, zoneType :: SpecialTags
+, route :: Maybe Route
+, speed :: Int
+, config :: AppConfig
+, messages :: Array ChatComponentConfig
+, messagesSize :: String
+, chatSuggestionsList :: Array String
+, lastMessage :: ChatComponentConfig
+, lastSentMessage :: ChatComponent
+, lastReceivedMessage :: ChatComponent
+, logField :: Object Foreign
+, messageToBeSent:: String
+, sosStatus :: Maybe SosStatus
+, emergencyAudioStatus :: EmAudioPlayStatus
+, counter :: Int
+}
+
+type FollowRideScreenProps = {
+  city :: City
+, showChatNotification :: Boolean
+, canSendSuggestion :: Boolean
+, isChatNotificationDismissed :: Boolean
+, unReadMessages :: Boolean
+, removeNotification :: Boolean
+, enableChatWidget :: Boolean
+, chatCallbackInitiated :: Boolean
+, openChatScreen:: Boolean
+, sendMessageActive :: Boolean
+, sheetState :: Maybe BottomSheetState
+, currentSheetState :: BottomSheetState
+, isNotificationExpanded :: Boolean
+, isOverlayDimissed :: Boolean
+}
+
+
+data EmAudioPlayStatus = STOPPED | STARTED | COMPLETED | RESTARTED
+
+derive instance genericEmAudioPlayStatus :: Generic EmAudioPlayStatus _
+instance eqEmAudioPlayStatus :: Eq EmAudioPlayStatus where eq = genericEq

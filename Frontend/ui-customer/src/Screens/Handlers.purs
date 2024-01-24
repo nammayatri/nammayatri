@@ -55,3 +55,4 @@ import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 -- import Screens.NammaSafetyScreen.VideoRecordScreen.Handler (videoScreen) as UI
 import Screens.TicketInfoScreen.Handler (ticketInfoScreen) as UI
 import Screens.TripDetailsScreen.Handler (tripDetailsScreen) as UI
+import Screens.FollowRideScreen.Handler (followRideScreen) as UI

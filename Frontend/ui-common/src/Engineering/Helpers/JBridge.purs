@@ -23,7 +23,7 @@ import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..),ChatComponent(..), LazyCheck(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData, CarouselModal, PolylineAnimationConfig, DisplayBase64ImageConig)
+import Common.Types.App
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
@@ -42,7 +42,7 @@ import Data.Maybe (Maybe(..))
 -- import Effect.Class (liftEffect)
 -- import PrestoDOM.Core(terminateUI)
 import Presto.Core.Types.Language.Flow
-import Engineering.Helpers.Commons (screenHeight, screenWidth, os)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, os, callbackMapper)
 import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
 import Presto.Core.Flow (doAff)
@@ -455,11 +455,6 @@ type MapRouteConfig = {
 
 type Coordinates = Array Paths
 
-type Paths = {
-    lat :: Number
-  , lng :: Number
-}
-
 type IsLocationOnPath = {
     points :: Coordinates
   , isInPath :: Boolean
@@ -503,6 +498,7 @@ type UpdateRouteConfig = {
   , srcMarker :: String
   , specialLocation :: MapRouteConfig
   , zoomLevel :: Number
+  , autoZoom :: Boolean
 }
 
 updateRouteConfig :: UpdateRouteConfig
@@ -524,6 +520,7 @@ updateRouteConfig = {
       } 
   }
   , zoomLevel : if (os == "IOS") then 19.0 else 17.0
+  , autoZoom : true
 }
 
 -- type Point = Array Number
@@ -570,3 +567,109 @@ displayBase64ImageConfig = {
   , scaleType : "CENTER_CROP"
   , inSampleSize : 1
 }
+
+foreign import addRippleCircle :: EffectFn1 CircleRippleConfig Unit
+foreign import animateRippleCircle :: EffectFn1 CircleRippleConfig Unit
+foreign import removeRippleCircle :: EffectFn1 CircleRippleConfig Unit
+foreign import updateRippleCirclePosition :: EffectFn1 CircleRippleConfig Unit
+foreign import addGroundOverlay :: EffectFn1 GroundOverlayConfig Unit
+foreign import updateGroundOverlay :: EffectFn1 GroundOverlayConfig Unit
+foreign import removeGroundOverlay :: EffectFn1 GroundOverlayConfig Unit
+foreign import upsertMarkerLabel :: EffectFn1 MarkerLabelConfig Unit
+foreign import clearMap :: EffectFn1 String Unit
+foreign import isOverlayPresent :: String -> Boolean
+foreign import isCirclePresent :: String -> Boolean
+foreign import clearAudioPlayer :: String -> Unit
+foreign import pauseAudioPlayer :: String -> Unit
+foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect Unit) (String -> action) Unit
+
+
+addAndUpdateRideSafeOverlay :: Paths -> Effect Unit
+addAndUpdateRideSafeOverlay center = 
+    if isOverlayPresent "SOSDangerOverlay" 
+      then do
+        removeSOSRipples ""
+        addOverlay center
+      else 
+        if isOverlayPresent "SOSSafeOverlay" 
+          then do
+            removeSOSRipples ""
+            updateSafeGroundOverlay center
+          else addOverlay center
+  where
+    addOverlay center = void $ runEffectFn1 addGroundOverlay groundOverlayConfig{center = center, id = "SOSSafeOverlay", imageUrl = "ny_ic_sos_safe"}
+
+addAndUpdateSOSRipples :: Paths -> Effect Unit
+addAndUpdateSOSRipples center = do
+  if isCirclePresent "ripples_1" 
+    then do
+      void $ runEffectFn1 updateRippleCirclePosition circleRippleConfig{center = center}
+      void $ runEffectFn1 updateGroundOverlay groundOverlayConfig{center = center, id = "SOSDangerOverlay"} 
+    else do
+      void $ runEffectFn1 addRippleCircle circleRippleConfig{center = center}
+      void $ runEffectFn1 animateRippleCircle circleRippleConfig{center = center}
+      void $ runEffectFn1 addGroundOverlay groundOverlayConfig{center = center, id = "SOSDangerOverlay"}
+
+addNavigateMarker :: forall action. Paths -> (action -> Effect Unit) -> action -> Effect Unit
+addNavigateMarker point push action = do
+  let
+    callBack = callbackMapper (push action)
+    locationName = runFn2 getLocationNameV2 point.lat point.lng
+  runEffectFn1 
+    upsertMarkerLabel 
+      { id: "SOSMarkerLabel"
+      , title: locationName
+      , actionImage: "ny_ic_navigate"
+      , actionCallBack: callBack
+      , position: point
+      , markerImage : ""
+      }
+updateSafeGroundOverlay :: Paths -> Effect Unit
+updateSafeGroundOverlay center = do
+  void $ runEffectFn1 updateGroundOverlay groundOverlayConfig{center = center, id = "SOSSafeOverlay"}
+  -- void $ addMarker "ny_ic_green_circle" center.lat center.lng 60 0.5 0.0 -- Need to check with designer not looking good
+
+removeSOSRipples :: String -> Effect Unit
+removeSOSRipples _ = do
+  void $ runEffectFn1 removeRippleCircle circleRippleConfig
+  void $ runEffectFn1 removeGroundOverlay groundOverlayConfig{id = "SOSDangerOverlay"}
+  void $ pure $ removeMarker "ny_ic_red_circle"
+
+circleRippleConfig :: CircleRippleConfig
+circleRippleConfig = {
+  delay : 100
+, duration : 1000
+, pause : 100
+, repeatMode : -1
+, count : 5
+, radius : 10.0
+, maxRadius : 5.0
+, strokeWidth : 5.0
+, maxStrokeWidth : 8.0
+, fromStrokeColor : "#f9cdcc"
+, toStrokeColor : "#FF0000"
+, prefix : "ripples"
+, center : {
+  lat : 0.0
+, lng : 0.0
+}
+}
+
+groundOverlayConfig :: GroundOverlayConfig
+groundOverlayConfig = {
+  id : "<unique>"
+, height : 150
+, width : 150
+, imageUrl : "ny_ic_sos_active"
+, fetchFromView : false
+, viewId : ""
+, center : {
+  lat : 0.0
+, lng : 0.0
+}
+}
+
+-- RepeatMode Mappings
+-- RESTART = 1
+-- REVERSE = 2
+-- INFINITE = -1

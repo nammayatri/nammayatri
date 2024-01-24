@@ -16,6 +16,7 @@
 module Screens.Types where
 
 import Common.Types.App as Common
+import Domain.Payments as PP
 import Components.ChatView.Controller as ChatView
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
@@ -930,7 +931,7 @@ type PaymentState = {
   makePaymentModal :: Boolean,
   showRateCard :: Boolean,
   paymentStatusBanner :: Boolean,
-  paymentStatus :: Common.PaymentStatus,
+  paymentStatus :: PP.PaymentStatus,
   invoiceId :: String,
   bannerBG :: String,
   bannerTitle :: String,
@@ -1701,7 +1702,7 @@ type AcknowledgementScreenData = {
 
 type AcknowledgementScreenProps = {
   primaryButtonVisibility :: Visibility,
-  paymentStatus :: Common.PaymentStatus,
+  paymentStatus :: PP.PaymentStatus,
   illustrationType :: IllustrationType
 }
 
@@ -1965,7 +1966,7 @@ type PaymentHistoryScreenData = {
 
 type TransactionInfo = {
   notificationStatus :: Maybe AutopayPaymentStage,
-  paymentStatus :: Common.PaymentStatus,
+  paymentStatus :: PP.PaymentStatus,
   statusTime :: String,
   details :: Array TransactionListItem,
   manualSpecificDetails :: Array DueCard,
@@ -1978,7 +1979,7 @@ type TransactionInfo = {
 type PaymentListItem = {
   transactionDate :: String,
   invoiceId :: String,
-  paymentStatus :: Common.PaymentStatus,
+  paymentStatus :: PP.PaymentStatus,
   amount :: Number,
   feeType :: FeeType,
   description :: String,

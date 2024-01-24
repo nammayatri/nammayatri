@@ -1,6 +1,7 @@
 module Resources.Localizable.BN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getBN :: STR -> String
 getBN stringKey =
@@ -919,3 +920,15 @@ getBN stringKey =
         ARE_YOU_READY_TO_START_DRILL -> "আপনি কি প্রস্তুত টেস্ট ড্রিল শুরু করতে?"
         TEST_DRILL_DESC -> "এটি একটি পরীক্ষা হয় এবং এটি একটি তাণাব-মুক্ত অভিজ্ঞান সাধন করে। এটি বাস্তব আপাতকালীন অবস্থায় উপলব্ধ হবে।"
         LEARN_ABOUT_SAFETY_MODE -> "নিরাপত্তা মোড সম্পর্কে জানুন"
+        FOLLOWING name -> "অনুসরণ করা হচ্ছে " <> name
+        TURN_OFF_ALARM -> "অ্যালার্ম বন্ধ করুন"
+        CHOOSE_A_PERSON_TO_FOLLOW -> "অনুসরণ করার জন্য একজন ব্যক্তিকে বেছে নিন"
+        IS_IN_SOS_SITUATION name -> name <> " একটি SOS পরিস্থিতিতে আছে!"
+        MARKED_RIDE_SAFE name -> name <> " রাইডটিকে নিরাপদ হিসেবে চিহ্নিত করেছে!"
+        STAY_CALM_KEEP_TRACKING name -> "শান্ত থাকুন। ট্র্যাকিং রাখুন " <> name <> "এর অবস্থান প্রয়োজনে প্রয়োজনীয় ব্যবস্থা নিন"
+        YOU_WILL_BE_NOTIFIED -> "রাইড সম্পূর্ণ হলে আপনাকে জানানো হবে"
+        TAP_HERE_TO_FOLLOW name ->  name <> " অনুসরণ করতে এখানে আলতো চাপুন"
+        HAVE_SHARED_RIDE_WITH_YOU name -> name <> " তাদের রাইডগুলি আপনার সাথে শেয়ার করেছে৷"
+        SOS_LOCATION -> "SOS অবস্থান"
+        THIS_IS_A_TEST_MOCK_DRILL name -> "এটি " <> name <> " এর জন্য একটি পরীক্ষামূলক ড্রিল"
+        THIS_IS_NOT_REAL_DRILL -> "এটি একটি বাস্তব ড্রিল নয়, এটি সহজভাবে ব্যাখ্যা করে যে অ্যাপটি জরুরী পরিস্থিতিতে কীভাবে প্রতিক্রিয়া জানাবে।"

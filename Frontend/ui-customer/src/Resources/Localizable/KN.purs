@@ -1,6 +1,7 @@
 module Resources.Localizable.KN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getKN :: STR -> String
 getKN stringKey =
@@ -920,3 +921,15 @@ getKN stringKey =
         ARE_YOU_READY_TO_START_DRILL -> "ನೀವು ಪರೀಕ್ಷೆ ಡ್ರಿಲ್ ಪ್ರಾರಂಭಿಸಲು ಸಿದ್ಧರಾಗಿದ್ದೀರಾ?"
         TEST_DRILL_DESC -> "ನಿಮ್ಮ ಆಪತ್ಕಾಲ ಸಂಪರ್ಕಗಳಿಗೆ ನಿಮ್ಮ ಪ್ರಯಾಣವನ್ನು ಹಂಚಿಕೊಳ್ಳಲು ನಿಮ್ಮ ಸುರಕ್ಷಾ ಡ್ರಿಲ್ ಪರೀಕ್ಷಿಸಿ"
         LEARN_ABOUT_SAFETY_MODE -> "ಸುರಕ್ಷಾ ಮೋಡ್ ಬಗ್ಗೆ ತಿಳಿಯಿರಿ"
+        FOLLOWING name -> name  <> "ಕಿಯನ್ನು ಅನುಸರಿಸುವುದು"
+        TURN_OFF_ALARM -> "ಅಲಾರಾಂ ಆಫ್ ಮಾಡಿ"
+        CHOOSE_A_PERSON_TO_FOLLOW -> "ಅನುಸರಿಸಲು ವ್ಯಕ್ತಿಯನ್ನು ಆರಿಸಿ"
+        IS_IN_SOS_SITUATION name -> name <> " SOS ಪರಿಸ್ಥಿತಿಯಲ್ಲಿದೆ!"
+        MARKED_RIDE_SAFE name -> name <> " ಸವಾರಿಯನ್ನು ಸುರಕ್ಷಿತ ಎಂದು ಗುರುತಿಸಿದ್ದಾರೆ!"
+        STAY_CALM_KEEP_TRACKING name -> "ಶಾಂತವಾಗಿರಿ. " <> name <> " ಸ್ಥಳವನ್ನು ಟ್ರ್ಯಾಕ್ ಮಾಡುತ್ತಿರಿ. ಅಗತ್ಯವಿದ್ದರೆ ಅಗತ್ಯ ಕ್ರಮಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಿ"
+        YOU_WILL_BE_NOTIFIED -> "ರೈಡ್ ಪೂರ್ಣಗೊಂಡ ನಂತರ ನಿಮಗೆ ಸೂಚಿಸಲಾಗುತ್ತದೆ"
+        TAP_HERE_TO_FOLLOW name ->  name <> " ಅನ್ನು ಅನುಸರಿಸಲು ಇಲ್ಲಿ ಟ್ಯಾಪ್ ಮಾಡಿ"
+        HAVE_SHARED_RIDE_WITH_YOU name -> name <> " ಅವರು ತಮ್ಮ ಸವಾರಿಗಳನ್ನು ನಿಮ್ಮೊಂದಿಗೆ ಹಂಚಿಕೊಂಡಿದ್ದಾರೆ"
+        SOS_LOCATION -> "SOS ಸ್ಥಳ"
+        THIS_IS_A_TEST_MOCK_DRILL name -> "ಇದು " <> name <> " ಗಾಗಿ ಟೆಸ್ಟ್ ಡ್ರಿಲ್"
+        THIS_IS_NOT_REAL_DRILL -> "ಇದು ನಿಜವಾದ ಡ್ರಿಲ್ ಅಲ್ಲ, ತುರ್ತು ಸಂದರ್ಭಗಳಲ್ಲಿ ಅಪ್ಲಿಕೇಶನ್ ಹೇಗೆ ಪ್ರತಿಕ್ರಿಯಿಸುತ್ತದೆ ಎಂಬುದನ್ನು ಇದು ಸರಳವಾಗಿ ವಿವರಿಸುತ್ತದೆ."

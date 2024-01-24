@@ -189,6 +189,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     stopChatService(notificationType, sharedPref);
                     String key = getString(R.string.service);
                     String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
+                    NotificationUtils.triggerUICallbacks(notificationType);
                     switch (notificationType) {
                         case NotificationTypes.DRIVER_NOTIFY:
                             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
@@ -593,48 +594,37 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         return ob;
     }
 
-    private void showSafetyAlert(String title, String body, JSONObject payload, String imageUrl){
-        try {
-            String notificationBody = null;
-            String notificationTitle = getString(R.string.everything_okay);
-            SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-            sharedPref.edit().putString("SAFETY_ALERT_TYPE", body).apply();
-            CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(this);
-            HashMap<String, Object> cleverTapParams = new HashMap<>();
-            cleverTapParams.put("searchRequestId", body);
-            cleverTapAPI.pushEvent("ny_user_night_safety_alert", cleverTapParams);
-            notificationBody = getString(R.string.safety_deviation_alert);
-            NotificationUtils.showNotification(this, notificationTitle, notificationBody, payload, imageUrl);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    private static class NotificationTypes {
-        private static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
-        private static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
-        private static final String CLEARED_FARE = "CLEARED_FARE";
-        private static final String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
-        private static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING";
-        private static final String TRIP_FINISHED = "TRIP_FINISHED";
-        private static final String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
-        private static final String TRIP_STARTED = "TRIP_STARTED";
-        private static final String BUNDLE_UPDATE = "BUNDLE_UPDATE";
-        private static final String CANCELLED_SEARCH_REQUEST = "CANCELLED_SEARCH_REQUEST";
-        private static final String NEW_MESSAGE = "NEW_MESSAGE";
-        private static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
-        private static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
-        private static final String UPDATE_STORAGE = "UPDATE_STORAGE";
-        private static final String CALL_API = "CALL_API";
-        private static final String CHAT_MESSAGE = "CHAT_MESSAGE";
-        private static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
-        private static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
-        private static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
-        private static final String PAYMENT_PENDING = "PAYMENT_PENDING";
-        private static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
-        private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
-        private static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
-        private static final String COINS_SUCCESS = "COINS_SUCCESS";
-        private static final String SAFETY_ALERT = "SAFETY_ALERT";
+    public static class NotificationTypes {
+        public static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
+        public static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
+        public static final String CLEARED_FARE = "CLEARED_FARE";
+        public static final String CANCELLED_PRODUCT = "CANCELLED_PRODUCT";
+        public static final String DRIVER_QUOTE_INCOMING = "DRIVER_QUOTE_INCOMING";
+        public static final String TRIP_FINISHED = "TRIP_FINISHED";
+        public static final String DRIVER_ASSIGNMENT = "DRIVER_ASSIGNMENT";
+        public static final String TRIP_STARTED = "TRIP_STARTED";
+        public static final String BUNDLE_UPDATE = "BUNDLE_UPDATE";
+        public static final String CANCELLED_SEARCH_REQUEST = "CANCELLED_SEARCH_REQUEST";
+        public static final String NEW_MESSAGE = "NEW_MESSAGE";
+        public static final String REGISTRATION_APPROVED = "REGISTRATION_APPROVED";
+        public static final String REFERRAL_ACTIVATED = "REFERRAL_ACTIVATED";
+        public static final String UPDATE_STORAGE = "UPDATE_STORAGE";
+        public static final String CALL_API = "CALL_API";
+        public static final String CHAT_MESSAGE = "CHAT_MESSAGE";
+        public static final String DRIVER_NOTIFY = "DRIVER_NOTIFY";
+        public static final String REALLOCATE_PRODUCT = "REALLOCATE_PRODUCT";
+        public static final String PAYMENT_OVERDUE = "PAYMENT_OVERDUE";
+        public static final String PAYMENT_PENDING = "PAYMENT_PENDING";
+        public static final String JOIN_NAMMAYATRI = "JOIN_NAMMAYATRI";
+        public static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
+        public static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
+        public static final String COINS_SUCCESS = "COINS_SUCCESS";
+        public static final String SHARE_RIDE = "SHARE_RIDE";
+        public static final String SOS_RESOLVED = "SOS_RESOLVED";
+        public static final String SOS_TRIGGERED = "SOS_TRIGGERED";
+        public static final String SOS_MOCK_DRILL = "SOS_MOCK_DRILL";
+        public static final String FOLLOW_RIDE = "FOLLOW_RIDE";
+        public static final String DRIVER_HAS_REACHED = "DRIVER_HAS_REACHED";
+        public static final String SAFETY_ALERT = "SAFETY_ALERT";
     }
 }

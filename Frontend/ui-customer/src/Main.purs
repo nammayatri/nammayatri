@@ -38,7 +38,7 @@ import Prelude (Unit, bind, pure, show, unit, void, ($), (<$>), (<<<), discard)
 import Presto.Core.Types.Language.Flow (throwErr)
 import PrestoDOM.Core (processEvent) as PrestoDom
 import Types.App (defaultGlobalState, FlowBT, ScreenType(..))
-import Screens.Types(PermissionScreenStage(..))
+import Screens.Types(PermissionScreenStage(..), FollowRideScreenStage(..))
 import AssetsProvider (fetchAssets)
 import Timers
 import Effect.Uncurried
@@ -114,3 +114,9 @@ onBundleUpdatedEvent description= do
       appUpdatedFlow description
     pure unit
   pure unit
+
+mockFollowRideEvent :: Event -> Effect Unit
+mockFollowRideEvent event = do
+  void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+    modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen{ data{ currentStage = MockFollowRide } })
+    Flow.followRideScreenFlow

@@ -156,6 +156,7 @@
       "ny_ic_add_filled" : true,
       "ny_ic_add_image" : true,
       "ny_ic_add_unfilled" : true,
+      "ny_ic_alarm_new" : true,
       "ny_ic_anonymous_call" : true,
       "ny_ic_app_related_issue" : true,
       "ny_ic_arrow_left_black" : true,

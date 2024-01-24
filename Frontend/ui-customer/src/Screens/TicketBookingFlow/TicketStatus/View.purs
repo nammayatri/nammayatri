@@ -5,7 +5,7 @@ import Screens.TicketBookingFlow.TicketStatus.ComponentConfig
 
 import Animation as Anim
 import Animation.Config (translateYAnimConfig, translateYAnimMapConfig, removeYAnimFromTopConfig)
-import Common.Types.App as Common
+import Domain.Payments as PP
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Data.Array as DA
@@ -228,7 +228,7 @@ getPillInfoColor ticketServiceName = case ticketServiceName of
   "Aquarium Fee" ->  Color.white900
   _ -> Color.white900
 
-bookingStatusView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
+bookingStatusView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 bookingStatusView state push paymentStatus = 
   relativeLayout
   [ width MATCH_PARENT
@@ -268,7 +268,7 @@ copyTransactionIdView state push visibility' =
      ] 
   ]
 
-bookingStatusBody :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus ->  PrestoDOM (Effect Unit) w
+bookingStatusBody :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus ->  PrestoDOM (Effect Unit) w
 bookingStatusBody state push paymentStatus = 
   linearLayout
   [ width MATCH_PARENT
@@ -276,7 +276,7 @@ bookingStatusBody state push paymentStatus =
   , weight 1.0
   , orientation VERTICAL
   , margin $ Margin 16 16 16 16
-  , visibility if paymentStatus == Common.Failed then GONE else VISIBLE
+  , visibility if paymentStatus == PP.Failed then GONE else VISIBLE
   ][ scrollView
       [ width MATCH_PARENT
       , height MATCH_PARENT
@@ -308,7 +308,7 @@ bookingStatusBody state push paymentStatus =
       ]
   ]
 
-bookingConfirmationActions :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
+bookingConfirmationActions :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 bookingConfirmationActions state push paymentStatus = 
   linearLayout
   [ width MATCH_PARENT
@@ -323,7 +323,7 @@ bookingConfirmationActions state push paymentStatus =
       , height $ V 1
       , background Color.grey900
       ][]
-   , PrimaryButton.view (push <<< ViewTicketAC) (viewTicketButtonConfig primaryButtonText $ paymentStatus /= Common.Pending)
+   , PrimaryButton.view (push <<< ViewTicketAC) (viewTicketButtonConfig primaryButtonText $ paymentStatus /= PP.Pending)
    , linearLayout
      [ width $ MATCH_PARENT
      , height WRAP_CONTENT
@@ -332,14 +332,14 @@ bookingConfirmationActions state push paymentStatus =
      ][commonTV push secondaryButtonText Color.black900 (FontStyle.subHeading1 TypoGraphy) 5 CENTER GoHome]
   ]
   where primaryButtonText = case paymentStatus of
-                              Common.Success -> "View Ticket"
-                              Common.Failed -> "Try Again"
+                              PP.Success -> "View Ticket"
+                              PP.Failed -> "Try Again"
                               _ -> ""
         secondaryButtonText = case paymentStatus of
-                              Common.Success -> "Go Home"
+                              PP.Success -> "Go Home"
                               _ -> "Go Back"
 
-paymentStatusHeader :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
+paymentStatusHeader :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 paymentStatusHeader state push paymentStatus = 
   let transcationConfig = getTransactionConfig paymentStatus
   in
@@ -355,7 +355,7 @@ paymentStatusHeader state push paymentStatus =
       ][imageView
         [ width $ MATCH_PARENT
         , height $ V 100
-        , visibility if paymentStatus == Common.Success then VISIBLE else GONE
+        , visibility if paymentStatus == PP.Success then VISIBLE else GONE
         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_confetti"
         ] 
       , linearLayout
@@ -372,8 +372,8 @@ paymentStatusHeader state push paymentStatus =
       ]
       , commonTV push transcationConfig.title Color.black900 (FontStyle.h2 TypoGraphy) 14 CENTER NoAction
       , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
-      , copyTransactionIdView state push $ paymentStatus == Common.Failed
-      , if (paymentStatus == Common.Success) then (linearLayout [][]) else (PrimaryButton.view (push <<< RefreshStatusAC) (refreshStatusButtonConfig state))
+      , copyTransactionIdView state push $ paymentStatus == PP.Failed
+      , if (paymentStatus == PP.Success) then (linearLayout [][]) else (PrimaryButton.view (push <<< RefreshStatusAC) (refreshStatusButtonConfig state))
 
     ]
 
@@ -439,10 +439,10 @@ bookingForView state =
       ] <> FontStyle.tags TypoGraphy
     ) state.data.bookedForArray)
 
-getTransactionConfig :: Common.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
+getTransactionConfig :: PP.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
 getTransactionConfig status = 
   case status of
-    Common.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : "Your ticket has been generated below", title : "Your booking is Confirmed!"}
-    Common.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : "Please check back in a few minutes.", title : "Your booking is Pending!"}
-    Common.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : "Please retry booking.", title : "Booking Failed!"}
-    Common.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}
+    PP.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : "Your ticket has been generated below", title : "Your booking is Confirmed!"}
+    PP.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : "Please check back in a few minutes.", title : "Your booking is Pending!"}
+    PP.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : "Please retry booking.", title : "Booking Failed!"}
+    PP.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}
