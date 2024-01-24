@@ -119,7 +119,11 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Beckn.OnDemand.Transformer.Init
+      Beckn.OnDemand.Transformer.OnSearch
       Beckn.OnDemand.Transformer.OnUpdate
+      Beckn.OnDemand.Transformer.RideAssigned
+      Beckn.OnDemand.Transformer.Search
       Beckn.OnDemand.Utils.Callback
       Beckn.OnDemand.Utils.Common
       Beckn.OnDemand.Utils.Init
@@ -583,10 +587,6 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
-      Beckn.OnDemand.Transformer.Init
-      Beckn.OnDemand.Transformer.OnSearch
-      Beckn.OnDemand.Transformer.RideAssigned
-      Beckn.OnDemand.Transformer.Search
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:
