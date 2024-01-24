@@ -1,6 +1,7 @@
 module Resources.Localizable.EN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getEN :: STR -> String
 getEN stringKey =
@@ -766,3 +767,16 @@ getEN stringKey =
         PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER -> "Please select the ride to call the driver"
         ADD_IMAGE_S -> "Add Image(s)"
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "You already have an active ride"
+        FOLLOWING name -> "Following " <> name
+        TURN_OFF_ALARM -> "Turn off the alarm"
+        CHOOSE_A_PERSON_TO_FOLLOW -> "Choose a person to follow"
+        IS_IN_SOS_SITUATION name -> name <> " is in a SOS Situation!"
+        MARKED_RIDE_SAFE name -> name <> " marked the ride Safe!"
+        STAY_CALM_KEEP_TRACKING name -> "Stay calm. Keep tracking " <> name <> "'s location Take necessary actions if needed"
+        YOU_WILL_BE_NOTIFIED -> "You'll be notified once the ride is completed"
+        TAP_HERE_TO_FOLLOW name ->  "Tap here to follow " <> name
+        HAVE_SHARED_RIDE_WITH_YOU name -> name <> " have shared their rides with you"
+        SOS_LOCATION -> "SOS Location"
+        THIS_IS_A_TEST_MOCK_DRILL name -> "This is a Test Drill for " <> name
+        THIS_IS_NOT_REAL_DRILL -> "This is NOT a real drill, it simply illustrates how the app will respond in emergency situations."
+        REACHED_DESTINATION_SAFELY name -> name <> " has reached the destination safely!"

@@ -16,7 +16,7 @@
 
 module Screens.SubscriptionScreen.ScreenData where
 
-import Common.Types.App (PaymentStatus(..))
+import Domain.Payments (PaymentStatus(..))
 import Data.Maybe as Mb
 import ConfigProvider
 import Screens.Types (AutoPayStatus(..), KeyValType, OptionsMenuState(..), PlanCardConfig, PromoConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..), DueItem)

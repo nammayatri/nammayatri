@@ -260,6 +260,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     String src = payload.optString("srcMarker", "");
                     String specialLocation = payload.optString("specialLocation", "");
                     float zoomLevel = (float)payload.optDouble("zoomLevel", 17.0);
+                    boolean autoZoom = payload.optBoolean("autoZoom", true);
                     ArrayList<LatLng> path = new ArrayList<>();
                     JSONObject jsonObject = new JSONObject(json);
                     JSONArray coordinates = jsonObject.getJSONArray("points");
@@ -272,11 +273,11 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     }
                     Marker currMarker = (Marker) markers.get(src);
                     currMarker.setTitle("Vehicle Icon On Map");
-                    Marker destMarker = (Marker) markers.get(dest);   
+                    Marker destMarker = (Marker) markers.get(dest);
                     JSONObject specialLocationObject = new JSONObject(specialLocation);
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
 
-                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER))));
+                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, false,null, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER))));
                     destMarker.setTitle("Driver is " + eta);
                     if (polyline != null) {
                         polyline.setEndCap(new ButtCap());
@@ -306,8 +307,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             if (debounceAnimateCameraCounter != 0) {
                                 debounceAnimateCameraCounter--;
                             } else {
-                                moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
-                                debounceAnimateCameraCounter = 10;
+                                if (autoZoom) {
+                                    moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                                    debounceAnimateCameraCounter = 10;
+                                }
                             }
                         }
                     }
@@ -392,7 +395,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         .title("")
                         .position(new LatLng(lat, lng))
                         .anchor(0.5f, 0.5f)
-                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", icon,null, MarkerType.SPECIAL_ZONE_MARKER)));
+                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", icon, false,null,null, MarkerType.SPECIAL_ZONE_MARKER)));
                 Marker m = googleMap.addMarker(markerOptionsObj);
                 if (m != null) {
                     m.hideInfoWindow();
@@ -423,7 +426,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         if (userPositionMarker == null) {
                             upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f); //TODO this function will be removed
                         } else {
-                            userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, null, MarkerType.NORMAL_MARKER)));
+                            userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, false,null,null, MarkerType.NORMAL_MARKER)));
                             userPositionMarker.setTitle("");
                             LatLng latLng = new LatLng(Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")));
                         }
@@ -445,7 +448,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     layer.removeLayerFromMap();
                 }
                 if (userPositionMarker != null) {
-                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", CURRENT_LOCATION, null, MarkerType.NORMAL_MARKER)));
+                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", CURRENT_LOCATION, false,null,null, MarkerType.NORMAL_MARKER)));
                     userPositionMarker.setTitle("");
                 }
             } catch (Exception e) {

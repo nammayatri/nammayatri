@@ -702,6 +702,7 @@ mapRouteConfig srcIcon destIcon isAnim animConfig= {
   , destSpecialTagIcon : destIcon
   , vehicleSizeTagIcon : (getMerchantVehicleSize unit)
   , isAnimation : isAnim 
+  , autoZoom : true
   , polylineAnimationConfig : animConfig
 }
 

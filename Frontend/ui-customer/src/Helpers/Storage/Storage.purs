@@ -91,6 +91,7 @@ data KeyStore
   | REALLOCATE_PRODUCT_ENABLED
   | UPDATE_REPEAT_TRIPS
   | CUSTOMER_LOCATION
+  | SOS_ALARM_STATUS
 
 derive instance genericKeyStore :: Generic KeyStore _
 

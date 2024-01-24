@@ -17,7 +17,7 @@ module Screens.PaymentHistoryScreen.Transformer where
 
 import Prelude
 
-import Common.Types.App (PaymentStatus(..), PaymentStatus(..))
+import Domain.Payments
 import Data.Array (length, mapWithIndex, (!!), filter)
 import Data.Maybe (Maybe(..), fromMaybe, isJust)
 import Engineering.Helpers.Commons (convertUTCtoISC)

@@ -17,7 +17,8 @@ module Services.API where
 
 import Data.Maybe
 
-import Common.Types.App (Version(..), APIPaymentStatus(..)) as Common
+import Common.Types.App (Version(..)) as Common
+import Domain.Payments as PP
 import Control.Alt ((<|>))
 import Control.Monad.Except (except, runExcept)
 import Control.Monad.Except (runExcept)
@@ -2275,7 +2276,7 @@ data OrderStatusReq = OrderStatusReq String
 
 newtype OrderStatusRes = OrderStatusRes
   {
-    status :: Common.APIPaymentStatus
+    status :: PP.APIPaymentStatus
   }
 
 instance makeOrderStatusReq :: RestEndpoint OrderStatusReq OrderStatusRes where
@@ -2320,7 +2321,7 @@ newtype PaymentBreakUp = PaymentBreakUp {
 
 newtype TxnInfo = TxnInfo {
     id :: String
-  , status :: Common.APIPaymentStatus
+  , status :: PP.APIPaymentStatus
 }
 
 data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE_DRIVERFEE

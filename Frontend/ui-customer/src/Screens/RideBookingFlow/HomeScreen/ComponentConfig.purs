@@ -918,10 +918,10 @@ getDefaultPeekHeight state = do
                   false -> if isQuotes then 334 else 283
   height + if state.data.config.driverInfoConfig.footerVisibility then 44 else 0
 
-metersToKm :: Int -> ST.HomeScreenState -> String
-metersToKm distance state =
+metersToKm :: Int -> Boolean -> String
+metersToKm distance towardsDrop =
   if (distance <= 10) then
-    (if (state.props.currentStage == ST.RideStarted) then (getString AT_DROP) else (getString AT_PICKUP))
+    (if towardsDrop then (getString AT_DROP) else (getString AT_PICKUP))
   else if (distance < 1000) then (HU.toStringJSON distance <> " m " <> (getString AWAY_C)) else (HU.parseFloat ((INT.toNumber distance) / 1000.0)) 2 <> " km " <> (getString AWAY_C)
 
 
@@ -1224,6 +1224,7 @@ specialLocationConfig srcIcon destIcon isAnim animConfig = {
   , destSpecialTagIcon : destIcon
   , vehicleSizeTagIcon : (HU.getVehicleSize unit)
   , isAnimation : isAnim
+  , autoZoom : true
   , polylineAnimationConfig : animConfig
 }
 
@@ -1603,7 +1604,7 @@ getChatSuggestions state = do
       canShowSuggestions = case lastMessage of 
                             Just value -> (value.sentBy /= "Customer") || not didDriverMessage
                             Nothing -> true
-      isAtPickup = (metersToKm state.data.driverInfoCardState.distance state) == getString AT_PICKUP
+      isAtPickup = (metersToKm state.data.driverInfoCardState.distance (state.props.currentStage == RideStarted)) == getString AT_PICKUP
   if (DA.null state.data.chatSuggestionsList) && canShowSuggestions && state.props.canSendSuggestion then
     if didDriverMessage && (not $ DA.null state.data.messages) then
       if isAtPickup then getSuggestionsfromKey "customerDefaultAP" else getSuggestionsfromKey "customerDefaultBP"

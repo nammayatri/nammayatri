@@ -521,7 +521,7 @@ export const updatePushInIdMap = function (key, flag) {
 export const getValueFromIdMap = function (key) {
   let val = idMap[key]; 
   if (!val) {
-    idMap[key] = getRandom(10000);
+    idMap[key] = {id : getRandom(10000), shouldPush: true};
     val = idMap[key];
   }
   return val;

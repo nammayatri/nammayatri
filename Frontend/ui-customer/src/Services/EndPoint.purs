@@ -199,3 +199,6 @@ updateIssue issueId language = (getBaseUrl "45") <> "/issue/" <> issueId <> "/up
 
 fetchIssueList :: String -> String
 fetchIssueList language = (getBaseUrl "46") <> "/issue/list?language=" <> language
+
+followRide :: String -> String
+followRide _ = (getBaseUrl "47") <> "/follow/ride"

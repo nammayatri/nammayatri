@@ -18,6 +18,7 @@ module Services.API where
 import Control.Alt ((<|>))
 import Control.Monad.Except (runExcept)
 import Common.Types.App (Version(..), FeedbackAnswer)
+import Common.Types.App as CTA
 import Data.Either (Either(..))
 import Data.Generic.Rep (class Generic)
 import Data.Show.Generic (genericShow)
@@ -908,7 +909,8 @@ newtype RideBookingRes = RideBookingRes {
   merchantExoPhone :: String,
   specialLocationTag :: Maybe String,
   hasDisability :: Maybe Boolean,
-  hasNightIssue :: Maybe Boolean
+  hasNightIssue :: Maybe Boolean,
+  sosStatus :: Maybe CTA.SosStatus
 }
 
 newtype FareBreakupAPIEntity = FareBreakupAPIEntity {
@@ -1242,6 +1244,7 @@ newtype GetProfileRes = GetProfileRes
   , clientVersion :: Maybe Version
   , disability :: Maybe String
   , hasDisability :: Maybe Boolean
+  , followsRide :: Maybe Boolean
   }
 
 
@@ -1393,7 +1396,8 @@ newtype EmergContactsReq = EmergContactsReq {
 newtype ContactDetails = ContactDetails {
   mobileNumber :: String,
   name :: String,
-  mobileCountryCode :: String
+  mobileCountryCode :: String,
+  priority :: Maybe Int
 }
 
 newtype EmergContactsResp = EmergContactsResp {
@@ -2708,3 +2712,40 @@ instance standardEncodeUpdateIssueRes :: StandardEncode UpdateIssueRes where sta
 instance decodeUpdateIssueRes         :: Decode UpdateIssueRes where decode = defaultDecode
 instance encodeUpdateIssueRes         :: Encode UpdateIssueRes where encode = defaultEncode
 
+--------------------------------------------------- FollowRide ----------------------------------------------------
+
+data FollowRideReq = FollowRideReq
+
+newtype FollowRideRes = FollowRideRes (Array Followers)
+
+newtype Followers = Followers {
+  bookingId :: String,
+  mobileNumber :: String,
+  name :: Maybe String,
+  priority :: Int
+}
+
+instance makeFollowRideReq :: RestEndpoint FollowRideReq FollowRideRes where
+  makeRequest reqBody headers = defaultMakeRequest GET (EP.followRide "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericFollowRideReq :: Generic FollowRideReq _
+instance standardEncodeFollowRideReq :: StandardEncode FollowRideReq where standardEncode _ = standardEncode {}
+instance showFollowRideReq :: Show FollowRideReq where show = genericShow
+instance decodeFollowRideReq :: Decode FollowRideReq where decode = defaultDecode
+instance encodeFollowRideReq :: Encode FollowRideReq where encode = defaultEncode
+
+derive instance genericFollowRideRes :: Generic FollowRideRes _
+derive instance newtypeFollowRideRes :: Newtype FollowRideRes _
+instance standardEncodeFollowRideRes :: StandardEncode FollowRideRes where standardEncode _ = standardEncode {}
+instance showFollowRideRes :: Show FollowRideRes where show = genericShow
+instance decodeFollowRideRes :: Decode FollowRideRes where decode = defaultDecode
+instance encodeFollowRideRes :: Encode FollowRideRes where encode = defaultEncode
+
+derive instance genericFollowers :: Generic Followers _
+derive instance newtypeFollowers :: Newtype Followers _
+instance standardEncodeFollowers :: StandardEncode Followers where standardEncode _ = standardEncode {}
+instance showFollowers :: Show Followers where show = genericShow
+instance decodeFollowers :: Decode Followers where decode = defaultDecode
+instance encodeFollowers :: Encode Followers where encode = defaultEncode

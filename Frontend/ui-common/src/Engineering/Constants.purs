@@ -23,6 +23,9 @@ decodeAppConfig = "decodeAppConfig"
 languageKey :: String
 languageKey = "languageKey"
 
+sosAlarmStatus :: String
+sosAlarmStatus = "sosAlarmStatus"
+
 configuration_file :: String
 configuration_file = "v1-configuration"
 
