@@ -1,43 +1,47 @@
 module Screens.EmergencyContactsScreen.Controller where
 
-import Prelude (bind, compare, class Show, pure, unit, ($), discard, (/=), (&&), (>=), (==), map, (<), (||), not, (-), (<>), (>), (<=), Unit, show, (+))
-import Screens.Types (EmergencyContactsScreenState, Contacts)
-import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit, ScrollState(..))
-import PrestoDOM.Types.Core (class Loggable)
+import Styles.Types
+
 import Components.GenericHeader as GenericHeader
+import Components.NewContact.Controller as NewContactController
+import Components.PopUpModal.Controller as PopUpModal
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
-import Components.NewContact.Controller as NewContactController
-import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Screens (ScreenName(..), getScreen)
-import JBridge (toast)
-import Screens.Types (EmergencyContactsScreenState , ContactDetail, NewContacts, NewContactsProp)
-import Data.Array (length, sortBy, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take, last, slice, union)
-import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText, toStringJSON, setEnabled, setRefreshing)
-import Log (printLog)
-import Screens.EmergencyContactsScreen.Transformer (getContactList)
-import Language.Strings (getString)
-import Language.Types (STR(..))
-import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
-import Styles.Types
-import Styles.Colors as Color
-import Components.PopUpModal.Controller as PopUpModal
-import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner)
-import Data.Maybe (fromMaybe, Maybe(..))
-import Data.String as DS
-import Data.Int (fromString)
-import Presto.Core.Types.Language.Flow (Flow)
-import Types.App (GlobalState, defaultGlobalState)
-import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, strToBool)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.String (split, Pattern(..), Replacement(..), replaceAll)
-import PrestoDOM.Types.Core (class Loggable, toPropValue)
+import Data.Array (catMaybes, elem, filter, head, last, length, mapWithIndex, null, slice, snoc, sortBy, tail, take, union, unionBy, (!!))
+import Data.Int (fromString)
+import Data.Maybe (fromMaybe, Maybe(..))
 import Data.Ord (min)
-import Engineering.Helpers.Utils (loaderText, toggleLoader, fromProp)
+import Data.String (split, Pattern(..), Replacement(..), replaceAll)
+import Data.String as DS
+import Effect.Aff (launchAff)
 import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, strToBool)
+import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner)
 import Engineering.Helpers.LogEvent (logEvent)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, fromProp)
+import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText, toStringJSON, setEnabled, setRefreshing)
+import JBridge (toast)
+import Language.Strings (getString)
+import Language.Types (STR(..))
+import Log (printLog)
+import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import Mobility.Prelude (boolToInt)
+import Prelude (bind, compare, class Show, pure, unit, ($), discard, (/=), (&&), (>=), (==), map, (<), (||), not, (-), (<>), (>), (<=), Unit, show, (+))
+import Presto.Core.Types.Language.Flow (Flow)
+import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit, ScrollState(..))
+import PrestoDOM.Types.Core (class Loggable)
+import PrestoDOM.Types.Core (class Loggable, toPropValue)
+import Screens (ScreenName(..), getScreen)
+import Screens.EmergencyContactsScreen.Transformer (getContactList)
+import Screens.NammaSafetyFlow.Components.ContactsList as ContactsList
+import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts, NewContactsProp)
+import Screens.Types (EmergencyContactsScreenState, Contacts)
+import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
+import Styles.Colors as Color
+import Types.App (GlobalState, defaultGlobalState)
+import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -56,7 +60,6 @@ instance loggableAction :: Loggable Action where
     PrimaryButtonActionControll act -> case act of
       PrimaryButton.OnClick -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "contacts_list" "primary_btn_onclick"
       PrimaryButton.NoAction -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "contacts_list" "primary_btn_noaction"
-    RemoveButtonClicked contacts -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "remove_button_click_action"
     NoAction -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "no_action"
     ContactsCallback contacts -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "contacts_callback"
     ContactListGenericHeaderActionController act -> case act of
@@ -75,9 +78,9 @@ instance loggableAction :: Loggable Action where
     FetchContacts -> trackAppActionClick appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "fetch_contacts"
     LoadMoreContacts -> trackAppScreenEvent appId (getScreen EMERGENCY_CONTACS_SCREEN) "in_screen" "loading more contacts"
     _ -> pure unit
+
 data Action = GenericHeaderActionController GenericHeader.Action
             | PrimaryButtonActionControll PrimaryButton.Action
-            | RemoveButtonClicked NewContacts
             | BackPressed
             | AfterRender
             | NoAction
@@ -93,17 +96,25 @@ data Action = GenericHeaderActionController GenericHeader.Action
             | ContactTextChanged String
             | ContactListPrimaryEditTextAction PrimaryEditTextController.Action
             | ContactListClearText
+            | AddContacts
             | ContactListScroll String
             | ContactListScrollStateChanged ScrollState
             | NewContactActionController NewContactController.Action
+            | ContactListAction ContactsList.Action
 
-data ScreenOutput = GoToHomeScreen
-                  | PostContacts EmergencyContactsScreenState
+data ScreenOutput = GoToSafetyScreen EmergencyContactsScreenState
+                  | PostContacts EmergencyContactsScreenState Boolean
                   | GetContacts EmergencyContactsScreenState
                   | Refresh EmergencyContactsScreenState
 
 eval :: Action -> EmergencyContactsScreenState -> Eval Action ScreenOutput EmergencyContactsScreenState
-eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = continueWithCmd state
+
+eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = 
+  if null state.data.contactsList 
+    then continueWithCmd state [pure AddContacts]
+    else updateAndExit state $ PostContacts state true
+
+eval AddContacts state = continueWithCmd state
       [do
         _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag")false
         pure $ setEnabled (getNewIDWithTag "EmergencyContactTag") false
@@ -124,7 +135,7 @@ eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
   let newPrestoList = map (\x -> if ((fromProp x.number) <> (fromProp x.name) == state.data.removedContactDetail.number <> state.data.removedContactDetail.name) then contactTransformerProp state.data.removedContactDetail{isSelected = false} else x) state.data.prestoListArrayItems
   contactsInString <- pure $ toStringJSON newContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
-  exit $ PostContacts state{data{contactsList = newContacts, prestoListArrayItems = newPrestoList}}
+  exit $ PostContacts state{data{contactsList = newContacts, prestoListArrayItems = newPrestoList}} false
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state{props{showInfoPopUp = false}}
 
@@ -183,9 +194,6 @@ eval (ContactsCallback allContacts) state = do
           DS.drop ((DS.length contact) - 10) contact
         else contact
 
-
-eval (RemoveButtonClicked contactDetail) state = continue state{props{showInfoPopUp = true}, data{removedContactDetail = contactDetail}}
-
 eval RefreshScreen state = do
   continueWithCmd state
       [do
@@ -210,7 +218,7 @@ eval BackPressed state =
   else if state.props.showInfoPopUp then
     continue state{props{showInfoPopUp = false, showContactList = false}}
   else
-    exit $ GoToHomeScreen
+    exit $ GoToSafetyScreen state
 
 eval (ContactListGenericHeaderActionController GenericHeader.PrefixImgOnClick) state = do
   if(state.props.showContactList) then do
@@ -228,7 +236,7 @@ eval (ContactListGenericHeaderActionController GenericHeader.PrefixImgOnClick) s
   else if state.props.showInfoPopUp then
     continue state{props{showInfoPopUp = false, showContactList = false}}
   else
-    exit $ GoToHomeScreen
+    exit $ GoToSafetyScreen state
 
 
 eval (ContactListScroll value) state = do
@@ -266,7 +274,7 @@ eval (ContactListClearText) state = continueWithCmd state { data { editedText = 
   ]
 
 eval (NewContactActionController (NewContactController.ContactSelected index)) state = do
-  let contact = fromMaybe {isSelected : false , name : "" , number : ""} (state.data.contactsUpdatedNewList !! index)
+  let contact = fromMaybe {isSelected : false , name : "" , number : "", enableForFollowing: false, priority : 1} (state.data.contactsUpdatedNewList !! index)
   let item = if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
     contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
   else contact
@@ -299,25 +307,42 @@ eval (NewContactActionController (NewContactController.ContactSelected index)) s
 eval (ContactListPrimaryButtonActionController PrimaryButton.OnClick) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contact_added"
   let selectedContacts = filter (_.isSelected) state.data.contactsNewList
-  let validSelectedContacts = (map (\contact ->
+  let validSelectedContacts = (mapWithIndex (\index contact ->
     if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
-      contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number}
-    else contact
+      contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number, priority = boolToInt $ index == 0}
+    else contact{priority = boolToInt $ index == 0}
   ) selectedContacts)
   contactsInString <- pure $ toStringJSON validSelectedContacts
   _ <- pure $ setValueToLocalStore CONTACTS contactsInString
-  updateAndExit state $ PostContacts state{data{editedText = "", contactsList = validSelectedContacts, prestoListArrayItems = [], offsetForEmergencyContacts = 0}, props{showContactList = false}}
+  updateAndExit state $ PostContacts state{data{editedText = "", contactsList = validSelectedContacts, prestoListArrayItems = [], offsetForEmergencyContacts = 0}, props{showContactList = false}} false
 
 eval CheckingContactList state = do
   contacts <- pure $ getValueToLocalStore CONTACTS
   if (contacts /= "") then do
     contactsInJson <- pure $ parseNewContacts contacts
-    continue state{data{contactsList = contactsInJson}}
+    continue state{data{contactsList = getDefaultPriorityList contactsInJson}}
     else do
       continue state
 
 eval FetchContacts state =
   updateAndExit state $ GetContacts state
+
+eval (ContactListAction (ContactsList.RemoveButtonClicked contactDetail)) state = continue state{props{showInfoPopUp = true}, data{removedContactDetail = contactDetail}}
+
+eval (ContactListAction (ContactsList.ContactCardClicked index)) state = do
+  let
+    newContactsList =
+      mapWithIndex
+        ( \i contact ->
+            if i == index then
+              contact { priority = 0 }
+            else
+              contact { priority = 1 }
+        )
+        state.data.contactsList
+  continue state { data { contactsList = newContactsList } }
+
+eval (ContactListAction (ContactsList.AddContacts)) state = continueWithCmd state [pure AddContacts]
 
 eval _ state = continue state
 
@@ -327,12 +352,6 @@ startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLow
 findContactsWithPrefix :: String -> Array NewContacts -> Array NewContacts
 findContactsWithPrefix prefix arr = filter (\contact -> startsWith prefix contact.name) arr
 
-contactColorsList :: Array (Array Color)
-contactColorsList = [
-    [Color.yellow900, Color.black800],
-    [Color.blue800, Color.white900],
-    [Color.orange800, Color.black800]
-]
 
 uniqueContacts :: Array NewContacts -> Array NewContacts -> Array NewContacts
 uniqueContacts result contacts =
@@ -373,7 +392,9 @@ contactListTransformer :: Array NewContacts -> Array NewContacts
 contactListTransformer contactList = (map (\(contact)->{
   name: contact.name,
   number: contact.number,
-  isSelected: contact.isSelected
+  isSelected: contact.isSelected,
+  enableForFollowing: false,
+  priority : 1
 })(contactList))
 
 sliceContacts :: EmergencyContactsScreenState -> Array NewContacts

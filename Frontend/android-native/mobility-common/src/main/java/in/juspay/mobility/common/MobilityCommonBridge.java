@@ -153,10 +153,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -164,17 +167,21 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
 import in.juspay.hyper.bridge.HyperBridge;
@@ -185,6 +192,7 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.app.services.MobilityAPIResponse;
 import in.juspay.mobility.app.services.MobilityCallAPI;
 
 public class MobilityCommonBridge extends HyperBridge {
@@ -194,6 +202,8 @@ public class MobilityCommonBridge extends HyperBridge {
     public static final int REQUEST_CALL = 8;
     protected static final int STORAGE_PERMISSION = 67;
     //Constants
+    private static final int IMAGE_CAPTURE_REQ_CODE = 101;
+    private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final String LOCATE_ON_MAP = "LocateOnMap";
     protected static final String CURRENT_LOCATION = "ny_ic_customer_current_location";
     private static final String CURRENT_LOCATION_LATLON = "Current Location";
@@ -251,10 +261,10 @@ public class MobilityCommonBridge extends HyperBridge {
     protected String downloadLayout;
     protected int labelTextSize = 30;
 
-    private static final int IMAGE_CAPTURE_REQ_CODE = 101;
+//    private static final int IMAGE_CAPTURE_REQ_CODE = 101;
 
     private static final int CREDENTIAL_PICKER_REQUEST = 74;
-    private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
+//    private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private  MediaPlayer mediaPlayer = null;
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
@@ -1882,6 +1892,7 @@ public class MobilityCommonBridge extends HyperBridge {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.setData(Uri.parse("tel:" + phoneNum));
         if (call && ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            phoneNumber = phoneNum;
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
         } else {
             bridgeComponents.getContext().startActivity(intent);
@@ -2555,6 +2566,23 @@ public class MobilityCommonBridge extends HyperBridge {
 
     // endregion
 
+
+    //region Overrides
+
+//    @Override
+//    public boolean onRequestPermissionResult(int requestCode, String[] permissions, int[] grantResults) {
+//        if (requestCode == REQUEST_CALL) {
+//            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+//                showDialer(phoneNumber, true);
+//            } else {
+//                toast("Permission Denied");
+//            }
+//        }
+//        return super.onRequestPermissionResult(requestCode, permissions, grantResults);
+//    }
+
+    //endregion
+
     protected static class Receivers {
         BroadcastReceiver gpsReceiver;
         BroadcastReceiver internetActionReceiver;
@@ -2639,6 +2667,46 @@ public class MobilityCommonBridge extends HyperBridge {
             } catch (Exception ignored) {
             }
         }
+
+
+    }
+    @JavascriptInterface
+    public String uploadMultiPartData(String filePath, String uploadUrl, String fileType, String fileField, String outputField) throws IOException {
+        String res = "";
+        try {
+            MobilityCallAPI mobilityApiHandler = new MobilityCallAPI();
+            Map<String, String> baseHeaders = mobilityApiHandler.getBaseHeaders(bridgeComponents.getContext());
+            File file = new File(filePath);
+            String fileName = file.getName();
+            FileInputStream fileInputStream = new FileInputStream(file);
+            int bytesAvailable = fileInputStream.available();
+            int maxBufferSize = 1024 * 1024;
+            int bufferSize = Math.min(bytesAvailable, maxBufferSize);
+
+            byte[] buffer = new byte[bufferSize];
+            int bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+
+            while (bytesRead > 0) {
+                bytesAvailable = fileInputStream.available();
+                bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+            }
+            Map<String, String> formData = new HashMap<>();
+            formData.put("fileType", fileType);
+            MobilityAPIResponse apiResponse = mobilityApiHandler.callMultipartAPI(bridgeComponents.getContext(), filePath, fileField, uploadUrl, fileType, formData,"POST");
+            System.out.println("Response Multipart" + apiResponse);
+            if (apiResponse.getStatusCode() == 200) {
+                JSONObject jsonObject = new JSONObject(apiResponse.getResponseBody());
+                res = jsonObject.optString(outputField, "Success");
+            }
+            else {
+                Toast.makeText(bridgeComponents.getContext(), "Unable to upload " + fileType.toLowerCase(), Toast.LENGTH_SHORT).show();
+            }
+
+        } catch (Exception error) {
+            Log.d(LOG_TAG, "Catch in uploadMultiPartData : " + error);
+        }
+        return res;
     }
 
     //region Image Rendering

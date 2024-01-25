@@ -24,10 +24,12 @@ emergencyContactsScreen = do
   listItemm <- lift $ lift $ PrestoList.preComputeListItem $ NewContact.view push listItem1
   action <- lift $ lift $ runScreen $ EmergencyContactsScreen.screen state.emergencyContactsScreen listItemm
   case action of
-    GoToHomeScreen -> App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_FROM_EMERGENCY_CONTACTS)
-    PostContacts updatedState -> do
+    GoToSafetyScreen updatedState -> do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
-      App.BackT $ App.NoBack <$> (pure $ POST_CONTACTS updatedState)
+      App.BackT $ pure  App.GoBack
+    PostContacts updatedState shouldGoToSafetyScreen -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ POST_CONTACTS updatedState shouldGoToSafetyScreen)
     GetContacts updatedState -> do
       modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ GET_CONTACTS updatedState)
@@ -37,5 +39,7 @@ listItem1 :: NewContacts
 listItem1 = {
   name: "",
   number: "",
-  isSelected: false
+  isSelected: false,
+  enableForFollowing: false,
+  priority : 1
 }

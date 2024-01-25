@@ -244,6 +244,7 @@ initData = {
     , flowWithoutOffers : true
     , showEducationalCarousel : false
     , specialZoneType : ""
+    , reportUnsafe : false
     , currentLocation : {
         lat : 0.0,
         lng : 0.0,
@@ -280,6 +281,8 @@ initData = {
     , autoScrollTimerId : ""
     , autoScroll : true
     , enableChatWidget : false
+    , showSosBanner : false
+    , enableLocalPoliceSupport : false
     }
 }
 
@@ -393,6 +396,8 @@ dummySettingBar = {
   , gender : Nothing
   , appConfig : getAppConfig appConfig
   , sideBarList : ["MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
+  , isLocalPoliceSupportEnabled : false
+  , hasCompletedSafetySetup : false
 }
 
 dummyAddress :: Address

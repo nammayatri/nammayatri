@@ -21,6 +21,7 @@ public class YoutubeVideoView extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Bundle newBundle = getIntent().getExtras();
+        System.out.println("here in full view");
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
         if (newBundle != null && newBundle.getString("videoType").equals("VIDEO")) {
@@ -34,10 +35,10 @@ public class YoutubeVideoView extends AppCompatActivity {
         youTubePlayerView = findViewById(R.id.idVideoView);
         getLifecycle().addObserver(youTubePlayerView);
         youTubePlayerView.enterFullScreen();
-
         youTubePlayerView.addYouTubePlayerListener(new AbstractYouTubePlayerListener() {
             @Override
             public void onReady(@NonNull YouTubePlayer youTubePlayer) {
+                System.out.println("here in full view1");
                 if (newBundle != null) {
                     youTubePlayer.loadVideo(newBundle.getString("videoId"), newBundle.getFloat("videoDuration"));
                 }

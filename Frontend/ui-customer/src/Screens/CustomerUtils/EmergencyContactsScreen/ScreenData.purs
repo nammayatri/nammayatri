@@ -1,8 +1,9 @@
 module Screens.EmergencyContactsScreen.ScreenData where
 
 import Prelude
-import Screens.Types (EmergencyContactsScreenState(..))
+
 import Foreign.Object (empty)
+import Screens.Types (EmergencyContactsScreenState(..), NammaSafetyStage(..))
 
 initData :: EmergencyContactsScreenState
 initData = {
@@ -19,6 +20,8 @@ initData = {
     , removedContactDetail : { isSelected :false
                               , name : ""
                               , number : ""
+                              , enableForFollowing: false
+                              , priority: 1
                               }
     , editedText : ""
     , logField : empty

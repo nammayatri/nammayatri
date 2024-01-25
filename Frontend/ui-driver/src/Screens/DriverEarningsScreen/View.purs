@@ -1013,6 +1013,7 @@ youtubeData state mediaType =
   , videoId: maybe "" (\x -> getVideoID x) state.props.individualQuestion.videoLink
   , videoType: "VIDEO"
   , videoHeight: 200
+  , showFullScreen: false
   }
 
 answersListView :: forall w. (Action -> Effect Unit) -> Array String -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w

@@ -122,7 +122,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
-            _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
+            -- _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
@@ -386,6 +386,8 @@ view push state =
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
             , if state.data.waitTimeInfo && state.props.currentStage == RideAccepted then waitTimeInfoPopUp push state else emptyTextView state
+            , safetyAlertPopup push state
+            , if state.props.reportUnsafe then issueReportedPopup push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -820,25 +822,75 @@ nammaSafetyView push state =
     ] <> FontStyle.body1 TypoGraphy
   ]
 
+-- sosView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+-- sosView push state =
+--   linearLayout
+--   [ width WRAP_CONTENT
+--   , height WRAP_CONTENT
+--   , visibility $ boolToVisibility $ (any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
+--   , margin (MarginHorizontal 16 16)
+--   , cornerRadius if os == "IOS" then 20.0 else 32.0
+--   , clickable true
+--   , onClick push $ const OpenEmergencyHelp
+--   , rippleColor Color.rippleShade
+--   ][ imageView 
+--     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
+--     , width $ V 50
+--     , height $ V 50
+--     , accessibilityHint $ "S O S : Button : Select to view S O S options"
+--     , accessibility ENABLE
+--     ]
+--   ]
+
 sosView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 sosView push state =
   linearLayout
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , visibility $ boolToVisibility $ (any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
-  , margin (MarginHorizontal 16 16)
-  , cornerRadius if os == "IOS" then 20.0 else 32.0
-  , clickable true
-  , onClick push $ const OpenEmergencyHelp
-  , rippleColor Color.rippleShade
-  ][ imageView 
-    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
-    , width $ V 50
-    , height $ V 50
-    , accessibilityHint $ "S O S : Button : Select to view S O S options"
-    , accessibility ENABLE
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , cornerRadius 20.0
+    , clipChildren false
     ]
-  ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , margin $ Margin 12 12 12 12
+        , shadow $ Shadow 0.1 2.0 10.0 24.0 Color.greyBackDarkColor 0.5
+        , background Color.white900
+        , cornerRadius 20.0
+        , onClick push $ const OpenEmergencyHelp
+          , visibility $ boolToVisibility $ (any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
+
+        ]
+        [ linearLayout
+            [ gravity CENTER_VERTICAL
+            , padding $ Padding 12 6 12 6
+            ]
+            [ imageView
+                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
+                , height $ V 24
+                , width $ V 24
+                , margin $ MarginRight 8
+                , accessibilityHint $ "S O S Button, Select to view S O S options"
+                , accessibility ENABLE
+                , onClick push $ const OpenEmergencyHelp
+                ]
+            , textView
+                $ [ text $ getString SAFETY_CENTER
+                  , color Color.blue900
+                  , margin $ MarginBottom 1
+                  ]
+                <> FontStyle.body6 TypoGraphy
+            ]
+        , imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ic_red_icon"
+            , height $ V 12
+            , width $ V 12
+            , visibility if getValueToLocalStore IS_SOS_ACTIVE == "true" then VISIBLE else GONE
+            ]
+        ]
+    ]
+  -- where
+    -- visibility' = if (Array.any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]) && (not state.props.showChatNotification) then VISIBLE else GONE
 
 liveStatsDashboardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 liveStatsDashboardView push state =
@@ -926,8 +978,10 @@ buttonLayout state push =
       , orientation VERTICAL
       , padding $ if state.data.config.feature.enableZooTicketBookingFlow then PaddingTop 0 else PaddingTop 16
       ]
-      [ if state.data.config.feature.enableZooTicketBookingFlow
-        then zooTicketBookingBanner state push 
+      [ if not state.data.settingSideBar.hasCompletedSafetySetup 
+          then sosSetupBannerView state push  
+        else if state.data.config.feature.enableZooTicketBookingFlow
+          then zooTicketBookingBanner state push 
         else linearLayout[visibility GONE][]
       , PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
       , if state.props.isSearchLocation == LocateOnMap
@@ -3378,7 +3432,9 @@ homeScreenViewV2 push state =
                                       [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state
                                       , if state.data.config.feature.enableZooTicketBookingFlow
                                           then zooTicketBookingBanner state push 
-                                          else linearLayout[visibility GONE][]
+                                        else if not state.data.settingSideBar.hasCompletedSafetySetup 
+                                          then sosSetupBannerView state push
+                                        else linearLayout[visibility GONE][]
                                       , shimmerView state
                                       , suggestionsView push state
                                       , emptySuggestionsBanner state push
@@ -4193,3 +4249,31 @@ locationUnserviceableView push state =
       ] <> (FontStyle.tags TypoGraphy)
     ]
   ]
+    
+sosSetupBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+sosSetupBannerView state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 10 10 10 10)
+    , gravity BOTTOM
+    ][     
+        Banner.view (push <<< StartSOSOnBoarding) (sosSetupBannerConfig state)
+    ]
+
+safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+safetyAlertPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , visibility  if not $ any (_ == (getValueToLocalNativeStore SAFETY_ALERT_TYPE))["__failed", "false", "(null)"]
+                then VISIBLE else GONE
+  ][PopUpModal.view (push <<< SafetyAlertAction) (safetyAlertConfig state)]
+
+issueReportedPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+issueReportedPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< ReportUnsafe) (reportingIssueConfig state)]

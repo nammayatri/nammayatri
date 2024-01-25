@@ -65,6 +65,7 @@ type AppConfigCustomer a =
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
+  , safetyConfig :: SafetyConfig
   | a
   }
 
@@ -306,6 +307,7 @@ type MarginConfig = {
   left :: Int,
   right :: Int
 }
+
 type ShadowConfig = {
   color :: String,
   blur :: Number,
@@ -338,4 +340,8 @@ type VariantConfig = {
 type VariantInfo = {
   name :: String,
   image :: String
+}
+
+type SafetyConfig = {
+  enableSupport :: Boolean
 }

@@ -151,7 +151,7 @@ config =
   , showDeleteAccount : false
   , autoSelectBackground : "#53BB6F"
   , showGenderBanner : true
-  , enableMockLocation : false
+  , enableMockLocation : true
   , specialLocationView : false
   , internationalNumberEnabled : false
   , callOptions : ["ANONYMOUS"]
@@ -297,7 +297,10 @@ config =
   , shareAppConfig : {
       title : "Share Namma Yatri!"
     , description : "Hey there!\n\nCheck India's first Zero Commission auto booking app.\n100% Open source | 100% Open Data\n\nDownload Namma Yatri now! \nhttps://nammayatri.in/link/rider/SJ8D \n\n #beOpen #chooseOpen"
-  }
+    }
+  , safetyConfig : {
+      enableSupport : false
+    }
   , dashboard :{
       url : "https://nammayatri.in/open?source=in-app"
     , enable : false

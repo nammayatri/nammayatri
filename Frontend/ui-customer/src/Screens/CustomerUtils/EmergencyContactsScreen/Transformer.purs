@@ -13,4 +13,6 @@ getContact contact = {
     isSelected : false
   , name : contact.name
   , number : contact.number
+  , enableForFollowing: false
+  , priority : 1
 }
