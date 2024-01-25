@@ -48,13 +48,26 @@ buildContext action bapConfig txnId msgId mTTL = do
         contextBppUri = Nothing,
         contextDomain = encodeToText' Spec.FRFS,
         contextKey = Nothing,
-        contextLocation = Nothing,
+        contextLocation = Just $ tfLocation "std:044",
         contextMessageId = Just msgId,
         contextTimestamp = Just now,
         contextTransactionId = Just txnId,
         contextTtl = mTTL,
         contextVersion = Just "2.0.0"
       }
+
+tfLocation :: Text -> Spec.Location
+tfLocation location_code =
+  Spec.Location
+    { locationDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorCode = Just location_code,
+              descriptorImages = Nothing,
+              descriptorName = Nothing
+            },
+      locationGps = Nothing
+    }
 
 getStartStop :: [Spec.Stop] -> Maybe Spec.Stop
 getStartStop stops = stops & find (\stop -> stop.stopType == start)
