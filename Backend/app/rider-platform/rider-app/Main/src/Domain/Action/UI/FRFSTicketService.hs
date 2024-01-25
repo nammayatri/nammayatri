@@ -213,10 +213,11 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   case booking.status of
     DFRFSTicketBooking.NEW -> buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.FAILED -> buildFRFSTicketBookingStatusAPIRes booking Nothing
-    DFRFSTicketBooking.CONFIRMING -> buildFRFSTicketBookingStatusAPIRes booking Nothing
+    DFRFSTicketBooking.CONFIRMING -> do
+      buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.CONFIRMED -> do
       callBPPStatus booking bapConfig
-      buildFRFSTicketBookingStatusAPIRes booking Nothing
+      buildFRFSTicketBookingStatusAPIRes booking paymentSuccess
     DFRFSTicketBooking.APPROVED -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
       paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
@@ -227,15 +228,17 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
           QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
           QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.FAILED booking.id
           let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing
-          buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
+          buildFRFSTicketBookingStatusAPIRes updatedBooking paymentFailed
         else do
+          txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
+          let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
           let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing
           paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
           let paymentObj =
                 Just $
                   FRFSTicketService.FRFSBookingPaymentAPI
-                    { status = paymentBookingStatus,
+                    { status = paymentStatus_,
                       paymentOrder = Just paymentOrder_
                     }
           buildFRFSTicketBookingStatusAPIRes updatedBooking paymentObj
@@ -249,7 +252,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
           QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
           QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.FAILED booking.id
           let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing
-          buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
+          buildFRFSTicketBookingStatusAPIRes updatedBooking paymentFailed
         else
           if (paymentBookingStatus == FRFSTicketService.SUCCESS)
             then do
@@ -263,17 +266,33 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
                 bknConfirmReq <- ACL.buildConfirmReq updatedBooking bapConfig txnId.getId
                 void $ CallBPP.confirm providerUrl bknConfirmReq
-              buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
+              buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
             else do
               paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
-              let paymentObj =
+              txn <- QPaymentTransaction.findNewTransactionByOrderId paymentOrder.id
+              let paymentStatus_ = if isNothing txn then FRFSTicketService.NEW else paymentBookingStatus
+                  paymentObj =
                     Just
                       FRFSTicketService.FRFSBookingPaymentAPI
-                        { status = paymentBookingStatus,
+                        { status = paymentStatus_,
                           paymentOrder = Just paymentOrder_
                         }
               buildFRFSTicketBookingStatusAPIRes booking paymentObj
   where
+    paymentSuccess =
+      Just $
+        FRFSTicketService.FRFSBookingPaymentAPI
+          { status = FRFSTicketService.SUCCESS,
+            paymentOrder = Nothing
+          }
+
+    paymentFailed =
+      Just $
+        FRFSTicketService.FRFSBookingPaymentAPI
+          { status = FRFSTicketService.FAILURE,
+            paymentOrder = Nothing
+          }
+
     buildCreateOrderResp paymentOrder person commonPersonId = do
       personEmail <- mapM decrypt person.email
       personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
@@ -345,7 +364,7 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
       }
 
 makeTicketBookingPaymentAPIStatus :: Payment.TransactionStatus -> FRFSTicketService.FRFSBookingPaymentStatusAPI
-makeTicketBookingPaymentAPIStatus NEW = FRFSTicketService.PENDING
+makeTicketBookingPaymentAPIStatus Payment.NEW = FRFSTicketService.NEW
 makeTicketBookingPaymentAPIStatus PENDING_VBV = FRFSTicketService.PENDING
 makeTicketBookingPaymentAPIStatus CHARGED = FRFSTicketService.SUCCESS
 makeTicketBookingPaymentAPIStatus AUTHENTICATION_FAILED = FRFSTicketService.FAILURE
