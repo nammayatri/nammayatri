@@ -145,7 +145,7 @@ filterRequiredBreakups fParamsType breakup = do
         `elem` [ "BASE_FARE",
                  "SERVICE_CHARGE",
                  "DEAD_KILOMETER_FARE",
-                 "EXTRA_DISTANCE_FARE",
+                 "DIST_BASED_FARE",
                  "TIME_BASED_FARE",
                  "DRIVER_SELECTED_FARE",
                  "CUSTOMER_SELECTED_FARE",
@@ -155,12 +155,13 @@ filterRequiredBreakups fParamsType breakup = do
                  "CUSTOMER_CANCELLATION_DUES"
                ]
 
+-- Fix these tage properly
 mkFulfillmentType :: DCT.TripCategory -> Text
 mkFulfillmentType = \case
   DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
   DCT.RoundTrip DCT.RideOtp -> "RIDE_OTP"
   DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
-  DCT.Rental DCT.RideOtp -> "RIDE_OTP"
+  DCT.Rental _ -> "RENTAL"
   _ -> "RIDE"
 
 getTagV2 :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text

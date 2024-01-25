@@ -245,7 +245,7 @@ in
             port = 5434;
           };
           extraReplicaDBSettings = { name, ... }: {
-            socketDir = "$HOME/NY/socket/${name}-replica";
+            socketDir = "$HOME/NY/socket/${name}";
             port = 5435;
           };
         };

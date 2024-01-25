@@ -137,7 +137,7 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
         calculateFareParameters
           CalculateFareParametersParams
             { farePolicy = farePolicy,
-              distance = fromMaybe 0 searchReq.estimatedDistance, -- TODO: Fix this
+              actualDistance = searchReq.estimatedDistance,
               rideTime = searchReq.startTime,
               waitingTime = Nothing,
               actualRideDuration = Nothing,
@@ -145,6 +145,11 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
               driverSelectedFare = Nothing,
               customerExtraFee = customerExtraFee,
               nightShiftCharge = Nothing,
+              customerCancellationDues = customerCancellationDues,
+              nightShiftOverlapChecking = DTC.isRentalTrip farePolicy.tripCategory,
+              estimatedDistance = searchReq.estimatedDistance,
+              estimatedRideDuration = searchReq.estimatedDuration,
+              timeDiffFromUtc = Nothing,
               ..
             }
       let estimatedFare = fareSum fareParams

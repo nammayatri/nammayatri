@@ -66,10 +66,16 @@ convertQuoteToPricing (DQuote.Quote {..}, mbDriverLocations) =
       pricingMinFare = estimatedFare,
       estimatedDistance = distance,
       fareParams = Just fareParams,
-      fulfillmentType = "RIDE_OTP",
+      fulfillmentType = mapToFulfillmentType tripCategory,
       distanceToNearestDriver = mbDriverLocations <&> (.distanceToNearestDriver),
       ..
     }
+  where
+    mapToFulfillmentType (DTC.OneWay DTC.OneWayRideOtp) = "RIDE_OTP"
+    mapToFulfillmentType (DTC.RoundTrip DTC.RideOtp) = "RIDE_OTP"
+    mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = "RIDE_OTP"
+    mapToFulfillmentType (DTC.Rental _) = "RENTAL"
+    mapToFulfillmentType _ = "RIDE_OTP" -- backward compatibility
 
 mkProviderLocations :: [Maybe NearestDriverInfo] -> [Spec.Location]
 mkProviderLocations driverLocationsInfo =

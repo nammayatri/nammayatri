@@ -31,6 +31,7 @@ import qualified Database.Beam.Backend as BeamBackend
 import Database.Beam.Postgres
 import Domain.Types.Booking as Booking
 import Domain.Types.Booking as DBooking
+import Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import qualified Domain.Types.LocationMapping as DLM
@@ -359,7 +360,8 @@ data RideItem = RideItem
     riderDetails :: RiderDetails,
     customerName :: Maybe Text,
     fareDiff :: Maybe Money,
-    bookingStatus :: Common.BookingStatus
+    bookingStatus :: Common.BookingStatus,
+    tripCategory :: DTC.TripCategory
   }
 
 instance Num (Maybe Money) where
@@ -432,7 +434,7 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
       r <- catMaybes <$> mapM fromTType' rides
       rd <- catMaybes <$> mapM fromTType' rideDetails
       rdr <- catMaybes <$> mapM fromTType' riderDetails
-      pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr (DBooking.riderName <$> b) (liftA2 (-) (DR.fare <$> r) (Just . DBooking.estimatedFare <$> b)) (mkBookingStatus now <$> r)
+      pure $ zip7 (DR.shortId <$> r) (DR.createdAt <$> r) rd rdr b (liftA2 (-) (DR.fare <$> r) (Just . DBooking.estimatedFare <$> b)) (mkBookingStatus now <$> r)
     Left err -> do
       logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
       pure []
@@ -455,8 +457,8 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
       | ride.status == Ride.INPROGRESS && ride.tripStartTime > Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.ONGOING
       | ride.status == Ride.CANCELLED = Common.CANCELLED
       | otherwise = Common.ONGOING_6HRS
-    mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, customerName, fareDiff, bookingStatus) =
-      RideItem {..}
+    mkRideItem (rideShortId, rideCreatedAt, rideDetails, riderDetails, booking, fareDiff, bookingStatus) =
+      RideItem {customerName = booking.riderName, tripCategory = booking.tripCategory, ..}
 
 data StuckRideItem = StuckRideItem
   { rideId :: Id Ride,

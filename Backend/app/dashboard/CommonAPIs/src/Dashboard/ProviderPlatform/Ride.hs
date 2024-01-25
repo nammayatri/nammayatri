@@ -68,6 +68,7 @@ data RideListItem = RideListItem
     customerPhoneNo :: Text,
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
+    tripCategory :: TripCategory,
     vehicleNo :: Text,
     fareDiff :: Maybe Money,
     bookingStatus :: BookingStatus,
@@ -79,6 +80,10 @@ data RideListItem = RideListItem
 data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED
   deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data TripCategory = OneWay | RoundTrip | Rental | RideShare
+  deriving stock (Eq, Ord, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 derivePersistField "BookingStatus"
 
@@ -235,6 +240,8 @@ data RideInfoRes = RideInfoRes
     actualDriverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
+    tripCategory :: TripCategory,
+    scheduledAt :: Maybe UTCTime,
     rideDistanceEstimated :: Maybe Meters,
     rideDistanceActual :: Meters,
     chargeableDistance :: Maybe Meters,
