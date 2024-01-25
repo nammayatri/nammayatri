@@ -388,6 +388,7 @@ youtubeData =
   , videoId: ""
   , videoType: ""
   , videoHeight : 0
+  , showFullScreen : false
   }
 
 splitUrlsAndText :: String -> Array String

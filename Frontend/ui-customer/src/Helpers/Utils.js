@@ -170,7 +170,7 @@ export const storeCallBackContacts = function (cb) {
         });
 
         console.log("In storeCallBackContacts ---------- + " + action);
-        window.JBridge.storeCallBackContacts(callback);
+        return window.JBridge.storeCallBackContacts(callback);
       } catch (err) {
         console.log("storeCallBackContacts error " + err);
       }
@@ -221,6 +221,7 @@ export const didDriverMessage = function() {
     return false;
   }
 }
+
 
 export const setRefreshing = function (id) {
   return function (bool) {
@@ -480,4 +481,10 @@ export const incrOrDecrTimeFrom = function (inputTime, minutesToAddOrSubtract, i
   else date.setMinutes(date.getMinutes() - minutesToAddOrSubtract);
   const newTime = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
   return newTime;
+}
+
+export const requestCameraAndMicrophonePermissions = function () {
+  if (window.JBridge.requestCameraAndMicrophonePermissions) {
+    return window.JBridge.requestCameraAndMicrophonePermissions();
+  }
 }

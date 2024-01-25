@@ -18,11 +18,15 @@ module Types.App where
 import Control.Monad.Except.Trans (ExceptT)
 import Control.Monad.Free (Free)
 import Control.Transformers.Back.Trans (BackT)
+import Foreign (Foreign)
+import Foreign.Object (Object(..), empty)
+import LoaderOverlay.ScreenData as LoaderScreenScreenData
 import Presto.Core.Types.Language.Flow (FlowWrapper)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
 import Screens.AddNewAddressScreen.ScreenData as AddNewAddressScreenData
 import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.ContactUsScreen.ScreenData as ContactUsScreenData
+import Screens.CustomerUtils.AboutUsScreen.ScreenData as AboutUsScreenData
 import Screens.EnterMobileNumberScreen.ScreenData as EnterMobileNumberScreenData
 import Screens.HelpAndSupportScreen.ScreenData as HelpAndSupportScreenData
 import Screens.HomeScreen.ScreenData as HomeScreenData
@@ -32,6 +36,9 @@ import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import LoaderOverlay.ScreenData as LoaderScreenScreenData
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.MyRidesScreen.ScreenData as MyRideScreenData
+import Screens.NammaSafetyFlow.ScreenData as NammaSafetyScreenData
+import Screens.OnBoardingFlow.PermissionScreen.ScreenData as PermissionScreenData
+import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreenData
 import Screens.SavedLocationScreen.ScreenData as SavedLocationScreenData
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
@@ -43,7 +50,7 @@ import Screens.OnBoardingFlow.WelcomeScreen.ScreenData as WelcomeScreenData
 import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, RideSelectionScreenState, ReportIssueChatScreenState, IssueInfo) 
+import Screens.Types 
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
@@ -84,6 +91,7 @@ newtype GlobalState = GlobalState {
   , rideScheduledScreen :: RideScheduledScreenState
   , rideSelectionScreen :: RideSelectionScreenState
   , reportIssueChatScreen :: ReportIssueChatScreenState
+  , nammaSafetyScreen :: NammaSafetyScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -116,6 +124,7 @@ defaultGlobalState = GlobalState {
   , rideScheduledScreen : RideScheduledScreenData.initData
   , rideSelectionScreen : RideSelectionScreenData.initData
   , reportIssueChatScreen : ReportIssueChatScreenData.initData
+  , nammaSafetyScreen : NammaSafetyScreenData.initData
   }
 
 data ACCOUNT_SET_UP_SCREEN_OUTPUT = GO_HOME AccountSetUpScreenState | GO_BACK
@@ -132,13 +141,23 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = GO_TO_SUPPORT_SCREEN String | GO_TO_TRIP_D
 
 data ABOUT_US_SCREEN_OUTPUT = GO_TO_HOME_FROM_ABOUT
 
-data EMERGECY_CONTACTS_SCREEN_OUTPUT = GO_TO_HOME_FROM_EMERGENCY_CONTACTS
-                                      | POST_CONTACTS EmergencyContactsScreenState
+data EMERGECY_CONTACTS_SCREEN_OUTPUT = GO_TO_HOME_FROM_EMERGENCY_CONTACTS EmergencyContactsScreenState
+                                      | POST_CONTACTS EmergencyContactsScreenState Boolean
                                       | GET_CONTACTS EmergencyContactsScreenState
                                       | REFRESH_EMERGECY_CONTACTS_SCREEN EmergencyContactsScreenState
+                                      
+data NAMMA_SAFETY_SCREEN_OUTPUT = GO_BACK_FROM_SAFETY_SCREEN NammaSafetyScreenState
+                                  | UPDATE_CONTACTS NammaSafetyScreenState
+                                  | POST_EMERGENCY_SETTINGS NammaSafetyScreenState
+                                  | CREATE_SOS NammaSafetyScreenState
+                                  | UPDATE_ACTION NammaSafetyScreenState
+                                  | UPDATE_AS_SAFE NammaSafetyScreenState
+                                  | GO_TO_VIDEO_FLOW
+                                  | NS_REFRESH NammaSafetyScreenState
+                                  | GO_TO_EMERGENCY_CONTACT_SCREEN NammaSafetyScreenState
 
 data TICKET_INFO_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_TICKET_INFO
-data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT_SCREEN ReportIssueChatScreenState | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_DRIVER_MODAL ReportIssueChatScreenState | CALL_SUPPORT_MODAL ReportIssueChatScreenState | SELECT_ISSUE_OPTION ReportIssueChatScreenState | REOPEN_ISSUE ReportIssueChatScreenState | GO_TO_TRIP_DETAILS_SCREEN ReportIssueChatScreenState | GO_TO_RIDE_SELECTION_SCREEN ReportIssueChatScreenState
+data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT_SCREEN ReportIssueChatScreenState | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_DRIVER_MODAL ReportIssueChatScreenState | CALL_SUPPORT_MODAL ReportIssueChatScreenState | SELECT_ISSUE_OPTION ReportIssueChatScreenState | REOPEN_ISSUE ReportIssueChatScreenState | GO_TO_TRIP_DETAILS_SCREEN ReportIssueChatScreenState | GO_TO_RIDE_SELECTION_SCREEN ReportIssueChatScreenState | GO_TO_SAFETY_SCREEN ReportIssueChatScreenState
 
 data HOME_SCREEN_OUTPUT = LOGOUT
                         | RELOAD Boolean
@@ -146,6 +165,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | RETRY
                         | NO_OUTPUT
                         | GO_TO_HELP
+                        | GO_TO_NAMMASAFETY HomeScreenState Boolean
                         | GO_TO_ABOUT
                         | GO_TO_MY_RIDES
                         | CHANGE_LANGUAGE
@@ -194,6 +214,7 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EXIT_TO_TICKETING HomeScreenState
                         | GO_TO_HELP_AND_SUPPORT 
                         | REALLOCATE_RIDE HomeScreenState
+                        | SAFETY_SUPPORT HomeScreenState Boolean
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -254,3 +275,4 @@ data ScreenType =
   | RideScheduledScreenStateType (RideScheduledScreenState -> RideScheduledScreenState)
   | RideSelectionScreenStateType (RideSelectionScreenState -> RideSelectionScreenState)
   | ReportIssueChatScreenStateType (ReportIssueChatScreenState -> ReportIssueChatScreenState)
+  | NammaSafetyScreenStateType (NammaSafetyScreenState -> NammaSafetyScreenState)

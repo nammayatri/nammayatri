@@ -57,4 +57,6 @@
     <string name="accept_goto">Accept “Go To”</string>
     <string name="take_a_clear_selfie">Take a clear photo with your driving licence \ninside the marked area</string>
     <string name="need_help">Need Help?</string>
+    <string name="safety_deviation_alert">We noticed your ride is on a different route. Are you feeling safe on your trip?</string>
+    <string name="everything_okay">Everything Okay?</string>
 </resources>

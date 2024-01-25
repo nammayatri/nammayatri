@@ -268,7 +268,7 @@ eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue s
 
 eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_performed"
-  void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+  void $ pure $ showDialer (getSupportNumber "") true -- TODO: FIX_DIALER
   continue state{props{isCallConfirmation = false}}
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ GoBack state
