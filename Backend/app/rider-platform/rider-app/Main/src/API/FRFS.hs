@@ -14,6 +14,7 @@
 
 module API.FRFS where
 
+import qualified API.Beckn.FRFS.OnCancel as OnCancel
 import qualified API.Beckn.FRFS.OnConfirm as OnConfirm
 import qualified API.Beckn.FRFS.OnInit as OnInit
 import qualified API.Beckn.FRFS.OnSearch as OnSearch
@@ -32,6 +33,7 @@ type API =
            :<|> OnInit.API
            :<|> OnConfirm.API
            :<|> OnStatus.API
+           :<|> OnCancel.API
        )
 
 type APIM =
@@ -42,6 +44,7 @@ type APIM =
            :<|> OnInit.API
            :<|> OnConfirm.API
            :<|> OnStatus.API
+           :<|> OnCancel.API
        )
 
 handler :: FlowServer API
@@ -50,3 +53,4 @@ handler auth =
     :<|> OnInit.handler auth
     :<|> OnConfirm.handler auth
     :<|> OnStatus.handler auth
+    :<|> OnCancel.handler auth

@@ -106,6 +106,7 @@ postFrfsSearch (mbPersonId, merchantId) vehicleType_ FRFSSearchAPIReq {..} = do
   QFRFSSearch.create searchReq
   fork "FRFS SearchReq" $ do
     bknSearchReq <- ACL.buildSearchReq searchReq bapConfig fromStation toStation
+    logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
     void $ CallBPP.search bapConfig.gatewayUrl bknSearchReq
   return $ FRFSSearchAPIRes searchReqId
 
@@ -146,7 +147,12 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
     bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) METRO >>= fromMaybeM (InternalError "Beckn Config not found")
     let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
     mRiderNumber <- mapM decrypt rider.mobileNumber
-    bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) dConfirmRes bapConfig Utils.BppData {bppId = dConfirmRes.bppSubscriberId, bppUri = dConfirmRes.bppSubscriberUrl}
+    -- Add default TTL of 30 seconds or the value provided in the config
+    let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.initTTLSec) now
+    void $ QFRFSTicketBooking.updateValidTillById validTill dConfirmRes.id
+    let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
+    bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) dConfirmRes' bapConfig Utils.BppData {bppId = dConfirmRes.bppSubscriberId, bppUri = dConfirmRes.bppSubscriberUrl}
+    logDebug $ "FRFS SearchReq " <> encodeToText bknInitReq
     void $ CallBPP.init providerUrl bknInitReq
   return $ makeBookingStatusAPI dConfirmRes stations
   where
@@ -164,7 +170,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
       unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
       maybeM (buildAndCreateBooking rider quote) (\booking -> return (rider, booking)) (QFRFSTicketBooking.findByQuoteId quoteId)
 
-    buildAndCreateBooking rider DFRFSQuote.FRFSQuote {..} = do
+    buildAndCreateBooking rider quote@DFRFSQuote.FRFSQuote {..} = do
       uuid <- generateGUID
       now <- getCurrentTime
       let booking =
@@ -176,6 +182,10 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
                 createdAt = now,
                 updatedAt = now,
                 merchantId = Just merchantId_,
+                price = HighPrecMoney $ (quote.price.getHighPrecMoney) * (toRational quote.quantity),
+                paymentTxnId = Nothing,
+                bppBankAccountNumber = Nothing,
+                bppBankCode = Nothing,
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -192,6 +202,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
           status = booking.status,
           payment = Nothing,
           tickets = [],
+          createdAt = booking.createdAt,
           ..
         }
 
@@ -207,7 +218,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   unless (personId == booking'.riderId) $ throwError AccessDenied
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
-  when ((booking'.status /= DFRFSTicketBooking.CONFIRMED || booking'.status /= DFRFSTicketBooking.FAILED) && booking'.validTill < now) $
+  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.validTill < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
@@ -240,7 +251,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 Just $
                   FRFSTicketService.FRFSBookingPaymentAPI
                     { status = paymentStatus_,
-                      paymentOrder = Just paymentOrder_
+                      paymentOrder = paymentOrder_
                     }
           buildFRFSTicketBookingStatusAPIRes updatedBooking paymentObj
     DFRFSTicketBooking.PAYMENT_PENDING -> do
@@ -257,15 +268,19 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         else
           if (paymentBookingStatus == FRFSTicketService.SUCCESS)
             then do
-              let updatedTTL = addUTCTime (60 :: NominalDiffTime) now -- 1 min from time of payment success
-              void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
-              void $ QFRFSTicketBooking.updateValidTillAndStatusById DFRFSTicketBooking.CONFIRMING updatedTTL booking.id
+              -- Add default TTL of 1 min or the value provided in the config
+              let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
               transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
               txnId <- getSuccessTransactionId transactions
+              void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
+              void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL)
               fork "FRFS Confirm Req" $ do
                 providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-                bknConfirmReq <- ACL.buildConfirmReq updatedBooking bapConfig txnId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl}
+                let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
+                mRiderNumber <- mapM decrypt person.mobileNumber
+                bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) updatedBooking bapConfig txnId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl}
+                logDebug $ "FRFS SearchReq " <> encodeToText bknConfirmReq
                 void $ CallBPP.confirm providerUrl bknConfirmReq
               buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
             else do
@@ -276,7 +291,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                     Just
                       FRFSTicketService.FRFSBookingPaymentAPI
                         { status = paymentStatus_,
-                          paymentOrder = Just paymentOrder_
+                          paymentOrder = paymentOrder_
                         }
               buildFRFSTicketBookingStatusAPIRes booking paymentObj
   where
@@ -315,7 +330,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 optionsGetUpiDeepLinks = Nothing,
                 metadataExpiryInMins = Nothing
               }
-      DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrder.id.getId)
+      DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
 
     createOrderCall = Payment.createOrder merchantId_ Nothing
     orderStatusCall = Payment.orderStatus merchantId_ Nothing
@@ -336,6 +351,7 @@ callBPPStatus booking bapConfig = do
   fork "FRFS Status Req" $ do
     providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
     bknStatusReq <- ACL.buildStatusReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl}
+    logDebug $ "FRFS SearchReq " <> encodeToText bknStatusReq
     void $ CallBPP.status providerUrl bknStatusReq
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
@@ -363,6 +379,7 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
         validTill = booking.validTill,
         vehicleType = booking.vehicleType,
         status = booking.status,
+        createdAt = booking.createdAt,
         ..
       }
 

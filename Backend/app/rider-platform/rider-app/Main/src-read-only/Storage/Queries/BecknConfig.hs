@@ -61,7 +61,8 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.buyerFinderFee buyerFinderFee,
+    [ Se.Set Beam.bapIFSC bapIFSC,
+      Se.Set Beam.buyerFinderFee buyerFinderFee,
       Se.Set Beam.collectedBy collectedBy,
       Se.Set Beam.confirmBufferTTLSec confirmBufferTTLSec,
       Se.Set Beam.confirmTTLSec confirmTTLSec,
@@ -99,7 +100,8 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
     pure $
       Just
         Domain.Types.BecknConfig.BecknConfig
-          { buyerFinderFee = buyerFinderFee,
+          { bapIFSC = bapIFSC,
+            buyerFinderFee = buyerFinderFee,
             collectedBy = collectedBy,
             confirmBufferTTLSec = confirmBufferTTLSec,
             confirmTTLSec = confirmTTLSec,
@@ -127,7 +129,8 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
 instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   toTType' Domain.Types.BecknConfig.BecknConfig {..} = do
     Beam.BecknConfigT
-      { Beam.buyerFinderFee = buyerFinderFee,
+      { Beam.bapIFSC = bapIFSC,
+        Beam.buyerFinderFee = buyerFinderFee,
         Beam.collectedBy = collectedBy,
         Beam.confirmBufferTTLSec = confirmBufferTTLSec,
         Beam.confirmTTLSec = confirmTTLSec,

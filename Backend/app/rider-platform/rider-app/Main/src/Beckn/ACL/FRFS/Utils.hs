@@ -27,6 +27,7 @@ import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicket as Ticket
 import Kernel.Prelude
 import Kernel.Types.Error
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 
 buildContext ::
@@ -39,7 +40,7 @@ buildContext ::
   Maybe BppData ->
   m Spec.Context
 buildContext action bapConfig txnId msgId mTTL bppData = do
-  now <- getCurrentTime
+  now <- UTCTimeRFC3339 <$> getCurrentTime
   let bapUrl = showBaseUrl bapConfig.subscriberUrl
   let bapId = bapConfig.subscriberId
       contextBppId = bppData <&> (.bppId)
@@ -171,7 +172,7 @@ mkPaymentTags :: Maybe Text -> Maybe Amount -> [Spec.TagGroup]
 mkPaymentTags mSettlementType mAmount =
   catMaybes
     [ Just mkBuyerFinderFeeTagGroup,
-      Just $ mkSettlementTagGroup mAmount,
+      Just $ mkSettlementTagGroup mAmount mSettlementType,
       mkSettlementDetailsTagGroup mSettlementType
     ]
 
@@ -201,8 +202,8 @@ mkBuyerFinderFeeTagGroup =
           tagValue = Just "0"
         }
 
-mkSettlementTagGroup :: Maybe Text -> Spec.TagGroup
-mkSettlementTagGroup mAmount =
+mkSettlementTagGroup :: Maybe Text -> Maybe Text -> Spec.TagGroup
+mkSettlementTagGroup mAmount mSettlementType =
   Spec.TagGroup
     { tagGroupDescriptor =
         Just $
@@ -227,6 +228,17 @@ mkSettlementTagGroup mAmount =
                         descriptorName = Nothing
                       },
                 tagValue = Just amount
+              },
+          mSettlementType <&> \settlementType ->
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "SETTLEMENT_TYPE",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just settlementType
               },
           Just $
             Spec.Tag
@@ -259,7 +271,7 @@ mkSettlementTagGroup mAmount =
                         descriptorImages = Nothing,
                         descriptorName = Nothing
                       },
-                tagValue = Just "INVOICE_RECIEPT"
+                tagValue = Just "DELIVERY"
               },
           Just $
             Spec.Tag
@@ -271,17 +283,6 @@ mkSettlementTagGroup mAmount =
                         descriptorName = Nothing
                       },
                 tagValue = Just "TRUE"
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just "COURT_JURISDICTION",
-                        descriptorImages = Nothing,
-                        descriptorName = Nothing
-                      },
-                tagValue = Just "Bengaluru" -- TODO: make it dynamic
               },
           Just $
             Spec.Tag
