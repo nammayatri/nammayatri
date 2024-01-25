@@ -141,7 +141,7 @@ data DriverInfoForPDNotification = DriverInfoForPDNotification
 getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerSetName" r Text, HasField "schedulerType" r SchedulerType, HasField "jobInfoMap" r (M.Map Text Bool)) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Id MerchantOperatingCity -> Int -> m ()
+scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerType" r SchedulerType, JobCreatorEnv r) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Id MerchantOperatingCity -> Int -> m ()
 scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfExecutionTime = transporterConfig.driverAutoPayExecutionTime

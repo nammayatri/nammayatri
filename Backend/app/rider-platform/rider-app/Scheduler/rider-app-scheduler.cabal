@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 
-name:           producer
+name:           rider-app-scheduler
 version:        0.1.0.0
 description:    Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
 homepage:       https://github.com/nammayatri/nammayatri#readme
@@ -28,9 +28,9 @@ library
   exposed-modules:
       App
       Environment
-      Producer.Flow
+      Tools.Metrics
   other-modules:
-      Paths_producer
+      Paths_rider_app_scheduler
   hs-source-dirs:
       src
   default-extensions:
@@ -51,9 +51,7 @@ library
       MultiWayIf
       NamedFieldPuns
       NoImplicitPrelude
-      OverloadedLabels
       OverloadedStrings
-      PackageImports
       PatternSynonyms
       PolyKinds
       RankNTypes
@@ -67,50 +65,57 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns
+      StandaloneDeriving
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
-    , beam-core
-    , beam-mysql
-    , beam-postgres
+    , beckn-spec
     , bytestring
-    , casing
-    , cereal
-    , dynamic-offer-driver-app
-    , esqueleto
+    , containers
+    , cryptonite
+    , either
     , euler-hs
-    , hashmap
-    , hedis
+    , exceptions
+    , extra
+    , generic-lens
+    , hspec
     , mobility-core
-    , monad-control
-    , persistent
-    , persistent-postgresql
-    , postgresql-simple
-    , random
+    , openapi3
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
+    , resource-pool
     , rider-app
+    , safe
     , scheduler
-    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
     , servant-server
     , singletons
-    , template-haskell
+    , stm
+    , string-conversions
     , text
+    , text-conversions
     , time
     , uuid
+    , wai
+    , warp
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -O2 -j4
 
-executable producer-exe
+executable rider-app-scheduler-exe
   main-is: Main.hs
   other-modules:
-      Paths_producer
+      Paths_rider_app_scheduler
   hs-source-dirs:
-      app
+      server
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -129,9 +134,7 @@ executable producer-exe
       MultiWayIf
       NamedFieldPuns
       NoImplicitPrelude
-      OverloadedLabels
       OverloadedStrings
-      PackageImports
       PatternSynonyms
       PolyKinds
       RankNTypes
@@ -145,39 +148,44 @@ executable producer-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+      StandaloneDeriving
+      PackageImports
+  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , base >=4.7 && <5
-    , beam-core
-    , beam-mysql
-    , beam-postgres
     , bytestring
-    , casing
-    , cereal
-    , dynamic-offer-driver-app
-    , esqueleto
+    , containers
+    , cryptonite
+    , either
     , euler-hs
-    , hashmap
-    , hedis
+    , exceptions
+    , extra
+    , generic-lens
+    , hspec
     , mobility-core
-    , monad-control
-    , persistent
-    , persistent-postgresql
-    , postgresql-simple
-    , producer
-    , random
+    , openapi3
+    , prometheus-client
     , record-dot-preprocessor
     , record-hasfield
-    , rider-app
+    , resource-pool
+    , rider-app-scheduler
+    , safe
     , scheduler
-    , sequelize
+    , servant
+    , servant-client
+    , servant-client-core
+    , servant-openapi3
     , servant-server
     , singletons
-    , template-haskell
+    , stm
+    , string-conversions
     , text
+    , text-conversions
     , time
     , uuid
+    , wai
+    , warp
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
