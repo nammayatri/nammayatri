@@ -186,6 +186,10 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [validTill, updatedAt]
       where: id
+    updateValidTillAndStatusById:
+      kvFunction: updateWithKV
+      params: [status, validTill, updatedAt]
+      where: id
     updateBPPOrderIdAndStatusById:
       kvFunction: updateWithKV
       params: [bppOrderId, status, updatedAt]
