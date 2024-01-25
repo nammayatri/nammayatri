@@ -262,7 +262,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL)
               fork "FRFS Confirm Req" $ do
                 providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-                bknConfirmReq <- ACL.buildConfirmReq booking bapConfig txnId.getId
+                bknConfirmReq <- ACL.buildConfirmReq updatedBooking bapConfig txnId.getId
                 void $ CallBPP.confirm providerUrl bknConfirmReq
               buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
             else do
