@@ -99,34 +99,6 @@ This is now easily & quickly achieved by simply un-commenting the flags under ["
 #### Parallel Jobs
 To speed up the compilation times, we use 6 parallel jobs by default. If you have a powerful computer with lots of cores and memory, you can increment the `jobs` setting in [cabal.project](cabal.project) file to run more parallel jobs for faster results. Inversely, if its a low-powered machine, you may consider lowering that number.
 
-#### Running external services
-
-To run the project, we'd first need to run some services. These are provided via [services-flake].
-
-For running the database, redis, passetto, osrm-server and kafka run this command:
-
-```sh
-# Note: This will create a `data` directory in the root of the project, it will persist the data
-# on restart. If you want a fresh start, you can delete the entire `data` directory and re-run:
-, run-svc
-```
-
-That should run most of the services required.
-
-More services, if needed, can be run with the following commands.
-
-For running pgadmin run this command:
-
-```sh
-, run-pgadmin
-```
-
-For running monitoring services like prometheus and grafana use this command:
-
-```sh
-, run-monitoring
-```
-
 #### Running backend services
 
 To run the backend either use:
@@ -144,6 +116,24 @@ You can also use Nix to run the mobility stack, but this is slower compared to t
 , run-mobility-stack-nix
 # Or (if you are not in the git repo):
 nix run github:nammayatri/nammyatri#run-mobility-stack-nix
+```
+
+##### External services
+
+The above command will also run some services (databae, redis, passetto, osrm-server, kafka). These are provided via [services-flake].
+
+More services, if needed, can be run with the following commands.
+
+For running pgadmin run this command:
+
+```sh
+, run-pgadmin
+```
+
+For running monitoring services like prometheus and grafana use this command:
+
+```sh
+, run-monitoring
 ```
 
 #### Updating flake inputs
@@ -278,7 +268,7 @@ Run `nix run github:nix-community/nix-melt` to navigate and find that transitive
 [cabal]: https://cabal.readthedocs.io/
 [nix-shell]: https://nixos.wiki/wiki/Development_environment_with_nix-shell
 
-### `, run-svc` not responding to `Ctrl-C` or [external-services](running-external-services) running in the background even after exiting `, run-svc`
+### `, run-mobility-stack-*` not responding to `Ctrl-C` or [external-services](running-external-services) running in the background even after exiting `, run-mobility-stack-*`
 
 Run `, kill-svc-ports`
 
