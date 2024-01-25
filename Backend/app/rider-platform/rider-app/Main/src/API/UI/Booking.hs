@@ -28,6 +28,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
@@ -46,15 +47,33 @@ type API =
              :> QueryParam "onlyActive" Bool
              :> QueryParam "status" SRB.BookingStatus
              :> Get '[JSON] DBooking.BookingListRes
+           :<|> Capture "rideBookingId" (Id SRB.Booking)
+             :> TokenAuth
+             :> "addStop"
+             :> ReqBody '[JSON] DBooking.StopReq
+             :> Post '[JSON] APISuccess
+           :<|> Capture "rideBookingId" (Id SRB.Booking)
+             :> TokenAuth
+             :> "editStop"
+             :> ReqBody '[JSON] DBooking.StopReq
+             :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API
 handler =
   bookingStatus
     :<|> bookingList
+    :<|> addStop
+    :<|> editStop
 
 bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler BookingAPIEntity
 bookingStatus bookingId = withFlowHandlerAPI . DBooking.bookingStatus bookingId
+
+addStop :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DBooking.StopReq -> FlowHandler APISuccess
+addStop bookingId (personId, merchantId) addStopReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DBooking.addStop (personId, merchantId) bookingId addStopReq
+
+editStop :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DBooking.StopReq -> FlowHandler APISuccess
+editStop bookingId (personId, merchantId) editStopReq = withFlowHandlerAPI . withPersonIdLogTag personId $ DBooking.editStop (personId, merchantId) bookingId editStopReq
 
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> FlowHandler DBooking.BookingListRes
 bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI . DBooking.bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive

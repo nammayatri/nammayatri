@@ -147,17 +147,16 @@ buildEstimateBreakUpItem currency tag = do
 
 buildNightShiftInfo :: MonadFlow m => Spec.Item -> m (Maybe OnSearch.NightShiftInfo)
 buildNightShiftInfo item = do
-  itemTags <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tags")
-  let nightShiftCharge = fromMaybe (Money 0) (getNightShiftCharge itemTags)
-  let oldNightShiftCharge = fromMaybe 0 (getOldNightShiftCharge itemTags)
-  let nightShiftStart = fromMaybe (TimeOfDay 22 00 00) (getNightShiftStart itemTags)
-  let nightShiftEnd = fromMaybe (TimeOfDay 06 00 00) (getNightShiftEnd itemTags)
-  return $
-    Just $
-      OnSearch.NightShiftInfo
-        { oldNightShiftCharge = realToFrac oldNightShiftCharge,
-          ..
-        }
+  itemTags <- item.itemTags
+  nightShiftCharge <- getNightShiftCharge itemTags
+  let oldNightShiftCharge = getOldNightShiftCharge itemTags
+  nightShiftStart <- getNightShiftStart itemTags
+  nightShiftEnd <- getNightShiftEnd itemTags
+  Just $
+    OnSearch.NightShiftInfo
+      { oldNightShiftCharge = realToFrac <$> oldNightShiftCharge,
+        ..
+      }
 
 getNightShiftCharge :: [Spec.TagGroup] -> Maybe Money
 getNightShiftCharge tagGroup = do

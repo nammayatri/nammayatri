@@ -51,6 +51,16 @@ data DUpdateReq
         origin :: Maybe Common.Location,
         destination :: Maybe Common.Location
       }
+  | AddStopReq
+      { bookingId :: Id DBooking.Booking,
+        rideId :: Id DRide.Ride,
+        stops :: [Common.Location]
+      }
+  | EditStopReq
+      { bookingId :: Id DBooking.Booking,
+        rideId :: Id DRide.Ride,
+        stops :: [Common.Location]
+      }
 
 data PaymentStatus = PAID | NOT_PAID
 
@@ -76,9 +86,6 @@ handler req@PaymentCompletedReq {} = do
   unless (ride.status == DRide.COMPLETED) $
     throwError $ RideInvalidStatus "Ride is not completed yet."
   logTagInfo "Payment completed : " ("bookingId " <> req.bookingId.getId <> ", rideId " <> req.rideId.getId)
-
--- TODO store to DB
-
 handler EditLocationReq {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -91,6 +98,7 @@ handler EditLocationReq {..} = do
     QLM.create pickupMapForRide
     let entityData = Notify.EditLocationReq {..}
     Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
+handler _ = throwError (InvalidRequest "Not Implemented")
 
 buildLocation :: MonadFlow m => Common.Location -> m DL.Location
 buildLocation location = do

@@ -183,9 +183,7 @@ library
       Domain.Action.UI.Ride
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
-      Domain.Action.UI.Search.Common
-      Domain.Action.UI.Search.OneWay
-      Domain.Action.UI.Search.Rental
+      Domain.Action.UI.Search
       Domain.Action.UI.Select
       Domain.Action.UI.Serviceability
       Domain.Action.UI.Sos
@@ -237,7 +235,7 @@ library
       Domain.Types.Quote
       Domain.Types.Rating
       Domain.Types.RegistrationToken
-      Domain.Types.RentalSlab
+      Domain.Types.RentalDetails
       Domain.Types.Ride
       Domain.Types.SavedReqLocation
       Domain.Types.SearchRequest
@@ -307,7 +305,7 @@ library
       Storage.Beam.Quote
       Storage.Beam.Rating
       Storage.Beam.RegistrationToken
-      Storage.Beam.RentalSlab
+      Storage.Beam.RentalDetails
       Storage.Beam.Ride
       Storage.Beam.SavedReqLocation
       Storage.Beam.SearchRequest
@@ -376,7 +374,7 @@ library
       Storage.Queries.Quote
       Storage.Queries.Rating
       Storage.Queries.RegistrationToken
-      Storage.Queries.RentalSlab
+      Storage.Queries.RentalDetails
       Storage.Queries.Ride
       Storage.Queries.SavedReqLocation
       Storage.Queries.SearchRequest

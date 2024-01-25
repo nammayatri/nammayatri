@@ -55,7 +55,7 @@ buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
         SConfirm.ConfirmOneWayDetails -> ("RIDE", Nothing, Nothing)
-        SConfirm.ConfirmRentalDetails _ -> ("RIDE", Nothing, Nothing)
+        SConfirm.ConfirmRentalDetails quoteId -> ("RENTAL", Just quoteId, Nothing)
         SConfirm.ConfirmAutoDetails estimateId driverId -> ("RIDE", Just estimateId, driverId)
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> ("RIDE_OTP", Just quoteId, Nothing) --need to be  checked
   let action = Context.INIT
@@ -67,7 +67,7 @@ buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.Init
 buildInitMessage res = do
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
         SConfirm.ConfirmOneWayDetails -> ("RIDE", Nothing, Nothing)
-        SConfirm.ConfirmRentalDetails _ -> ("RIDE", Nothing, Nothing)
+        SConfirm.ConfirmRentalDetails quoteId -> ("RENTAL", Just quoteId, Nothing)
         SConfirm.ConfirmAutoDetails estimateId driverId -> ("RIDE", Just estimateId, driverId)
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> ("RIDE_OTP", Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
