@@ -100,7 +100,6 @@ import PrestoDOM.Core
 import PrestoDOM.List
 import RemoteConfig as RC
 import Locale.Utils
-import Debug
 
 
 instance showAction :: Show Action where
@@ -345,7 +344,6 @@ data Action = NoAction
             | UpdateGoHomeTimer Int String String
             | AddLocation PrimaryButtonController.Action
             | ConfirmDisableGoto PopUpModal.Action
-            | UpdateOriginDist Number Number ST.Location
             | AccountBlockedAC PopUpModal.Action
             | UpdateAndNotify ST.Location Boolean
             | UpdateWaitTime ST.TimerStatus
@@ -845,51 +843,16 @@ eval (TimeUpdate time lat lng) state = do
   void $ pure $ setValueToLocalStore LOCATION_UPDATE_TIME (convertUTCtoISC time "hh:mm a")
   continueWithCmd newState [ do
     void $ if (getValueToLocalNativeStore IS_RIDE_ACTIVE == "false") then checkPermissionAndUpdateDriverMarker newState else pure unit
-    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, state.data.snappedOrigin, state.data.latLonArray of
-      _, _, _, _, Nothing -> pure (UpdateLastLoc driverLat driverLong)
-      true, ST.RideAccepted, false, Nothing,  Just lastLoc -> pure (UpdateOriginDist driverLat driverLong lastLoc)
-      true, ST.RideAccepted, false, Just snapped,  Just lastLoc -> do
-        let lastTwoHB = checkTwoHB {lat : driverLat, lon:driverLong, place: ""} {lat:lastLoc.lat, lon : lastLoc.lon, place : "" } {lat:snapped.lat, lon : snapped.lon, place : "" } state.data.config.waitTimeConfig.thresholdDist
-        pure if lastTwoHB then NotifyAPI else (UpdateLastLoc driverLat driverLong)
-      _, _, _, _, _ -> pure $ UpdateLastLoc driverLat driverLong
+    case state.data.config.waitTimeConfig.enableWaitTime, state.props.currentStage, state.data.activeRide.notifiedCustomer, state.data.latLonArray of
+      true, ST.RideAccepted, false, Just lastLoc -> do
+        let lastTwoHB = checkTwoHB {lat : driverLat, lon:driverLong, place: ""} {lat:lastLoc.lat, lon : lastLoc.lon, place : "" } {lat:state.data.activeRide.src_lat, lon : state.data.activeRide.src_lon, place : "" } state.data.config.waitTimeConfig.thresholdDist
+        pure if lastTwoHB then UpdateAndNotify {lat:state.data.activeRide.src_lat, lon : state.data.activeRide.src_lon, place : "" } lastTwoHB else (UpdateLastLoc driverLat driverLong)
+      _, _, _, _-> pure $ UpdateLastLoc driverLat driverLong
     ]
-
-eval (UpdateOriginDist lat lng lastLoc) state =
-  continueWithCmd state [ do
-    void $ launchAff $ flowRunner defaultGlobalState $ do
-      push <- liftFlow $ getPushFn Nothing "HomeScreen"
-      rideRouteResp <- Remote.rideRoute state.data.activeRide.id
-      case rideRouteResp of
-        Left _ -> pure unit
-        Right (API.RideRouteResp resp) -> 
-          case Array.head resp.points of
-            Just (API.LatLong loc) -> do
-              
-              let lastTwoHB = checkTwoHB {lat : lat, lon:lng, place: ""} {lat:lastLoc.lat, lon : lastLoc.lon, place : "" } {lat:loc.lat, lon : loc.lon, place : "" } state.data.config.waitTimeConfig.thresholdDist
-              _ <- pure $ spy "testing1" lastTwoHB
-              liftFlow $ push $ UpdateAndNotify {lat : loc.lat, lon : loc.lon, place : ""} $ lastTwoHB
-              pure unit
-            _ -> do
-                  _ <- pure $ spy "testing2" (Array.head resp.points)
-                  pure unit
-      pure unit
-    pure NoAction]
 
 eval (UpdateLastLoc lat lon) state = continue state {data { latLonArray = Just {lat : lat, lon : lon, place : ""}}}
   
-eval (UpdateAndNotify snappedOrigin callNotify) state = do
-  -- continueWithCmd state{data{snappedOrigin = Just snappedOrigin}} [ do
-  --     if callNotify then do
-  --       GetRouteResp routeApiResponse <- Remote.getRouteBT (Remote.makeGetRouteReq state.data.currentDriverLat state.data.currentDriverLon snappedOrigin.lat snappedOrigin.lon) "pickup"
-  --       let shortRoute = (routeApiResponse Array.!! 0)
-  --       case shortRoute of
-  --               Just (Route route) -> do
-  --                   pure if route.distance <= 30 then NotifyAPI else NoAction
-  --               _ -> pure NoAction
-  --       else NoAction
-  -- ]
-
-
+eval (UpdateAndNotify snappedOrigin callNotify) state =
   continueWithCmd state{data{snappedOrigin = Just snappedOrigin}}
         [ do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
@@ -1326,10 +1289,4 @@ checkTwoHB loc1 loc2 pickupLoc thresholdDist =
       dist2 = getDistanceBwCordinates loc2.lat loc2.lon pickupLoc.lat pickupLoc.lon
       h1 = dist1 < thresholdDist
       h2 = dist2 < thresholdDist
-      _ = spy "zxc loc1 " loc1
-      _ = spy "zxc loc2 " loc2
-      _ = spy "zxc pickupLoc " pickupLoc
-      _ = spy "zxc thresholdDist " thresholdDist
-      _ = spy "zxc dist2 "  dist2
-      _ = spy "zxc dist1 "  dist1
   in h1 && h2
