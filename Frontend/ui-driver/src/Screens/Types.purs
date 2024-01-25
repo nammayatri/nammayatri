@@ -893,7 +893,8 @@ type HomeScreenData =  {
   gender :: String,
   coinBalance :: Int,
   subsRemoteConfig :: RC.RCSubscription,
-  bannerData :: BannerCarousalData
+  bannerData :: BannerCarousalData,
+  latLonArray :: Maybe Location
 }
 
 type BannerCarousalData = {
