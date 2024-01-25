@@ -325,7 +325,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
 
 callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environment.Flow ()
 callBPPStatus booking bapConfig = do
-  fork "FRFS Init Req" $ do
+  fork "FRFS Status Req" $ do
     providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
     bknStatusReq <- ACL.buildStatusReq booking bapConfig
     void $ CallBPP.status providerUrl bknStatusReq
