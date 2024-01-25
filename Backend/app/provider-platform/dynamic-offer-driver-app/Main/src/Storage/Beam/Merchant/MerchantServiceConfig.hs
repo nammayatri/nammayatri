@@ -37,6 +37,7 @@ data MerchantServiceConfigT f = MerchantServiceConfigT
   { merchantId :: B.C f Text,
     serviceName :: B.C f Domain.ServiceName,
     configJSON :: B.C f A.Value,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     updatedAt :: B.C f UTCTime,
     createdAt :: B.C f UTCTime
   }
@@ -73,6 +74,8 @@ getServiceNameConfigJSON = \case
     AadhaarVerification.GridlineConfig cfg -> (Domain.AadhaarVerificationService AadhaarVerification.Gridline, toJSON cfg)
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> (Domain.PaymentService Payment.Juspay, toJSON cfg)
+  Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig cfg -> (Domain.RentalPaymentService Payment.Juspay, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
   Domain.NotificationServiceConfig notificationCfg -> case notificationCfg of

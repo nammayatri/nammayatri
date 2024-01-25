@@ -19,10 +19,10 @@ import Data.Maybe (listToMaybe)
 import Data.Time (Day, UTCTime (utctDay))
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
-import qualified Domain.Types.Merchant as M
+import qualified Domain.Types.Merchant.MerchantOperatingCity as MOC
 import Domain.Types.Merchant.TransporterConfig as TC
 import Domain.Types.Person (Person)
-import Domain.Types.Plan (Plan)
+import Domain.Types.Plan (Plan, ServiceNames (..))
 import EulerHS.Prelude hiding (id, state)
 import GHC.Float (double2Int)
 import GHC.Records.Extra
@@ -118,6 +118,8 @@ groupDriverFeeByInvoices driverFees_ = do
           driverId = driverFee.driverId,
           lastStatusCheckedAt = Nothing,
           updatedAt = now,
+          merchantOperatingCityId = driverFee.merchantOperatingCityId,
+          serviceName = driverFee.serviceName,
           createdAt = now
         }
 
@@ -198,12 +200,22 @@ setCoinAdjustedInSubscriptionByDriverIdKey driverId count = do
   _ <- Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) count
   Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAdjustedInSubscriptionByDriverIdKey driverId) 2592000 -- expire in 30 days
 
-notificationSchedulerKey :: UTCTime -> UTCTime -> Id M.Merchant -> Text
-notificationSchedulerKey startTime endTime merchantId = "NotificationScheduler:st:" <> show startTime <> ":et:" <> show endTime <> ":mid:" <> merchantId.getId
+notificationSchedulerKey :: UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> Text
+notificationSchedulerKey startTime endTime merchantOpCityId serviceName = "NotificationScheduler:st:" <> show startTime <> ":et:" <> show endTime <> ":opCityid:" <> merchantOpCityId.getId <> ":serviceName:" <> show serviceName
 
-isNotificationSchedulerRunningKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Id M.Merchant -> m (Maybe Bool)
-isNotificationSchedulerRunningKey startTime endTime merchantId = Hedis.withCrossAppRedis $ Hedis.get (notificationSchedulerKey startTime endTime merchantId)
+isNotificationSchedulerRunningKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> m (Maybe Bool)
+isNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName = Hedis.withCrossAppRedis $ Hedis.get (notificationSchedulerKey startTime endTime merchantOpCityId serviceName)
 
-setIsNotificationSchedulerRunningKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Id M.Merchant -> Bool -> m ()
-setIsNotificationSchedulerRunningKey startTime endTime merchantId isNotificationSchedulerRunning = do
-  Hedis.withCrossAppRedis $ Hedis.setExp (notificationSchedulerKey startTime endTime merchantId) isNotificationSchedulerRunning (3600 * 24) -- one day expiry
+setIsNotificationSchedulerRunningKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => UTCTime -> UTCTime -> Id MOC.MerchantOperatingCity -> ServiceNames -> Bool -> m ()
+setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName isNotificationSchedulerRunning = do
+  Hedis.withCrossAppRedis $ Hedis.setExp (notificationSchedulerKey startTime endTime merchantOpCityId serviceName) isNotificationSchedulerRunning (3600 * 24) -- one day expiry
+
+createDriverFeeForServiceInSchedulerKey :: ServiceNames -> Id MOC.MerchantOperatingCity -> Text
+createDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId = "CreateDriverFeeFor:service:" <> show serviceName <> ":opCityid:" <> merchantOpCityId.getId
+
+toCreateDriverFeeForService :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceNames -> Id MOC.MerchantOperatingCity -> m (Maybe Bool)
+toCreateDriverFeeForService serviceName merchantOpCityId = Hedis.withCrossAppRedis $ Hedis.get (createDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId)
+
+setCreateDriverFeeForServiceInSchedulerKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ServiceNames -> Id MOC.MerchantOperatingCity -> Bool -> m ()
+setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId createDriverFeeForService = do
+  Hedis.withCrossAppRedis $ Hedis.setExp (createDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId) createDriverFeeForService (3600 * 24) -- one day expiry

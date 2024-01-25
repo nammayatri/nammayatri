@@ -3,16 +3,20 @@
 module Storage.Queries.Invoice where
 
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
-import Domain.Types.DriverFee (DriverFee)
-import Domain.Types.Invoice as Domain
+import qualified Domain.Types.DriverFee as DF
+import qualified Domain.Types.Invoice as Domain
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Person (Person)
+import Domain.Types.Plan (ServiceNames (YATRI_SUBSCRIPTION))
 import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import Storage.Beam.Invoice as BeamI hiding (Id)
+import qualified Storage.Beam.Invoice as BeamI hiding (Id)
+import qualified Storage.Queries.DriverFee as QDF
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.Invoice -> m ()
 create = createWithKV
@@ -26,7 +30,7 @@ checkIfAutoPayInvoiceById (Id invoiceId) = do
     findAllWithKV
       [ Se.And
           [ Se.Is BeamI.id $ Se.Eq invoiceId,
-            Se.Is BeamI.paymentMode $ Se.Eq AUTOPAY_INVOICE
+            Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE
           ]
       ]
   return $ not (null invoices)
@@ -34,7 +38,7 @@ checkIfAutoPayInvoiceById (Id invoiceId) = do
 createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Domain.Invoice] -> m ()
 createMany = traverse_ create
 
-findValidByDriverFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m [Domain.Invoice]
+findValidByDriverFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DF.DriverFee -> m [Domain.Invoice]
 findValidByDriverFeeId (Id driverFeeId) =
   findAllWithKV
     [ Se.And
@@ -43,20 +47,28 @@ findValidByDriverFeeId (Id driverFeeId) =
         ]
     ]
 
-findAllInvoicesByDriverIdWithLimitAndOffset :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> [Domain.InvoicePaymentMode] -> Int -> Int -> m [Domain.Invoice]
-findAllInvoicesByDriverIdWithLimitAndOffset driverId paymentModes limit offset = do
+findAllInvoicesByDriverIdWithLimitAndOffset ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Person ->
+  [Domain.InvoicePaymentMode] ->
+  Int ->
+  Int ->
+  ServiceNames ->
+  m [Domain.Invoice]
+findAllInvoicesByDriverIdWithLimitAndOffset driverId paymentModes limit offset serviceName = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamI.driverId $ Se.Eq (driverId.getId),
           Se.Is BeamI.paymentMode $ Se.In paymentModes,
-          Se.Is BeamI.invoiceStatus $ Se.Not $ Se.In [Domain.INACTIVE, Domain.EXPIRED]
+          Se.Is BeamI.invoiceStatus $ Se.Not $ Se.In [Domain.INACTIVE, Domain.EXPIRED],
+          Se.Is BeamI.serviceName $ Se.Eq (Just serviceName)
         ]
     ]
     (Se.Desc BeamI.createdAt)
     (Just limit)
     (Just offset)
 
-findLatestByDriverFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m (Maybe Domain.Invoice)
+findLatestByDriverFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DF.DriverFee -> m (Maybe Domain.Invoice)
 findLatestByDriverFeeId (Id driverFeeId) =
   findAllWithOptionsKV
     [ Se.And
@@ -85,7 +97,7 @@ findByIdWithPaymenModeAndStatus invocieId paymentMode status =
         ]
     ]
 
-findActiveManualOrMandateSetupInvoiceByFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m [Domain.Invoice]
+findActiveManualOrMandateSetupInvoiceByFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DF.DriverFee -> m [Domain.Invoice]
 findActiveManualOrMandateSetupInvoiceByFeeId (Id driverFeeId) =
   findAllWithKV
     [ Se.And
@@ -95,7 +107,7 @@ findActiveManualOrMandateSetupInvoiceByFeeId (Id driverFeeId) =
         ]
     ]
 
-findActiveManualInvoiceByFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m [Domain.Invoice]
+findActiveManualInvoiceByFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DF.DriverFee -> m [Domain.Invoice]
 findActiveManualInvoiceByFeeId (Id driverFeeId) =
   findAllWithKV
     [ Se.And
@@ -105,7 +117,7 @@ findActiveManualInvoiceByFeeId (Id driverFeeId) =
         ]
     ]
 
-findActiveMandateSetupInvoiceByFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m [Domain.Invoice]
+findActiveMandateSetupInvoiceByFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DF.DriverFee -> m [Domain.Invoice]
 findActiveMandateSetupInvoiceByFeeId (Id driverFeeId) =
   findAllWithKV
     [ Se.And
@@ -115,12 +127,12 @@ findActiveMandateSetupInvoiceByFeeId (Id driverFeeId) =
         ]
     ]
 
-findByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> m [Domain.Invoice]
+findByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> m [Domain.Invoice]
 findByDriverFeeIds driverFeeIds =
   findAllWithKV
     [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds)]
 
-findActiveByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DriverFee] -> m [Domain.Invoice]
+findActiveByDriverFeeIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> m [Domain.Invoice]
 findActiveByDriverFeeIds driverFeeIds =
   findAllWithKV
     [ Se.And
@@ -129,8 +141,13 @@ findActiveByDriverFeeIds driverFeeIds =
         ]
     ]
 
-findAllByStatusWithLimit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.InvoiceStatus -> Int -> m [Domain.Invoice]
-findAllByStatusWithLimit status limit = do
+findAllByStatusWithLimit ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Domain.InvoiceStatus ->
+  Id DMOC.MerchantOperatingCity ->
+  Int ->
+  m [Domain.Invoice]
+findAllByStatusWithLimit status merchantOperatingCityId limit = do
   endTime <- getCurrentTime
   let startTime = addUTCTime (-1 * 3 * 3600 * 24) endTime
   let lastCheckedAt = UTCTime (utctDay endTime) (secondsToDiffTime 0)
@@ -139,6 +156,7 @@ findAllByStatusWithLimit status limit = do
         [ Se.Is BeamI.invoiceStatus $ Se.Eq status,
           Se.Is BeamI.createdAt $ Se.LessThanOrEq endTime,
           Se.Is BeamI.createdAt $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamI.merchantOperatingCityId $ Se.Eq $ Just merchantOperatingCityId.getId,
           Se.Or
             [ Se.Is BeamI.lastStatusCheckedAt $ Se.Eq Nothing,
               Se.Is BeamI.lastStatusCheckedAt $ Se.Not (Se.Eq $ Just lastCheckedAt)
@@ -149,19 +167,24 @@ findAllByStatusWithLimit status limit = do
     (Just limit)
     Nothing
 
-findAllAutoPayInvoicesActiveOlderThanProvidedDuration :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => NominalDiffTime -> m [Domain.Invoice]
-findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeDiff = do
+findAllAutoPayInvoicesActiveOlderThanProvidedDuration ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  NominalDiffTime ->
+  Id DMOC.MerchantOperatingCity ->
+  m [Domain.Invoice]
+findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeDiff merchantOperatingCityId = do
   endTime <- getCurrentTime
   let startTime = addUTCTime (-1 * timeDiff) endTime
   findAllWithKV
     [ Se.And
         [ Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
           Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE,
+          Se.Is BeamI.merchantOperatingCityId $ Se.Eq (Just $ getId merchantOperatingCityId),
           Se.Is BeamI.createdAt $ Se.LessThan startTime
         ]
     ]
 
-findLatestAutopayActiveByDriverFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DriverFee -> m [Domain.Invoice]
+findLatestAutopayActiveByDriverFeeId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DF.DriverFee -> m [Domain.Invoice]
 findLatestAutopayActiveByDriverFeeId driverFeeId = do
   findAllWithOptionsKV
     [ Se.And
@@ -174,12 +197,13 @@ findLatestAutopayActiveByDriverFeeId driverFeeId = do
     (Just 1)
     Nothing
 
-findLatestNonAutopayActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [Domain.Invoice]
-findLatestNonAutopayActiveByDriverId driverId = do
+findLatestNonAutopayActiveByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> ServiceNames -> m [Domain.Invoice]
+findLatestNonAutopayActiveByDriverId driverId serviceName = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is BeamI.driverId $ Se.Eq (getId driverId),
-          Se.Is BeamI.paymentMode $ Se.Not $ Se.Eq Domain.AUTOPAY_INVOICE
+          Se.Is BeamI.paymentMode $ Se.Not $ Se.Eq Domain.AUTOPAY_INVOICE,
+          Se.Is BeamI.serviceName $ Se.Eq (Just serviceName)
         ]
     ]
     (Se.Desc BeamI.createdAt)
@@ -193,9 +217,13 @@ updateInvoiceStatusByInvoiceId invoiceStatus invoiceId = do
     [ Se.Set BeamI.invoiceStatus invoiceStatus,
       Se.Set BeamI.updatedAt now
     ]
-    [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
+    [ Se.And
+        ( [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
+            <> [Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE | invoiceStatus == Domain.INACTIVE]
+        )
+    ]
 
-updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.InvoiceStatus -> [Id DriverFee] -> Maybe Domain.InvoicePaymentMode -> m ()
+updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.InvoiceStatus -> [Id DF.DriverFee] -> Maybe Domain.InvoicePaymentMode -> m ()
 updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode status driverFeeIds paymentMode = do
   now <- getCurrentTime
   let paymentModeCheck =
@@ -210,7 +238,7 @@ updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode status driverFeeIds paymentMod
         <> paymentModeCheck
     )
 
-updateStatusAndTypeByMbdriverFeeIdAndInvoiceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Invoice -> Maybe Domain.InvoiceStatus -> Maybe Domain.InvoicePaymentMode -> Maybe (Id DriverFee) -> m ()
+updateStatusAndTypeByMbdriverFeeIdAndInvoiceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Invoice -> Maybe Domain.InvoiceStatus -> Maybe Domain.InvoicePaymentMode -> Maybe (Id DF.DriverFee) -> m ()
 updateStatusAndTypeByMbdriverFeeIdAndInvoiceId invoiceId status paymentMode driverFeeId = do
   now <- getCurrentTime
   updateWithKV
@@ -220,20 +248,25 @@ updateStatusAndTypeByMbdriverFeeIdAndInvoiceId invoiceId status paymentMode driv
     )
     ([Se.Is BeamI.driverFeeId $ Se.Eq (getId (fromJust driverFeeId)) | isJust driverFeeId] <> [Se.Is BeamI.id $ Se.Eq invoiceId.getId])
 
-updatePendingToFailed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => NominalDiffTime -> m ()
-updatePendingToFailed seconds = do
+updatePendingToFailed ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  NominalDiffTime ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+updatePendingToFailed seconds merchantOperatingCityId = do
   endTime <- getCurrentTime
   let startTime = addUTCTime (-1 * seconds) endTime
   updateWithKV
     [Se.Set BeamI.invoiceStatus Domain.INACTIVE]
     [ Se.And
         [ Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
+          Se.Is BeamI.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId),
           Se.Is BeamI.createdAt $ Se.LessThan startTime
         ]
     ]
 
-inActivateAllAutopayActiveInvoices :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
-inActivateAllAutopayActiveInvoices driverId = do
+inActivateAllAutopayActiveInvoices :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> ServiceNames -> m ()
+inActivateAllAutopayActiveInvoices driverId serviceName = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamI.invoiceStatus Domain.INACTIVE,
@@ -242,7 +275,8 @@ inActivateAllAutopayActiveInvoices driverId = do
     [ Se.And
         [ Se.Is BeamI.driverId $ Se.Eq (getId driverId),
           Se.Is BeamI.invoiceStatus $ Se.Eq Domain.ACTIVE_INVOICE,
-          Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE
+          Se.Is BeamI.paymentMode $ Se.Eq Domain.AUTOPAY_INVOICE,
+          Se.Is BeamI.serviceName $ Se.Eq (Just serviceName)
         ]
     ]
 
@@ -266,11 +300,26 @@ updateLastCheckedOn invoiceIds = do
     ]
     [Se.Is BeamI.id (Se.In $ getId <$> invoiceIds)]
 
+updateMerchantOperatingCityIdByInvoiceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Invoice -> Id DMOC.MerchantOperatingCity -> m ()
+updateMerchantOperatingCityIdByInvoiceId invoiceId merchantOperatingCityId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.merchantOperatingCityId (Just $ getId merchantOperatingCityId),
+      Se.Set BeamI.updatedAt now
+    ]
+    [Se.Is BeamI.id (Se.Eq $ getId invoiceId)]
+
 instance FromTType' BeamI.Invoice Domain.Invoice where
   fromTType' BeamI.InvoiceT {..} = do
+    merchantOperatingCityId' <- case merchantOperatingCityId of
+      Just opCity -> return $ Id opCity
+      Nothing -> do
+        dfee <- QDF.findById (Id driverFeeId) >>= fromMaybeM (DriverFeeNotFound driverFeeId)
+        updateMerchantOperatingCityIdByInvoiceId (Id id) (dfee.merchantOperatingCityId)
+        return dfee.merchantOperatingCityId
     pure $
       Just
-        Invoice
+        Domain.Invoice
           { id = Id id,
             invoiceShortId = invoiceShortId,
             driverId = Id driverId,
@@ -282,12 +331,14 @@ instance FromTType' BeamI.Invoice Domain.Invoice where
             bankErrorMessage,
             bankErrorUpdatedAt,
             lastStatusCheckedAt,
+            merchantOperatingCityId = merchantOperatingCityId',
+            Domain.serviceName = fromMaybe YATRI_SUBSCRIPTION serviceName,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
 
 instance ToTType' BeamI.Invoice Domain.Invoice where
-  toTType' Invoice {..} = do
+  toTType' Domain.Invoice {..} = do
     BeamI.InvoiceT
       { BeamI.id = id.getId,
         BeamI.invoiceShortId = invoiceShortId,
@@ -300,6 +351,8 @@ instance ToTType' BeamI.Invoice Domain.Invoice where
         BeamI.bankErrorMessage = bankErrorMessage,
         BeamI.bankErrorUpdatedAt = bankErrorUpdatedAt,
         BeamI.lastStatusCheckedAt = lastStatusCheckedAt,
+        BeamI.serviceName = Just serviceName,
+        BeamI.merchantOperatingCityId = Just merchantOperatingCityId.getId,
         BeamI.createdAt = createdAt,
         BeamI.updatedAt = updatedAt
       }

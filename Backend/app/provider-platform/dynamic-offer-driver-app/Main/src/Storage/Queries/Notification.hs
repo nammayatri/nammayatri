@@ -4,16 +4,19 @@ module Storage.Queries.Notification where
 
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import qualified Domain.Types.DriverFee as DF
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Notification as Domain
 import Kernel.Beam.Functions (FromTType' (fromTType'), ToTType' (toTType'), createWithKV, findAllWithKV, findAllWithOptionsKV, findOneWithKV, updateWithKV)
 import Kernel.External.Payment.Interface.Types (MandateNotificationRes, NotificationStatus (NOTIFICATION_CREATED, NOTIFICATION_FAILURE, PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Payment
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import Storage.Beam.Notification as BeamI hiding (Id)
+import qualified Storage.Queries.DriverFee as QDF
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.Notification -> m ()
 create = createWithKV
@@ -27,8 +30,13 @@ findByShortId shortId = findOneWithKV [Se.Is BeamI.shortId $ Se.Eq shortId]
 findAllByDriverFeeIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DF.DriverFee] -> NotificationStatus -> m [Domain.Notification]
 findAllByDriverFeeIdAndStatus driverFeeIds status = findAllWithKV [Se.And [Se.Is BeamI.driverFeeId $ Se.In (getId <$> driverFeeIds), Se.Is BeamI.status $ Se.Eq status]]
 
-findAllByStatusWithLimit :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [NotificationStatus] -> Int -> m [Domain.Notification]
-findAllByStatusWithLimit status limit = do
+findAllByStatusWithLimit ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [NotificationStatus] ->
+  Id DMOC.MerchantOperatingCity ->
+  Int ->
+  m [Domain.Notification]
+findAllByStatusWithLimit status merchantOperatingCityId limit = do
   endTime <- getCurrentTime
   let startTime = addUTCTime (-1 * 3 * 3600 * 24) endTime
   let lastCheckedAt = UTCTime (utctDay endTime) (secondsToDiffTime 0)
@@ -37,6 +45,7 @@ findAllByStatusWithLimit status limit = do
         [ Se.Is BeamI.status $ Se.In status,
           Se.Is BeamI.createdAt $ Se.LessThanOrEq endTime,
           Se.Is BeamI.createdAt $ Se.GreaterThanOrEq startTime,
+          Se.Is BeamI.merchantOperatingCityId $ Se.Eq $ Just $ getId merchantOperatingCityId,
           Se.Or
             [ Se.Is BeamI.lastStatusCheckedAt $ Se.Eq Nothing,
               Se.Is BeamI.lastStatusCheckedAt $ Se.Not (Se.Eq $ Just lastCheckedAt)
@@ -47,14 +56,18 @@ findAllByStatusWithLimit status limit = do
     (Just limit)
     Nothing
 
-updatePendingToFailed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m ()
-updatePendingToFailed = do
+updatePendingToFailed ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+updatePendingToFailed merchantOperatingCityId = do
   endTime <- getCurrentTime
   let startTime = addUTCTime (-1 * 3 * 3600 * 24) endTime
   updateWithKV
     [Se.Set BeamI.status NOTIFICATION_FAILURE]
     [ Se.And
         [ Se.Is BeamI.status $ Se.In [NOTIFICATION_CREATED, PENDING],
+          Se.Is BeamI.merchantOperatingCityId $ Se.Eq (Just $ getId merchantOperatingCityId),
           Se.Is BeamI.createdAt $ Se.LessThan startTime
         ]
     ]
@@ -98,8 +111,23 @@ updateNotificationResponseById notificationId response = do
     ]
     [Se.Is BeamI.id (Se.Eq $ getId notificationId)]
 
+updateMerchantOperatingCityIdByNotificationId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Domain.Notification -> Id DMOC.MerchantOperatingCity -> m ()
+updateMerchantOperatingCityIdByNotificationId notificationId merchantOperatingCityId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamI.merchantOperatingCityId (Just $ getId merchantOperatingCityId),
+      Se.Set BeamI.updatedAt now
+    ]
+    [Se.Is BeamI.id (Se.Eq $ getId notificationId)]
+
 instance FromTType' BeamI.Notification Domain.Notification where
   fromTType' BeamI.NotificationT {..} = do
+    merchantOperatingCityId' <- case merchantOperatingCityId of
+      Just opcity -> return $ Id opcity
+      Nothing -> do
+        dfee <- QDF.findById (Id driverFeeId) >>= fromMaybeM (DriverFeeNotFound driverFeeId)
+        updateMerchantOperatingCityIdByNotificationId (Id id) (DF.merchantOperatingCityId dfee)
+        return $ dfee.merchantOperatingCityId
     pure $
       Just
         Notification
@@ -116,10 +144,11 @@ instance FromTType' BeamI.Notification Domain.Notification where
             status,
             dateCreated,
             lastUpdated,
-            createdAt,
             responseCode,
             responseMessage,
             lastStatusCheckedAt,
+            merchantOperatingCityId = merchantOperatingCityId',
+            createdAt,
             updatedAt
           }
 
@@ -142,6 +171,7 @@ instance ToTType' BeamI.Notification Domain.Notification where
         BeamI.createdAt = createdAt,
         BeamI.responseCode = responseCode,
         BeamI.responseMessage = responseMessage,
+        BeamI.merchantOperatingCityId = Just merchantOperatingCityId.getId,
         BeamI.lastStatusCheckedAt = lastStatusCheckedAt,
         BeamI.updatedAt = updatedAt
       }

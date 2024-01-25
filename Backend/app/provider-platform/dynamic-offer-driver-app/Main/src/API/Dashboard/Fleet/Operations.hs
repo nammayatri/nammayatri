@@ -40,6 +40,8 @@ type API =
            :<|> GetFleetDriverVehicleAssociationAPI
            :<|> GetFleetDriverAssociationAPI
            :<|> GetFleetVehicleAssociationAPI
+           :<|> GetFleetDriverAssociationAPIBySearch
+           :<|> GetFleetVehicleAssociationAPIBySearch
            :<|> SetVehicleDriverRcStatusForFleetAPI
        )
 
@@ -151,6 +153,28 @@ type GetFleetVehicleAssociationAPI =
     :> QueryParam "offset" Int
     :> Get '[JSON] Common.DrivertoVehicleAssociationRes
 
+type GetFleetDriverAssociationAPIBySearch =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "getFleetDriverAssociation"
+    :> "search"
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "driverName" Text
+    :> QueryParam "driverPhoneNo" Text
+    :> Get '[JSON] Common.DrivertoVehicleAssociationRes
+
+type GetFleetVehicleAssociationAPIBySearch =
+  Capture "fleetOwnerId" Text
+    :> "fleet"
+    :> "getFleetVehicleAssociation"
+    :> "search"
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "vehicleNo" Text
+    :> QueryParam "driverPhoneNo" Text
+    :> Get '[JSON] Common.DrivertoVehicleAssociationRes
+
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler merchantId city =
   addVehicleForFleet merchantId city
@@ -165,6 +189,8 @@ handler merchantId city =
     :<|> getFleetDriverVehicleAssociation merchantId city
     :<|> getFleetDriverAssociation merchantId city
     :<|> getFleetVehicleAssociation merchantId city
+    :<|> getFleetDriverAssociationBySearch merchantId city
+    :<|> getFleetVehicleAssociationBySearch merchantId city
     :<|> setVehicleDriverRcStatusForFleet merchantId city
 
 addVehicleForFleet :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Text -> Common.AddVehicleReq -> FlowHandler APISuccess
@@ -201,7 +227,13 @@ getFleetDriverVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text 
 getFleetDriverVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetDriverVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset
 
 getFleetDriverAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset
+getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset Nothing Nothing False
 
 getFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> FlowHandler Common.DrivertoVehicleAssociationRes
-getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset
+getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset = withFlowHandlerAPI $ DDriver.getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset Nothing Nothing False
+
+getFleetDriverAssociationBySearch :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler Common.DrivertoVehicleAssociationRes
+getFleetDriverAssociationBySearch merchantShortId opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo = withFlowHandlerAPI $ DDriver.getFleetDriverAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbDriverName mbDriverPhNo True
+
+getFleetVehicleAssociationBySearch :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> FlowHandler Common.DrivertoVehicleAssociationRes
+getFleetVehicleAssociationBySearch merchantShortId opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbDriverPhNo = withFlowHandlerAPI $ DDriver.getFleetVehicleAssociation merchantShortId opCity fleetOwnerId mbLimit mbOffset mbVehicleNumber mbDriverPhNo True

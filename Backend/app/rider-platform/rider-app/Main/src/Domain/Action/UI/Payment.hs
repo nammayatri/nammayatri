@@ -26,6 +26,7 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import Environment
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
@@ -39,6 +40,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import Lib.Payment.Storage.Beam.BeamFlow ()
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Servant (BasicAuthData)
 import SharedLogic.Merchant
@@ -47,6 +49,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
+import Tools.Metrics
 import qualified Tools.Payment as Payment
 
 -- create order -----------------------------------------------------
@@ -57,10 +60,13 @@ createOrder ::
   Flow Payment.CreateOrderResp
 createOrder (personId, merchantId) rideId = do
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus $ show ride.status)
   totalFare <- ride.totalFare & fromMaybeM (RideFieldNotPresent "totalFare")
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
+  -- person <- QP.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   riderId <- B.runInReplica $ QRide.findRiderIdByRideId ride.id >>= fromMaybeM (InternalError "riderId not found")
+  -- riderId <- QRide.findRiderIdByRideId ride.id >>= fromMaybeM (InternalError "riderId not found")
   unless (person.id == riderId) $ throwError NotAnExecutor
   customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email") >>= decrypt
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
@@ -78,7 +84,9 @@ createOrder (personId, merchantId) rideId = do
             mandateMaxAmount = Nothing,
             mandateFrequency = Nothing,
             mandateStartDate = Nothing,
-            mandateEndDate = Nothing
+            mandateEndDate = Nothing,
+            optionsGetUpiDeepLinks = Nothing,
+            metadataExpiryInMins = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -91,9 +99,10 @@ createOrder (personId, merchantId) rideId = do
 getStatus ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
-    MonadFlow m,
+    L.MonadFlow m,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    CoreMetrics m
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DOrder.PaymentOrder ->
@@ -107,13 +116,15 @@ getOrder ::
   ( CacheFlow m r,
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    CoreMetrics m
   ) =>
   (Id DP.Person, Id DM.Merchant) ->
   Id DOrder.PaymentOrder ->
   m DOrder.PaymentOrderAPIEntity
 getOrder (personId, _) orderId = do
   order <- B.runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
+  -- order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   unless (order.personId == cast personId) $ throwError NotAnExecutor
   mkOrderAPIEntity order
 

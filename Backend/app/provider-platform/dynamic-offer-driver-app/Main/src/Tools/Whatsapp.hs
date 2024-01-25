@@ -51,7 +51,7 @@ whatsAppOptAPI merchantId merchantOpCityId req = do
 
     getProviderConfig provider = do
       merchantWhatsappServiceConfig <-
-        QMSC.findByMerchantIdAndService merchantId (DMSC.WhatsappService provider)
+        QMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.WhatsappService provider) merchantOpCityId
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       case merchantWhatsappServiceConfig.serviceConfig of
         DMSC.WhatsappServiceConfig msc -> pure msc
@@ -70,7 +70,7 @@ whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId = GupShup.whats
 
     getProviderConfig provider = do
       merchantWhatsappServiceConfig <-
-        QMSC.findByMerchantIdAndService merchantId (DMSC.WhatsappService provider)
+        QMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.WhatsappService provider) merchantOpCityId
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
       case merchantWhatsappServiceConfig.serviceConfig of
         DMSC.WhatsappServiceConfig msc -> pure msc

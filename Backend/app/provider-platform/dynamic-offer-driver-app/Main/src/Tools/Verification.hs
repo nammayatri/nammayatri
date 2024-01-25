@@ -109,7 +109,7 @@ runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
     CQMSUC.findByMerchantOpCityId merchantOpCityId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
-    CQMSC.findByMerchantIdAndService merchantId (DMSC.VerificationService $ getCfg merchantServiceUsageConfig)
+    CQMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.VerificationService $ getCfg merchantServiceUsageConfig) merchantOpCityId
       >>= fromMaybeM (InternalError $ "No verification service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
   case merchantServiceConfig.serviceConfig of
     DMSC.VerificationServiceConfig vsc -> func vsc req

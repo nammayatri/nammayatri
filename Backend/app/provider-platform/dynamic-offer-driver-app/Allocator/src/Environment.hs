@@ -29,6 +29,7 @@ import Data.String.Conversions (cs)
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
 import Kernel.Streaming.Kafka.Producer.Types
@@ -78,6 +79,7 @@ data HandlerEnv = HandlerEnv
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
     maxShards :: Int,
     maxNotificationShards :: Int,
+    smsCfg :: SmsConfig,
     version :: DeploymentVersion,
     jobInfoMap :: M.Map Text Bool,
     enableRedisLatencyLogging :: Bool,

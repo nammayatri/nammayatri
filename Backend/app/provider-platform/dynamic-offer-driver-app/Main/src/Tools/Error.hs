@@ -713,6 +713,7 @@ data SubscriptionError
   | OngoingManualPayment
   | NoCurrentPlanForDriver Text
   | NoDriverPlanForMandate Text
+  | NoSubscriptionConfigForService Text Text
   | InvalidAutoPayStatus
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -730,6 +731,7 @@ instance IsBaseError SubscriptionError where
     InvalidPaymentMode -> Just "Invalid payment method"
     InvalidAutoPayStatus -> Just "Invalid auto pay status"
     OngoingManualPayment -> Just "There is ongoing manual payment pls wait"
+    NoSubscriptionConfigForService merchantOperatingCityId serviceName -> Just $ "No subscription config exists for merchantOperatingCityId \"" <> show merchantOperatingCityId <> "\" and serviceName \"" <> show serviceName <> "\""
 
 instance IsHTTPError SubscriptionError where
   toErrorCode = \case
@@ -743,6 +745,7 @@ instance IsHTTPError SubscriptionError where
     InvalidPaymentMode -> "INVALID_PAYMENT_MODE"
     InvalidAutoPayStatus -> "INVALID_AUTO_PAY_STATUS"
     OngoingManualPayment -> "ONGOING_PAYMENT_EXECUTION"
+    NoSubscriptionConfigForService _ _ -> "NO_SUBSCRIPTION_CONFIG_FOR_SERVICE"
   toHttpCode = \case
     PlanNotFound _ -> E500
     MandateNotFound _ -> E500
@@ -754,6 +757,7 @@ instance IsHTTPError SubscriptionError where
     NoCurrentPlanForDriver _ -> E500
     NoDriverPlanForMandate _ -> E500
     OngoingManualPayment -> E400
+    NoSubscriptionConfigForService _ _ -> E500
 
 instance IsAPIError SubscriptionError
 

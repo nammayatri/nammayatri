@@ -18,8 +18,10 @@ module Domain.Types.DriverFee where
 
 import Data.Aeson
 import Domain.Types.Merchant (Merchant)
+import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Person (Driver)
 import Domain.Types.Plan (PaymentMode, Plan)
+import qualified Domain.Types.Plan as Plan
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
@@ -51,6 +53,7 @@ data DriverFee = DriverFee
     badDebtRecoveryDate :: Maybe UTCTime,
     schedulerTryCount :: Int,
     notificationRetryCount :: Int,
+    merchantOperatingCityId :: Id MerchantOperatingCity,
     stageUpdatedAt :: Maybe UTCTime,
     amountPaidByCoin :: Maybe HighPrecMoney,
     feeWithoutDiscount :: Maybe HighPrecMoney,
@@ -58,7 +61,9 @@ data DriverFee = DriverFee
     specialZoneRideCount :: Int,
     specialZoneAmount :: HighPrecMoney,
     planId :: Maybe (Id Plan),
-    planMode :: Maybe PaymentMode
+    planMode :: Maybe PaymentMode,
+    serviceName :: Plan.ServiceNames,
+    vehicleNumber :: Maybe Text
   }
   deriving (Generic, Show, Eq)
 
@@ -69,7 +74,7 @@ data PlatformFee = PlatformFee
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
-data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE | CLEARED_BY_YATRI_COINS deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
+data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE | CLEARED_BY_YATRI_COINS | MANUAL_REVIEW_NEEDED deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data FeeType = MANDATE_REGISTRATION | RECURRING_INVOICE | RECURRING_EXECUTION_INVOICE deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
@@ -82,7 +87,7 @@ mandateProcessingLockKey :: Text -> Text
 mandateProcessingLockKey driverId = "Mandate:Processing:DriverId" <> driverId
 
 billNumberGenerationLockKey :: Text -> Text
-billNumberGenerationLockKey merchantId = "DriverFee:BillNumber:Processing:MerchantId" <> merchantId --- make lock on merchant Id
+billNumberGenerationLockKey merchantOpCityId = "DriverFee:BillNumber:Processing:MerchantOpCityId" <> merchantOpCityId --- make lock on merchant Id
 
 $(mkBeamInstancesForEnum ''DriverFeeStatus)
 

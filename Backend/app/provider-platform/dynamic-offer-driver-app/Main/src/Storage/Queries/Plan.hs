@@ -20,7 +20,7 @@ module Storage.Queries.Plan
     #-}
 where
 
-import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Plan
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -36,17 +36,60 @@ create = createWithKV
 fetchAllPlan :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Plan]
 fetchAllPlan = findAllWithKV [Se.Is BeamP.id $ Se.Not $ Se.Eq $ getId ""]
 
-findByIdAndPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Plan -> PaymentMode -> m (Maybe Plan)
-findByIdAndPaymentMode (Id planId) paymentMode = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq planId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
+findByIdAndPaymentModeWithServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Plan -> PaymentMode -> ServiceNames -> m (Maybe Plan)
+findByIdAndPaymentModeWithServiceName (Id planId) paymentMode serviceName = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.id $ Se.Eq planId,
+          Se.Is BeamP.paymentMode $ Se.Eq paymentMode,
+          Se.Is BeamP.serviceName $ Se.Eq serviceName
+        ]
+    ]
 
-findByMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [Plan]
-findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamP.merchantId $ Se.Eq merchantId]
+findByMerchantOpCityIdWithServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> ServiceNames -> m [Plan]
+findByMerchantOpCityIdWithServiceName (Id merchantOpCityId) serviceName = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamP.merchantOpCityId $ Se.Eq merchantOpCityId,
+          Se.Is BeamP.serviceName $ Se.Eq serviceName
+        ]
+    ]
 
-findByMerchantIdAndPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> PaymentMode -> m [Plan]
-findByMerchantIdAndPaymentMode (Id merchantId) paymentMode = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
+findByMerchantOpCityIdAndPaymentModeWithServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  PaymentMode ->
+  ServiceNames ->
+  Maybe Bool ->
+  m [Plan]
+findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOpCityId) paymentMode serviceName mbIsDeprecated = do
+  findAllWithKV
+    [ Se.And
+        ( [ Se.Is BeamP.merchantOpCityId $ Se.Eq merchantOpCityId,
+            Se.Is BeamP.paymentMode $ Se.Eq paymentMode,
+            Se.Is BeamP.serviceName $ Se.Eq serviceName
+          ]
+            <> ( case mbIsDeprecated of
+                   Nothing -> []
+                   Just isDeprecated -> [Se.Is BeamP.isDeprecated $ Se.Eq isDeprecated]
+               )
+        )
+    ]
 
-findByMerchantIdAndType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> PlanType -> m [Plan]
-findByMerchantIdAndType (Id merchantId) planType = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.planType $ Se.Eq planType]]
+findByMerchantOpCityIdAndTypeWithServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  PlanType ->
+  ServiceNames ->
+  m [Plan]
+findByMerchantOpCityIdAndTypeWithServiceName (Id merchantOpCityId) planType serviceName = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamP.merchantOpCityId $ Se.Eq merchantOpCityId,
+          Se.Is BeamP.planType $ Se.Eq planType,
+          Se.Is BeamP.serviceName $ Se.Eq serviceName
+        ]
+    ]
 
 instance FromTType' BeamP.Plan Plan where
   fromTType' BeamP.PlanT {..} = do
@@ -68,7 +111,13 @@ instance FromTType' BeamP.Plan Plan where
             cgstPercentage = cgstPercentage,
             sgstPercentage = sgstPercentage,
             planType = planType,
-            maxMandateAmount = maxMandateAmount
+            maxMandateAmount = maxMandateAmount,
+            merchantOpCityId = Id merchantOpCityId,
+            serviceName = serviceName,
+            eligibleForCoinDiscount = eligibleForCoinDiscount,
+            subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
+            isDeprecated = isDeprecated,
+            basedOnEntity = basedOnEntity
           }
 
 instance ToTType' BeamP.Plan Plan where
@@ -89,5 +138,11 @@ instance ToTType' BeamP.Plan Plan where
         BeamP.cgstPercentage = cgstPercentage,
         BeamP.sgstPercentage = sgstPercentage,
         BeamP.planType = planType,
-        BeamP.maxMandateAmount = maxMandateAmount
+        BeamP.maxMandateAmount = maxMandateAmount,
+        BeamP.merchantOpCityId = merchantOpCityId.getId,
+        BeamP.serviceName = serviceName,
+        BeamP.eligibleForCoinDiscount = eligibleForCoinDiscount,
+        BeamP.subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
+        BeamP.isDeprecated = isDeprecated,
+        BeamP.basedOnEntity = basedOnEntity
       }

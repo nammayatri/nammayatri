@@ -17,6 +17,7 @@ module API.UI.Plan where
 import qualified Domain.Action.UI.Driver as Driver
 import qualified Domain.Action.UI.Plan as DPlan
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -68,26 +69,26 @@ handler =
     :<|> planSelect
 
 planList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> FlowHandler DPlan.PlanListAPIRes
-planList (driverId, merchantId, merchantOpCityId) mbLimit = withFlowHandlerAPI . DPlan.planList (driverId, merchantId, merchantOpCityId) mbLimit
+planList (driverId, merchantId, merchantOpCityId) mbLimit = withFlowHandlerAPI . DPlan.planList (driverId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION mbLimit
 
 planSuspend :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
-planSuspend = withFlowHandlerAPI . DPlan.planSuspend False
+planSuspend = withFlowHandlerAPI . DPlan.planSuspend DPlan.YATRI_SUBSCRIPTION False
 
 planResume :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
-planResume = withFlowHandlerAPI . DPlan.planResume
+planResume = withFlowHandlerAPI . DPlan.planResume DPlan.YATRI_SUBSCRIPTION
 
 currentPlan :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.CurrentPlanRes
-currentPlan = withFlowHandlerAPI . DPlan.currentPlan
+currentPlan = withFlowHandlerAPI . DPlan.currentPlan DPlan.YATRI_SUBSCRIPTION
 
 planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DPlan.PlanSubscribeRes
 planSubscribe planId (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ do
   driverInfo <- DI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   if driverInfo.autoPayStatus == Just DI.SUSPENDED
     then do
-      void $ DPlan.planResume (personId, merchantId, merchantOpCityId)
-      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId)
+      void $ DPlan.planResume DPlan.YATRI_SUBSCRIPTION (personId, merchantId, merchantOpCityId)
+      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) DPlan.YATRI_SUBSCRIPTION Nothing
       return $ DPlan.PlanSubscribeRes {..}
-    else do DPlan.planSubscribe planId False (personId, merchantId, merchantOpCityId) driverInfo
+    else do DPlan.planSubscribe DPlan.YATRI_SUBSCRIPTION planId (False, Nothing) (personId, merchantId, merchantOpCityId) driverInfo DPlan.NoData
 
 planSelect :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
-planSelect planId = withFlowHandlerAPI . DPlan.planSelect planId
+planSelect planId = withFlowHandlerAPI . DPlan.planSwitch DPlan.YATRI_SUBSCRIPTION planId

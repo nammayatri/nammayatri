@@ -191,8 +191,6 @@ let registryMap =
 
 let AllocatorJobType =
       < SendSearchRequestToDriver
-      | SendPaymentReminderToDriver
-      | UnsubscribeDriverForPaymentOverdue
       | UnblockDriver
       | SendPDNNotificationToDriver
       | MandateExecution
@@ -201,16 +199,11 @@ let AllocatorJobType =
       | SendOverlay
       | BadDebtCalculation
       | RetryDocumentVerification
+      | SendManualPaymentLink
       >
 
 let jobInfoMapx =
       [ { mapKey = AllocatorJobType.SendSearchRequestToDriver, mapValue = True }
-      , { mapKey = AllocatorJobType.SendPaymentReminderToDriver
-        , mapValue = False
-        }
-      , { mapKey = AllocatorJobType.UnsubscribeDriverForPaymentOverdue
-        , mapValue = True
-        }
       , { mapKey = AllocatorJobType.UnblockDriver, mapValue = False }
       , { mapKey = AllocatorJobType.SendPDNNotificationToDriver
         , mapValue = True
@@ -225,6 +218,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.RetryDocumentVerification
         , mapValue = False
         }
+      , { mapKey = AllocatorJobType.SendManualPaymentLink, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

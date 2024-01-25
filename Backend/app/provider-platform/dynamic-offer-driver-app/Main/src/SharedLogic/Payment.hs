@@ -18,14 +18,18 @@ import Data.Time (UTCTime (UTCTime), secondsToDiffTime, utctDay)
 import Domain.Types.DriverFee
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.Merchant.MerchantMessage as MessageKey
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
+import Domain.Types.Plan as DP
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payment.Interface.Types
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Common hiding (id)
@@ -35,13 +39,18 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import SharedLogic.DriverFee (roundToHalf)
+import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Payment as TPayment
+import qualified Tools.SMS as Sms
+import Tools.Whatsapp as Whatsapp
 
 data MandateOrder = MandateOrder
   { maxAmount :: HighPrecMoney,
@@ -59,13 +68,15 @@ createOrder ::
     CoreMetrics m,
     MonadFlow m
   ) =>
-  (Id DP.Person, Id DM.Merchant) ->
+  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  DMSC.ServiceName ->
   ([DriverFee], [DriverFee]) ->
   Maybe MandateOrder ->
   INV.InvoicePaymentMode ->
   Maybe (Id INV.Invoice, Text) ->
+  Maybe DeepLinkData ->
   m (CreateOrderResp, Id DOrder.PaymentOrder)
-createOrder (driverId, merchantId) (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice = do
+createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice mbDeepLinkData = do
   mapM_ (\driverFee -> when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled driverFee.id.getId)) driverFees
   mapM_ (\driverFee -> when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse driverFee.id.getId)) driverFees
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
@@ -78,6 +89,7 @@ createOrder (driverId, merchantId) (driverFees, driverFeesToAddOnExpiry) mbManda
       (invoiceId, invoiceShortId) = fromMaybe (genInvoiceId, genShortInvoiceId.getShortId) existingInvoice
       amount = sum $ (\pendingFees -> roundToHalf (fromIntegral pendingFees.govtCharges + pendingFees.platformFee.fee + pendingFees.platformFee.cgst + pendingFees.platformFee.sgst)) <$> driverFees
       invoices = mkInvoiceAgainstDriverFee invoiceId.getId invoiceShortId now (mbMandateOrder <&> (.maxAmount)) invoicePaymentMode <$> driverFees
+  when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices
   let createOrderReq =
         CreateOrderReq
@@ -93,17 +105,19 @@ createOrder (driverId, merchantId) (driverFees, driverFeesToAddOnExpiry) mbManda
             mandateMaxAmount = mbMandateOrder <&> (.maxAmount),
             mandateFrequency = mbMandateOrder <&> (.frequency),
             mandateEndDate = mbMandateOrder <&> (.mandateEndDate),
-            mandateStartDate = mbMandateOrder <&> (.mandateStartDate)
+            mandateStartDate = mbMandateOrder <&> (.mandateStartDate),
+            optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
+            metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes)
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
-      createOrderCall = TPayment.createOrder merchantId -- api call
+      createOrderCall = TPayment.createOrder merchantId opCity serviceName -- api call
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
-      createOrder (driverId, merchantId) (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing -- call same function with no existing order
+      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing mbDeepLinkData -- call same function with no existing order
 
 mkInvoiceAgainstDriverFee :: Text -> Text -> UTCTime -> Maybe HighPrecMoney -> INV.InvoicePaymentMode -> DriverFee -> INV.Invoice
 mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee =
@@ -119,20 +133,25 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
       bankErrorMessage = Nothing,
       bankErrorUpdatedAt = Nothing,
       lastStatusCheckedAt = Nothing,
+      serviceName = driverFee.serviceName,
+      merchantOperatingCityId = driverFee.merchantOperatingCityId,
       updatedAt = now,
       createdAt = now
     }
 
-offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Payment.OfferListReq -> m Payment.OfferListResp
-offerListCache merchantId merchantOpCityId req = do
+offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DP.ServiceNames -> Payment.OfferListReq -> m Payment.OfferListResp
+offerListCache merchantId merchantOpCityId serviceName req = do
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  subscriptionConfig <-
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+      >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   if transporterConfig.useOfferListCache
     then do
       key <- makeOfferListCacheKey transporterConfig.cacheOfferListByDriverId req
       Hedis.get key >>= \case
         Just a -> return a
-        Nothing -> cacheOfferListResponse transporterConfig.cacheOfferListByDriverId req /=<< TPayment.offerList merchantId req
-    else TPayment.offerList merchantId req
+        Nothing -> cacheOfferListResponse transporterConfig.cacheOfferListByDriverId req /=<< TPayment.offerList merchantId merchantOpCityId subscriptionConfig.paymentServiceName req
+    else TPayment.offerList merchantId merchantOpCityId subscriptionConfig.paymentServiceName req
 
 cacheOfferListResponse :: (MonadFlow m, CacheFlow m r) => Bool -> Payment.OfferListReq -> Payment.OfferListResp -> m ()
 cacheOfferListResponse includeDriverId req resp = do
@@ -165,3 +184,63 @@ makeOfferListCacheKey includeDriverId req = do
       case offerListingMetric' of
         LIST_BASED_ON_DATE listingDates -> show $ UTCTime (utctDay listingDates) (secondsToDiffTime 0)
         _ -> show offerListingMetric'
+
+sendLinkTroughChannelProvided ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig) =>
+  Maybe Payment.PaymentLinks ->
+  Id DP.Person ->
+  Maybe HighPrecMoney ->
+  Maybe MediaChannel ->
+  Bool ->
+  MessageKey ->
+  m ()
+sendLinkTroughChannelProvided mbPaymentLink driverId mbAmount mbChannel sendDeepLink mkey = do
+  driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+  mobileNumber <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let phoneNumber = countryCode <> mobileNumber
+      merchantOpCityId = driver.merchantOperatingCityId
+      merchantId = driver.merchantId
+  webPaymentLink <- getPaymentLinks mbPaymentLink driverId sendDeepLink
+  case mbChannel of
+    Just MessageKey.WHATSAPP -> do
+      merchantMessage <- QMM.findByMerchantOpCityIdAndMessageKey merchantOpCityId mkey >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show mkey))
+      let amount = show <$> mbAmount
+      let whatsAppReq =
+            Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq
+              { sendTo = phoneNumber,
+                templateId = merchantMessage.templateId,
+                var1 = amount,
+                var2 = Nothing,
+                var3 = Nothing,
+                ctaButtonUrl = Just webPaymentLink,
+                containsUrlButton = Just merchantMessage.containsUrlButton
+              }
+      result <- Whatsapp.whatsAppSendMessageWithTemplateIdAPI merchantId merchantOpCityId whatsAppReq
+      when (result._response.status /= "success") $ throwError (InternalError "Unable to send Whatsapp message via dashboard")
+    Just MessageKey.SMS -> do
+      smsCfg <- asks (.smsCfg)
+      message <-
+        MessageBuilder.buildSendPaymentLink merchantOpCityId $
+          MessageBuilder.BuildSendPaymentLinkReq
+            { paymentLink = webPaymentLink,
+              amount = show (fromMaybe 0 mbAmount)
+            }
+      Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber smsCfg.sender)
+        >>= Sms.checkSmsResult
+    _ -> pure ()
+  return ()
+
+getPaymentLinks :: (MonadFlow m) => Maybe Payment.PaymentLinks -> Id DP.Person -> Bool -> m Text
+getPaymentLinks mbPaymentLink driverId sendDeepLink = do
+  let mbDeepLink = if sendDeepLink then mbPaymentLink >>= (.deep_link) else Nothing
+  case (mbPaymentLink >>= (.web), mbDeepLink) of
+    (_, Just deepLink) -> return deepLink
+    (Just paymentLink, Nothing) -> return $ showBaseUrl paymentLink
+    (Nothing, Nothing) -> throwError $ InternalError ("No payment link found for driverId" <> show driverId.getId)
+
+data DeepLinkData = DeepLinkData
+  { sendDeepLink :: Maybe Bool,
+    expiryTimeInMinutes :: Maybe Int
+  }
+  deriving (Generic, ToJSON, ToSchema, FromJSON, Show, Ord, Eq)

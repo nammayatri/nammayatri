@@ -329,6 +329,7 @@ library
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
+      SharedLogic.EventTracking
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide
       SharedLogic.External.LocationTrackingService.API.NearBy
@@ -477,6 +478,7 @@ library
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.RegistryMapFallback
+      Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.DriverEdaKafka
       Storage.Queries.BapMetadata
@@ -606,6 +608,7 @@ library
       Domain.Types.DriverModuleCompletion
       Domain.Types.DriverPoolConfig
       Domain.Types.Estimate
+      Domain.Types.EventTracker
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsModule
       Domain.Types.LmsModuleTranslation
@@ -615,9 +618,11 @@ library
       Domain.Types.ModuleCompletionInformation
       Domain.Types.QuestionInformation
       Domain.Types.QuestionModuleMapping
+      Domain.Types.SubscriptionConfig
       Storage.Beam.DriverModuleCompletion
       Storage.Beam.DriverPoolConfig
       Storage.Beam.Estimate
+      Storage.Beam.EventTracker
       Storage.Beam.InterCityTravelCities
       Storage.Beam.LmsModule
       Storage.Beam.LmsModuleTranslation
@@ -627,9 +632,11 @@ library
       Storage.Beam.ModuleCompletionInformation
       Storage.Beam.QuestionInformation
       Storage.Beam.QuestionModuleMapping
+      Storage.Beam.SubscriptionConfig
       Storage.Queries.DriverModuleCompletion
       Storage.Queries.DriverPoolConfig
       Storage.Queries.Estimate
+      Storage.Queries.EventTracker
       Storage.Queries.InterCityTravelCities
       Storage.Queries.LmsModule
       Storage.Queries.LmsModuleTranslation
@@ -639,6 +646,7 @@ library
       Storage.Queries.ModuleCompletionInformation
       Storage.Queries.QuestionInformation
       Storage.Queries.QuestionModuleMapping
+      Storage.Queries.SubscriptionConfig
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:

@@ -322,12 +322,11 @@ updateDriverDowngradeTaxiForSuv (Id driverId) canDowngradeToTaxi = do
     ]
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateAutoPayStatusAndPayerVpa :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverAutoPayStatus -> Maybe Text -> Id Person.Driver -> m ()
-updateAutoPayStatusAndPayerVpa autoPayStatus payerVpa (Id driverId) = do
+updatPayerVpa :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Id Person.Driver -> m ()
+updatPayerVpa payerVpa (Id driverId) = do
   now <- getCurrentTime
   updateOneWithKV
-    ( [ Se.Set BeamDI.autoPayStatus autoPayStatus,
-        Se.Set BeamDI.updatedAt now
+    ( [ Se.Set BeamDI.updatedAt now
       ]
         <> [Se.Set BeamDI.payerVpa payerVpa | isJust payerVpa]
     )

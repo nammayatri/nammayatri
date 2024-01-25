@@ -43,6 +43,7 @@ data PaymentOrderT f = PaymentOrderT
     webPaymentLink :: B.C f (Maybe Text),
     iframePaymentLink :: B.C f (Maybe Text),
     mobilePaymentLink :: B.C f (Maybe Text),
+    deepLink :: B.C f (Maybe Text),
     clientAuthTokenEncrypted :: B.C f (Maybe Text),
     clientAuthTokenHash :: B.C f (Maybe DbHash),
     clientAuthTokenExpiry :: B.C f (Maybe UTCTime),

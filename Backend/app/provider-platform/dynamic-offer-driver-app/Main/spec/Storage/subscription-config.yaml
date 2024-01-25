@@ -1,0 +1,60 @@
+imports:
+  UTCTime: Kernel.Prelude
+  Seconds: Kernel.Types.Common
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+  Id: Kernel.Types.Id
+
+
+SubscriptionConfig:
+  tableName: subscription_config
+
+  derives: "Generic,Show,ToJSON,FromJSON"
+
+  fields:
+    allowManualPaymentLinks : Bool
+    useOverlayService : Bool
+    paymentLinkChannel : Domain.Types.Merchant.MerchantMessage.MediaChannel
+    paymentLinkJobTime : Data.Time.NominalDiffTime
+    genericBatchSizeForJobs : Int
+    genericJobRescheduleTime : Data.Time.NominalDiffTime
+    maxRetryCount : Int
+    sendInAppFcmNotifications : Bool
+    paymentServiceName : Domain.Types.Merchant.MerchantServiceConfig.ServiceName
+    allowDueAddition : Bool
+    serviceName : Domain.Types.Plan.ServiceNames
+    sendDeepLink : Bool
+    deepLinkExpiryTimeInMinutes : Maybe Int
+    isTriggeredAtEndRide : Bool
+    allowDriverFeeCalcSchedule : Bool
+
+  fromTType:
+    genericJobRescheduleTime: Kernel.Utils.Common.secondsToNominalDiffTime|I
+    paymentLinkJobTime : Kernel.Utils.Common.secondsToNominalDiffTime|I
+  toTType:
+    genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+    paymentLinkJobTime : Kernel.Utils.Common.nominalDiffTimeToSeconds|I
+
+  beamType:
+    genericJobRescheduleTime: Seconds
+    paymentLinkJobTime: Seconds
+
+  constraints:
+    serviceName : PrimaryKey
+    merchantOperatingCityId : PrimaryKey
+
+
+  queries :
+    findSubscriptionConfigsByMerchantOpCityIdAndServiceName:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, serviceName]
+
+  default :
+    allow_manual_payment_links : "false"
+    send_deep_link : "false"
+    send_in_app_fcm_notifications : "false"
+    allow_due_addition : "false"
+    payment_service_name : "'Payment_Juspay'"
+    is_triggered_at_end_ride : "true"
+    allow_driver_fee_calc_schedule : "false"
