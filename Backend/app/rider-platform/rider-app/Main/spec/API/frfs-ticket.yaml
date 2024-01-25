@@ -58,7 +58,7 @@ types:
     paymentOrder: Maybe CreateOrderResp
 
   FRFSBookingPaymentStatusAPI:
-    enum: "PENDING, SUCCESS, FAILURE, REFUNDED"
+    enum: "NEW, PENDING, SUCCESS, FAILURE, REFUNDED"
 
   FRFSStationAPI:
     name: Text

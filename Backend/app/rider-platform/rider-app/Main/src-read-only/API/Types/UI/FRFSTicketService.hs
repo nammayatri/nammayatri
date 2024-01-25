@@ -29,7 +29,7 @@ data FRFSBookingPaymentAPI = FRFSBookingPaymentAPI
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data FRFSBookingPaymentStatusAPI = PENDING | SUCCESS | FAILURE | REFUNDED
+data FRFSBookingPaymentStatusAPI = NEW | PENDING | SUCCESS | FAILURE | REFUNDED
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
