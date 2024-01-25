@@ -43,5 +43,6 @@ updateFlowStatusStorage response = do
   setValueToLocalStore REFERRAL_STATUS userRideStatus
   setValueToLocalStore HAS_TAKEN_FIRST_RIDE $ show $ response ^. _hasTakenRide
   setValueToLocalStore USER_NAME name
+  setValueToLocalStore CUSTOMER_ID $ response ^. _id
   void $ pure $ setValueToLocalStore DISABILITY_NAME <$> response ^. _disability
   void $ pure $ setValueToLocalStore USER_EMAIL <$> response ^. _email

@@ -249,7 +249,7 @@ foreign import withinTimeRange :: String -> String -> String -> Boolean
 foreign import getChatMessages :: LazyCheck -> Array ChatComponent
 foreign import storeKeyBoardCallback :: forall action. EffectFn2 (action -> Effect Unit) (String -> action) Unit
 foreign import scrollViewFocus :: String -> Int -> Boolean
-foreign import clearChatMessages :: Effect Unit
+foreign import clearChatMessages :: String -> Effect Unit
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
 foreign import pauseYoutubeVideo :: Unit -> Unit 
 foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit

@@ -17,6 +17,9 @@ module Constants where
 appConfig :: String
 appConfig = "appConfig"
 
+personId :: String
+personId = "personId"
+
 decodeAppConfig :: String
 decodeAppConfig = "decodeAppConfig"
 

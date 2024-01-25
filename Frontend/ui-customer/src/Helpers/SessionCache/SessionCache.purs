@@ -24,3 +24,13 @@ setSosAlarmStatus obj =
   let stringifiedObj = stringifyJSON obj
       _ =  runFn2 setKeyInSharedPref "SOS_ALARM_STATUS" stringifiedObj
   in runFn2 setAnyInWindow ReExport.sosAlarmStatus obj
+
+
+getCustomerId :: String -> String
+getCustomerId key = do
+  let mbValue = runFn3 getFromWindowString key Nothing Just
+  case mbValue of
+    Nothing ->
+      let personId = getKeyInSharedPrefKeys "CUSTOMER_ID"
+      in runFn2 setInWindow key personId
+    Just value -> value

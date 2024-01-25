@@ -674,10 +674,11 @@ export const storeCallBackMessageUpdated = function (cb) {
               type: "Text",
               delay: 0
             }
-            window.chatMessages = window.chatMessages || [];
-            if(sentBy == "Driver") window.didDriverMessage = true;
-            window.chatMessages.push(messageObj);
-            if (window.chatMessages.length - 1 == messagesSize || messagesSize === "-1") {
+            window.chatMessages = window.chatMessages || {};
+            window.chatMessages[chatChannelID] = window.chatMessages[chatChannelID] || [];
+            if(sentBy != chatUserId) window.didDriverMessage = true;
+            window.chatMessages[chatChannelID].push(messageObj);
+            if (window.chatMessages[chatChannelID].length - 1 == messagesSize || messagesSize === "-1") {
               cb(action(message)(sentBy)(timeStamp)(messagesSize))();
             }
           });
@@ -702,7 +703,7 @@ export const getChatMessages = function (string) {
   return [].concat(window.chatMessages !== undefined ? window.chatMessages : []);
 }
 
-export const clearChatMessages = function () {
+export const clearChatMessages = function (key) {
   window.chatMessages = undefined;
   window.didDriverMessage = undefined;
 }
