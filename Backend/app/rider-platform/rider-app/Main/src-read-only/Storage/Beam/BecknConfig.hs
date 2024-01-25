@@ -17,7 +17,8 @@ import qualified Servant.Client.Core
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
-  { buyerFinderFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { bapIFSC :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    buyerFinderFee :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     collectedBy :: B.C f Domain.Types.BecknConfig.PaymentCollectedBy,
     confirmBufferTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     confirmTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

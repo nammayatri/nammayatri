@@ -38,6 +38,7 @@ onConfirm ::
   FlowHandler Spec.AckResponse
 onConfirm _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  logDebug $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     dOnConfirmReq <- ACL.buildOnConfirmReq req
     Redis.whenWithLockRedis (onConfirmLockKey dOnConfirmReq.bppOrderId) 60 $ do

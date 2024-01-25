@@ -42,8 +42,7 @@ buildInitReq rider tBooking bapConfig bppData = do
   now <- getCurrentTime
   let transactionId = tBooking.searchId.getId
   let messageId = tBooking.id.getId
-      validTill = addUTCTime (intToNominalDiffTime 30) now
-      ttl = diffUTCTime validTill now
+      ttl = diffUTCTime tBooking.validTill now
 
   let mPaymentParams = bapConfig.paymentParamsJson >>= decodeFromText
   let mSettlementType = bapConfig.settlementType
@@ -65,6 +64,7 @@ tfOrder :: (Maybe RiderName, Maybe RiderNumber) -> DTBooking.FRFSTicketBooking -
 tfOrder rider tBooking mPaymentParams mSettlementType =
   Spec.Order
     { orderBilling = tfBilling rider,
+      orderCancellation = Nothing,
       orderCancellationTerms = Nothing,
       orderCreatedAt = Nothing,
       orderFulfillments = Nothing,
@@ -83,7 +83,7 @@ tfBilling (mRiderName, mRiderNumber) =
   Just $
     Spec.Billing
       { billingEmail = Nothing,
-        billingName = mRiderName,
+        billingName = Just (fromMaybe "NY User" mRiderName),
         billingPhone = mRiderNumber
       }
 

@@ -29,6 +29,7 @@ library
   exposed-modules:
       API
       API.Beckn
+      API.Beckn.FRFS.OnCancel
       API.Beckn.FRFS.OnConfirm
       API.Beckn.FRFS.OnInit
       API.Beckn.FRFS.OnSearch
@@ -421,6 +422,7 @@ library
       Domain.Types.BppDetails
       Domain.Types.BusinessHour
       Domain.Types.FRFSQuote
+      Domain.Types.FRFSRecon
       Domain.Types.FRFSSearch
       Domain.Types.FRFSTicket
       Domain.Types.FRFSTicketBooking
@@ -447,6 +449,7 @@ library
       Storage.Beam.BppDetails
       Storage.Beam.BusinessHour
       Storage.Beam.FRFSQuote
+      Storage.Beam.FRFSRecon
       Storage.Beam.FRFSSearch
       Storage.Beam.FRFSTicket
       Storage.Beam.FRFSTicketBooking
@@ -473,6 +476,7 @@ library
       Storage.Queries.BppDetails
       Storage.Queries.BusinessHour
       Storage.Queries.FRFSQuote
+      Storage.Queries.FRFSRecon
       Storage.Queries.FRFSSearch
       Storage.Queries.FRFSTicket
       Storage.Queries.FRFSTicketBooking

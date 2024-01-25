@@ -21,6 +21,7 @@ import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnInit as Domain
 import Kernel.Prelude
 import Kernel.Types.Error
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 
 buildOnInitReq ::
@@ -34,7 +35,7 @@ buildOnInitReq onInitReq = do
 
   timeStamp <- onInitReq.onInitReqContext.contextTimestamp & fromMaybeM (InvalidRequest "Timestamp not found")
 
-  let ttl = onInitReq.onInitReqContext.contextTtl >>= Utils.getQuoteValidTill timeStamp
+  let ttl = onInitReq.onInitReqContext.contextTtl >>= Utils.getQuoteValidTill (convertRFC3339ToUTC timeStamp)
 
   order <- onInitReq.onInitReqMessage <&> (.confirmReqMessageOrder) & fromMaybeM (InvalidRequest "Order not found")
 
@@ -44,6 +45,12 @@ buildOnInitReq onInitReq = do
   bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
 
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
+
+  orderPayment <- order.orderPayments >>= listToMaybe & fromMaybeM (InvalidRequest "OrderPayment not found")
+  orderPaymentParams <- orderPayment.paymentParams & fromMaybeM (InvalidRequest "PaymentParams not found")
+  bankAccNum <- orderPaymentParams.paymentParamsBankAccountNumber & fromMaybeM (InvalidRequest "PaymentParamsBankAccountNumber not found")
+  bankCode <- orderPaymentParams.paymentParamsBankCode & fromMaybeM (InvalidRequest "PaymentParamsBankCode not found")
+
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
   totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Invalid quotationPrice")
 
@@ -57,5 +64,7 @@ buildOnInitReq onInitReq = do
         bppItemId,
         transactionId,
         messageId,
-        validTill = ttl
+        validTill = ttl,
+        bankAccNum,
+        bankCode
       }
