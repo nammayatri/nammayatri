@@ -23,8 +23,12 @@ data FPRentalDetailsD (s :: UsageSafety) = FPRentalDetails
   { baseFare :: Money,
     perHourCharge :: Money,
     distanceBuffers :: NonEmpty (FPRentalDetailsDistanceBuffersD s),
-    perHourFreeKms :: Int,
     perExtraKmRate :: Money,
+    perExtraMinRate :: Money,
+    includedKmPerHr :: Kilometers,
+    plannedPerKmRate :: Money,
+    maxAdditionalKmsLimit :: Kilometers,
+    totalAdditionalKmsLimit :: Kilometers,
     nightShiftCharge :: Maybe NightShiftCharge
   }
   deriving (Generic, Show)

@@ -42,7 +42,6 @@ import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
-import EulerHS.Prelude (Alternative (empty))
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -149,7 +148,7 @@ handler merchant sReq = do
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration) -- estimate distance and durations by user
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq
   allFarePoliciesProduct <- (pure . combineFarePoliciesProducts) =<< ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation) `mapM` possibleTripOption.tripCategories)
-  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) allFarePoliciesProduct.farePolicies
+  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) allFarePoliciesProduct.farePolicies
 
   (driverPool, selectedFarePolicies) <-
     if transporterConfig.considerDriversForSearch
@@ -185,15 +184,16 @@ handler merchant sReq = do
         }
 
     processPolicy ::
-      (DFP.FullFarePolicy -> Flow DEst.Estimate) ->
-      (DFP.FullFarePolicy -> Flow DQuote.Quote) ->
+      (Bool -> DFP.FullFarePolicy -> Flow DEst.Estimate) ->
+      (Bool -> DFP.FullFarePolicy -> Flow DQuote.Quote) ->
       DFP.FullFarePolicy ->
       ([DEst.Estimate], [DQuote.Quote]) ->
       Flow ([DEst.Estimate], [DQuote.Quote])
     processPolicy buildEstimateHelper buildQuoteHelper fp (estimates, quotes) =
       case fp.tripCategory of
-        DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> buildEstimateHelper fp >>= \est -> pure (est : estimates, quotes)
-        _ -> buildQuoteHelper fp >>= \quote -> pure (estimates, quote : quotes)
+        DTC.OneWay DTC.OneWayOnDemandDynamicOffer -> (buildEstimateHelper False) fp >>= \est -> pure (est : estimates, quotes)
+        DTC.Rental _ -> (buildQuoteHelper True) fp >>= \quote -> pure (estimates, quote : quotes)
+        _ -> (buildQuoteHelper False) fp >>= \quote -> pure (estimates, quote : quotes)
 
     buildDSearchResp fromLocation toLocation merchantOpCityId specialLocationTag searchMetricsMVar quotes estimates = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
@@ -205,15 +205,25 @@ handler merchant sReq = do
             ..
           }
 
-    selectFarePolicy distance farePolicies = do
-      farePolicy <- farePolicies
-      let check =
-            farePolicy.allowedTripDistanceBounds <&> \allowedTripDistanceBounds ->
-              allowedTripDistanceBounds.minAllowedTripDistance <= distance
-                && allowedTripDistanceBounds.maxAllowedTripDistance >= distance
-      case check of
-        Just False -> empty
-        _ -> return farePolicy
+    selectFarePolicy distance duration =
+      filter isValid
+      where
+        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy
+
+        checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
+
+        checkBounds bounds = bounds.minAllowedTripDistance <= distance && distance <= bounds.maxAllowedTripDistance
+
+        checkExtendUpto farePolicy = case farePolicy.farePolicyDetails of
+          DFP.RentalDetails det -> checkLimits det
+          _ -> True
+          where
+            checkLimits det =
+              let distInKm = distance.getMeters `div` 1000
+                  timeInHr = duration.getSeconds `div` 3600
+                  includedKm = (timeInHr * det.includedKmPerHr.getKilometers)
+                  maxAllowed = min (min det.maxAdditionalKmsLimit.getKilometers (timeInHr * includedKm)) (det.totalAdditionalKmsLimit.getKilometers - (timeInHr * includedKm))
+               in distInKm - includedKm <= maxAllowed
 
     getCancellationDues transporterConfig =
       if transporterConfig.canAddCancellationFee
@@ -346,15 +356,16 @@ buildQuote ::
   Maybe Seconds ->
   Maybe Text ->
   HighPrecMoney ->
+  Bool ->
   DFP.FullFarePolicy ->
   m DQuote.Quote
-buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag customerCancellationDues fullFarePolicy = do
+buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDuration specialLocationTag customerCancellationDues nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
-          distance = dist, -- TODO: Fix this
+          actualDistance = Just dist,
           rideTime = pickupTime,
           waitingTime = Nothing,
           actualRideDuration = Nothing,
@@ -362,7 +373,11 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
           nightShiftCharge = Nothing,
-          customerCancellationDues = customerCancellationDues
+          customerCancellationDues = customerCancellationDues,
+          nightShiftOverlapChecking = nightShiftOverlapChecking,
+          estimatedDistance = searchRequest.estimatedDistance,
+          estimatedRideDuration = searchRequest.estimatedDuration,
+          timeDiffFromUtc = Nothing
         }
   quoteId <- Id <$> generateGUID
   now <- getCurrentTime
@@ -393,15 +408,16 @@ buildEstimate ::
   Maybe Meters ->
   Maybe Text ->
   HighPrecMoney ->
+  Bool ->
   DFP.FullFarePolicy ->
   m DEst.Estimate
-buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag customerCancellationDues fullFarePolicy = do
+buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag customerCancellationDues nightShiftOverlapChecking fullFarePolicy = do
   let dist = fromMaybe 0 mbDistance -- TODO: Fix Later
   fareParams <-
     calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
-          distance = dist, -- TODO: Fix this
+          actualDistance = Just dist,
           rideTime = startTime,
           waitingTime = Nothing,
           actualRideDuration = Nothing,
@@ -409,7 +425,11 @@ buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag cu
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
           nightShiftCharge = Nothing,
-          customerCancellationDues = customerCancellationDues
+          customerCancellationDues = customerCancellationDues,
+          nightShiftOverlapChecking = nightShiftOverlapChecking,
+          estimatedDistance = Nothing,
+          estimatedRideDuration = Nothing,
+          timeDiffFromUtc = Nothing
         }
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare

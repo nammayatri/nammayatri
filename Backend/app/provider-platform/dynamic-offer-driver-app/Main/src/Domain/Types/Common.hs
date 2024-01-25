@@ -107,3 +107,8 @@ isOdometerReadingsRequired _ = False
 isGoHomeAvailable :: TripCategory -> Bool
 isGoHomeAvailable (OneWay _) = True
 isGoHomeAvailable _ = False
+
+isRentalTrip :: TripCategory -> Bool
+isRentalTrip tripCategory = case tripCategory of
+  Rental _ -> True
+  _ -> False

@@ -33,6 +33,7 @@ buildDInitReq subscriber req = do
   let fulfillmentId_ = case fulfillmentType_ of
         "RIDE" -> Domain.Action.Beckn.Init.EstimateId (Kernel.Types.Id.Id fulfillmentId__)
         "RIDE_OTP" -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
+        "RENTAL" -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
         _ -> Domain.Action.Beckn.Init.QuoteId (Kernel.Types.Id.Id fulfillmentId__)
   maxEstimatedDistance_ <- (req.initReqMessage.confirmReqMessageOrder.orderFulfillments >>= Kernel.Prelude.listToMaybe >>= (.fulfillmentTags) & Kernel.Utils.Common.fromMaybeM (Kernel.Types.Error.InvalidRequest "Fulfillment Tags not found")) <&> Beckn.OnDemand.Utils.Init.getMaxEstimateDistance
   paymentMethodInfo_ <- req.initReqMessage.confirmReqMessageOrder.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join

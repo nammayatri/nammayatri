@@ -163,7 +163,7 @@ mkFulfillmentType = \case
   DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
   DCT.RoundTrip DCT.RideOtp -> "RIDE_OTP"
   DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
-  DCT.Rental DCT.RideOtp -> "RIDE_OTP"
+  DCT.Rental _ -> "RENTAL"
   _ -> "RIDE"
 
 rationaliseMoney :: Money -> Text

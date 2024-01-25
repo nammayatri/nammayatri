@@ -150,7 +150,9 @@ data RentalQuoteDetails = RentalQuoteDetails
   { id :: Text,
     baseFare :: Money,
     perHourCharge :: Money,
-    perHourFreeKms :: Int,
+    perExtraMinRate :: Money,
+    includedKmPerHr :: Kilometers,
+    plannedPerKmRate :: Money,
     perExtraKmRate :: Money,
     nightShiftInfo :: Maybe NightShiftInfo
   }
