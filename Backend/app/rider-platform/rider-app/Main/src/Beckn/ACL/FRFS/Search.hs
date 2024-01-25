@@ -96,7 +96,9 @@ tfLocation station =
   Just $
     Spec.Location
       { locationDescriptor = Utils.tfDescriptor (Just $ station.code) (Just $ station.name),
-        locationGps = Nothing
+        locationGps = Nothing,
+        locationCity = Nothing,
+        locationCountry = Nothing
       }
 
 tfVehicle :: DSearch.FRFSSearch -> Maybe Spec.Vehicle
