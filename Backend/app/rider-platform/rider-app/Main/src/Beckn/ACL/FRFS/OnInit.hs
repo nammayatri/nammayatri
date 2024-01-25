@@ -57,5 +57,5 @@ buildOnInitReq onInitReq = do
         bppItemId,
         transactionId,
         messageId,
-        validTill = ttl -- TODO: fix me
+        validTill = ttl
       }

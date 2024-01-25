@@ -47,12 +47,6 @@ types:
     tickets: [FRFSTicketAPI]
     stations: [FRFSStationAPI]
 
-    # FRFSBookingPayment:
-    #   status: FRFSBookingPaymentStatus
-
-    # FRFSBookingPaymentStatus:
-    #   enum: "PENDING, SUCCESS, FAILURE, REFUNDED"
-
   FRFSTicketAPI:
     status: FRFSTicketStatus
     qrData: Text

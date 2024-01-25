@@ -117,24 +117,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
 
   mapM
     ( \quote -> do
-        -- trips <- B.runInReplica $ QFRFSTrip.findAllByQuoteId quote.id
-        -- let _ = sortBy (\tripA tripB -> compare tripA.stopSequence tripB.stopSequence) trips
         (stations :: [FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
-        -- let stations =
-        --       map
-        --         ( \DFRFSTrip.FRFSTrip {..} ->
-        --             FRFSTicketService.FRFSStationAPI
-        --               { address = Nothing,
-        --                 code = stationCode,
-        --                 color = Nothing,
-        --                 lat = Nothing,
-        --                 lon = Nothing,
-        --                 name = stationName,
-        --                 stationType = Just stationType,
-        --                 ..
-        --               }
-        --         )
-        --         trips'
         return $
           FRFSTicketService.FRFSQuoteAPIRes
             { quoteId = quote.id,
@@ -288,60 +271,6 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                         }
               buildFRFSTicketBookingStatusAPIRes booking paymentObj
   where
-    -- callBPPStatus booking
-    -- (paymentBooking :: Maybe DFRFSTicketBookingPayment.FRFSTicketBookingPayment) <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId
-    -- payment <- case paymentBooking of
-    --   Just paymentBooking' -> do
-    --     paymentOrder' <- QPaymentOrder.findById paymentBooking'.paymentOrderId
-    --     paymentTransaction' <- QPaymentTransaction.findNewTransactionByOrderId paymentBooking'.paymentOrderId
-    --     case (paymentTransaction', paymentOrder') of
-    --       (Just paymentTransaction, Just paymentOrder) -> do
-    --         let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentTransaction.status
-    --         case paymentBookingStatus of
-    --           FRFSTicketService.PENDING -> do
-    --             void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING booking.id
-    --             paymentOrder_ <- buildCreateOrderResp paymentOrder person
-    --             return $
-    --               Just
-    --                 FRFSTicketService.FRFSBookingPaymentAPI
-    --                   { status = paymentBookingStatus,
-    --                     paymentOrder = Just paymentOrder_
-    --                   }
-    --           FRFSTicketService.FAILURE -> do
-    --             QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.FAILED booking.id
-    --             QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-    --             return $
-    --               Just
-    --                 FRFSTicketService.FRFSBookingPaymentAPI
-    --                   { status = paymentBookingStatus,
-    --                     paymentOrder = Nothing
-    --                   }
-    --           FRFSTicketService.REFUNDED -> do
-    --             void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUNDED booking.id
-    --             void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
-    --             return $
-    --               Just
-    --                 FRFSTicketService.FRFSBookingPaymentAPI
-    --                   { status = paymentBookingStatus,
-    --                     paymentOrder = Nothing
-    --                   }
-    --           FRFSTicketService.SUCCESS -> do
-    --             void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
-    --             void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING booking.id
-    --             fork "FRFS Confirm Req" $ do
-    --               providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-    --               bknConfirmReq <- ACL.buildConfirmReq booking
-    --               void $ CallBPP.confirm providerUrl bknConfirmReq
-    --             return $
-    --               Just
-    --                 FRFSTicketService.FRFSBookingPaymentAPI
-    --                   { status = paymentBookingStatus,
-    --                     paymentOrder = Nothing
-    --                   }
-    --       (_, _) -> return Nothing
-    --   Nothing -> return Nothing
-    -- buildFRFSTicketBookingStatusAPIRes booking payment
-
     buildCreateOrderResp paymentOrder person commonPersonId = do
       personEmail <- mapM decrypt person.email
       personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
