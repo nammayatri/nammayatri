@@ -76,8 +76,10 @@ update farePolicy = do
       updateOneWithKV
         [ Se.Set BeamFPRD.baseFare $ fPRD.baseFare,
           Se.Set BeamFPRD.perHourCharge $ fPRD.perHourCharge,
-          Se.Set BeamFPRD.perHourFreeKms $ fPRD.perHourFreeKms,
+          Se.Set BeamFPRD.perExtraMinRate $ fPRD.perExtraMinRate,
           Se.Set BeamFPRD.perExtraKmRate $ fPRD.perExtraKmRate,
+          Se.Set BeamFPRD.includedKmPerHr $ fPRD.includedKmPerHr,
+          Se.Set BeamFPRD.plannedPerKmRate $ fPRD.plannedPerKmRate,
           Se.Set BeamFPRD.nightShiftCharge $ fPRD.nightShiftCharge
         ]
         [Se.Is BeamFPRD.farePolicyId (Se.Eq $ getId farePolicy.id)]
@@ -94,6 +96,8 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
         BeamFP.nightShiftEnd = Domain.nightShiftEnd <$> nightShiftBounds,
         BeamFP.maxAllowedTripDistance = Domain.maxAllowedTripDistance <$> allowedTripDistanceBounds,
         BeamFP.minAllowedTripDistance = Domain.minAllowedTripDistance <$> allowedTripDistanceBounds,
+        BeamFP.maxAdditionalKmsLimit = maxAdditionalKmsLimit,
+        BeamFP.totalAdditionalKmsLimit = totalAdditionalKmsLimit,
         BeamFP.govtCharges = govtCharges,
         BeamFP.perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
         BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
@@ -143,6 +147,8 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
                 farePolicyDetails,
                 perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
                 description = description,
+                maxAdditionalKmsLimit = maxAdditionalKmsLimit,
+                totalAdditionalKmsLimit = totalAdditionalKmsLimit,
                 createdAt = createdAt,
                 updatedAt = updatedAt
               }

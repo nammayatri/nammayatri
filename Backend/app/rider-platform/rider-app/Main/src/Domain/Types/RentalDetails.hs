@@ -23,8 +23,10 @@ data RentalDetails = RentalDetails
   { id :: Id RentalDetails,
     baseFare :: Money,
     perHourCharge :: Money,
-    perHourFreeKms :: Int,
+    perExtraMinRate :: Money,
     perExtraKmRate :: Money,
+    includedKmPerHr :: Kilometers,
+    plannedPerKmRate :: Money,
     nightShiftInfo :: Maybe NightShiftInfo
   }
   deriving (Generic, Show)
@@ -40,7 +42,9 @@ data NightShiftInfo = NightShiftInfo
 data RentalDetailsAPIEntity = RentalDetailsAPIEntity
   { baseFare :: Money,
     perHourCharge :: Money,
-    perHourFreeKms :: Int,
+    perExtraMinRate :: Money,
+    includedKmPerHr :: Kilometers,
+    plannedPerKmRate :: Money,
     perExtraKmRate :: Money,
     nightShiftInfo :: Maybe NightShiftInfo
   }

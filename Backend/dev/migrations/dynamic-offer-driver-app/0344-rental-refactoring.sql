@@ -17,6 +17,7 @@ $$ LANGUAGE plpgsql;
 
 -- BOOKING TABLE --
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN trip_category text;
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN stop_location_id character varying(36);
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'booking', 'estimated_distance');
 -- atlas_driver_offer_bpp.drop_not_null_if_exists('atlas_driver_offer_bpp', 'booking', 'estimated_duration');
 
@@ -41,14 +42,15 @@ ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN updated_at TIMESTA
 CREATE TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ();
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN fare_parameters_id character varying(36);
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN time_based_fare numeric(30, 2);
-ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN extra_dist_fare numeric(30, 2);
+ALTER TABLE atlas_driver_offer_bpp.fare_parameters_rental_details ADD COLUMN dist_based_fare numeric(30, 2);
 
 -- FARE POLICY RENTAL DETAILS --
 CREATE TABLE atlas_driver_offer_bpp.fare_policy_rental_details ();
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN fare_policy_id character varying(36);
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN base_fare numeric(30, 2);
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN per_hour_charge numeric(30, 2);
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN per_hour_free_kms integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN planned_per_km_rate numeric(30, 2);
+ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN included_km_per_hour int NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN per_extra_km_rate numeric(30, 2);
 ALTER TABLE atlas_driver_offer_bpp.fare_policy_rental_details ADD COLUMN night_shift_charge json;
 
@@ -87,6 +89,28 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN start_time TIMESTAM
 
 -- SEARCH TRY --
 ALTER TABLE atlas_driver_offer_bpp.search_try ADD COLUMN trip_category text;
+
+-- FARE POLICY --
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN max_additional_kms_limit integer;
+ALTER TABLE atlas_driver_offer_bpp.fare_policy ADD COLUMN total_additional_kms_limit integer;
+
+-- INSERTIONS ---
+
+INSERT INTO atlas_driver_offer_bpp.fare_policy_rental_details (fare_policy_id, base_fare, per_hour_charge, per_extra_min_rate, per_extra_km_rate, included_km_per_hr, planned_per_km_rate, night_shift_charge) VALUES
+('71b52524-e773-03dc-5853-290132ce6fd5', 0, 180, 5, 18, 10, 15, '{"contents":250,"tag":"ConstantNightShiftCharge"}' :: json),
+('51b42524-e113-03dc-5453-290032ce6fd5', 0, 220, 6, 22, 10, 18, '{"contents":250,"tag":"ConstantNightShiftCharge"}' :: json);
+
+INSERT INTO atlas_driver_offer_bpp.fare_policy_rental_details_distance_buffers (fare_policy_id, ride_duration, buffer_kms) VALUES
+('71b52524-e773-03dc-5853-290132ce6fd5', 0, 4),
+('71b52524-e773-03dc-5853-290132ce6fd5', 5, 8),
+('51b42524-e113-03dc-5453-290032ce6fd5', 0, 4),
+('51b42524-e113-03dc-5453-290032ce6fd5', 5, 8);
+
+INSERT INTO atlas_driver_offer_bpp.fare_policy (id, night_shift_start, night_shift_end, created_at, updated_at, min_allowed_trip_distance, max_allowed_trip_distance, service_charge, govt_charges, fare_policy_type, max_additional_kms_limit, total_additional_kms_limit, description) VALUES ('71b52524-e773-03dc-5853-290132ce6fd5', '22:00:00', '06:00:00', now(), now(), 0, 100000, null, null, 'Rental', 50, 120, 'Yatri Sathi SEDAN Rental');
+INSERT INTO atlas_driver_offer_bpp.fare_policy (id, night_shift_start, night_shift_end, created_at, updated_at, min_allowed_trip_distance, max_allowed_trip_distance, service_charge, govt_charges, fare_policy_type, max_additional_kms_limit, total_additional_kms_limit, description) VALUES ('51b42524-e113-03dc-5453-290032ce6fd5', '22:00:00', '06:00:00', now(), now(), 0, 100000, null, null, 'Rental', 50, 120, 'Yatri Sathi SUV Rental');
+
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow, merchant_operating_city_id) VALUES ('294abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '71b52524-e773-03dc-5853-290132ce6fd5', 'SEDAN', 'Default', 'RENTAL',(SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow, merchant_operating_city_id) VALUES ('394abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SUV', 'Default', 'RENTAL',(SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
 
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
 -- @ WARNING: DO NOT ENTER BEFORE FULL RELEASE - DROP QUERY ZONE @ --

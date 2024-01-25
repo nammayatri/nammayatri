@@ -83,7 +83,7 @@ import qualified Data.Map as M
 import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
-import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
+import Data.Time (Day, fromGregorian)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
@@ -902,7 +902,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
         calculateFareParameters
           CalculateFareParametersParams
             { farePolicy = farePolicy,
-              distance = fromMaybe 0 searchReq.estimatedDistance, -- TODO: Fix this
+              actualDistance = searchReq.estimatedDistance,
               rideTime = sReqFD.startTime,
               waitingTime = Nothing,
               actualRideDuration = Nothing,
@@ -911,6 +911,10 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
               customerExtraFee = searchTry.customerExtraFee,
               nightShiftCharge = Nothing,
               customerCancellationDues = searchReq.customerCancellationDues,
+              estimatedRideDuration = Nothing,
+              nightShiftOverlapChecking = False,
+              estimatedDistance = Nothing,
+              timeDiffFromUtc = Nothing,
               ..
             }
       QFP.updateFareParameters fareParams

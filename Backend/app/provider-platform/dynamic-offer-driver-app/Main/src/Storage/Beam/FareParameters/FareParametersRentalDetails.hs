@@ -19,7 +19,7 @@ import Tools.Beam.UtilsTH
 data FareParametersRentalDetailsT f = FareParametersRentalDetailsT
   { fareParametersId :: B.C f Text,
     timeBasedFare :: B.C f Money,
-    extraDistFare :: B.C f Money
+    distBasedFare :: B.C f Money
   }
   deriving (Generic, B.Beamable)
 

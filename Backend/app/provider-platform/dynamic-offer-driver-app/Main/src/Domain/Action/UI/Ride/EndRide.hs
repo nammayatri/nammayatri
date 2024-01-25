@@ -395,15 +395,19 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
     calculateFareParameters
       Fare.CalculateFareParametersParams
         { farePolicy = farePolicy,
-          distance = recalcDistance,
+          actualDistance = Just recalcDistance,
+          estimatedDistance = Just oldDistance,
           rideTime = booking.startTime,
           waitingTime = secondsToMinutes . roundToIntegral <$> (diffUTCTime <$> ride.tripStartTime <*> ride.driverArrivalTime),
           actualRideDuration = roundToIntegral <$> (diffUTCTime <$> Just tripEndTime <*> ride.tripStartTime),
+          estimatedRideDuration = booking.estimatedDuration,
           avgSpeedOfVehicle = thresholdConfig.avgSpeedOfVehicle,
           driverSelectedFare = booking.fareParams.driverSelectedFare,
           customerExtraFee = booking.fareParams.customerExtraFee,
           nightShiftCharge = booking.fareParams.nightShiftCharge,
-          customerCancellationDues = booking.fareParams.customerCancellationDues
+          customerCancellationDues = booking.fareParams.customerCancellationDues,
+          nightShiftOverlapChecking = True, -- make true only for rental
+          timeDiffFromUtc = Just thresholdConfig.timeDiffFromUtc
         }
   let finalFare = Fare.fareSum fareParams
       distanceDiff = recalcDistance - oldDistance
