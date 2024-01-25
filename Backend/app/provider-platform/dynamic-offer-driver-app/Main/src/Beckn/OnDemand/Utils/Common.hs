@@ -305,7 +305,7 @@ mkStopsOUS booking ride rideOtp =
             }
         ]
 
-mkFulFillmentV2 ::
+mkFulfillmentV2 ::
   (MonadFlow m, EncFlow m r) =>
   Maybe SP.Person ->
   DRide.Ride ->
@@ -313,11 +313,12 @@ mkFulFillmentV2 ::
   Maybe DVeh.Vehicle ->
   Maybe Text ->
   Maybe [Spec.TagGroup] ->
+  Maybe [Spec.TagGroup] ->
   Bool ->
   Bool ->
   Maybe Text ->
   m Spec.Fulfillment
-mkFulFillmentV2 mbDriver ride booking mbVehicle mbImage mbTags isDriverBirthDay isFreeRide mbEvent = do
+mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent = do
   mbDInfo <- driverInfo
   pure $
     Spec.Fulfillment
@@ -346,7 +347,7 @@ mkFulFillmentV2 mbDriver ride booking mbVehicle mbImage mbTags isDriverBirthDay 
                                 imageWidth = Nothing
                               },
                         personName = mbDInfo >>= Just . (.name),
-                        personTags = mbDInfo >>= (.tags)
+                        personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
                       }
               },
         fulfillmentVehicle =
@@ -469,3 +470,70 @@ mkDriverDetailsTags driver isDriverBirthDay isFreeRide =
               tagDisplay = Just False,
               tagValue = Just $ show isFreeRide
             }
+
+mkLocationTagGroupV2 :: Maybe Maps.LatLong -> [Spec.TagGroup]
+mkLocationTagGroupV2 location =
+  [ Spec.TagGroup
+      { tagGroupDisplay = Just False,
+        tagGroupDescriptor =
+          Just $
+            Spec.Descriptor
+              { descriptorCode = Just "current_location",
+                descriptorName = Just "Current Location",
+                descriptorShortDesc = Nothing
+              },
+        tagGroupList =
+          Just $
+            [ Spec.Tag
+                { tagDisplay = Just False,
+                  tagDescriptor =
+                    Just $
+                      Spec.Descriptor
+                        { descriptorCode = Just "current_location_lat",
+                          descriptorName = Just "Current Location Lat",
+                          descriptorShortDesc = Nothing
+                        },
+                  tagValue = ((\loc -> Just $ show loc.lat) =<< location)
+                },
+              Spec.Tag
+                { tagDisplay = Just False,
+                  tagDescriptor =
+                    Just $
+                      Spec.Descriptor
+                        { descriptorCode = Just "current_location_lon",
+                          descriptorName = Just "Current Location Lon",
+                          descriptorShortDesc = Nothing
+                        },
+                  tagValue = ((\loc -> Just $ show loc.lon) =<< location)
+                }
+            ]
+      }
+  ]
+
+mkArrivalTimeTagGroupV2 :: Maybe UTCTime -> [Spec.TagGroup]
+mkArrivalTimeTagGroupV2 arrivalTime =
+  [ Spec.TagGroup
+      { tagGroupDisplay = Just False,
+        tagGroupDescriptor =
+          Just $
+            Spec.Descriptor
+              { descriptorCode = Just "driver_arrived_info",
+                descriptorName = Just "Driver Arrived Info",
+                descriptorShortDesc = Nothing
+              },
+        tagGroupList =
+          Just $
+            [ Spec.Tag
+                { tagDisplay = Just False,
+                  tagDescriptor =
+                    Just $
+                      Spec.Descriptor
+                        { descriptorCode = Just "arrival_time",
+                          descriptorName = Just "Arrival Time",
+                          descriptorShortDesc = Nothing
+                        },
+                  tagValue = show <$> arrivalTime
+                }
+            ]
+      }
+  ]

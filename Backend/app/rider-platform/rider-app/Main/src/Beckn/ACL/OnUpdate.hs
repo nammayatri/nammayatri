@@ -20,8 +20,8 @@ where
 
 import Beckn.ACL.Common (getTag)
 import qualified Beckn.ACL.Common as Common
-import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
@@ -80,6 +80,12 @@ getLocationFromTag :: Maybe Tags.TagGroups -> Text -> Text -> Text -> Maybe Maps
 getLocationFromTag tagGroup key latKey lonKey =
   let tripStartLat :: Maybe Double = readMaybe . T.unpack =<< getTag key latKey =<< tagGroup
       tripStartLon :: Maybe Double = readMaybe . T.unpack =<< getTag key lonKey =<< tagGroup
+   in Maps.LatLong <$> tripStartLat <*> tripStartLon
+
+getLocationFromTagV2 :: Maybe [Spec.TagGroup] -> Text -> Text -> Text -> Maybe Maps.LatLong
+getLocationFromTagV2 tagGroup key latKey lonKey =
+  let tripStartLat :: Maybe Double = readMaybe . T.unpack =<< Utils.getTagV2 key latKey =<< tagGroup
+      tripStartLon :: Maybe Double = readMaybe . T.unpack =<< Utils.getTagV2 key lonKey =<< tagGroup
    in Maps.LatLong <$> tripStartLat <*> tripStartLon
 
 handleErrorV2 ::
@@ -299,10 +305,13 @@ parseRideStartedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
 parseRideStartedEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideStarted Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideStarted Event.")
+  let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
+  let tripStartLocation = getLocationFromTagV2 personTagsGroup "current_location" "current_location_lat" "current_location_lon"
   pure $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id bppBookingId,
-        bppRideId = Id bppRideId
+        bppRideId = Id bppRideId,
+        ..
       }
 
 parseRideCompletedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -322,6 +331,8 @@ parseRideCompletedEvent order = do
         =<< Utils.getTagV2 "ride_distance_details" "traveled_distance" tagGroups
   fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
   fareBreakups <- traverse mkOnUpdateFareBreakup fareBreakups'
+  let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
+  let tripEndLocation = getLocationFromTagV2 personTagsGroup "current_location" "current_location_lat" "current_location_lon"
   pure $
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id bppBookingId,
@@ -331,7 +342,8 @@ parseRideCompletedEvent order = do
         chargeableDistance = chargeableDistance,
         traveledDistance = traveledDistance,
         fareBreakups = fareBreakups,
-        paymentUrl = Nothing
+        paymentUrl = Nothing,
+        ..
       }
   where
     mkOnUpdateFareBreakup breakup = do

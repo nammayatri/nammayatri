@@ -29,25 +29,25 @@ buildOnSearchReq req provider items = do
 
 tfEstimatesInfo :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.Provider -> BecknV2.OnDemand.Types.Item -> m (Domain.Action.Beckn.OnSearch.EstimateInfo)
 tfEstimatesInfo provider item = do
-  let bppEstimateId_ = Beckn.OnDemand.Utils.OnSearch.getFulfillmentId item
+  bppEstimateId_ <- Beckn.OnDemand.Utils.OnSearch.getFulfillmentId item
   let descriptions_ = []
   let discount_ = Nothing
-  let driversLocation_ = Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider
-  let estimatedFare_ = Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
-  let estimatedTotalFare_ = Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
-  let itemId_ = Beckn.OnDemand.Utils.OnSearch.getItemId item
-  let nightShiftInfo_ = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item
-  let specialLocationTag_ = Beckn.OnDemand.Utils.OnSearch.buildSpecialLocationTag item
-  let totalFareRange_ = Beckn.OnDemand.Utils.OnSearch.getTotalFareRange item
-  let vehicleVariant_ = Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item
-  let waitingCharges_ = Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item
+  driversLocation_ <- Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider
+  estimatedFare_ <- Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
+  estimatedTotalFare_ <- Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
+  itemId_ <- Beckn.OnDemand.Utils.OnSearch.getItemId item
+  nightShiftInfo_ <- Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item
+  specialLocationTag_ <- Beckn.OnDemand.Utils.OnSearch.buildSpecialLocationTag item
+  totalFareRange_ <- Beckn.OnDemand.Utils.OnSearch.getTotalFareRange item
+  vehicleVariant_ <- Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item
+  waitingCharges_ <- Beckn.OnDemand.Utils.OnSearch.buildWaitingChargeInfo item
   estimateBreakupList_ <- Beckn.OnDemand.Utils.OnSearch.buildEstimateBreakupList item
   pure $ Domain.Action.Beckn.OnSearch.EstimateInfo {bppEstimateId = bppEstimateId_, descriptions = descriptions_, discount = discount_, driversLocation = driversLocation_, estimateBreakupList = estimateBreakupList_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, nightShiftInfo = nightShiftInfo_, specialLocationTag = specialLocationTag_, totalFareRange = totalFareRange_, vehicleVariant = vehicleVariant_, waitingCharges = waitingCharges_}
 
 tfProviderInfo :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.OnSearchReq -> m (Domain.Action.Beckn.OnSearch.ProviderInfo)
 tfProviderInfo req = do
   let mobileNumber_ = ""
-  let name_ = Beckn.OnDemand.Utils.OnSearch.getProviderName req
+  name_ <- Beckn.OnDemand.Utils.OnSearch.getProviderName req
   let ridesCompleted_ = 0
   providerId_ <- req.onSearchReqContext.contextBppId & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing bpp_id")
   url_ <- Beckn.OnDemand.Utils.Common.getContextBppUri req.onSearchReqContext >>= Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing bpp_uri")
@@ -55,17 +55,17 @@ tfProviderInfo req = do
 
 tfQuoteDetails :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.Item -> m (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails)
 tfQuoteDetails item = do
-  let quoteId_ = Beckn.OnDemand.Utils.OnSearch.getQuoteFulfillmentId item
+  quoteId_ <- Beckn.OnDemand.Utils.OnSearch.getQuoteFulfillmentId item
   pure $ Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteId_}
 
 tfQuotesInfo :: (Monad m, Kernel.Types.App.MonadFlow m) => BecknV2.OnDemand.Types.Provider -> BecknV2.OnDemand.Types.Item -> m (Domain.Action.Beckn.OnSearch.QuoteInfo)
 tfQuotesInfo provider item = do
   let descriptions_ = []
   let discount_ = Nothing
-  let estimatedFare_ = Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
-  let estimatedTotalFare_ = Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
-  let itemId_ = Beckn.OnDemand.Utils.OnSearch.getItemId item
-  let specialLocationTag_ = Beckn.OnDemand.Utils.OnSearch.buildSpecialLocationTag item
-  let vehicleVariant_ = Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item
+  estimatedFare_ <- Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
+  estimatedTotalFare_ <- Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
+  itemId_ <- Beckn.OnDemand.Utils.OnSearch.getItemId item
+  specialLocationTag_ <- Beckn.OnDemand.Utils.OnSearch.buildSpecialLocationTag item
+  vehicleVariant_ <- Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item
   quoteDetails_ <- Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails <$> tfQuoteDetails item
   pure $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, vehicleVariant = vehicleVariant_}

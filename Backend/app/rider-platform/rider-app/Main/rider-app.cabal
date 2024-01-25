@@ -131,11 +131,6 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
-      Domain.Action.Beckn.FRFS.Common
-      Domain.Action.Beckn.FRFS.OnConfirm
-      Domain.Action.Beckn.FRFS.OnInit
-      Domain.Action.Beckn.FRFS.OnSearch
-      Domain.Action.Beckn.FRFS.OnStatus
       Beckn.OnDemand.Transformer.Init
       Beckn.OnDemand.Transformer.OnSearch
       Beckn.OnDemand.Transformer.Search
@@ -143,6 +138,11 @@ library
       Beckn.OnDemand.Utils.Init
       Beckn.OnDemand.Utils.OnSearch
       Beckn.OnDemand.Utils.Search
+      Domain.Action.Beckn.FRFS.Common
+      Domain.Action.Beckn.FRFS.OnConfirm
+      Domain.Action.Beckn.FRFS.OnInit
+      Domain.Action.Beckn.FRFS.OnSearch
+      Domain.Action.Beckn.FRFS.OnStatus
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch

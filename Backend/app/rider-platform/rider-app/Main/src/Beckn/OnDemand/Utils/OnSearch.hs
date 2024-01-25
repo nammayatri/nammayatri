@@ -18,88 +18,107 @@ import Beckn.ACL.Common (getTagV2)
 import Beckn.OnDemand.Utils.Common as Common
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
+import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
+import Data.Time (TimeOfDay (..))
 import Domain.Action.Beckn.OnSearch as OnSearch
 import Domain.Types.Estimate as Estimate
 import Domain.Types.VehicleVariant as VehicleVariant
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
-import Kernel.Prelude (TimeOfDay, roundToIntegral)
+import Kernel.Prelude (roundToIntegral)
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Tools.Error
 
-getProviderName :: Spec.OnSearchReq -> Text
+getProviderName :: MonadFlow m => Spec.OnSearchReq -> m Text
 getProviderName req = do
-  let message = req.onSearchReqMessage & fromMaybe (error "Missing Message")
-  let catalog = message.onSearchReqMessageCatalog
-  let providers = catalog.catalogProviders & fromMaybe (error "Missing Providers")
-  let provider = safeHead providers & fromMaybe (error "Missing Provider")
-  let descriptor = provider.providerDescriptor & fromMaybe (error "Missing Descriptor")
-  descriptor.descriptorName & fromMaybe (error "Missing Name")
+  providerName <-
+    req.onSearchReqMessage
+      >>= (.onSearchReqMessageCatalog.catalogProviders)
+      >>= safeHead
+      >>= (.providerDescriptor)
+      >>= (.descriptorName)
+      & fromMaybeM (InvalidRequest "Missing Provider Name")
+  return providerName
 
-getFulfillmentId :: Spec.Item -> Id Estimate.BPPEstimate
+getFulfillmentId :: MonadFlow m => Spec.Item -> m (Id Estimate.BPPEstimate)
 getFulfillmentId item = do
-  let fulfillmentIds = item.itemFulfillmentIds & fromMaybe (error "Missing Fulfillment Ids")
-  Id $ safeHead fulfillmentIds & fromMaybe (error "Missing Fulfillment Id")
+  fulfillmentId <-
+    item.itemFulfillmentIds
+      >>= listToMaybe
+      & fromMaybeM (InvalidRequest "Missing Fulfillment Ids")
+  return $ Id fulfillmentId
 
-getQuoteFulfillmentId :: Spec.Item -> Text
+getQuoteFulfillmentId :: MonadFlow m => Spec.Item -> m Text
 getQuoteFulfillmentId item = do
-  let fulfillmentIds = item.itemFulfillmentIds & fromMaybe (error "Missing Fulfillment Ids")
-  safeHead fulfillmentIds & fromMaybe (error "Missing Fulfillment Id")
+  fulfillmentId <-
+    item.itemFulfillmentIds
+      >>= listToMaybe
+      & fromMaybeM (InvalidRequest "Missing Fulfillment Ids")
+  return fulfillmentId
 
-getVehicleVariant :: Spec.Provider -> Spec.Item -> VehicleVariant.VehicleVariant
+getVehicleVariant :: MonadFlow m => Spec.Provider -> Spec.Item -> m (VehicleVariant.VehicleVariant)
 getVehicleVariant provider item = do
-  let fulfillmentIds = item.itemFulfillmentIds & fromMaybe (error "Missing Fulfillment Ids")
-  let fulfillmentId = safeHead fulfillmentIds & fromMaybe (error "Missing Fulfillment Id")
-  let fulfillments = provider.providerFulfillments & fromMaybe (error "Missing Fulfillments")
-  let fulfillment = find (\fulf -> fulfId fulf == fulfillmentId) fulfillments & fromMaybe (error "Missing fulfillment")
-  let vehicle = fulfillment.fulfillmentVehicle & fromMaybe (error "Missing Vehicle")
-  let variant = vehicle.vehicleVariant & fromMaybe (error "Missing Variant")
+  variant <-
+    item.itemFulfillmentIds
+      >>= listToMaybe
+      >>= (\fulfillmentId -> provider.providerFulfillments >>= find (\fulf -> fulfId fulf == fulfillmentId))
+      >>= (.fulfillmentVehicle)
+      >>= (.vehicleVariant)
+      & fromMaybeM (InvalidRequest "Missing Vehicle Variant")
   case variant of
-    "SEDAN" -> VehicleVariant.SEDAN
-    "SUV" -> VehicleVariant.SUV
-    "HATCHBACK" -> VehicleVariant.HATCHBACK
-    "AUTO_RICKSHAW" -> VehicleVariant.AUTO_RICKSHAW
-    "TAXI" -> VehicleVariant.TAXI
-    "TAXI_PLUS" -> VehicleVariant.TAXI_PLUS
-    _ -> error "Invalid Vehicle Variant"
+    "SEDAN" -> return VehicleVariant.SEDAN
+    "SUV" -> return VehicleVariant.SUV
+    "HATCHBACK" -> return VehicleVariant.HATCHBACK
+    "AUTO_RICKSHAW" -> return VehicleVariant.AUTO_RICKSHAW
+    "TAXI" -> return VehicleVariant.TAXI
+    "TAXI_PLUS" -> return VehicleVariant.TAXI_PLUS
+    _ -> throwError (InvalidRequest $ "Invalid Vehicle Variant" <> variant)
   where
     fulfId :: Spec.Fulfillment -> Text
-    fulfId fulf = fulf.fulfillmentId & fromMaybe (error "Missing Fulfillment Id")
+    fulfId fulf = fulf.fulfillmentId & fromMaybe ("Missing Fulfillment Id")
 
-getEstimatedFare :: Spec.Item -> Money
+getEstimatedFare :: MonadFlow m => Spec.Item -> m Money
 getEstimatedFare item = do
-  let price = item.itemPrice & fromMaybe (error "Missing Price")
+  price <- item.itemPrice & fromMaybeM (InvalidRequest "Missing Price")
   let value = price.priceValue
-  let tagValue = (DecimalValue.valueFromString =<< value) & fromMaybe (error "Missing fare breakup item: tagValue")
-  Money $ roundToIntegral tagValue
+  tagValue <- (DecimalValue.valueFromString =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: tagValue")
+  return $ Money $ roundToIntegral tagValue
 
-getItemId :: Spec.Item -> Text
+getItemId :: MonadFlow m => Spec.Item -> m Text
 getItemId item = do
-  item.itemId & fromMaybe (error "Missing Item Id")
+  item.itemId & fromMaybeM (InvalidRequest "Missing Item Id")
 
-getTotalFareRange :: Spec.Item -> Estimate.FareRange
+getTotalFareRange :: MonadFlow m => Spec.Item -> m (Estimate.FareRange)
 getTotalFareRange item = do
-  let price = item.itemPrice & fromMaybe (error "Missing Price")
-  let mini = price.priceMinimumValue
-  let minValue = (DecimalValue.valueFromString =<< mini) & fromMaybe (error "Missing Minimum Value")
-  let maxi = price.priceMaximumValue
-  let maxValue = (DecimalValue.valueFromString =<< maxi) & fromMaybe (error "Missing Maximum Value")
-  Estimate.FareRange
-    { Estimate.minFare = Money $ roundToIntegral minValue,
-      Estimate.maxFare = Money $ roundToIntegral maxValue
-    }
+  minValue <-
+    item.itemPrice
+      >>= (.priceMinimumValue)
+      >>= DecimalValue.valueFromString
+      & fromMaybeM (InvalidRequest "Missing Minimum Value")
+  maxValue <-
+    item.itemPrice
+      >>= (.priceMaximumValue)
+      >>= DecimalValue.valueFromString
+      & fromMaybeM (InvalidRequest "Missing Maximum Value")
+  return $
+    Estimate.FareRange
+      { Estimate.minFare = Money $ roundToIntegral minValue,
+        Estimate.maxFare = Money $ roundToIntegral maxValue
+      }
 
 buildEstimateBreakupList :: MonadFlow m => Spec.Item -> m [OnSearch.EstimateBreakupInfo]
 buildEstimateBreakupList item = do
-  let price = item.itemPrice & fromMaybe (error "Missing Price")
-  let currency = price.priceCurrency & fromMaybe (error "Missing Currency")
-  let tagGroups = item.itemTags & fromMaybe (error "Missing Tags")
+  currency <-
+    item.itemPrice
+      >>= (.priceCurrency)
+      & fromMaybeM (InvalidRequest "Missing Currency")
+  tagGroups <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tag Groups")
   tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just "fare_breakup") tagGroups & fromMaybeM (InvalidRequest "Missing fare breakup")
-  let tagList = tagGroup.tagGroupList & fromMaybe (error "Missing Tag List")
+  tagList <- tagGroup.tagGroupList & fromMaybeM (InvalidRequest "Missing Tag List")
   mapM (buildEstimateBreakUpItem currency) tagList
   where
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
@@ -126,18 +145,19 @@ buildEstimateBreakUpItem currency tag = do
             }
       }
 
-buildNightShiftInfo :: Spec.Item -> Maybe OnSearch.NightShiftInfo
+buildNightShiftInfo :: MonadFlow m => Spec.Item -> m (Maybe OnSearch.NightShiftInfo)
 buildNightShiftInfo item = do
-  let itemTags = item.itemTags & fromMaybe (error "Missing Tags")
-  nightShiftCharge <- getNightShiftCharge itemTags
-  oldNightShiftCharge <- getOldNightShiftCharge itemTags
-  nightShiftStart <- getNightShiftStart itemTags
-  nightShiftEnd <- getNightShiftEnd itemTags
-  Just $
-    OnSearch.NightShiftInfo
-      { oldNightShiftCharge = realToFrac oldNightShiftCharge,
-        ..
-      }
+  itemTags <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tags")
+  let nightShiftCharge = fromMaybe (Money 0) (getNightShiftCharge itemTags)
+  let oldNightShiftCharge = fromMaybe 0 (getOldNightShiftCharge itemTags)
+  let nightShiftStart = fromMaybe (TimeOfDay 22 00 00) (getNightShiftStart itemTags)
+  let nightShiftEnd = fromMaybe (TimeOfDay 06 00 00) (getNightShiftEnd itemTags)
+  return $
+    Just $
+      OnSearch.NightShiftInfo
+        { oldNightShiftCharge = realToFrac oldNightShiftCharge,
+          ..
+        }
 
 getNightShiftCharge :: [Spec.TagGroup] -> Maybe Money
 getNightShiftCharge tagGroup = do
@@ -166,25 +186,26 @@ buildWaitingChargeInfo' tagGroups = do
   waitingChargeValue <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral waitingChargeValue
 
-buildWaitingChargeInfo :: Spec.Item -> Maybe OnSearch.WaitingChargesInfo
+buildWaitingChargeInfo :: MonadFlow m => Spec.Item -> m (Maybe OnSearch.WaitingChargesInfo)
 buildWaitingChargeInfo item = do
-  let itemTags = item.itemTags & fromMaybe (error "Missing Tags")
-  Just
-    OnSearch.WaitingChargesInfo
-      { waitingChargePerMin = buildWaitingChargeInfo' itemTags
-      }
+  itemTags <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tags")
+  return $
+    Just
+      OnSearch.WaitingChargesInfo
+        { waitingChargePerMin = buildWaitingChargeInfo' itemTags
+        }
 
-getProviderLocation :: Spec.Provider -> [Maps.LatLong]
+getProviderLocation :: MonadFlow m => Spec.Provider -> m [Maps.LatLong]
 getProviderLocation provider = do
-  let locations = provider.providerLocations & fromMaybe (error "Missing Locations")
-  map makeLatLong locations
+  locations <- provider.providerLocations & fromMaybeM (InvalidRequest "Missing Locations")
+  mapM makeLatLong locations
 
-makeLatLong :: Spec.Location -> Maps.LatLong
+makeLatLong :: MonadFlow m => Spec.Location -> m Maps.LatLong
 makeLatLong location = do
-  let gps = location.locationGps & fromMaybe (error "Missing GPS")
-  Common.parseLatLong gps
+  gps <- location.locationGps & fromMaybeM (InvalidRequest "Missing GPS")
+  return $ Common.parseLatLong gps
 
-buildSpecialLocationTag :: Spec.Item -> Maybe Text
+buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item = do
-  let itemTags = item.itemTags & fromMaybe (error "Missing Tags")
-  getTagV2 "general_info" "special_location_tag" itemTags
+  itemTags <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tags")
+  return $ getTagV2 "general_info" "special_location_tag" itemTags

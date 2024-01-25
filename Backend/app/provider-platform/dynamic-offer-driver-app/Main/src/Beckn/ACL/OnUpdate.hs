@@ -47,7 +47,7 @@ buildOnUpdateMessage ::
   (EsqDBFlow m r, EncFlow m r) =>
   OnUpdateBuildReq ->
   m OnUpdate.OnUpdateMessage
-buildOnUpdateMessage RideAssignedBuildReq {..} = do
+buildOnUpdateMessage (RideAssignedBuildReq DRideAssignedReq {..}) = do
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) image Nothing Nothing isDriverBirthDay isFreeRide
   return $
     OnUpdate.OnUpdateMessage
@@ -61,7 +61,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
         -- JAYPAL, TODO check where to place update_target
         update_target = "order.fufillment.state.code, order.fulfillment.agent, order.fulfillment.vehicle" <> ", order.fulfillment.start.authorization" -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
       }
-buildOnUpdateMessage RideStartedBuildReq {..} = do
+buildOnUpdateMessage (RideStartedBuildReq DRideStartedReq {..}) = do
   let personTag = Common.mkLocationTagGroup tripStartLocation
   fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing Nothing (Just $ Tags.TG personTag) False False
   return $
@@ -74,19 +74,19 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
               },
         update_target = "order.fufillment.state.code"
       }
-buildOnUpdateMessage req@RideCompletedBuildReq {tripEndLocation} = do
+buildOnUpdateMessage (RideCompletedBuildReq DRideCompletedReq {..}) = do
   let personTag = Common.mkLocationTagGroup tripEndLocation
-  distanceTagGroup <- Common.buildDistanceTagGroup req.ride
-  fulfillment <- Common.mkFulfillment (Just req.driver) req.ride req.booking (Just req.vehicle) Nothing (Just $ Tags.TG distanceTagGroup) (Just $ Tags.TG personTag) False False
-  quote <- Common.buildRideCompletedQuote req.ride req.fareParams
+  distanceTagGroup <- Common.buildDistanceTagGroup ride
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG distanceTagGroup) (Just $ Tags.TG personTag) False False
+  quote <- Common.buildRideCompletedQuote ride fareParams
   return $
     OnUpdate.OnUpdateMessage
       { order =
           OnUpdate.RideCompleted
             RideCompletedOU.RideCompletedEvent
-              { id = req.booking.id.getId,
+              { id = booking.id.getId,
                 quote,
-                payment = Just $ Common.mkRideCompletedPayment req.paymentMethodInfo req.paymentUrl,
+                payment = Just $ Common.mkRideCompletedPayment paymentMethodInfo paymentUrl,
                 fulfillment = fulfillment
               },
         update_target = "order.payment, order.quote, order.fulfillment.tags, order.fulfillment.state.tags"

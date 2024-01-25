@@ -23,102 +23,128 @@ import qualified Data.Text as T
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
 import Kernel.Types.Common
+import Kernel.Utils.Common (fromMaybeM)
+import Tools.Error (GenericError (InvalidRequest))
 
-getPickUpLocation :: Spec.SearchReqMessage -> Spec.Location
+getPickUpLocation :: MonadFlow m => Spec.SearchReqMessage -> m Spec.Location
 getPickUpLocation req = do
-  let intent = req.searchReqMessageIntent & fromMaybe (error "Missing Intent")
-  let fulfillment = intent.intentFulfillment & fromMaybe (error "Missing Fulfillment")
-  let stops = fulfillment.fulfillmentStops & fromMaybe (error "Missing Stops")
-  let pickUp = firstStop stops & fromMaybe (error "Missing Pickup")
-  pickUp.stopLocation & fromMaybe (error "Missing Location")
+  pickupLocation <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentStops)
+      >>= firstStop
+      >>= (.stopLocation)
+      & fromMaybeM (InvalidRequest "Missing Pickup Location")
+  return pickupLocation
 
-getDropOffLocation :: Spec.SearchReqMessage -> Spec.Location
+getDropOffLocation :: MonadFlow m => Spec.SearchReqMessage -> m Spec.Location
 getDropOffLocation req = do
-  let intent = req.searchReqMessageIntent & fromMaybe (error "Missing Intent")
-  let fulfillment = intent.intentFulfillment & fromMaybe (error "Missing Fulfillment")
-  let stops = fulfillment.fulfillmentStops & fromMaybe (error "Missing Stops")
-  let dropOff = lastStop stops & fromMaybe (error "Missing DropOff")
-  dropOff.stopLocation & fromMaybe (error "Missing Location")
+  dropOffLocation <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentStops)
+      >>= lastStop
+      >>= (.stopLocation)
+      & fromMaybeM (InvalidRequest "Missing DropOff Location")
+  return dropOffLocation
 
-getPickUpLocationGps :: Spec.SearchReqMessage -> Text
+getPickUpLocationGps :: MonadFlow m => Spec.SearchReqMessage -> m Text
 getPickUpLocationGps req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let stops = fromMaybe (error "Missing Stops") $ fulfillment.fulfillmentStops
-  let pickUp = lastStop stops & fromMaybe (error "Missing DropOff")
-  let location = pickUp.stopLocation & fromMaybe (error "Missing Location")
-  location.locationGps & fromMaybe (error "Missing GPS")
+  pickupLocationGps <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentStops)
+      >>= firstStop
+      >>= (.stopLocation)
+      >>= (.locationGps)
+      & fromMaybeM (InvalidRequest "Missing Pickup Location GPS")
+  return pickupLocationGps
 
-getDropOffLocationGps :: Spec.SearchReqMessage -> Text
+getDropOffLocationGps :: MonadFlow m => Spec.SearchReqMessage -> m Text
 getDropOffLocationGps req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let stops = fromMaybe (error "Missing Stops") $ fulfillment.fulfillmentStops
-  let dropOff = lastStop stops & fromMaybe (error "Missing DropOff")
-  let location = dropOff.stopLocation & fromMaybe (error "Missing Location")
-  location.locationGps & fromMaybe (error "Missing GPS")
+  dropOffLocationGps <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentStops)
+      >>= lastStop
+      >>= (.stopLocation)
+      >>= (.locationGps)
+      & fromMaybeM (InvalidRequest "Missing DropOff Location GPS")
+  return dropOffLocationGps
 
-getDistance :: Spec.SearchReqMessage -> Maybe Meters
+getDistance :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Meters)
 getDistance req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let tagGroups = fromMaybe (error "Missing Tags") $ fulfillment.fulfillmentTags
-  tagValue <- getTagV2 "route_info" "distance_info_in_m" tagGroups
-  distanceValue <- readMaybe $ T.unpack tagValue
-  return $ Meters distanceValue
+  tagGroups <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentTags)
+      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagValue = getTagV2 "route_info" "distance_info_in_m" tagGroups
+  return $ tagValue >>= readMaybe . T.unpack >>= Just . Meters
 
-getDuration :: Spec.SearchReqMessage -> Maybe Seconds
+getDuration :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Seconds)
 getDuration req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let tagGroups = fromMaybe (error "Missing Tags") $ fulfillment.fulfillmentTags
-  tagValue <- getTagV2 "route_info" "duration_info_in_s" tagGroups
-  durationValue <- readMaybe $ T.unpack tagValue
-  Just $ Seconds durationValue
+  tagGroups <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentTags)
+      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagValue = getTagV2 "route_info" "duration_info_in_s" tagGroups
+  return $ tagValue >>= readMaybe . T.unpack >>= Just . Seconds
 
-buildCustomerLanguage :: Spec.SearchReqMessage -> Maybe Language
+buildCustomerLanguage :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Language)
 buildCustomerLanguage req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let customer = fromMaybe (error "Missing Customer") $ fulfillment.fulfillmentCustomer
-  let customerPerson = fromMaybe (error "Missing Person") $ customer.customerPerson
-  let tagGroups = fromMaybe (error "Missing Tags") $ customerPerson.personTags
-  tagValue <- getTagV2 "customer_info" "customer_language" tagGroups
-  readMaybe $ T.unpack tagValue
+  tagGroups <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentCustomer)
+      >>= (.customerPerson)
+      >>= (.personTags)
+      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagValue = getTagV2 "customer_info" "customer_language" tagGroups
+  return $ tagValue >>= readMaybe . T.unpack >>= Just
 
-buildDisabilityTag :: Spec.SearchReqMessage -> Maybe Text
+buildDisabilityTag :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Text)
 buildDisabilityTag req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let customer = fromMaybe (error "Missing Customer") $ fulfillment.fulfillmentCustomer
-  let customerPerson = fromMaybe (error "Missing Person") $ customer.customerPerson
-  let tagGroups = fromMaybe (error "Missing Tags") $ customerPerson.personTags
-  tagValue <- getTagV2 "customer_info" "disability_tag" tagGroups
-  Just tagValue
+  tagGroups <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentCustomer)
+      >>= (.customerPerson)
+      >>= (.personTags)
+      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagValue = getTagV2 "customer_info" "disability_tag" tagGroups
+  return $ tagValue >>= readMaybe . T.unpack >>= Just
 
-buildCustomerPhoneNumber :: Spec.SearchReqMessage -> Maybe Text
+buildCustomerPhoneNumber :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Text)
 buildCustomerPhoneNumber req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let customer = fromMaybe (error "Missing Customer") $ fulfillment.fulfillmentCustomer
-  let customerPerson = fromMaybe (error "Missing Person") $ customer.customerPerson
-  let tagGroups = fromMaybe (error "Missing Tags") $ customerPerson.personTags
-  tagValue <- getTagV2 "customer_info" "customer_phone_number" tagGroups
-  readMaybe $ T.unpack tagValue
+  tagGroups <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentCustomer)
+      >>= (.customerPerson)
+      >>= (.personTags)
+      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagValue = getTagV2 "customer_info" "customer_phone_number" tagGroups
+  return $ tagValue >>= readMaybe . T.unpack >>= Just
 
 -- customerPerson <- req ^? (ix "searchReqMessageIntent" . key "intentFulfillment" . key "fulfillmentCustomer" . key "customerPerson" . key "tags") & fromMaybeM (InvalidRequest "Missing Fields")
 
-getIsReallocationEnabled :: Spec.SearchReqMessage -> Maybe Bool
+getIsReallocationEnabled :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Bool)
 getIsReallocationEnabled req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let tagGroups = fromMaybe (error "Missing Tags") $ fulfillment.fulfillmentTags
-  tagValue <- getTagV2 "reallocation_info" "is_reallocation_enabled" tagGroups
-  readMaybe $ T.unpack tagValue
+  tagGroups <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentTags)
+      & fromMaybeM (InvalidRequest "Missing Tags")
+  let tagValue = getTagV2 "reallocation_info" "is_reallocation_enabled" tagGroups
+  return $ tagValue >>= readMaybe . T.unpack >>= Just
 
-buildRoutePoints :: Spec.SearchReqMessage -> Maybe [Maps.LatLong]
+buildRoutePoints :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe [Maps.LatLong])
 buildRoutePoints req = do
-  let intent = fromMaybe (error "Missing Intent") $ req.searchReqMessageIntent
-  let fulfillment = fromMaybe (error "Missing Fulfillment") $ intent.intentFulfillment
-  let tagGroups = fromMaybe (error "Missing Tags") $ fulfillment.fulfillmentTags
-  getTagV2 "route_info" "route_points" tagGroups >>= decode . encodeUtf8
+  tagGroups <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentTags)
+      & fromMaybeM (InvalidRequest "Missing Tags")
+  return $ getTagV2 "route_info" "route_points" tagGroups >>= decode . encodeUtf8 >>= Just

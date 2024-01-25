@@ -23,6 +23,7 @@ import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
+import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Id
 
@@ -50,7 +51,8 @@ data DRideStartedReq = DRideStartedReq
   { driver :: SP.Person,
     vehicle :: SVeh.Vehicle,
     ride :: DRide.Ride,
-    booking :: DRB.Booking
+    booking :: DRB.Booking,
+    tripStartLocation :: Maybe Maps.LatLong
   }
 
 data DRideCompletedReq = DRideCompletedReq
@@ -60,7 +62,8 @@ data DRideCompletedReq = DRideCompletedReq
     booking :: DRB.Booking,
     fareParams :: Fare.FareParameters,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    paymentUrl :: Maybe Text
+    paymentUrl :: Maybe Text,
+    tripEndLocation :: Maybe Maps.LatLong
   }
 
 data DBookingCancelledReq = DBookingCancelledReq

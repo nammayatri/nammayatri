@@ -42,7 +42,7 @@ buildOnUpdateReqV2 ::
 buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country = \case
   OU.RideAssignedBuildReq OU.DRideAssignedReq {..} -> do
     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-    fulfillment <- Utils.mkFulFillmentV2 (Just driver) ride booking (Just vehicle) image Nothing isDriverBirthDay isFreeRide (Just $ show Event.RIDE_ASSIGNED)
+    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image Nothing Nothing isDriverBirthDay isFreeRide (Just $ show Event.RIDE_ASSIGNED)
     pure $
       Spec.OnUpdateReq
         { onUpdateReqError = Nothing,
@@ -67,7 +67,8 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country =
         }
   OU.RideStartedBuildReq OU.DRideStartedReq {..} -> do
     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-    fulfillment <- Utils.mkFulFillmentV2 (Just driver) ride booking (Just vehicle) Nothing Nothing False False (Just $ show Event.RIDE_STARTED)
+    let personTag = Utils.mkLocationTagGroupV2 tripStartLocation -- why are we sending trip start and end location in personTags?
+    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing Nothing (Just personTag) False False (Just $ show Event.RIDE_STARTED)
     pure $
       Spec.OnUpdateReq
         { onUpdateReqError = Nothing,
@@ -91,9 +92,10 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country =
                 }
         }
   OU.RideCompletedBuildReq OU.DRideCompletedReq {..} -> do
+    let personTag = Utils.mkLocationTagGroupV2 tripEndLocation
     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
     distanceTagGroup <- Utils.mkDistanceTagGroup ride
-    fulfillment <- Utils.mkFulFillmentV2 (Just driver) ride booking (Just vehicle) Nothing distanceTagGroup False False (Just $ show Event.RIDE_COMPLETED)
+    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing distanceTagGroup (Just personTag) False False (Just $ show Event.RIDE_COMPLETED)
     quote <- Utils.mkRideCompletedQuote ride fareParams
     pure $
       Spec.OnUpdateReq
@@ -167,9 +169,10 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country =
                 }
         }
   OU.DriverArrivedBuildReq OU.DDriverArrivedReq {..} -> do
+    let tagGroups = Utils.mkArrivalTimeTagGroupV2 arrivalTime
     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
     let driverArrivedInfoTags = Utils.mkDriverArrivedInfoTags arrivalTime
-    fulfillment <- Utils.mkFulFillmentV2 (Just driver) ride booking (Just vehicle) Nothing driverArrivedInfoTags False False (Just $ show Event.DRIVER_ARRIVED)
+    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing driverArrivedInfoTags (Just tagGroups) False False (Just $ show Event.DRIVER_ARRIVED)
     pure $
       Spec.OnUpdateReq
         { onUpdateReqError = Nothing,
@@ -193,9 +196,35 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country =
                 }
         }
   OU.EstimateRepetitionBuildReq OU.DEstimateRepetitionReq {..} -> do
+    let tagGroupV2 =
+          [ Spec.TagGroup
+              { tagGroupDisplay = Just False,
+                tagGroupDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "previous_cancellation_reasons",
+                        descriptorName = Just "Previous Cancellation Reasons",
+                        descriptorShortDesc = Nothing
+                      },
+                tagGroupList =
+                  Just $
+                    [ Spec.Tag
+                        { tagDisplay = Just False,
+                          tagDescriptor =
+                            Just $
+                              Spec.Descriptor
+                                { descriptorCode = Just "cancellation_reason",
+                                  descriptorName = Just "Cancellation Reason",
+                                  descriptorShortDesc = Nothing
+                                },
+                          tagValue = Just $ show $ Utils.castCancellationSource cancellationSource
+                        }
+                    ]
+              }
+          ]
     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
     let previousCancellationReasonsTags = Utils.mkPreviousCancellationReasonsTags cancellationSource
-    fulfillment <- Utils.mkFulFillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags False False (Just $ show Event.ESTIMATE_REPETITION)
+    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing previousCancellationReasonsTags (Just tagGroupV2) False False (Just $ show Event.ESTIMATE_REPETITION)
     pure $
       Spec.OnUpdateReq
         { onUpdateReqError = Nothing,
@@ -229,9 +258,35 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country =
                 }
         }
   OU.NewMessageBuildReq OU.DNewMessageReq {..} -> do
+    let tagGroupV2 =
+          [ Spec.TagGroup
+              { tagGroupDisplay = Just False,
+                tagGroupDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "driver_new_message",
+                        descriptorName = Just "Driver New Message",
+                        descriptorShortDesc = Nothing
+                      },
+                tagGroupList =
+                  Just $
+                    [ Spec.Tag
+                        { tagDisplay = Just False,
+                          tagDescriptor =
+                            Just $
+                              Spec.Descriptor
+                                { descriptorCode = Just "message",
+                                  descriptorName = Just "New Message",
+                                  descriptorShortDesc = Nothing
+                                },
+                          tagValue = Just message
+                        }
+                    ]
+              }
+          ]
     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
     let newMessageTags = Utils.mkNewMessageTags message
-    fulfillment <- Utils.mkFulFillmentV2 (Just driver) ride booking (Just vehicle) Nothing newMessageTags False False (Just $ show Event.NEW_MESSAGE)
+    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing newMessageTags (Just tagGroupV2) False False (Just $ show Event.NEW_MESSAGE)
     pure $
       Spec.OnUpdateReq
         { onUpdateReqError = Nothing,
@@ -255,9 +310,36 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country =
                 }
         }
   OU.SafetyAlertBuildReq OU.DSafetyAlertReq {..} -> do
+    let tagGroupV2 =
+          Just $
+            [ Spec.TagGroup
+                { tagGroupDisplay = Just False,
+                  tagGroupDescriptor =
+                    Just $
+                      Spec.Descriptor
+                        { descriptorCode = Just "safety_alert",
+                          descriptorName = Just "Safety Alert",
+                          descriptorShortDesc = Nothing
+                        },
+                  tagGroupList =
+                    Just $
+                      [ Spec.Tag
+                          { tagDisplay = Just False,
+                            tagDescriptor =
+                              Just $
+                                Spec.Descriptor
+                                  { descriptorCode = Just code,
+                                    descriptorName = Just "Safety Alert Trigger",
+                                    descriptorShortDesc = Nothing
+                                  },
+                            tagValue = Just reason
+                          }
+                      ]
+                }
+            ]
     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
     let safetyAlertTags = Utils.mkSafetyAlertTags reason code
-    fulfillment <- Utils.mkFulFillmentV2 Nothing ride booking Nothing Nothing safetyAlertTags False False (Just $ show Event.SAFETY_ALERT)
+    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing safetyAlertTags tagGroupV2 False False (Just $ show Event.SAFETY_ALERT)
     pure $
       Spec.OnUpdateReq
         { onUpdateReqError = Nothing,

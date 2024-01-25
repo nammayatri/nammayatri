@@ -161,7 +161,7 @@ tfOrder (DStatus.NewBookingBuildReq {bookingId}) =
 tfOrder (DStatus.RideAssignedBuildReq {newRideInfo}) = do
   let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
   let arrivalTimeTagGroup = UtilsOU.mkDriverArrivedInfoTags ride.driverArrivalTime
-  fulfillment <- Utils.mkFulFillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup False False Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -178,7 +178,7 @@ tfOrder (DStatus.RideAssignedBuildReq {newRideInfo}) = do
 tfOrder (DStatus.RideStartedBuildReq {newRideInfo}) = do
   let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
   let arrivalTimeTagGroup = UtilsOU.mkDriverArrivedInfoTags ride.driverArrivalTime
-  fulfillment <- Utils.mkFulFillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup False False Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -197,7 +197,7 @@ tfOrder (DStatus.RideCompletedBuildReq {newRideInfo, rideCompletedInfo}) = do
   let SyncRide.RideCompletedInfo {fareParams, paymentMethodInfo, paymentUrl} = rideCompletedInfo
   let arrivalTimeTagGroup = UtilsOU.mkDriverArrivedInfoTags ride.driverArrivalTime
   distanceTagGroup <- UtilsOU.mkDistanceTagGroup ride
-  fulfillment <- Utils.mkFulFillmentV2 (Just driver) ride booking (Just vehicle) image (arrivalTimeTagGroup <> distanceTagGroup) False False Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (arrivalTimeTagGroup <> distanceTagGroup) Nothing False False Nothing
   quote <- UtilsOU.mkRideCompletedQuote ride fareParams
   pure
     Spec.Order
@@ -217,7 +217,7 @@ tfOrder (DStatus.BookingCancelledBuildReq {bookingCancelledInfo, mbNewRideInfo})
   fulfillment <- forM mbNewRideInfo $ \newRideInfo -> do
     let SyncRide.NewRideInfo {driver, image, vehicle, ride} = newRideInfo
     let arrivalTimeTagGroup = UtilsOU.mkDriverArrivedInfoTags ride.driverArrivalTime
-    Utils.mkFulFillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup False False Nothing
+    Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
@@ -239,7 +239,7 @@ tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, newRideIn
   let SyncRide.BookingCancelledInfo {booking, cancellationSource} = bookingReallocationInfo
   let SyncRide.NewRideInfo {driver, image, vehicle, ride} = newRideInfo
   let arrivalTimeTagGroup = UtilsOU.mkDriverArrivedInfoTags ride.driverArrivalTime
-  fulfillment <- Utils.mkFulFillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup False False Nothing
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image arrivalTimeTagGroup Nothing False False Nothing
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
