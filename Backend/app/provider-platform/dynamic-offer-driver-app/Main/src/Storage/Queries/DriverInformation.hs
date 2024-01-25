@@ -307,7 +307,7 @@ updateDriverInformation (Id driverId) canDowngradeToSedan canDowngradeToHatchbac
     [ Se.Set BeamDI.canDowngradeToSedan canDowngradeToSedan,
       Se.Set BeamDI.canDowngradeToHatchback canDowngradeToHatchback,
       Se.Set BeamDI.canDowngradeToTaxi canDowngradeToTaxi,
-      Se.Set BeamDI.canSwitchToRental canSwitchToRental,
+      Se.Set BeamDI.canSwitchToRental (Just canSwitchToRental),
       Se.Set BeamDI.availableUpiApps availableUpiApps,
       Se.Set BeamDI.updatedAt now
     ]

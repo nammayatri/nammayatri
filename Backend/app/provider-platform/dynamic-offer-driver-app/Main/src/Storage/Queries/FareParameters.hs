@@ -57,7 +57,7 @@ updateFareParameters FareParameters {..} = do
       Se.Set BeamFP.waitingCharge waitingCharge,
       Se.Set BeamFP.rideExtraTimeFare rideExtraTimeFare,
       Se.Set BeamFP.nightShiftCharge nightShiftCharge,
-      Se.Set BeamFP.updatedAt now
+      Se.Set BeamFP.updatedAt (Just now)
     ]
     [Se.Is BeamFP.id (Se.Eq id.getId)]
 
@@ -80,6 +80,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
           case mFullFPRD of
             Just (_, fPRD) -> return (Just $ RentalDetails fPRD)
             Nothing -> return Nothing
+    now <- getCurrentTime
     case mFareParametersDetails of
       Just fareParametersDetails -> do
         return $
@@ -97,7 +98,7 @@ instance FromTType' BeamFP.FareParameters FareParameters where
                 nightShiftCharge = nightShiftCharge,
                 fareParametersDetails,
                 customerCancellationDues = fromMaybe 0 customerCancellationDues,
-                updatedAt = updatedAt
+                updatedAt = fromMaybe now updatedAt
               }
       Nothing -> return Nothing
 
@@ -116,7 +117,7 @@ instance ToTType' BeamFP.FareParameters FareParameters where
         BeamFP.nightShiftCharge = nightShiftCharge,
         BeamFP.fareParametersType = getFareParametersType $ FareParameters {..},
         BeamFP.customerCancellationDues = Just customerCancellationDues,
-        BeamFP.updatedAt = updatedAt
+        BeamFP.updatedAt = Just updatedAt
       }
 
 findAllLateNightRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m Int

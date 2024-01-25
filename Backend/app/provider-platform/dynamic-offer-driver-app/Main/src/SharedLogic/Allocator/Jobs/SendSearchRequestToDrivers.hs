@@ -57,9 +57,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   let jobData = jobInfo.jobData
   let searchTryId = jobData.searchTryId
   searchTry <- B.runInReplica $ QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
-  -- searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
-  -- searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId (Just searchTry.vehicleVariant) jobData.estimatedRideDistance
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId

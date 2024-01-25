@@ -290,7 +290,6 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
-      Domain.Types.SearchRequestSpecialZone
       Domain.Types.SearchTry
       Domain.Types.Translations
       Domain.Types.Vehicle

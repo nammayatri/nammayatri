@@ -50,6 +50,7 @@ instance FromTType' BeamE.Estimate Estimate where
           { id = Id id,
             requestId = Id requestId,
             tripCategory = fromMaybe (OneWay OneWayOnDemandDynamicOffer) tripCategory,
+            updatedAt = fromMaybe createdAt updatedAt, -- backward compatibility
             ..
           }
 
@@ -61,5 +62,6 @@ instance ToTType' BeamE.Estimate Estimate where
         tripCategory = Just tripCategory,
         farePolicyId = (getId . (.id)) <$> farePolicy,
         fareParamsId = (getId . (.id)) <$> fareParams,
+        updatedAt = Just updatedAt,
         ..
       }

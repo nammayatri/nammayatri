@@ -50,6 +50,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.SearchRequestSpecialZone as SZSRFallback
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
@@ -256,7 +257,15 @@ validateRequest merchantId req = do
       quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
       when (quote.validTill < now) $
         throwError $ QuoteExpired quote.id.getId
-      searchRequest <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
+      -- Replace with this after the release
+      -- searchRequest <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
+      -- This is just to handle backward compatibility
+      searchRequest <- do
+        mbSearchReq <- QSR.findById quote.searchRequestId
+        case mbSearchReq of
+          Just sr -> return sr
+          Nothing -> SZSRFallback.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
+
       return $ ValidatedInitReq {searchRequest, quote = ValidatedQuote quote}
 
 compareMerchantPaymentMethod :: DMPM.PaymentMethodInfo -> DMPM.MerchantPaymentMethod -> Bool

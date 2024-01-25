@@ -32,6 +32,7 @@ instance FromTType' BeamDI.DriverInformation DriverInformation where
             merchantId = Id <$> merchantId,
             referredByDriverId = Id <$> referredByDriverId,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
+            canSwitchToRental = fromMaybe True canSwitchToRental,
             ..
           }
 
@@ -60,7 +61,7 @@ instance ToTType' BeamDI.DriverInformation DriverInformation where
         BeamDI.canDowngradeToSedan = canDowngradeToSedan,
         BeamDI.canDowngradeToHatchback = canDowngradeToHatchback,
         BeamDI.canDowngradeToTaxi = canDowngradeToTaxi,
-        BeamDI.canSwitchToRental = canSwitchToRental,
+        BeamDI.canSwitchToRental = Just canSwitchToRental,
         BeamDI.mode = mode,
         BeamDI.autoPayStatus = autoPayStatus,
         BeamDI.payerVpa = payerVpa,
