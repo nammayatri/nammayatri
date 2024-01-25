@@ -76,7 +76,7 @@ update farePolicy = do
       updateOneWithKV
         [ Se.Set BeamFPRD.baseFare $ fPRD.baseFare,
           Se.Set BeamFPRD.perHourCharge $ fPRD.perHourCharge,
-          Se.Set BeamFPRD.perHourFreeKms $ fPRD.perHourFreeKms,
+          Se.Set BeamFPRD.perExtraMinRate $ fPRD.perExtraMinRate,
           Se.Set BeamFPRD.perExtraKmRate $ fPRD.perExtraKmRate,
           Se.Set BeamFPRD.nightShiftCharge $ fPRD.nightShiftCharge
         ]

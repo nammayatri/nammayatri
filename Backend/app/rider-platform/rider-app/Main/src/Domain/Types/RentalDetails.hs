@@ -23,7 +23,7 @@ data RentalDetails = RentalDetails
   { id :: Id RentalDetails,
     baseFare :: Money,
     perHourCharge :: Money,
-    perHourFreeKms :: Int,
+    perExtraMinRate :: Money,
     perExtraKmRate :: Money,
     nightShiftInfo :: Maybe NightShiftInfo
   }
@@ -40,7 +40,7 @@ data NightShiftInfo = NightShiftInfo
 data RentalDetailsAPIEntity = RentalDetailsAPIEntity
   { baseFare :: Money,
     perHourCharge :: Money,
-    perHourFreeKms :: Int,
+    perExtraMinRate :: Money,
     perExtraKmRate :: Money,
     nightShiftInfo :: Maybe NightShiftInfo
   }

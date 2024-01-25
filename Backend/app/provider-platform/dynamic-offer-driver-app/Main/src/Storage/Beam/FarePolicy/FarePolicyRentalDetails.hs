@@ -21,7 +21,7 @@ data FarePolicyRentalDetailsT f = FarePolicyRentalDetailsT
   { farePolicyId :: B.C f Text,
     baseFare :: B.C f Money,
     perHourCharge :: B.C f Money,
-    perHourFreeKms :: B.C f Int,
+    perExtraMinRate :: B.C f Money,
     perExtraKmRate :: B.C f Money,
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
   }

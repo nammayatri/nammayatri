@@ -349,7 +349,7 @@ buildQuote searchRequest transporterId pickupTime mbDistance mbDuration specialL
     calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
-          distance = dist, -- TODO: Fix this
+          actualDistance = Just dist,
           rideTime = pickupTime,
           waitingTime = Nothing,
           actualRideDuration = Nothing,
@@ -357,7 +357,11 @@ buildQuote searchRequest transporterId pickupTime mbDistance mbDuration specialL
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
           nightShiftCharge = Nothing,
-          customerCancellationDues = customerCancellationDues
+          customerCancellationDues = customerCancellationDues,
+          nightShiftOverlapChecking = True, -- sending True in rental
+          estimatedDistance = searchRequest.estimatedDistance,
+          estimatedRideDuration = searchRequest.estimatedDuration,
+          timeDiffFromUtc = Nothing
         }
   quoteId <- Id <$> generateGUID
   now <- getCurrentTime
@@ -395,7 +399,7 @@ buildEstimate searchReqId startTime mbDistance specialLocationTag customerCancel
     calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
-          distance = dist, -- TODO: Fix this
+          actualDistance = Just dist,
           rideTime = startTime,
           waitingTime = Nothing,
           actualRideDuration = Nothing,
@@ -403,7 +407,11 @@ buildEstimate searchReqId startTime mbDistance specialLocationTag customerCancel
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
           nightShiftCharge = Nothing,
-          customerCancellationDues = customerCancellationDues
+          customerCancellationDues = customerCancellationDues,
+          nightShiftOverlapChecking = False,
+          estimatedDistance = Nothing,
+          estimatedRideDuration = Nothing,
+          timeDiffFromUtc = Nothing
         }
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare

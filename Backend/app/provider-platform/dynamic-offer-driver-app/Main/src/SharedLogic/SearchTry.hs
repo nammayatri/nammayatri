@@ -74,7 +74,7 @@ initiateDriverSearchBatch merchant searchReq tripCategory vehicleVariant estOrQu
         calculateFareParameters
           CalculateFareParametersParams
             { farePolicy = farePolicy,
-              distance = fromMaybe 0 searchReq.estimatedDistance, -- TODO: Fix this
+              actualDistance = searchReq.estimatedDistance,
               rideTime = searchReq.startTime,
               waitingTime = Nothing,
               actualRideDuration = Nothing,
@@ -82,6 +82,11 @@ initiateDriverSearchBatch merchant searchReq tripCategory vehicleVariant estOrQu
               driverSelectedFare = Nothing,
               customerExtraFee = customerExtraFee,
               nightShiftCharge = Nothing,
+              customerCancellationDues = customerCancellationDues,
+              nightShiftOverlapChecking = False, -- sending True in rental
+              estimatedDistance = searchReq.estimatedDistance,
+              estimatedRideDuration = searchReq.estimatedDuration,
+              timeDiffFromUtc = Nothing,
               ..
             }
       let estimatedFare = fareSum fareParams
