@@ -1,0 +1,40 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  BaseUrl: Servant.Client.Core
+
+BecknConfig:
+  tableName: beckn_config
+
+  fields:
+    id: Id BecknConfig
+    domain: Text
+    subscriberId: Text
+    subscriberUrl: BaseUrl
+    gatewayUrl: BaseUrl
+    registryUrl: BaseUrl
+    uniqueKeyId: Text
+
+  queries:
+    findByMerchantIdAndDomain:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, domain]
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  beamType:
+    subscriberUrl: Text
+    gatewayUrl: Text
+    registryUrl: Text
+
+  toTType:
+    subscriberUrl: showBaseUrl
+    gatewayUrl: showBaseUrl
+    registryUrl: showBaseUrl
+
+  fromTType:
+    subscriberUrl: parseBaseUrl
+    gatewayUrl: parseBaseUrl
+    registryUrl: parseBaseUrl

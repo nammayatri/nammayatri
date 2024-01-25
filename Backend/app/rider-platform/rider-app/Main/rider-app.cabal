@@ -29,6 +29,10 @@ library
   exposed-modules:
       API
       API.Beckn
+      API.Beckn.FRFS.OnConfirm
+      API.Beckn.FRFS.OnInit
+      API.Beckn.FRFS.OnSearch
+      API.Beckn.FRFS.OnStatus
       API.Beckn.OnConfirm
       API.Beckn.OnInit
       API.Beckn.OnSearch
@@ -57,6 +61,7 @@ library
       API.Dashboard.RideBooking.Search
       API.Dashboard.RideBooking.Select
       API.Dashboard.Tickets
+      API.FRFS
       API.Internal
       API.Internal.Rating
       API.MetroBeckn
@@ -100,6 +105,15 @@ library
       Beckn.ACL.Cancel
       Beckn.ACL.Common
       Beckn.ACL.Confirm
+      Beckn.ACL.FRFS.Confirm
+      Beckn.ACL.FRFS.Init
+      Beckn.ACL.FRFS.OnConfirm
+      Beckn.ACL.FRFS.OnInit
+      Beckn.ACL.FRFS.OnSearch
+      Beckn.ACL.FRFS.OnStatus
+      Beckn.ACL.FRFS.Search
+      Beckn.ACL.FRFS.Status
+      Beckn.ACL.FRFS.Utils
       Beckn.ACL.Init
       Beckn.ACL.Metro.OnSearch
       Beckn.ACL.Metro.Search
@@ -117,6 +131,11 @@ library
       Beckn.ACL.Track
       Beckn.ACL.Update
       Beckn.Core
+      Domain.Action.Beckn.FRFS.Common
+      Domain.Action.Beckn.FRFS.OnConfirm
+      Domain.Action.Beckn.FRFS.OnInit
+      Domain.Action.Beckn.FRFS.OnSearch
+      Domain.Action.Beckn.FRFS.OnStatus
       Domain.Action.Beckn.OnConfirm
       Domain.Action.Beckn.OnInit
       Domain.Action.Beckn.OnSearch
@@ -145,6 +164,7 @@ library
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.FollowRide
+      Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
       Domain.Action.UI.HotSpot
       Domain.Action.UI.Maps
@@ -223,6 +243,7 @@ library
       Lib.Mesh
       SharedLogic.CallBPP
       SharedLogic.CallBPPInternal
+      SharedLogic.CallFRFSBPP
       SharedLogic.Confirm
       SharedLogic.GoogleTranslate
       SharedLogic.JobScheduler
@@ -288,6 +309,7 @@ library
       Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
       Storage.Beam.Webengage
+      Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.Exophone
       Storage.CachedQueries.FeedbackForm
@@ -324,6 +346,7 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareBreakup
       Storage.Queries.FeedbackForm
+      Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.Geometry
       Storage.Queries.HotSpotConfig
       Storage.Queries.Issues
@@ -375,12 +398,21 @@ library
       Tools.Ticket
       Tools.Whatsapp
       API.Action.UI.FollowRide
+      API.Action.UI.FRFSTicketService
       API.Action.UI.Sos
       API.Action.UI.TicketService
       API.Types.UI.FollowRide
+      API.Types.UI.FRFSTicketService
       API.Types.UI.Sos
       API.Types.UI.TicketService
+      Domain.Types.BecknConfig
       Domain.Types.BusinessHour
+      Domain.Types.FRFSQuote
+      Domain.Types.FRFSSearch
+      Domain.Types.FRFSTicket
+      Domain.Types.FRFSTicketBooking
+      Domain.Types.FRFSTicketBookingPayment
+      Domain.Types.FRFSTrip
       Domain.Types.MerchantOperatingCity
       Domain.Types.NextBillionData
       Domain.Types.SeatManagement
@@ -388,13 +420,21 @@ library
       Domain.Types.ServicePeopleCategory
       Domain.Types.Sos
       Domain.Types.SpecialOccasion
+      Domain.Types.Station
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
       Domain.Types.TicketBookingService
       Domain.Types.TicketBookingServiceCategory
       Domain.Types.TicketPlace
       Domain.Types.TicketService
+      Storage.Beam.BecknConfig
       Storage.Beam.BusinessHour
+      Storage.Beam.FRFSQuote
+      Storage.Beam.FRFSSearch
+      Storage.Beam.FRFSTicket
+      Storage.Beam.FRFSTicketBooking
+      Storage.Beam.FRFSTicketBookingPayment
+      Storage.Beam.FRFSTrip
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.NextBillionData
       Storage.Beam.SeatManagement
@@ -402,13 +442,21 @@ library
       Storage.Beam.ServicePeopleCategory
       Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
+      Storage.Beam.Station
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
       Storage.Beam.TicketBookingService
       Storage.Beam.TicketBookingServiceCategory
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
+      Storage.Queries.BecknConfig
       Storage.Queries.BusinessHour
+      Storage.Queries.FRFSQuote
+      Storage.Queries.FRFSSearch
+      Storage.Queries.FRFSTicket
+      Storage.Queries.FRFSTicketBooking
+      Storage.Queries.FRFSTicketBookingPayment
+      Storage.Queries.FRFSTrip
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.NextBillionData
       Storage.Queries.SeatManagement
@@ -416,6 +464,7 @@ library
       Storage.Queries.ServicePeopleCategory
       Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
+      Storage.Queries.Station
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory
       Storage.Queries.TicketBookingService

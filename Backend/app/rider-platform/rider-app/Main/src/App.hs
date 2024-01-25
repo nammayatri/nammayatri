@@ -48,6 +48,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import System.Environment (lookupEnv)
 import "utils" Utils.Common.Events as UE
@@ -97,11 +98,17 @@ runRiderApp' appCfg = do
           try QMerchant.loadAllBaps
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
+        -- Load FRFS BAPs
+        frfsBap <-
+          try QBecknConfig.findAll
+            >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
+        let allFRFSSubIds = map ((.subscriberId) &&& (.uniqueKeyId)) frfsBap
         flowRt' <-
           addAuthManagersToFlowRt
             flowRt
             $ catMaybes
               [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
+                Just (Nothing, prepareAuthManagers flowRt appEnv allFRFSSubIds),
                 Just (Just 150000, prepareGridlineHttpManager 150000)
               ]
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
