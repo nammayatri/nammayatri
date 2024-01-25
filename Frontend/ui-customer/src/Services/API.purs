@@ -2745,6 +2745,7 @@ derive instance genericStationType :: Generic StationType _
 instance showStationType :: Show StationType where show = genericShow
 instance decodeStationType :: Decode StationType where decode = defaultDecode
 instance encodeStationType :: Encode StationType where encode = defaultEncode
+instance eqStationType :: Eq StationType where eq = genericEq
 instance standardEncodeStationType :: StandardEncode StationType
   where
   standardEncode START = standardEncode $ show START

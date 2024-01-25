@@ -38,7 +38,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat)
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, MetroTicketBookingStatus(..))
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -1885,6 +1885,7 @@ type MetroTicketInfo = {
   qrString :: String
 , ticketNumber :: String 
 , validUntil :: String
+, status :: String
 }
 
 type MetroRoute = {
@@ -1896,6 +1897,7 @@ type MetroRoute = {
 data MetroLine = BlueLine 
                | GreenLine 
                | RedLine
+               | NoColorLine
 
 derive instance genericMetroLine :: Generic MetroLine _                                  
 instance showMetroLine :: Show MetroLine where show = genericShow
@@ -1927,13 +1929,24 @@ type MetroMyTicketsScreenState = {
 }
 
 type MetroMyTicketsScreenData = {
-  dummyData :: String
+  activeTickets :: Array MetroTicketCardData
+, pastTickets :: Array MetroTicketCardData
 }
 
 type MetroMyTicketsScreenProps = {
   dummyProps :: String
+, showShimmer :: Boolean
 }
 
+type MetroTicketCardData = {
+  sourceName :: String
+  , destinationName :: String
+  , createdAt :: String
+  , noOfTickets :: Int
+  , metroTicketStatusApiResp :: MetroTicketBookingStatus
+  , status :: String
+  , validUntill :: String
+}
 
 
 -- ######################################### TicketBookingStatus #################################################### 
@@ -2095,3 +2108,22 @@ data TicketType = ONE_WAY | ROUND_TRIP
 
 derive instance genericTicketType :: Generic TicketType _
 instance eqTicketType :: Eq TicketType where eq = genericEq
+
+
+-- ######################################### MetroTicketStatusScreenState ####################################################
+type MetroTicketStatusScreenState = {
+  data :: MetroTicketStatusScreenData,
+  props :: MetroTicketStatusScreenProps
+}
+
+type MetroTicketStatusScreenData = {
+  shortOrderId :: String,
+  keyValArray :: Array KeyVal,
+  ticketName :: String,
+  validUntil :: String
+}
+
+type MetroTicketStatusScreenProps = {
+  showShimmer :: Boolean
+, paymentStatus :: Common.PaymentStatus
+}

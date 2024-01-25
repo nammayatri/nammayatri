@@ -177,6 +177,9 @@ import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenDa
 import Screens.Types
 import Screens.TicketBookingFlow.TicketStatus.Transformer as TicketStatusTransformer
 import Screens as Screen
+import Screens.TicketBookingFlow.MetroTicketStatus.Transformer
+import Screens.TicketBookingFlow.MetroTicketDetails.Transformer
+import Screens.TicketBookingFlow.MetroMyTickets.Transformer
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -1375,19 +1378,9 @@ homeScreenFlow = do
     GO_TO_METRO_BOOKING _ -> metroTicketBookingFlow
     GO_TO_HELP_AND_SUPPORT -> helpAndSupportScreenFlow
     GO_TO_MY_METRO_TICKETS -> do
-      modifyScreenState $ 
-        TicketStatusScreenStateType (\_ -> 
-          TicketStatusScreenData.initData {
-            props{
-              actionType = MetroTicketToPaymentStatusEntry
-            , currentStage = BookingConfirmationStage
-            }
-          , data{
-              ticketName = "Tickets for Chennai Metro"
-            , keyValArray = TicketStatusTransformer.metroTicketDetailsTransformer
-            }
-          })
-      ticketStatusFlow
+      (GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT
+      modifyScreenState $ MetroMyTicketsScreenStateType (\metroMyTicketsScreen -> metroTicketListApiToMyTicketsTransformer resp metroMyTicketsScreen)
+      metroMyTicketsFlow
     _ -> homeScreenFlow
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
@@ -2799,15 +2792,51 @@ metroTicketPaymentFlow = do
       sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
       shortOrderID = "orderResp.order_id"
   -- modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{shortOrderId = shortOrderID}, props{selectedBookingId = shortOrderID}})
-  lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
-  _ <- paymentPageUI sdkPayload
-  void $ lift $ lift $ toggleLoader true
+  -- lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+  -- _ <- paymentPageUI sdkPayload
+  -- Payment status flow starts
+  -- void $ lift $ lift $ toggleLoader true
   _ <- pure $ toggleBtnLoader "" false
-  -- (GetTicketStatusResp ticketStatus) <- Remote.getTicketStatusBT shortOrderID
-  -- modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
-  -- updatePaymentStatusData ticketStatus shortOrderID
-  -- void $ lift $ lift $ toggleLoader false
-  ticketStatusFlow
+  resp <-  lift $ lift $ Remote.getMetroBookingStatus shortOrderID
+  lift $ lift $ toggleLoader false
+  case resp of 
+    Right (GetMetroBookingStatusResp ticketStatus) -> do
+      let (MetroTicketBookingStatus metroTicketStatus) = ticketStatus
+      void $ pure $ spy "METRO TICKET STATUS" metroTicketStatus
+      if metroTicketStatus.status == "PAYMENT_PENDING" then
+        setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "true"
+      else
+        pure unit
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer ticketStatus metroTicketDetailsState)
+      modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer ticketStatus shortOrderID metroTicketStatusScreen)
+      metroTicketStatusFlow
+    Left _ -> pure unit
+  pure unit 
+
+
+metroTicketStatusFlow :: FlowBT String Unit
+metroTicketStatusFlow = do
+  (GlobalState currentState) <- getState
+  flow <- UI.metroTicketStatusScreen
+  case flow of 
+    GO_TO_METRO_TICKET_DETAILS _ -> metroTicketDetailsFlow
+    REFRESH_STATUS_AC state -> do
+      resp <- (Remote.retryMetroTicketPayment state.data.shortOrderId)
+      case resp of 
+        Right (RetryMetrTicketPaymentResp ticketStatus) -> do
+          let (MetroTicketBookingStatus metroTicketStatus) = ticketStatus
+          setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+          modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer ticketStatus metroTicketDetailsState)
+          modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer ticketStatus state.data.shortOrderId metroTicketStatusScreen)
+          metroTicketStatusFlow
+        Left _ -> pure unit
+      metroTicketStatusFlow
+    GO_TO_TRY_AGAIN_PAYMENT state -> do 
+      -- Handle Retry Payment 
+      metroTicketStatusFlow
+    _ -> metroTicketStatusFlow
+  pure unit
+
 
 
 sdkPayload :: PaymentPagePayload
@@ -3073,7 +3102,15 @@ metroMyTicketsFlow = do
   logField_ <- lift $ lift $ getLogFields
   flow <- UI.metroMyTicketsScreen 
   case flow of 
+    GO_TO_METRO_TICKET_DETAILS_FLOW bookingStatusResp -> do
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer bookingStatusResp metroTicketDetailsState)
+      metroTicketDetailsFlow
+    GO_TO_METRO_TICKET_STAUS_FLOW bookingStatusResp -> do
+      modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer bookingStatusResp "" metroTicketStatusScreen)
+      metroTicketStatusFlow
     _ -> metroMyTicketsFlow
+
+
 searchLocationFlow :: FlowBT String Unit
 searchLocationFlow = do 
   (GlobalState globalState) <- getState
