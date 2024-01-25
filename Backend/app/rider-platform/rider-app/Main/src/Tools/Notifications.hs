@@ -703,7 +703,7 @@ notifyOnStopReached booking ride = do
   let merchantOperatingCityId = person.merchantOperatingCityId
   let notificationData =
         Notification.NotificationReq
-          { category = Notification.FOLLOW_RIDE, --- Notification.STOP_REACHED, FIX THIS
+          { category = Notification.STOP_REACHED, --- Notification.STOP_REACHED, FIX THIS
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,

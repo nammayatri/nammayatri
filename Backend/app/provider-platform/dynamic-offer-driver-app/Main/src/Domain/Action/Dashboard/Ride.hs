@@ -63,6 +63,8 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.DriverQuote as DQ
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
@@ -260,6 +262,15 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         _ -> Nothing
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
+  maxOrder <- QLM.maxOrderByEntity reqRideId.getId
+  (nextStopLoc, lastStopLoc) <- case booking.stopLocationId of
+    Nothing -> do
+      lastLoc <- mkLocationFromLocationMapping reqRideId maxOrder
+      return (Nothing, lastLoc)
+    Just nextStopId -> do
+      nextLoc <- QL.findById nextStopId
+      lastLoc <- mkLocationFromLocationMapping reqRideId (maxOrder - 1)
+      return (nextLoc, lastLoc)
   now <- getCurrentTime
   pure
     Common.RideInfoRes
@@ -300,13 +311,30 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
         driverDeviatedFromRoute = ride.driverDeviatedFromRoute,
-        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant
+        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant,
+        nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
+        lastStopLocation = mkLocationAPIEntity <$> lastStopLoc
       }
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
 mkLocationAPIEntity DLoc.Location {..} = do
   let DLoc.LocationAddress {..} = address
   Common.LocationAPIEntity {..}
+
+mkLocationFromLocationMapping ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig]
+  ) =>
+  Id Common.Ride ->
+  Int ->
+  m (Maybe DLoc.Location)
+mkLocationFromLocationMapping reqRideId order = do
+  locMap <- listToMaybe <$> QLM.findByEntityIdOrderAndVersion reqRideId.getId order "LATEST"
+  case locMap of
+    Nothing -> pure Nothing
+    Just locMap_ -> QL.findById locMap_.locationId
 
 castCancellationSource :: DBCReason.CancellationSource -> Common.CancellationSource
 castCancellationSource = \case

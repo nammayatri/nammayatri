@@ -15,8 +15,8 @@
 module Domain.Action.UI.Ride
   ( GetDriverLocResp,
     GetRideStatusResp (..),
-    EditLocationReq (..),
     EditLocation (..),
+    EditLocationReq (..),
     getDriverLoc,
     getRideStatus,
     editLocation,

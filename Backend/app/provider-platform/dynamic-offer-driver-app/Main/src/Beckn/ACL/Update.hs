@@ -60,13 +60,11 @@ parseEvent (Update.EditLocation elEvent) = do
 parseEvent (Update.AddStop asEvent) = do
   DUpdate.AddStopReq
     { bookingId = Id asEvent.id,
-      rideId = Id asEvent.fulfillment.id,
       stops = asEvent.fulfillment.stops
     }
 parseEvent (Update.EditStop esEvent) = do
   DUpdate.EditStopReq
     { bookingId = Id esEvent.id,
-      rideId = Id esEvent.fulfillment.id,
       stops = esEvent.fulfillment.stops
     }
 

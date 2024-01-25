@@ -766,3 +766,42 @@ sendSearchRequestToDriverNotification merchantId merchantOpCityId req = Notifica
       case merchantNotificationServiceConfig.serviceConfig of
         DMSC.NotificationServiceConfig nsc -> pure nsc
         _ -> throwError $ InternalError "Unknow Service Config"
+
+data StopReq = StopReq
+  { bookingId :: Id Booking,
+    stop :: Maybe Common.Location,
+    isEdit :: Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+notifyStopModification ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  StopReq ->
+  m ()
+notifyStopModification merchantOpCityId personId mbDeviceToken entityData = do
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) False notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = if entityData.isEdit then FCM.EDIT_STOP else FCM.ADD_STOP
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = entityData.bookingId.getId,
+          fcmEntityData = Just entityData,
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType,
+          fcmOverlayNotificationJSON = Nothing,
+          fcmNotificationId = Nothing
+        }
+    title = FCMNotificationTitle (if entityData.isEdit then "Stop Edited" else "Stop Added")
+    body =
+      FCMNotificationBody $
+        unwords
+          [ if entityData.isEdit then "Customer edited stop!" else "Customer added a stop!"
+          ]
