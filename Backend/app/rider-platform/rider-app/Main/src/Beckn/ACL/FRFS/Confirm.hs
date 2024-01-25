@@ -19,6 +19,7 @@ module Beckn.ACL.FRFS.Confirm (buildConfirmReq) where
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
+import qualified BecknV2.FRFS.Utils as Utils
 import Data.List (singleton)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
@@ -35,7 +36,9 @@ buildConfirmReq booking bapConfig txnId = do
   let transactionId = booking.searchId.getId
       messageId = booking.id.getId
 
-  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId Nothing
+  now <- getCurrentTime
+  let ttl = diffUTCTime booking.validTill now
+  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId (Just $ Utils.durationToText ttl)
 
   pure $
     Spec.ConfirmReq

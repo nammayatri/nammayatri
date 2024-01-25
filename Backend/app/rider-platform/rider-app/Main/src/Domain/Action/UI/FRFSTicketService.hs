@@ -224,11 +224,11 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         then do
           QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
           QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.FAILED booking.id
-          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED
+          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing
           buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
         else do
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
-          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING
+          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.PAYMENT_PENDING Nothing
           paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId
           let paymentObj =
                 Just $
@@ -246,16 +246,17 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         then do
           QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
           QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.FAILED booking.id
-          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED
+          let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing
           buildFRFSTicketBookingStatusAPIRes updatedBooking Nothing
         else
           if (paymentBookingStatus == FRFSTicketService.SUCCESS)
             then do
+              let updatedTTL = addUTCTime (60 :: NominalDiffTime) now -- 1 min from time of payment success
               void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
-              void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.CONFIRMING booking.id
+              void $ QFRFSTicketBooking.updateValidTillAndStatusById DFRFSTicketBooking.CONFIRMING updatedTTL booking.id
               transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
               txnId <- getSuccessTransactionId transactions
-              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING
+              let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL)
               fork "FRFS Confirm Req" $ do
                 providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
                 bknConfirmReq <- ACL.buildConfirmReq booking bapConfig txnId.getId
@@ -296,7 +297,9 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
     orderStatusCall = Payment.orderStatus merchantId_
     commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId_
 
-    makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus = DFRFSTicketBooking.FRFSTicketBooking {status = updatedStatus, ..}
+    makeUpdatedBooking DFRFSTicketBooking.FRFSTicketBooking {..} updatedStatus mTTL =
+      let validTill' = mTTL & fromMaybe validTill
+       in DFRFSTicketBooking.FRFSTicketBooking {status = updatedStatus, validTill = validTill', ..}
     getSuccessTransactionId transactions = do
       let successTransactions = filter (\transaction -> transaction.status == Payment.CHARGED) transactions
       case successTransactions of

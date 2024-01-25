@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -73,6 +74,17 @@ updateStatusById status (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.status $ status,
+      Se.Set Beam.updatedAt $ now
+    ]
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
+updateValidTillAndStatusById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
+updateValidTillAndStatusById status validTill (Kernel.Types.Id.Id id) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.status $ status,
+      Se.Set Beam.validTill $ validTill,
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.Is Beam.id $ Se.Eq id
