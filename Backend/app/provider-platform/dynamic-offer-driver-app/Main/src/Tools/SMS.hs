@@ -58,7 +58,7 @@ sendSMS merchantId merchantOpCityId = Sms.sendSMS handler
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
-        QMSC.findByMerchantIdAndService merchantId (DMSC.SmsService provider)
+        QMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.SmsService provider) merchantOpCityId
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc

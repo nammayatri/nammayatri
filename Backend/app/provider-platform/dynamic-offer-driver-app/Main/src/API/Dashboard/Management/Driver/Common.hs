@@ -51,6 +51,7 @@ type API =
            :<|> Common.SendDummyRideRequestToDriverAPI
            :<|> Common.ChangeOperatingCityAPI
            :<|> Common.GetOperatingCityAPI
+           :<|> Common.PauseOrResumeServiceChargesAPI
        )
 
 type BlockDriverWithReasonAPI =
@@ -90,6 +91,7 @@ handler merchantId city =
     :<|> sendDummyRideRequestToDriver merchantId city
     :<|> changeOperatingCity merchantId city
     :<|> getOperatingCity merchantId city
+    :<|> setServiceChargeEligibleFlagInDriverPlan merchantId city
 
 driverDocumentsInfo :: ShortId DM.Merchant -> Context.City -> FlowHandler Common.DriverDocumentsInfoRes
 driverDocumentsInfo merchantShortId = withFlowHandlerAPI . DDriver.driverDocumentsInfo merchantShortId
@@ -157,3 +159,6 @@ changeOperatingCity merchantShortId opCity driverId_ = withFlowHandlerAPI . DDri
 
 getOperatingCity :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe (Id Common.Ride) -> FlowHandler Common.GetOperatingCityResp
 getOperatingCity merchantShortId opCity mbMobileCountryCode mbMobileNumber mbRideId = withFlowHandlerAPI $ DDriver.getOperatingCity merchantShortId opCity mbMobileCountryCode mbMobileNumber mbRideId
+
+setServiceChargeEligibleFlagInDriverPlan :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.PauseOrResumeServiceChargesReq -> FlowHandler APISuccess
+setServiceChargeEligibleFlagInDriverPlan merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.setServiceChargeEligibleFlagInDriverPlan merchantShortId opCity driverId

@@ -99,7 +99,9 @@ onInit onInitReq merchant booking = do
             mandateMaxAmount = Nothing,
             mandateFrequency = Nothing,
             mandateEndDate = Nothing,
-            mandateStartDate = Nothing
+            mandateStartDate = Nothing,
+            optionsGetUpiDeepLinks = Nothing,
+            metadataExpiryInMins = Nothing
           }
 
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchant.id

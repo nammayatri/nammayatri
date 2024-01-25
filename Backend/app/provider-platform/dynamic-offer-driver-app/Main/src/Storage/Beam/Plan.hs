@@ -38,7 +38,13 @@ data PlanT f = PlanT
     freeRideCount :: B.C f Int,
     frequency :: B.C f Domain.Frequency,
     planType :: B.C f Domain.PlanType,
+    serviceName :: B.C f Domain.ServiceNames,
+    isDeprecated :: B.C f Bool,
+    merchantOpCityId :: B.C f Text,
+    subscribedFlagToggleAllowed :: B.C f Bool,
+    eligibleForCoinDiscount :: B.C f Bool,
     cgstPercentage :: B.C f HighPrecMoney,
+    basedOnEntity :: B.C f Domain.BasedOnEntity,
     sgstPercentage :: B.C f HighPrecMoney
   }
   deriving (Generic, B.Beamable)

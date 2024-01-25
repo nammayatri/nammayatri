@@ -14,7 +14,11 @@
 
 module Domain.Types.DriverPlan where
 
+import qualified Data.Aeson as A
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Mandate as DM
+import Domain.Types.Merchant
+import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import Kernel.Prelude
@@ -30,6 +34,38 @@ data DriverPlan = DriverPlan
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     coinCovertedToCashLeft :: HighPrecMoney,
-    totalCoinsConvertedCash :: HighPrecMoney
+    totalCoinsConvertedCash :: HighPrecMoney,
+    payerVpa :: Maybe Text,
+    autoPayStatus :: Maybe DI.DriverAutoPayStatus,
+    serviceName :: DPlan.ServiceNames,
+    enableServiceUsageCharge :: Bool,
+    merchantId :: Id Merchant,
+    merchantOpCityId :: Id MerchantOperatingCity,
+    subscriptionServiceRelatedData :: SubscriptionServiceRelatedData
   }
   deriving (Generic, Show)
+
+newtype CommodityData = CommodityData
+  { rentedVehicleNumber :: Maybe Text
+  }
+  deriving (Generic, Show, Ord, Eq)
+
+data SubscriptionServiceRelatedData = RentedVehicleNumber Text | NoData
+  deriving (Generic, Show, Ord, Eq)
+
+instance ToJSON CommodityData where
+  toJSON = A.genericToJSON A.defaultOptions
+
+instance FromJSON CommodityData where
+  parseJSON = A.genericParseJSON A.defaultOptions
+
+instance ToJSON SubscriptionServiceRelatedData where
+  toJSON (RentedVehicleNumber vehicleNumber) = A.object ["rentedVehicleNumber" A..= vehicleNumber]
+  toJSON NoData = A.object []
+
+instance FromJSON SubscriptionServiceRelatedData where
+  parseJSON = A.withObject "SubscriptionServiceRelatedData" $ \o -> do
+    rentedVehicleNumber <- o A..:? "rentedVehicleNumber"
+    case rentedVehicleNumber of
+      Just vehicleNumber -> return (RentedVehicleNumber vehicleNumber)
+      Nothing -> return NoData

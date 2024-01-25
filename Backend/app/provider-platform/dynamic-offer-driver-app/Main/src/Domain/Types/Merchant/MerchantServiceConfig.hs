@@ -19,6 +19,7 @@ module Domain.Types.Merchant.MerchantServiceConfig where
 import qualified Data.List as List
 import Domain.Types.Common (UsageSafety (..))
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
@@ -47,6 +48,7 @@ data ServiceName
   | AadhaarVerificationService AadhaarVerification.AadhaarVerificationService
   | CallService Call.CallService
   | PaymentService Payment.PaymentService
+  | RentalPaymentService Payment.PaymentService
   | IssueTicketService Ticket.IssueTicketService
   | NotificationService Notification.NotificationService
   deriving stock (Eq, Ord, Generic)
@@ -62,6 +64,7 @@ instance Show ServiceName where
   show (AadhaarVerificationService s) = "AadhaarVerification_" <> show s
   show (CallService s) = "Call_" <> show s
   show (PaymentService s) = "Payment_" <> show s
+  show (RentalPaymentService s) = "RentalPayment_" <> show s
   show (IssueTicketService s) = "Ticket_" <> show s
   show (NotificationService s) = "Notification_" <> show s
 
@@ -98,6 +101,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Payment_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (RentalPaymentService v1, r2)
+                 | r1 <- stripPrefix "RentalPayment_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (IssueTicketService v1, r2)
                  | r1 <- stripPrefix "Ticket_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -119,6 +126,7 @@ data ServiceConfigD (s :: UsageSafety)
   | AadhaarVerificationServiceConfig !AadhaarVerificationServiceConfig
   | CallServiceConfig !CallServiceConfig
   | PaymentServiceConfig !PaymentServiceConfig
+  | RentalPaymentServiceConfig !PaymentServiceConfig
   | IssueTicketServiceConfig !Ticket.IssueTicketServiceConfig
   | NotificationServiceConfig !NotificationServiceConfig
   deriving (Generic, Eq)
@@ -132,6 +140,7 @@ instance ToJSON (ServiceConfigD 'Unsafe)
 data MerchantServiceConfigD (s :: UsageSafety) = MerchantServiceConfig
   { merchantId :: Id Merchant,
     serviceConfig :: ServiceConfigD s,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
@@ -166,6 +175,8 @@ getServiceName osc = case osc.serviceConfig of
     Call.ExotelConfig _ -> CallService Call.Exotel
   PaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig _ -> PaymentService Payment.Juspay
+  RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
+    Payment.JuspayConfig _ -> RentalPaymentService Payment.Juspay
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
   NotificationServiceConfig notificationCfg -> case notificationCfg of
@@ -177,13 +188,15 @@ buildMerchantServiceConfig ::
   MonadTime m =>
   Id Merchant ->
   ServiceConfig ->
+  Id DMOC.MerchantOperatingCity ->
   m MerchantServiceConfig
-buildMerchantServiceConfig merchantId serviceConfig = do
+buildMerchantServiceConfig merchantId serviceConfig merchantOperatingCityId = do
   now <- getCurrentTime
   pure
     MerchantServiceConfig
       { merchantId,
         serviceConfig,
+        merchantOperatingCityId = Just merchantOperatingCityId,
         updatedAt = now,
         createdAt = now
       }

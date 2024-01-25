@@ -19,7 +19,7 @@ module Storage.Beam.DriverFee where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.DriverFee as Domain
-import Domain.Types.Plan (PaymentMode)
+import Domain.Types.Plan (PaymentMode, ServiceNames)
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -47,6 +47,7 @@ data DriverFeeT f = DriverFeeT
     billNumber :: B.C f (Maybe Int),
     autopayPaymentStage :: B.C f (Maybe Domain.AutopayPaymentStage),
     schedulerTryCount :: B.C f Int,
+    merchantOperatingCityId :: B.C f (Maybe Text),
     notificationRetryCount :: B.C f Int,
     feeWithoutDiscount :: B.C f (Maybe HighPrecMoney),
     amountPaidByCoin :: B.C f (Maybe HighPrecMoney),
@@ -55,8 +56,10 @@ data DriverFeeT f = DriverFeeT
     overlaySent :: B.C f Bool,
     specialZoneRideCount :: B.C f Int,
     specialZoneAmount :: B.C f HighPrecMoney,
+    vehicleNumber :: B.C f (Maybe Text),
     planId :: B.C f (Maybe Text),
     planMode :: B.C f (Maybe PaymentMode),
+    serviceName :: B.C f (Maybe ServiceNames),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

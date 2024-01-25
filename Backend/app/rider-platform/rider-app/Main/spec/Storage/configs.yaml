@@ -2,6 +2,7 @@ imports:
   City: Kernel.Types.Beckn.Context
   IndianState: Kernel.Types.Beckn.Context
   Merchant: Domain.Types.Merchant
+  ShortId: Kernel.Types.Id
 
 MerchantOperatingCity:
   tableName: merchant_operating_city

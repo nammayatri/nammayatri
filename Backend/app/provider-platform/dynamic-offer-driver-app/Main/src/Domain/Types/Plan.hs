@@ -20,6 +20,7 @@ import Data.Aeson
 import qualified Data.List as List
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DMerchant
+import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney, Money)
 import Kernel.Types.Id
@@ -29,6 +30,9 @@ import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
 newtype RideCountBasedFeePolicyConfig = RideCountBasedFeePolicyConfig [RideCountBasedFeePolicy] deriving (Generic, ToJSON, FromJSON, Show)
+
+data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
+  deriving (Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Eq, Show, Read, Ord)
 
 data Plan = Plan
   { id :: Id Plan,
@@ -46,7 +50,13 @@ data Plan = Plan
     frequency :: Frequency,
     planType :: PlanType,
     cgstPercentage :: HighPrecMoney,
-    sgstPercentage :: HighPrecMoney
+    sgstPercentage :: HighPrecMoney,
+    subscribedFlagToggleAllowed :: Bool,
+    isDeprecated :: Bool,
+    eligibleForCoinDiscount :: Bool,
+    merchantOpCityId :: Id MerchantOperatingCity,
+    basedOnEntity :: BasedOnEntity,
+    serviceName :: ServiceNames
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
@@ -68,6 +78,10 @@ data Frequency = DAILY | WEEKLY | MONTHLY
   deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 data PlanType = DEFAULT | SUBSCRIPTION
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
+
+data BasedOnEntity = RIDE | NONE | VEHICLE | VEHICLE_AND_RIDE
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema, ToParamSchema)
 
@@ -121,3 +135,11 @@ $(mkHttpInstancesForEnum ''Frequency)
 $(mkHttpInstancesForEnum ''PaymentMode)
 
 $(mkHttpInstancesForEnum ''PlanType)
+
+$(mkBeamInstancesForEnum ''ServiceNames)
+
+$(mkHttpInstancesForEnum ''ServiceNames)
+
+$(mkHttpInstancesForEnum ''BasedOnEntity)
+
+$(mkBeamInstancesForEnum ''BasedOnEntity)

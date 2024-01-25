@@ -1,0 +1,28 @@
+imports:
+  UTCTime: Kernel.Prelude
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+
+EventTracker:
+  tableName: event_tracker
+
+  fields:
+    id : Id EventTracker
+    entity : Text
+    reason : Maybe Text
+    eventName : EventName
+    entityFieldName : Text
+    createdAt : UTCTime
+    entityPrimaryId : Text
+    fromState : Maybe Text
+    toState : Maybe Text
+    subscriptionServiceName : Maybe Text
+
+  types:
+    EventName:
+      enum: "DRIVER_FEE_AUTO_PAY_TO_MANUAL,AUTO_PAY_STATUS_TOGGLE,SERVICE_USAGE_CHARGE_TOGGLE"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id

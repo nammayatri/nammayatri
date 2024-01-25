@@ -101,8 +101,12 @@ data FleetRegisterReq = FleetRegisterReq
     mobileNumber :: Text,
     mobileCountryCode :: Text,
     merchantId :: ShortId DMerchant.Merchant,
+    fleetType :: Maybe FleetType,
     city :: Maybe City.City
   }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data FleetType = RENTAL_FLEET | NORMAL_FLEET
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 login ::
@@ -291,7 +295,7 @@ registerFleetOwner ::
 registerFleetOwner req = do
   runRequestValidation validateFleetOwner req
   unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
-  fleetOwnerRole <- QRole.findByDashboardAccessType FLEET_OWNER >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
+  fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist "FLEET_OWNER")
   fleetOwner <- buildFleetOwner req fleetOwnerRole.id
   merchant <-
     QMerchant.findByShortId req.merchantId
@@ -302,6 +306,11 @@ registerFleetOwner req = do
   QP.create fleetOwner
   QAccess.create merchantAccess
   return Success
+  where
+    getFleetRole mbFleetType = case mbFleetType of
+      Just RENTAL_FLEET -> RENTAL_FLEET_OWNER
+      Just NORMAL_FLEET -> FLEET_OWNER
+      Nothing -> FLEET_OWNER
 
 buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Id DRole.Role -> m PT.Person
 buildFleetOwner req roleId = do

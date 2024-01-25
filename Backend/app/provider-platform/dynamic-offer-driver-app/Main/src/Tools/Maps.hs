@@ -156,7 +156,7 @@ snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithF
 
     getProviderConfig provider = do
       merchantMapsServiceConfig <-
-        QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService provider)
+        QOMSC.findByMerchantIdAndServiceWithCity merchantId (DOSC.MapsService provider) merchantOperatingCityId
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCityId.getId "Maps" (show provider))
       case merchantMapsServiceConfig.serviceConfig of
         DOSC.MapsServiceConfig msc -> pure msc
@@ -173,7 +173,7 @@ runWithServiceConfig ::
 runWithServiceConfig func getCfg merchantId merchantOpCityId req = do
   orgMapsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgMapsServiceConfig <-
-    QOMSC.findByMerchantIdAndService merchantId (DOSC.MapsService $ getCfg orgMapsConfig)
+    QOMSC.findByMerchantIdAndServiceWithCity merchantId (DOSC.MapsService $ getCfg orgMapsConfig) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Maps" (show $ getCfg orgMapsConfig))
   case orgMapsServiceConfig.serviceConfig of
     DOSC.MapsServiceConfig msc -> func msc req

@@ -170,6 +170,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.Plan as CQP
+import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverHomeLocation as QDHL
@@ -453,7 +454,7 @@ getInformation (personId, merchantId, merchantOpCityId) = do
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById (cast driverId)
   driverEntity <- buildDriverEntityRes (person, driverInfo)
-  dues <- QDF.findAllPendingAndDueDriverFeeByDriverId driverId
+  dues <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId YATRI_SUBSCRIPTION
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
@@ -1240,8 +1241,17 @@ remove (personId, _, _) = do
   return Success
 
 -- history should be on basis of invoice instead of driverFee id
-getDriverPayments :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Day -> Maybe Day -> Maybe DDF.DriverFeeStatus -> Maybe Int -> Maybe Int -> m [DriverPaymentHistoryResp]
-getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit mbOffset = do
+getDriverPayments ::
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe Day ->
+  Maybe Day ->
+  Maybe DDF.DriverFeeStatus ->
+  Maybe Int ->
+  Maybe Int ->
+  ServiceNames ->
+  m [DriverPaymentHistoryResp]
+getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit mbOffset serviceName = do
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset = fromMaybe 0 mbOffset
       defaultFrom = fromMaybe (fromGregorian 2020 1 1) mbFrom
@@ -1252,7 +1262,7 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
       to = fromMaybe today mbTo
   let windowStartTime = UTCTime from 0
       windowEndTime = addUTCTime (86399 + transporterConfig.driverPaymentCycleDuration) (UTCTime to 0)
-  driverFees <- runInReplica $ QDF.findWindowsWithStatus personId windowStartTime windowEndTime mbStatus limit offset
+  driverFees <- runInReplica $ QDF.findWindowsWithStatusAndServiceName personId windowStartTime windowEndTime mbStatus limit offset serviceName
 
   driverFeeByInvoices <- case driverFees of
     [] -> pure []
@@ -1294,19 +1304,28 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
           }
       ]
 
-clearDriverDues :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m ClearDuesRes
-clearDriverDues (personId, _merchantId, _) = do
-  dueDriverFees <- QDF.findAllByStatusAndDriverId personId [DDF.PAYMENT_OVERDUE]
+clearDriverDues ::
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  ServiceNames ->
+  Maybe SPayment.DeepLinkData ->
+  m ClearDuesRes
+clearDriverDues (personId, _merchantId, opCityId) serviceName mbDeepLinkData = do
+  dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] serviceName
   invoices <- (runInReplica . QINV.findActiveManualInvoiceByFeeId . (.id)) `mapM` dueDriverFees
+  subscriptionConfig <-
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId serviceName
+      >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
+  let paymentService = subscriptionConfig.paymentServiceName
   let sortedInvoices = mergeSortAndRemoveDuplicate invoices
   case sortedInvoices of
-    [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId) (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing
+    [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (dueDriverFees, []) Nothing INV.MANUAL_INVOICE Nothing mbDeepLinkData
     (invoice_ : restinvoices) -> do
       mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
       (invoice, currentDuesForExistingInvoice, newDues) <- validateExistingInvoice invoice_ dueDriverFees
       let driverFeeForCurrentInvoice = filter (\dfee -> dfee.id.getId `elem` currentDuesForExistingInvoice) dueDriverFees
       let driverFeeToBeAddedOnExpiry = filter (\dfee -> dfee.id.getId `elem` newDues) dueDriverFees
-      mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId) (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice
+      mkClearDuesResp <$> SPayment.createOrder (personId, _merchantId, opCityId) paymentService (driverFeeForCurrentInvoice, driverFeeToBeAddedOnExpiry) Nothing INV.MANUAL_INVOICE invoice mbDeepLinkData
   where
     validateExistingInvoice invoice driverFees = do
       invoices <- runInReplica $ QINV.findAllByInvoiceId invoice.id
@@ -1356,14 +1375,21 @@ data ManualInvoiceHistory = ManualInvoiceHistory
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getDriverPaymentsHistoryV2 :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe INV.InvoicePaymentMode -> Maybe Int -> Maybe Int -> m HistoryEntityV2
-getDriverPaymentsHistoryV2 (driverId, _, merchantOpCityId) mPaymentMode mbLimit mbOffset = do
+getDriverPaymentsHistoryV2 ::
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe INV.InvoicePaymentMode ->
+  Maybe Int ->
+  Maybe Int ->
+  ServiceNames ->
+  m HistoryEntityV2
+getDriverPaymentsHistoryV2 (driverId, _, merchantOpCityId) mPaymentMode mbLimit mbOffset serviceName = do
   let defaultLimit = 20
       limit = min defaultLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
-      manualInvoiceModes = [INV.MANUAL_INVOICE, INV.MANDATE_SETUP_INVOICE]
+      manualInvoiceModes = [INV.MANUAL_INVOICE, INV.MANDATE_SETUP_INVOICE, INV.CASH_COLLECTED_INVOICE]
       modes = maybe manualInvoiceModes (\mode -> if mode == INV.AUTOPAY_INVOICE then [INV.AUTOPAY_INVOICE] else manualInvoiceModes) mPaymentMode
-  invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId modes limit offset
+  invoices <- QINV.findAllInvoicesByDriverIdWithLimitAndOffset driverId modes limit offset serviceName
   driverFeeForInvoices <- QDF.findAllByDriverFeeIds (invoices <&> (.driverFeeId))
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId) -- check if there is error type already for this
   let mapDriverFeeByDriverFeeId = M.fromList (map (\dfee -> (dfee.id, dfee)) driverFeeForInvoices)
@@ -1451,12 +1477,18 @@ data DriverFeeInfoEntity = DriverFeeInfoEntity
     isCoinCleared :: Bool,
     coinDiscountAmount :: Maybe HighPrecMoney,
     specialZoneRideCount :: Int,
-    totalSpecialZoneCharges :: HighPrecMoney
+    totalSpecialZoneCharges :: HighPrecMoney,
+    vehicleNumber :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-getHistoryEntryDetailsEntityV2 :: (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> m HistoryEntryDetailsEntityV2
-getHistoryEntryDetailsEntityV2 (_, _, merchantOpCityId) invoiceShortId = do
+getHistoryEntryDetailsEntityV2 ::
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Text ->
+  ServiceNames ->
+  m HistoryEntryDetailsEntityV2
+getHistoryEntryDetailsEntityV2 (_, _, merchantOpCityId) invoiceShortId serviceName = do
   allEntiresByInvoiceId <- QINV.findAllByInvoiceShortId invoiceShortId
   allDriverFeeForInvoice <- QDF.findAllByDriverFeeIds (allEntiresByInvoiceId <&> (.driverFeeId))
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -1477,16 +1509,22 @@ getHistoryEntryDetailsEntityV2 (_, _, merchantOpCityId) invoiceShortId = do
         | any (\dfee -> dfee.feeType == DDF.MANDATE_REGISTRATION) allDriverFeeForInvoice = DDF.MANDATE_REGISTRATION
         | invoiceType == Just INV.AUTOPAY_INVOICE = DDF.RECURRING_EXECUTION_INVOICE
         | otherwise = DDF.RECURRING_INVOICE
-  driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus)) transporterConfig
+  driverFeeInfo' <- mkDriverFeeInfoEntity allDriverFeeForInvoice (listToMaybe allEntiresByInvoiceId <&> (.invoiceStatus)) transporterConfig serviceName
   return $ HistoryEntryDetailsEntityV2 {invoiceId = invoiceShortId, amount, createdAt, executionAt, feeType, driverFeeInfo = driverFeeInfo'}
   where
     mapToAmount = map (\dueDfee -> SLDriverFee.roundToHalf (fromIntegral dueDfee.govtCharges + dueDfee.platformFee.fee + dueDfee.platformFee.cgst + dueDfee.platformFee.sgst))
 
-mkDriverFeeInfoEntity :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [DDF.DriverFee] -> Maybe INV.InvoiceStatus -> TransporterConfig -> m [DriverFeeInfoEntity]
-mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig = do
+mkDriverFeeInfoEntity ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  [DDF.DriverFee] ->
+  Maybe INV.InvoiceStatus ->
+  TransporterConfig ->
+  ServiceNames ->
+  m [DriverFeeInfoEntity]
+mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig serviceName = do
   mapM
     ( \driverFee -> do
-        driverFeesInWindow <- QDF.findFeeInRangeAndDriverId driverFee.startTime driverFee.endTime driverFee.driverId
+        driverFeesInWindow <- QDF.findFeeInRangeAndDriverIdAndServiceName driverFee.startTime driverFee.endTime driverFee.driverId serviceName
         mbPlan <- getPlanDataFromDriverFee driverFee
         let maxRidesEligibleForCharge = planMaxRides =<< mbPlan
         return
@@ -1504,6 +1542,7 @@ mkDriverFeeInfoEntity driverFees invoiceStatus transporterConfig = do
               coinDiscountAmount = driverFee.amountPaidByCoin,
               specialZoneRideCount = driverFee.specialZoneRideCount,
               totalSpecialZoneCharges = driverFee.specialZoneAmount,
+              vehicleNumber = driverFee.vehicleNumber,
               maxRidesEligibleForCharge
             }
     )
@@ -1537,11 +1576,16 @@ planMaxRides plan = do
     PERRIDE_BASE baseAmount -> Just $ round $ (plan.maxAmount) / baseAmount
     _ -> Nothing
 
-getPlanDataFromDriverFee :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DDF.DriverFee -> m (Maybe Plan)
+getPlanDataFromDriverFee ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  DDF.DriverFee ->
+  m (Maybe Plan)
 getPlanDataFromDriverFee driverFee = do
-  let (mbPlanId, mbPaymentMode) = (driverFee.planId, driverFee.planMode)
+  let (mbPlanId, mbPaymentMode, serviceName) = (driverFee.planId, driverFee.planMode, driverFee.serviceName)
   case (mbPlanId, mbPaymentMode) of
-    (Just planId, _) -> CQP.findByIdAndPaymentMode planId $ fromMaybe MANUAL mbPaymentMode
+    (Just planId, _) -> do
+      let paymentMode = fromMaybe MANUAL mbPaymentMode
+      CQP.findByIdAndPaymentModeWithServiceName planId paymentMode serviceName
     _ -> return Nothing
 
 data DriverFeeResp = DriverFeeResp

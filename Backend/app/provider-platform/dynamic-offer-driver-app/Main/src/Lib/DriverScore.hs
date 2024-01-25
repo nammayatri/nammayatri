@@ -179,6 +179,8 @@ createDriverStat driverId = do
             totalDistance = highPrecMetersToMeters . sum $ map (.traveledDistance) allRides,
             ridesCancelled = Just cancelledRidesCount,
             totalRidesAssigned = Just $ length allRides,
+            coinCovertedToCashLeft = 0.0,
+            totalCoinsConvertedCash = 0.0,
             updatedAt = now
           }
   _ <- DSQ.create driverStat

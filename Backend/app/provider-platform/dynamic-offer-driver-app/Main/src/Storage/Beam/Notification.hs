@@ -55,6 +55,7 @@ data NotificationT f = NotificationT
     dateCreated :: B.C f UTCTime,
     lastUpdated :: B.C f UTCTime,
     lastStatusCheckedAt :: B.C f (Maybe UTCTime),
+    merchantOperatingCityId :: B.C f (Maybe Text),
     responseCode :: B.C f (Maybe Text),
     responseMessage :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,

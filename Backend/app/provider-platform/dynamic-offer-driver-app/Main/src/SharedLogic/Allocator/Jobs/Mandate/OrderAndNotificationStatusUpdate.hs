@@ -40,10 +40,10 @@ notificationAndOrderStatusUpdate (Job {id, jobInfo}) = withLogTag ("JobId-" <> i
   transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let batchSizeOfNotification = transporterConfig.updateNotificationStatusBatchSize
       batchSizeOfOrderStatus = transporterConfig.updateOrderStatusBatchSize
-  allPendingNotification <- QNTF.findAllByStatusWithLimit [PaymentInterface.NOTIFICATION_CREATED, PaymentInterface.PENDING] batchSizeOfNotification
+  allPendingNotification <- QNTF.findAllByStatusWithLimit [PaymentInterface.NOTIFICATION_CREATED, PaymentInterface.PENDING] merchantOpCityId batchSizeOfNotification
   QNTF.updateLastCheckedOn ((.id) <$> allPendingNotification)
-  QNTF.updatePendingToFailed
-  allPendingOrders <- QINV.findAllByStatusWithLimit INV.ACTIVE_INVOICE batchSizeOfOrderStatus
+  QNTF.updatePendingToFailed merchantOpCityId
+  allPendingOrders <- QINV.findAllByStatusWithLimit INV.ACTIVE_INVOICE merchantOpCityId batchSizeOfOrderStatus
   QINV.updateLastCheckedOn ((.id) <$> allPendingOrders)
   updateInvoicesPendingToFailedAfterRetry transporterConfig
   forM_ allPendingNotification $ \notification -> do
@@ -64,6 +64,7 @@ getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> 
 updateInvoicesPendingToFailedAfterRetry :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m ()
 updateInvoicesPendingToFailedAfterRetry transporterConfig = do
   let timeCheckLimit = transporterConfig.orderAndNotificationStatusCheckTimeLimit
-  activeExecutionInvoices <- QINV.findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeCheckLimit
-  QINV.updatePendingToFailed timeCheckLimit
+      opCityId = transporterConfig.merchantOperatingCityId
+  activeExecutionInvoices <- QINV.findAllAutoPayInvoicesActiveOlderThanProvidedDuration timeCheckLimit opCityId
+  QINV.updatePendingToFailed timeCheckLimit opCityId
   mapM_ QDF.updateAutoPayToManual (activeExecutionInvoices <&> (.driverFeeId))

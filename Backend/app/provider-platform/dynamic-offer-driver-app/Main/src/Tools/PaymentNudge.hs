@@ -87,8 +87,9 @@ sendSwitchPlanNudge ::
   Maybe Plan ->
   Maybe DPlan.DriverPlan ->
   Int ->
+  ServiceNames ->
   m ()
-sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRides = do
+sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRides serviceName = do
   whenJust mbCurrPlan $ \currPlan -> do
     driver <- QDP.findById (cast driverInfo.driverId) >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
     if numRides == currPlan.freeRideCount + 1
@@ -96,7 +97,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
       else case currPlan.planBaseAmount of
         PERRIDE_BASE amount -> do
           let currentTotal = fromIntegral numRides * amount
-          availablePlans <- filterM (checkPlanEligible currPlan) =<< (CQP.findByMerchantIdAndPaymentMode transporterConfig.merchantId currPlan.paymentMode)
+          availablePlans <- filterM (checkPlanEligible currPlan) =<< (CQP.findByMerchantOpCityIdAndPaymentModeWithServiceName transporterConfig.merchantOperatingCityId currPlan.paymentMode serviceName) (Just False)
           offeredAmountsEntity <- getOfferedAmount currentTotal driver `mapM` availablePlans
 
           unless (null offeredAmountsEntity) do
@@ -116,7 +117,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
               _ -> currentTotal
       let mbMandateSetupDate = mbDriverPlan >>= (.mandateSetupDate)
       let mandateSetupDate = maybe now (\date -> if driverInfo.autoPayStatus == Just DI.ACTIVE then date else now) mbMandateSetupDate
-      offersResp <- SPayment.offerListCache transporterConfig.merchantId driver.merchantOperatingCityId =<< makeOfferReq mandateSetupDate plan.paymentMode plan driver
+      offersResp <- SPayment.offerListCache transporterConfig.merchantId driver.merchantOperatingCityId plan.serviceName =<< makeOfferReq mandateSetupDate plan.paymentMode plan driver
       if null offersResp.offerResp
         then return (mkOfferedAmountsEntity amount plan.id)
         else do
@@ -156,10 +157,16 @@ switchPlanNudge driver numOfRides saveUpto planId = do
     let endPoint = T.replace (templateText "planId") planId <$> overlay.endPoint
     sendOverlay driver.merchantOperatingCityId driver.id driver.deviceToken $ mkOverlayReq overlay description overlay.okButtonText overlay.cancelButtonText endPoint
 
-notifyPaymentFailure :: (CacheFlow m r, EsqDBFlow m r) => Id DP.Person -> PaymentMode -> Maybe Text -> m ()
-notifyPaymentFailure driverId paymentMode mbBankErrorCode = do
+notifyPaymentFailure ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
+  PaymentMode ->
+  Maybe Text ->
+  ServiceNames ->
+  m ()
+notifyPaymentFailure driverId paymentMode mbBankErrorCode serviceName = do
   driver <- B.runInReplica $ QDP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverId (cast driverId)
+  dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverId) serviceName
   let totalDues = sum $ map (\dueInvoice -> roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dueDriverFees
 
   let pnKey = if paymentMode == AUTOPAY then autopayPaymentFailedNudgeKey else maunalPaymentFailedNudgeKey
