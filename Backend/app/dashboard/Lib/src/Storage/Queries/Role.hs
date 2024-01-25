@@ -63,7 +63,7 @@ findAllWithLimitOffset mbLimit mbOffset mbSearchString = do
             B.orderBy_ (\role -> B.desc_ role.name) $
               B.filter_'
                 ( \role ->
-                    maybe (B.sqlBool_ $ B.val_ False) (\searchStr -> B.sqlBool_ (role.name `B.like_` B.val_ ("%" <> searchStr <> "%"))) mbSearchString
+                    maybe (B.sqlBool_ $ B.val_ True) (\searchStr -> B.sqlBool_ (role.name `B.like_` B.val_ ("%" <> searchStr <> "%"))) mbSearchString
                 )
                 do
                   B.all_ (SBC.role SBC.atlasDB)
