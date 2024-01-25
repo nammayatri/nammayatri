@@ -23,6 +23,7 @@ import Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.FarePolicy.FareProductType as DFF
+import qualified Domain.Types.FarePolicy.FareProductType as DFP
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -49,7 +50,6 @@ import qualified Storage.Queries.DriverOffer ()
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Quote ()
-import Storage.Queries.RentalSlab as QueryRS
 import qualified Storage.Queries.TripTerms as QTT
 
 createBooking' :: MonadFlow m => Booking -> m ()
@@ -60,7 +60,7 @@ create dBooking = do
   _ <- whenNothingM_ (QL.findById dBooking.fromLocation.id) $ do QL.create (dBooking.fromLocation)
   _ <- case dBooking.bookingDetails of
     OneWayDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
-    RentalDetails _ -> pure ()
+    RentalDetails detail -> whenJust detail.stopLocation $ \stopLoc -> void $ whenNothingM_ (QL.findById stopLoc.id) $ do QL.create stopLoc
     DriverOfferDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
     OneWaySpecialZoneDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
   void $ createBooking' dBooking
@@ -70,7 +70,7 @@ createBooking booking = do
   fromLocationMap <- SLM.buildPickUpLocationMapping booking.fromLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
   mbToLocationMap <- case booking.bookingDetails of
     DRB.OneWayDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    DRB.RentalDetails _ -> return Nothing
+    DRB.RentalDetails detail -> (\loc -> SLM.buildDropLocationMapping loc.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)) `mapM` detail.stopLocation
     DRB.DriverOfferDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
     DRB.OneWaySpecialZoneDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
 
@@ -197,6 +197,21 @@ updatePaymentUrl bookingId paymentUrl = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
+-- THIS IS TEMPORARY UNTIL WE HAVE PROPER ADD STOP FEATURE
+updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> m ()
+updateStop booking mbStopLoc = do
+  now <- getCurrentTime
+  whenJust mbStopLoc $ \stopLoc -> do
+    void $ whenNothingM_ (QL.findById stopLoc.id) $ QL.create stopLoc
+    locationMapping <- SLM.buildDropLocationMapping stopLoc.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+    QLM.create locationMapping
+
+  updateOneWithKV
+    [ Se.Set BeamB.stopLocationId ((getId . (.id)) <$> mbStopLoc),
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId booking.id)]
+
 findAllByPersonIdLimitOffset :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> m [Booking]
 findAllByPersonIdLimitOffset (Id personId) mlimit moffset = do
   let limit' = fmap fromIntegral $ mlimit <|> Just 100
@@ -212,6 +227,7 @@ findStuckBookings merchant moCity bookingIds now =
           [ Se.Is BeamB.merchantId $ Se.Eq merchant.id.getId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
             Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED],
+            Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DFP.RENTAL,
             Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp,
             Se.Or
               ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq $ Just (getId moCity.id)]
@@ -252,11 +268,7 @@ instance FromTType' BeamB.Booking Booking where
             DFF.ONE_WAY -> do
               upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
               DRB.OneWayDetails <$> buildOneWayDetails toLocationId
-            DFF.RENTAL -> do
-              qd <- getRentalDetails rentalSlabId
-              case qd of
-                Nothing -> throwError (InternalError "No Rental Details present")
-                Just a -> pure a
+            DFF.RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             DFF.DRIVER_OFFER -> do
               upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
               DRB.OneWayDetails <$> buildOneWayDetails toLocationId
@@ -274,11 +286,7 @@ instance FromTType' BeamB.Booking Booking where
           fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
           bookingDetails <- case fareProductType of
             DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
-            DFF.RENTAL -> do
-              qd <- getRentalDetails rentalSlabId
-              case qd of
-                Nothing -> throwError (InternalError "No Rental Details present")
-                Just a -> pure a
+            DFF.RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
             DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
           return (fl, bookingDetails)
@@ -336,20 +344,22 @@ instance FromTType' BeamB.Booking Booking where
               toLocation = toLocation,
               ..
             }
-      getRentalDetails rentalSlabId' = do
-        res <- maybe (pure Nothing) (QueryRS.findById . Id) rentalSlabId'
-        case res of
-          Just rentalSlab -> pure $ Just $ DRB.RentalDetails rentalSlab
-          Nothing -> pure Nothing
+      buildRentalDetails mbStopLocationId = do
+        mbStopLocation <- maybe (pure Nothing) (QL.findById . Id) mbStopLocationId
+        pure
+          DRB.RentalBookingDetails
+            { stopLocation = mbStopLocation
+            }
+
       backfillMOCId = \case
         Just mocId -> pure $ Id mocId
         Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (Id merchantId)
 
 instance ToTType' BeamB.Booking Booking where
   toTType' DRB.Booking {..} =
-    let (fareProductType, toLocationId, distance, rentalSlabId, otpCode) = case bookingDetails of
+    let (fareProductType, toLocationId, distance, stopLocationId, otpCode) = case bookingDetails of
           DRB.OneWayDetails details -> (DQuote.ONE_WAY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
-          DRB.RentalDetails rentalSlab -> (DQuote.RENTAL, Nothing, Nothing, Just . getId $ rentalSlab.id, Nothing)
+          DRB.RentalDetails rentalDetails -> (DQuote.RENTAL, Nothing, Nothing, (getId . (.id)) <$> rentalDetails.stopLocation, Nothing)
           DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
           DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
      in BeamB.BookingT
@@ -380,7 +390,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.vehicleVariant = vehicleVariant,
             BeamB.distance = distance,
             BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),
-            BeamB.rentalSlabId = rentalSlabId,
+            BeamB.stopLocationId = stopLocationId,
             BeamB.merchantId = getId merchantId,
             BeamB.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
             BeamB.specialLocationTag = specialLocationTag,

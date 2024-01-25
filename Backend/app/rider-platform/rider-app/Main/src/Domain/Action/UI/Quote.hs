@@ -46,7 +46,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.Quote as QRentalQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.Error
 
@@ -59,8 +58,10 @@ data GetQuotesRes = GetQuotesRes
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
+-- TODO: Needs to be fixed as quotes could be of both rentals and one way
 data OfferRes
   = OnDemandCab QuoteAPIEntity
+  | OnRentalCab QuoteAPIEntity
   | Metro MetroOffer
   | PublicTransport PublicTransportQuote
   deriving (Show, Generic)
@@ -104,8 +105,8 @@ getOffers searchRequest = do
       publicTransportOffers <- map PublicTransport <$> PublicTransport.getPublicTransportOffers searchRequest.id
       return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
     Nothing -> do
-      quoteList <- runInReplica $ QRentalQuote.findAllBySRId searchRequest.id
-      let quotes = OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
+      quoteList <- runInReplica $ QQuote.findAllBySRId searchRequest.id
+      let quotes = OnRentalCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
       return . sortBy (compare `on` creationTime) $ quotes
   where
     sortByNearestDriverDistance quoteList = do
@@ -120,6 +121,7 @@ getOffers searchRequest = do
     creationTime :: OfferRes -> UTCTime
     creationTime (OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
+    creationTime (OnRentalCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
 getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]

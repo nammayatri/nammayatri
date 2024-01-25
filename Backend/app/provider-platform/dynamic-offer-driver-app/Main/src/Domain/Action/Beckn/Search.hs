@@ -146,8 +146,7 @@ handler merchant sReq = do
         let setRouteInfo srId = Redis.setExp (searchRequestKey $ getId srId) routeInfo 3600
 
         return $ (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration)
-      _ -> return (Nothing, Nothing, Nothing, Nothing)
-
+      _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration) -- estimate distance and durations by user
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq
   allFarePoliciesProduct <- (pure . combineFarePoliciesProducts) =<< ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation) `mapM` possibleTripOption.tripCategories)
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) allFarePoliciesProduct.farePolicies

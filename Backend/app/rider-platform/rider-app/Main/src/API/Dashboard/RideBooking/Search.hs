@@ -41,12 +41,12 @@ type CustomerRideSearchAPI =
   Capture "customerId" (Id DP.Person)
     :> "rideSearch"
     :> ReqBody '[JSON] SH.SearchReq
-    :> Post '[JSON] SH.SearchRes
+    :> Post '[JSON] SH.SearchResp
 
 handler :: ShortId DM.Merchant -> FlowServer API
 handler = callSearch
 
-callSearch :: ShortId DM.Merchant -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchRes
+callSearch :: ShortId DM.Merchant -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchResp
 callSearch merchantId personId req = do
   m <- withFlowHandlerAPI $ findMerchantByShortId merchantId
   SH.search (personId, m.id) req Nothing Nothing Nothing

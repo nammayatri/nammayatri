@@ -23,7 +23,6 @@ import Domain.Types.Location (LocationAPIEntity)
 import qualified Domain.Types.Location as SLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (Ride, RideAPIEntity, makeRideAPIEntity)
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.Sos as DSos
@@ -75,7 +74,7 @@ data BookingAPIEntity = BookingAPIEntity
 -- do not change constructor names without changing fareProductConstructorModifier
 data BookingAPIDetails
   = OneWayAPIDetails OneWayBookingAPIDetails
-  | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
+  | RentalAPIDetails RentalBookingAPIDetails
   | DriverOfferAPIDetails OneWayBookingAPIDetails
   | OneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingAPIDetails
   deriving (Show, Generic)
@@ -88,6 +87,11 @@ instance FromJSON BookingAPIDetails where
 
 instance ToSchema BookingAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
+
+data RentalBookingAPIDetails = RentalBookingAPIDetails
+  { stopLocation :: Maybe LocationAPIEntity
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data OneWayBookingAPIDetails = OneWayBookingAPIDetails
   { toLocation :: LocationAPIEntity,
@@ -152,7 +156,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
     mkBookingAPIDetails :: BookingDetails -> BookingAPIDetails
     mkBookingAPIDetails = \case
       OneWayDetails details -> OneWayAPIDetails . mkOneWayAPIDetails $ details
-      RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
+      RentalDetails details -> RentalAPIDetails . mkRentalAPIDetails $ details
       DriverOfferDetails details -> DriverOfferAPIDetails . mkOneWayAPIDetails $ details
       OneWaySpecialZoneDetails details -> OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
       where
@@ -160,6 +164,10 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
           OneWayBookingAPIDetails
             { toLocation = SLoc.makeLocationAPIEntity toLocation,
               estimatedDistance = distance
+            }
+        mkRentalAPIDetails RentalBookingDetails {..} =
+          RentalBookingAPIDetails
+            { stopLocation = SLoc.makeLocationAPIEntity <$> stopLocation
             }
         mkOneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingDetails {..} =
           OneWaySpecialZoneBookingAPIDetails

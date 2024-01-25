@@ -130,12 +130,12 @@ buildNightShiftInfo :: Spec.Item -> Maybe OnSearch.NightShiftInfo
 buildNightShiftInfo item = do
   let itemTags = item.itemTags & fromMaybe (error "Missing Tags")
   nightShiftCharge <- getNightShiftCharge itemTags
-  oldNightShiftCharge <- getOldNightShiftCharge itemTags
+  let oldNightShiftCharge = getOldNightShiftCharge itemTags
   nightShiftStart <- getNightShiftStart itemTags
   nightShiftEnd <- getNightShiftEnd itemTags
   Just $
     OnSearch.NightShiftInfo
-      { oldNightShiftCharge = realToFrac oldNightShiftCharge,
+      { oldNightShiftCharge = realToFrac <$> oldNightShiftCharge,
         ..
       }
 

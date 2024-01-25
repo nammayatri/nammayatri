@@ -101,10 +101,10 @@ checkServiceabilityAndGetCity ::
   ) =>
   (GeofencingConfig -> GeoRestriction) ->
   (Id Person.Person, Id Merchant.Merchant) ->
-  LatLong ->
   Bool ->
+  LatLong ->
   m ServiceabilityCityRes
-checkServiceabilityAndGetCity settingAccessor (personId, merchantId) location shouldUpdatePerson = do
+checkServiceabilityAndGetCity settingAccessor (personId, merchantId) shouldUpdatePerson location = do
   let merchId = merchantId
   geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
   let geoRestriction = settingAccessor geoConfig

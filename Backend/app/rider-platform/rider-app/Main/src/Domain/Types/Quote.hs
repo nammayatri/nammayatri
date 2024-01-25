@@ -19,7 +19,7 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.RentalSlab as DRentalSlab
+import qualified Domain.Types.RentalDetails as DRentalDetails
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
 import qualified Domain.Types.TripTerms as DTripTerms
@@ -55,7 +55,7 @@ data Quote = Quote
 
 data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
-  | RentalDetails DRentalSlab.RentalSlab
+  | RentalDetails DRentalDetails.RentalDetails
   | DriverOfferDetails DDriverOffer.DriverOffer
   | OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote
   deriving (Generic, Show)
@@ -85,7 +85,7 @@ data QuoteAPIEntity = QuoteAPIEntity
 -- do not change constructor names without changing fareProductConstructorModifier
 data QuoteAPIDetails
   = OneWayAPIDetails OneWayQuoteAPIDetails
-  | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
+  | RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity
   | DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity
   | OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity
   deriving (Show, Generic)
@@ -111,7 +111,7 @@ newtype OneWaySpecialZoneQuoteAPIDetails = OneWaySpecialZoneQuoteAPIDetails
 
 mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
-  RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
+  RentalDetails DRentalDetails.RentalDetails {..} -> RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity {..}
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
   DriverOfferDetails DDriverOffer.DriverOffer {..} -> DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {..}
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
