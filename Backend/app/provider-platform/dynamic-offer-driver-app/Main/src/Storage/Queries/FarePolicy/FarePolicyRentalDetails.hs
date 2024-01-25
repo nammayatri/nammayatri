@@ -34,9 +34,13 @@ instance FromTType' BeamFPRD.FarePolicyRentalDetails Domain.FullFarePolicyRental
           Domain.FPRentalDetails
             { baseFare = baseFare,
               perHourCharge = perHourCharge,
-              perHourFreeKms = perHourFreeKms,
+              perExtraMinRate = perExtraMinRate,
               perExtraKmRate = perExtraKmRate,
               nightShiftCharge = nightShiftCharge,
+              includedKmPerHr = includedKmPerHr,
+              plannedPerKmRate = plannedPerKmRate,
+              maxAdditionalKmsLimit = maxAdditionalKmsLimit,
+              totalAdditionalKmsLimit = totalAdditionalKmsLimit,
               distanceBuffers = snd <$> fPRDB
             }
         )
@@ -47,7 +51,11 @@ instance ToTType' BeamFPRD.FarePolicyRentalDetails Domain.FullFarePolicyRentalDe
       { farePolicyId = farePolicyId,
         baseFare = baseFare,
         perHourCharge = perHourCharge,
-        perHourFreeKms = perHourFreeKms,
+        perExtraMinRate = perExtraMinRate,
         perExtraKmRate = perExtraKmRate,
-        nightShiftCharge = nightShiftCharge
+        nightShiftCharge = nightShiftCharge,
+        includedKmPerHr = includedKmPerHr,
+        maxAdditionalKmsLimit = maxAdditionalKmsLimit,
+        totalAdditionalKmsLimit = totalAdditionalKmsLimit,
+        plannedPerKmRate = plannedPerKmRate
       }

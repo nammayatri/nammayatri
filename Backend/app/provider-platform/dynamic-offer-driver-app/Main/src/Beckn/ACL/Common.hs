@@ -145,7 +145,7 @@ filterRequiredBreakups fParamsType breakup = do
         `elem` [ "BASE_FARE",
                  "SERVICE_CHARGE",
                  "DEAD_KILOMETER_FARE",
-                 "EXTRA_DISTANCE_FARE",
+                 "DIST_BASED_FARE",
                  "TIME_BASED_FARE",
                  "DRIVER_SELECTED_FARE",
                  "CUSTOMER_SELECTED_FARE",

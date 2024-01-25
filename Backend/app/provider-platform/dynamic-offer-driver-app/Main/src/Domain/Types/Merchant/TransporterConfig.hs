@@ -163,7 +163,7 @@ data TransporterConfigD u = TransporterConfig
     orderAndNotificationStatusCheckFallBackTime :: NominalDiffTime,
     kaptureDisposition :: Text,
     dummyFromLocation :: DummyLocationInfo,
-    dummyToLocation :: DummyLocationInfo
+    dummyToLocation :: DummyLocationInfo,
     scheduleRideBufferTime :: NominalDiffTime,
     considerDriversForSearch :: Bool
   }

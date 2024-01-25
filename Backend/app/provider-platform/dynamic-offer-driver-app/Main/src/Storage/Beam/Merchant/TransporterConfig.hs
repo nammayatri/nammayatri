@@ -138,7 +138,7 @@ data TransporterConfigT f = TransporterConfigT
     orderAndNotificationStatusCheckFallBackTime :: B.C f Seconds,
     kaptureDisposition :: B.C f Text,
     dummyFromLocation :: B.C f (Maybe A.Value),
-    dummyToLocation :: B.C f (Maybe A.Value)
+    dummyToLocation :: B.C f (Maybe A.Value),
     scheduleRideBufferTime :: B.C f Seconds,
     considerDriversForSearch :: B.C f Bool
   }

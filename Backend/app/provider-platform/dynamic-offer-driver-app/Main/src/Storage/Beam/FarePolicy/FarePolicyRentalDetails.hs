@@ -21,8 +21,12 @@ data FarePolicyRentalDetailsT f = FarePolicyRentalDetailsT
   { farePolicyId :: B.C f Text,
     baseFare :: B.C f Money,
     perHourCharge :: B.C f Money,
-    perHourFreeKms :: B.C f Int,
+    perExtraMinRate :: B.C f Money,
     perExtraKmRate :: B.C f Money,
+    includedKmPerHr :: B.C f Kilometers,
+    plannedPerKmRate :: B.C f Money,
+    maxAdditionalKmsLimit :: B.C f Kilometers,
+    totalAdditionalKmsLimit :: B.C f Kilometers,
     nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
   }
   deriving (Generic, B.Beamable)

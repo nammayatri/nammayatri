@@ -33,6 +33,7 @@ import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
+import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverOnboarding.DriverRCAssociation
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Location as DLoc
@@ -122,6 +123,7 @@ buildRideListItem QRide.RideItem {..} = do
         driverName = rideDetails.driverName,
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
+        tripCategory = castTripCategory tripCategory,
         fareDiff,
         bookingStatus,
         rideCreatedAt = rideCreatedAt
@@ -308,6 +310,8 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         cancelledBy,
         cancellationReason,
         driverInitiatedCallCount,
+        scheduledAt = Just booking.startTime,
+        tripCategory = castTripCategory booking.tripCategory,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
         driverDeviatedFromRoute = ride.driverDeviatedFromRoute,
@@ -343,6 +347,13 @@ castCancellationSource = \case
   DBCReason.ByMerchant -> Common.ByMerchant
   DBCReason.ByAllocator -> Common.ByAllocator
   DBCReason.ByApplication -> Common.ByApplication
+
+castTripCategory :: DTC.TripCategory -> Common.TripCategory
+castTripCategory = \case
+  DTC.OneWay _ -> Common.OneWay
+  DTC.RoundTrip _ -> Common.RoundTrip
+  DTC.Rental _ -> Common.Rental
+  DTC.RideShare _ -> Common.RideShare
 
 timeDiffInMinutes :: UTCTime -> UTCTime -> Minutes
 timeDiffInMinutes t1 = secondsToMinutes . nominalDiffTimeToSeconds . diffUTCTime t1
