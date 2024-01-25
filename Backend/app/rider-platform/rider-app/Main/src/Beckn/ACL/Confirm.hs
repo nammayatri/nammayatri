@@ -13,7 +13,7 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Confirm (buildConfirmReq) where
+module Beckn.ACL.Confirm (buildConfirmReq, buildConfirmReqV2) where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
@@ -186,11 +186,11 @@ mkPayment estimatedTotalFare uri =
       uri
     }
 
-_buildConfirmReqV2 ::
+buildConfirmReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DOnInit.OnInitRes ->
   m Spec.ConfirmReq
-_buildConfirmReqV2 res = do
+buildConfirmReqV2 res = do
   messageId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.

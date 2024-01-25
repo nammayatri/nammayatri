@@ -276,18 +276,17 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
   isDriverBirthDay <- maybe (return False) (checkIsDriverBirthDay mbTransporterConfig) driverInfo.driverDob
   isFreeRide <- maybe (return False) (checkIfRideBySpecialDriver ride.driverId) mbTransporterConfig
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq ACL.DRideAssignedReq {..}
-  rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
-  let mbCity = booking.bapCity
-  let mbCountry = booking.bapCountry
-  rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry rideAssignedBuildReq
-  let generatedMsg = A.encode rideAssignedMsgV2
-  logDebug $ "on_update request bppv2: " <> T.pack (show generatedMsg)
-
   retryConfig <- asks (.shortDurationRetryCfg)
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
   if isBecknSpecVersion2
-    then void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig
-    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideAssignedMsg retryConfig -- shrey00 : implement callOnUpdateV2
+    then do
+      rideAssignedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry rideAssignedBuildReq
+      let generatedMsg = A.encode rideAssignedMsgV2
+      logDebug $ "ride assigned on_update request bppv2: " <> T.pack (show generatedMsg)
+      void $ callOnUpdateV2 rideAssignedMsgV2 retryConfig
+    else do
+      rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
+      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideAssignedMsg retryConfig
   where
     refillKey = "REFILLED_" <> ride.driverId.getId
     updateVehicle DVeh.Vehicle {..} newModel = DVeh.Vehicle {model = newModel, ..}
@@ -350,19 +349,19 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
   let rideStartedBuildReq = ACL.RideStartedBuildReq ACL.DRideStartedReq {..}
-  rideStartedMsg <- ACL.buildOnUpdateMessage rideStartedBuildReq
-  let mbCity = booking.bapCity
-  let mbCountry = booking.bapCountry
-  rideStartedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry rideStartedBuildReq
   retryConfig <- asks (.longDurationRetryCfg)
 
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
   if isBecknSpecVersion2
-    then void $ callOnUpdateV2 rideStartedMsgV2 retryConfig
-    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideStartedMsg retryConfig -- shrey00 : implement callOnUpdateV2
+    then do
+      rideStartedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry rideStartedBuildReq
+      void $ callOnUpdateV2 rideStartedMsgV2 retryConfig
+    else do
+      rideStartedMsg <- ACL.buildOnUpdateMessage rideStartedBuildReq
+      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideStartedMsg retryConfig
 
 sendRideCompletedUpdateToBAP ::
   ( CacheFlow m r,
@@ -385,18 +384,18 @@ sendRideCompletedUpdateToBAP booking ride fareParams paymentMethodInfo paymentUr
   transporter <-
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
   let rideCompletedBuildReq = ACL.RideCompletedBuildReq ACL.DRideCompletedReq {..}
-  rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
-  let mbCity = booking.bapCity
-  let mbCountry = booking.bapCountry
-  rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry rideCompletedBuildReq
   retryConfig <- asks (.longDurationRetryCfg)
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
   if isBecknSpecVersion2
-    then void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig
-    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideCompletedMsg retryConfig
+    then do
+      rideCompletedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry rideCompletedBuildReq
+      void $ callOnUpdateV2 rideCompletedMsgV2 retryConfig
+    else do
+      rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
+      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId rideCompletedMsg retryConfig
 
 sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -414,15 +413,15 @@ sendBookingCancelledUpdateToBAP ::
   m ()
 sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   let bookingCancelledBuildReq = ACL.BookingCancelledBuildReq ACL.DBookingCancelledReq {..}
-  bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
-  let mbCity = booking.bapCity
-  let mbCountry = booking.bapCountry
-  bookingCancelledMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry bookingCancelledBuildReq -- shrey00 : implement buildOnUpdateMessageV2
   retryConfig <- asks (.longDurationRetryCfg)
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
   if isBecknSpecVersion2
-    then void $ callOnUpdateV2 bookingCancelledMsgV2 retryConfig
-    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId bookingCancelledMsg retryConfig
+    then do
+      bookingCancelledMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry bookingCancelledBuildReq
+      void $ callOnUpdateV2 bookingCancelledMsgV2 retryConfig
+    else do
+      bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
+      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId bookingCancelledMsg retryConfig
 
 sendDriverOffer ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -493,16 +492,15 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let driverArrivedBuildReq = ACL.DriverArrivedBuildReq ACL.DDriverArrivedReq {..}
-  driverArrivedMsg <- ACL.buildOnUpdateMessage driverArrivedBuildReq
-  let mbCity = booking.bapCity
-  let mbCountry = booking.bapCountry
-  driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry driverArrivedBuildReq
-
   retryConfig <- asks (.shortDurationRetryCfg)
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
   if isBecknSpecVersion2
-    then void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig
-    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId driverArrivedMsg retryConfig
+    then do
+      driverArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry driverArrivedBuildReq
+      void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig
+    else do
+      driverArrivedMsg <- ACL.buildOnUpdateMessage driverArrivedBuildReq
+      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId driverArrivedMsg retryConfig
 
 sendNewMessageToBAP ::
   ( CacheFlow m r,
@@ -525,16 +523,16 @@ sendNewMessageToBAP booking ride message = do
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let newMessageBuildReq = ACL.NewMessageBuildReq ACL.DNewMessageReq {..}
-  newMessageMsg <- ACL.buildOnUpdateMessage newMessageBuildReq
-  let mbCity = booking.bapCity
-  let mbCountry = booking.bapCountry
-  newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry newMessageBuildReq -- shrey00 : implement buildOnUpdateMessageV2
   retryConfig <- asks (.shortDurationRetryCfg)
 
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
   if isBecknSpecVersion2
-    then void $ callOnUpdateV2 newMessageMsgV2 retryConfig
-    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId newMessageMsg retryConfig
+    then do
+      newMessageMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry newMessageBuildReq -- shrey00 : implement buildOnUpdateMessageV2
+      void $ callOnUpdateV2 newMessageMsgV2 retryConfig
+    else do
+      newMessageMsg <- ACL.buildOnUpdateMessage newMessageBuildReq
+      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId newMessageMsg retryConfig
 
 sendSafetyAlertToBAP ::
   ( CacheFlow m r,
@@ -556,16 +554,16 @@ sendSafetyAlertToBAP booking ride code reason = do
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   let safetyAlertBuildReq = ACL.SafetyAlertBuildReq ACL.DSafetyAlertReq {..}
-  safetyAlertMsg <- ACL.buildOnUpdateMessage safetyAlertBuildReq
-  let mbCity = booking.bapCity
-  let mbCountry = booking.bapCountry
-  safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry safetyAlertBuildReq
 
   retryConfig <- asks (.shortDurationRetryCfg)
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
   if isBecknSpecVersion2
-    then void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig
-    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId safetyAlertMsg retryConfig
+    then do
+      safetyAlertMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry safetyAlertBuildReq
+      void $ callOnUpdateV2 safetyAlertMsgV2 retryConfig
+    else do
+      safetyAlertMsg <- ACL.buildOnUpdateMessage safetyAlertBuildReq
+      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId safetyAlertMsg retryConfig
 
 sendEstimateRepetitionUpdateToBAP ::
   ( CacheFlow m r,
@@ -587,14 +585,14 @@ sendEstimateRepetitionUpdateToBAP booking ride estimateId cancellationSource = d
     CQM.findById booking.providerId
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   let estimateRepetitionBuildReq = ACL.EstimateRepetitionBuildReq ACL.DEstimateRepetitionReq {cancellationSource, booking, estimateId, ride}
-  estimateRepMsg <- ACL.buildOnUpdateMessage estimateRepetitionBuildReq
-  let mbCity = booking.bapCity
-  let mbCountry = booking.bapCountry
-  estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry estimateRepetitionBuildReq
 
   retryConfig <- asks (.shortDurationRetryCfg)
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
 
   if isBecknSpecVersion2
-    then void $ callOnUpdateV2 estimateRepMsgV2 retryConfig
-    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId estimateRepMsg retryConfig
+    then do
+      estimateRepMsgV2 <- ACL.buildOnUpdateMessageV2 transporter booking.bapCity booking.bapCountry estimateRepetitionBuildReq
+      void $ callOnUpdateV2 estimateRepMsgV2 retryConfig
+    else do
+      estimateRepMsg <- ACL.buildOnUpdateMessage estimateRepetitionBuildReq
+      void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId estimateRepMsg retryConfig

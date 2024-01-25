@@ -34,7 +34,6 @@ import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Product.Validation.Context (validateContext)
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Beckn.DecimalValue (DecimalValue)
 import Kernel.Types.Beckn.ReqTypes (BecknCallbackReq)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -310,8 +309,8 @@ parseRideCompletedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateRe
 parseRideCompletedEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideCompleted Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideCompleted Event.")
-  fare :: DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= readMaybe & fromMaybeM (InvalidRequest "quote.price.value is not present in RideCompleted Event.")
-  totalFare :: DecimalValue <- order.orderQuote >>= (.quotationPrice) >>= (.priceComputedValue) >>= readMaybe & fromMaybeM (InvalidRequest "qoute.price.computed_value is not present in RideCompleted Event.")
+  fare :: Int <- order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= readMaybe & fromMaybeM (InvalidRequest "quote.price.value is not present in RideCompleted Event.")
+  totalFare :: Int <- order.orderQuote >>= (.quotationPrice) >>= (.priceComputedValue) >>= readMaybe & fromMaybeM (InvalidRequest "qoute.price.computed_value is not present in RideCompleted Event.")
   tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment tags is not present in RideCompleted Event.")
   chargeableDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "chargeable_distance is not present in RideCompleted Event.") $
@@ -327,8 +326,8 @@ parseRideCompletedEvent order = do
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id bppBookingId,
         bppRideId = Id bppRideId,
-        fare = roundToIntegral fare,
-        totalFare = roundToIntegral totalFare,
+        fare = Money fare,
+        totalFare = Money totalFare,
         chargeableDistance = chargeableDistance,
         traveledDistance = traveledDistance,
         fareBreakups = fareBreakups,
@@ -336,11 +335,12 @@ parseRideCompletedEvent order = do
       }
   where
     mkOnUpdateFareBreakup breakup = do
-      val :: DecimalValue <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= readMaybe & fromMaybeM (InvalidRequest "quote.breakup.price.value is not present in RideCompleted Event.")
+      value :: Int <- breakup.quotationBreakupInnerPrice >>= (.priceValue) >>= readMaybe & fromMaybeM (InvalidRequest "quote.breakup.price.value is not present in RideCompleted Event.")
+      let val = toRational value
       title <- breakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "breakup_title is not present in RideCompleted Event.")
       pure $
         DOnUpdate.OnUpdateFareBreakup
-          { amount = realToFrac val,
+          { amount = HighPrecMoney val,
             description = title
           }
 

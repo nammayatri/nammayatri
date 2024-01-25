@@ -182,7 +182,7 @@ buildQuoteInfoV2 driverId fulfillment quote contextTime order item = do
   case parsedData order of
     Left err -> do
       logTagError "on_select req" $ "on_select error: " <> show err
-      throwError $ InvalidRequest "Invalid Price"
+      throwError $ InvalidRequest "Invalid or missing price data"
     Right (estimatedFare, estimatedTotalFare) -> do
       validatePrices estimatedFare estimatedTotalFare
       -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
@@ -258,13 +258,15 @@ buildDriverOfferQuoteDetailsV2 ::
   Text ->
   m DOnSelect.DriverOfferQuoteDetails
 buildDriverOfferQuoteDetailsV2 item fulfillment quote timestamp driverId = do
-  fulfillmentTags <- fulfillment.fulfillmentTags & fromMaybeM (InvalidRequest "Missing fulfillmentTags")
+  fulfillmentAgent <- fulfillment.fulfillmentAgent & fromMaybeM (InvalidRequest "Missing fulfillmentAgent")
+  agentPerson <- fulfillmentAgent.agentPerson & fromMaybeM (InvalidRequest "Missing agentPerson")
+  agentTags <- agentPerson.personTags & fromMaybeM (InvalidRequest "Missing agentTags")
   itemTags <- item.itemTags & fromMaybeM (InvalidRequest "Missing itemTags")
   driverName <- tfDriverName fulfillment
-  durationToPickup <- getPickupDurationV2 fulfillmentTags & fromMaybeM (InvalidRequest "Missing duration_to_pickup in driver offer select item")
+  durationToPickup <- getPickupDurationV2 agentTags & fromMaybeM (InvalidRequest "Missing duration_to_pickup in driver offer select item")
   distanceToPickup' <- getDistanceToNearestDriverV2 itemTags & fromMaybeM (InvalidRequest "Trip type is DRIVER_OFFER, but distance_to_nearest_driver is Nothing")
   validTill <- (getQuoteValidTill timestamp =<< quote.quotationTtl) & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
-  let rating = getDriverRatingV2 fulfillmentTags
+  let rating = getDriverRatingV2 agentTags
   bppQuoteId <- (getTagV2 "general_info" "bpp_quote_id" =<< item.itemTags) & fromMaybeM (InvalidRequest "Missing bpp quoteId select item")
   pure $
     DOnSelect.DriverOfferQuoteDetails

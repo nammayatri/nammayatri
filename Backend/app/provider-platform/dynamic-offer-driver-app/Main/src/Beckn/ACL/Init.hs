@@ -104,7 +104,8 @@ buildInitReqV2 ::
 buildInitReqV2 subscriber req = do
   let context = req.initReqContext
   Utils.validateContext Context.INIT context
-  unless (Just subscriber.subscriber_id == context.contextBppId) $
+  bap_id <- context.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")
+  unless (subscriber.subscriber_id == bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   bapUri <- mapM parseBaseUrl context.contextBapUri >>= fromMaybeM (InvalidRequest "bap_uri not found")
   unless (subscriber.subscriber_url == bapUri) $

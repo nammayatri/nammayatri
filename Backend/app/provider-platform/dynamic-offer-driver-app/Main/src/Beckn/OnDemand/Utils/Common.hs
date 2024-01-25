@@ -126,7 +126,7 @@ getContextBppUri context = do
   let mbBppUriText = context.contextBppUri
   case mbBppUriText of
     Nothing -> pure Nothing
-    Just bppUriText -> Just <$> decode (encodeUtf8 bppUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBppUri: " <> bppUriText)
+    Just bppUriText -> Just <$> A.decode (A.encode bppUriText) & fromMaybeM (InvalidRequest $ "Error in parsing contextBppUri: " <> bppUriText)
 
 withTransactionIdLogTag :: (Log m) => Text -> m a -> m a
 withTransactionIdLogTag = withTransactionIdLogTag'

@@ -82,7 +82,7 @@ track transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBe
   if isBecknSpecVersion2
     then do
       logTagInfo "track APIV2 Flow" "Sending OnTrack APIV2"
-      context <- ContextV2.buildContextV2 Context.TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
+      context <- ContextV2.buildContextV2 Context.ON_TRACK Context.MOBILITY msgId txnId bapId callbackUrl bppId bppUri city country
       Callback.withCallback dTrackRes.transporter "TRACK" OnTrack.onTrackAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $
         -- there should be DOnTrack.onTrack, but it is empty anyway
         pure $

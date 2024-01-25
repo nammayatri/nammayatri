@@ -143,17 +143,18 @@ confirm providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   callBecknAPIWithSignature req.context.bap_id "confirm" API.confirmAPIV1 providerUrl internalEndPointHashMap req
 
--- confirmV2 ::
---   ( MonadFlow m,
---     CoreMetrics m,
---     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
---   ) =>
---   BaseUrl ->
---   ConfirmReqV2 ->
---   m ConfirmRes
--- confirmV2 providerUrl req = do
---   internalEndPointHashMap <- asks (.internalEndPointHashMap)
---   callBecknAPIWithSignature req.context.bap_id "confirm" API.confirmAPIV2 providerUrl internalEndPointHashMap req
+confirmV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  ConfirmReqV2 ->
+  m ConfirmRes
+confirmV2 providerUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.confirmReqContext.contextBapId
+  callBecknAPIWithSignature bapId "confirm" API.confirmAPIV2 providerUrl internalEndPointHashMap req
 
 cancel ::
   ( MonadFlow m,

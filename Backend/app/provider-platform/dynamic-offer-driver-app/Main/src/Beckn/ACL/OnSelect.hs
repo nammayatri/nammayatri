@@ -483,6 +483,6 @@ mkQuotationPrice quote =
         priceCurrency = Just "INR",
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
-        priceOfferedValue = Nothing,
+        priceOfferedValue = Just $ encodeToText quote.estimatedFare,
         priceValue = Just $ encodeToText quote.estimatedFare
       }

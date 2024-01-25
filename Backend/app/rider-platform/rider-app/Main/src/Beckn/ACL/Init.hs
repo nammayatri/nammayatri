@@ -20,6 +20,7 @@ import qualified Beckn.OnDemand.Transformer.Init as TF
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
+import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
@@ -32,6 +33,7 @@ import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Logging
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
+import Tools.Error (GenericError (InvalidRequest))
 
 buildInitReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -58,8 +60,8 @@ buildInitReqV2 res = do
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> (Init.RIDE_OTP, Just quoteId, Nothing) --need to be  checked
   let action = Context.INIT
   let domain = Context.MOBILITY
-
-  TF.buildInitReq res bapUrl action domain (encodeToText fulfillmentType) mbBppFullfillmentId mbDriverId
+  fulfillmentType' <- A.decode (A.encode fulfillmentType) & fromMaybeM (InvalidRequest "FulfillmentType not found")
+  TF.buildInitReq res bapUrl action domain fulfillmentType' mbBppFullfillmentId mbDriverId
 
 buildInitMessage :: (MonadThrow m, Log m) => SConfirm.DConfirmRes -> m Init.InitMessage
 buildInitMessage res = do

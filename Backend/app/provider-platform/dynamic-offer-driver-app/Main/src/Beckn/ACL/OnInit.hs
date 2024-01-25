@@ -211,7 +211,7 @@ tfItemPrice res =
         priceCurrency = Just "INR",
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
-        priceOfferedValue = Nothing,
+        priceOfferedValue = Just $ encodeToText res.booking.estimatedFare,
         priceValue = Just $ encodeToText res.booking.estimatedFare
       }
 
@@ -270,7 +270,7 @@ tfQuotationPrice res =
         priceCurrency = Just "INR",
         priceMaximumValue = Nothing,
         priceMinimumValue = Nothing,
-        priceOfferedValue = Nothing,
+        priceOfferedValue = Just $ encodeToText res.booking.estimatedFare,
         priceValue = Just $ encodeToText res.booking.estimatedFare
       }
 
@@ -287,7 +287,7 @@ mkQuotationBreakup res =
             priceCurrency = Just "INR",
             priceMaximumValue = Nothing,
             priceMinimumValue = Nothing,
-            priceOfferedValue = Nothing,
+            priceOfferedValue = Just $ encodeToText money,
             priceValue = Just $ encodeToText money
           }
 

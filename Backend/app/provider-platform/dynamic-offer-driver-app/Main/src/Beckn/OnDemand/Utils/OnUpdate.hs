@@ -15,6 +15,7 @@
 module Beckn.OnDemand.Utils.OnUpdate where
 
 import qualified Beckn.ACL.Common as Common
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified BecknV2.OnDemand.Types as Spec
@@ -24,7 +25,6 @@ import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id, (%~))
-import Kernel.Types.Beckn.DecimalValue (DecimalValue)
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import SharedLogic.FareCalculator as Fare
@@ -38,8 +38,8 @@ showPaymentCollectedBy = show . maybe OnUpdate.BPP (Common.castDPaymentCollector
 
 mkRideCompletedQuote :: MonadFlow m => DRide.Ride -> DFParams.FareParameters -> m Spec.Quotation
 mkRideCompletedQuote ride fareParams = do
-  fare' :: DecimalValue <- realToFrac <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present in RideCompletedReq ride.")
-  let fare = show fare'
+  fare' <- ride.fare & fromMaybeM (InternalError "Ride fare is not present in RideCompletedReq ride.")
+  let fare = Utils.rationaliseMoney fare'
   let currency = "INR"
       price =
         Spec.Price
@@ -63,7 +63,7 @@ mkRideCompletedQuote ride fareParams = do
     mkPrice currency val =
       Spec.Price
         { priceCurrency = Just currency,
-          priceValue = Just . (show :: DecimalValue -> Text) $ fromIntegral val,
+          priceValue = Just $ Utils.rationaliseMoney val,
           priceComputedValue = Nothing,
           priceMaximumValue = Nothing,
           priceMinimumValue = Nothing,

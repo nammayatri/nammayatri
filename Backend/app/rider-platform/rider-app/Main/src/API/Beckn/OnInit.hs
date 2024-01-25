@@ -64,8 +64,11 @@ onInit _ reqBS = withFlowHandlerBecknAPI $ do
         fork "oninit request processing" $ do
           onInitRes <- DOnInit.onInit onInitReq
           booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
+          isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
           handle (errHandler booking) $
-            void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
+            if isBecknSpecVersion2
+              then void $ withShortRetry $ CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
+              else void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
   pure Ack
   where
     errHandler booking exc

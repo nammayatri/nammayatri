@@ -86,7 +86,7 @@ init transporterId (SignatureAuthResult _ subscriber) reqBS = withFlowHandlerBec
         isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
         if isBecknSpecVersion2
           then do
-            context <- ContextV2.buildContextV2 Context.ON_SELECT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
+            context <- ContextV2.buildContextV2 Context.ON_INIT Context.MOBILITY msgId txnId bapId bapUri bppId bppUri city country
             void . handle (errHandler dInitRes.booking) $
               Callback.withCallback dInitRes.transporter "INIT" OnInit.onInitAPIV2 bapUri internalEndPointHashMap (errHandlerV2 context) $ do
                 pure $
