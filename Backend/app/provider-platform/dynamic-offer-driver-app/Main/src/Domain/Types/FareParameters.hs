@@ -57,7 +57,7 @@ data FParamsSlabDetails = FParamsSlabDetails
 
 data FParamsRentalDetails = FParamsRentalDetails
   { timeBasedFare :: Money,
-    extraDistFare :: Money
+    distBasedFare :: Money
   }
   deriving (Generic, Show, Eq, PrettyShow)
 

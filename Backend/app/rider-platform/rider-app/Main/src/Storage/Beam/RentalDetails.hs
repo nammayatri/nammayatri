@@ -21,8 +21,10 @@ data RentalDetailsT f = RentalDetailsT
   { id :: B.C f Text,
     baseFare :: B.C f Money,
     perHourCharge :: B.C f Money,
-    perHourFreeKms :: B.C f Int,
+    perExtraMinRate :: B.C f Money,
     perExtraKmRate :: B.C f Money,
+    includedKmPerHr :: B.C f Kilometers,
+    plannedPerKmRate :: B.C f Money,
     nightShiftCharge :: B.C f (Maybe Money),
     nightShiftStart :: B.C f (Maybe TimeOfDay),
     nightShiftEnd :: B.C f (Maybe TimeOfDay)

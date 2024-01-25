@@ -41,8 +41,10 @@ instance ToTType' BeamRS.RentalDetails RentalDetails where
       { BeamRS.id = getId id,
         BeamRS.baseFare = baseFare,
         BeamRS.perHourCharge = perHourCharge,
-        BeamRS.perHourFreeKms = perHourFreeKms,
+        BeamRS.perExtraMinRate = perExtraMinRate,
         BeamRS.perExtraKmRate = perExtraKmRate,
+        BeamRS.includedKmPerHr = includedKmPerHr,
+        BeamRS.plannedPerKmRate = plannedPerKmRate,
         BeamRS.nightShiftCharge = (.nightShiftCharge) <$> nightShiftInfo,
         BeamRS.nightShiftStart = (.nightShiftStart) <$> nightShiftInfo,
         BeamRS.nightShiftEnd = (.nightShiftEnd) <$> nightShiftInfo

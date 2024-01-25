@@ -34,6 +34,8 @@ data FarePolicyD (s :: UsageSafety) = FarePolicy
     serviceCharge :: Maybe Money,
     nightShiftBounds :: Maybe NightShiftBounds,
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    maxAdditionalKmsLimit :: Maybe Kilometers,
+    totalAdditionalKmsLimit :: Maybe Kilometers,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     farePolicyDetails :: FarePolicyDetailsD s,
@@ -94,6 +96,8 @@ data FullFarePolicy = FullFarePolicy
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     farePolicyDetails :: FarePolicyDetails,
+    maxAdditionalKmsLimit :: Maybe Kilometers,
+    totalAdditionalKmsLimit :: Maybe Kilometers,
     description :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

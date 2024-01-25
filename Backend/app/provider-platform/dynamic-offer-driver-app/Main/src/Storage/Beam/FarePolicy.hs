@@ -30,6 +30,8 @@ data FarePolicyT f = FarePolicyT
     nightShiftEnd :: B.C f (Maybe TimeOfDay),
     maxAllowedTripDistance :: B.C f (Maybe Meters),
     minAllowedTripDistance :: B.C f (Maybe Meters),
+    maxAdditionalKmsLimit :: B.C f (Maybe Kilometers),
+    totalAdditionalKmsLimit :: B.C f (Maybe Kilometers),
     govtCharges :: B.C f (Maybe Double),
     perMinuteRideExtraTimeCharge :: B.C f (Maybe HighPrecMoney),
     description :: B.C f (Maybe Text),

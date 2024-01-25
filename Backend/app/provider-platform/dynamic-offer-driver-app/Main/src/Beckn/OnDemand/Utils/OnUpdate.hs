@@ -114,7 +114,7 @@ mkRideCompletedQuote ride fareParams = do
             `elem` [ Just "BASE_FARE",
                      Just "SERVICE_CHARGE",
                      Just "DEAD_KILOMETER_FARE",
-                     Just "EXTRA_DISTANCE_FARE",
+                     Just "DIST_BASED_FARE",
                      Just "TIME_BASED_FARE",
                      Just "DRIVER_SELECTED_FARE",
                      Just "CUSTOMER_SELECTED_FARE",

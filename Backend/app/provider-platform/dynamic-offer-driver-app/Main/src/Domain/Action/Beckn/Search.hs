@@ -42,7 +42,6 @@ import Domain.Types.RideRoute
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
-import EulerHS.Prelude (Alternative (empty))
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -149,7 +148,7 @@ handler merchant sReq = do
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration) -- estimate distance and durations by user
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq
   allFarePoliciesProduct <- (pure . combineFarePoliciesProducts) =<< ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation) `mapM` possibleTripOption.tripCategories)
-  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) allFarePoliciesProduct.farePolicies
+  let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) allFarePoliciesProduct.farePolicies
 
   (driverPool, selectedFarePolicies) <-
     if transporterConfig.considerDriversForSearch
@@ -205,15 +204,29 @@ handler merchant sReq = do
             ..
           }
 
-    selectFarePolicy distance farePolicies = do
-      farePolicy <- farePolicies
-      let check =
-            farePolicy.allowedTripDistanceBounds <&> \allowedTripDistanceBounds ->
-              allowedTripDistanceBounds.minAllowedTripDistance <= distance
-                && allowedTripDistanceBounds.maxAllowedTripDistance >= distance
-      case check of
-        Just False -> empty
-        _ -> return farePolicy
+    selectFarePolicy distance duration farePolicies =
+      filter isValid farePolicies
+      where
+        isValid farePolicy = checkDistanceBounds farePolicy && checkExtendUpto farePolicy
+
+        checkDistanceBounds farePolicy = maybe True checkBounds farePolicy.allowedTripDistanceBounds
+
+        checkBounds bounds = bounds.minAllowedTripDistance <= distance && distance <= bounds.maxAllowedTripDistance
+
+        checkExtendUpto farePolicy = case farePolicy.farePolicyDetails of
+          DFP.RentalDetails det -> checkLimits det
+          _ -> True
+          where
+            checkLimits det =
+              let distInKm = distance.getMeters `div` 1000
+                  timeInHr = duration.getSeconds `div` 3600
+                  includedKm = (timeInHr * det.includedKmPerHr.getKilometers)
+                  maxAllowed = case (farePolicy.maxAdditionalKmsLimit, farePolicy.totalAdditionalKmsLimit) of
+                    (Just maxAdditionalKmsLimit, Just totalAdditionalKmsLimit) -> min (min maxAdditionalKmsLimit.getKilometers (timeInHr * includedKm)) (totalAdditionalKmsLimit.getKilometers - (timeInHr * includedKm))
+                    (Just maxAdditionalKmsLimit, Nothing) -> min maxAdditionalKmsLimit.getKilometers (timeInHr * includedKm)
+                    (Nothing, Just totalAdditionalKmsLimit) -> min (timeInHr * includedKm) (totalAdditionalKmsLimit.getKilometers - (timeInHr * includedKm))
+                    _ -> 0 -- or infinite?
+               in distInKm - includedKm <= maxAllowed
 
     getCancellationDues transporterConfig =
       if transporterConfig.canAddCancellationFee
@@ -354,7 +367,7 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
     calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
-          distance = dist, -- TODO: Fix this
+          actualDistance = Just dist,
           rideTime = pickupTime,
           waitingTime = Nothing,
           actualRideDuration = Nothing,
@@ -362,7 +375,11 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
           nightShiftCharge = Nothing,
-          customerCancellationDues = customerCancellationDues
+          customerCancellationDues = customerCancellationDues,
+          nightShiftOverlapChecking = True, -- sending True in rental
+          estimatedDistance = searchRequest.estimatedDistance,
+          estimatedRideDuration = searchRequest.estimatedDuration,
+          timeDiffFromUtc = Nothing
         }
   quoteId <- Id <$> generateGUID
   now <- getCurrentTime
@@ -401,7 +418,7 @@ buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag cu
     calculateFareParameters
       CalculateFareParametersParams
         { farePolicy = fullFarePolicy,
-          distance = dist, -- TODO: Fix this
+          actualDistance = Just dist,
           rideTime = startTime,
           waitingTime = Nothing,
           actualRideDuration = Nothing,
@@ -409,7 +426,11 @@ buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag cu
           driverSelectedFare = Nothing,
           customerExtraFee = Nothing,
           nightShiftCharge = Nothing,
-          customerCancellationDues = customerCancellationDues
+          customerCancellationDues = customerCancellationDues,
+          nightShiftOverlapChecking = False,
+          estimatedDistance = Nothing,
+          estimatedRideDuration = Nothing,
+          timeDiffFromUtc = Nothing
         }
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare
