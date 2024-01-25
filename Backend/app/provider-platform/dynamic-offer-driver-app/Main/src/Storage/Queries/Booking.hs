@@ -81,6 +81,24 @@ updateStatus rbId rbStatus = do
     [Se.Set BeamB.status rbStatus, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
+updateStop :: MonadFlow m => Id Booking -> Maybe Text -> m ()
+updateStop bookingId stopLocationId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.stopLocationId stopLocationId,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateStopArrival :: MonadFlow m => Id Booking -> m ()
+updateStopArrival bookingId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.stopLocationId Nothing,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
 updateRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Id RiderDetails -> m ()
 updateRiderId rbId riderId = do
   now <- getCurrentTime
@@ -236,6 +254,7 @@ instance FromTType' BeamB.Booking Booking where
                 paymentUrl = paymentUrl,
                 createdAt = createdAt,
                 updatedAt = updatedAt,
+                stopLocationId = Id <$> stopLocationId,
                 distanceToPickup = distanceToPickup
               }
       else do
@@ -282,7 +301,8 @@ instance ToTType' BeamB.Booking Booking where
         BeamB.riderName = riderName,
         BeamB.createdAt = createdAt,
         BeamB.updatedAt = updatedAt,
-        BeamB.distanceToPickup = distanceToPickup
+        BeamB.distanceToPickup = distanceToPickup,
+        BeamB.stopLocationId = getId <$> stopLocationId
       }
 
 -- FUNCTIONS FOR HANDLING OLD DATA : TO BE REMOVED AFTER SOME TIME

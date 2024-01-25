@@ -20,6 +20,7 @@ module Domain.Action.UI.Ride
     listDriverRides,
     arrivedAtPickup,
     otpRideCreate,
+    arrivedAtStop,
   )
 where
 
@@ -58,6 +59,7 @@ import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
+import Storage.Queries.Location as QLoc
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -100,7 +102,8 @@ data DriverRideRes = DriverRideRes
     payerVpa :: Maybe Text,
     autoPayStatus :: Maybe DI.DriverAutoPayStatus,
     customerCancellationDues :: HighPrecMoney,
-    isFreeRide :: Maybe Bool
+    isFreeRide :: Maybe Bool,
+    stopLocationId :: Maybe (Id DLoc.Location)
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -193,7 +196,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       payerVpa = driverInfo >>= (.payerVpa),
       autoPayStatus = driverInfo >>= (.autoPayStatus),
       isFreeRide = ride.isFreeRide,
-      customerCancellationDues = fareParams.customerCancellationDues
+      customerCancellationDues = fareParams.customerCancellationDues,
+      stopLocationId = (.id) <$> booking.toLocation
     }
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasField "isBecknSpecVersion2" r Bool, HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id DRide.Ride -> LatLong -> m APISuccess
@@ -242,3 +246,23 @@ otpRideCreate driver otpCode booking = do
     isNotAllowedVehicleVariant driverVehicle bookingVehicle =
       (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
         && driverVehicle == DVeh.TAXI
+
+arrivedAtStop :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasField "isBecknSpecVersion2" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtStop rideId pt = do
+  ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress")
+  unless (isJust booking.stopLocationId) $ throwError (InvalidRequest $ "Can't find stop to be reached for ride " <> ride.id.getId)
+  case booking.stopLocationId of
+    Nothing -> throwError $ InvalidRequest ("No stop present to be reached for ride " <> ride.id.getId)
+    Just nextStopId -> do
+      stopLoc <- runInReplica $ QLoc.findById nextStopId >>= fromMaybeM (InvalidRequest $ "Stop location doesn't exist for ride " <> ride.id.getId)
+      let curPt = LatLong stopLoc.lat stopLoc.lon
+          distance = distanceBetweenInMeters pt curPt
+      driverReachedDistance <- asks (.driverReachedDistance)
+      unless (distance < driverReachedDistance) $ throwError $ InvalidRequest ("Driver is not at stop location for ride " <> ride.id.getId)
+      QBooking.updateStopArrival booking.id
+      BP.sendStopArrivalUpdateToBAP booking ride
+      pure Success
+  where
+    isValidRideStatus status = status == DRide.INPROGRESS

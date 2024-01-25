@@ -19,6 +19,7 @@ module SharedLogic.CallBAP
     sendRideCompletedUpdateToBAP,
     sendBookingCancelledUpdateToBAP,
     sendDriverArrivalUpdateToBAP,
+    sendStopArrivalUpdateToBAP,
     sendEstimateRepetitionUpdateToBAP,
     sendNewMessageToBAP,
     sendDriverOffer,
@@ -500,6 +501,32 @@ sendDriverArrivalUpdateToBAP booking ride arrivalTime = do
   if isBecknSpecVersion2
     then void $ callOnUpdateV2 driverArrivedMsgV2 retryConfig
     else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId driverArrivedMsg retryConfig
+
+sendStopArrivalUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool
+  ) =>
+  DRB.Booking ->
+  SRide.Ride ->
+  m ()
+sendStopArrivalUpdateToBAP booking ride = do
+  transporter <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+  let stopArrivedBuildReq = ACL.StopArrivedBuildReq ACL.DStopArrivedBuildReq {..}
+  stopArrivedMsg <- ACL.buildOnUpdateMessage stopArrivedBuildReq
+  let mbCity = booking.bapCity
+  let mbCountry = booking.bapCountry
+  stopArrivedMsgV2 <- ACL.buildOnUpdateMessageV2 transporter mbCity mbCountry stopArrivedBuildReq
+  retryConfig <- asks (.shortDurationRetryCfg)
+  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+  if isBecknSpecVersion2
+    then void $ callOnUpdateV2 stopArrivedMsgV2 retryConfig
+    else void $ callOnUpdate transporter booking.bapId booking.bapUri booking.bapCity booking.bapCountry booking.transactionId stopArrivedMsg retryConfig
 
 sendNewMessageToBAP ::
   ( CacheFlow m r,

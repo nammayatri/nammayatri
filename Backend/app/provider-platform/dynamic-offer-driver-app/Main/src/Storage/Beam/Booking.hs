@@ -59,6 +59,7 @@ data BookingT f = BookingT
     paymentMethodId :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
+    stopLocationId :: B.C f (Maybe Text),
     distanceToPickup :: B.C f (Maybe Meters)
   }
   deriving (Generic, B.Beamable)

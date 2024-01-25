@@ -20,8 +20,11 @@ import Data.OpenApi (ToSchema (..))
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.Location
 import Domain.Types.LocationAddress
+import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -34,6 +37,8 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
 import Tools.Error
 
@@ -75,6 +80,9 @@ processStop bookingId loc merchantId isEdit = do
   booking <- runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
   validateStopReq booking isEdit
   location <- buildLocation loc
+  locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+  QL.create location
+  QLM.create locationMapping
   QRB.updateStop booking (Just location)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
@@ -120,6 +128,22 @@ buildLocation req = do
       { lat = req.gps.lat,
         lon = req.gps.lon,
         address = req.address,
+        createdAt = now,
+        updatedAt = now,
+        ..
+      }
+
+buildLocationMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Location -> Text -> Bool -> Maybe (Id DM.Merchant) -> Maybe (Id DMOC.MerchantOperatingCity) -> m DLM.LocationMapping
+buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCityId = do
+  id <- generateGUID
+  now <- getCurrentTime
+  prevOrder <- QLM.maxOrderByEntity entityId
+  when isEdit $ QLM.updatePastMappingVersions entityId prevOrder
+  let version = "LATEST"
+      tag = DLM.BOOKING
+  return $
+    DLM.LocationMapping
+      { order = if isEdit then prevOrder else prevOrder + 1,
         createdAt = now,
         updatedAt = now,
         ..

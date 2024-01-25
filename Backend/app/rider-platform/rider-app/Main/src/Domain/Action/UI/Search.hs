@@ -41,7 +41,6 @@ import Kernel.External.Encryption
 import Kernel.External.Maps
 import qualified Kernel.External.Maps as MapsK
 import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
-import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Beckn.Context (City)

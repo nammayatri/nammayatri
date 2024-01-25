@@ -201,10 +201,10 @@ updatePaymentUrl bookingId paymentUrl = do
 updateStop :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> Maybe DL.Location -> m ()
 updateStop booking mbStopLoc = do
   now <- getCurrentTime
-  whenJust mbStopLoc $ \stopLoc -> do
-    void $ whenNothingM_ (QL.findById stopLoc.id) $ QL.create stopLoc
-    locationMapping <- SLM.buildDropLocationMapping stopLoc.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
-    QLM.create locationMapping
+  -- whenJust mbStopLoc $ \stopLoc -> do
+  --   void $ whenNothingM_ (QL.findById stopLoc.id) $ QL.create stopLoc
+  -- locationMapping <- SLM.buildDropLocationMapping stopLoc.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+  -- QLM.create locationMapping
 
   updateOneWithKV
     [ Se.Set BeamB.stopLocationId ((getId . (.id)) <$> mbStopLoc),
