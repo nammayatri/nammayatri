@@ -59,14 +59,15 @@ buildContext action bapConfig txnId msgId mTTL = do
 tfLocation :: Text -> Spec.Location
 tfLocation location_code =
   Spec.Location
-    { locationDescriptor =
+    { locationDescriptor = Nothing,
+      locationGps = Nothing,
+      locationCity =
         Just $
-          Spec.Descriptor
-            { descriptorCode = Just location_code,
-              descriptorImages = Nothing,
-              descriptorName = Nothing
+          Spec.City
+            { cityCode = Just location_code,
+              cityName = Nothing
             },
-      locationGps = Nothing
+      locationCountry = Nothing
     }
 
 getStartStop :: [Spec.Stop] -> Maybe Spec.Stop

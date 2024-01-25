@@ -12,9 +12,11 @@ module BecknV2.FRFS.Types
     CancellationTerm (..),
     Catalog (..),
     Category (..),
+    City (..),
     ConfirmReq (..),
     ConfirmReqMessage (..),
     Context (..),
+    Country (..),
     Descriptor (..),
     Domain (..),
     Error (..),
@@ -288,6 +290,33 @@ optionsCategory =
         ("categoryId", "id")
       ]
 
+-- | Describes a city
+data City = City
+  { -- | City code
+    cityCode :: Maybe Text,
+    -- | Name of the city
+    cityName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON City where
+  parseJSON = genericParseJSON optionsCity
+
+instance ToJSON City where
+  toJSON = genericToJSON optionsCity
+
+optionsCity :: Options
+optionsCity =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("cityCode", "code"),
+        ("cityName", "name")
+      ]
+
 -- |
 data ConfirmReq = ConfirmReq
   { -- |
@@ -398,6 +427,33 @@ optionsContext =
         ("contextTransactionId", "transaction_id"),
         ("contextTtl", "ttl"),
         ("contextVersion", "version")
+      ]
+
+-- | Describes a country
+data Country = Country
+  { -- | Country code as per ISO 3166-1 and ISO 3166-2 format
+    countryCode :: Maybe Text,
+    -- | Name of the country
+    countryName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Country where
+  parseJSON = genericParseJSON optionsCountry
+
+instance ToJSON Country where
+  toJSON = genericToJSON optionsCountry
+
+optionsCountry :: Options
+optionsCountry =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("countryCode", "code"),
+        ("countryName", "name")
       ]
 
 -- | Physical description of something.
@@ -748,7 +804,11 @@ data Location = Location
   { -- |
     locationDescriptor :: Maybe Descriptor,
     -- | Describes a GPS coordinate
-    locationGps :: Maybe Text
+    locationGps :: Maybe Text,
+    -- |
+    locationCity :: Maybe City,
+    -- |
+    locationCountry :: Maybe Country
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -767,6 +827,8 @@ optionsLocation =
   where
     table =
       [ ("locationDescriptor", "descriptor"),
+        ("locationCity", "city"),
+        ("locationCountry", "country"),
         ("locationGps", "gps")
       ]
 
