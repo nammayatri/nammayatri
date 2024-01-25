@@ -21,6 +21,7 @@ module Dashboard.ProviderPlatform.Driver
 where
 
 import Dashboard.Common as Reexport
+import Data.Aeson
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (derivePersistField)
@@ -33,8 +34,10 @@ import Kernel.Types.Predicate
 import Kernel.Types.Version
 import Kernel.Utils.GenericPretty
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation
 import Servant hiding (Summary, throwError)
+import qualified Text.Show
 
 -- we need to save endpoint transactions only for POST, PUT, DELETE APIs
 data DriverEndpoint
@@ -63,6 +66,7 @@ data DriverEndpoint
   | SendMessageToDriverViaDashboardEndPoint
   | SendDummyRideRequestToDriverViaDashboardEndPoint
   | ChangeOperatingCityEndpoint
+  | PauseOrResumeServiceChargesEndPoint
   deriving (Show, Read, ToJSON, FromJSON, Generic, Eq, Ord)
 
 derivePersistField "DriverEndpoint"
@@ -277,7 +281,7 @@ data PlatformFee = PlatformFee
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
-data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE | CLEARED_BY_YATRI_COINS deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE | CLEARED_BY_YATRI_COINS | MANUAL_REVIEW_NEEDED deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
 
 type DriverOutstandingBalanceAPI =
   "paymentDue"
@@ -288,6 +292,13 @@ type DriverOutstandingBalanceAPI =
 ---------------------------------------------------------
 -- driver cash collection api ----------------------------------------
 
+type DriverCashCollectionAPIV2 =
+  Capture "driverId" (Id Driver)
+    :> "v2"
+    :> "collectCash"
+    :> Capture "serviceName" ServiceNames
+    :> Post '[JSON] APISuccess
+
 type DriverCashCollectionAPI =
   Capture "driverId" (Id Driver)
     :> "collectCash"
@@ -296,6 +307,13 @@ type DriverCashCollectionAPI =
 -------------------------------------
 
 -- driver cash exemption api ----------------------------------------
+
+type DriverCashExemptionAPIV2 =
+  Capture "driverId" (Id Driver)
+    :> "v2"
+    :> "exemptCash"
+    :> Capture "serviceName" ServiceNames
+    :> Post '[JSON] APISuccess
 
 type DriverCashExemptionAPI =
   Capture "driverId" (Id Driver)
@@ -547,7 +565,9 @@ data VerificationStatus = PENDING | VALID | INVALID
 
 data RCStatusReq = RCStatusReq
   { rcNo :: Text,
-    isActivate :: Bool
+    isActivate :: Bool,
+    serviceName :: Maybe ServiceNames,
+    planToAssociate :: Maybe Text
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -917,6 +937,7 @@ type UpdateSubscriptionDriverFeeAndInvoiceAPI =
   Capture "driverId" (Id Driver)
     :> "update"
     :> "driverFeeAndInvoiceInfo"
+    :> Capture "serviceName" ServiceNames
     :> ReqBody '[JSON] SubscriptionDriverFeesAndInvoicesToUpdate
     :> Post '[JSON] SubscriptionDriverFeesAndInvoicesToUpdate
 
@@ -1000,6 +1021,26 @@ type GetFleetVehicleAssociationAPI =
     :> QueryParam "Offset" Int
     :> Get '[JSON] DrivertoVehicleAssociationRes
 
+type GetFleetDriverAssociationBySearchAPI =
+  "fleet"
+    :> "driverAssociation"
+    :> "search"
+    :> QueryParam "Limit" Int
+    :> QueryParam "Offset" Int
+    :> QueryParam "driverName" Text
+    :> QueryParam "driverPhoneNo" Text
+    :> Get '[JSON] DrivertoVehicleAssociationRes
+
+type GetFleetVehicleAssociationBySearchAPI =
+  "fleet"
+    :> "vehicleAssociation"
+    :> "search"
+    :> QueryParam "Limit" Int
+    :> QueryParam "Offset" Int
+    :> QueryParam "vehicleNo" Text
+    :> QueryParam "driverPhoneNo" Text
+    :> Get '[JSON] DrivertoVehicleAssociationRes
+
 -- data DriverMode
 --   = ONLINE
 --   | OFFLINE
@@ -1031,3 +1072,40 @@ newtype ChangeOperatingCityReq = ChangeOperatingCityReq
 
 instance HideSecrets ChangeOperatingCityReq where
   hideSecrets = identity
+
+-- pause or resume service charges via dashboard Api ------------------------
+
+type PauseOrResumeServiceChargesAPI =
+  Capture "driverId" (Id Driver)
+    :> "pauseOrResumeServiceCharges"
+    :> ReqBody '[JSON] PauseOrResumeServiceChargesReq
+    :> Post '[JSON] APISuccess
+
+data PauseOrResumeServiceChargesReq = PauseOrResumeServiceChargesReq
+  { serviceChargeEligibility :: Bool,
+    vehicleId :: Text,
+    serviceName :: ServiceNames,
+    reason :: Maybe ReasonForDisablingServiceCharge
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+instance HideSecrets PauseOrResumeServiceChargesReq where
+  hideSecrets = identity
+
+data ReasonForDisablingServiceCharge = OUT_SICK | VEHICLE_UNDER_MAINTENANCE | EXITED_INITIATIVE | SWITCH_VEHICLE | PROMOTIIONAL_ACTIVITY | NOTIFIED_LEAVE | OTHER
+  deriving (Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Read)
+
+instance Show ReasonForDisablingServiceCharge where
+  show OUT_SICK = "sickness"
+  show VEHICLE_UNDER_MAINTENANCE = "vehicle under maintainence"
+  show EXITED_INITIATIVE = "initiative exited from intiative"
+  show SWITCH_VEHICLE = "switching of vehicle"
+  show PROMOTIIONAL_ACTIVITY = "attending promotional activity"
+  show NOTIFIED_LEAVE = "notified leave"
+  show OTHER = "miscellaneous"
+
+data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
+
+$(mkHttpInstancesForEnum ''ServiceNames)
+$(mkHttpInstancesForEnum ''ReasonForDisablingServiceCharge)

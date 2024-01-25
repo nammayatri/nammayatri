@@ -41,7 +41,7 @@ fetchConfig :: forall b. (Show b, Eq b) => Id Merchant -> Maps.MapsService -> (S
 fetchConfig merchantId serviceProvider getterFunc resultExpected = do
   Just cfg <-
     runARDUFlow "" $
-      QMSC.findByMerchantIdAndService merchantId (MapsService serviceProvider)
+      QMSC.findByMerchantIdAndServiceWithCity merchantId (MapsService serviceProvider) (Id "Merchnant-op-city")
   getterFunc cfg.serviceConfig `shouldBe` resultExpected
 
 fetchGoogleConfig :: IO ()

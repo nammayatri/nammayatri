@@ -64,8 +64,6 @@ allocatorHandle flowRt env =
       jobHandlers =
         emptyJobHandlerList
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendSearchRequestToDrivers)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPaymentReminderToDriver)
-          & putJobHandlerInList (liftIO . runFlowR flowRt env . unsubscribeDriverForPaymentOverdue)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . unblockDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . calculateDriverFeeForDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendPDNNotificationToDriver)
@@ -73,6 +71,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . notificationAndOrderStatusUpdate)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendOverlayToDriver)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . badDebtCalculation)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendManualPaymentLink)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . retryDocumentVerificationJob)
     }
 

@@ -19,7 +19,9 @@
 
 module Storage.Beam.DriverPlan where
 
+import qualified Data.Aeson as A
 import qualified Database.Beam as B
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Plan as DPlan
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -34,7 +36,14 @@ data DriverPlanT f = DriverPlanT
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     coinCovertedToCashLeft :: B.C f HighPrecMoney,
-    totalCoinsConvertedCash :: B.C f HighPrecMoney
+    totalCoinsConvertedCash :: B.C f HighPrecMoney,
+    autoPayStatus :: B.C f (Maybe DI.DriverAutoPayStatus),
+    payerVpa :: B.C f (Maybe Text),
+    serviceName :: B.C f (Maybe DPlan.ServiceNames),
+    enableServiceUsageCharge :: B.C f (Maybe Bool),
+    merchantId :: B.C f (Maybe Text),
+    merchantOpCityId :: B.C f (Maybe Text),
+    commodityData :: B.C f (Maybe A.Value)
   }
   deriving (Generic, B.Beamable)
 

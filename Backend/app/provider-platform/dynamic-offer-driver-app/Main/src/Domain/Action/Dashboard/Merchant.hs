@@ -51,6 +51,7 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Merchant.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Merchant.OnboardingDocumentConfig as DODC
 import qualified Domain.Types.Merchant.TransporterConfig as DTC
+import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
 import qualified Kernel.External.Maps as Maps
@@ -64,6 +65,7 @@ import Kernel.Utils.Validation
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
+import qualified SharedLogic.DriverFee as SDF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FarePolicy as CQFP
@@ -221,12 +223,20 @@ schedulerTrigger merchantShortId _ req = do
       triggerScheduler req.jobName maxShards req.jobData diffTimeS
     _ -> throwError $ InternalError "invalid scheduled at time"
   where
+    triggerScheduler :: Maybe Common.JobName -> Int -> Text -> NominalDiffTime -> Flow APISuccess
     triggerScheduler jobName maxShards jobDataRaw diffTimeS = do
       case jobName of
         Just Common.DriverFeeCalculationTrigger -> do
           let jobData' = decodeFromText jobDataRaw :: Maybe CalculateDriverFeesJobData
           case jobData' of
             Just jobData -> do
+              let serviceName = fromMaybe Plan.YATRI_SUBSCRIPTION jobData.serviceName
+                  mbMerchantOpCityId = jobData.merchantOperatingCityId
+                  merchantId = jobData.merchantId
+              merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+              merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
+              when (serviceName == Plan.YATRI_RENTAL) $ do
+                SDF.setCreateDriverFeeForServiceInSchedulerKey serviceName merchantOpCityId True
               createJobIn @_ @'CalculateDriverFees diffTimeS maxShards (jobData :: CalculateDriverFeesJobData)
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
@@ -557,13 +567,14 @@ mapsServiceConfigUpdate ::
   Context.City ->
   Common.MapsServiceConfigUpdateReq ->
   Flow APISuccess
-mapsServiceConfigUpdate merchantShortId _ req = do
+mapsServiceConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.MapsService $ Common.getMapsServiceFromReq req
   serviceConfig <- DMSC.MapsServiceConfig <$> Common.buildMapsServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
+  CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
+  CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
   logTagInfo "dashboard -> mapsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -573,13 +584,14 @@ smsServiceConfigUpdate ::
   Context.City ->
   Common.SmsServiceConfigUpdateReq ->
   Flow APISuccess
-smsServiceConfigUpdate merchantShortId _ req = do
+smsServiceConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.SmsService $ Common.getSmsServiceFromReq req
   serviceConfig <- DMSC.SmsServiceConfig <$> Common.buildSmsServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
+  CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
+  CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
   logTagInfo "dashboard -> smsServiceConfigUpdate : " (show merchant.id)
   pure Success
 
@@ -617,7 +629,7 @@ mapsServiceUsageConfigUpdate merchantShortId opCity req = do
   forM_ Maps.availableMapsServices $ \service -> do
     when (Common.mapsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByMerchantIdAndService merchant.id (DMSC.MapsService service)
+        CQMSC.findByMerchantIdAndServiceWithCity merchant.id (DMSC.MapsService service) merchantOpCityId
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -650,7 +662,7 @@ smsServiceUsageConfigUpdate merchantShortId opCity req = do
   forM_ SMS.availableSmsServices $ \service -> do
     when (Common.smsServiceUsedInReq req service) $ do
       void $
-        CQMSC.findByMerchantIdAndService merchant.id (DMSC.SmsService service)
+        CQMSC.findByMerchantIdAndServiceWithCity merchant.id (DMSC.SmsService service) merchantOpCityId
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -670,13 +682,14 @@ verificationServiceConfigUpdate ::
   Context.City ->
   Common.VerificationServiceConfigUpdateReq ->
   Flow APISuccess
-verificationServiceConfigUpdate merchantShortId _ req = do
+verificationServiceConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
+  merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   let serviceName = DMSC.VerificationService $ Common.getVerificationServiceFromReq req
   serviceConfig <- DMSC.VerificationServiceConfig <$> Common.buildVerificationServiceConfig req
-  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig
-  _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig
-  CQMSC.clearCache merchant.id serviceName
+  merchantServiceConfig <- DMSC.buildMerchantServiceConfig merchant.id serviceConfig merchanOperatingCityId
+  _ <- CQMSC.upsertMerchantServiceConfig merchantServiceConfig merchanOperatingCityId
+  CQMSC.clearCache merchant.id serviceName merchanOperatingCityId
   logTagInfo "dashboard -> verificationServiceConfigUpdate : " (show merchant.id)
   pure Success
 

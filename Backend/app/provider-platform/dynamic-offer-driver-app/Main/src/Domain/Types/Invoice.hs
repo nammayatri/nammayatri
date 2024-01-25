@@ -5,6 +5,7 @@ module Domain.Types.Invoice where
 import Data.Aeson
 import qualified Domain.Types.DriverFee as DF
 import Domain.Types.Person (Person)
+import Domain.Types.Plan (ServiceNames)
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
@@ -23,6 +24,7 @@ data Invoice = Invoice
     bankErrorUpdatedAt :: Maybe UTCTime,
     lastStatusCheckedAt :: Maybe UTCTime,
     maxMandateAmount :: Maybe HighPrecMoney,
+    serviceName :: ServiceNames,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -30,7 +32,7 @@ data Invoice = Invoice
 
 data InvoiceStatus = ACTIVE_INVOICE | INACTIVE | SUCCESS | FAILED | EXPIRED | CLEARED_BY_YATRI_COINS deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, Ord)
 
-data InvoicePaymentMode = MANUAL_INVOICE | AUTOPAY_INVOICE | MANDATE_SETUP_INVOICE deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
+data InvoicePaymentMode = MANUAL_INVOICE | AUTOPAY_INVOICE | MANDATE_SETUP_INVOICE | CASH_COLLECTED_INVOICE deriving (Show, Read, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 $(mkBeamInstancesForEnum ''InvoiceStatus)
 $(mkBeamInstancesForEnum ''InvoicePaymentMode)

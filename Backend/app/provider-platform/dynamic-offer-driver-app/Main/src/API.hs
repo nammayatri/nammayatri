@@ -23,6 +23,7 @@ import Data.OpenApi
 import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
 import qualified Domain.Action.UI.Payment as Payment
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Plan as Plan
 import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
@@ -57,6 +58,12 @@ type MainAPI =
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> Juspay.JuspayWebhookAPI
          )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> QueryParam "serviceName" Plan.ServiceNames
+             :> "v2"
+             :> Juspay.JuspayWebhookAPI
+         )
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> Internal.API
@@ -72,6 +79,7 @@ mainServer =
     :<|> idfyWebhookHandler
     :<|> idfyWebhookV2Handler
     :<|> juspayWebhookHandler
+    :<|> juspayWebhookHandlerV2
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> Internal.handler
@@ -134,5 +142,15 @@ juspayWebhookHandler ::
   BasicAuthData ->
   Value ->
   FlowHandler AckResponse
-juspayWebhookHandler merchantShortId secret =
-  withFlowHandlerAPI . Payment.juspayWebhookHandler merchantShortId secret
+juspayWebhookHandler merchantShortId secret value' =
+  withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId Nothing Nothing secret value'
+
+juspayWebhookHandlerV2 ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Plan.ServiceNames ->
+  BasicAuthData ->
+  Value ->
+  FlowHandler AckResponse
+juspayWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret value' =
+  withFlowHandlerAPI $ Payment.juspayWebhookHandler merchantShortId mbOpCity mbServiceName secret value'

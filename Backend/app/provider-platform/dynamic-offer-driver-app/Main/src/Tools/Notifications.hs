@@ -761,7 +761,7 @@ sendSearchRequestToDriverNotification merchantId merchantOpCityId req = Notifica
 
     getServiceConfig service = do
       merchantNotificationServiceConfig <-
-        QMSC.findByMerchantIdAndService merchantId (DMSC.NotificationService service)
+        QMSC.findByMerchantIdAndServiceWithCity merchantId (DMSC.NotificationService service) merchantOpCityId
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Notification" (show service))
       case merchantNotificationServiceConfig.serviceConfig of
         DMSC.NotificationServiceConfig nsc -> pure nsc

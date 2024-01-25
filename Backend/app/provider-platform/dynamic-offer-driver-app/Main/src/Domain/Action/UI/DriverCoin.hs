@@ -38,6 +38,7 @@ import qualified Storage.CachedQueries.Merchant.TransporterConfig as TC
 import Storage.Queries.Coins.CoinHistory as CHistory
 import Storage.Queries.Coins.PurchaseHistory as PHistory
 import Storage.Queries.DriverPlan as DPlan
+import Storage.Queries.DriverStats as QDS
 import Storage.Queries.Person as Person
 import Tools.Error
 
@@ -136,7 +137,7 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset =
     throwError $ CoinServiceUnavailable merchantId_.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   purchaseSummary <- B.runInReplica $ PHistory.getPurchasedHistory driverId mbLimit mbOffset
-  mbDriverPlan <- DPlan.findByDriverId driverId
+  mbDriverStat <- QDS.findById driverId
   let coinUsageHistory = map toUsageHistoryItem purchaseSummary
   coinAdjustedInSubscriptionKeyExists <- getCoinAdjustedInSubscriptionByDriverIdKey driverId
   coinConvertedToCashUsage <- case coinAdjustedInSubscriptionKeyExists of
@@ -144,8 +145,8 @@ getCoinUsageSummary (driverId, merchantId_, merchantOpCityId) mbLimit mbOffset =
       delCoinAdjustedInSubscriptionByDriverIdKey driverId
       pure $ Just cashUsed
     Nothing -> pure Nothing
-  let coinConvertedTocashLeft = mbDriverPlan <&> (.coinCovertedToCashLeft)
-      totalCoinConvertedToCash = mbDriverPlan <&> (.totalCoinsConvertedCash)
+  let coinConvertedTocashLeft = mbDriverStat <&> (.coinCovertedToCashLeft)
+      totalCoinConvertedToCash = mbDriverStat <&> (.totalCoinsConvertedCash)
   pure
     CoinsUsageRes
       { coinBalance = coinBalance_,
@@ -213,7 +214,7 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
                 title = "converted from coins"
               }
       void $ PHistory.createPurchaseHistory history
-      void $ DPlan.updateCoinFieldsByDriverId driverId calculatedAmount
+      void $ QDS.updateCoinFieldsByDriverId driverId calculatedAmount
       driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       void $ Person.updateUsedCoins driverId (coins + driver.usedCoins)
       histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc

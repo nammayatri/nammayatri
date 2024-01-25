@@ -101,6 +101,7 @@ instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         web <- parseBaseUrl `mapM` paymentOrder.webPaymentLink
         iframe <- parseBaseUrl `mapM` paymentOrder.iframePaymentLink
         mobile <- parseBaseUrl `mapM` paymentOrder.mobilePaymentLink
+        let deep_link = paymentOrder.deepLink
         pure Payment.PaymentLinks {..}
 
 instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
@@ -113,6 +114,7 @@ instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         webPaymentLink = showBaseUrl <$> paymentLinks.web,
         iframePaymentLink = showBaseUrl <$> paymentLinks.iframe,
         mobilePaymentLink = showBaseUrl <$> paymentLinks.mobile,
+        deepLink = paymentLinks.deep_link,
         clientAuthTokenEncrypted = clientAuthToken <&> unEncrypted . (.encrypted),
         clientAuthTokenHash = clientAuthToken <&> (.hash),
         ..

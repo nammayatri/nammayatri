@@ -56,7 +56,9 @@ type ActivateAPI =
     :> ( Common.DriverOutstandingBalanceAPI
            :<|> Common.EnableDriverAPI
            :<|> DriverCashCollectionAPI
+           :<|> DriverCashCollectionAPIV2
            :<|> DriverCashExemptionAPI
+           :<|> DriverCashExemptionAPIV2
            :<|> DriverInfoAPI
            :<|> Common.UnlinkVehicleAPI
            :<|> Common.EndRCAssociationAPI
@@ -72,6 +74,14 @@ type DriverCashCollectionAPI =
     :> ReqBody '[JSON] Text
     :> Post '[JSON] APISuccess
 
+type DriverCashCollectionAPIV2 =
+  Capture "driverId" (Id Common.Driver)
+    :> "collectCash"
+    :> "v2"
+    :> Capture "token" Text
+    :> Capture "serviceName" Common.ServiceNames
+    :> Post '[JSON] APISuccess
+
 -------------------------------------
 
 -- driver cash exemption api ----------------------------------------
@@ -80,6 +90,14 @@ type DriverCashExemptionAPI =
   Capture "driverId" (Id Common.Driver)
     :> "exemptCash"
     :> ReqBody '[JSON] Text
+    :> Post '[JSON] APISuccess
+
+type DriverCashExemptionAPIV2 =
+  Capture "driverId" (Id Common.Driver)
+    :> "exemptCash"
+    :> "v2"
+    :> Capture "token" Text
+    :> Capture "serviceName" Common.ServiceNames
     :> Post '[JSON] APISuccess
 
 ----- payment history ----------
@@ -99,7 +117,9 @@ activateHandler merchantId city =
   getDriverDue merchantId city
     :<|> enableDriver merchantId city
     :<|> collectCash merchantId city
+    :<|> collectCashV2 merchantId city
     :<|> exemptCash merchantId city
+    :<|> exemptCashV2 merchantId city
     :<|> driverInfo merchantId city
     :<|> unlinkVehicle merchantId city
     :<|> endRCAssociation merchantId city
@@ -116,8 +136,14 @@ enableDriver merchantShortId opCity = withFlowHandlerAPI . DDriver.enableDriver 
 collectCash :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> FlowHandler APISuccess
 collectCash merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.collectCash merchantShortId opCity driverId
 
+collectCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> FlowHandler APISuccess
+collectCashV2 merchantShortId opCity driverId rId serviceName = withFlowHandlerAPI $ DDriver.collectCashV2 merchantShortId opCity driverId rId serviceName
+
 exemptCash :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> FlowHandler APISuccess
 exemptCash merchantShortId opCity driverId = withFlowHandlerAPI . DDriver.exemptCash merchantShortId opCity driverId
+
+exemptCashV2 :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Text -> Common.ServiceNames -> FlowHandler APISuccess
+exemptCashV2 merchantShortId opCity driverId rId serviceName = withFlowHandlerAPI $ DDriver.exemptCashV2 merchantShortId opCity driverId rId serviceName
 
 driverInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Text -> Bool -> FlowHandler Common.DriverInfoRes
 driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId = withFlowHandlerAPI . DDriver.driverInfo merchantShortId opCity mbMobileNumber mbMobileCountryCode mbVehicleNumber mbDlNumber mbRcNumber fleetOwnerId

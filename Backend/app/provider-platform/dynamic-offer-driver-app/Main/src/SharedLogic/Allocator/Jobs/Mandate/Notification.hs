@@ -14,6 +14,7 @@ import Domain.Types.Merchant.TransporterConfig
 import qualified Domain.Types.Notification as NTF
 import Domain.Types.Person as P
 import Domain.Types.Plan as Plan
+import qualified Domain.Types.SubscriptionConfig as DSC
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -28,11 +29,12 @@ import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual,
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as SCT
+import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Notification as QNTF
+import Tools.Error
 import qualified Tools.Payment as TPayment
 
 sendPDNNotificationToDriver ::
@@ -58,21 +60,25 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         startTime = jobData.startTime
         endTime = jobData.endTime
         retryCount = fromMaybe 0 jobData.retryCount
-    setIsNotificationSchedulerRunningKey startTime endTime merchantId True
+        serviceName = fromMaybe YATRI_SUBSCRIPTION jobData.serviceName
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
+    setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId True
     transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    subscriptionConfig <-
+      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName
+        >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
     let limit = transporterConfig.driverFeeMandateNotificationBatchSize
-    driverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime endTime retryCount DF.PAYMENT_PENDING
+    driverFees <- QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName
     maxShards <- asks (.maxShards)
     if null driverFees
       then do
         if retryCount >= transporterConfig.notificationRetryCountThreshold
           then do
-            setIsNotificationSchedulerRunningKey startTime endTime merchantId False
-            driverFeesPostRetries <- QDF.findDriverFeeInRangeWithNotifcationNotSentAndStatus merchantId limit startTime endTime retryCount DF.PAYMENT_PENDING
+            setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId False
+            driverFeesPostRetries <- QDF.findDriverFeeInRangeWithNotifcationNotSentServiceNameAndStatus merchantId limit startTime endTime retryCount DF.PAYMENT_PENDING serviceName
             mapM_ handleNotificationFailureAfterRetiresEnd (driverFeesPostRetries <&> (.id))
-            scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards
+            scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName
             return Complete
           else do
             let dfCalculationJobTs = 2 ^ retryCount * transporterConfig.notificationRetryTimeGap
@@ -82,13 +88,13 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
                   merchantOperatingCityId = Just merchantOpCityId,
                   startTime = startTime,
                   endTime = endTime,
-                  retryCount = Just $ retryCount + 1
+                  retryCount = Just $ retryCount + 1,
+                  serviceName = Just serviceName
                 }
             return Complete
       else do
         let driverIdsWithPendingFee = driverFees <&> (.driverId)
-        activeAutopayDrivers <- QDI.findAllByAutoPayStatusAndMerchantIdInDriverIds merchantId (Just DI.ACTIVE) driverIdsWithPendingFee
-        mandateIdAndDriverIdsToNotify <- mandateIdAndDriverId <$> QDP.findAllByDriverIdsAndPaymentMode (DI.driverId <$> activeAutopayDrivers) Plan.AUTOPAY
+        mandateIdAndDriverIdsToNotify <- mandateIdAndDriverId <$> QDP.findAllByDriverIdsPaymentModeAndServiceName driverIdsWithPendingFee Plan.AUTOPAY serviceName (Just DI.ACTIVE)
         let driverInfoForPDNotification = mapDriverInfoForPDNNotification (Map.fromList mandateIdAndDriverIdsToNotify) driverFees
         changeAutoPayFeesAndInvoicesForDriverFeesToManual (driverFees <&> (.id)) (driverInfoForPDNotification <&> (.driverFeeId))
         driverFeeToBeNotified <-
@@ -107,7 +113,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
         QDF.updateAutopayPaymentStageAndRetryCountByIds (Just NOTIFICATION_ATTEMPTING) retryCount (map (.driverFeeId) driverFeeToBeNotified)
         for_ driverFeeToBeNotified $ \driverToNotify -> do
           fork ("Notification call for driverFeeId : " <> driverToNotify.driverFeeId.getId) $ do
-            sendAsyncNotification driverToNotify merchantId
+            sendAsyncNotification driverToNotify merchantId merchantOpCityId subscriptionConfig
         ReSchedule <$> getRescheduledTime transporterConfig
   logWarning ("duration of job " <> show timetaken)
   return response
@@ -141,8 +147,17 @@ data DriverInfoForPDNotification = DriverInfoForPDNotification
 getRescheduledTime :: MonadTime m => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-scheduleJobs :: (CacheFlow m r, EsqDBFlow m r, HasField "schedulerType" r SchedulerType, JobCreatorEnv r) => TransporterConfig -> UTCTime -> UTCTime -> Id Merchant -> Id MerchantOperatingCity -> Int -> m ()
-scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards = do
+scheduleJobs ::
+  (CacheFlow m r, EsqDBFlow m r, HasField "schedulerType" r SchedulerType, JobCreatorEnv r) =>
+  TransporterConfig ->
+  UTCTime ->
+  UTCTime ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Int ->
+  Plan.ServiceNames ->
+  m ()
+scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId maxShards serviceName = do
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let dfExecutionTime = transporterConfig.driverAutoPayExecutionTime
       dfStatusCheckTime = transporterConfig.orderAndNotificationStatusCheckTime
@@ -158,7 +173,8 @@ scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId max
       { merchantId = merchantId,
         merchantOperatingCityId = Just merchantOpCityId,
         startTime = startTime,
-        endTime = endTime
+        endTime = endTime,
+        serviceName = Just serviceName
       }
   createJobIn @_ @'OrderAndNotificationStatusUpdate orderAndNotificationJobTs maxShards $
     OrderAndNotificationStatusUpdateJobData
@@ -176,14 +192,16 @@ sendAsyncNotification ::
   ) =>
   DriverInfoForPDNotification ->
   Id Merchant ->
+  Id MerchantOperatingCity ->
+  DSC.SubscriptionConfig ->
   m ()
-sendAsyncNotification driverToNotify merchantId = do
+sendAsyncNotification driverToNotify merchantId merchantOperatingCityId subscriptionConfig = do
   notificationId <- generateGUID
   notificationShortId <- generateShortId
   now <- getCurrentTime
   req <- mkNotificationRequest driverToNotify notificationShortId.getShortId
   QNTF.create $ buildNotificationEntity notificationId req driverToNotify.driverFeeId driverToNotify.mandateId now
-  exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId))
+  exec <- try @_ @SomeException $ withShortRetry (APayments.createNotificationService req (TPayment.mandateNotification merchantId merchantOperatingCityId subscriptionConfig.paymentServiceName))
   case exec of
     Left err -> do
       QINV.updateInvoiceStatusByDriverFeeIdsAndMbPaymentMode INV.INACTIVE [driverToNotify.driverFeeId] Nothing

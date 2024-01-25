@@ -20,7 +20,7 @@ module Storage.Queries.Plan
     #-}
 where
 
-import Domain.Types.Merchant
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Plan
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -29,6 +29,9 @@ import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Plan as BeamP
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Tools.Error
 
 create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Plan -> m ()
 create = createWithKV
@@ -36,20 +39,62 @@ create = createWithKV
 fetchAllPlan :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Plan]
 fetchAllPlan = findAllWithKV [Se.Is BeamP.id $ Se.Not $ Se.Eq $ getId ""]
 
-findByIdAndPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Plan -> PaymentMode -> m (Maybe Plan)
-findByIdAndPaymentMode (Id planId) paymentMode = findOneWithKV [Se.And [Se.Is BeamP.id $ Se.Eq planId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
+findByIdAndPaymentModeWithServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Plan -> PaymentMode -> ServiceNames -> m (Maybe Plan)
+findByIdAndPaymentModeWithServiceName (Id planId) paymentMode serviceName = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.id $ Se.Eq planId,
+          Se.Is BeamP.paymentMode $ Se.Eq paymentMode,
+          Se.Is BeamP.serviceName $ Se.Eq (Just serviceName)
+        ]
+    ]
 
-findByMerchantId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> m [Plan]
-findByMerchantId (Id merchantId) = findAllWithKV [Se.Is BeamP.merchantId $ Se.Eq merchantId]
+findByMerchantOpCityIdWithServiceName :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> ServiceNames -> m [Plan]
+findByMerchantOpCityIdWithServiceName (Id merchantOpCityId) serviceName = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamP.merchantOpCityId $ Se.Eq (Just merchantOpCityId),
+          Se.Is BeamP.serviceName $ Se.Eq (Just serviceName)
+        ]
+    ]
 
-findByMerchantIdAndPaymentMode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> PaymentMode -> m [Plan]
-findByMerchantIdAndPaymentMode (Id merchantId) paymentMode = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.paymentMode $ Se.Eq paymentMode]]
+findByMerchantOpCityIdAndPaymentModeWithServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  PaymentMode ->
+  ServiceNames ->
+  Maybe Bool ->
+  m [Plan]
+findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOpCityId) paymentMode serviceName mbIsDeprecated = do
+  findAllWithKV
+    [ Se.And
+        ( [ Se.Is BeamP.merchantOpCityId $ Se.Eq (Just merchantOpCityId),
+            Se.Is BeamP.paymentMode $ Se.Eq paymentMode,
+            Se.Is BeamP.serviceName $ Se.Eq (Just serviceName)
+          ]
+            <> [Se.Is BeamP.isDeprecated $ Se.Eq mbIsDeprecated | isJust mbIsDeprecated]
+        )
+    ]
 
-findByMerchantIdAndType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Merchant -> PlanType -> m [Plan]
-findByMerchantIdAndType (Id merchantId) planType = findAllWithKV [Se.And [Se.Is BeamP.merchantId $ Se.Eq merchantId, Se.Is BeamP.planType $ Se.Eq planType]]
+findByMerchantOpCityIdAndTypeWithServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  PlanType ->
+  ServiceNames ->
+  m [Plan]
+findByMerchantOpCityIdAndTypeWithServiceName (Id merchantOpCityId) planType serviceName = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamP.merchantOpCityId $ Se.Eq (Just merchantOpCityId),
+          Se.Is BeamP.planType $ Se.Eq planType,
+          Se.Is BeamP.serviceName $ Se.Eq (Just serviceName)
+        ]
+    ]
 
 instance FromTType' BeamP.Plan Plan where
   fromTType' BeamP.PlanT {..} = do
+    merchant <- CQM.findById (Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+    merchantOperatingCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOpCityId) merchant Nothing
     pure $
       Just
         Plan
@@ -68,7 +113,12 @@ instance FromTType' BeamP.Plan Plan where
             cgstPercentage = cgstPercentage,
             sgstPercentage = sgstPercentage,
             planType = planType,
-            maxMandateAmount = maxMandateAmount
+            maxMandateAmount = maxMandateAmount,
+            merchantOpCityId = merchantOperatingCityId,
+            serviceName = fromMaybe YATRI_SUBSCRIPTION serviceName,
+            eligibleForCoinDiscount = fromMaybe False eligibleForCoinDiscount,
+            subscribedFlagToggleAllowed = fromMaybe False subscribedFlagToggleAllowed,
+            isDeprecated = fromMaybe True isDeprecated
           }
 
 instance ToTType' BeamP.Plan Plan where
@@ -89,5 +139,10 @@ instance ToTType' BeamP.Plan Plan where
         BeamP.cgstPercentage = cgstPercentage,
         BeamP.sgstPercentage = sgstPercentage,
         BeamP.planType = planType,
-        BeamP.maxMandateAmount = maxMandateAmount
+        BeamP.maxMandateAmount = maxMandateAmount,
+        BeamP.merchantOpCityId = Just merchantOpCityId.getId,
+        BeamP.serviceName = Just serviceName,
+        BeamP.eligibleForCoinDiscount = Just eligibleForCoinDiscount,
+        BeamP.subscribedFlagToggleAllowed = Just subscribedFlagToggleAllowed,
+        BeamP.isDeprecated = Just isDeprecated
       }

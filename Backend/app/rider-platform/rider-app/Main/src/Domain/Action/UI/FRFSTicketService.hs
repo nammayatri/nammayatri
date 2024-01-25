@@ -311,7 +311,9 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 mandateMaxAmount = Nothing,
                 mandateFrequency = Nothing,
                 mandateEndDate = Nothing,
-                mandateStartDate = Nothing
+                mandateStartDate = Nothing,
+                optionsGetUpiDeepLinks = Nothing,
+                metadataExpiryInMins = Nothing
               }
       DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrder.id.getId)
 

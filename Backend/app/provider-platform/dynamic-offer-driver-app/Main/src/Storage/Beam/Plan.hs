@@ -38,6 +38,11 @@ data PlanT f = PlanT
     freeRideCount :: B.C f Int,
     frequency :: B.C f Domain.Frequency,
     planType :: B.C f Domain.PlanType,
+    serviceName :: B.C f (Maybe Domain.ServiceNames),
+    isDeprecated :: B.C f (Maybe Bool),
+    merchantOpCityId :: B.C f (Maybe Text),
+    subscribedFlagToggleAllowed :: B.C f (Maybe Bool),
+    eligibleForCoinDiscount :: B.C f (Maybe Bool),
     cgstPercentage :: B.C f HighPrecMoney,
     sgstPercentage :: B.C f HighPrecMoney
   }

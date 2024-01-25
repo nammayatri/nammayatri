@@ -288,6 +288,7 @@ library
       Domain.Types.SearchRequest.SearchReqLocation
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.SubscriptionConfig
       Domain.Types.Translations
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
@@ -324,6 +325,7 @@ library
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
+      SharedLogic.EventTracking
       SharedLogic.External.LocationTrackingService.API.DriversLocation
       SharedLogic.External.LocationTrackingService.API.EndRide
       SharedLogic.External.LocationTrackingService.API.NearBy
@@ -438,6 +440,7 @@ library
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchRequestSpecialZone
       Storage.Beam.SearchTry
+      Storage.Beam.SubscriptionConfig
       Storage.Beam.SystemConfigs
       Storage.Beam.Translations
       Storage.Beam.Vehicle
@@ -469,6 +472,7 @@ library
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.RegistryMapFallback
+      Storage.CachedQueries.SubscriptionConfig
       Storage.Clickhouse.DriverEdaKafka
       Storage.Queries.BapMetadata
       Storage.Queries.Booking
@@ -568,6 +572,7 @@ library
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
+      Storage.Queries.SubscriptionConfig
       Storage.Queries.Translations
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
@@ -592,8 +597,11 @@ library
       Tools.Verification
       Tools.Whatsapp
       Domain.Types.DriverPoolConfig
+      Domain.Types.EventTracker
       Storage.Beam.DriverPoolConfig
+      Storage.Beam.EventTracker
       Storage.Queries.DriverPoolConfig
+      Storage.Queries.EventTracker
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:

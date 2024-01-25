@@ -228,6 +228,7 @@ scheduleOverlay merchantShortId opCity req@ScheduleOverlay {..} = do
         driverPaymentCycleStartTime = transporterConfig.driverPaymentCycleStartTime,
         driverFeeOverlaySendingTimeLimitInDays = transporterConfig.driverFeeOverlaySendingTimeLimitInDays,
         overlayBatchSize = transporterConfig.overlayBatchSize,
+        serviceName = Nothing,
         ..
       }
   pure Success

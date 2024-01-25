@@ -223,6 +223,7 @@ library
       Domain.Types.Merchant.MerchantServiceUsageConfig
       Domain.Types.MerchantConfig
       Domain.Types.OnSearchEvent
+      Domain.Types.Payment
       Domain.Types.Person
       Domain.Types.Person.PersonDefaultEmergencyNumber
       Domain.Types.Person.PersonDisability
