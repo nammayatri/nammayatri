@@ -51,7 +51,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
 import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer)
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance, getCityCodeFromCity, getCityNameFromCode)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (printLog)
@@ -604,8 +604,14 @@ homeScreenFlow = do
           fetchAndModifyLocationLists bothLocationChangedState.data.savedLocations
         (GlobalState globalState) <- getState
         let updateScreenState = globalState.homeScreen
+            recentList = 
+                updateLocListWithDistance 
+                  updateScreenState.data.recentSearchs.predictionArray 
+                  updateScreenState.props.sourceLat 
+                  updateScreenState.props.sourceLong 
+                  true 
+                  state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
         if (not srcServiceable && (updateScreenState.props.sourceLat /= -0.1 && updateScreenState.props.sourceLong /= -0.1) && (updateScreenState.props.sourceLat /= 0.0 && updateScreenState.props.sourceLong /= 0.0)) then do
-          let recentList = recentDistance updateScreenState.data.recentSearchs.predictionArray updateScreenState.props.sourceLat updateScreenState.props.sourceLong
           modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isSrcServiceable = false, isRideServiceable= false, isSource = Just true}, data {recentSearchs {predictionArray = recentList}}})
           homeScreenFlow
         else if ((not destServiceable) && (updateScreenState.props.destinationLat /= 0.0 && updateScreenState.props.destinationLat /= -0.1) && (updateScreenState.props.destinationLong /= 0.0 && bothLocationChangedState.props.destinationLong /= -0.1)) then do
@@ -613,10 +619,26 @@ homeScreenFlow = do
             _ <- pure $ toast (getString STR.LOCATION_UNSERVICEABLE)
             pure unit
             else pure unit
-          let recentList = (recentDistance updateScreenState.data.recentSearchs.predictionArray updateScreenState.props.sourceLat updateScreenState.props.sourceLong)
           modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{isDestServiceable = false, isRideServiceable = false,isSource = Just false, isSrcServiceable = true}, data {recentSearchs {predictionArray = recentList}}})
           homeScreenFlow
-         else modifyScreenState $ HomeScreenStateType (\homeScreen -> updateScreenState{props{ isRideServiceable= true, isSrcServiceable = true, isDestServiceable = true}, data {recentSearchs {predictionArray = (recentDistance updateScreenState.data.recentSearchs.predictionArray updateScreenState.props.sourceLat updateScreenState.props.sourceLong)}}})
+        else 
+          modifyScreenState $ 
+            HomeScreenStateType 
+              (\homeScreen -> 
+                updateScreenState
+                  { props
+                      { isRideServiceable = true
+                      , isSrcServiceable = true
+                      , isDestServiceable = true
+                      }
+                  , data 
+                      { recentSearchs 
+                          { predictionArray = 
+                              recentList
+                          }
+                      }
+                  }
+              )
         rideSearchFlow "NORMAL_FLOW"
 
     SEARCH_LOCATION input state -> do
@@ -627,12 +649,22 @@ homeScreenFlow = do
               Just false -> "ny_user_auto_complete_api_trigger_dst"
               Nothing -> ""
       _ <- lift $ lift $ liftFlow $ logEvent logField_ event
-      let sortedByDistanceList = sortPredctionByDistance searchLocationResp.predictions
-          predictionList = getLocationList sortedByDistanceList
-          sortedWithDistance =  recentDistance state.data.recentSearchs.predictionArray state.props.sourceLat state.props.sourceLong
-          recentLists = if state.props.isSource == Just true then sortedWithDistance else recentDistance state.data.destinationSuggestions state.props.sourceLat state.props.sourceLong
-          filteredRecentsList = filterRecentSearches recentLists predictionList
-          filteredPredictionList = differenceOfLocationLists predictionList filteredRecentsList
+      let 
+        sortedByDistanceList = sortPredctionByDistance searchLocationResp.predictions
+        predictionList = getLocationList sortedByDistanceList
+        listToBeUpdated = 
+          if state.props.isSource == Just true 
+            then state.data.recentSearchs.predictionArray 
+            else state.data.destinationSuggestions
+        recentLists = 
+          updateLocListWithDistance 
+            listToBeUpdated
+            state.props.sourceLat 
+            state.props.sourceLong 
+            true 
+            state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist 
+        filteredRecentsList = filterRecentSearches recentLists predictionList
+        filteredPredictionList = differenceOfLocationLists predictionList filteredRecentsList
 
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{locationList =
         map
@@ -1431,7 +1463,7 @@ rideSearchFlow flowType = do
 
                 Nothing -> pure unit
     else
-      let updatedLocationList = recentDistance finalState.data.destinationSuggestions finalState.props.sourceLat finalState.props.sourceLong
+      let updatedLocationList = updateLocListWithDistance finalState.data.destinationSuggestions finalState.props.sourceLat finalState.props.sourceLong true finalState.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
       in modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {locationList = updatedLocationList}, props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel}})
   homeScreenFlow
 
@@ -2282,8 +2314,7 @@ fetchAndModifyLocationLists savedLocationResp = do
                 (\item -> isPointWithinXDist item state state.data.config.suggestedTripsAndLocationConfig.tripWithinXDist) 
             $ Arr.reverse 
                 (Arr.sortWith (\d -> fromMaybe 0.0 d.locationScore) tripArrWithNeighbors)
-        updatedLocationList = recentDistance updateFavIcon state.props.sourceLat state.props.sourceLong
-        locationListWithinXDistance = filter (\item -> isLocationWithinXDist item state state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist) updatedLocationList
+        updatedLocationList = updateLocListWithDistance updateFavIcon state.props.sourceLat state.props.sourceLong true state.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
     
     modifyScreenState $ 
       HomeScreenStateType 
@@ -2292,8 +2323,8 @@ fetchAndModifyLocationLists savedLocationResp = do
             { data
               { savedLocations = savedLocationResp
               , recentSearchs {predictionArray = recents}
-              , locationList = locationListWithinXDistance
-              , destinationSuggestions = locationListWithinXDistance
+              , locationList = updatedLocationList
+              , destinationSuggestions = updatedLocationList
               , suggestionsData{suggestionsMap = suggestionsMap}
               , tripSuggestions = sortedTripList
               }
@@ -2310,15 +2341,6 @@ fetchAndModifyLocationLists savedLocationResp = do
             sourceLat
             sourceLong
             <= thresholdDist
-      
-      isLocationWithinXDist :: LocationListItemState -> HomeScreenState -> Number -> Boolean
-      isLocationWithinXDist item state thresholdDist = 
-        getDistanceBwCordinates 
-          (fromMaybe 0.0 item.lat) 
-          (fromMaybe 0.0 item.lon) 
-          state.props.sourceLat 
-          state.props.sourceLong 
-          <= thresholdDist
       
       getHelperLists savedLocationLists recentPredictionsObject state = 
         let suggestionsConfig = state.data.config.suggestedTripsAndLocationConfig
