@@ -27,7 +27,8 @@ import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils as HU
-import JBridge (askRequestedPermissions)
+import Foreign (unsafeToForeign)
+import JBridge 
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (delay)
@@ -98,6 +99,10 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             }
         )
         response.defaultEmergencyNumbers
+  void $ pure $ setCleverTapUserProp [ { key: "Safety Setup Completed", value: unsafeToForeign response.hasCompletedSafetySetup } ]
+  void $ pure $ setCleverTapUserProp [ { key: "Auto Share Night Ride", value: unsafeToForeign response.shareTripWithEmergencyContacts } ]
+  void $ pure $ setCleverTapUserProp [ { key: "Mock Safety Drill Completed", value: unsafeToForeign response.hasCompletedMockSafetyDrill } ]
+  void $ pure $ setCleverTapUserProp [ { key: "Night Safety Check Enabled", value: unsafeToForeign response.nightSafetyChecks } ]
   continue
     state
       { data

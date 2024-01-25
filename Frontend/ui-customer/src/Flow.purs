@@ -73,7 +73,7 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEvent, cleverTapCustomEventWithParams)
 import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, recentDistance, getCityCodeFromCity, getCityNameFromCode)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
@@ -1407,7 +1407,7 @@ homeScreenFlow = do
       -- let onRide = any (_ == state.props.currentStage) [ RideAccepted, RideStarted, ChatWithDriver ]
       --     stage = if onRide then ST.ActivateNammaSafety else ST.NammaSafetyDashboard
       let rideId = currentState.homeScreen.data.driverInfoCardState.rideId
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{props{triggeringSos = false, timerValue = 6, showTestDrill = false, showShimmer = true}, data{rideId = rideId, vehicleDetails = currentState.homeScreen.data.driverInfoCardState.registrationNumber}})
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{props{triggeringSos = false, timerValue = 6, showTestDrill = false, showShimmer = true, confirmTestDrill = false}, data{rideId = rideId, vehicleDetails = currentState.homeScreen.data.driverInfoCardState.registrationNumber}})
       -- activateSafetyScreenFlow
 
       case triggerSos of
@@ -1421,11 +1421,33 @@ homeScreenFlow = do
       case res of
         Right resp -> do
                         _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
-                        _ <- pure $ toast "Response received"
-                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {reportUnsafe  = false}})
+                        when (isSafe) $ do
+                          _ <- pure $ toast $ getString STR.GLAD_TO_KNOW_YOU_ARE_SAFE
+                          pure unit
         Left err   -> do
                         _ <- pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
                         pure unit
+              
+      homeScreenFlow
+    GO_TO_SHARE_RIDE state -> do
+      (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
+      let contacts = getDefaultPriorityList $ map (\(ContactDetails item) -> {
+          number: item.mobileNumber,
+          name: item.name,
+          isSelected: true,
+          enableForFollowing: false,
+          priority: fromMaybe 1 item.priority
+        }) res.defaultEmergencyNumbers
+      contactsInString <- pure $ toStringJSON contacts
+      setValueToLocalStore CONTACTS (contactsInString)
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{contactList = contacts}, props{showShareRide = true}})
+      homeScreenFlow
+    GO_TO_NOTIFY_RIDE_SHARE state -> do
+      let req = ShareRideReq { emergencyContactNumbers : map (\item -> item.number) $ filter (\item -> item.isSelected) state.data.contactList }
+      _ <- lift $ lift $ Remote.shareRide req
+      void $ pure $ cleverTapCustomEvent "ny_user_auto_share_ride"
+      pure $ toggleBtnLoader "" false
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{showShareRide = false}})
       homeScreenFlow
     _ -> homeScreenFlow
 
@@ -3189,11 +3211,15 @@ activateSafetyScreenFlow = do
       if state.props.showTestDrill
         then do
           _ <- lift $ lift $ Remote.createMockSos ""
+          void $ pure $ cleverTapCustomEvent "ny_user_test_drill"
           pure unit
         else do
           (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow flowType "") rideId)
-          when (not isPoliceFlow) $ do
+          if (not isPoliceFlow) then do
             modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> state{data {sosId = res.id}})
+            void $ pure $ cleverTapCustomEventWithParams "ny_user_sos_activated" "current_time" (getCurrentUTC "")
+          else 
+            void $ pure $ cleverTapCustomEvent "ny_user_call_police_activated"
           setValueToLocalStore IS_SOS_ACTIVE "true"
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> state{props{shouldCallAutomatically = true}})
       setValueToLocalStore SOS_TYPE $ if isPoliceFlow then "Police" else "SafetyFlow"
@@ -3208,6 +3234,7 @@ activateSafetyScreenFlow = do
           chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
                                                         chatType : "IssueMessage", 
                                                         timestamp : (getCurrentUTC "")} )getOptionsRes.messages
+      void $ pure $ cleverTapCustomEvent "ny_user_report_safety_issue_activated"
       modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ST.SafetyScreen, chats = chats', tripId = Just state.data.rideId, categoryName = "Safety Related Issue", categoryId = "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", options = getOptionsRes', chatConfig { messages = messages' },  selectedRide = Nothing } } )
       issueReportChatScreenFlow
 
@@ -3256,6 +3283,7 @@ sosActiveFlow = do
     SosActiveScreen.UpdateAsSafe state -> do
       when (not state.props.showTestDrill) $ do
         _ <- lift $ lift $ Remote.markRideAsSafe state.data.sosId
+        void $ pure $ cleverTapCustomEventWithParams "ny_user_sos_marked_safe" "current_time" (getCurrentUTC "")
         pure unit
       modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{sosId = ""}})
       setValueToLocalStore IS_SOS_ACTIVE "false"

@@ -74,6 +74,7 @@ import Storage (KeyStore(..), setValueToLocalStore)
 --         pure unit
 safetyEducationFlow :: FlowBT String Unit
 safetyEducationFlow = do
+  void $ pure $ cleverTapCustomEvent "ny_user_safety_learn_more_clicked"
   flow <- UI.safetyEducationScreen
   case flow of
     SafetyEducationScreen.Refresh state -> do

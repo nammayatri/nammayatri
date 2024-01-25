@@ -215,6 +215,8 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_HELP_AND_SUPPORT 
                         | REALLOCATE_RIDE HomeScreenState
                         | SAFETY_SUPPORT HomeScreenState Boolean
+                        | GO_TO_SHARE_RIDE HomeScreenState
+                        | GO_TO_NOTIFY_RIDE_SHARE HomeScreenState
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

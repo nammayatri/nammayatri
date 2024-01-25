@@ -152,11 +152,11 @@ sosDescriptionView state push =
           ]
         <> FontStyle.h3 TypoGraphy
     , textView
-        $ [ text
-              $ if null state.data.contactsList then
-                  "Please stay calm, Namma Yatri safety team is alerted!"
+        $ [ text $ getString
+               if null state.data.contactsList then
+                  PLEASE_STAY_CALM_TEAM_ALERTED
                 else
-                  getString SOS_TRIGGERED_DESC
+                  SOS_TRIGGERED_DESC
           , color Color.white900
           , margin $ MarginTop 8
           , gravity CENTER
@@ -186,7 +186,7 @@ sosActionsView state push =
         , gravity CENTER
         ]
         [ textView
-            $ [ text "Try connecting with another Emergency Contact" -- $ getString EMERGENCY_REQUEST_SENT
+            $ [ text $ getString TRY_ANOTHER_CONTACT
               , color Color.white900
               , visibility $ boolToVisibility $ not $ null state.data.contactsList
               ]
@@ -352,12 +352,12 @@ testSafetyHeaderView push =
         , orientation VERTICAL
         ]
         [ textView
-            $ [ text "Test Safety Drill"
+            $ [ text $ getString TEST_SAFETY_DRILL
               , color Color.black900
               ]
             <> FontStyle.subHeading1 TypoGraphy
         , textView
-            [ text "This is not a real SOS situation"
+            [ text $ getString THIS_IS_NOT_A_REAL_SOS_SITUATION
             , color Color.black900
             ]
         ]
@@ -411,7 +411,7 @@ dialPoliceView state push =
                 , orientation VERTICAL
                 ]
                 [ textView
-                    $ [ text "Your Current Location"
+                    $ [ text $ getString YOUR_CURRENT_LOCATION
                       , color Color.white900
                       ]
                     <> FontStyle.subHeading1 TypoGraphy
@@ -441,7 +441,7 @@ dialPoliceView state push =
                 , orientation VERTICAL
                 ]
                 [ textView
-                    $ [ text "Your Vehicle Info"
+                    $ [ text $ getString YOUR_VEHICLE_INFO
                       , color Color.white900
                       ]
                     <> FontStyle.subHeading1 TypoGraphy
@@ -466,7 +466,7 @@ dialPoliceView state push =
                 , margin $ MarginRight 5
                 ]
             , textView
-                $ [ text "Please give the operator your location - The app doesn’t share the location automatically."
+                $ [ text $ getString POLICE_VIEW_INSTRUCTION
                   , color Color.black500
                   ]
                 <> FontStyle.tags TypoGraphy

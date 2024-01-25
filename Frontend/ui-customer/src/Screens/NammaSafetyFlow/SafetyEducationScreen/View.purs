@@ -172,7 +172,7 @@ aboutNammaSafetyView state push =
         , orientation VERTICAL
         ]
         [ textView
-            [ text $ getString LEARN_ABOUT_NAMMA_SAFETY
+            [ text $ getString LEARN_ABOUT_SAFETY_MODE
             , width MATCH_PARENT
             , height WRAP_CONTENT
             , color Color.black700

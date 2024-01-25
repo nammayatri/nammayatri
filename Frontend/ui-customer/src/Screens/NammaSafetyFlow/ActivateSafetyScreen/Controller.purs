@@ -84,6 +84,7 @@ data Action
   | ShowPoliceView
   | ShowSafetyIssueView
   | SelectedCurrentLocation Number Number String
+  | GoToEducationView
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval AddContacts state = updateAndExit state $ GoToEmergencyContactScreen state
@@ -194,5 +195,7 @@ eval ShowSafetyIssueView state = exit $ GoToIssueScreen state
 
 eval (SelectedCurrentLocation lat lon name) state = 
   continue state  { data { currentLocation =  name  } }
+
+eval GoToEducationView state = exit $ GoToEducationScreen state
 
 eval (_) state = continue state

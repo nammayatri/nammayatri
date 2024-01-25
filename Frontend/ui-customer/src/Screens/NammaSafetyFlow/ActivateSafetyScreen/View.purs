@@ -102,7 +102,6 @@ view push state =
             , background Color.black900
         , afterRender ( \_ -> do
         getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
-        let _ = spy "dialPoliceView state " state
         pure unit) (const NoAction)
         ]
         [ linearLayout
@@ -131,7 +130,7 @@ view push state =
       { learnMoreTitle = getString LEARN_ABOUT_NAMMA_SAFETY
       , showLearnMore = not state.props.showCallPolice
       , useLightColor = true
-      , title = if not state.props.showCallPolice then getString SAFETY_CENTER else "Call Police"
+      , title = getString if not state.props.showCallPolice then  SAFETY_CENTER else CALL_POLICE
       , headerVisiblity =
         case state.props.confirmTestDrill of
           true -> INVISIBLE
@@ -163,14 +162,14 @@ sosButtonView state push =
   let
     buttonText = case state.props.triggeringSos, state.props.showTestDrill of
       true, _ -> show state.props.timerValue
-      false, true -> "TEST\nSOS"
-      false, false -> "SOS" --getString SOS
+      false, true -> getString TEST_SOS
+      false, false -> getString SOS
 
-    descText = case state.props.triggeringSos, state.props.showTestDrill of
-      true, true -> "Test SOS is getting activated in..."
-      true, false -> "Emergency SOS is getting activated in..."
-      false, true -> "Press the below button to start the\nTest SOS Drill"
-      false, false -> "Press the button on emergency"
+    descText = getString $case state.props.triggeringSos, state.props.showTestDrill of
+      true, true -> TEST_SOS_ACTIVATING_IN
+      true, false -> EMERGENCY_SOS_ACTIVATING
+      false, true -> PRESS_TO_START_TEST_DRILL
+      false, false -> PRESS_THE_BUTTON_ON_EMERGENCY
   in
     linearLayout
       [ width MATCH_PARENT
@@ -297,7 +296,7 @@ emergencyContactsView state push =
             <> FontStyle.body1 TypoGraphy
         ]
     , textView
-        $ [ text "Emergency Contacts can follow/ take emergency response actions on Namma Yatri App"
+        $ [ text $ getString EMERGENCY_CONTACTS_CAN_TAKE_ACTION
           , color Color.white900
           , visibility $ boolToVisibility $ state.props.showTestDrill && not (null state.data.contactsList)
           , gravity CENTER
@@ -314,7 +313,7 @@ emergencyContactsView state push =
         , visibility $ boolToVisibility $ not $ null state.data.contactsList
         ]
         [ textView
-            $ [ text "Select the contact to be called"
+            $ [ text $ getString SELECT_CONTACT_TO_CALL
               , color Color.black500
               ]
             <> FontStyle.tags TypoGraphy
@@ -347,7 +346,7 @@ emergencyContactsView state push =
         ]
     
     , textView
-        $ [ text "Please inform your emergency contacts about this test drill to prevent any unnecessary panic"
+        $ [ text $ getString INFORM_EMERGENCY_CONTACTS
           , color Color.black500
           , visibility $ boolToVisibility state.props.showTestDrill
           , margin $ MarginTop 16
@@ -376,7 +375,7 @@ emergencyContactsView state push =
     }
   
   configDescThree =
-    { text': "Share location and ride details with your emergency contacts"
+    { text': getString SHARE_LOCATION_AND_RIDE_DETAILS_EMERGENCY_CONTACT
     , isActive: false
     , textColor: Color.white900
     , useMargin: true
@@ -405,12 +404,12 @@ otherActionsView state push =
                 []
         )
         [ textView
-            $ [ text "Other Safety Actions"
+            $ [ text $ getString OTHER_SAFETY_ACTIONS
               , color Color.white900
               ]
             <> FontStyle.subHeading1 TypoGraphy
         , textView
-            $ [ text "Available only during a real SOS situation"
+            $ [ text $ getString AVAILABLE_IN_REAL_EMERGENCY
               , color Color.white900
               , margin $ MarginTop 4
               ]
@@ -474,24 +473,6 @@ otherActionsView state push =
     , image: Just "ny_ic_issue_box"
     }
 
-getHeaderTitle :: SafetySetupStage -> String
-getHeaderTitle stage = getString NAMMA_SAFETY
-
-toggleSwitchView :: Boolean -> Boolean -> Action -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-toggleSwitchView isActive visibility' action push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity CENTER_VERTICAL
-    , onClick push $ const action --ToggleSwitch stage
-    , visibility $ boolToVisibility visibility'
-    ]
-    [ imageView
-        [ imageUrl if isActive then "ny_ic_switch_active" else "ny_ic_switch_inactive"
-        , width $ V 40
-        , height $ V 24
-        ]
-    ]
 
 shimmerView :: forall w. ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
@@ -559,12 +540,12 @@ testSafetyHeaderView push =
         , orientation VERTICAL
         ]
         [ textView
-            $ [ text "Test Safety Drill"
+            $ [ text $ getString TEST_SAFETY_DRILL
               , color Color.black900
               ]
             <> FontStyle.subHeading1 TypoGraphy
         , textView
-            [ text "This is not a real SOS situation"
+            [ text $ getString THIS_IS_NOT_A_REAL_SOS_SITUATION
             , color Color.black900
             ]
         ]
@@ -578,7 +559,7 @@ testSafetyHeaderView push =
             , color Color.black900
             , gravity RIGHT
             , margin $ MarginRight 16
-            -- , onClick push $ const $ SwitchToStage AboutNammaSafety
+            , onClick push $ const GoToEducationView
             ]
         ]
     ]
@@ -596,7 +577,7 @@ disclaimerView state push =
     , visibility $ boolToVisibility $ state.props.triggeringSos && not state.props.showTestDrill
     ]
     [ textView
-        $ [ text "Disclaimer:"
+        $ [ text $ getString DISCLAIMER <> ":"
           , color Color.white900
           ]
         <> FontStyle.subHeading2 TypoGraphy
@@ -624,9 +605,9 @@ disclaimerView state push =
     ]
   where
   disclaimerText =
-    [ { text: "Use only in emergencies", action: NoAction }
-    , { text: "Use <span style='color:#2194FF'><u>Test safety drill</u></span> for testing", action: GoToTestDrill }
-    , { text: "Misuse may result in legal action", action: NoAction }
+    [ { text: getString USE_ONLY_IN_EMERGENCY, action: NoAction }
+    , { text: getString USE_TEST_DRILL, action: GoToTestDrill }
+    , { text: getString MISUSE_MAY_LEAD_TO_LEGAL_ACTION, action: NoAction }
     ]
 
 dismissSoSButtonView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -642,7 +623,7 @@ dismissSoSButtonView state push =
         true -> emptyTextView
         false -> separatorView Color.black700 $ MarginVertical 40 16
     , textView
-        $ [ text "NammaYatri will indicate to your emergency contacts that this is a test drill, ensuring a stress-free experience."
+        $ [ text $ getString INDICATION_TO_EMERGENCY_CONTACTS
           , color Color.black500
           , gravity CENTER
           , margin $ Margin 16 16 16 0
@@ -739,13 +720,13 @@ confirmSafetyDrillView state push =
         ]
     , layoutWithWeight
     , textView
-        $ [ text "Are you ready to start the test safety drill?"
+        $ [ text $ getString ARE_YOU_READY_TO_START_DRILL
           , color Color.white900
           , gravity CENTER
           ]
         <> FontStyle.h1 TypoGraphy
     , textView
-        $ [ text "Taking part in the test drill helps you to understand how to act in a real emergency. Take the test drill now, to avoid panic during an emergency."
+        $ [ text $ getString TEST_DRILL_DESC
           , color Color.white900
           , gravity CENTER
           , margin $ MarginTop 16
@@ -789,7 +770,7 @@ dialPoliceView state push =
                 , orientation VERTICAL
                 ]
                 [ textView
-                    $ [ text "Your Current Location"
+                    $ [ text $ getString YOUR_CURRENT_LOCATION
                       , color Color.white900
                       ]
                     <> FontStyle.subHeading1 TypoGraphy
@@ -819,7 +800,7 @@ dialPoliceView state push =
                 , orientation VERTICAL
                 ]
                 [ textView
-                    $ [ text "Your Vehicle Info"
+                    $ [ text $ getString YOUR_VEHICLE_INFO
                       , color Color.white900
                       ]
                     <> FontStyle.subHeading1 TypoGraphy
@@ -844,7 +825,7 @@ dialPoliceView state push =
               , margin $ MarginRight 5
               ]
             , textView $
-              [ text "Please give the operator your location - The app doesn’t share the location automatically."
+              [ text $ getString POLICE_VIEW_INSTRUCTION
               , color Color.black500
               ] <> FontStyle.tags TypoGraphy
             ]

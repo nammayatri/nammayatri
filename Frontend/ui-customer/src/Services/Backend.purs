@@ -1127,3 +1127,9 @@ createMockSos dummy = do
         withAPIResult (EP.createMockSos "") unwrapResponse $ callAPI headers (CreateMockSosReq "")
     where
         unwrapResponse (x) = x
+
+shareRide (ShareRideReq req) = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.shareRide "") unwrapResponse $ callAPI headers (ShareRideReq req)
+    where
+        unwrapResponse (x) = x

@@ -1635,6 +1635,7 @@ getChatSuggestions state = do
 safetyAlertConfig :: ST.HomeScreenState -> PopUpModal.Config
 safetyAlertConfig state = let
   config' = PopUpModal.config
+  alertData = getSafetyAlertData $ getValueToLocalStore SAFETY_ALERT_TYPE
   popUpConfig' = config'{
       dismissPopup =true,
       optionButtonOrientation = "VERTICAL",
@@ -1646,7 +1647,7 @@ safetyAlertConfig state = let
       , margin = Margin 16 0 16 10
       }
       , secondaryText { 
-        text = getSafetyText $ getValueToLocalStore SAFETY_ALERT_TYPE
+        text = alertData.text
         , margin = MarginHorizontal 16 16 
        },
       option1 {
@@ -1666,7 +1667,7 @@ safetyAlertConfig state = let
       },
       cornerRadius = Corners 15.0 true true true true,
       coverImageConfig {
-        imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_safety_alert"
+        imageUrl = HU.fetchImage HU.FF_ASSET alertData.image
       , visibility = VISIBLE
       , margin = Margin 16 16 16 16
       , width = MATCH_PARENT
@@ -1675,10 +1676,10 @@ safetyAlertConfig state = let
   }
   in popUpConfig'
 
-getSafetyText :: String -> String
-getSafetyText reason
-            | reason == "deviation" = getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE
-            | otherwise             = getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED
+getSafetyAlertData :: String -> {text :: String, image :: String}
+getSafetyAlertData reason
+            | reason == "deviation" = {text : getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE, image : "ny_ic_safety_alert_deroute"}
+            | otherwise             = {text : getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED, image : "ny_ic_safety_alert_stationary"}
 
 
 reportingIssueConfig :: ST.HomeScreenState -> PopUpModal.Config
@@ -1721,3 +1722,17 @@ reportingIssueConfig state =
         }
   in
     popUpConfig'
+
+shareRideButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+shareRideButtonConfig state = 
+  PrimaryButton.config
+    { textConfig
+        { text = getVarString SHARE_RIDE_WITH_CONTACT [numberOfSelectedContacts]
+        , accessibilityHint = "Share Ride Button"
+        }
+    , id = "ShareRideButton"
+    , enableLoader = (JB.getBtnLoader "ShareRideButton")
+    , margin = MarginTop 20
+    }
+  where 
+    numberOfSelectedContacts = show $ DA.length $ DA.filter (\contact -> contact.isSelected) state.data.contactList

@@ -175,7 +175,7 @@ window.getMerchantConfig = function () {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
       , "name" : "Namma Yatri"
     }
-    , "enableMockLocation" : false
+    , "enableMockLocation" : true
     , "cityConfig" : [
       {
         "cityName" : "Bangalore",

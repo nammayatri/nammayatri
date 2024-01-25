@@ -220,7 +220,7 @@ config =
             --   enableYatriCoins : false
             -- }
         ]
-  , enableMockLocation : false
+  , enableMockLocation : true
   , permissions : {
       locationPermission : false,
       notification : true

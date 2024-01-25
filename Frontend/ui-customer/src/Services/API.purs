@@ -2890,3 +2890,31 @@ instance standardEncodeCreateMockSosRes :: StandardEncode CreateMockSosRes where
 instance showCreateMockSosRes :: Show CreateMockSosRes where show = genericShow
 instance decodeCreateMockSosRes :: Decode CreateMockSosRes where decode = defaultDecode
 instance encodeCreateMockSosRes :: Encode CreateMockSosRes where encode = defaultEncode
+
+
+newtype ShareRideReq = ShareRideReq {
+    emergencyContactNumbers :: Array String
+  }
+
+newtype ShareRideRes = ShareRideRes {
+    result :: String
+  }
+
+instance makeShareRideRequest :: RestEndpoint ShareRideReq ShareRideRes where
+    makeRequest reqBody headers = defaultMakeRequest POST (EP.shareRide "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericShareRideRes :: Generic ShareRideRes _
+derive instance newtypeShareRideRes :: Newtype ShareRideRes _
+instance standardEncodeShareRideRes :: StandardEncode ShareRideRes where standardEncode (ShareRideRes res) = standardEncode res
+instance showShareRideRes :: Show ShareRideRes where show = genericShow
+instance decodeShareRideRes :: Decode ShareRideRes where decode = defaultDecode
+instance encodeShareRideRes :: Encode ShareRideRes where encode = defaultEncode
+
+derive instance genericShareRideReq :: Generic ShareRideReq _
+derive instance newtypeShareRideReq :: Newtype ShareRideReq _
+instance standardEncodeShareRideReq :: StandardEncode ShareRideReq where standardEncode (ShareRideReq req) = standardEncode req
+instance showShareRideReq :: Show ShareRideReq where show = genericShow
+instance decodeShareRideReq :: Decode ShareRideReq where decode = defaultDecode
+instance encodeShareRideReq :: Encode ShareRideReq where encode = defaultEncode

@@ -142,6 +142,7 @@ initData = {
     , infoCardPeekHeight : 0
     , peekHeight : 0
     , rideHistoryTrip : Nothing
+    , contactList : []
     },
     props: {
       rideRequestFlow : false
@@ -244,7 +245,6 @@ initData = {
     , flowWithoutOffers : true
     , showEducationalCarousel : false
     , specialZoneType : ""
-    , reportUnsafe : false
     , currentLocation : {
         lat : 0.0,
         lng : 0.0,
@@ -283,6 +283,7 @@ initData = {
     , enableChatWidget : false
     , showSosBanner : false
     , enableLocalPoliceSupport : false
+    , showShareRide : false
     }
 }
 

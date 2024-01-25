@@ -151,7 +151,7 @@ driverRatingView state  =
       , textView (
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ if ceil state.driverRating == 0.0 then (getString NEW_) else show $ ceil state.driverRating
+        , text $ if ceil state.driverRating == 0.0 then (getString NEW_) else show $ state.driverRating
         ] <> FontStyle.tags LanguageStyle)
     ]
 

@@ -761,6 +761,7 @@ type HomeScreenStateData =
   , suggestionsData :: SuggestionsData
   , peekHeight :: Int
   , rideHistoryTrip :: Maybe Trip
+  , contactList :: Array NewContacts
   }
 
 type QuoteListItemState = 
@@ -912,7 +913,7 @@ type HomeScreenStateProps =
   , enableChatWidget :: Boolean
   , showSosBanner :: Boolean
   , enableLocalPoliceSupport :: Boolean
-  , reportUnsafe :: Boolean
+  , showShareRide :: Boolean
   }
 
 data City

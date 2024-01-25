@@ -270,7 +270,7 @@ dependencies {
     implementation 'com.android.installreferrer:installreferrer:2.2'
     implementation 'com.google.mlkit:translate:17.0.1'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+//    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
 }
 
 def tmpSource = "/tmp/juspay"

@@ -55,7 +55,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, mapWithIndex)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
@@ -73,7 +73,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, recentDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -111,6 +111,7 @@ import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
+import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Timers (clearTimerWithId)
 import Mobility.Prelude (boolToInt, toBool)
 import SuggestionUtils
@@ -747,6 +748,8 @@ data ScreenOutput = LogoutUser
                   | GoToHelpAndSupport HomeScreenState
                   | ReAllocateRide HomeScreenState
                   | SafetySupport HomeScreenState Boolean
+                  | GoToShareRide HomeScreenState
+                  | GoToNotifyRideShare HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -892,7 +895,11 @@ data Action = NoAction
             | ChooseSingleVehicleAction ChooseVehicleController.Action
             | StartSOSOnBoarding Banner.Action
             | SafetyAlertAction PopUpModal.Action
-            | ReportUnsafe PopUpModal.Action
+            | ContactAction ContactCircle.Action
+            | ShowShareRide
+            | NotifyRideShare PrimaryButtonController.Action
+            | ToggleShare Int
+            | DismissShareRide
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1679,7 +1686,8 @@ eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet
 eval ShareRide state = do
   continueWithCmd state
         [ do
-            _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> " is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            _ <- pure $ shareTextMessage "" $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]
 
@@ -2422,20 +2430,22 @@ eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state tru
 
 eval ReportIssueClick state = exit $  GoToHelp state
 
-eval (SafetyAlertAction PopUpModal.OnButton1Click) state = exit $ SafetySupport state true
+eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
+  void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_i_feel_safe"
+  exit $ SafetySupport state true
 
 eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
-    _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
-    continue state {props {reportUnsafe = true}}
+    void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_need_help"
+    void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
+    exit $ GoToNammaSafety state true
 
-eval (ReportUnsafe PopUpModal.OnButton1Click) state = 
-    case state.data.config.safetyConfig.enableSupport of
-      true -> exit $ SafetySupport state false
-      false -> do
-        void $ pure $ showDialer "112" false
-        continue state {props {reportUnsafe = false}}
+eval ShowShareRide state = exit $ GoToShareRide state
 
-eval (ReportUnsafe PopUpModal.OnButton2Click) state = continue state{props {reportUnsafe = false}}
+eval (NotifyRideShare PrimaryButtonController.OnClick) state = exit $ GoToNotifyRideShare state
+
+eval (ToggleShare index) state = continue state {data{contactList = mapWithIndex (\i item -> if index == i then item {isSelected = not item.isSelected} else item) state.data.contactList}}
+
+eval DismissShareRide state = continue state {props{showShareRide = false}}
 
 eval _ state = continue state
 

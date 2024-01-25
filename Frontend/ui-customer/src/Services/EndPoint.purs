@@ -219,3 +219,6 @@ safetySupport dummy = (getBaseUrl "40") <> "/support/safetyCheckSupport"
 
 createMockSos :: String -> String
 createMockSos dummy = (getBaseUrl "40") <> "/sos/createMockSos"
+
+shareRide :: String -> String
+shareRide dummy = (getBaseUrl "40") <> "/share/ride"

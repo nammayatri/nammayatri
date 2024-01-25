@@ -26,7 +26,7 @@ import Data.Maybe
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils as HU
-import JBridge (askRequestedPermissions)
+import JBridge (askRequestedPermissions, pauseYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (delay)
@@ -123,7 +123,8 @@ eval (SwitchToStage stage) state = continue state { props { setupStage = stage }
 eval (BackPressed) state =
   if isNothing state.props.educationViewIndex then
     exit $ GoBack state
-  else
+  else do
+    void $ pure $ pauseYoutubeVideo unit
     continue state { props { educationViewIndex = Nothing } }
 
 eval DisableShimmer state = continue state { props { showShimmer = false } }

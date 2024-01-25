@@ -599,6 +599,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             String notificationTitle = getString(R.string.everything_okay);
             SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             sharedPref.edit().putString("SAFETY_ALERT_TYPE", body).apply();
+            CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(this);
+            HashMap<String, Object> cleverTapParams = new HashMap<>();
+            cleverTapParams.put("searchRequestId", body);
+            cleverTapAPI.pushEvent("ny_user_night_safety_alert", cleverTapParams);
             notificationBody = getString(R.string.safety_deviation_alert);
             NotificationUtils.showNotification(this, notificationTitle, notificationBody, payload, imageUrl);
         }
