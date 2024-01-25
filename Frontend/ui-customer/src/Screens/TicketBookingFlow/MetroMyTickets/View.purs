@@ -46,12 +46,50 @@ view push state =
   , height MATCH_PARENT
   , background Color.white900
   , clickable true
-  -- , onBackPressed push $ const BackPressed
+  , onBackPressed push $ const BackPressed
   , orientation VERTICAL
-  ][
-    headerView push state
-  , scrollableView push state
-  ]
+  , afterRender push $ const AfterRender
+  ] $ if not $ state.props.showShimmer then 
+        [ headerView push state
+        , scrollableView push state
+        ]
+      else
+        [shimmerView state]
+
+shimmerView :: forall w . ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
+shimmerView state =
+  shimmerFrameLayout[ 
+    width MATCH_PARENT
+  , height MATCH_PARENT
+  , orientation VERTICAL
+  , background Color.white900
+  , visibility $ boolToVisibility $  state.props.showShimmer
+  ][ 
+    linearLayout [ 
+      width MATCH_PARENT
+    , height (V 235)
+    , margin (Margin 16 15 16 0)
+    , background Color.greyDark
+    , cornerRadius 16.0
+    ] []
+  , linearLayout[
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , margin (MarginTop 258)
+    ] (DA.mapWithIndex 
+        (\index item ->
+            linearLayout
+              [ width MATCH_PARENT
+              , height (V 60)
+              , margin (Margin 16 16 16 0)
+              , cornerRadius 12.0
+              , background Color.greyDark
+              ][]
+        ) (1 .. 7)
+      )
+    ]
+
 
 headerView :: forall w . (Action -> Effect Unit) -> ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
 headerView push state = 
@@ -94,10 +132,9 @@ scrollableView push state =
       width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    ][
-      activeTicketsListView push state
-    , pastTicketsListView push state
-    ]
+    ] $ []
+      <> if not $ null state.data.activeTickets then [activeTicketsListView push state] else [linearLayout [visibility GONE] []]
+      <> if not $ null state.data.pastTickets then [pastTicketsListView push state] else [linearLayout [visibility GONE] []]
   ]
 
 activeTicketsListView :: forall w . (Action -> Effect Unit) -> ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
@@ -119,13 +156,11 @@ activeTicketsListView push state =
     , height WRAP_CONTENT
     , orientation VERTICAL
     , margin $ MarginTop 13
-    ] [
-      activeTicketView push state
-    ]
+    ] $ map (\ ticket -> activeTicketView push ticket) state.data.activeTickets
   ]
 
-activeTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
-activeTicketView push state = 
+activeTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
+activeTicketView push ticketCard = 
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT 
@@ -133,6 +168,7 @@ activeTicketView push state =
   , cornerRadius 8.0
   , orientation VERTICAL
   , background Color.grey900
+  , onClick push $ const $ ActiveTicketPressed ticketCard.metroTicketStatusApiResp
   ][ 
     linearLayout [
       width MATCH_PARENT
@@ -167,7 +203,7 @@ activeTicketView push state =
           textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text "Anna Nagar East to Chennai International Airport"
+          , text $ ticketCard.sourceName <> " to " <> ticketCard.destinationName
           , color Color.black800
           ] <> FontStyle.body1 TypoGraphy
         , linearLayout [
@@ -179,7 +215,7 @@ activeTicketView push state =
             textView $ [
               width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text "10th Jan, 24"
+            , text ticketCard.createdAt
             , color Color.black700
             ] <> FontStyle.tags TypoGraphy
           , linearLayout [
@@ -193,7 +229,7 @@ activeTicketView push state =
           , textView $ [
               width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text $ "6 tickets"
+            , text $ (show ticketCard.noOfTickets) <> " tickets"
             , color Color.black700
             ] <> FontStyle.tags TypoGraphy
           ]
@@ -223,7 +259,7 @@ activeTicketView push state =
         , textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ "Valid until " <> "10th Jan, 24"
+          , text $ "Valid until " <> ticketCard.validUntill
           ] <> FontStyle.tags TypoGraphy
         ]
       , linearLayout [
@@ -272,13 +308,11 @@ pastTicketsListView push state =
     , orientation VERTICAL
     , margin $ MarginTop 13
     , orientation VERTICAL
-    ] [
-      pastTicketView push state
-    ]
+    ] $ map (\ticket ->  pastTicketView push ticket) state.data.pastTickets
   ]
 
-pastTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
-pastTicketView push state = 
+pastTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
+pastTicketView push ticketCard = 
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -286,6 +320,7 @@ pastTicketView push state =
   , cornerRadius 8.0
   , background Color.grey900
   , gravity CENTER
+  , onClick push $ const $ PastTicketPressed ticketCard.metroTicketStatusApiResp
   ][
     linearLayout [
       width MATCH_PARENT
@@ -315,7 +350,7 @@ pastTicketView push state =
         textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text "Anna Nagar East to Egmore"
+        , text $ ticketCard.sourceName <> " to " <> ticketCard.destinationName
         , color Color.black800
         ] <> FontStyle.body1 TypoGraphy
       , linearLayout [
@@ -327,7 +362,7 @@ pastTicketView push state =
           textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text "10th Jan, 24"
+          , text ticketCard.createdAt
           , color Color.black700
           ] <> FontStyle.tags TypoGraphy
         , linearLayout [
@@ -341,14 +376,14 @@ pastTicketView push state =
         , textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ "6 tickets"
+          , text $ (show ticketCard.noOfTickets) <> " tickets"
           , color Color.black700
           ] <> FontStyle.tags TypoGraphy
         ]
       , textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ "Expired"
+        , text $ ticketCard.status
         , color Color.green900
         ] <> FontStyle.body3 TypoGraphy
       ]

@@ -50,3 +50,4 @@ import Screens.TicketBookingFlow.MetroMyTickets.Handler (metroMyTicketsScreen) a
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.SearchLocationScreen.View (searchLocationScreen) as UI
 import Screens.TicketBookingFlow.MetroTicketBooking.Handler (metroTicketBookingScreen) as UI
+import Screens.TicketBookingFlow.MetroTicketStatus.Handler (metroTicketStatusScreen) as UI
