@@ -73,14 +73,6 @@ _:
         '';
       };
 
-      run-svc = {
-        category = "Backend";
-        description = ''
-          Run the nammayatri services like kafka, redis, databases, osrm-server and passetto-server.
-        '';
-        exec = "nix run .#services";
-      };
-
       kill-svc-ports = {
         category = "Backend";
         description = ''
