@@ -28,7 +28,7 @@ import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.SafetyAlertEvent
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.StopArrivedEvent
 import Data.OpenApi
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (fromList)
 import qualified Kernel.Utils.JSON as J
 import qualified Kernel.Utils.Schema as S
 

@@ -90,6 +90,12 @@ type API =
                     :> "cancel"
                     :> ReqBody '[JSON] CancelRideReq
                     :> Post '[JSON] RideCancel.CancelRideResp
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
+                    :> "arrived"
+                    :> "stop"
+                    :> ReqBody '[JSON] LatLong
+                    :> Post '[JSON] APISuccess
                 )
          )
 
@@ -120,6 +126,7 @@ handler =
              :<|> startRide
              :<|> endRide
              :<|> cancelRide
+             :<|> arrivedAtStop
          )
 
 startRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess
@@ -169,3 +176,6 @@ listDriverRides (driverId, _, _) mbLimit mbOffset mbRideStatus mbDay = withFlowH
 
 arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
+
+arrivedAtStop :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
+arrivedAtStop (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtStop rideId req

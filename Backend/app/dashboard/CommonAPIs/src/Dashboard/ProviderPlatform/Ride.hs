@@ -252,7 +252,9 @@ data RideInfoRes = RideInfoRes
     bookingToRideStartDuration :: Maybe Minutes,
     distanceCalculationFailed :: Maybe Bool,
     driverDeviatedFromRoute :: Maybe Bool,
-    vehicleVariant :: Maybe Variant
+    vehicleVariant :: Maybe Variant,
+    nextStopLocation :: Maybe LocationAPIEntity,
+    lastStopLocation :: Maybe LocationAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

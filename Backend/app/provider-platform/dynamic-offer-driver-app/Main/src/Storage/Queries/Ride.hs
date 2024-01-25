@@ -774,7 +774,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.tripEndLat = lat <$> tripEndPos,
         BeamR.tripStartLon = lon <$> tripStartPos,
         BeamR.tripEndLon = lon <$> tripEndPos,
-        pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
+        BeamR.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
         BeamR.fareParametersId = getId <$> fareParametersId,
         BeamR.distanceCalculationFailed = distanceCalculationFailed,
         BeamR.createdAt = createdAt,

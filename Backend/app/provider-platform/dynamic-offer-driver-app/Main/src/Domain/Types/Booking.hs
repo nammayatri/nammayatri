@@ -78,6 +78,7 @@ data Booking = Booking
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     paymentUrl :: Maybe Text,
+    stopLocationId :: Maybe (Id DLoc.Location),
     distanceToPickup :: Maybe Meters
   }
   deriving (Generic)

@@ -213,6 +213,7 @@ handler merchantId req validatedReq = do
             area = searchRequest.area,
             paymentMethodId = mbPaymentMethodId,
             distanceToPickup = distanceToPickup,
+            stopLocationId = (.id) <$> toLocation,
             ..
           }
 

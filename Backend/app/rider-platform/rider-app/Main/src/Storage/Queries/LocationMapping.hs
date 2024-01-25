@@ -41,6 +41,14 @@ findAllByEntityIdAndOrder entityId order =
     [Se.And [Se.Is BeamLM.entityId $ Se.Eq entityId, Se.Is BeamLM.order $ Se.Eq order]]
     Nothing
 
+maxOrderByEntity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m Int
+maxOrderByEntity entityId = do
+  lms <- findAllWithKVAndConditionalDB [Se.Is BeamLM.entityId $ Se.Eq entityId] Nothing
+  let orders = map order lms
+  case orders of
+    [] -> pure 0
+    _ -> pure $ maximum orders
+
 updatePastMappingVersions :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m ()
 updatePastMappingVersions entityId order = do
   mappings <- findAllByEntityIdAndOrder entityId order
