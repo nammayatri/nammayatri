@@ -129,6 +129,8 @@ library
     , warp
     , warp-tls
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
@@ -220,6 +222,8 @@ executable rider-app-drainer-exe
     , warp
     , warp-tls
   default-language: Haskell2010
+  if os(darwin)
+    ghc-options: -fwhole-archive-hs-libs
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
