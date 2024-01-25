@@ -162,7 +162,7 @@ handler merchant sReq = do
   --   (\_ -> throwError $ InvalidRequest "Duplicate Search request")
   searchReq <- buildSearchRequest sReq merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area cancellationDues
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo searchReq.id
-  triggerSearchEvent SearchEventData {searchRequest = Left searchReq, merchantId = merchantId}
+  triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}
   void $ QSR.createDSReq searchReq
 
   let buildEstimateHelper = buildEstimate searchReq.id sReq.pickupTime mbDistance allFarePoliciesProduct.specialLocationTag cancellationDues
@@ -329,33 +329,6 @@ buildSearchRequest DSearchReq {..} providerId merchantOpCityId fromLocation mbTo
         createdAt = now,
         ..
       }
-
--- buildSearchRequestSpecialZone ::
---   ( MonadGuid m,
---     MonadTime m,
---     MonadReader r m,
-
---   ) =>
---   DSearchReq ->
---   Id DM.Merchant ->
---   Id DMOC.MerchantOperatingCity ->
---   DLoc.Location ->
---   DLoc.Location ->
---   Meters ->
---   Seconds ->
---   DFareProduct.Area ->
---   m DSRSZ.SearchRequestSpecialZone
--- buildSearchRequestSpecialZone DSearchReq {..} providerId merchantOpCityId fromLocation toLocation estimatedDistance estimatedDuration area = do
---   uuid <- generateGUID
---   pure
---     DSRSZ.SearchRequestSpecialZone
---       { id = Id uuid,
---         createdAt = now,
---         updatedAt = now,
---         area = Just area,
---         merchantOperatingCityId = merchantOpCityId,
---         ..
---       }
 
 buildQuote ::
   ( EsqDBFlow m r,

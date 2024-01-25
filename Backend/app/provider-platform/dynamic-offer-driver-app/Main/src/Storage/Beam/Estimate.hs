@@ -36,7 +36,7 @@ data EstimateT f = EstimateT
     farePolicyId :: B.C f (Maybe Text),
     specialLocationTag :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    updatedAt :: B.C f (Maybe UTCTime)
   }
   deriving (Generic, B.Beamable)
 

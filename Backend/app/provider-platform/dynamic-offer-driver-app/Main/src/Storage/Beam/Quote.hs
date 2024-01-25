@@ -51,4 +51,10 @@ type Quote = QuoteT Identity
 
 $(enableKVPG ''QuoteT ['id] [['searchRequestId]])
 
+{-
+  The table named quote_special_zone in the QuoteT database was originally created exclusively for handling
+  data pertaining to special zones. This naming convention has been retained for reasons of backward compatibility.
+  Over time, the use of this table was expanded beyond its initial scope to accommodate a broader range of use cases,
+  extending its functionality beyond just special zones
+-}
 $(mkTableInstances ''QuoteT "quote_special_zone")
