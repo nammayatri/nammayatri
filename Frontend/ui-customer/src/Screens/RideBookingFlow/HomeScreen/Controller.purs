@@ -747,6 +747,7 @@ data ScreenOutput = LogoutUser
                   | GoToHelpAndSupport HomeScreenState
                   | ReAllocateRide HomeScreenState
                   | GoToMyMetroTickets HomeScreenState
+                  | GoToMetroTicketBookingFlow HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -863,6 +864,7 @@ data Action = NoAction
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
             | SpecialZoneOTPExpiryAction Int String String
             | TicketBookingFlowBannerAC Banner.Action
+            | MetroTicketBookingBannerAC Banner.Action
             | WaitingInfo
             | ShareRide
             | ScrollStateChanged String
@@ -1779,7 +1781,7 @@ eval (PredictionClickedAction (LocationListItemController.FavClick item)) state 
   if (length state.data.savedLocations >= 20) then do
     void $ pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     continue state
-    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, tagData = [], isBtnActive = false }, selectedLocationListItem = Just item}}
+    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, isBtnActive = false }, selectedLocationListItem = Just item}}
 
 eval (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose)) state = continue state{props{isSaveFavourite = false},data{selectedLocationListItem = Nothing, saveFavouriteCard {address = "" , tag = "", isBtnActive = false}}}
 
@@ -2264,6 +2266,8 @@ eval (UpdateProfileButtonAC PrimaryButtonController.OnClick) state = do
 eval (DisabilityBannerAC Banner.OnClick) state = if (addCarouselWithVideoExists unit ) then continue state{props{showEducationalCarousel = true}} else exit $ GoToMyProfile state true
 
 eval (TicketBookingFlowBannerAC Banner.OnClick) state = exit $ GoToTicketBookingFlow state
+
+eval (MetroTicketBookingBannerAC Banner.OnClick) state = exit $ GoToMetroTicketBookingFlow state
 
 eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = do 
   _ <- pure $ pauseYoutubeVideo unit

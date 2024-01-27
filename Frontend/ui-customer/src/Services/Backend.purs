@@ -1077,3 +1077,192 @@ updateIssue language issueId req = do
           errorHandler _ = do
                 BackT $ pure GoBack
 
+
+-------------------------------------------------------- Metro Booking --------------------------------------------------------
+
+-- getMetroBookingStatus :: String -> FlowBT String GetMetroBookingStatusResp
+getMetroBookingStatus shortOrderID =  pure $ Right dummyResp 
+  -- headers <- getHeaders "" false
+  -- withAPIResult (EP.getMetroBookingStatus shortOrderID) unwrapResponse $ callAPI headers (GetMetroBookingStatusReq shortOrderID)
+  -- where
+  --   unwrapResponse x = x
+
+
+dummyResp :: GetMetroBookingStatusResp
+dummyResp = (GetMetroBookingStatusResp  dummyMetroBookingStatus)
+
+
+dummyMetroBookingStatus :: MetroTicketBookingStatus
+dummyMetroBookingStatus = 
+  MetroTicketBookingStatus {
+    _type: SingleJourney,
+    bookingId : "d663387c-b2b1-4e1b-9dd5-269c777fe5c1",
+    payment : Nothing
+    -- {
+    --     paymentOrder : {
+    --         id : "ordeh_869c291c82bb43a689e80645aeea9606",
+    --         order_id : "yECo8nctlJ",
+    --         payment_links : {
+    --             iframe: null,
+    --             mobile: null,
+    --             web: "https://api.juspay.in/orders/ordeh_869c291c82bb43a689e80645aeea9606/payment-page"
+    --         },
+    --         sdk_payload: {
+    --             payload: {
+    --                 action: "paymentPage",
+    --                 amount: "1.0",
+    --                 clientAuthToken: "tkn_8bb3e9b9637e4d8eb14b1b76b1ada09e",
+    --                 clientAuthTokenExpiry: "2024-01-24T19:37:13Z",
+    --                 clientId: "nammayatri",
+    --                 currency: "INR",
+    --                 customerEmail: "test@gmail.com",
+    --                 customerId: "2df68545-ed58-4358-84b5-3a00cf44f002",
+    --                 customerPhone: "1987654330",
+    --                 description: "Complete your payment",
+    --                 environment: "production",
+    --                 firstName: null,
+    --                 lastName: null,
+    --                 mandate.endDate: null,
+    --                 mandate.maxAmount: null,
+    --                 mandate.startDate: null,
+    --                 merchantId: "nammayatri",
+    --                 options.createMandate: null,
+    --                 options.getUpiDeepLinks: null,
+    --                 orderId: "yECo8nctlJ",
+    --                 returnUrl: "https://api.juspay.in/end"
+    --             },
+    --             requestId: "1833770d55ac421182769a670f3e1e8b",
+    --             service: "in.juspay.hyperpay"
+    --         },
+    --         status: "NEW"
+    --     },
+    --     status: "PENDING"
+    -- }
+    ,
+    price: 1,
+    quantity: 2,
+    stations: [
+        FRFSStationAPI {
+            address: Nothing,
+            code: "SAP|0133",
+            color: Just "Green",
+            lat: Just 12.980826,
+            lon: Just 80.1642,
+            name: "Chennai International Airport",
+            -- sequenceNum: 1,
+            stationType: Just START
+        },
+        FRFSStationAPI {
+            address: Nothing,
+            code: "SAP|0133",
+            color: Just "Green",
+            lat: Just 12.980826,
+            lon: Just 80.1642,
+            name: "Chennai Bus Stand",
+            -- sequenceNum: 1,
+            stationType: Just INTERMEDIATE
+        },
+        FRFSStationAPI {
+            address: Nothing,
+            code: "SAP|0133",
+            color: Just "Green",
+            lat: Just 12.980826,
+            lon: Just 80.1642,
+            name: "Egmore",
+            -- sequenceNum: 1,
+            stationType: Just INTERMEDIATE
+        },
+        FRFSStationAPI {
+            address: Nothing,
+            code: "SAP|0133",
+            color: Just "Blue",
+            lat: Just 12.980826,
+            lon: Just 80.1642,
+            name: "Fish Market",
+            -- sequenceNum: 1,
+            stationType: Just TRANSIT
+        },
+        FRFSStationAPI {
+            address: Nothing,
+            code: "SAP|0133",
+            color: Just "Blue",
+            lat: Just 12.980826,
+            lon: Just 80.1642,
+            name: "Mayajaal",
+            -- sequenceNum: 1,
+            stationType: Just INTERMEDIATE
+        },
+        FRFSStationAPI {
+            address: Nothing,
+            code: "SHC|0105",
+            color: Just "Blue",
+            lat: Just 13.087369,
+            lon: Just 80.285021,
+            name: "High Court",
+            -- sequenceNum: 2,
+            stationType: Just END
+        }
+    ],
+    status: "PAYMENT_PENDING",
+    tickets: [
+        FRFSTicketAPI {
+          status : ACTIVE
+        , qrData : "Namma Yatri"
+        , validTill : "30 Jan 2024, 22:00"
+        , ticketNumber : "JASF98234324"
+        }
+      , FRFSTicketAPI {
+          status : ACTIVE
+        , qrData : "Namma Yatri PARTNER"
+        , validTill : "30 Jan 2024, 22:00"
+        , ticketNumber : "324F98223984923"
+        }
+      , FRFSTicketAPI {
+          status : ACTIVE
+        , qrData : "Namma Yatri CHENNAI"
+        , validTill : "30 Jan 2024, 22:00"
+        , ticketNumber : "KJQEDF98234324"
+        }
+    ],
+    vehicleType: Metro_,
+    validTill: "2024-01-26T19:37:12.516Z"
+    }
+
+
+getMetroBookingStatusListBT :: FlowBT String GetMetroBookingListResp
+getMetroBookingStatusListBT = do
+    --   headers <- getHeaders' "" false
+    --   withAPIResultBT (EP.getMetroBookingList "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq))
+    --   where
+    --     errorHandler _ = do
+    --         BackT $ pure GoBack
+    pure $ dummyMetroBookingStatusList
+
+
+retryMetroTicketPaymentBT :: String -> FlowBT String RetryMetrTicketPaymentResp
+retryMetroTicketPaymentBT shortId = do
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.retryMetrTicketPayment shortId) (\x → x) errorHandler (lift $ lift $ callAPI headers (RetryMetrTicketPaymentReq shortId))
+      where
+        errorHandler _ = do
+            BackT $ pure GoBack
+
+-- retryMetroTicketPayment :: String -> FlowBT String RetryMetrTicketPaymentResp
+retryMetroTicketPayment shortId = pure $ Right dummyRetryResp 
+  -- headers <- getHeaders "" false
+  -- withAPIResult (EP.retryMetrTicketPayment shortOrderID) unwrapResponse $ callAPI headers (RetryMetrTicketPaymentReq shortId)
+  -- where
+  --   unwrapResponse x = x
+
+
+-- data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED
+
+
+
+
+
+dummyRetryResp :: RetryMetrTicketPaymentResp 
+dummyRetryResp = (RetryMetrTicketPaymentResp dummyMetroBookingStatus)
+
+dummyMetroBookingStatusList :: GetMetroBookingListResp 
+dummyMetroBookingStatusList = (GetMetroBookingListResp [dummyMetroBookingStatus])

@@ -26,9 +26,9 @@ initData = {
 dummyTicketInfo :: Array MetroTicketInfo
 dummyTicketInfo = 
   [
-    {qrString : "Hello", ticketNumber: "12345", validUntil : "12:00 PM 5 May23"}
-  , {qrString : "world", ticketNumber: "12dasf5", validUntil : "12:00 PM 4 Jan 24"}
-  , {qrString : "fasd", ticketNumber: "adsfasd", validUntil : "3:15 PM 16 Dec 23"}
+    {qrString : "Hello", ticketNumber: "12345", validUntil : "12:00 PM 5 May23", status : "ACTIVE" }
+  , {qrString : "world", ticketNumber: "12dasf5", validUntil : "12:00 PM 4 Jan 24", status : "ACTIVE" }
+  , {qrString : "fasd", ticketNumber: "adsfasd", validUntil : "3:15 PM 16 Dec 23", status : "ACTIVE" }
   ]
 
 

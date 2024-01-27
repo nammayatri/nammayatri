@@ -79,7 +79,6 @@ initData = {
       , tag : ""
       , tagExists : false
       , selectedItem : locationListStateObj
-      , tagData : []
       , isBtnActive : false
       }
     , rideDistance : "--"

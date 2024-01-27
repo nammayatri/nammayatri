@@ -246,7 +246,6 @@ qrCodeView push state =
       , color Color.black800
       , gravity CENTER
       ] <> FontStyle.subHeading1 TypoGraphy
-      -- Add QR Code here
     , linearLayout[
         width MATCH_PARENT
       , height WRAP_CONTENT
@@ -339,96 +338,117 @@ ticketNumberAndValidView push state =
 
 originAndDestinationView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 originAndDestinationView push state = 
-  linearLayout [
-    width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , gravity CENTER_VERTICAL
-  , cornerRadius 8.0
-  ][
+  let originStation = state.data.metroRoute !! 0
+      destinationStation = state.data.metroRoute !! ((length state.data.metroRoute) - 1)
+      originConfig = case originStation of
+        Nothing -> {
+          name : ""
+        , line : ST.NoColorLine
+        }
+        Just station -> {
+          name : station.name
+        , line : station.line
+        }
+      destinationConfig = case destinationStation of
+        Nothing -> {
+          name : ""
+        , line : ST.NoColorLine
+        }
+        Just station -> {
+          name : station.name
+        , line : station.line
+        }
+  in
     linearLayout [
       width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , gravity CENTER_VERTICAL
+    , cornerRadius 8.0
     ][
       linearLayout [
         width MATCH_PARENT
       , height WRAP_CONTENT
-      , orientation HORIZONTAL
-      , gravity CENTER_VERTICAL
+      , orientation VERTICAL
       ][
         linearLayout [
-          width $ V 8
-        , height $ V 8
-        , cornerRadius 4.0
-        , background Color.green900
-        ][]
-      , textView $ [
-          width WRAP_CONTENT
+          width MATCH_PARENT
         , height WRAP_CONTENT
-        , text "Origin"
-        , color Color.black700
-        , margin $ MarginLeft 6
-        ] <> FontStyle.body3 TypoGraphy
+        , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        ][
+          linearLayout [
+            width $ V 8
+          , height $ V 8
+          , cornerRadius 4.0
+          , background Color.green900
+          ][]
+        , textView $ [
+            width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text "Origin"
+          , color Color.black700
+          , margin $ MarginLeft 6
+          ] <> FontStyle.body3 TypoGraphy
+        ]
+      , linearLayout [
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        ][
+          textView $ [
+            width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text originConfig.name
+          ] <> FontStyle.body1 TypoGraphy
+        , linePillView originConfig.line
+        ]
       ]
     , linearLayout [
         width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation HORIZONTAL
-      ][
-        textView $ [
-          width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text "Anna Nagar East"
-        ] <> FontStyle.body1 TypoGraphy
-      , linePillView "Green Line" Color.green900 Color.tealishGreen
-      ]
-    ]
-  , linearLayout [
-      width MATCH_PARENT
-    , height $ V 1
-    , background $ Color.ghostWhite
-    , margin $ MarginVertical 12 12
-    ][]
-  , linearLayout [
-      width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    ][
-      linearLayout [
-        width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation HORIZONTAL
-      , gravity CENTER_VERTICAL
-      ][
-        linearLayout [
-          width $ V 8
-        , height $ V 8
-        , cornerRadius 4.0
-        , background Color.red900
-        ][]
-      , textView $ [
-          width WRAP_CONTENT
-        , height WRAP_CONTENT
-        , text "Destination"
-        , color Color.black700
-        , margin $ MarginLeft 6
-        ] <> FontStyle.body3 TypoGraphy
-      ]
+      , height $ V 1
+      , background $ Color.ghostWhite
+      , margin $ MarginVertical 12 12
+      ][]
     , linearLayout [
         width MATCH_PARENT
       , height WRAP_CONTENT
-      , orientation HORIZONTAL
+      , orientation VERTICAL
       ][
-        textView $ [
-          width WRAP_CONTENT
+        linearLayout [
+          width MATCH_PARENT
         , height WRAP_CONTENT
-        , text "Chennai Internation Airport"
-        ] <> FontStyle.body1 TypoGraphy
-      , linePillView "Blue Line" Color.blue900 Color.blue600
+        , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        ][
+          linearLayout [
+            width $ V 8
+          , height $ V 8
+          , cornerRadius 4.0
+          , background Color.red900
+          ][]
+        , textView $ [
+            width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text "Destination"
+          , color Color.black700
+          , margin $ MarginLeft 6
+          ] <> FontStyle.body3 TypoGraphy
+        ]
+      , linearLayout [
+          width MATCH_PARENT
+        , height WRAP_CONTENT
+        , orientation HORIZONTAL
+        ][
+          textView $ [
+            width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , text destinationConfig.name
+          ] <> FontStyle.body1 TypoGraphy
+        , linePillView destinationConfig.line
+        ]
       ]
     ]
-  ]
 
 paymentInfoView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 paymentInfoView push state = 
@@ -444,7 +464,7 @@ paymentInfoView push state =
     textView $ [
       width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text "View Payment Information"
+    , text "View Route Information"
     ] <> FontStyle.body1 TypoGraphy
   , linearLayout [
       height WRAP_CONTENT
@@ -457,24 +477,31 @@ paymentInfoView push state =
     ]
   ]
 
-linePillView :: forall w . String -> String -> String -> PrestoDOM (Effect Unit) w
-linePillView pillText textColor backgroundColor = 
-  linearLayout [
-    width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , padding $ Padding 8 2 8 2
-  , background backgroundColor
-  , cornerRadius 4.0 
-  , margin $ MarginLeft 8
-  ][
-    textView $ [
+linePillView :: forall w . ST.MetroLine -> PrestoDOM (Effect Unit) w
+linePillView line = 
+  let 
+    pillConfig = case line of 
+      ST.GreenLine -> {text : "Green Line", color : Color.green900, bg : Color.tealishGreen}
+      ST.BlueLine -> {text : "Blue Line", color : Color.blue900, bg : Color.blue600}
+      ST.RedLine -> {text : "Red Line", color : Color.red900, bg : Color.red600}
+      _ -> {text : "", color : Color.black800, bg : Color.black600}
+  in 
+    linearLayout [
       width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text pillText
-    , color textColor
-    , padding $ PaddingBottom 4
-    ] <> FontStyle.body15 TypoGraphy
-  ]
+    , padding $ Padding 8 2 8 2
+    , background pillConfig.bg
+    , cornerRadius 4.0 
+    , margin $ MarginLeft 8
+    ][
+      textView $ [
+        width WRAP_CONTENT
+      , height WRAP_CONTENT
+      , text pillConfig.text
+      , color pillConfig.color
+      , padding $ PaddingBottom 4
+      ] <> FontStyle.body15 TypoGraphy
+    ]
 
 
 mapView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
@@ -512,6 +539,7 @@ routeDetailsItemView push index routeDetails =
                 ST.GreenLine -> "Green Line"
                 ST.BlueLine -> "Blue Line"
                 ST.RedLine -> "Red Line"
+                _ -> ""
   in
     linearLayout [
       width MATCH_PARENT
@@ -548,7 +576,6 @@ routeDetailsItemView push index routeDetails =
         width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
-      , visibility $ boolToVisibility $ noOfStops > 0
       ][
         linearLayout [
           width $ V 2
@@ -566,7 +593,7 @@ routeDetailsItemView push index routeDetails =
           , height WRAP_CONTENT
           , margin $ MarginTop 8
           ][
-            linePillView pillText metroPrimaryColor pillBG 
+            linePillView routeDetails.line
           , linearLayout [
               height WRAP_CONTENT
             , width WRAP_CONTENT
@@ -576,6 +603,7 @@ routeDetailsItemView push index routeDetails =
             , margin $ MarginLeft 8 
             , onClick push $ const $ StopsBtnClick index
             , gravity CENTER
+            , visibility $ boolToVisibility $ noOfStops > 0
             ][
               textView $ [
                 width WRAP_CONTENT
@@ -593,11 +621,13 @@ routeDetailsItemView push index routeDetails =
                       ST.GreenLine -> Color.green900
                       ST.BlueLine -> Color.blue800 
                       ST.RedLine -> Color.red900
+                      _ -> Color.black800
 
     pillBG = case routeDetails.line of 
                 ST.GreenLine -> Color.tealishGreen
                 ST.BlueLine -> Color.blue600 
                 ST.RedLine -> Color.red600
+                _ -> Color.black600
 
     stopsListView :: forall w . PrestoDOM (Effect Unit) w
     stopsListView = 

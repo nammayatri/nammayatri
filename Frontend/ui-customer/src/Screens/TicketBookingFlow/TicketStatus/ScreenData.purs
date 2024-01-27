@@ -41,7 +41,7 @@ initData =
       termsAndConditionsSelected : true,
       validDate : true,
       showShimmer : true,
-      paymentStatus : Common.Scheduled,
+      paymentStatus : Common.Success,
       previousStage : DescriptionStage,
       ticketBookingList : dummyData,
       selectedBookingId : "",

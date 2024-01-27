@@ -46,6 +46,8 @@ type Config = {
   padding :: Padding,
   margin :: Margin,
   actionTextVisibility :: Boolean,
+  actionTextBackgroundColor :: String,
+  actionTextCornerRadius :: Number,
   titleTextVisibility :: Boolean,
   imagePadding :: Padding
 }
@@ -73,6 +75,8 @@ config = {
     padding : PaddingTop 0,
     margin : MarginTop 12,
     actionTextVisibility : true,
+    actionTextBackgroundColor : "00FFFFFF",
+    actionTextCornerRadius : 0.0,
     titleTextVisibility : true,
     imagePadding : PaddingVertical 5 5
 }

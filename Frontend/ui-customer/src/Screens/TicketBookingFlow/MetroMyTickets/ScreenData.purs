@@ -13,9 +13,19 @@ import Screens.Types
 initData :: MetroMyTicketsScreenState
 initData = {
   data : {
-      dummyData : ""
+      activeTickets : []
+    , pastTickets : []
     }
   , props :  {
       dummyProps : ""
+    , showShimmer : true
     }
   }
+
+-- type MetroTicketCardData = {
+--   sourceName :: String
+--   , destinationName :: String
+--   , createdAt :: String
+--   , noOfTickets :: Int
+--   , metroTicketStatusApiResp :: MetroTicketBookingStatus
+-- }
