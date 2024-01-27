@@ -59,7 +59,7 @@ import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, un
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, maybe)
 import Data.Number (fromString, round) as NUM
 import Data.String as STR
 import Debug (spy)
@@ -1176,7 +1176,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
 
 eval (UpdateSheetState sheetState) state = continue state {props {sheetState = Nothing, currentSheetState = sheetState}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = Just COLLAPSED, currentSheetState = COLLAPSED}}
+eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continueWithCmd state {props {sheetState = Just COLLAPSED}}  [ do pure $ UpdateSheetState COLLAPSED]
 
 eval RemoveNotification state = do
   continue state {props { showChatNotification = false, isChatNotificationDismissed = true}}
@@ -1671,7 +1671,13 @@ eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
   continue state{props{emergencyHelpModal = true}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{sheetState = if state.props.currentSheetState == EXPANDED then Just COLLAPSED else Just EXPANDED}}
+eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = do
+  let lowVisionDisability = maybe false (\dis -> if dis.tag == "BLIND_LOW_VISION" then true else false) state.data.disability
+  if lowVisionDisability 
+    then do
+      let sheetState = state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED
+      continue state{props{sheetState = Just sheetState,currentSheetState = sheetState}}
+    else continue state
 
 eval ShareRide state = do
   continueWithCmd state

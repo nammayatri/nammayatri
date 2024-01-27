@@ -3671,7 +3671,7 @@ pickupLocationView push state =
                 , gravity CENTER_VERTICAL
                 , cornerRadius 8.0
                 , layoutGravity "center_vertical"
-                $ boolToVisibility $ not $ (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.currentSheetState == EXPANDED)
+                , visibility $ boolToVisibility $ not $ (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.currentSheetState == EXPANDED)
                 , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
                 ][ textView
                     [ text $ if not state.props.isReferred then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
