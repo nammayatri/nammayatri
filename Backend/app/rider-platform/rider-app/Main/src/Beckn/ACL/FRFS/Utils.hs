@@ -139,21 +139,26 @@ mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPayme
 mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType =
   Spec.Payment
     { paymentCollectedBy = Just "BAP",
-      paymentId = Nothing,
-      paymentParams = mTxnId >>= (\txnId -> mAmount <&> (mkPaymentParams mPaymentParams txnId)),
+      paymentId = mTxnId,
+      paymentParams =
+        if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
+          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount
+          else Nothing,
       paymentStatus = encodeToText' paymentStatus,
       paymentTags = Just $ mkPaymentTags mSettlementType mAmount,
       paymentType = encodeToText' Spec.PRE_ORDER
     }
+  where
+    anyTrue = any (== True)
 
-mkPaymentParams :: Maybe BknPaymentParams -> TxnId -> Amount -> Spec.PaymentParams
-mkPaymentParams mPaymentParams txnId amount =
+mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe Amount -> Spec.PaymentParams
+mkPaymentParams mPaymentParams mTxnId mAmount =
   Spec.PaymentParams
-    { paymentParamsAmount = Just amount,
+    { paymentParamsAmount = mAmount,
       paymentParamsBankAccountNumber = mPaymentParams >>= (.bankAccNumber),
       paymentParamsBankCode = mPaymentParams >>= (.bankCode),
       paymentParamsCurrency = Just "INR",
-      paymentParamsTransactionId = Just txnId,
+      paymentParamsTransactionId = mTxnId,
       paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }
 
