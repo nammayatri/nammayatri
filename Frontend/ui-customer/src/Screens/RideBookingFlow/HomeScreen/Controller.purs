@@ -889,6 +889,7 @@ data Action = NoAction
             | RemoveShimmer 
             | ReportIssueClick
             | ChooseSingleVehicleAction ChooseVehicleController.Action
+            | UpdateSheetState BottomSheetState
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1168,15 +1169,14 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages FunctionCall
-      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = COLLAPSED}} 
-      -- [ do
-      --   pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
-      -- ]
+      continueWithCmd state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}}  [ do pure $ UpdateSheetState COLLAPSED]
   else continueWithCmd state[ do
         pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
       ]
 
-eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = COLLAPSED}}
+eval (UpdateSheetState sheetState) state = continue state {props {sheetState = Nothing, currentSheetState = sheetState}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = Just COLLAPSED, currentSheetState = COLLAPSED}}
 
 eval RemoveNotification state = do
   continue state {props { showChatNotification = false, isChatNotificationDismissed = true}}
@@ -1223,7 +1223,7 @@ eval (ScrollStateChanged scrollState) state = do
               "5" -> STATE_HIDDEN
               "6" -> STATE_HALF_EXPANDED
               _ -> STATE_HIDDEN
-  continue state {props {bottomSheetState = sheetState, sheetState = if sheetState == STATE_EXPANDED then EXPANDED else state.props.sheetState}}
+  continue state {props {bottomSheetState = sheetState, currentSheetState = if sheetState == STATE_EXPANDED then EXPANDED else state.props.currentSheetState, sheetState = Nothing}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) state = do
   if length state.data.config.callOptions > 1 then
@@ -1671,7 +1671,7 @@ eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
   continue state{props{emergencyHelpModal = true}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
+eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{sheetState = if state.props.currentSheetState == EXPANDED then Just COLLAPSED else Just EXPANDED}}
 
 eval ShareRide state = do
   continueWithCmd state
