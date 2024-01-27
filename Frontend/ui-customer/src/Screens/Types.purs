@@ -878,7 +878,8 @@ type HomeScreenStateProps =
   , confirmLocationCategory :: String
   , zoneTimerExpired :: Boolean
   , canSendSuggestion :: Boolean
-  , sheetState :: BottomSheetState
+  , sheetState :: Maybe BottomSheetState
+  , currentSheetState :: BottomSheetState
   , showOfferedAssistancePopUp :: Boolean
   , showDisabilityPopUp :: Boolean
   , isChatNotificationDismissed :: Boolean

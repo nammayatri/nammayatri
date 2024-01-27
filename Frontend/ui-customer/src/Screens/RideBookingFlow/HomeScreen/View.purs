@@ -760,7 +760,7 @@ recenterButtonView push state =
 
 referralView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 referralView push state =
-  let removeRefferal = (not state.data.config.feature.enableReferral) || (((any (_ == state.props.currentStage)) [RideAccepted, RideStarted, ChatWithDriver]) || state.props.hasTakenRide || state.props.sheetState == EXPANDED)
+  let removeRefferal = (not state.data.config.feature.enableReferral) || (((any (_ == state.props.currentStage)) [RideAccepted, RideStarted, ChatWithDriver]) || state.props.hasTakenRide || state.props.currentSheetState == EXPANDED)
   in
   linearLayout
     [ width WRAP_CONTENT
@@ -2151,17 +2151,20 @@ rideTrackingView push state =
                     [ height WRAP_CONTENT
                     , width MATCH_PARENT
                     ][ bottomSheetLayout
-                        [ height WRAP_CONTENT
+                        ([ height WRAP_CONTENT
                         , width MATCH_PARENT
-                        , background Color.transparent
-                        , sheetState state.props.sheetState 
+                        , background Color.transparent 
                         , accessibility DISABLE
                         , enableShift false
                         , peakHeight $ getInfoCardPeekHeight state
                         , halfExpandedRatio $ halfExpanded
                         , orientation VERTICAL
-                        , onStateChanged push $ ScrollStateChanged
-                        ]
+                        ] <> (if lowVisionDisability || (os == "ANDROID") then 
+                            [onStateChanged push $ ScrollStateChanged
+                            , sheetState state.props.currentSheetState] 
+                            else case state.props.sheetState of
+                                    Nothing -> []
+                                    Just state -> [sheetState state]))
                         [ linearLayout
                             [ height WRAP_CONTENT
                             , width MATCH_PARENT
@@ -3668,7 +3671,7 @@ pickupLocationView push state =
                 , gravity CENTER_VERTICAL
                 , cornerRadius 8.0
                 , layoutGravity "center_vertical"
-                , visibility if (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.sheetState == EXPANDED) then GONE else VISIBLE
+                , visibility $ boolToVisibility $ not $ (not state.data.config.feature.enableReferral) || ((state.props.isReferred && state.props.currentStage == RideStarted) || state.props.hasTakenRide || state.props.currentSheetState == EXPANDED)
                 , onClick push $ const $ if state.props.isReferred then ReferralFlowNoAction else ReferralFlowAction
                 ][ textView
                     [ text $ if not state.props.isReferred then  getString HAVE_A_REFFERAL else (getString REFERRAL_CODE_APPLIED)
