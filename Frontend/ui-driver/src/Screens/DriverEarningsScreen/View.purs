@@ -819,7 +819,7 @@ faqView push state =
           , margin $ Margin 16 12 0 12
           ]
         <> FontStyle.subHeading2 TypoGraphy
-    , questionsListView push (dummyQuestions Language) state
+    , questionsListView push (dummyQuestions state Language) state
     ]
 
 questionsListView :: forall w. (Action -> Effect Unit) -> Array ST.FaqQuestions -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w

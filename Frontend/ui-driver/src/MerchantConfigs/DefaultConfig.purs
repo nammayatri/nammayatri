@@ -290,7 +290,10 @@ config =
       rideCompletedCoins : "+1",
       fiveStarRatingCoins : "+1",
       oneOrTwoStarRatingCoins : "-1",
-      rideCancellationCoins : "-5"
+      rideCancellationCoins : "-5",
+      whatAreYatriCoinFAQ : "https://www.youtube.com/shorts/vt_Z4wu4otY",
+      howToEarnYatriCoinFAQ : "https://www.youtube.com/shorts/teQyPdP1fRc",
+      howToRedeemYatriCoinFAQ : "https://www.youtube.com/shorts/dU3XxAisGjo"
   }
   , inAppKeyboardModalConfig : {
       enableDeviceKeyboard : true

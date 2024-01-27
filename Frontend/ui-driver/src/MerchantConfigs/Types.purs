@@ -215,7 +215,10 @@ type CoinsConfig = {
   rideCompletedCoins :: String,
   fiveStarRatingCoins :: String,
   oneOrTwoStarRatingCoins :: String,
-  rideCancellationCoins :: String
+  rideCancellationCoins :: String,
+  whatAreYatriCoinFAQ :: String,
+  howToEarnYatriCoinFAQ :: String,
+  howToRedeemYatriCoinFAQ :: String
 }
 
 type InAppKeyboardModalConfig = {
