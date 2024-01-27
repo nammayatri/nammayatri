@@ -135,33 +135,35 @@ type TxnId = Text
 
 type Amount = Text
 
-mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Spec.Payment
-mkPayment paymentStatus mAmount mTxnId =
+mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Spec.Payment
+mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType =
   Spec.Payment
     { paymentCollectedBy = Just "BAP",
       paymentId = Nothing,
-      paymentParams = mTxnId >>= (\txnId -> mAmount <&> (mkPaymentParams txnId)),
+      paymentParams = mTxnId >>= (\txnId -> mAmount <&> (mkPaymentParams mPaymentParams txnId)),
       paymentStatus = encodeToText' paymentStatus,
-      paymentTags = Just $ mkPaymentTags mAmount,
+      paymentTags = Just $ mkPaymentTags mSettlementType mAmount,
       paymentType = encodeToText' Spec.PRE_ORDER
     }
 
-mkPaymentParams :: TxnId -> Amount -> Spec.PaymentParams
-mkPaymentParams txnId amount =
+mkPaymentParams :: Maybe BknPaymentParams -> TxnId -> Amount -> Spec.PaymentParams
+mkPaymentParams mPaymentParams txnId amount =
   Spec.PaymentParams
     { paymentParamsAmount = Just amount,
-      paymentParamsBankAccountNumber = Nothing,
-      paymentParamsBankCode = Nothing,
+      paymentParamsBankAccountNumber = mPaymentParams >>= (.bankAccNumber),
+      paymentParamsBankCode = mPaymentParams >>= (.bankCode),
       paymentParamsCurrency = Just "INR",
       paymentParamsTransactionId = Just txnId,
-      paymentParamsVirtualPaymentAddress = Nothing
+      paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }
 
-mkPaymentTags :: Maybe Amount -> [Spec.TagGroup]
-mkPaymentTags mAmount =
-  [ mkBuyerFinderFeeTagGroup,
-    mkSettlementTagGroup mAmount
-  ]
+mkPaymentTags :: Maybe Text -> Maybe Amount -> [Spec.TagGroup]
+mkPaymentTags mSettlementType mAmount =
+  catMaybes
+    [ Just mkBuyerFinderFeeTagGroup,
+      Just $ mkSettlementTagGroup mAmount,
+      mkSettlementDetailsTagGroup mSettlementType
+    ]
 
 mkBuyerFinderFeeTagGroup :: Spec.TagGroup
 mkBuyerFinderFeeTagGroup =
@@ -221,11 +223,55 @@ mkSettlementTagGroup mAmount =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
+                      { descriptorCode = Just "SETTLEMENT_WINDOW",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "PT1D"
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
                       { descriptorCode = Just "DELAY_INTEREST",
                         descriptorImages = Nothing,
                         descriptorName = Nothing
                       },
                 tagValue = Just "0"
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "SETTLEMENT_BASIS",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "INVOICE_RECIEPT"
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "MANDATORY_ARBITRATION",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "TRUE"
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "COURT_JURISDICTION",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "Bengaluru" -- TODO: make it dynamic
               },
           Just $
             Spec.Tag
@@ -239,6 +285,34 @@ mkSettlementTagGroup mAmount =
                 tagValue = Just "https://api.example-bap.com/booking/terms" -- TODO: update with actual terms url
               }
         ]
+
+mkSettlementDetailsTagGroup :: Maybe Text -> Maybe Spec.TagGroup
+mkSettlementDetailsTagGroup mSettlementType = do
+  st <- mSettlementType
+  return $
+    Spec.TagGroup
+      { tagGroupDescriptor =
+          Just $
+            Spec.Descriptor
+              { descriptorCode = Just "SETTLEMENT_DETAILS",
+                descriptorImages = Nothing,
+                descriptorName = Nothing
+              },
+        tagGroupDisplay = Just False,
+        tagGroupList = Just [stTag st]
+      }
+  where
+    stTag st =
+      Spec.Tag
+        { tagDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "SETTLEMENT_TYPE",
+                  descriptorImages = Nothing,
+                  descriptorName = Nothing
+                },
+          tagValue = Just st
+        }
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode
