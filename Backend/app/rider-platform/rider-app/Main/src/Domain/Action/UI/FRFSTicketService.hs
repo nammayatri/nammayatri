@@ -134,7 +134,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
 postFrfsQuoteConfirm :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  dConfirmRes <- confirm
+  (rider, dConfirmRes) <- confirm
   -- handle (errHandler dConfirmRes.booking) $
   --   void $ withShortRetry $ CallBPP.init dConfirmRes.bppSubscriberUrl becknInitReq
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
@@ -143,7 +143,9 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
   when (dConfirmRes.status == DFRFSTicketBooking.NEW && dConfirmRes.validTill > now) $ do
     providerUrl <- dConfirmRes.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
     bapConfig <- QBC.findByMerchantIdAndDomain (Just merchant.id) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
-    bknInitReq <- ACL.buildInitReq dConfirmRes bapConfig
+    let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
+    mRiderNumber <- mapM decrypt rider.mobileNumber
+    bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) dConfirmRes bapConfig
     void $ CallBPP.init providerUrl bknInitReq
   return $ makeBookingStatusAPI dConfirmRes stations
   where
@@ -154,14 +156,14 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
 
     confirm = do
       personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-      _ <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      rider <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
       unless (personId == quote.riderId) $ throwError AccessDenied
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
-      maybeM (buildAndCreateBooking quote) (\booking -> return booking) (QFRFSTicketBooking.findByQuoteId quoteId)
+      maybeM (buildAndCreateBooking rider quote) (\booking -> return (rider, booking)) (QFRFSTicketBooking.findByQuoteId quoteId)
 
-    buildAndCreateBooking DFRFSQuote.FRFSQuote {..} = do
+    buildAndCreateBooking rider DFRFSQuote.FRFSQuote {..} = do
       uuid <- generateGUID
       now <- getCurrentTime
       let booking =
@@ -176,7 +178,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
                 ..
               }
       QFRFSTicketBooking.create booking
-      return booking
+      return (rider, booking)
 
     makeBookingStatusAPI booking stations =
       FRFSTicketService.FRFSTicketBookingStatusAPIRes
