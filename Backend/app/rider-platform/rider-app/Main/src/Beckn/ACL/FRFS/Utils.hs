@@ -67,7 +67,12 @@ tfLocation location_code =
             { cityCode = Just location_code,
               cityName = Nothing
             },
-      locationCountry = Nothing
+      locationCountry =
+        Just $
+          Spec.Country
+            { countryCode = Just "IND",
+              countryName = Nothing
+            }
     }
 
 getStartStop :: [Spec.Stop] -> Maybe Spec.Stop
@@ -164,7 +169,7 @@ mkBuyerFinderFeeTagGroup =
     { tagGroupDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just "BUYER_FINDER_FEE",
+            { descriptorCode = Just "BUYER_FINDER_FEES",
               descriptorImages = Nothing,
               descriptorName = Nothing
             },
