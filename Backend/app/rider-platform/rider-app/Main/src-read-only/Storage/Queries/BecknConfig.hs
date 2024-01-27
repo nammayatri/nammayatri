@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -52,7 +53,9 @@ updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   updateWithKV
     [ Se.Set Beam.domain $ domain,
       Se.Set Beam.gatewayUrl $ showBaseUrl $ gatewayUrl,
+      Se.Set Beam.paymentParamsJson $ paymentParamsJson,
       Se.Set Beam.registryUrl $ showBaseUrl $ registryUrl,
+      Se.Set Beam.settlementType $ settlementType,
       Se.Set Beam.subscriberId $ subscriberId,
       Se.Set Beam.subscriberUrl $ showBaseUrl $ subscriberUrl,
       Se.Set Beam.uniqueKeyId $ uniqueKeyId,
@@ -77,7 +80,9 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
           { domain = domain,
             gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
+            paymentParamsJson = paymentParamsJson,
             registryUrl = registryUrl',
+            settlementType = settlementType,
             subscriberId = subscriberId,
             subscriberUrl = subscriberUrl',
             uniqueKeyId = uniqueKeyId,
@@ -93,7 +98,9 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
       { Beam.domain = domain,
         Beam.gatewayUrl = showBaseUrl (gatewayUrl),
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.paymentParamsJson = paymentParamsJson,
         Beam.registryUrl = showBaseUrl (registryUrl),
+        Beam.settlementType = settlementType,
         Beam.subscriberId = subscriberId,
         Beam.subscriberUrl = showBaseUrl (subscriberUrl),
         Beam.uniqueKeyId = uniqueKeyId,

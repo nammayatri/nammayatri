@@ -56,7 +56,7 @@ tfIntent search fromStation toStation =
   Just $
     Spec.Intent
       { intentFulfillment = tfIntentFulfillment search fromStation toStation,
-        intentPayment = Just $ Utils.mkPayment Spec.NOT_PAID Nothing Nothing
+        intentPayment = Just $ Utils.mkPayment Spec.NOT_PAID Nothing Nothing Nothing Nothing
       }
 
 tfIntentFulfillment :: DSearch.FRFSSearch -> DStation.Station -> DStation.Station -> Maybe Spec.Fulfillment
