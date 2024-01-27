@@ -24,6 +24,7 @@ data Action = TextFieldFocusChanged String Boolean
             | InputChanged String 
             | AutoCompleteCallBack String Boolean
             | BackPress
+            | NoAction
 
 type InputViewConfig = 
   { backIcon :: ImageConfig

@@ -26,18 +26,45 @@ import JBridge as JB
 import Data.Array
 import Font.Size as FontSize
 import Data.Maybe (maybe)
+import Effect.Aff (launchAff)
+import Services.API
+import Presto.Core.Types.Language.Flow (doAff, Flow, delay)
+import Types.App (GlobalState, defaultGlobalState)
+import Screens.Types
+import Services.Backend as Remote
+import Data.Either (Either(..))
+import Effect.Class (liftEffect)
+import Data.Time.Duration (Milliseconds(..))
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "MetroTicketBookingScreen"
-  , globalEvents : []
+  , globalEvents : [getQuotes]
   , eval : \action state -> do
         let _ = spy "MetroTicketBookingScreenState action " action
         let _ = spy "MetroTicketBookingScreenState state " state
         eval action state
   }
+  where
+    getQuotes push = do
+      void $ launchAff $ EHC.flowRunner defaultGlobalState $ getQuotesPolling initialState.data.searchId 5 3000.0 initialState push GetMetroQuotesAction
+      pure $ pure unit
+
+getQuotesPolling :: forall action. String-> Int -> Number -> ST.MetroTicketBookingScreenState -> (action -> Effect Unit) -> (Array MetroQuote -> action) -> Flow GlobalState Unit
+getQuotesPolling searchId count delayDuration state push action = do
+  if state.props.currentStage == GetMetroQuote then do
+    (getMetroQuotesResp) <- Remote.getMetroQuotes searchId
+    case getMetroQuotesResp of
+        Right (GetMetroQuotesRes resp) -> do
+          if (not (null resp)) then do
+              doAff do liftEffect $ push $ action resp
+          else do
+              void $ delay $ Milliseconds delayDuration
+              getQuotesPolling searchId (count - 1) delayDuration state push action
+        Left _ -> pure unit
+  else pure unit
 
 view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -360,19 +387,19 @@ srcTextView push state =
     , background Color.white900
     , cornerRadius 5.0
     , gravity CENTER_VERTICAL
-    , onClick push $ const SelectSource
+    , onClick push $ const (SelectSource "src")
     , stroke ("1," <> Color.borderColorLight)
     ][
       textView $ 
         [ height MATCH_PARENT
         , width WRAP_CONTENT
-        , text state.data.srcLoc  -- $ maybe "Starting From?" (_.stationName) state.data.srcLoc 
+        , text if state.data.srcLoc == "" then "Starting From?" else state.data.srcLoc  -- $ maybe "Starting From?" (_.stationName) state.data.srcLoc 
         , color Color.black800
         , gravity CENTER_VERTICAL
         , lineHeight "28"
         , singleLine true
         , margin $ Margin 20 0 10 0
-        , alpha 1.0
+        , alpha if state.data.srcLoc == "" then 0.5 else 1.0
         ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle)
     ]
     ]
@@ -402,19 +429,19 @@ destTextView push state =
     , background Color.white900
     , cornerRadius 5.0
     , gravity CENTER_VERTICAL
-    , onClick push $ const SelectDestination
+    , onClick push $ const (SelectDestination "dest")
     , stroke ("1," <> Color.borderColorLight)
     ][
       textView $ 
         [ height MATCH_PARENT
         , width WRAP_CONTENT
-        , text state.data.destLoc  -- $ maybe "Where to?" (_.stationName) state.data.destLoc 
+        , text if state.data.destLoc == "" then "Where to?" else state.data.destLoc -- $ maybe "Where to?" (_.stationName) state.data.destLoc 
         , color Color.black800
         , gravity CENTER_VERTICAL
         , lineHeight "28"
         , singleLine true
         , margin $ Margin 20 0 10 0
-        , alpha 0.5
+        , alpha if state.data.destLoc == "" then 0.5 else 1.0
         ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle)
     ]
     ]

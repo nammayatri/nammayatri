@@ -512,7 +512,7 @@ predictionsView push state globalProps = let
               , lat : MB.Nothing
               , lon : MB.Nothing
               , description : ""
-              , tag : ""
+              , tag : item.stationCode -- Needs refactor
               , tagType : MB.Nothing
               , cardType : MB.Nothing
               , address : ""

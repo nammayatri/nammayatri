@@ -10,9 +10,16 @@ initData = {
   , ticketCount : 1
   , srcLoc : ""
   , destLoc : ""
+  , srcCode : ""
+  , destCode : ""
+  , searchId : ""
+  , ticketPrice : 0
+  , bookingId : ""
+  , quoteId : ""
   },
   props: {
     isLimitExceeded : false
     , termsAndConditionsSelected : true
+    , currentStage : ST.MetroTicketSelection
   }
 }

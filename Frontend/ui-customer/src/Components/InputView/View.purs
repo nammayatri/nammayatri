@@ -21,13 +21,13 @@ import Components.InputView.Controller
 import Components.SeparatorView.View as SeparatorView
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id)
+import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, afterRender)
 import Data.Array (mapWithIndex, length)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
-import JBridge (debounceFunction)
+import JBridge (debounceFunction, showKeyboard)
 import Resources.Constants (getDelayForAutoComplete)
 
 view :: forall w. (Action -> Effect Unit) -> InputViewConfig -> PrestoDOM (Effect Unit) w
@@ -179,6 +179,7 @@ inputTextField push config =
               void $ debounceFunction getDelayForAutoComplete push AutoCompleteCallBack config.isFocussed
               void $ push action
             ) InputChanged
+          , afterRender (\ _ ->  void $ pure $ showKeyboard $ getNewIDWithTag $ config.id) $ const NoAction
           , onFocus push $ const $ TextFieldFocusChanged config.id true
           , cursorColor Color.yellow900
           ] <> FontStyle.body6 LanguageStyle

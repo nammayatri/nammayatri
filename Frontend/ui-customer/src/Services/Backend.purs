@@ -1266,3 +1266,57 @@ dummyRetryResp = (RetryMetrTicketPaymentResp dummyMetroBookingStatus)
 
 dummyMetroBookingStatusList :: GetMetroBookingListResp 
 dummyMetroBookingStatusList = (GetMetroBookingListResp [dummyMetroBookingStatus])
+getMetroStationBT :: String -> FlowBT String GetMetroStationResponse
+getMetroStationBT _ = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getMetroStations "") (\x -> x) errorHandler (lift $ lift $ callAPI headers GetMetroStationReq)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack 
+
+searchMetroBT :: SearchMetroReq -> FlowBT String SearchMetroResp
+searchMetroBT  requestBody = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.searchMetro "") (\x -> x) errorHandler (lift $ lift $ callAPI headers requestBody)
+    where
+    errorHandler errorPayload = do
+      BackT $ pure GoBack 
+
+makeSearchMetroReq :: String -> String -> Int -> SearchMetroReq
+makeSearchMetroReq srcCode destCode count = SearchMetroReq {
+    "fromStationCode" : srcCode,
+    "toStationCode" : destCode,
+    "quantity" : count
+    }
+
+getMetroQuotesBT :: String -> FlowBT String GetMetroQuotesRes
+getMetroQuotesBT searchId = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.getMetroQuotes searchId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroQuotesReq searchId))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+
+getMetroQuotes searchId = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.getMetroQuotes searchId) unwrapResponse $ callAPI headers (GetMetroQuotesReq searchId)
+  where
+  unwrapResponse x = x
+ 
+confirmMetroQuoteBT :: String -> FlowBT String MetroTicketBookingStatus
+confirmMetroQuoteBT quoteId = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.confirmMetroQuote quoteId) (\x → x) errorHandler (lift $ lift $ callAPI headers (ConfirmMetroQuoteReq quoteId))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+
+getMetroStatusBT :: String -> FlowBT String GetMetroBookingStatusResp
+getMetroStatusBT bookingId = do
+        headers <- getHeaders' "" false
+        withAPIResultBT (EP.getMetroBookingStatus bookingId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingStatusReq bookingId))
+        where
+          errorHandler _ = do
+                BackT $ pure GoBack
+
+

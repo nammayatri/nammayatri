@@ -13,6 +13,11 @@ import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==))
 import PrestoDOM
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
+import Services.API
+import Data.Array
+import Data.Maybe
+import Debug (spy)
+import JBridge (toast, toggleBtnLoader)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -33,14 +38,16 @@ data Action = AfterRender
             | DecrementTicket
             | MetroRouteMapAction
             | ToggleTermsAndConditions
-            | SelectSource
-            | SelectDestination
+            | SelectSource String
+            | SelectDestination String
+            | GetMetroQuotesAction (Array MetroQuote)
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
                   | MyMetroTicketScreen ST.MetroTicketBookingScreenState
                   | GoToMetroRouteMap
-                  | SelectSrcDest ST.MetroTicketBookingScreenState
+                  | SelectSrcDest ST.MetroTicketBookingScreenState String
+                  | Refresh ST.MetroTicketBookingScreenState
                   -- | SelectDest ST.MetroTicketBookingScreenState
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
@@ -67,8 +74,34 @@ eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSel
 
 eval (ChangeTicketTab ticketType) state = continue state { data {ticketType = ticketType }}
 
-eval SelectSource state = updateAndExit state $ SelectSrcDest state
+eval (SelectSource src) state = updateAndExit state $ SelectSrcDest state src
 
-eval SelectDestination state = updateAndExit state $ SelectSrcDest state
+eval (SelectDestination dest ) state = updateAndExit state $ SelectSrcDest state dest
+
+eval (GetMetroQuotesAction resp) state = do 
+  _ <- pure $ spy "GetMetroQuotesAction" state
+  _ <- pure $ spy "GetMetroQuotesActionquoteId"  $ (getquoteData state resp).quoteId
+  _ <- pure $ spy "GetMetroQuotesActionprice"  $ (getquoteData state resp).price
+  _ <- pure $ spy "GetMetroQuotesActionresp" resp
+  _ <- pure $ toggleBtnLoader "" false
+  updateAndExit state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}} $ Refresh state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}}
 
 eval _ state = continue state
+
+
+getquoteData :: ST.MetroTicketBookingScreenState -> Array MetroQuote -> {"price" :: Int, "quoteId" :: String}--Int
+getquoteData state  metroQuote =
+  let quote = filter (\(MetroQuote item) -> (getTicketType item._type) == (state.data.ticketType)) metroQuote
+      quoteData = quote !! 0
+  in
+    {
+      "price": maybe 0 (\(MetroQuote item) -> item.price) quoteData,
+      "quoteId" : maybe "" (\(MetroQuote item) -> item.quoteId) quoteData
+    }
+  where
+    getTicketType :: String -> ST.TicketType
+    getTicketType str = case str of 
+      "SingleJourney" -> ST.ONE_WAY
+      "ReturnJourney" -> ST.ROUND_TRIP
+      "Pass" -> ST.ONE_WAY
+      _ -> ST.ONE_WAY

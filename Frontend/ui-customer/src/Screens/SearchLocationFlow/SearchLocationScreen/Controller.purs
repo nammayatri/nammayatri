@@ -104,8 +104,8 @@ eval (LocationListItemAC savedLocations (LocationListItemController.FavClick ite
 eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do 
   void $ pure $ spy "LocationListItemAC"  item
   if state.props.actionType == MetroStationSelectionAction then do
-      let metroLocInfo = {stationName: item.title, stationCode : "080" }
-      let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : MB.Nothing, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo}
+      let metroLocInfo = {stationName: item.title, stationCode : item.tag }
+      let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : MB.Nothing, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo, stationCode : item.tag}
           newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
                           state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false }} 
                           else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false} }
@@ -115,7 +115,7 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
       MB.maybe (continue state) (\currTextField -> predictionClicked currTextField ) state.props.focussedTextField
       where 
         predictionClicked currTextField = do 
-          let updatedLoc = {placeId : item.placeId, address : item.description, lat : item.lat, lon : item.lon, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress, metroInfo : MB.Nothing}
+          let updatedLoc = {placeId : item.placeId, address : item.description, lat : item.lat, lon : item.lon, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress, metroInfo : MB.Nothing, stationCode : item.tag}
               newState = if currTextField == SearchLocPickup then 
                           state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false }} 
                           else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false} }
@@ -142,11 +142,13 @@ eval (LocationTagBarAC savedLoc (LocationTagBarController.TagClicked tag) ) stat
 
 eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText)) state = do
   case textField of 
-    "SearchLocPickup" -> pure $ setText (getNewIDWithTag textField) $ MB.maybe "Current Location" (\srcLoc -> srcLoc.address) state.data.srcLoc
+    "SearchLocPickup" -> pure $ setText (getNewIDWithTag textField) $ MB.maybe "" (\srcLoc -> srcLoc.address) state.data.srcLoc
     "SearchLocDrop" ->  pure $ setText (getNewIDWithTag textField) $ MB.maybe "" (\destLoc -> destLoc.address) state.data.destLoc
     _ -> pure unit
+  
+  let canClearText = canClear textField
   let sortedCachedLoc = fetchSortedCachedSearches state globalProps textField
-  continue state{ props{focussedTextField = mkTextFieldTag textField}
+  continue state{ props{focussedTextField = mkTextFieldTag textField, canClearText = canClearText}
                 , data {locationList = sortedCachedLoc}}
 
   where
@@ -156,6 +158,14 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
         "SearchLocPickup" -> MB.Just SearchLocPickup
         "SearchLocDrop" -> MB.Just SearchLocDrop
         _ -> MB.Nothing
+
+    canClear :: String -> Boolean
+    canClear textField = 
+      case textField of 
+        "SearchLocPickup" ->( STR.length $ MB.maybe "" (\srcLoc -> srcLoc.address) state.data.srcLoc) > 2 
+        "SearchLocDrop" ->  (STR.length $ MB.maybe "" (\destLoc -> destLoc.address) state.data.destLoc) > 2 
+        _ -> false
+
 
 eval (InputViewAC _ (InputViewController.AutoCompleteCallBack value pickUpchanged)) state = do
   if state.props.actionType == MetroStationSelectionAction then continue state
@@ -179,10 +189,10 @@ eval (InputViewAC _ (InputViewController.InputChanged value)) state = do
       ]
 
 eval (UpdateLocAndLatLong recentSearches lat lng) state = do 
-  let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "" , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing}
+  let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "" , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing, stationCode : "0808"}
   continue state{ data 
-                    { srcLoc = MB.Just updatedLoc
-                    , currentLoc = MB.Just updatedLoc
+                    { --srcLoc = MB.Just updatedLoc
+                      currentLoc = MB.Just updatedLoc
                     , locationList = DA.sortBy (comparing (_.actualDistance)) $ recentDistance recentSearches (MB.fromMaybe 0.0 updatedLoc.lat) (MB.fromMaybe 0.0 updatedLoc.lon) }
                     }
 

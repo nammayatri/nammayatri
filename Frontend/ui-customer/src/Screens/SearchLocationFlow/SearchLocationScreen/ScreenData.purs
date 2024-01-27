@@ -109,5 +109,6 @@ dummyLocationInfo = {
   address : "",
   addressComponents : dummyAddress,
   city : Nothing ,
+  stationCode : "",
   metroInfo : Nothing
 }

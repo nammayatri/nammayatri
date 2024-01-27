@@ -10,6 +10,7 @@ import Control.Transformers.Back.Trans as App
 import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.TicketBookingFlow.MetroTicketBooking.View as MetroTicketBooking
 import Types.App
+import ModifyScreenState (modifyScreenState)
 
 metroTicketBookingScreen :: FlowBT String METRO_TICKET_SCREEN_OUTPUT
 metroTicketBookingScreen = do
@@ -19,12 +20,16 @@ metroTicketBookingScreen = do
         GoBack updatedState -> do
             App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN_FROM_METRO_TICKET updatedState)
         UpdateAction updatedState -> do
+            void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
             App.BackT $ App.NoBack <$> (pure $ METRO_FARE_AND_PAYMENT updatedState)
         MyMetroTicketScreen updatedState -> do
             App.BackT $ App.NoBack <$> (pure $ GO_TO_MY_METRO_TICKET_SCREEN updatedState)
         GoToMetroRouteMap -> do
             App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_ROUTE_MAP)
-        SelectSrcDest updatedState -> do
-            App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH updatedState)
+        SelectSrcDest updatedState srcdest -> do
+            App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH updatedState srcdest)
+        Refresh updateState -> do
+            void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updateState)
+            App.BackT $ App.NoBack <$> (pure $ REFRESH_METRO_TICKET_SCREEN updateState)
         -- SelectDest updatedState -> do
         --     App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH updatedState)

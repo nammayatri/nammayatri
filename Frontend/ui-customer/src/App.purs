@@ -277,10 +277,11 @@ data METRO_MY_TICKETS_SCREEN_OUTPUT = METRO_MY_TICKETS_SCREEN_OUTPUT_NO_OUTPUT
                                     | GO_TO_METRO_TICKET_STAUS_FLOW MetroTicketBookingStatus 
 
 data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicketBookingScreenState
-                                 | GO_TO_METRO_STATION_SEARCH MetroTicketBookingScreenState 
+                                 | GO_TO_METRO_STATION_SEARCH MetroTicketBookingScreenState String
                                  | METRO_FARE_AND_PAYMENT MetroTicketBookingScreenState
                                  | GO_TO_MY_METRO_TICKET_SCREEN MetroTicketBookingScreenState
                                  | GO_TO_METRO_ROUTE_MAP
+                                 | REFRESH_METRO_TICKET_SCREEN MetroTicketBookingScreenState
 data ScreenType =
     EnterMobileNumberScreenType (EnterMobileNumberScreenState -> EnterMobileNumberScreenState)
   | HomeScreenStateType (HomeScreenState -> HomeScreenState)

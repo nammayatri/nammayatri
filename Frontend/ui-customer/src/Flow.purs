@@ -133,8 +133,9 @@ import Screens.TicketBookingFlow.PlaceList.View as PlaceListS
 import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreenData
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.Types (Gender(..)) as Gender
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..), PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..), TicketInfoScreenData(..), IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationScreenState, SearchLocationTextField(..), SearchLocationStage(..), LocationInfo, SearchLocationActionType(..))
+import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..), TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..), PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..), TicketInfoScreenData(..), IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationScreenState, SearchLocationTextField(..), SearchLocationStage(..), LocationInfo, SearchLocationActionType(..),Station(..),MetroTicketBookingStage(..))
 import Screens.Types as ST
+import Screens.Types
 import Services.Backend as Remote
 import Services.Config (getBaseUrl, getSupportNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
@@ -2767,25 +2768,71 @@ metroTicketBookingFlow = do
   flow <- UI.metroTicketBookingScreen
   case flow of
     GO_TO_HOME_SCREEN_FROM_METRO_TICKET state -> homeScreenFlow
-    GO_TO_METRO_STATION_SEARCH state -> do
+    GO_TO_METRO_STATION_SEARCH state srcdest -> do
+      (GetMetroStationResponse getMetroStationResp) <- Remote.getMetroStationBT ""-- (item.title <> ", " <> item.subTitle) state.props.sourcePlaceId state.props.sourceLat state.props.sourceLong (if state.props.isSource == Just false then dummyLocationListItemState else item)
+      let typee = case srcdest of
+                    "src" -> Just SearchLocPickup
+                    "des" -> Just SearchLocDrop
+                    _ -> Nothing
+          abc = map (\(GetMetroStationResp item) -> {
+                        stationName : item.name,
+                        stationCode : item.code
+                      }) getMetroStationResp
+      void $ pure $ spy "abc" getMetroStationResp
+      void $ pure $ spy "abc new" abc
+          -- stations = getStations getMetroStationResp
       -- let updatedSrcLoc = {placeId : Nothing, city : Nothing, addressComponents : dummyAddress , address : state.data.srcLoc , lat : Nothing , lon : Nothing, metroInfo : Nothing}
       --     updatedDestLoc = {placeId : Nothing, city : Nothing, addressComponents : dummyAddress , address : state.data.destLoc , lat : Nothing , lon : Nothing, metroInfo : Nothing}
       modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
-      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN}})--, srcLoc = Just updatedSrcLoc, destLoc = Just updatedDestLoc }})
+      modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = typee}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = abc, updatedMetroStations = abc}})--, srcLoc = Just updatedSrcLoc, destLoc = Just updatedDestLoc }})
       searchLocationFlow
-    METRO_FARE_AND_PAYMENT state -> metroTicketPaymentFlow
+    METRO_FARE_AND_PAYMENT state -> do
+      if state.props.currentStage == MetroTicketSelection then do
+        void $ pure $ spy "METRO_FARE_AND_PAYMENT LIST CALLED" state
+        (SearchMetroResp searchMetroResp) <- Remote.searchMetroBT (Remote.makeSearchMetroReq state.data.srcCode state.data.destCode state.data.ticketCount)
+        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ searchId = searchMetroResp.searchId}, props { currentStage = GetMetroQuote }})
+        -- (GlobalState newState) <- getState
+        -- let state = newState.metroTicketBookingScreen
+        metroTicketBookingFlow
+        else if state.props.currentStage == ConfirmMetroQuote then do
+          (confirmMetroQuoteResp) <- Remote.confirmMetroQuoteBT state.data.quoteId
+          let (MetroTicketBookingStatus confirmMetroQuoteResppp) = confirmMetroQuoteResp
+          -- (GlobalState newState) <- getState
+          -- let state = newState.metroTicketBookingScreen
+          modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ bookingId = ( (confirmMetroQuoteResppp.bookingId))}})
+          void $ pure $ spy "METRO_FARE_AND_PAYMENT LIST CALLED" (show $ (confirmMetroQuoteResppp.bookingId))
+          -- (getMetroStatusResp) <- Remote.getMetroStatusBT state.data.bookingId
+          metroTicketPaymentFlow state.data.bookingId
+          else do
+            metroTicketBookingFlow  
+      -- if state.props.currentStage == GetMetroQuote then metroTicketBookingFlow else metroTicketPaymentFlow
+      -- (GetMetroQuotesRes getMetroQuotesResp) <- Remote.getMetroQuotesBT searchMetroResp.searchId
+      -- metroTicketPaymentFlow
     GO_TO_MY_METRO_TICKET_SCREEN state -> metroTicketDetailsFlow
     GO_TO_METRO_ROUTE_MAP -> do
       modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
       modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{props{stage = ST.MetroMapStage}})
       metroTicketDetailsFlow
-      
+    REFRESH_METRO_TICKET_SCREEN state -> do
+      modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{props { currentStage = ConfirmMetroQuote }})
+      -- (confirmMetroQuoteResp) <- Remote.confirmMetroQuoteBT state.data.quoteId
+      -- let (MetroTicketBookingStatus confirmMetroQuoteResppp) = confirmMetroQuoteResp
+      -- modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ bookingId = ( (confirmMetroQuoteResppp.bookingId))}})
+      -- void $ pure $ spy "METRO_FARE_AND_PAYMENT LIST CALLED" (show $ (confirmMetroQuoteResppp.bookingId))
+      _ <- pure $ spy "REFRESH_METRO_TICKET_SCREEN" state
+      metroTicketBookingFlow
 
-metroTicketPaymentFlow :: FlowBT String Unit
-metroTicketPaymentFlow = do
+metroTicketPaymentFlow :: String ->  FlowBT String Unit
+metroTicketPaymentFlow bookingId = do
   liftFlowBT $ initiatePaymentPage
   -- let ticketPlaceID = maybe "" (\(TicketPlaceResp ticketPlaceResp) -> ticketPlaceResp.id) screenData.placeInfo
   -- (CreateOrderRes orderResp) <- Remote.bookTicketsBT (Remote.mkBookingTicketReq screenData) ticketPlaceID
+  -- (getMetroStatusResp) <- Remote.getMetroStatusBT bookingId
+  -- let (GetMetroBookingStatusResp getMetroStatusResppp) = getMetroStatusResp
+  --     ( payment) = maybe Nothing (\(GetMetroBookingStatusResp item) -> item.payment) getMetroStatusResppp
+      -- maybe 0 (\(MetroQuote item) -> item.price) quoteData,
+  -- let (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
+  
   let (PaymentPagePayload sdk_payload) = sdkPayload
       (PayPayload innerpayload) = sdk_payload.payload
       finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
@@ -2839,16 +2886,48 @@ metroTicketStatusFlow = do
 
 
 
+-- sdkPayload :: PaymentPagePayload
+-- sdkPayload = PaymentPagePayload {
+--   service : Just "in.juspay.hyperpay",
+--   requestId : Just "743b1e7711cc4d1995633dbfcf4bb0e3",
+--   payload : PayPayload {
+--         returnUrl : Just "google.com",
+--         orderId : Just "Test0100002",
+--         options_getUpiDeepLinks : Nothing,
+--         "options.createMandate" : Nothing,
+--         merchantId : Just "yatrisathi",
+--         "mandate.startDate" : Nothing,
+--         "mandate.maxAmount" : Nothing,
+--         "mandate.endDate" : Nothing,
+--         lastName : Nothing,
+--         language : Just "english",
+--         -- issuingPsp : Just "YES_BIZ",
+--         firstName : Just "Driverds",
+--         environment : Just "sandbox",
+--         description : Just "Complete your payment",
+--         customerPhone : Nothing, -- This should be same as sim operator or null
+--         customerId : Just "107006461",
+--         -- customer_id  : Just "107006461",
+--         customerEmail : Just"test@juspay.in",
+--         currency : "INR",
+--         clientId : Just "yatrisathi",
+--         clientAuthTokenExpiry : "2023-12-22T11:00:25Z",
+--         clientAuthToken : "tkn_a922265a98e04a7a9ce1964e19fa94ba",
+--         amount : "10.0",
+--         action : Just "paymentPage"
+--   }
+-- }
+
 sdkPayload :: PaymentPagePayload
 sdkPayload = PaymentPagePayload {
   service : Just "in.juspay.hyperpay",
-  requestId : Just "743b1e7711cc4d1995633dbfcf4bb0e3",
+  requestId : Just "29b40641b1dc4d049241c59616a26b54",
   payload : PayPayload {
-        returnUrl : Just "google.com",
-        orderId : Just "Test0100002",
+        returnUrl : Just "https://api.juspay.in/end",
+        orderId : Just "yECo8nctlJ",
         options_getUpiDeepLinks : Nothing,
         "options.createMandate" : Nothing,
-        merchantId : Just "yatrisathi",
+        merchantId : Just "nammayatri",
         "mandate.startDate" : Nothing,
         "mandate.maxAmount" : Nothing,
         "mandate.endDate" : Nothing,
@@ -2856,20 +2935,49 @@ sdkPayload = PaymentPagePayload {
         language : Just "english",
         -- issuingPsp : Just "YES_BIZ",
         firstName : Just "Driverds",
-        environment : Just "sandbox",
+        environment : Just "production",
         description : Just "Complete your payment",
         customerPhone : Nothing, -- This should be same as sim operator or null
-        customerId : Just "107006461",
+        customerId : Just "9c6f7363-c313-4455-bd2b-7a613017444a",
         -- customer_id  : Just "107006461",
         customerEmail : Just"test@juspay.in",
         currency : "INR",
-        clientId : Just "yatrisathi",
-        clientAuthTokenExpiry : "2023-12-22T11:00:25Z",
-        clientAuthToken : "tkn_a922265a98e04a7a9ce1964e19fa94ba",
-        amount : "10.0",
+        clientId : Just "nammayatri",
+        clientAuthTokenExpiry : "2024-01-25T21:16:45Z",
+        clientAuthToken : "tkn_8bacdade745a46c28cf9dcb362cb2602",
+        amount : "1.0",
         action : Just "paymentPage"
   }
 }
+
+-- "sdk_payload": {
+--                 "payload": {
+--                     "action": "paymentPage",
+--                     "amount": "1.0",
+--                     "clientAuthToken": "tkn_8bb3e9b9637e4d8eb14b1b76b1ada09e",
+--                     "clientAuthTokenExpiry": "2024-01-24T19:37:13Z",
+--                     "clientId": "nammayatri",
+--                     "currency": "INR",
+--                     "customerEmail": "test@gmail.com",
+--                     "customerId": "2df68545-ed58-4358-84b5-3a00cf44f002",
+--                     "customerPhone": "1987654330",
+--                     "description": "Complete your payment",
+--                     "environment": "production",
+--                     "firstName": null,
+--                     "lastName": null,
+--                     "mandate.endDate": null,
+--                     "mandate.maxAmount": null,
+--                     "mandate.startDate": null,
+--                     "merchantId": "nammayatri",
+--                     "options.createMandate": null,
+--                     "options.getUpiDeepLinks": null,
+--                     "orderId": "yECo8nctlJ",
+--                     "returnUrl": "https://api.juspay.in/end"
+--                 },
+--                 "requestId": "1833770d55ac421182769a670f3e1e8b",
+--                 "service": "in.juspay.hyperpay"
+--             }
+
 ticketListFlow :: FlowBT String Unit
 ticketListFlow = do
   (GlobalState currentState) <- getState
@@ -3144,7 +3252,7 @@ searchLocationFlow = do
                           pickUpPoints /= state.data.nearByGates
           dummyLocInfo = {  lat : Nothing,  lon : Nothing,  placeId : Nothing,  address : "", addressComponents : dummyAddress, city : Nothing}
           locOnMap = state.data.mapLoc
-          updatedState = { lat : fromString lat, lon : fromString lon, placeId : locOnMap.placeId, address : locOnMap.address, addressComponents : locOnMap.addressComponents , city : Just cityName , metroInfo : Nothing} 
+          updatedState = { lat : fromString lat, lon : fromString lon, placeId : locOnMap.placeId, address : locOnMap.address, addressComponents : locOnMap.addressComponents , city : Just cityName , metroInfo : Nothing, stationCode : ""} 
       modifyScreenState 
         $ SearchLocationScreenStateType 
             (\slsState -> slsState{data{ mapLoc = updatedState}})
@@ -3163,7 +3271,7 @@ searchLocationFlow = do
           gateAddress = fromMaybe HomeScreenData.dummyLocation (head pickUpPoint)
       when (isDistMoreThanThreshold ) do  
         PlaceName address <- getPlaceName lat lon gateAddress 
-        let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing, metroInfo : Nothing}
+        let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing, metroInfo : Nothing, stationCode : ""}
         modifyScreenState 
           $ SearchLocationScreenStateType 
               (\ slsState -> slsState { data  {mapLoc = updatedAddress, confirmLocCategory = ""} }) 
@@ -3315,7 +3423,9 @@ predictionClickedFlow prediction state = do
         -- TicketBookingScreenStateType
         let src = maybe "" (\(loc) -> loc.address) state.data.srcLoc
             dest = maybe "" (\(loc) -> loc.address) state.data.destLoc
-        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ srcLoc = src, destLoc = dest }})
+            srcCode = maybe "" (\(loc) -> loc.stationCode) state.data.srcLoc
+            destCode = maybe "" (\(loc) -> loc.stationCode) state.data.destLoc
+        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ srcLoc = src, destLoc = dest , srcCode = srcCode, destCode = destCode}})
         metroTicketBookingFlow
       else do
         void $ pure $ spy "else do" state
@@ -3350,7 +3460,7 @@ predictionClickedFlow prediction state = do
 
     mkSrcAndDestLoc :: Number -> Number -> SearchLocationScreenState -> SearchLocationTextField -> LocationListItemState -> Maybe String -> {sourceLoc :: Maybe LocationInfo, destinationLoc :: Maybe LocationInfo, updatedState :: LocationInfo}
     mkSrcAndDestLoc placeLat placeLon state currTextField prediction city = 
-      let updatedState = {lat : Just placeLat, lon : Just placeLon, city : Just (getCityNameFromCode city ), addressComponents : encodeAddress prediction.description [] Nothing , placeId : prediction.placeId, address : prediction.description, metroInfo : Nothing} 
+      let updatedState = {lat : Just placeLat, lon : Just placeLon, city : Just (getCityNameFromCode city ), addressComponents : encodeAddress prediction.description [] Nothing , placeId : prediction.placeId, address : prediction.description, metroInfo : Nothing, stationCode : ""} 
           sourceLoc = if currTextField == SearchLocPickup then Just updatedState else state.data.srcLoc
           destinationLoc = if currTextField == SearchLocPickup then state.data.destLoc else Just updatedState
       in {sourceLoc, destinationLoc, updatedState}

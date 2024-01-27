@@ -2073,7 +2073,8 @@ type LocationInfo =
     address :: String ,
     addressComponents :: Address ,
     city :: Maybe City,
-    metroInfo :: Maybe Station
+    metroInfo :: Maybe Station,
+    stationCode :: String
   }
 
 type MetroStation = {
@@ -2097,18 +2098,30 @@ type MetroTicketBookingScreenData = {
   , ticketCount :: Int
   , srcLoc :: String
   , destLoc :: String
+  , srcCode :: String
+  , destCode :: String
+  , searchId :: String
+  , ticketPrice :: Int
+  , bookingId :: String
+  , quoteId :: String
 }
 
 type MetroTicketBookingScreenProps = {
   isLimitExceeded :: Boolean
 , termsAndConditionsSelected :: Boolean
+, currentStage :: MetroTicketBookingStage
 }
+
+data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote
 
 data TicketType = ONE_WAY | ROUND_TRIP
 
 derive instance genericTicketType :: Generic TicketType _
 instance eqTicketType :: Eq TicketType where eq = genericEq
 
+derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
+instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
+instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
 
 -- ######################################### MetroTicketStatusScreenState ####################################################
 type MetroTicketStatusScreenState = {
