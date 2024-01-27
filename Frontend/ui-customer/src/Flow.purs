@@ -124,6 +124,7 @@ import Foreign.Class (class Encode)
 import SuggestionUtils
 import ConfigProvider
 import Components.ChatView.Controller (makeChatComponent')
+import Components.MessagingView (ChatComponent)
 import Mobility.Prelude (capitalize)
 import Screens.HelpAndSupportScreen.Transformer (reportIssueMessageTransformer)
 import Timers
@@ -876,7 +877,7 @@ homeScreenFlow = do
                                       removeChatService ""
                                       setValueToLocalStore PICKUP_DISTANCE "0"
                                       (GlobalState updatedState) <- getState
-                                      let homeScreenState = updatedState.homeScreen{data { quoteListModelState = [] }, props { isBanner = state.props.isBanner, currentStage = ReAllocated, estimateId = updatedState.homeScreen.props.estimateId, reAllocation { showPopUp = true }, tipViewProps { isVisible = updatedState.homeScreen.props.tipViewProps.activeIndex >= 0 }, selectedQuote = Nothing }}
+                                      let homeScreenState = updatedState.homeScreen{data { quoteListModelState = [] }, props { isBanner = state.props.isBanner, currentStage = ReAllocated, estimateId = updatedState.homeScreen.props.estimateId, reAllocation { showPopUp = true }, tipViewProps { isVisible = updatedState.homeScreen.props.tipViewProps.activeIndex >= 0 }, selectedQuote = Nothing}}
                                       let updatedState = case (getTipViewData "LazyCheck") of
                                                           Just (TipViewData tipView) -> homeScreenState{ props{ tipViewProps{ stage = tipView.stage , activeIndex = tipView.activeIndex , isVisible = tipView.activeIndex >= 0 } } }
                                                           Nothing -> homeScreenState{ props{ tipViewProps = HomeScreenData.initData.props.tipViewProps } }
@@ -2421,9 +2422,13 @@ dummyLocationListItemState = locationListStateObj{locationItemType = Just PREDIC
 
 removeChatService :: String -> FlowBT String Unit -- TODO:: Create a chat service and remove this
 removeChatService _ = do
+  let state = HomeScreenData.initData.data
   _ <- lift $ lift $ liftFlow $ stopChatListenerService
   _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
-  pure unit
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> 
+    homeScreen{
+      props{sendMessageActive = false, chatcallbackInitiated = false, unReadMessages = false, openChatScreen = false, showChatNotification = false, canSendSuggestion = true, isChatNotificationDismissed = false, isNotificationExpanded = false, removeNotification = true, enableChatWidget = false},
+      data{messages = [], messagesSize = "-1", chatSuggestionsList = [], messageToBeSent = "", lastMessage = state.lastMessage, waitTimeInfo = false, lastSentMessage = state.lastSentMessage, lastReceivedMessage = state.lastReceivedMessage}})
 
 setFlowStatusData :: Encode FlowStatusData => FlowStatusData -> Effect Unit
 setFlowStatusData object = void $ pure $ setValueToLocalStore FLOW_STATUS_DATA (encodeJSON object)
