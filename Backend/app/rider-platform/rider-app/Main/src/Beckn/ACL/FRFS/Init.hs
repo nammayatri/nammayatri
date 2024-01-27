@@ -25,12 +25,17 @@ import qualified Domain.Types.FRFSTicketBooking as DTBooking
 import Kernel.Prelude
 import Kernel.Utils.Common
 
+type RiderName = Text
+
+type RiderNumber = Text
+
 buildInitReq ::
   (MonadFlow m) =>
+  (Maybe RiderName, Maybe RiderNumber) ->
   DTBooking.FRFSTicketBooking ->
   BecknConfig ->
   m (Spec.InitReq)
-buildInitReq tBooking bapConfig = do
+buildInitReq rider tBooking bapConfig = do
   let transactionId = tBooking.searchId.getId
   let messageId = tBooking.id.getId
 
@@ -39,19 +44,19 @@ buildInitReq tBooking bapConfig = do
   pure $
     Spec.InitReq
       { initReqContext = context,
-        initReqMessage = tfInitMessage tBooking
+        initReqMessage = tfInitMessage rider tBooking
       }
 
-tfInitMessage :: DTBooking.FRFSTicketBooking -> Spec.ConfirmReqMessage
-tfInitMessage tBooking =
+tfInitMessage :: (Maybe RiderName, Maybe RiderNumber) -> DTBooking.FRFSTicketBooking -> Spec.ConfirmReqMessage
+tfInitMessage rider tBooking =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder tBooking
+    { confirmReqMessageOrder = tfOrder rider tBooking
     }
 
-tfOrder :: DTBooking.FRFSTicketBooking -> Spec.Order
-tfOrder tBooking =
+tfOrder :: (Maybe RiderName, Maybe RiderNumber) -> DTBooking.FRFSTicketBooking -> Spec.Order
+tfOrder rider tBooking =
   Spec.Order
-    { orderBilling = tfBilling tBooking,
+    { orderBilling = tfBilling rider,
       orderCancellationTerms = Nothing,
       orderCreatedAt = Nothing,
       orderFulfillments = Nothing,
@@ -65,13 +70,13 @@ tfOrder tBooking =
       orderUpdatedAt = Nothing
     }
 
-tfBilling :: DTBooking.FRFSTicketBooking -> Maybe Spec.Billing
-tfBilling _quote =
+tfBilling :: (Maybe RiderName, Maybe RiderNumber) -> Maybe Spec.Billing
+tfBilling (mRiderName, mRiderNumber) =
   Just $
     Spec.Billing
       { billingEmail = Nothing,
-        billingName = Just "N/A", -- TODO: fix billing details
-        billingPhone = Nothing
+        billingName = mRiderName,
+        billingPhone = mRiderNumber
       }
 
 tfItems :: DTBooking.FRFSTicketBooking -> Maybe [Spec.Item]
