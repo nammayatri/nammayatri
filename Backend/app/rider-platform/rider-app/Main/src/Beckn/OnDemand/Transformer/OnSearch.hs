@@ -36,7 +36,7 @@ tfEstimatesInfo provider item = do
   estimatedFare_ <- Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
   estimatedTotalFare_ <- Beckn.OnDemand.Utils.OnSearch.getEstimatedFare item
   itemId_ <- Beckn.OnDemand.Utils.OnSearch.getItemId item
-  nightShiftInfo_ <- Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item
+  let nightShiftInfo_ = Beckn.OnDemand.Utils.OnSearch.buildNightShiftInfo item
   specialLocationTag_ <- Beckn.OnDemand.Utils.OnSearch.buildSpecialLocationTag item
   totalFareRange_ <- Beckn.OnDemand.Utils.OnSearch.getTotalFareRange item
   vehicleVariant_ <- Beckn.OnDemand.Utils.OnSearch.getVehicleVariant provider item

@@ -260,7 +260,6 @@ library
       Domain.Types.Maps.PlaceNameCache
       Domain.Types.Merchant
       Domain.Types.Merchant.DriverIntelligentPoolConfig
-      Domain.Types.Merchant.DriverPoolConfig
       Domain.Types.Merchant.LeaderBoardConfig
       Domain.Types.Merchant.MerchantMessage
       Domain.Types.Merchant.MerchantOperatingCity
@@ -410,7 +409,6 @@ library
       Storage.Beam.Maps.PlaceNameCache
       Storage.Beam.Merchant
       Storage.Beam.Merchant.DriverIntelligentPoolConfig
-      Storage.Beam.Merchant.DriverPoolConfig
       Storage.Beam.Merchant.LeaderBoardConfig
       Storage.Beam.Merchant.MerchantMessage
       Storage.Beam.Merchant.MerchantOperatingCity
@@ -538,7 +536,6 @@ library
       Storage.Queries.Maps.PlaceNameCache
       Storage.Queries.Merchant
       Storage.Queries.Merchant.DriverIntelligentPoolConfig
-      Storage.Queries.Merchant.DriverPoolConfig
       Storage.Queries.Merchant.LeaderBoardConfig
       Storage.Queries.Merchant.MerchantMessage
       Storage.Queries.Merchant.MerchantOperatingCity
@@ -595,6 +592,9 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      Domain.Types.DriverPoolConfig
+      Storage.Beam.DriverPoolConfig
+      Storage.Queries.DriverPoolConfig
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:

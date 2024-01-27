@@ -364,7 +364,7 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country =
         }
   OU.StopArrivedBuildReq OU.DStopArrivedBuildReq {..} -> do
     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
-    fulfillment <- Utils.mkFulFillmentV2 Nothing ride booking Nothing Nothing Nothing False False (Just $ show Event.STOP_ARRIVED)
+    fulfillment <- Utils.mkFulfillmentV2 Nothing ride booking Nothing Nothing Nothing Nothing False False (Just $ show Event.STOP_ARRIVED)
     pure $
       Spec.OnUpdateReq
         { onUpdateReqError = Nothing,

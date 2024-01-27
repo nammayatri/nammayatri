@@ -274,7 +274,7 @@ addNearestDriverInfo (Just driverPool) estdOrQuotes = do
 
 selectDriversAndMatchFarePolicies :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> [DFP.FullFarePolicy] -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
 selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig farePolicies = do
-  driverPoolCfg <- getDriverPoolConfig merchantOpCityId Nothing mbDistance
+  driverPoolCfg <- getSearchDriverPoolConfig merchantOpCityId mbDistance
   driverPoolNotOnRide <- calculateDriverPool Estimate driverPoolCfg Nothing fromLocation merchantId True Nothing
   logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
   driverPoolCurrentlyOnRide <-

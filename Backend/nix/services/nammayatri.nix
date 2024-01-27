@@ -169,6 +169,7 @@ in
             extensions = extensions: [
               extensions.postgis
             ];
+            dataDir = "/Users/hemant.mangla/data/db-primary";
             initialDatabases = [
               {
                 name = "atlas_dev";

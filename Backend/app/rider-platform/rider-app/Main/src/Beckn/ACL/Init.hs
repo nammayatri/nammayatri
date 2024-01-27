@@ -20,7 +20,6 @@ import qualified Beckn.OnDemand.Transformer.Init as TF
 import qualified Beckn.Types.Core.Taxi.Init as Init
 import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens ((%~))
-import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationAddress as DLA
@@ -33,7 +32,6 @@ import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Logging
 import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
-import Tools.Error (GenericError (InvalidRequest))
 
 buildInitReq ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>

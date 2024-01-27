@@ -145,7 +145,7 @@ buildEstimateBreakUpItem currency tag = do
             }
       }
 
-buildNightShiftInfo :: MonadFlow m => Spec.Item -> m (Maybe OnSearch.NightShiftInfo)
+buildNightShiftInfo :: Spec.Item -> Maybe OnSearch.NightShiftInfo
 buildNightShiftInfo item = do
   itemTags <- item.itemTags
   nightShiftCharge <- getNightShiftCharge itemTags

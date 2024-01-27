@@ -180,7 +180,7 @@ buildOnUpdateMessage (SafetyAlertBuildReq DSafetyAlertReq {..}) = do
         update_target = "order.fufillment.state.code, order.fulfillment.tags"
       }
 buildOnUpdateMessage (StopArrivedBuildReq DStopArrivedBuildReq {..}) = do
-  fulfillment <- Common.mkFulfillment Nothing ride booking Nothing Nothing Nothing False False
+  fulfillment <- Common.mkFulfillment Nothing ride booking Nothing Nothing Nothing Nothing False False
   return $
     OnUpdate.OnUpdateMessage
       { order =

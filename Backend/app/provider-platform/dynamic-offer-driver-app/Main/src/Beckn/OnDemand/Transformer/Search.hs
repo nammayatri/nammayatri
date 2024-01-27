@@ -37,9 +37,9 @@ buildSearchReq messageId city subscriber req context = do
   routeDuration_ <- Beckn.OnDemand.Utils.Search.getDuration req
   routePoints_ <- Beckn.OnDemand.Utils.Search.buildRoutePoints req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
-  dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req >>= tfAddress
-  dropLocation_ <- Beckn.OnDemand.Utils.Search.getDropOffLocationGps req >>= tfLatLong
-  pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= tfAddress
+  dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
+  dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
+  pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (tfAddress . Just)
   pickupLocation_ <- Beckn.OnDemand.Utils.Search.getPickUpLocationGps req >>= tfLatLong
   pickupTime_ <- Kernel.Types.Common.getCurrentTime
   transactionId_ <- Beckn.OnDemand.Utils.Common.getTransactionId context
