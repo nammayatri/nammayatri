@@ -975,7 +975,7 @@ driverInfoTransformer state =
     , config : state.data.config
     , vehicleVariant : cardState.vehicleVariant
     , defaultPeekHeight : getDefaultPeekHeight state
-    , bottomSheetState : state.props.bottomSheetState
+    , bottomSheetState : state.props.currentSheetState
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
