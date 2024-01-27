@@ -2825,98 +2825,36 @@ metroTicketBookingFlow = do
 metroTicketPaymentFlow :: String ->  FlowBT String Unit
 metroTicketPaymentFlow bookingId = do
   liftFlowBT $ initiatePaymentPage
-  -- let ticketPlaceID = maybe "" (\(TicketPlaceResp ticketPlaceResp) -> ticketPlaceResp.id) screenData.placeInfo
-  -- (CreateOrderRes orderResp) <- Remote.bookTicketsBT (Remote.mkBookingTicketReq screenData) ticketPlaceID
-  -- (getMetroStatusResp) <- Remote.getMetroStatusBT bookingId
-  -- let (GetMetroBookingStatusResp getMetroStatusResppp) = getMetroStatusResp
-  --     ( payment) = maybe Nothing (\(GetMetroBookingStatusResp item) -> item.payment) getMetroStatusResppp
-      -- maybe 0 (\(MetroQuote item) -> item.price) quoteData,
-  -- let (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
-  
-  let (PaymentPagePayload sdk_payload) = sdkPayload
-      (PayPayload innerpayload) = sdk_payload.payload
-      finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
-      sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
-      shortOrderID = "orderResp.order_id"
-  -- modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen{data{shortOrderId = shortOrderID}, props{selectedBookingId = shortOrderID}})
-  -- lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
-  -- _ <- paymentPageUI sdkPayload
-  -- Payment status flow starts
-  -- void $ lift $ lift $ toggleLoader true
-  _ <- pure $ toggleBtnLoader "" false
-  resp <-  lift $ lift $ Remote.getMetroBookingStatus shortOrderID
-  lift $ lift $ toggleLoader false
-  case resp of 
-    Right (GetMetroBookingStatusResp ticketStatus) -> do
-      let (MetroTicketBookingStatus metroTicketStatus) = ticketStatus
-      void $ pure $ spy "METRO TICKET STATUS" metroTicketStatus
-      if metroTicketStatus.status == "PAYMENT_PENDING" then
-        setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "true"
-      else
-        pure unit
-      modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer ticketStatus metroTicketDetailsState)
-      modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer ticketStatus shortOrderID metroTicketStatusScreen)
-      metroTicketStatusFlow
-    Left _ -> pure unit
-  pure unit 
-
-
-metroTicketStatusFlow :: FlowBT String Unit
-metroTicketStatusFlow = do
-  (GlobalState currentState) <- getState
-  flow <- UI.metroTicketStatusScreen
-  case flow of 
-    GO_TO_METRO_TICKET_DETAILS _ -> metroTicketDetailsFlow
-    REFRESH_STATUS_AC state -> do
-      resp <- (Remote.retryMetroTicketPayment state.data.shortOrderId)
-      case resp of 
-        Right (RetryMetrTicketPaymentResp ticketStatus) -> do
-          let (MetroTicketBookingStatus metroTicketStatus) = ticketStatus
-          setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
-          modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer ticketStatus metroTicketDetailsState)
-          modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer ticketStatus state.data.shortOrderId metroTicketStatusScreen)
-          metroTicketStatusFlow
-        Left _ -> pure unit
-      metroTicketStatusFlow
-    GO_TO_TRY_AGAIN_PAYMENT state -> do 
-      -- Handle Retry Payment 
-      metroTicketStatusFlow
-    _ -> metroTicketStatusFlow
-  pure unit
-
-
-
--- sdkPayload :: PaymentPagePayload
--- sdkPayload = PaymentPagePayload {
---   service : Just "in.juspay.hyperpay",
---   requestId : Just "743b1e7711cc4d1995633dbfcf4bb0e3",
---   payload : PayPayload {
---         returnUrl : Just "google.com",
---         orderId : Just "Test0100002",
---         options_getUpiDeepLinks : Nothing,
---         "options.createMandate" : Nothing,
---         merchantId : Just "yatrisathi",
---         "mandate.startDate" : Nothing,
---         "mandate.maxAmount" : Nothing,
---         "mandate.endDate" : Nothing,
---         lastName : Nothing,
---         language : Just "english",
---         -- issuingPsp : Just "YES_BIZ",
---         firstName : Just "Driverds",
---         environment : Just "sandbox",
---         description : Just "Complete your payment",
---         customerPhone : Nothing, -- This should be same as sim operator or null
---         customerId : Just "107006461",
---         -- customer_id  : Just "107006461",
---         customerEmail : Just"test@juspay.in",
---         currency : "INR",
---         clientId : Just "yatrisathi",
---         clientAuthTokenExpiry : "2023-12-22T11:00:25Z",
---         clientAuthToken : "tkn_a922265a98e04a7a9ce1964e19fa94ba",
---         amount : "10.0",
---         action : Just "paymentPage"
---   }
--- }
+  (GetMetroBookingStatusResp getMetroStatusResp) <- Remote.getMetroStatusBT bookingId
+  let (MetroTicketBookingStatus metroTicketStatusResp) = getMetroStatusResp
+  case metroTicketStatusResp.payment of
+    Just (FRFSBookingPaymentAPI paymentInfo) -> do
+      let (CreateOrderRes orderResp) = paymentInfo.paymentOrder
+          (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
+          (PayPayload innerpayload) = sdk_payload.payload
+          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
+          sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+          shortOrderID = orderResp.order_id
+      lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+      _ <- paymentPageUI sdkPayload
+      void $ lift $ lift $ toggleLoader true
+      _ <- pure $ toggleBtnLoader "" false
+      -- resp <-  lift $ lift $ Remote.getMetroBookingStatus shortOrderID
+      -- lift $ lift $ toggleLoader false
+      -- case resp of 
+      --   Right (GetMetroBookingStatusResp ticketStatus) -> do
+      --     let (MetroTicketBookingStatus metroTicketStatus) = ticketStatus
+      --     void $ pure $ spy "METRO TICKET STATUS" metroTicketStatus
+      --     if metroTicketStatus.status == "PAYMENT_PENDING" then
+      --       setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "true"
+      --     else
+      --       pure unit
+      --     modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer ticketStatus metroTicketDetailsState)
+      --     modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer ticketStatus shortOrderID metroTicketStatusScreen)
+      --     ticketStatusFlow
+      --   Left _ -> pure unit
+      pure unit
+    Nothing -> pure unit
 
 sdkPayload :: PaymentPagePayload
 sdkPayload = PaymentPagePayload {
@@ -2949,34 +2887,6 @@ sdkPayload = PaymentPagePayload {
         action : Just "paymentPage"
   }
 }
-
--- "sdk_payload": {
---                 "payload": {
---                     "action": "paymentPage",
---                     "amount": "1.0",
---                     "clientAuthToken": "tkn_8bb3e9b9637e4d8eb14b1b76b1ada09e",
---                     "clientAuthTokenExpiry": "2024-01-24T19:37:13Z",
---                     "clientId": "nammayatri",
---                     "currency": "INR",
---                     "customerEmail": "test@gmail.com",
---                     "customerId": "2df68545-ed58-4358-84b5-3a00cf44f002",
---                     "customerPhone": "1987654330",
---                     "description": "Complete your payment",
---                     "environment": "production",
---                     "firstName": null,
---                     "lastName": null,
---                     "mandate.endDate": null,
---                     "mandate.maxAmount": null,
---                     "mandate.startDate": null,
---                     "merchantId": "nammayatri",
---                     "options.createMandate": null,
---                     "options.getUpiDeepLinks": null,
---                     "orderId": "yECo8nctlJ",
---                     "returnUrl": "https://api.juspay.in/end"
---                 },
---                 "requestId": "1833770d55ac421182769a670f3e1e8b",
---                 "service": "in.juspay.hyperpay"
---             }
 
 ticketListFlow :: FlowBT String Unit
 ticketListFlow = do
@@ -3425,7 +3335,7 @@ predictionClickedFlow prediction state = do
             dest = maybe "" (\(loc) -> loc.address) state.data.destLoc
             srcCode = maybe "" (\(loc) -> loc.stationCode) state.data.srcLoc
             destCode = maybe "" (\(loc) -> loc.stationCode) state.data.destLoc
-        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ srcLoc = src, destLoc = dest , srcCode = srcCode, destCode = destCode}})
+        modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ srcLoc = src, destLoc = dest , srcCode = srcCode, destCode = destCode}, props {isButtonActive = true}})
         metroTicketBookingFlow
       else do
         void $ pure $ spy "else do" state

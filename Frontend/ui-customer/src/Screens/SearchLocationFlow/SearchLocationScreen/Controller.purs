@@ -123,7 +123,7 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
 
 eval (InputViewAC globalProps (InputViewController.ClearTextField textField)) state = do 
   pure $ setText (getNewIDWithTag textField) $ ""
-  continue state { data {locationList = fetchSortedCachedSearches state globalProps textField }
+  continue state { data {locationList = fetchSortedCachedSearches state globalProps textField, updatedMetroStations = state.data.metroStations }
                  , props {canClearText = false, isAutoComplete = false}}
 
 eval (FavouriteLocationModelAC (FavouriteLocModelController.GenericHeaderAC (GenericHeaderController.PrefixImgOnClick))) state = continue state{props{searchLocStage = PredictionsStage}}
@@ -149,8 +149,7 @@ eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textFie
   let canClearText = canClear textField
   let sortedCachedLoc = fetchSortedCachedSearches state globalProps textField
   continue state{ props{focussedTextField = mkTextFieldTag textField, canClearText = canClearText}
-                , data {locationList = sortedCachedLoc}}
-
+                , data {locationList = sortedCachedLoc, updatedMetroStations = state.data.metroStations}}
   where
     mkTextFieldTag :: String -> MB.Maybe SearchLocationTextField
     mkTextFieldTag textField =
@@ -191,7 +190,7 @@ eval (InputViewAC _ (InputViewController.InputChanged value)) state = do
 eval (UpdateLocAndLatLong recentSearches lat lng) state = do 
   let updatedLoc = {placeId : MB.Nothing, city : MB.Nothing, addressComponents : LocationListItemController.dummyAddress , address : "" , lat : NUM.fromString lat , lon : NUM.fromString lng, metroInfo : MB.Nothing, stationCode : "0808"}
   continue state{ data 
-                    { --srcLoc = MB.Just updatedLoc
+                    { --srcLoc = MB.Just updatedLoc -- need to check
                       currentLoc = MB.Just updatedLoc
                     , locationList = DA.sortBy (comparing (_.actualDistance)) $ recentDistance recentSearches (MB.fromMaybe 0.0 updatedLoc.lat) (MB.fromMaybe 0.0 updatedLoc.lon) }
                     }

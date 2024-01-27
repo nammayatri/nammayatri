@@ -2110,6 +2110,7 @@ type MetroTicketBookingScreenProps = {
   isLimitExceeded :: Boolean
 , termsAndConditionsSelected :: Boolean
 , currentStage :: MetroTicketBookingStage
+, isButtonActive :: Boolean
 }
 
 data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote

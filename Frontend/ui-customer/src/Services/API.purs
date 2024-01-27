@@ -2972,18 +2972,18 @@ instance standardEncodeFRFSTicketStatus :: StandardEncode FRFSTicketStatus
 
 data GetMetroBookingStatusReq = GetMetroBookingStatusReq String
 
-newtype GetMetroBookingStatusResp = GetMetroBookingStatusResp {
-  bookingId :: String
-  , status :: String
-  , _type :: FRFSQuoteType
-  , quantity :: Int
-  , vehicleType :: FRFSVehicleType
-  , price :: Int
-  , validTill :: String
-  , payment :: Maybe FRFSBookingPaymentAPI
-  , tickets :: Array FRFSTicketAPI
-  , stations :: Array FRFSStationAPI
-}
+newtype GetMetroBookingStatusResp = GetMetroBookingStatusResp MetroTicketBookingStatus
+--   bookingId :: String
+--   , status :: String
+--   , _type :: FRFSQuoteType
+--   , quantity :: Int
+--   , vehicleType :: FRFSVehicleType
+--   , price :: Int
+--   , validTill :: String
+--   , payment :: Maybe FRFSBookingPaymentAPI
+--   , tickets :: Array FRFSTicketAPI
+--   , stations :: Array FRFSStationAPI
+-- }
 instance makeGetMetroBookingStatusReq :: RestEndpoint GetMetroBookingStatusReq GetMetroBookingStatusResp where
  makeRequest reqBody@(GetMetroBookingStatusReq bookingId) headers = defaultMakeRequest POST (EP.getMetroBookingStatus bookingId) headers reqBody Nothing
  decodeResponse = decodeJSON

@@ -21,5 +21,6 @@ initData = {
     isLimitExceeded : false
     , termsAndConditionsSelected : true
     , currentStage : ST.MetroTicketSelection
+    , isButtonActive : false
   }
 }
