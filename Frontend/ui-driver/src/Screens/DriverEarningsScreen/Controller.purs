@@ -594,10 +594,10 @@ updateToState state = do
             Nothing -> 0
   state { props { weekIndex = 3, selectedBarIndex = -1, currWeekData = currentWeekData, totalEarningsData = getTotalCurrentWeekData currentWeekData, currentWeekMaxEarning = currWeekMaxEarning }, data { coinBalance = state.data.coinBalance } }
 
-dummyQuestions :: LazyCheck -> Array ST.FaqQuestions
-dummyQuestions lazy =
+dummyQuestions :: DriverEarningsScreenState -> LazyCheck -> Array ST.FaqQuestions
+dummyQuestions state lazy =
   [ { question: getString YATRI_COINS_FAQS_QUES1
-    , videoLink: Just "https://www.youtube.com/watch?v=1340l2e0ZKY"
+    , videoLink: Just state.data.config.coinsConfig.whatAreYatriCoinFAQ
     , answer:
         [ getString YATRI_COINS_FAQS_QUES1_ANS1
         , getString YATRI_COINS_FAQS_QUES1_ANS2
@@ -614,7 +614,7 @@ dummyQuestions lazy =
     , showTable: false
     }
   , { question: getString YATRI_COINS_FAQS_QUES3
-    , videoLink: Just "https://www.youtube.com/watch?v=1340l2e0ZKY"
+    , videoLink: Just state.data.config.coinsConfig.howToEarnYatriCoinFAQ
     , answer:
         [ getString YATRI_COINS_FAQS_QUES3_ANS1
         , getString YATRI_COINS_FAQS_QUES3_ANS2
@@ -622,7 +622,7 @@ dummyQuestions lazy =
     , showTable: false
     }
   , { question: getString YATRI_COINS_FAQS_QUES4
-    , videoLink: Just "https://www.youtube.com/watch?v=1340l2e0ZKY"
+    , videoLink: Just state.data.config.coinsConfig.howToRedeemYatriCoinFAQ
     , answer:
         [ getString YATRI_COINS_FAQS_QUES4_ANS1
         , getString YATRI_COINS_FAQS_QUES4_ANS2
