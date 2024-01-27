@@ -42,7 +42,7 @@ import Helpers.Utils (getCurrentDate, getCityNameFromCode)
 import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBooking)
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
-
+import Screens.HomeScreen.ScreenData as HomeScreenData
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -179,9 +179,13 @@ checkRideStatus rideAssigned = do
 
 removeChatService :: String -> FlowBT String Unit
 removeChatService _ = do
-  void $ lift $ lift $ liftFlow $ stopChatListenerService
-  setValueToLocalNativeStore READ_MESSAGES "0"
-  pure unit
+  let state = HomeScreenData.initData.data
+  _ <- lift $ lift $ liftFlow $ stopChatListenerService
+  _ <- pure $ setValueToLocalNativeStore READ_MESSAGES "0"
+  modifyScreenState $ HomeScreenStateType (\homeScreen -> 
+    homeScreen{
+      props{sendMessageActive = false, chatcallbackInitiated = false, unReadMessages = false, openChatScreen = false, showChatNotification = false, canSendSuggestion = true, isChatNotificationDismissed = false, isNotificationExpanded = false, removeNotification = true, enableChatWidget = false},
+      data{messages = [], messagesSize = "-1", chatSuggestionsList = [], messageToBeSent = "", lastMessage = state.lastMessage, waitTimeInfo = false, lastSentMessage = state.lastSentMessage, lastReceivedMessage = state.lastReceivedMessage}})
 
 getFlowStatusData :: String -> Maybe FlowStatusData
 getFlowStatusData dummy =

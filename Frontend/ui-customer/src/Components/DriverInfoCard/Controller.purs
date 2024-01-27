@@ -22,6 +22,7 @@ import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
+import PrestoDOM
 import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..))
 
 data Action = NoAction
@@ -88,5 +89,5 @@ type DriverInfoCardData =
   , config :: AppConfig
   , vehicleVariant :: String
   , defaultPeekHeight :: Int
-  , bottomSheetState :: SheetState
+  , bottomSheetState :: BottomSheetState
   }

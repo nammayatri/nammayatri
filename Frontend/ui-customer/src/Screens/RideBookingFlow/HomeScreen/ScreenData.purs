@@ -236,7 +236,8 @@ initData = {
     , findingQuotesProgress : 0.0
     , confirmLocationCategory : ""
     , canSendSuggestion : true
-    , sheetState : COLLAPSED
+    , sheetState : Nothing
+    , currentSheetState : COLLAPSED
     , showOfferedAssistancePopUp : false
     , showDisabilityPopUp : false
     , isChatNotificationDismissed : false
