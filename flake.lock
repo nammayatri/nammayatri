@@ -1646,11 +1646,11 @@
     "namma-dsl": {
       "flake": false,
       "locked": {
-        "lastModified": 1705908582,
-        "narHash": "sha256-3ww2XPywnL2enQUriztsPFilXhy/lfsddysNoZuTeTg=",
+        "lastModified": 1706357577,
+        "narHash": "sha256-R+3TVDXLmYYmiTGcXeMs9lcFeO4Kru12fyt7xSuLDZo=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "7e15a9914bae63c4fc44ba209a135933f6fe5b2d",
+        "rev": "d2744abc1f80a8eb995fdddc3666d6eee6a81957",
         "type": "github"
       },
       "original": {

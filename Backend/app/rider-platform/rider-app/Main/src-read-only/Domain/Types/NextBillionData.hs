@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.NextBillionData where
 
@@ -8,6 +9,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
 import Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
 
 data NextBillionData = NextBillionData
   { routes :: [Kernel.Prelude.Text],

@@ -5,6 +5,7 @@ module API.Action.UI.FollowRide where
 
 import API.Types.UI.FollowRide (Followers, ShareRideReq)
 import qualified API.Types.UI.FollowRide
+import qualified Control.Lens
 import qualified Domain.Action.UI.FollowRide as Domain.Action.UI.FollowRide
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -28,7 +29,7 @@ handler =
     :<|> postShareRide
 
 getFollowRide :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.FollowRide.Followers]
-getFollowRide a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.getFollowRide (Kernel.Prelude.first Kernel.Prelude.Just a1)
+getFollowRide a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.getFollowRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
 
 postShareRide :: (Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.FollowRide.ShareRideReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
-postShareRide a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.postShareRide (Kernel.Prelude.first Kernel.Prelude.Just a2) a1
+postShareRide a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FollowRide.postShareRide (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

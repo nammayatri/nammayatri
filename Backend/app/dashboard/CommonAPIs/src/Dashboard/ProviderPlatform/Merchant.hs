@@ -263,6 +263,7 @@ type DriverPoolConfigUpdateAPI =
     :> "update"
     :> MandatoryQueryParam "tripDistance" Meters
     :> QueryParam "vehicleVariant" Variant
+    :> QueryParam "tripCategory" Text
     :> ReqBody '[JSON] DriverPoolConfigUpdateReq
     :> Post '[JSON] APISuccess
 
@@ -314,6 +315,7 @@ type DriverPoolConfigCreateAPI =
     :> "create"
     :> MandatoryQueryParam "tripDistance" Meters
     :> QueryParam "vehiclevariant" Variant
+    :> QueryParam "tripCategory" Text
     :> ReqBody '[JSON] DriverPoolConfigCreateReq
     :> Post '[JSON] APISuccess
 
