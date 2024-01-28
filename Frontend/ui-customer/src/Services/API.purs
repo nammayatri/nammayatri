@@ -2720,7 +2720,7 @@ newtype GetMetroStationResp = GetMetroStationResp {
   ,  lat :: Maybe Number
   ,  lon :: Maybe Number
   ,  address :: Maybe String
-  ,  stationType :: Maybe String --StationType
+  ,  stationType :: Maybe StationType --StationType
   ,  color :: Maybe String
 }
 
@@ -2819,7 +2819,7 @@ newtype FRFSStationAPI = FRFSStationAPI {
   , lat :: Maybe Number
   , lon :: Maybe Number
   , address :: Maybe String
-  , stationType :: Maybe String --StationType
+  , stationType :: Maybe StationType --StationType
   , sequenceNum :: Int
   , color :: Maybe String
 }

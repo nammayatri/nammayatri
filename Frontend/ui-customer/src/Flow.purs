@@ -3128,6 +3128,29 @@ metroMyTicketsFlow = do
       metroTicketStatusFlow
     _ -> metroMyTicketsFlow
 
+metroTicketStatusFlow :: FlowBT String Unit
+metroTicketStatusFlow = do
+  (GlobalState currentState) <- getState
+  flow <- UI.metroTicketStatusScreen
+  case flow of 
+    GO_TO_METRO_TICKET_DETAILS _ -> metroTicketDetailsFlow
+    REFRESH_STATUS_AC state -> do
+      resp <- (Remote.retryMetroTicketPayment state.data.shortOrderId)
+      case resp of 
+        Right (RetryMetrTicketPaymentResp ticketStatus) -> do
+          let (MetroTicketBookingStatus metroTicketStatus) = ticketStatus
+          setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+          modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer ticketStatus metroTicketDetailsState)
+          modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer ticketStatus state.data.shortOrderId metroTicketStatusScreen)
+          metroTicketStatusFlow
+        Left _ -> pure unit
+      metroTicketStatusFlow
+    GO_TO_TRY_AGAIN_PAYMENT state -> do 
+      -- Handle Retry Payment 
+      metroTicketStatusFlow
+    _ -> metroTicketStatusFlow
+  pure unit
+
 
 searchLocationFlow :: FlowBT String Unit
 searchLocationFlow = do 

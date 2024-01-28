@@ -17,7 +17,6 @@ import Data.Array
 import Data.Maybe
 import Engineering.Helpers.Commons
 import JBridge
-import Screens.TicketBookingFlow.MetroTicketDetails.ComponentConfig
 
 instance showAction :: Show Action where
   show _ = ""
@@ -33,6 +32,7 @@ data Action = NoAction
             | StopsBtnClick Int
             | PrevTicketClick 
             | NextTicketClick
+            | TicketQRRendered String String
 
 data ScreenOutput = NoOutput | GoBack
 
@@ -51,7 +51,7 @@ eval BackPressed state =
     exit GoBack
 
 eval ShareTicketClick state = do
-  void $ pure $ shareImageMessage "" getShareTicketConfig
+  _ <- pure $ shareImageMessage "Here is metro ticket!" (shareImageMessageConfig "")
   continue state
 
 eval ViewPaymentInfoClick state = 
@@ -93,8 +93,7 @@ eval PrevTicketClick state = do
                     Just ticket -> ticket.qrString
                     Nothing -> ""
     continueWithCmd updatedState [ do 
-      runEffectFn4 generateQR qrString (getNewIDWithTag "metro_ticket_qr_code" ) 218 1
-      pure NoAction
+      pure $ (TicketQRRendered (getNewIDWithTag "metro_ticket_qr_code") qrString)
     ]
   else 
     continue state
@@ -113,16 +112,27 @@ eval NextTicketClick state = do
                     Just ticket -> ticket.qrString
                     Nothing -> ""
     continueWithCmd updatedState [ do 
-      runEffectFn4 generateQR qrString (getNewIDWithTag "metro_ticket_qr_code" ) 218 1
-      pure NoAction
+      pure $ (TicketQRRendered (getNewIDWithTag "metro_ticket_qr_code") qrString)
     ]
   else 
     continue state
 
+eval (TicketQRRendered id text) state  = 
+  continueWithCmd state [ do
+    runEffectFn4 generateQR text id 200 0
+    pure $ NoAction
+  ]
+
 eval _ state = continue state
 
 
-
+shareImageMessageConfig :: String ->  Common.ShareImageConfig 
+shareImageMessageConfig _ = {
+    viewId : getNewIDWithTag "MetroTicketView"
+  , code : ""
+  , logoId : getNewIDWithTag "metro_ticket_qr_code"
+  , isReferral : false
+}
 
 
 

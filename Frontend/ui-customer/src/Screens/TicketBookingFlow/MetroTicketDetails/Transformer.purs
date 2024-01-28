@@ -43,6 +43,18 @@ getNextInterMediates (FRFSStationAPI station) stations =
     Just stationType -> 
       case stationType of 
         INTERMEDIATE -> []
+        START -> [{
+            name : station.name
+          , line : GreenLine
+          , stops : getStops (FRFSStationAPI station) stations
+          , listExpanded : false
+          }]
+        END -> [{
+            name : station.name
+          , line : RedLine
+          , stops : getStops (FRFSStationAPI station) stations
+          , listExpanded : false
+          }]
         _ -> [{
             name : station.name
           , line : case station.color of

@@ -1095,7 +1095,7 @@ dummyResp = (GetMetroBookingStatusResp  dummyMetroBookingStatus)
 dummyMetroBookingStatus :: MetroTicketBookingStatus
 dummyMetroBookingStatus = 
   MetroTicketBookingStatus {
-    _type: SingleJourney,
+    _type: "SingleJourney",
     bookingId : "d663387c-b2b1-4e1b-9dd5-269c777fe5c1",
     payment : Nothing
     -- {
@@ -1149,7 +1149,7 @@ dummyMetroBookingStatus =
             lat: Just 12.980826,
             lon: Just 80.1642,
             name: "Chennai International Airport",
-            -- sequenceNum: 1,
+            sequenceNum: 1,
             stationType: Just START
         },
         FRFSStationAPI {
@@ -1159,7 +1159,7 @@ dummyMetroBookingStatus =
             lat: Just 12.980826,
             lon: Just 80.1642,
             name: "Chennai Bus Stand",
-            -- sequenceNum: 1,
+            sequenceNum: 1,
             stationType: Just INTERMEDIATE
         },
         FRFSStationAPI {
@@ -1169,7 +1169,7 @@ dummyMetroBookingStatus =
             lat: Just 12.980826,
             lon: Just 80.1642,
             name: "Egmore",
-            -- sequenceNum: 1,
+            sequenceNum: 1,
             stationType: Just INTERMEDIATE
         },
         FRFSStationAPI {
@@ -1179,7 +1179,7 @@ dummyMetroBookingStatus =
             lat: Just 12.980826,
             lon: Just 80.1642,
             name: "Fish Market",
-            -- sequenceNum: 1,
+            sequenceNum: 1,
             stationType: Just TRANSIT
         },
         FRFSStationAPI {
@@ -1189,7 +1189,7 @@ dummyMetroBookingStatus =
             lat: Just 12.980826,
             lon: Just 80.1642,
             name: "Mayajaal",
-            -- sequenceNum: 1,
+            sequenceNum: 1,
             stationType: Just INTERMEDIATE
         },
         FRFSStationAPI {
@@ -1199,11 +1199,11 @@ dummyMetroBookingStatus =
             lat: Just 13.087369,
             lon: Just 80.285021,
             name: "High Court",
-            -- sequenceNum: 2,
+            sequenceNum: 2,
             stationType: Just END
         }
     ],
-    status: "PAYMENT_PENDING",
+    status: "CONFIRMED",
     tickets: [
         FRFSTicketAPI {
           status : ACTIVE
@@ -1224,7 +1224,7 @@ dummyMetroBookingStatus =
         , ticketNumber : "KJQEDF98234324"
         }
     ],
-    vehicleType: Metro_,
+    vehicleType: "Metro_",
     validTill: "2024-01-26T19:37:12.516Z"
     }
 

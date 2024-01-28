@@ -27,7 +27,8 @@ import Mobility.Prelude
 import Debug
 import Helpers.Utils
 import Effect.Uncurried
-
+import PrestoDOM.Animation as PrestoAnim
+import Animation as Anim
 
 screen :: ST.MetroTicketDetailsScreenState -> Screen Action ST.MetroTicketDetailsScreenState ScreenOutput
 screen initialState =
@@ -51,7 +52,7 @@ view push state =
                   ST.MetroMapStage -> mapView
                   ST.MetroRouteDetailsStage -> routeDetailsView
   in
-    linearLayout[
+    Anim.screenAnimation $ linearLayout[
       width MATCH_PARENT
     , height MATCH_PARENT
     , background Color.grey700
@@ -62,7 +63,6 @@ view push state =
       headerView push state
     , bodyView push state
     ] 
-
 
 headerView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 headerView push state = 
@@ -128,6 +128,7 @@ metroTicketDetailsView push state =
       width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , id $ getNewIDWithTag "MetroTicketView"
     ][
       ticketDetailsView push state
     , paymentInfoView push state
@@ -262,13 +263,11 @@ qrCodeView push state =
           height WRAP_CONTENT
         , weight 1.0
         ][]
-      , imageView [
+      , PrestoAnim.animationSet [ Anim.fadeInWithDelay 50 true ] $ imageView [
           width $ V 218
         , height $ V 218
         , id $ getNewIDWithTag "metro_ticket_qr_code"
-        , afterRender (\action -> do 
-            runEffectFn4 generateQR qrString (getNewIDWithTag "metro_ticket_qr_code") 218 1
-          ) (const NoAction)
+        , onAnimationEnd push (const (TicketQRRendered (getNewIDWithTag "metro_ticket_qr_code") qrString))
         ]
       , linearLayout [
           height WRAP_CONTENT
@@ -582,6 +581,7 @@ routeDetailsItemView push index routeDetails =
         , height MATCH_PARENT
         , margin $ Margin 9 8 9 0
         , background Color.grey900
+        , visibility if noOfStops > 0 then VISIBLE else INVISIBLE
         ][]
       , linearLayout [
           width MATCH_PARENT
@@ -592,6 +592,7 @@ routeDetailsItemView push index routeDetails =
             width MATCH_PARENT
           , height WRAP_CONTENT
           , margin $ MarginTop 8
+          , visibility $ boolToVisibility $ noOfStops > 0
           ][
             linePillView routeDetails.line
           , linearLayout [
@@ -603,14 +604,20 @@ routeDetailsItemView push index routeDetails =
             , margin $ MarginLeft 8 
             , onClick push $ const $ StopsBtnClick index
             , gravity CENTER
-            , visibility $ boolToVisibility $ noOfStops > 0
             ][
               textView $ [
                 width WRAP_CONTENT
               , height WRAP_CONTENT
               , text $ (show noOfStops) <> " Stops"
               , padding $ PaddingBottom 4
+              , color metroPrimaryColor
               ] <> FontStyle.tags TypoGraphy
+              , imageView [
+                width $ V 24
+              , height $ V 15
+              , padding $ PaddingLeft 8
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET (if routeDetails.listExpanded then "ny_ic_chevron_up" else "ny_ic_chevron_down" )
+              ]
             ]
           ]
         ] <> if routeDetails.listExpanded then [stopsListView] else [] 
@@ -670,117 +677,3 @@ routeDetailsItemView push index routeDetails =
         , margin $ MarginLeft 8
         ] <> FontStyle.body1 TypoGraphy
       ]
-
-
-
---   module Screens.TicketBookingFlow.MetroTicketDetails.View where
-
--- import Prelude
-
-
--- import Prelude
--- import Common.Types.App (LazyCheck(..))
-
--- import Data.Array 
--- import Presto.Core.Types.Language.Flow 
--- import Effect.Aff 
--- import Types.App
--- import Control.Monad.Except.Trans 
--- import Control.Transformers.Back.Trans 
--- import Engineering.Helpers.Commons 
--- import Effect.Class 
--- import Data.Maybe 
--- import Effect 
--- import Font.Style as FontStyle
--- import PrestoDOM 
--- import Screens.TicketBookingFlow.MetroTicketDetails.Controller
--- import Screens.Types as ST
--- import Styles.Colors as Color
--- import Data.Array as DA
--- import Font.Size as FontSize
--- import Mobility.Prelude
--- import Debug
--- import Helpers.Utils
-
-
--- screen :: ST.MetroTicketDetailsScreenState -> Screen Action ST.MetroTicketDetailsScreenState ScreenOutput
--- screen initialState =
---   { initialState
---   , view
---   , name : "MetroTicketDetailsScreen"
---   , globalEvents : []
---   , eval :
---     \action state -> do
---         let _ = spy "MetroTicketDetailsScreen action " action
---         let _ = spy "MetroTicketDetailsScreen state " state
---         eval action state
---   }
-
-
--- view :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
--- view push state =  
---   [
---     width MATCH_PARENT
---   , height MATCH_PARENT
---   , backgroundColor Color.grey700
---   , clickable true
---   , onBackPressed push $ const BackPressed
---   ][
---     headerView push state
---   -- , ticketDetailsView push state
---   -- , paymentInfoView push state
---   ]
-
-
--- headerView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
--- headerView push state = 
---   linearLayout[
---     width MATCH_PARENT
---   , height WRAP_CONTENT
---   , padding $ Padding 16 16 16 16 
---   , backgroundColor Color.white900
---   ][
---     imageView [
---       width $ V 24
---     , height $ V 27
---     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
---     , onClick push $ const BackPressed
---     ]
---   , textView $ [
---       width WRAP_CONTENT
---     , height WRAP_CONTENT
---     , text "Ticket Details"
---     , color Color.black800
---     , margin $ MarginLeft 8
---     ] <> FontStyle.subHeading1 TypoGraphy 
---   , linearLayout [
---       height WRAP_CONTENT
---     , weight 1.0
---     ][]
---   , linearLayout [
---       width WRAP_CONTENT
---     , height MATCH_PARENT
---     , onClick push $ const ShareTicketClick
---     , gravity CENTER_VERTICAL
---     ][
---       imageView [
---         width $ V 16
---       , height $ V 16
---       , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_share"
---       ]
---     , textView $ [
---         width WRAP_CONTENT
---       , height WRAP_CONTENT
---       , text "Share Ticket"
---       , color Color.blue900
---       , margin $ MarginLeft 8
---       ] <> FontStyle.tags TypoGraphy
---     ]
---   ]
-
-
--- ticketDetailsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
--- ticketDetailsView push state = 
---   linearLayout [
-    
---   ]
