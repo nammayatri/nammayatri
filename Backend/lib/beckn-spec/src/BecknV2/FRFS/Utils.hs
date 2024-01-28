@@ -13,8 +13,8 @@ import Kernel.Utils.Error
 
 tfDescriptor :: Maybe Text -> Maybe Text -> Maybe Spec.Descriptor
 tfDescriptor mCode mName = do
-  name <- mCode
-  code <- mName
+  code <- mCode
+  name <- mName
   return
     Spec.Descriptor
       { descriptorCode = Just $ code,
