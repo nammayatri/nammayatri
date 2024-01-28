@@ -24,7 +24,10 @@ genericHeaderConfig :: EmergencyContactsScreenState -> GenericHeader.Config
 genericHeaderConfig state =
   let
     config = GenericHeader.config
-
+    titleText = case null state.data.contactsList, state.props.showContactList of 
+                    _, true -> show (length state.data.contactsList) <> "/3 " <> (getString CONTACTS_SELECTED)
+                    true, false -> getString EMERGENCY_CONTACTS
+                    false, false -> getString EDIT_EMERGENCY_CONTACTS
     genericHeaderConfig' =
       config
         { height = WRAP_CONTENT
@@ -38,7 +41,7 @@ genericHeaderConfig state =
           }
         , padding = (Padding 0 5 0 5)
         , textConfig
-          { text = if state.props.showContactList then (show (length state.data.contactsList) <> "/3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
+          { text = titleText
           , accessibilityHint = if state.props.showContactList then (show (length state.data.contactsList) <> " Of 3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
           , color = Color.darkCharcoal
           }
@@ -58,13 +61,12 @@ primaryButtonConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)
-          , accessibilityHint = (if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString ADD_ANOTHER_CONTACT)) <> " : Button"
+          { text = if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString CONFIRM_EMERGENCY_CONTACTS)
+          , accessibilityHint = (if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
           }
         , isClickable = true
         , width = if os == "IOS" then (V 360) else (MATCH_PARENT)
         , margin = (MarginBottom 24)
-        , visibility = if ((length state.data.contactsList) == 3) then GONE else VISIBLE
         , id = "ConfirmEmergencyContactsButton"
         , enableRipple = true
         , rippleColor = Color.rippleShade

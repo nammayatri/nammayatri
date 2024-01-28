@@ -38,6 +38,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
+import RemoteConfigs as RC
 import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
@@ -52,7 +53,9 @@ type Contacts = {
 type NewContacts = {
   name :: String,
   number :: String,
-  isSelected :: Boolean
+  isSelected :: Boolean,
+  enableForFollowing :: Boolean,
+  priority :: Int
 }
 
 type NewContactsProp = {
@@ -450,7 +453,7 @@ type ReportIssueChatScreenData = {
   entryPoint :: ReportIssueChatScreenEntryPoint,
   config :: AppConfig
 }
-data ReportIssueChatScreenEntryPoint = TripDetailsScreenEntry | RideSelectionScreenEntry | HelpAndSupportScreenEntry | OldChatEntry
+data ReportIssueChatScreenEntryPoint = TripDetailsScreenEntry | RideSelectionScreenEntry | HelpAndSupportScreenEntry | OldChatEntry | SafetyScreen
 derive instance genericReportIssueChatScreenEntryPoint :: Generic ReportIssueChatScreenEntryPoint _
 instance showReportIssueChatScreenEntryPoint :: Show ReportIssueChatScreenEntryPoint where show = genericShow
 instance eqReportIssueChatScreenEntryPoint :: Eq ReportIssueChatScreenEntryPoint where eq = genericEq
@@ -763,6 +766,7 @@ type HomeScreenStateData =
   , rideHistoryTrip :: Maybe Trip
   , rentalsInfo :: Maybe RentalsInfo
   , bannerData :: BannerCarousalData
+  , contactList :: Array NewContacts
   }
 
 type RentalsInfo = 
@@ -924,6 +928,8 @@ type HomeScreenStateProps =
   , autoScroll :: Boolean
   , enableChatWidget :: Boolean
   , focussedBottomIcon :: BottomNavBarIcon
+  , showSosBanner :: Boolean
+  , showShareRide :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1155,7 +1161,8 @@ type EmergencyContactsScreenData = {
 
 type EmergencyContactsScreenProps = {
   showContactList :: Boolean,
-  showInfoPopUp :: Boolean
+  showInfoPopUp :: Boolean,
+  fromSosFlow :: Boolean
 }
 
 type ContactDetail = {
@@ -1958,3 +1965,62 @@ type LocationInfo =
     addressComponents :: Address ,
     city :: Maybe City
   }
+  
+-- ############################################## NammaSafetyScreenState #############################
+
+
+data SafetySetupStage =  SetNightTimeSafetyAlert
+                        | SetDefaultEmergencyContacts
+                        | SetPersonalSafetySettings
+                        | SetShareTripWithContacts
+
+derive instance genericSafetySetupStage :: Generic SafetySetupStage _
+instance eqSafetySetupStage :: Eq SafetySetupStage where eq = genericEq
+instance showSafetySetupStage :: Show SafetySetupStage where show = genericShow
+
+type NammaSafetyScreenState = {
+  data :: NammaSafetyScreenData,
+  props :: NammaSafetyScreenProps
+}
+
+type NammaSafetyScreenData =  {
+  shareToEmergencyContacts :: Boolean,
+  nightSafetyChecks :: Boolean,
+  hasCompletedMockSafetyDrill :: Boolean,
+  shareTripWithEmergencyContacts :: Boolean,
+  hasCompletedSafetySetup :: Boolean,
+  contactsList :: Array NewContacts,
+  sosId :: String,
+  rideId :: String,
+  videoPath :: String,
+  updateActionType :: String,
+  removedContactDetail :: NewContacts,
+  currentLocation :: String,
+  vehicleDetails :: String,
+  videoList :: Array RC.SafetyVideoConfig
+ }
+
+type NammaSafetyScreenProps =  {
+  onRide :: Boolean,
+  setupStage :: SafetySetupStage,
+  recordingState :: RecordingState,
+  confirmPopup :: Boolean,
+  timerId :: String,
+  timerValue :: Int,
+  enableLocalPoliceSupport :: Boolean,
+  showInfoPopUp :: Boolean,
+  localPoliceNumber :: String,
+  showShimmer :: Boolean,
+  showTestDrill :: Boolean,
+  triggeringSos :: Boolean,
+  confirmTestDrill :: Boolean,
+  educationViewIndex :: Maybe Int,
+  setYoutubeView :: Boolean,
+  showCallPolice :: Boolean,
+  shouldCallAutomatically :: Boolean
+}
+data RecordingState = RECORDING | NOT_RECORDING | SHARING | UPLOADING | SHARED
+
+derive instance genericRecordingState :: Generic RecordingState _
+instance eqRecordingState :: Eq RecordingState where eq = genericEq
+instance showRecordingState :: Show RecordingState where show = genericShow

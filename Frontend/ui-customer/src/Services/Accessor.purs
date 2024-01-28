@@ -257,3 +257,6 @@ _paymentMethod = lens (unwrap >>> _.payment_method) (\oldRec newVal -> wrap ((un
 
 _name :: forall a b c. Newtype a { name :: b | c } => Lens' a b
 _name = lens (unwrap >>> _.name) (\oldRec newVal -> wrap ((unwrap oldRec) { name = newVal }))
+
+_hasCompletedSafetySetup :: forall a b c. Newtype a { hasCompletedSafetySetup :: b | c } => Lens' a b
+_hasCompletedSafetySetup = lens (unwrap >>> _.hasCompletedSafetySetup) (\oldRec newVal -> wrap ((unwrap oldRec) { hasCompletedSafetySetup = newVal }))

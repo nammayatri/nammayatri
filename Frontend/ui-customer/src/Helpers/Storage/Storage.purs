@@ -91,6 +91,9 @@ data KeyStore
   | REALLOCATE_PRODUCT_ENABLED
   | UPDATE_REPEAT_TRIPS
   | CUSTOMER_LOCATION
+  | IS_SOS_ACTIVE
+  | SAFETY_ALERT_TYPE
+  | SOS_TYPE
 
 derive instance genericKeyStore :: Generic KeyStore _
 

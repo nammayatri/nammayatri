@@ -50,8 +50,8 @@ import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, 
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer)
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, getCityConfig)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEvent, cleverTapCustomEventWithParams)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredctionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (printLog)
@@ -95,7 +95,7 @@ import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialL
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
 import Screens.Types (Gender(..)) as Gender
-import Services.API --(AddressGeometry(..), BookingLocationAPIEntity(..), CancelEstimateRes(..), ConfirmRes(..), ContactDetails(..), DeleteSavedLocationReq(..), FlowStatus(..), FlowStatusRes(..), GatesInfo(..), Geometry(..), GetDriverLocationResp(..), GetEmergContactsReq(..), GetEmergContactsResp(..), GetPlaceNameResp(..), GetProfileRes(..), LatLong(..), LocationS(..), LogOutReq(..), LogOutRes(..), PlaceName(..), ResendOTPResp(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingDetails(..), RideBookingListRes(..), RideBookingRes(..), Route(..), SavedLocationReq(..), SavedLocationsListRes(..), SearchLocationResp(..), SearchRes(..), ServiceabilityRes(..), SpecialLocation(..), TriggerOTPResp(..), UserSosRes(..), VerifyTokenResp(..), ServiceabilityResDestination(..), SelectEstimateRes(..), UpdateProfileReq(..), OnCallRes(..), Snapped(..), AddressComponents(..), FareBreakupAPIEntity(..), GetDisabilityListResp(..), Disability(..), PersonStatsRes(..), FeedbackReq)
+import Services.API
 import Services.Backend as Remote
 import Services.Config (getBaseUrl, getSupportNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
@@ -138,6 +138,12 @@ import Screens.SearchLocationScreen.Controller as SearchLocationController
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
 import Screens (ScreenName(..), getScreen) as Screen
 import MerchantConfig.DefaultConfig (defaultCityConfig)
+import Screens.NammaSafetyFlow.SafetySettingsScreen.Controller as SafetySettingsScreen
+import Screens.NammaSafetyFlow.SetupSafetySettingsScreen.Controller as SetupSafetySettingsScreen
+import Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller as ActivateSafetyScreen
+import Screens.NammaSafetyFlow.SosActiveScreen.Controller as SosActiveScreen
+import Screens.NammaSafetyFlow.Components.SafetyUtils
+import Screens.NammaSafetyFlow.SafetyFlow (updateEmergencySettings, safetyEducationFlow)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -236,8 +242,22 @@ currentFlowStatus = do
           handleDeepLinks Nothing true
         else do
           tag <- maybe (pure "") pure (response ^. _disability)
-          modifyScreenState $ HomeScreenStateType $ \homeScreen → homeScreen{data{ disability = Just {tag : tag, id : "", description: ""}, settingSideBar{name =fromMaybe ""  (response ^. _firstName),gender = response ^. _gender, email = response ^. _email}} , props {isBanner = false}}
-          
+          let hasCompletedSafetySetup = fromMaybe false $ response ^. _hasCompletedSafetySetup
+          modifyScreenState $ HomeScreenStateType
+                  $ \homeScreen →
+                      homeScreen
+                        { data
+                          { disability = Just { tag: tag, id: "", description: "" }
+                          , settingSideBar
+                            { name = fromMaybe "" (response ^. _firstName)
+                            , gender = response ^. _gender
+                            , email = response ^. _email
+                            , hasCompletedSafetySetup = hasCompletedSafetySetup
+                            }
+                          }
+                        , props { isBanner = false, showSosBanner = not hasCompletedSafetySetup}
+                        }          
+                        
     getUpdateToken :: String -> FlowBT String Unit --TODO:: Move this to common library
     getUpdateToken token =
       let
@@ -458,9 +478,6 @@ homeScreenFlow = do
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_help"
       helpAndSupportScreenFlow
     CHANGE_LANGUAGE ->  selectLanguageScreenFlow
-    GO_TO_EMERGENCY_CONTACTS -> do
-      modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> EmergencyContactsScreenData.initData)
-      emergencyScreenFlow
     GO_TO_ABOUT -> aboutUsScreenFlow
     GO_TO_MY_TICKETS -> do
       (GetAllBookingsRes bookedRes) <- Remote.getAllBookingsBT Booked
@@ -851,6 +868,8 @@ homeScreenFlow = do
                                           destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
                                       _ <- pure $ metaLogEvent "ny_user_ride_completed"
                                       _ <- updateLocalStage HomeScreen
+                                      setValueToLocalStore IS_SOS_ACTIVE "false"
+                                      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{sosId = ""}})
                                       if (state.props.bookingId /= "") then do
                                         (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
                                         let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
@@ -868,6 +887,8 @@ homeScreenFlow = do
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES
                                       _ <- pure $ removeAllPolylines ""
                                       _ <- updateLocalStage HomeScreen
+                                      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{sosId = ""}})
+                                      setValueToLocalStore IS_SOS_ACTIVE "false"
                                       removeChatService ""
                                       setValueToLocalStore PICKUP_DISTANCE "0"
                                       lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
@@ -1274,18 +1295,18 @@ homeScreenFlow = do
               getDistanceDiff  state{data{ saveFavouriteCard{selectedItem{lat = Just (placeLatLong.lat), lon =Just (placeLatLong.lon) }},selectedLocationListItem = Just selectedLocationListItem{lat = Just (placeLatLong.lat), lon = Just (placeLatLong.lon) }}} (placeLatLong.lat) (placeLatLong.lon)
     GO_TO_CALL_EMERGENCY_CONTACT state -> do
         (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "EmergencyContact" state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo) state.data.driverInfoCardState.rideId)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.id}}})
         homeScreenFlow
     GO_TO_CALL_POLICE state -> do
         (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "Police" "") state.data.driverInfoCardState.rideId)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.id}}})
         homeScreenFlow
     GO_TO_CALL_SUPPORT state -> do
         (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow "CustomerCare" "") state.data.driverInfoCardState.rideId)
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.sosId}}})
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{sosId = res.id}}})
         homeScreenFlow
     GO_TO_SOS_STATUS state -> do
-        res <- Remote.userSosStatusBT state.props.emergencyHelpModelState.sosId (Remote.makeSosStatus state.props.emergencyHelpModelState.sosStatus)
+        res <- Remote.userSosStatusBT state.props.emergencyHelpModelState.sosId (Remote.makeSosStatus state.props.emergencyHelpModelState.sosStatus "")
         homeScreenFlow
     GO_TO_FETCH_CONTACTS state-> do
       (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
@@ -1383,6 +1404,45 @@ homeScreenFlow = do
       modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
       searchLocationFlow --rentalsScreenFlow
     GO_TO_SCHEDULED_RIDES -> rideScheduledFlow
+    GO_TO_NAMMASAFETY state triggerSos-> do
+      let rideId = currentState.homeScreen.data.driverInfoCardState.rideId
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{props{triggeringSos = false, timerValue = 6, showTestDrill = false, showShimmer = true, confirmTestDrill = false}, data{rideId = rideId, vehicleDetails = currentState.homeScreen.data.driverInfoCardState.registrationNumber}})
+      case triggerSos of
+        true -> activateSafetyScreenFlow
+        false -> safetySettingsFlow
+    SAFETY_SUPPORT state isSafe -> do
+      res <- lift $ lift $ Remote.sendSafetySupport $ Remote.makeAskSupportRequest state.props.bookingId isSafe $ "User need help - Ride on different route"
+      case res of
+        Right resp -> do
+                        _ <- pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
+                        when (isSafe) $ do
+                          _ <- pure $ toast $ getString STR.GLAD_TO_KNOW_YOU_ARE_SAFE
+                          pure unit
+        Left err   -> do
+                        _ <- pure $ toast $ getString STR.SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+                        pure unit
+              
+      homeScreenFlow
+    GO_TO_SHARE_RIDE state -> do
+      (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
+      let contacts = getDefaultPriorityList $ map (\(ContactDetails item) -> {
+          number: item.mobileNumber,
+          name: item.name,
+          isSelected: true,
+          enableForFollowing: false,
+          priority: fromMaybe 1 item.priority
+        }) res.defaultEmergencyNumbers
+      contactsInString <- pure $ toStringJSON contacts
+      setValueToLocalStore CONTACTS (contactsInString)
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{contactList = contacts}, props{showShareRide = true}})
+      homeScreenFlow
+    GO_TO_NOTIFY_RIDE_SHARE state -> do
+      let req = ShareRideReq { emergencyContactNumbers : map (\item -> item.number) $ filter (\item -> item.isSelected) state.data.contactList }
+      _ <- lift $ lift $ Remote.shareRide req
+      void $ pure $ cleverTapCustomEvent "ny_user_auto_share_ride"
+      pure $ toggleBtnLoader "" false
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{showShareRide = false}})
+      homeScreenFlow
     _ -> homeScreenFlow
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
@@ -1767,7 +1827,7 @@ issueReportChatScreenFlow = do
       let tripDetailsScreenState = globalState.tripDetailsScreen 
       tripDetailsScreenFlow tripDetailsScreenState.props.fromMyRides
     GO_TO_HELP_AND_SUPPORT_SCREEN updatedState -> helpAndSupportScreenFlow
-
+    GO_TO_SAFETY_SCREEN updatedState -> activateSafetyScreenFlow
 
 rideSelectionScreenFlow :: FlowBT String Unit
 rideSelectionScreenFlow = do
@@ -1858,24 +1918,31 @@ emergencyScreenFlow :: FlowBT String Unit
 emergencyScreenFlow = do
   flow <- UI.emergencyContactsScreen
   case flow of
-    GO_TO_HOME_FROM_EMERGENCY_CONTACTS -> homeScreenFlow
-    POST_CONTACTS state -> do
-      _ <- Remote.emergencyContactsBT (Remote.postContactsReq state.data.contactsList)
-      if state.props.showInfoPopUp then pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
-        else pure $ toast $ getString STR.EMERGENCY_CONTACS_ADDED_SUCCESSFULLY
-      modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state{props{showInfoPopUp = false}})
+    GO_TO_HOME_FROM_EMERGENCY_CONTACTS state -> homeScreenFlow --nammaSafetyFlow
+    POST_CONTACTS state shouldGoToSafetyScreen -> do
+      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.contactsList)
+      when (not shouldGoToSafetyScreen)
+        $ if state.props.showInfoPopUp then
+            pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
+          else
+            pure $ toast $ getString STR.EMERGENCY_CONTACS_ADDED_SUCCESSFULLY
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> state { props { showInfoPopUp = false } })
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { contactsList = state.data.contactsList }, props{setupStage = ST.SetDefaultEmergencyContacts} })
       (GlobalState globalState) <- getState
-      if globalState.homeScreen.props.emergencyHelpModelState.isSelectEmergencyContact
-      then do
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{emergencyHelpModelState{isSelectEmergencyContact = false, emergencyContactData = transformContactList state.data.contactsList}}})
-        homeScreenFlow
-      else emergencyScreenFlow
+      case globalState.nammaSafetyScreen.data.hasCompletedSafetySetup, shouldGoToSafetyScreen, state.props.fromSosFlow of 
+        _, _, true -> activateSafetyScreenFlow
+        false, true, _ -> setupSafetySettingsFlow
+        true, true, _ -> safetySettingsFlow
+        _, _, _ -> emergencyScreenFlow
+
     GET_CONTACTS state -> do
       (GetEmergContactsResp res) <- Remote.getEmergencyContactsBT GetEmergContactsReq
-      let contacts = map (\(ContactDetails item) -> {
+      let contacts = getDefaultPriorityList $ map (\(ContactDetails item) -> {
           number: item.mobileNumber,
           name: item.name,
-          isSelected: true
+          isSelected: true,
+          enableForFollowing: false,
+          priority: fromMaybe 1 item.priority
         }) res.defaultEmergencyNumbers
       contactsInString <- pure $ toStringJSON contacts
       setValueToLocalStore CONTACTS (contactsInString)
@@ -2693,8 +2760,23 @@ updateSourceLocation _ = do
 
 updateUserInfoToState :: HomeScreenState -> FlowBT String Unit
 updateUserInfoToState state =
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData{data{disability = state.data.disability, settingSideBar{gender = state.data.settingSideBar.gender , email = state.data.settingSideBar.email},destinationSuggestions = state.data.destinationSuggestions
-  , tripSuggestions = state.data.tripSuggestions },props { isBanner = state.props.isBanner}})             
+  modifyScreenState
+    $ HomeScreenStateType
+        ( \homeScreen ->
+            HomeScreenData.initData
+              { data
+                { disability = state.data.disability
+                , settingSideBar
+                  { gender = state.data.settingSideBar.gender
+                  , email = state.data.settingSideBar.email
+                  , hasCompletedSafetySetup = state.data.settingSideBar.hasCompletedSafetySetup
+                  }
+                  ,destinationSuggestions = state.data.destinationSuggestions
+  , tripSuggestions = state.data.tripSuggestions
+                }
+              , props { isBanner = state.props.isBanner, showSosBanner = state.props.showSosBanner }
+              }
+        )
 
 placeListFlow :: FlowBT String Unit 
 placeListFlow = do
@@ -3300,3 +3382,103 @@ fetchGlobalSavedLocations :: FlowBT String (Array LocationListItemState)
 fetchGlobalSavedLocations = do
   (GlobalState globalState) <- getState
   pure $ (globalState.globalProps.savedLocations)
+
+activateSafetyScreenFlow :: FlowBT String Unit
+activateSafetyScreenFlow = do
+  flow <- UI.activateSafetyScreen
+  case flow of
+    ActivateSafetyScreen.GoBack state -> homeScreenFlow
+    ActivateSafetyScreen.GoToEmergencyContactScreen state -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = true}})
+      emergencyScreenFlow
+    ActivateSafetyScreen.CreateSos state isPoliceFlow -> do
+      (GlobalState currentState) <- getState
+      let rideId = currentState.homeScreen.data.driverInfoCardState.rideId
+          flowType = if isPoliceFlow then "Police" else "SafetyFlow"
+      if state.props.showTestDrill
+        then do
+          _ <- lift $ lift $ Remote.createMockSos ""
+          void $ pure $ cleverTapCustomEvent "ny_user_test_drill"
+          pure unit
+        else do
+          (UserSosRes res) <- Remote.userSosBT (Remote.makeUserSosReq (Remote.createUserSosFlow flowType "") rideId)
+          if (not isPoliceFlow) then do
+            modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data {sosId = res.id}})
+            void $ pure $ cleverTapCustomEventWithParams "ny_user_sos_activated" "current_time" (getCurrentUTC "")
+          else 
+            void $ pure $ cleverTapCustomEvent "ny_user_call_police_activated"
+          setValueToLocalStore IS_SOS_ACTIVE "true"
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{props{shouldCallAutomatically = true}})
+      setValueToLocalStore SOS_TYPE $ if isPoliceFlow then "Police" else "SafetyFlow"
+      if isPoliceFlow then activateSafetyScreenFlow else sosActiveFlow
+    ActivateSafetyScreen.GoToSosScreen state -> sosActiveFlow
+    ActivateSafetyScreen.GoToEducationScreen state -> safetyEducationFlow
+    ActivateSafetyScreen.GoToIssueScreen state -> do
+      let language = fetchLanguage $ getLanguageLocale languageKey 
+      (GetOptionsRes getOptionsRes) <- Remote.getOptionsBT language "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0" "" ""
+      let getOptionsRes' = mapWithIndex (\index (Option optionObj) -> optionObj { option = (show (index + 1)) <> ". " <> optionObj.option }) getOptionsRes.options
+          messages' = mapWithIndex (\index (Message currMessage) -> makeChatComponent' (reportIssueMessageTransformer currMessage.message) "Bot" (getCurrentUTC "") "Text" (500*(index + 1))) getOptionsRes.messages
+          chats' = map (\(Message currMessage) -> Chat {chatId : currMessage.id, 
+                                                        chatType : "IssueMessage", 
+                                                        timestamp : (getCurrentUTC "")} )getOptionsRes.messages
+      void $ pure $ cleverTapCustomEvent "ny_user_report_safety_issue_activated"
+      modifyScreenState $ ReportIssueChatScreenStateType (\_ -> ReportIssueChatScreenData.initData { data {entryPoint = ST.SafetyScreen, chats = chats', tripId = Just state.data.rideId, categoryName = "Safety Related Issue", categoryId = "f01lail9-0hrg-elpj-skkm-2omgyhk3c2h0", options = getOptionsRes', chatConfig { messages = messages' },  selectedRide = Nothing } } )
+      issueReportChatScreenFlow
+
+safetySettingsFlow :: FlowBT String Unit
+safetySettingsFlow = do
+  modifyScreenState $  NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{props{showShimmer = true}})
+  flow <- UI.safetySettingsScreen
+  case flow of
+    SafetySettingsScreen.GoBack updatedState -> homeScreenFlow
+    SafetySettingsScreen.PostEmergencySettings state -> do
+      updateEmergencySettings state
+      safetySettingsFlow
+    SafetySettingsScreen.GoToEmergencyContactScreen updatedState -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = false}})
+      emergencyScreenFlow
+    SafetySettingsScreen.GoToEducationScreen updatedState -> safetyEducationFlow
+    SafetySettingsScreen.GoToSetupScreen updatedState -> setupSafetySettingsFlow
+    SafetySettingsScreen.GoToActivateSosScreen state -> activateSafetyScreenFlow
+    SafetySettingsScreen.PostContacts state -> do
+      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.contactsList)
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { contactsList = state.data.contactsList } })
+      safetySettingsFlow
+
+
+setupSafetySettingsFlow :: FlowBT String Unit
+setupSafetySettingsFlow = do
+  flow <- UI.setupSafetySettingsScreen
+  case flow of 
+    SetupSafetySettingsScreen.GoBack state -> safetySettingsFlow
+    SetupSafetySettingsScreen.PostContacts state  -> do
+      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.contactsList)
+      if state.props.showInfoPopUp 
+        then pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
+        else pure $ toast $ getString STR.EMERGENCY_CONTACS_ADDED_SUCCESSFULLY
+      modifyScreenState $  NammaSafetyScreenStateType (\nammaSafetyScreen -> state{props{showInfoPopUp = false}})
+      setupSafetySettingsFlow
+    SetupSafetySettingsScreen.Refresh state  -> pure unit
+    SetupSafetySettingsScreen.PostEmergencySettings state  -> do
+        updateEmergencySettings state
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{showSosBanner = false}, data{settingSideBar {hasCompletedSafetySetup = true}}})
+        safetySettingsFlow
+    SetupSafetySettingsScreen.GoToEmergencyContactScreen state  -> do
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = false}})
+      emergencyScreenFlow
+
+sosActiveFlow :: FlowBT String Unit
+sosActiveFlow = do
+  flow <- UI.sosActiveScreen
+  case flow of
+    SosActiveScreen.UpdateAsSafe state -> do
+      when (not state.props.showTestDrill) $ do
+        _ <- lift $ lift $ Remote.markRideAsSafe state.data.sosId
+        void $ pure $ cleverTapCustomEventWithParams "ny_user_sos_marked_safe" "current_time" (getCurrentUTC "")
+        pure unit
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{sosId = ""}})
+      setValueToLocalStore IS_SOS_ACTIVE "false"
+      homeScreenFlow
+    SosActiveScreen.GoToEducationScreen state -> safetyEducationFlow
+    _ -> sosActiveFlow
+  pure unit
