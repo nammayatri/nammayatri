@@ -80,6 +80,9 @@ foreign import safeMarginBottomImpl :: Unit -> Int
 foreign import getNewIDWithTag :: String -> String
 foreign import getOs :: Unit -> String
 foreign import setText :: String -> String -> Unit
+foreign import countDown :: forall action. Int -> String -> (action -> Effect Unit) -> (Int -> String -> String -> String-> action)  -> Effect Unit
+foreign import clearTimer :: String -> Unit
+foreign import clearCountDownTimer :: String -> Unit
 foreign import getExpiryTime :: String -> Boolean -> Int
 foreign import getCurrentUTC :: String -> String
 foreign import convertUTCtoISC :: String -> String -> String
@@ -281,16 +284,17 @@ getMapsLanguageFormat key =
     "TE_IN" -> "TELUGU"
     _       -> "ENGLISH"
 
-getYoutubeData :: String -> String -> Int -> YoutubeData
-getYoutubeData videoId videoType videoHeight = {
+getYoutubeData :: String -> String -> Int -> Boolean -> Boolean -> YoutubeData
+getYoutubeData videoId videoType videoHeight showFullScreen showSeekBar = {
   videoTitle : "title",
   setVideoTitle : false,
   showMenuButton : false,
   showDuration : true,
-  showSeekBar : true,
+  showSeekBar : showSeekBar,
   videoId : videoId,
   videoType : videoType,
-  videoHeight : videoHeight
+  videoHeight : videoHeight,
+  showFullScreen : showFullScreen
 }
 
 isInvalidUrl :: String -> Boolean

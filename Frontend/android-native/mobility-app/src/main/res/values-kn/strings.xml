@@ -55,5 +55,8 @@
     <string name="accept_goto">ಒಪ್ಪಿಕೊಳ್ಳಿ “ಗೋ-ಟು”</string>
     <string name="take_a_clear_selfie">ಗುರುತಿಸಲಾದ ಪ್ರದೇಶದಲ್ಲಿ ನಿಮ್ಮ ಡ್ರೈವಿಂಗ್ \n ಲೈಸೆನ್ಸ್‌ನೊಂದಿಗೆ ಸ್ಪಷ್ಟವಾದ ಫೋಟೋ ತೆಗೆದುಕೊಳ್ಳಿ</string>
     <string name="need_help">ಸಹಾಯ ಬೇಕಾ?</string>
+    <string name="safety_deviation_alert">ನಾವು ನಿನ್ನ ಸವಾರಿ ವೇಗದ ರೂಟ್ ಯಲ್ಲಿ ಇದ್ದೇವೆ ಎಂದು ಗುರುತಿಸಿದ್ದೇವೆ. ನೀವು ನಿಮ್ಮ ಪ್ರಯಾಣದಲ್ಲಿ ಸುರಕ್ಷಿತವಾಗಿದ್ದೀರಾ?</string>
+    <string name="everything_okay">ಎಲ್ಲಾ ಸರಿಯಾಗಿದೆಯೇ?</string>
+    <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">ನಾವು ನಿನ್ನ ಚಾಲಕನು ಸ್ವಲ್ಪ ಹೊಡೆಯುತ್ತಿಲ್ಲವೆನ್ನುತ್ತಿದ್ದೇವೆ. ನೀವು ನಿಜಾಯಿತು ಸುರಕ್ಷಿತವಾಗಿರುತ್ತಿದ್ದೀರಾ?</string>
 
 </resources>

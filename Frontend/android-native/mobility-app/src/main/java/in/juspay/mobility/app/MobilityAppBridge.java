@@ -13,11 +13,16 @@ import static android.Manifest.permission.CAMERA;
 import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
+import static androidx.core.app.ActivityCompat.requestPermissions;
 import static androidx.core.app.ActivityCompat.startIntentSenderForResult;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.content.ActivityNotFoundException;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
@@ -26,6 +31,8 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.database.Cursor;
+import android.graphics.Color;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Build;
@@ -33,11 +40,16 @@ import android.os.Bundle;
 import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.text.Html;
+import android.provider.MediaStore;
 import android.util.Log;
+import android.util.Size;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
+import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -47,6 +59,17 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.annotation.Nullable;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageCapture;
+import androidx.camera.core.Preview;
+import androidx.camera.core.VideoCapture;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.android.installreferrer.api.InstallReferrerClient;
@@ -61,6 +84,7 @@ import com.google.android.gms.tasks.Task;
 import com.google.android.play.core.review.ReviewInfo;
 import com.google.android.play.core.review.ReviewManager;
 import com.google.android.play.core.review.ReviewManagerFactory;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.google.firebase.messaging.FirebaseMessaging;
@@ -75,6 +99,7 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTube
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.ui.DefaultPlayerUiController;
 import com.theartofdev.edmodo.cropper.CropImage;
 
+import org.checkerframework.checker.units.qual.C;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -90,12 +115,15 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 
 import in.juspay.hyper.bridge.HyperBridge;
 import in.juspay.hyper.core.BridgeComponents;
@@ -105,6 +133,32 @@ import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.ContentValues;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.provider.MediaStore;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.ImageCapture;
+import androidx.camera.core.Preview;
+import androidx.camera.core.VideoCapture;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.PreviewView;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.google.common.util.concurrent.ListenableFuture;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 
 
 public class MobilityAppBridge extends HyperBridge {
@@ -116,6 +170,8 @@ public class MobilityAppBridge extends HyperBridge {
     private static final String CALLBACK = "CALLBACK";
     private static final String UTILS = "UTILS";
     private static final String OVERRIDE = "OVERRIDE";
+    private static final int CALL_REQUEST_CODE = 90;
+    private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
 
     private static final String REFERRER = "REFERRER";
     private final ArrayList<ViewPagerItem> viewPagerItemArrayList = new ArrayList<>();
@@ -129,7 +185,6 @@ public class MobilityAppBridge extends HyperBridge {
     private String storeImageUploadCallBack = null;
     private String storeUploadMultiPartCallBack = null;
 
-
     // Permission request Code
     private static final int CREDENTIAL_PICKER_REQUEST = 74;
 
@@ -138,6 +193,8 @@ public class MobilityAppBridge extends HyperBridge {
     public static YouTubePlayer youtubePlayer;
     public static String youtubeVideoStatus;
     public static float videoDuration = 0;
+
+    CameraUtils cameraUtils;
 
     protected HashMap<String, Trace> traceElements;
 
@@ -729,6 +786,7 @@ public class MobilityAppBridge extends HyperBridge {
                         boolean showSeekBar = json.getBoolean("showSeekBar");
                         String videoTitle = json.getString("videoTitle");
                         String videoId = json.getString("videoId");
+                        boolean showFullScreen = json.getBoolean("showFullScreen");
                         String videoType = "VIDEO";
                         if (json.has("videoType")) {
                             videoType = json.getString("videoType");
@@ -747,7 +805,7 @@ public class MobilityAppBridge extends HyperBridge {
                                         playerUiController.showMenuButton(showMenuButton);
                                         playerUiController.showDuration(showDuration);
                                         playerUiController.showSeekBar(showSeekBar);
-                                        playerUiController.showFullscreenButton(true);
+                                        playerUiController.showFullscreenButton(!showFullScreen);
                                         if (setVideoTitle) {
                                             playerUiController.setVideoTitle(videoTitle);
                                         }
@@ -774,6 +832,8 @@ public class MobilityAppBridge extends HyperBridge {
                             }
                         };
 
+                        if(showFullScreen)
+                            youTubePlayerView.enterFullScreen();
                         String finalVideoType = videoType;
                         youTubePlayerView.addFullScreenListener(new YouTubePlayerFullScreenListener() {
                             @Override
@@ -799,6 +859,12 @@ public class MobilityAppBridge extends HyperBridge {
                 }
             });
         }
+    }
+
+    @JavascriptInterface
+    public void switchYoutubeVideo (String videoId){
+        if(youtubePlayer != null)
+            youtubePlayer.loadVideo(videoId, 0);
     }
     
     private final VPAdapter vpAdapter = new VPAdapter(viewPagerItemArrayList, bridgeComponents.getContext(), new VPAdapter.VPAdapterListener(){
@@ -1081,6 +1147,51 @@ public class MobilityAppBridge extends HyperBridge {
             Log.e("UPLOAD_MULTI_PART_DATA" , "error in Upload file: "+e);
         }
     }
+    
+    public void askRequestedPermissions(String[] requests) {
+        PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, null);
+    }
+
+    @JavascriptInterface
+    public void askRequestedPermissionsWithCallback(String[] requests, final String callback) {
+        PermissionUtils.askRequestedPermissions(bridgeComponents.getActivity(), bridgeComponents.getContext(), requests, new PermissionUtils.PermissionCallback() {
+            @Override
+            public void onPermissionsGranted() {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", callback, true);
+                if (callback != null) {
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            }
+
+            @Override
+            public void onPermissionsDenied() {
+                String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');", callback, false);
+                if (callback != null) {
+                    bridgeComponents.getJsCallback().addJsToWebView(javascript);
+                }
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void setupCamera(String previewViewId, boolean isBackCamera) {
+        cameraUtils = new CameraUtils();
+        cameraUtils.setupCamera(bridgeComponents.getActivity(), bridgeComponents.getContext(), previewViewId, isBackCamera);
+    }
+
+    @JavascriptInterface
+    public void recordVideo(final String callback) {
+        if(cameraUtils != null)
+            cameraUtils.recordVideo(bridgeComponents.getActivity(), bridgeComponents.getContext(), callback, bridgeComponents);
+    }
+
+    @JavascriptInterface
+    public void stopRecord() {
+        if(cameraUtils != null)
+            cameraUtils.stopRecord();
+    }
+
+    // region Override functions
 
     @Override
     public boolean onActivityResult(int requestCode, int resultCode, Intent data) {

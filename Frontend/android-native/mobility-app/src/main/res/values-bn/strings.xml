@@ -49,4 +49,7 @@
     <string name="accept_goto">প্রস্তাব গ্রহণ “গো-টু”</string>
     <string name="take_a_clear_selfie">চিহ্নিত এলাকার ভিতরে আপনার ড্রাইভিং লাইসেন্স \n সহ একটি পরিষ্কার ছবি তুলুন</string>
     <string name="need_help">সাহায্য চাই?</string>
+    <string name="safety_deviation_alert">আমরা দেখেছি আপনার রাইডটি একটি বিভিন্ন রুটে আছে। আপনি আপনার ভ্রমণে সুরক্ষিত আছেন?</string>
+    <string name="everything_okay">হ্যাঁ, সব ঠিক আছে</string>
+    <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">আমরা লক্ষ্য করেছি আপনার চালক একটু সময় ধরে চলেননি। আপনি কি আপনার ভ্রমণে নিরাপদ অনুভূত করছেন?</string>
 </resources>

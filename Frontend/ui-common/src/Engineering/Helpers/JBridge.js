@@ -2316,3 +2316,60 @@ export const displayBase64Image = (configObj) => {
     }
   }
 } 
+
+export const askRequestedPermissions = function(permissions){
+  if(window.JBridge.askRequestedPermissions)
+    return window.JBridge.askRequestedPermissions(permissions);
+}
+
+export const askRequestedPermissionsWithCallback = function(permissions){
+  return function(cb) {
+    return function(action) {
+      const callback = callbackMapper.map(function (isPermissionGranted) {
+        cb(action(isPermissionGranted))();
+      });
+      if(window.JBridge.askRequestedPermissionsWithCallback)
+        return window.JBridge.askRequestedPermissionsWithCallback(permissions, callback);
+    }
+  }
+}
+
+export const setupCamera = function(id){
+  return function(isBackCamera){
+    if (window.__OS == "IOS" && window.JBridge.renderCameraView) {
+      return window.JBridge.renderCameraView(id);
+    }
+    else if(window.JBridge.setupCamera){
+      return window.JBridge.setupCamera(id, isBackCamera);
+    }
+  }
+}
+
+export const startRecord = function (cb){
+  return function (action){
+    return function () {
+      const callback = callbackMapper.map(function (videostatus, videoUri) {
+        cb(action(videostatus)(videoUri))();
+      });
+      if (window.__OS == "IOS" && window.JBridge.startRecording) {
+        return window.JBridge.startRecording(callback);
+      }
+      else if(window.JBridge.recordVideo){
+        return window.JBridge.recordVideo(callback);
+      }
+    }
+  }
+}
+  
+
+export const stopRecord = function(){
+  if(window.JBridge.stopRecord){
+    return window.JBridge.stopRecord();
+  }
+}
+
+export const switchYoutubeVideo = function(videoId) {
+  if (window.JBridge.switchYoutubeVideo){
+    window.JBridge.switchYoutubeVideo(videoId)
+  }
+}

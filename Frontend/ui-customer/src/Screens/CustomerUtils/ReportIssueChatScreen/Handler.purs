@@ -56,3 +56,6 @@ reportIssueChatScreen = do
       GoToHelpAndSupportScreen updatedState -> do 
         modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
         App.BackT $ App.NoBack <$> (pure $ GO_TO_HELP_AND_SUPPORT_SCREEN updatedState)
+      GoToSafetyScreen updatedState -> do 
+        modifyScreenState $ ReportIssueChatScreenStateType (\ _ -> initData )
+        App.BackT $ App.NoBack <$> (pure $ GO_TO_SAFETY_SCREEN updatedState)

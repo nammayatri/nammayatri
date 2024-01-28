@@ -55,7 +55,7 @@ import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
 import Control.Transformers.Back.Trans (runBackT)
-import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl)
+import Data.Array ((!!), filter, null, any, snoc, length, head, last, sortBy, union, elem, findIndex, reverse, sortWith, foldl, mapWithIndex)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (toNumber, round, fromString, fromNumber, ceil)
 import Data.Lens ((^.))
@@ -73,7 +73,7 @@ import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey
 import Foreign (unsafeToForeign)
 import Foreign.Class (encode)
 import Helpers.Utils (addToRecentSearches, getCurrentLocationMarker, getDistanceBwCordinates, getLocationName, getScreenFromStage, getSearchType, parseNewContacts, performHapticFeedback, setText, terminateApp, withinTimeRange, toStringJSON, secondsToHms, recentDistance, getPixels, getDeviceDefaultDensity, getDefaultPixels)
-import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo)
+import JBridge (addMarker, animateCamera, currentPosition, exitLocateOnMap, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, getCurrentPosition, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, locateOnMap, minimizeApp, openNavigation, openUrlInApp, removeAllPolylines, removeMarker, requestKeyboardShow, requestLocation, shareTextMessage, showDialer, toast, toggleBtnLoader, goBackPrevWebPage, stopChatListenerService, sendMessage, getCurrentLatLong, isInternetAvailable, emitJOSEvent, startLottieProcess, getSuggestionfromKey, scrollToEnd, lottieAnimationConfig, methodArgumentCount, getChatMessages, scrollViewFocus, getLayoutBounds, updateInputString, checkAndAskNotificationPermission, locateOnMapConfig, addCarouselWithVideoExists, pauseYoutubeVideo, cleverTapCustomEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, printLog, trackAppTextInput, trackAppScreenEvent)
@@ -111,6 +111,7 @@ import Data.List ((:))
 import Common.Resources.Constants (zoomLevel, pickupZoomLevel)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
+import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Timers (clearTimerWithId)
 import Mobility.Prelude (boolToInt, toBool)
 import SuggestionUtils
@@ -700,10 +701,10 @@ data ScreenOutput = LogoutUser
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
+                  | GoToNammaSafety HomeScreenState Boolean
                   | PastRides HomeScreenState
                   | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
-                  | GoToEmergencyContacts HomeScreenState
                   | Retry HomeScreenState
                   | GetQuotes HomeScreenState
                   | UpdatedState HomeScreenState Boolean
@@ -746,6 +747,9 @@ data ScreenOutput = LogoutUser
                   | ExitToTicketing HomeScreenState
                   | GoToHelpAndSupport HomeScreenState
                   | ReAllocateRide HomeScreenState
+                  | SafetySupport HomeScreenState Boolean
+                  | GoToShareRide HomeScreenState
+                  | GoToNotifyRideShare HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -889,6 +893,13 @@ data Action = NoAction
             | RemoveShimmer 
             | ReportIssueClick
             | ChooseSingleVehicleAction ChooseVehicleController.Action
+            | StartSOSOnBoarding Banner.Action
+            | SafetyAlertAction PopUpModal.Action
+            | ContactAction ContactCircle.Action
+            | ShowShareRide
+            | NotifyRideShare PrimaryButtonController.Action
+            | ToggleShare Int
+            | DismissShareRide
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 
@@ -1435,9 +1446,8 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_about"
   exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
-eval (SettingSideBarActionController (SettingSideBarController.GoToEmergencyContacts)) state = do
-  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contacts"
-  exit $ GoToEmergencyContacts state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+eval (SettingSideBarActionController (SettingSideBarController.GoToNammaSafety)) state = do
+  exit $ GoToNammaSafety state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToMyTickets)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_zoo_tickets"
@@ -1669,14 +1679,15 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 
 eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
-  continue state{props{emergencyHelpModal = true}}
+  exit $ GoToNammaSafety state true
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
 eval ShareRide state = do
   continueWithCmd state
         [ do
-            _ <- pure $ shareTextMessage (getValueToLocalStore USER_NAME <> "is on a Namma Yatri Ride") $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            _ <- pure $ shareTextMessage "" $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]
 
@@ -1699,8 +1710,6 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.StoreContacts)) state  = do
     let newContacts = transformContactList contactsInJson
         newState = state{props{emergencyHelpModelState{emergencyContactData = newContacts}}}
     continue newState
-
-eval (EmergencyHelpModalAC (EmergencyHelpController.AddedEmergencyContacts)) state  =  updateAndExit state{props{emergencyHelpModelState{isSelectEmergencyContact = true}}} $ GoToEmergencyContacts state {props {emergencyHelpModelState{isSelectEmergencyContact = true}}}
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
     void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo false -- TODO: FIX_DIALER
@@ -2268,6 +2277,8 @@ eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showDisabilityPopUp = false}}
 
+eval (StartSOSOnBoarding Banner.OnClick) state = exit $ GoToNammaSafety state false
+
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
 
@@ -2419,6 +2430,23 @@ eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state tru
 
 eval ReportIssueClick state = exit $  GoToHelp state
 
+eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
+  void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_i_feel_safe"
+  exit $ SafetySupport state true
+
+eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
+    void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_need_help"
+    void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
+    exit $ GoToNammaSafety state true
+
+eval ShowShareRide state = exit $ GoToShareRide state
+
+eval (NotifyRideShare PrimaryButtonController.OnClick) state = exit $ GoToNotifyRideShare state
+
+eval (ToggleShare index) state = continue state {data{contactList = mapWithIndex (\i item -> if index == i then item {isSelected = not item.isSelected} else item) state.data.contactList}}
+
+eval DismissShareRide state = continue state {props{showShareRide = false}}
+
 eval _ state = continue state
 
 dummyChatComponent :: MessagingView.ChatComponent
@@ -2442,7 +2470,6 @@ constructLatLong lat lng _ =
   , city : Nothing
   }
 
-addItemToFeedbackList :: Array String -> String -> Array String
 addItemToFeedbackList feedbackList feedbackItem = if (any (_ == feedbackItem) feedbackList ) then (filter (\item -> feedbackItem /= item) feedbackList) else snoc feedbackList feedbackItem
 
 checkPermissionAndUpdatePersonMarker :: HomeScreenState -> Effect Unit

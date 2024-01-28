@@ -35,6 +35,7 @@ import Components.PopUpModal as PopUpModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.PricingTutorialModel as PricingTutorialModel
 import Components.PrimaryButton as PrimaryButton
+import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Components.QuoteListModel.View as QuoteListModel
 import Components.RateCard as RateCard
 import Components.RatingCard as RatingCard
@@ -86,8 +87,9 @@ import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLoca
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
+import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
-import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..))
+import Screens.Types (CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), NewContacts)
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
@@ -122,7 +124,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
-            _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
+            -- _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             if (not initialState.props.callbackInitiated) then do
               _ <- pure $ printLog "storeCallBackCustomer initiateCallback" "."
@@ -386,6 +388,8 @@ view push state =
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
             , if state.data.waitTimeInfo && state.props.currentStage == RideAccepted then waitTimeInfoPopUp push state else emptyTextView state
+            , if showSafetyAlertPopup then safetyAlertPopup push state else  emptyTextView state
+            , if state.props.showShareRide then shareRidePopup push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -405,6 +409,8 @@ view push state =
                     else [])
         ]
   ]
+  where
+    showSafetyAlertPopup = not $ any (_ == (getValueToLocalNativeStore SAFETY_ALERT_TYPE))["__failed", "false", "(null)"]
 
 getMapHeight :: HomeScreenState -> Length
 getMapHeight state = V (if state.data.currentSearchResultType == QUOTES then (((screenHeight unit)/ 4)*3) 
@@ -822,23 +828,67 @@ nammaSafetyView push state =
 
 sosView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 sosView push state =
-  linearLayout
-  [ width WRAP_CONTENT
-  , height WRAP_CONTENT
-  , visibility $ boolToVisibility $ (any (_ == state.props.currentStage) ) [RideAccepted, RideStarted, ChatWithDriver] 
-  , margin (MarginHorizontal 16 16)
-  , cornerRadius if os == "IOS" then 20.0 else 32.0
-  , clickable true
-  , onClick push $ const OpenEmergencyHelp
-  , rippleColor Color.rippleShade
-  ][ imageView 
-    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
-    , width $ V 50
-    , height $ V 50
-    , accessibilityHint $ "S O S : Button : Select to view S O S options"
-    , accessibility ENABLE
+  relativeLayout
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , gravity CENTER
+    , visibility $ boolToVisibility $ (any (_ == state.props.currentStage)) [ RideAccepted, RideStarted, ChatWithDriver ]
     ]
-  ]
+    [ textView
+        $ [ text $ getString NEW <> "✨"
+          , color Color.white900
+          , margin $ Margin 18 16 12 12
+          , padding $ Padding 12 30 12 3
+          , background Color.blue900
+          , width $ V 130
+          , gravity CENTER
+          , cornerRadius 20.0
+          ]
+        <> FontStyle.body17 TypoGraphy
+    , linearLayout
+        [ width WRAP_CONTENT
+        , height WRAP_CONTENT
+        , cornerRadius 20.0
+        , clipChildren false
+        ]
+        [ linearLayout
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , margin $ Margin 12 12 12 12
+            , shadow $ Shadow 0.1 2.0 10.0 24.0 Color.greyBackDarkColor 0.5
+            , background Color.white900
+            , cornerRadius 20.0
+            , onClick push $ const OpenEmergencyHelp
+            ]
+            [ linearLayout
+                [ gravity CENTER_VERTICAL
+                , padding $ Padding 12 6 12 6
+                ]
+                [ imageView
+                    [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
+                    , height $ V 24
+                    , width $ V 24
+                    , margin $ MarginRight 8
+                    , accessibilityHint $ "S O S Button, Select to view S O S options"
+                    , accessibility ENABLE
+                    , onClick push $ const OpenEmergencyHelp
+                    ]
+                , textView
+                    $ [ text $ getString SAFETY_CENTER
+                      , color Color.blue900
+                      , margin $ MarginBottom 1
+                      ]
+                    <> FontStyle.body6 TypoGraphy
+                ]
+            , imageView
+                [ imageWithFallback $ fetchImage FF_ASSET "ic_red_icon"
+                , height $ V 12
+                , width $ V 12
+                , visibility $ boolToVisibility $ getValueToLocalStore IS_SOS_ACTIVE == "true"
+                ]
+            ]
+        ]
+    ]
 
 liveStatsDashboardView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 liveStatsDashboardView push state =
@@ -926,8 +976,10 @@ buttonLayout state push =
       , orientation VERTICAL
       , padding $ if state.data.config.feature.enableZooTicketBookingFlow then PaddingTop 0 else PaddingTop 16
       ]
-      [ if state.data.config.feature.enableZooTicketBookingFlow
-        then zooTicketBookingBanner state push 
+      [ if not state.data.settingSideBar.hasCompletedSafetySetup 
+          then sosSetupBannerView state push  
+        else if state.data.config.feature.enableZooTicketBookingFlow
+          then zooTicketBookingBanner state push 
         else linearLayout[visibility GONE][]
       , PrimaryButton.view (push <<< PrimaryButtonActionController) (whereToButtonConfig state)
       , if state.props.isSearchLocation == LocateOnMap
@@ -2711,7 +2763,7 @@ rideInfoActionView push state =
       , clickable true
       , accessibilityHint "Share Ride : Button : Select to share ride details"
       , accessibility ENABLE
-      , onClick push $ const ShareRide
+      , onClick push $ const ShowShareRide
       , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
       , rippleColor Color.rippleShade
       ][ imageView
@@ -3378,7 +3430,9 @@ homeScreenViewV2 push state =
                                       [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state
                                       , if state.data.config.feature.enableZooTicketBookingFlow
                                           then zooTicketBookingBanner state push 
-                                          else linearLayout[visibility GONE][]
+                                        else if not state.data.settingSideBar.hasCompletedSafetySetup 
+                                          then sosSetupBannerView state push
+                                        else linearLayout[visibility GONE][]
                                       , shimmerView state
                                       , suggestionsView push state
                                       , emptySuggestionsBanner state push
@@ -4193,3 +4247,131 @@ locationUnserviceableView push state =
       ] <> (FontStyle.tags TypoGraphy)
     ]
   ]
+    
+sosSetupBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
+sosSetupBannerView state push = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin (Margin 10 10 10 10)
+    , gravity BOTTOM
+    ][     
+        Banner.view (push <<< StartSOSOnBoarding) (sosSetupBannerConfig state)
+    ]
+
+safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+safetyAlertPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< SafetyAlertAction) (safetyAlertConfig state)]
+
+
+shareRidePopup :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+shareRidePopup push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , background Color.blackLessTrans
+    , gravity CENTER_VERTICAL
+    , onClick push $ const DismissShareRide
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginHorizontal 16 16
+        , background Color.white900
+        , cornerRadius 16.0
+        , clickable true
+        ]
+        [ linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , gravity CENTER_VERTICAL
+            , padding $ Padding 16 24 16 16
+            , background Color.blue600
+        , cornerRadius 16.0
+            ]
+            [ textView
+                $ [ text $ getString SHARE_RIDE
+                  , color Color.black900
+                  , weight 1.0
+                  ]
+                <> FontStyle.h1 TypoGraphy
+            , imageView
+                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_close"
+                , height $ V 20
+                , width $ V 20
+                , onClick push $ const DismissShareRide
+                ]
+            ]
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , gravity CENTER_VERTICAL
+            , padding $ Padding 16 16 16 16
+            ]
+            [ textView
+                $ [ text $ getString $ SHARE_RIDE_DESCRIPTION "SHARE_RIDE_DESCRIPTION"
+                  , color Color.black700
+                  ]
+                <> FontStyle.body1 TypoGraphy
+        , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            , margin $ MarginTop 16
+            ]
+            (mapWithIndex (shareRideOptionView push state) state.data.contactList)
+        , PrimaryButton.view (push <<< NotifyRideShare) (shareRideButtonConfig state)
+        , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , margin $ Margin 16 12 16 16
+          , gravity CENTER
+          , onClick push $ const ShareRide
+          ][
+            imageView
+              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_share"
+              , height $ V 20
+              , width $ V 20
+              , margin $ MarginRight 7
+              ]
+           , textView
+              [ text $ getString SHARE_LINK
+              , color Color.black700
+              , width WRAP_CONTENT              
+              ]
+          ]
+        ]
+        ]
+    ]
+
+shareRideOptionView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> Int -> NewContacts -> PrestoDOM (Effect Unit) w
+shareRideOptionView push state index contact =
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation HORIZONTAL
+    , gravity CENTER_VERTICAL
+    , padding $ Padding 16 6 16 6
+    , onClick push $ const $ ToggleShare index
+    ]
+    [ imageView
+        [ imageWithFallback $ fetchImage FF_ASSET $ if contact.isSelected then "ny_ic_checkbox_selected" else "ny_ic_checkbox_unselected"
+        , height $ V 16
+        , width $ V 16
+        , margin $ MarginRight 10
+        ]
+    , ContactCircle.view (ContactCircle.getContactConfig contact index false) (push <<< ContactAction)
+    , textView
+        $ [ text contact.name
+          , color Color.black800
+          , gravity CENTER_VERTICAL
+          , margin $ MarginLeft 8
+          ]
+        <> FontStyle.body1 TypoGraphy
+    ]
