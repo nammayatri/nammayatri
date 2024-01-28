@@ -24,19 +24,21 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Utils.Common
-import Kernel.Utils.Servant.SignatureAuth
+-- import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 
 type API = Spec.OnStatusAPI
 
-handler :: SignatureAuthResult -> FlowServer API
+handler :: FlowServer API
+-- handler :: SignatureAuthResult -> FlowServer API
 handler = onStatus
 
 onStatus ::
-  SignatureAuthResult ->
+  -- SignatureAuthResult ->
   Spec.OnStatusReq ->
   FlowHandler Spec.AckResponse
-onStatus _ req = withFlowHandlerAPI $ do
+-- onStatus _ req = withFlowHandlerAPI $ do
+onStatus req = withFlowHandlerAPI $ do
   transaction_id <- req.onStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   withTransactionIdLogTag' transaction_id $ do
     dOnStatusReq <- ACL.buildOnStatusReq req

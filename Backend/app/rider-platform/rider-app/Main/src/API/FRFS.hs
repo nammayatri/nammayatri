@@ -21,12 +21,12 @@ import qualified API.Beckn.FRFS.OnStatus as OnStatus
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Id
-import Kernel.Utils.Servant.SignatureAuth
+-- import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 
 type API =
   "beckn" :> "frfs" :> "v1"
-    :> SignatureAuth "Authorization"
+    -- :> SignatureAuth "Authorization"
     :> ( OnSearch.API
            :<|> OnInit.API
            :<|> OnConfirm.API
@@ -36,7 +36,7 @@ type API =
 type APIM =
   "beckn" :> "frfs" :> "v1"
     :> Capture "merchantId" (Id DM.Merchant)
-    :> SignatureAuth "Authorization"
+    -- :> SignatureAuth "Authorization"
     :> ( OnSearch.API
            :<|> OnInit.API
            :<|> OnConfirm.API
@@ -44,8 +44,9 @@ type APIM =
        )
 
 handler :: FlowServer API
-handler auth =
-  OnSearch.handler auth
-    :<|> OnInit.handler auth
-    :<|> OnConfirm.handler auth
-    :<|> OnStatus.handler auth
+handler =
+  -- auth =
+  OnSearch.handler --auth
+    :<|> OnInit.handler --auth
+    :<|> OnConfirm.handler --auth
+    :<|> OnStatus.handler --auth
