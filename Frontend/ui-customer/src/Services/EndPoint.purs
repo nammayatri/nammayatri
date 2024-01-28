@@ -199,3 +199,27 @@ updateIssue issueId language = (getBaseUrl "45") <> "/issue/" <> issueId <> "/up
 
 fetchIssueList :: String -> String
 fetchIssueList language = (getBaseUrl "46") <> "/issue/list?language=" <> language
+
+getEmergencySettings :: String -> String
+getEmergencySettings dummy = (getBaseUrl "47") <> "/profile/getEmergencySettings"
+
+updateEmergencySettings :: String -> String
+updateEmergencySettings dummy = (getBaseUrl "48") <> "/profile/updateEmergencySettings"
+
+updateSafeRide :: String -> String
+updateSafeRide sosId = (getBaseUrl "49") <> "/sos/markRideAsSafe/" <> sosId
+
+updateSosVideo :: String -> String
+updateSosVideo sosId = (getBaseUrl "50") <> "/sos/" <> sosId <> "/addVideo"
+
+getSosDetails :: String -> String
+getSosDetails rideId = (getBaseUrl "51") <> "/sos/getDetails/" <> rideId
+
+safetySupport :: String -> String
+safetySupport dummy = (getBaseUrl "52") <> "/support/safetyCheckSupport"
+
+createMockSos :: String -> String
+createMockSos dummy = (getBaseUrl "53") <> "/sos/createMockSos"
+
+shareRide :: String -> String
+shareRide dummy = (getBaseUrl "54") <> "/share/ride"

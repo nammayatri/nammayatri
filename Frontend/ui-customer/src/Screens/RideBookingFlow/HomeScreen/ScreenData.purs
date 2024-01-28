@@ -148,6 +148,7 @@ initData = {
       , bannerScrollState: "0"
       , currentPage : 0
     } 
+    , contactList : []
     },
     props: {
       rideRequestFlow : false
@@ -288,6 +289,8 @@ initData = {
     , autoScrollTimerId : ""
     , autoScroll : true
     , enableChatWidget : false
+    , showSosBanner : false
+    , showShareRide : false
     }
 }
 
@@ -401,6 +404,7 @@ dummySettingBar = {
   , gender : Nothing
   , appConfig : getAppConfig appConfig
   , sideBarList : ["MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "ShareApp", "LiveStatsDashboard", "About", "Logout"]
+  , hasCompletedSafetySetup : false
 }
 
 dummyAddress :: Address

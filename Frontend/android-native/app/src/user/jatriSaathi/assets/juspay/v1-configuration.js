@@ -109,7 +109,7 @@ window.getMerchantConfig = function () {
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"],
     "merchantLogo" : "ny_ic_yatri_sathi_logo,https://assets.juspay.in/beckn/jatrisaathi/user/images/ny_ic_yatri_sathi_logo.png",
     "feedbackBackground": "#2C2F3A",
-    "sideBarList": ["MyRides", "Tickets", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
+    "sideBarList": ["MyRides", "Tickets", "Favorites", "NammaSafety", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout"],
     "rateCardColor": "#2C2F3A",
     "nyBrandingVisibility": false,
     "fontType": "Assets",
@@ -149,6 +149,7 @@ window.getMerchantConfig = function () {
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours.",
       "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Yatri Sathi Support. Do you want to proceed?",
       "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at nammayatri.support@juspay.in for any queries."
+
     },
     "hindiStrings": {
       "ABOUT_APP_DESCRIPTION": "यात्री साथी सवारियों को चालकों से जोड़ने का एक खुला मंच है। ऐप राइडर्स के लिए मीटर रेट के साथ राइड बुक करना सुविधाजनक बनाता है इसलिए न्यूनतम किराया।",
@@ -180,6 +181,7 @@ window.getMerchantConfig = function () {
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपने मामले का वर्णन करें। यात्री साथी 24 घंटे के अंदर इसका समाधान करने का प्रयास करेंगे।",
       "CALL_SUPPORT_DESCRIPTION" : "आप यात्री साथी सहायता को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
       "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "हमें उम्मीद है कि समस्या हल हो गई है, किसी भी प्रश्न के लिए बेझिझक हमें yatrisathi.support@wb.gov.in पर लिखें।"
+      
     },
     "bengaliStrings": {
       "ABOUT_APP_DESCRIPTION": "যাত্রী সাথী হল চালকদের সাথে রাইডারদের সংযোগ করার জন্য একটি উন্মুক্ত প্ল্যাটফর্ম। অ্যাপটি রাইডারদের জন্য মিটার রেট সহ একটি রাইড বুক করা সুবিধাজনক করে তোলে তাই ন্যূনতম ভাড়া।",
@@ -199,7 +201,7 @@ window.getMerchantConfig = function () {
       "CORPORATE_ADDRESS_DESCRIPTION" : "পশ্চিমবঙ্গ সরকারের তথ্য প্রযুক্তি ও ইলেকট্রনিক্স বিভাগ, মনিভান্ডার (৫ম এবং ৬ষ্ঠ তলা), ওয়েবেল ভবনের প্রাঙ্গণ, ব্লক - ইপি অ্যান্ড জিপি, সেক্টর-ভি, সল্টলেক, কলকাতা - 700091",
       "REGISTERED_ADDRESS_DESCRIPTION" : "পশ্চিমবঙ্গ সরকারের তথ্য প্রযুক্তি ও ইলেকট্রনিক্স বিভাগ, মনিভান্ডার (৫ম এবং ৬ষ্ঠ তলা), ওয়েবেল ভবনের প্রাঙ্গণ, ব্লক - ইপি অ্যান্ড জিপি, সেক্টর-ভি, সল্টলেক, কলকাতা - 700091",
       "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL" : "",
-      "CALL_NAMMA_YATRI_SUPPORT" : "সহযাত্রী সমর্থন কল করুন",
+      "CALL_NAMMA_YATRI_SUPPORT" : "সহযাত্রী সাহায্য কল করুন",
       "YOUR_FEEDBACK_HELPS_US" : "আপনার প্রতিক্রিয়া আমাদের যাত্রী সাথী অভিজ্ঞতা উন্নত করতে সাহায্য করে",
       "LEARN_HOW_TEXT" : "জানুন কীভাবে যাত্রী সাথী আপনার প্রয়োজন মেটায়",
       "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE": "ড্রাইভার যোগ করার সীমা ₹10 বৃদ্ধিতে রয়েছে ",
@@ -211,6 +213,7 @@ window.getMerchantConfig = function () {
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "আপনার সমস্যাটি বর্ণনা. যাত্রী সাথী 24 ঘন্টার মধ্যে এটি সমাধান করার চেষ্টা করবে।",
       "CALL_SUPPORT_DESCRIPTION" : "আপনি যাত্রী সাথী সমর্থনে একটি কল করতে চলেছেন৷ আপনি কি এগিয়ে যেতে চান?",
       "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "আমরা আশা করি সমস্যাটি সমাধান হয়ে গেছে, যেকোনো প্রশ্নের জন্য yatrisathi.support@wb.gov.in-এ আমাদের কাছে নির্দ্বিধায় লিখুন।"
+
     },
     "languageList": [{
       "name": "English",
@@ -227,27 +230,27 @@ window.getMerchantConfig = function () {
     }],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
-    , "title" : "Complete your profile for a personalised ride experience"
-    , "titleColor" : "#21C179"
-    , "actionText" : "Update now"
-    , "actionTextColor" : "#27AE5F"
-    , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
+      , "title" : "Complete your profile for a personalised ride experience"
+      , "titleColor" : "#21C179"
+      , "actionText" : "Update now"
+      , "actionTextColor" : "#27AE5F"
+      , "imageUrl" : "ny_ic_banner_gender_feat,https://assets.juspay.in/beckn/merchantcommon/images/ny_ic_banner_gender_feat.png"
     },
     "terminateBtnConfig" : {
       "visibility" : false,
       "title" : "",
       "imageUrl" : ""
-  }
-  , "showDeleteAccount" : true
-  , "fontName" : "PlusJakartaSans"
-  , "fontKannada" : "NotoSansKannada"
-  , "showGenderBanner" : true
-  , "autoSelectBackground" : "#53BB6F"
-  , "enableMockLocation" : false
-  , "defaultLanguage" : "EN_US"
-  , "enableGeocoder" : false
-  , "specialLocationView" : true
-  , "navigationAppConfig" : {
+    }
+    , "showDeleteAccount" : true
+    , "fontName" : "PlusJakartaSans"
+    , "fontKannada" : "NotoSansKannada"
+    , "showGenderBanner" : true
+    , "autoSelectBackground" : "#53BB6F"
+    , "enableMockLocation" : false
+    , "defaultLanguage" : "EN_US"
+    , "enableGeocoder" : false
+    , "specialLocationView" : true
+    , "navigationAppConfig" : {
       "query" : "google.navigation:q=%f,%f"
     , "packageName" : "com.google.android.apps.maps"
     , "walkQuery" : "google.navigation:q=%f,%f&mode=w"
@@ -267,7 +270,7 @@ window.getMerchantConfig = function () {
       { "notify" : true, 
         "autoGeneratedText" : "Nomoshkar, I'll arrive in about "
       }
-  , "estimateAndQuoteConfig" : 
+    , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["SEDAN", "HATCHBACK", "TAXI_PLUS"], ["TAXI"] ]
       , "variantOrder" : ["SEDAN", "HATCHBACK", "TAXI_PLUS", "TAXI", "SUV"]
       , "enableOnlyAuto" : false
