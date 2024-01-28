@@ -19,6 +19,7 @@ module Beckn.ACL.FRFS.Init (buildInitReq) where
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
+import qualified BecknV2.FRFS.Utils as Utils
 import Data.List (singleton)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DTBooking
@@ -36,12 +37,15 @@ buildInitReq ::
   BecknConfig ->
   m (Spec.InitReq)
 buildInitReq rider tBooking bapConfig = do
+  now <- getCurrentTime
   let transactionId = tBooking.searchId.getId
   let messageId = tBooking.id.getId
+      validTill = addUTCTime (intToNominalDiffTime 30) now
+      ttl = diffUTCTime validTill now
 
   let mPaymentParams = bapConfig.paymentParamsJson >>= decodeFromText
   let mSettlementType = bapConfig.settlementType
-  context <- Utils.buildContext Spec.INIT bapConfig transactionId messageId Nothing
+  context <- Utils.buildContext Spec.INIT bapConfig transactionId messageId (Just $ Utils.durationToText ttl)
 
   pure $
     Spec.InitReq
