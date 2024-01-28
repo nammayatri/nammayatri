@@ -17,6 +17,7 @@ metroTicketStatusScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ MetroTicketStatusView.screen state.metroTicketStatusScreen
   case action of
+    GoBack ->  App.BackT $ pure App.GoBack 
     NoOutput -> pure NO_OUTPUT_METRO_TICKET_STATUS_SCREEN
     GoToMetroTicketDetails updatedState -> do
       modifyScreenState $ MetroTicketStatusScreenStateType (\_ ->updatedState)

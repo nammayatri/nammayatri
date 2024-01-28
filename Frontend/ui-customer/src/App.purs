@@ -44,7 +44,7 @@ import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, RideSelectionScreenState, ReportIssueChatScreenState, IssueInfo, MetroTicketBookingScreenState, SearchLocationScreenState, GlobalProps, MetroTicketDetailsScreenState, MetroMyTicketsScreenState, TicketStatusScreenState, MetroTicketStatusScreenState) 
+import Screens.Types
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
 import Services.API (BookingStatus(..))
@@ -271,15 +271,16 @@ data TICKETING_SCREEN_SCREEN_OUTPUT = EXIT_TO_HOME TicketingScreenState
                                     | BOOK_TICKETS TicketingScreenState
 
 data METRO_TICKET_DETAILS_SCREEN_OUTPUT = METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_OUTPUT 
+                                        | BACK_TO_SEARCH_METRO_LOCATION
 
 data METRO_MY_TICKETS_SCREEN_OUTPUT = METRO_MY_TICKETS_SCREEN_OUTPUT_NO_OUTPUT
                                     | GO_TO_METRO_TICKET_DETAILS_FLOW MetroTicketBookingStatus
                                     | GO_TO_METRO_TICKET_STAUS_FLOW MetroTicketBookingStatus 
 
 data METRO_TICKET_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FROM_METRO_TICKET MetroTicketBookingScreenState
-                                 | GO_TO_METRO_STATION_SEARCH MetroTicketBookingScreenState String
+                                 | GO_TO_METRO_STATION_SEARCH LocationActionId
                                  | METRO_FARE_AND_PAYMENT MetroTicketBookingScreenState
-                                 | GO_TO_MY_METRO_TICKET_SCREEN MetroTicketBookingScreenState
+                                 | GO_TO_MY_METRO_TICKET_SCREEN
                                  | GO_TO_METRO_ROUTE_MAP
                                  | REFRESH_METRO_TICKET_SCREEN MetroTicketBookingScreenState
 data ScreenType =

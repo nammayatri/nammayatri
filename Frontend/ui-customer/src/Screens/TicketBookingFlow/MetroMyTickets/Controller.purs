@@ -33,6 +33,7 @@ data Action = NoAction
 data ScreenOutput = NoOutput
                   | GoToMetroTicketDetailsFlow MetroTicketBookingStatus
                   | GoToMetroTicketStatusFlow MetroTicketBookingStatus
+                  | GoBack
 
 
 eval :: Action -> MetroMyTicketsScreenState -> Eval Action ScreenOutput MetroMyTicketsScreenState
@@ -48,5 +49,7 @@ eval AfterRender state =
       showShimmer = false
     }
   }
+
+eval BackPressed state = exit GoBack
 
 eval _ state = continue state

@@ -34,21 +34,22 @@ data Action = NoAction
             | NextTicketClick
             | TicketQRRendered String String
 
-data ScreenOutput = NoOutput | GoBack
+data ScreenOutput = NoOutput | GoBack | BackToSearchMetroLocation
 
 
 eval :: Action -> MetroTicketDetailsScreenState -> Eval Action ScreenOutput MetroTicketDetailsScreenState
 
 eval BackPressed state = 
-  if state.props.stage == MetroMapStage || state.props.stage == MetroRouteDetailsStage then 
+  if (state.props.stage == MetroMapStage || state.props.stage == MetroRouteDetailsStage) && state.props.previousScreenStage == MetroMyTicketsStage then 
     continue
       state {
         props {
           stage = MetroTicketDetailsStage
         }
       }
+  else if state.props.previousScreenStage == SearchMetroLocationStage then exit BackToSearchMetroLocation
   else
-    exit GoBack
+  exit GoBack
 
 eval ShareTicketClick state = do
   _ <- pure $ shareImageMessage "Here is metro ticket!" (shareImageMessageConfig "")
@@ -133,52 +134,3 @@ shareImageMessageConfig _ = {
   , logoId : getNewIDWithTag "metro_ticket_qr_code"
   , isReferral : false
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
--- module Screens.TicketBookingFlow.MetroTicketDetails.Controller where
-
--- import Log 
--- import Prelude 
--- import PrestoDOM (Eval, continue)
--- import Screens 
--- import Screens.Types 
--- import Helpers.Utils 
--- import Effect.Uncurried 
--- import Effect.Unsafe 
--- import Screens.Types 
--- import Common.Types.App as Common
--- import Language.Strings
--- import Language.Types
--- import PrestoDOM.Types.Core (class Loggable)
-
-
--- instance showAction :: Show Action where
---   show _ = ""
-
--- instance loggableAction :: Loggable Action where
---   performLog action appId  = case action of
---     _ -> pure unit
-    
--- data Action = NoAction
---             | BackPressed 
---             | ShareTicketClick
-
--- data ScreenOutput = NoOutput
-
-
--- eval :: Action -> MetroTicketDetailsScreenState -> Eval Action ScreenOutput MetroTicketDetailsScreenState
-
--- eval _ state = continue state

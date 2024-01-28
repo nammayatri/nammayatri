@@ -61,6 +61,7 @@ data Action = NoAction
             | UpdateLocAndLatLong (Array LocationListItemState) String String 
             | RecenterCurrentLocation 
             | SetLocationOnMap 
+            | MetroRouteMapAction
             | ClearTextField SearchLocationTextField
             | AutoCompleteCallBack String Boolean
             | LocFromMap String String String
@@ -71,6 +72,7 @@ data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
             | InputViewAC GlobalProps InputViewController.Action 
             | MenuButtonAC MenuButtonController.Action
+            | BackPressed
 
 data ScreenOutput = NoOutput  
                   | Reload SearchLocationScreenState
@@ -84,6 +86,8 @@ data ScreenOutput = NoOutput
                   | HomeScreen SearchLocationScreenState
                   | RentalsScreen SearchLocationScreenState
                   | MetroTicketBookingScreen SearchLocationScreenState
+                  | GoToMetroRouteMap
+
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
 eval (PrimaryButtonAC PrimaryButtonController.OnClick) state =  
@@ -251,6 +255,12 @@ eval (InputViewAC _ (InputViewController.BackPress)) state = do
       else exit $ RentalsScreen state 
     _ -> continue state 
 
+eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
+
+eval BackPressed state = do
+ if state.data.fromScreen == getScreen METRO_TICKET_BOOKING_SCREEN then exit $ MetroTicketBookingScreen state 
+  else continue state
+ 
 eval _ state = continue state
 
 

@@ -89,8 +89,7 @@ updateButtonConfig :: ST.MetroTicketBookingScreenState -> PrimaryButton.Config
 updateButtonConfig state = let
     config = PrimaryButton.config
     updateButtonConfig' = config 
-        { textConfig{ text = if state.data.ticketPrice /= 0 then ("Pay " <> (show state.data.ticketPrice) <> "₹")  else "Get Fare"}--, color = state.data.config.primaryTextColor
-        -- , accessibilityHint = if state.props.isBtnEnabled then "Update Personal Details Button " else if not state.props.isEmailValid then "Update Button Is DisAbled : Please Enter A Valid Email" else if (not state.props.isNameValid) then  "Update Button Is DisAbled : Please Enter A Valid Name" else "Update Button Is DisAbled"}
+        { textConfig{ text = if state.data.ticketPrice /= 0 then ("Pay " <> " ₹" <> (show state.data.ticketPrice) )  else "Get Fare"}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)

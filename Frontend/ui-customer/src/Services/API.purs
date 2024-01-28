@@ -2785,18 +2785,6 @@ instance decodeSearchMetroReq :: Decode SearchMetroReq where decode = defaultDec
 instance encodeSearchMetroReq :: Encode SearchMetroReq where encode = defaultEncode
 
 
--- instance makeUserSosReq :: RestEndpoint UserSosReq UserSosRes where
---  makeRequest reqBody headers = defaultMakeRequest POST (EP.userSos "") headers reqBody Nothing
---  decodeResponse = decodeJSON
---  encodeRequest req = standardEncode req
-
--- derive instance genericUserSosReq :: Generic UserSosReq _
--- derive instance newtypeUserSosReq:: Newtype UserSosReq _
--- instance standardEncodeUserSosReq :: StandardEncode UserSosReq where standardEncode (UserSosReq req) = standardEncode req
--- instance showUserSosReq :: Show UserSosReq where show = genericShow
--- instance decodeUserSosReq :: Decode UserSosReq where decode = defaultDecode
--- instance encodeUserSosReq :: Encode UserSosReq where encode = defaultEncode
-
 derive instance genericSearchMetroResp :: Generic SearchMetroResp _
 derive instance newtypeSearchMetroResp :: Newtype SearchMetroResp _
 instance standardEncodeSearchMetroResp :: StandardEncode SearchMetroResp where standardEncode (SearchMetroResp id) = standardEncode id
@@ -2819,8 +2807,8 @@ newtype FRFSStationAPI = FRFSStationAPI {
   , lat :: Maybe Number
   , lon :: Maybe Number
   , address :: Maybe String
-  , stationType :: Maybe StationType --StationType
-  , sequenceNum :: Int
+  , stationType :: Maybe String --StationType
+  , sequenceNum :: Maybe Int
   , color :: Maybe String
 }
 
@@ -2973,19 +2961,9 @@ instance standardEncodeFRFSTicketStatus :: StandardEncode FRFSTicketStatus
 data GetMetroBookingStatusReq = GetMetroBookingStatusReq String
 
 newtype GetMetroBookingStatusResp = GetMetroBookingStatusResp MetroTicketBookingStatus
---   bookingId :: String
---   , status :: String
---   , _type :: FRFSQuoteType
---   , quantity :: Int
---   , vehicleType :: FRFSVehicleType
---   , price :: Int
---   , validTill :: String
---   , payment :: Maybe FRFSBookingPaymentAPI
---   , tickets :: Array FRFSTicketAPI
---   , stations :: Array FRFSStationAPI
--- }
+
 instance makeGetMetroBookingStatusReq :: RestEndpoint GetMetroBookingStatusReq GetMetroBookingStatusResp where
- makeRequest reqBody@(GetMetroBookingStatusReq bookingId) headers = defaultMakeRequest POST (EP.getMetroBookingStatus bookingId) headers reqBody Nothing
+ makeRequest reqBody@(GetMetroBookingStatusReq bookingId) headers = defaultMakeRequest GET (EP.getMetroBookingStatus bookingId) headers reqBody Nothing
  decodeResponse = decodeJSON
  encodeRequest req = standardEncode req
 

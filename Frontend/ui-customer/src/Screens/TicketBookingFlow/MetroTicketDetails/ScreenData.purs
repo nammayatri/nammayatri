@@ -19,6 +19,7 @@ initData = {
     dummyProps : ""
   , stage : MetroTicketDetailsStage
   , currentTicketIndex : 0
+  , previousScreenStage : MetroMyTicketsStage
   }
 }
 

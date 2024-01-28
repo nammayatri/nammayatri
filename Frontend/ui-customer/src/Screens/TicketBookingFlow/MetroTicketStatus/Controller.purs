@@ -47,13 +47,14 @@ data Action = BackPressed
             | ViewTicketBtnOnClick PrimaryButton.Action
 
 data ScreenOutput = NoOutput 
+                  | GoBack
                   | GoToMetroTicketDetails MetroTicketStatusScreenState
                   | RefreshPaymentStatus MetroTicketStatusScreenState
                   | GoToTryAgainPayment MetroTicketStatusScreenState
 
 eval :: Action -> MetroTicketStatusScreenState -> Eval Action ScreenOutput MetroTicketStatusScreenState
 
-eval (BackPressed) state = continue state -- Handle Back Press
+eval (BackPressed) state = exit GoBack --continue state -- Handle Back Press
 
 eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatus)) state =
   case metroTicketBookingStatus.status of 

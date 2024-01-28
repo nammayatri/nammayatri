@@ -23,7 +23,7 @@ import Effect (Effect)
 import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps,Station(..))
 import Styles.Colors as Color
 import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize)
+import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed)
 import JBridge (showMap, debounceFunction, startLottieProcess, lottieAnimationConfig, storeCallBackLocateOnMap)
 import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner, os)
 import Components.SeparatorView.View as SeparatorView
@@ -82,6 +82,7 @@ view globalProps push state =
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
+    , onBackPressed push $ const BackPressed
     , afterRender 
         (\action -> mapRenderAction action)
         $ const AfterRender
@@ -412,7 +413,7 @@ locateOnMapFooterView push state = let
       case actionType of 
         SearchLocationAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
         AddingStopAction -> {imageUrl : "ny_ic_locate_on_map", text : "Set Location On Map", action : SetLocationOnMap}
-        MetroStationSelectionAction -> {imageUrl : "ny_ic_metro", text : "See Metro Map", action : SetLocationOnMap}
+        MetroStationSelectionAction -> {imageUrl : "ny_ic_metro_map", text : "See Metro Map", action : MetroRouteMapAction}
 
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
@@ -479,7 +480,7 @@ predictionsView push state globalProps = let
               , color Color.black700
               , margin $ MarginVertical 14 8
               ] <> FontStyle.body3 TypoGraphy
-          , predictionArrayView $ metroStationsArray state.data.updatedMetroStations --if state.props.actionType == MetroStationSelectionAction then metroStationsArray state.data.updatedMetroStations else state.data.locationList
+          , predictionArrayView $ if state.props.actionType == MetroStationSelectionAction then metroStationsArray state.data.updatedMetroStations else state.data.locationList
           , footerView
         ]
       ]

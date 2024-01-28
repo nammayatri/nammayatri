@@ -23,25 +23,24 @@ import Font.Size as FontSize
 import Mobility.Prelude
 import Debug
 import Helpers.Utils
-
-
+import Animation as Anim
 
 screen :: ST.MetroMyTicketsScreenState -> Screen Action ST.MetroMyTicketsScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
-  , name : "MetroTicketDetailsScreen"
+  , name : "MetroMyTickets"
   , globalEvents : []
   , eval :
     \action state -> do
-        let _ = spy "MetroMyTicketsScreen action " action
-        let _ = spy "MetroMyTicketsScreen state " state
+        let _ = spy "MetroMyTickets action " action
+        let _ = spy "MetroMyTickets state " state
         eval action state
   }
 
 view :: forall w . (Action -> Effect Unit) -> ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
 view push state = 
-  linearLayout[
+  Anim.screenAnimation $ linearLayout[
     width MATCH_PARENT
   , height MATCH_PARENT
   , background Color.white900
@@ -49,13 +48,9 @@ view push state =
   , onBackPressed push $ const BackPressed
   , orientation VERTICAL
   , afterRender push $ const AfterRender
-  ] $ if not $ state.props.showShimmer then 
-        [ headerView push state
+  ] [ headerView push state
         , scrollableView push state
         ]
-      else
-        [shimmerView state]
-
 shimmerView :: forall w . ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
   shimmerFrameLayout[ 
@@ -109,7 +104,7 @@ headerView push state =
         width $ V 24
       , height $ V 27
       , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left"
-      -- , onClick push $ const BackPressed
+      , onClick push $ const BackPressed
       ]
     , textView $ [
         width WRAP_CONTENT
@@ -318,6 +313,7 @@ pastTicketView push ticketCard =
   , height WRAP_CONTENT
   , padding $ Padding 1 1 1 1
   , cornerRadius 8.0
+  , margin $ MarginBottom 16
   , background Color.grey900
   , gravity CENTER
   , onClick push $ const $ PastTicketPressed ticketCard.metroTicketStatusApiResp

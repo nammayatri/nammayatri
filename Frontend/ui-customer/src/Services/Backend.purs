@@ -1141,68 +1141,68 @@ dummyMetroBookingStatus =
     ,
     price: 1,
     quantity: 2,
-    stations: [
-        FRFSStationAPI {
-            address: Nothing,
-            code: "SAP|0133",
-            color: Just "Green",
-            lat: Just 12.980826,
-            lon: Just 80.1642,
-            name: "Chennai International Airport",
-            sequenceNum: 1,
-            stationType: Just START
-        },
-        FRFSStationAPI {
-            address: Nothing,
-            code: "SAP|0133",
-            color: Just "Green",
-            lat: Just 12.980826,
-            lon: Just 80.1642,
-            name: "Chennai Bus Stand",
-            sequenceNum: 1,
-            stationType: Just INTERMEDIATE
-        },
-        FRFSStationAPI {
-            address: Nothing,
-            code: "SAP|0133",
-            color: Just "Green",
-            lat: Just 12.980826,
-            lon: Just 80.1642,
-            name: "Egmore",
-            sequenceNum: 1,
-            stationType: Just INTERMEDIATE
-        },
-        FRFSStationAPI {
-            address: Nothing,
-            code: "SAP|0133",
-            color: Just "Blue",
-            lat: Just 12.980826,
-            lon: Just 80.1642,
-            name: "Fish Market",
-            sequenceNum: 1,
-            stationType: Just TRANSIT
-        },
-        FRFSStationAPI {
-            address: Nothing,
-            code: "SAP|0133",
-            color: Just "Blue",
-            lat: Just 12.980826,
-            lon: Just 80.1642,
-            name: "Mayajaal",
-            sequenceNum: 1,
-            stationType: Just INTERMEDIATE
-        },
-        FRFSStationAPI {
-            address: Nothing,
-            code: "SHC|0105",
-            color: Just "Blue",
-            lat: Just 13.087369,
-            lon: Just 80.285021,
-            name: "High Court",
-            sequenceNum: 2,
-            stationType: Just END
-        }
-    ],
+    stations: [],
+    --     FRFSStationAPI {
+    --         address: Nothing,
+    --         code: "SAP|0133",
+    --         color: Just "Green",
+    --         lat: Just 12.980826,
+    --         lon: Just 80.1642,
+    --         name: "Chennai International Airport",
+    --         sequenceNum: 1,
+    --         stationType: Just START
+    --     },
+    --     FRFSStationAPI {
+    --         address: Nothing,
+    --         code: "SAP|0133",
+    --         color: Just "Green",
+    --         lat: Just 12.980826,
+    --         lon: Just 80.1642,
+    --         name: "Chennai Bus Stand",
+    --         sequenceNum: 1,
+    --         stationType: Just INTERMEDIATE
+    --     },
+    --     FRFSStationAPI {
+    --         address: Nothing,
+    --         code: "SAP|0133",
+    --         color: Just "Green",
+    --         lat: Just 12.980826,
+    --         lon: Just 80.1642,
+    --         name: "Egmore",
+    --         sequenceNum: 1,
+    --         stationType: Just INTERMEDIATE
+    --     },
+    --     FRFSStationAPI {
+    --         address: Nothing,
+    --         code: "SAP|0133",
+    --         color: Just "Blue",
+    --         lat: Just 12.980826,
+    --         lon: Just 80.1642,
+    --         name: "Fish Market",
+    --         sequenceNum: 1,
+    --         stationType: Just TRANSIT
+    --     },
+    --     FRFSStationAPI {
+    --         address: Nothing,
+    --         code: "SAP|0133",
+    --         color: Just "Blue",
+    --         lat: Just 12.980826,
+    --         lon: Just 80.1642,
+    --         name: "Mayajaal",
+    --         sequenceNum: 1,
+    --         stationType: Just INTERMEDIATE
+    --     },
+    --     FRFSStationAPI {
+    --         address: Nothing,
+    --         code: "SHC|0105",
+    --         color: Just "Blue",
+    --         lat: Just 13.087369,
+    --         lon: Just 80.285021,
+    --         name: "High Court",
+    --         sequenceNum: 2,
+    --         stationType: Just END
+    --     }
+    -- ],
     status: "CONFIRMED",
     tickets: [
         FRFSTicketAPI {
@@ -1231,12 +1231,12 @@ dummyMetroBookingStatus =
 
 getMetroBookingStatusListBT :: FlowBT String GetMetroBookingListResp
 getMetroBookingStatusListBT = do
-    --   headers <- getHeaders' "" false
-    --   withAPIResultBT (EP.getMetroBookingList "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq))
-    --   where
-    --     errorHandler _ = do
-    --         BackT $ pure GoBack
-    pure $ dummyMetroBookingStatusList
+      headers <- getHeaders' "" false
+      withAPIResultBT (EP.getMetroBookingList "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetMetroBookingListReq))
+      where
+        errorHandler _ = do
+            BackT $ pure GoBack
+    -- pure $ dummyMetroBookingStatusList
 
 
 retryMetroTicketPaymentBT :: String -> FlowBT String RetryMetrTicketPaymentResp

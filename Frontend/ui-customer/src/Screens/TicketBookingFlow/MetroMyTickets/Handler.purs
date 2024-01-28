@@ -20,6 +20,7 @@ metroMyTicketsScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ MetroMyTickets.screen state.metroMyTicketsScreen
   case action of
+    GoBack ->  App.BackT $ pure App.GoBack 
     GoToMetroTicketDetailsFlow bookingStatusApiResp -> do 
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_TICKET_DETAILS_FLOW bookingStatusApiResp)
     GoToMetroTicketStatusFlow bookingStatusApiResp -> do 

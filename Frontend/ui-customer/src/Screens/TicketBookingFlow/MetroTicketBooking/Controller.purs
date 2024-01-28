@@ -3,11 +3,7 @@ module Screens.TicketBookingFlow.MetroTicketBooking.Controller where
 import Prelude
 import Screens.Types as ST
 import Components.GenericHeader as GenericHeader
--- import Components.SelectionTabModal as SelectionTabModal
 import Components.PrimaryEditText as PrimaryEditText
--- import Components.IncrementDecrementModel as IncrementDecrementModel
--- import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
--- import Components.PrimaryButton.Controller as PrimaryButtonController
 import Components.PrimaryButton as PrimaryButton
 import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==))
 import PrestoDOM
@@ -29,8 +25,6 @@ instance loggableAction :: Loggable Action where
 data Action = AfterRender
             | BackPressed
             | GenericHeaderAC GenericHeader.Action
-            | SourceEditText PrimaryEditText.Action
-            | DestinationEditText PrimaryEditText.Action
             | UpdateButtonAction PrimaryButton.Action
             | MyMetroTicketAction
             | ChangeTicketTab ST.TicketType
@@ -38,17 +32,15 @@ data Action = AfterRender
             | DecrementTicket
             | MetroRouteMapAction
             | ToggleTermsAndConditions
-            | SelectSource String
-            | SelectDestination String
             | GetMetroQuotesAction (Array MetroQuote)
+            | SelectLocation ST.LocationActionId
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
-                  | MyMetroTicketScreen ST.MetroTicketBookingScreenState
+                  | MyMetroTicketScreen
                   | GoToMetroRouteMap
-                  | SelectSrcDest ST.MetroTicketBookingScreenState String
+                  | SelectSrcDest ST.LocationActionId
                   | Refresh ST.MetroTicketBookingScreenState
-                  -- | SelectDest ST.MetroTicketBookingScreenState
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
@@ -56,7 +48,7 @@ eval BackPressed state =  exit $ GoBack state
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     updateAndExit state $ UpdateAction state
 
-eval MyMetroTicketAction state = exit $ MyMetroTicketScreen state
+eval MyMetroTicketAction state = exit $ MyMetroTicketScreen
 
 eval IncrementTicket state = do
   if state.data.ticketCount < 6
@@ -74,17 +66,19 @@ eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSel
 
 eval (ChangeTicketTab ticketType) state = continue state { data {ticketType = ticketType }}
 
-eval (SelectSource src) state = updateAndExit state $ SelectSrcDest state src
-
-eval (SelectDestination dest ) state = updateAndExit state $ SelectSrcDest state dest
+eval (SelectLocation loc ) state = exit $ SelectSrcDest loc
 
 eval (GetMetroQuotesAction resp) state = do 
-  _ <- pure $ spy "GetMetroQuotesAction" state
-  _ <- pure $ spy "GetMetroQuotesActionquoteId"  $ (getquoteData state resp).quoteId
-  _ <- pure $ spy "GetMetroQuotesActionprice"  $ (getquoteData state resp).price
-  _ <- pure $ spy "GetMetroQuotesActionresp" resp
-  _ <- pure $ toggleBtnLoader "" false
-  updateAndExit state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}} $ Refresh state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}}
+  if null resp then do
+    _ <- pure $ toast "No quotes available"
+    _ <- pure $ toggleBtnLoader "" false
+    continue state
+  else do
+    _ <- pure $ spy "GetMetroQuotesActionresp" resp
+    _ <- pure $ toggleBtnLoader "" false
+    updateAndExit state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}} $ Refresh state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}}
+
+eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
 eval _ state = continue state
 
@@ -100,8 +94,7 @@ getquoteData state  metroQuote =
     }
   where
     getTicketType :: String -> ST.TicketType
-    getTicketType str = case str of 
+    getTicketType quoteType = case quoteType of 
       "SingleJourney" -> ST.ONE_WAY
       "ReturnJourney" -> ST.ROUND_TRIP
-      "Pass" -> ST.ONE_WAY
       _ -> ST.ONE_WAY

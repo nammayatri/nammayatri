@@ -41,8 +41,8 @@ initData = {
         , nearByGates : []
         , specialZoneCoordinates : ""
         , confirmLocCategory : ""
-        , metroStations : dummyStations
-        , updatedMetroStations : dummyStations
+        , metroStations : []
+        , updatedMetroStations : []
   } ,
   props : {
     searchLocStage : PredictionsStage ,

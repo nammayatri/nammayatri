@@ -1,5 +1,3 @@
-
-
 module Screens.TicketBookingFlow.MetroTicketDetails.Transformer where
 
 import Prelude 
@@ -8,6 +6,7 @@ import Screens.Types
 import Common.Types.App
 import Data.Array
 import Data.Maybe
+import Engineering.Helpers.Commons
 
 metroTicketDetailsTransformer :: MetroTicketBookingStatus -> MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState 
 metroTicketDetailsTransformer (MetroTicketBookingStatus metroTicketBookingStatus) state = 
@@ -42,14 +41,14 @@ getNextInterMediates (FRFSStationAPI station) stations =
   case station.stationType of 
     Just stationType -> 
       case stationType of 
-        INTERMEDIATE -> []
-        START -> [{
+        "INTERMEDIATE" -> []
+        "START" -> [{
             name : station.name
           , line : GreenLine
           , stops : getStops (FRFSStationAPI station) stations
           , listExpanded : false
           }]
-        END -> [{
+        "END" -> [{
             name : station.name
           , line : RedLine
           , stops : getStops (FRFSStationAPI station) stations
@@ -75,7 +74,7 @@ getStops (FRFSStationAPI station) stations =
   let 
     stationIndex = fromMaybe 0 (findIndex (\(FRFSStationAPI station') -> station'.name == station.name) stations) -- fromMay default won't hit never
     nextStations = drop (stationIndex + 1) stations
-    endStationIndex = fromMaybe 0 (findIndex (\(FRFSStationAPI station') -> station'.stationType /= Just INTERMEDIATE) nextStations)
+    endStationIndex = fromMaybe 0 (findIndex (\(FRFSStationAPI station') -> station'.stationType /= Just "INTERMEDIATE") nextStations)
     nextStations' = take endStationIndex nextStations
   in 
     map (\(FRFSStationAPI station') -> 
@@ -91,7 +90,7 @@ ticketsInfoTransformer tickets =
   map (\(FRFSTicketAPI ticket) -> {
     qrString : ticket.qrData
     , ticketNumber : ticket.ticketNumber
-    , validUntil : ticket.validTill
+    , validUntil : (convertUTCtoISC ticket.validTill "hh:mm A") <> ", " <> (convertUTCtoISC ticket.validTill "Do MMM YYYY") 
     , status : show ticket.status
   }) tickets
 

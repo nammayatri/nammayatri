@@ -197,7 +197,7 @@ getInputViewConfigBasedOnActionType actionType =
   case actionType of 
         ST.AddingStopAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : "Enter Pickup Location", destPlaceHolder : "Add Stop",  inputViewMargin : MarginTop 8,  headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
         ST.SearchLocationAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_blue_circle", srcPlaceHolder : "Enter Pickup Location", destPlaceHolder : "Add Stop", inputViewMargin : MarginTop 8, headerVisibility : true, imageLayoutMargin : MarginLeft 24 }
-        ST.MetroStationSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Starting From?", destPlaceHolder : "Where to?", inputViewMargin : MarginTop 8, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
+        ST.MetroStationSelectionAction -> { srcPrefixImageName : "ny_ic_green_circle", destPrefixImageName : "ny_ic_red_circle", srcPlaceHolder : "Starting From?", destPlaceHolder : "Where to?", inputViewMargin : MarginTop 0, headerVisibility : false, imageLayoutMargin : MarginLeft 0 }
 
 menuButtonConfig :: ST.SearchLocationScreenState -> ST.Location -> MenuButton.Config
 menuButtonConfig state item = let

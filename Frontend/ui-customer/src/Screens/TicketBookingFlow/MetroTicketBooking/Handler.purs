@@ -18,18 +18,17 @@ metroTicketBookingScreen = do
     action <- lift $ lift $ runScreen $ MetroTicketBooking.screen state.metroTicketBookingScreen
     case action of
         GoBack updatedState -> do
-            App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN_FROM_METRO_TICKET updatedState)
+            App.BackT $ pure App.GoBack
+            -- App.BackT $ App.NoBack <$> (pure $ GO_TO_HOME_SCREEN_FROM_METRO_TICKET updatedState)
         UpdateAction updatedState -> do
             void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
             App.BackT $ App.NoBack <$> (pure $ METRO_FARE_AND_PAYMENT updatedState)
-        MyMetroTicketScreen updatedState -> do
-            App.BackT $ App.NoBack <$> (pure $ GO_TO_MY_METRO_TICKET_SCREEN updatedState)
+        MyMetroTicketScreen -> do
+            App.BackT $ App.BackPoint <$> (pure $ GO_TO_MY_METRO_TICKET_SCREEN)
         GoToMetroRouteMap -> do
-            App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_ROUTE_MAP)
-        SelectSrcDest updatedState srcdest -> do
-            App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH updatedState srcdest)
-        Refresh updateState -> do
-            void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updateState)
-            App.BackT $ App.NoBack <$> (pure $ REFRESH_METRO_TICKET_SCREEN updateState)
-        -- SelectDest updatedState -> do
-        --     App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH updatedState)
+            App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_ROUTE_MAP)
+        SelectSrcDest srcdest -> do
+            App.BackT $ App.NoBack <$> (pure $ GO_TO_METRO_STATION_SEARCH srcdest)
+        Refresh updatedState -> do
+            void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
+            App.BackT $ App.NoBack <$> (pure $ REFRESH_METRO_TICKET_SCREEN updatedState)

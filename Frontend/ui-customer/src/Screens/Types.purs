@@ -1911,7 +1911,16 @@ type MetroTicketDetailsScreenProps = {
   dummyProps :: String
 , stage :: MetroTicketDetailsScreenStage
 , currentTicketIndex :: Int
+, previousScreenStage :: PreviousMetroTicketDetailsStage
 }
+
+data PreviousMetroTicketDetailsStage = MetroMyTicketsStage 
+                                     | SearchMetroLocationStage 
+                                     | MetroTicketSelectionStage
+
+derive instance genericPreviousMetroTicketDetailsStage :: Generic PreviousMetroTicketDetailsStage _                                  
+instance showPreviousMetroTicketDetailsStage :: Show PreviousMetroTicketDetailsStage where show = genericShow
+instance eqPreviousMetroTicketDetailsStage :: Eq PreviousMetroTicketDetailsStage where eq = genericEq 
 
 data MetroTicketDetailsScreenStage = MetroTicketDetailsStage 
                                    | MetroMapStage 
@@ -2115,14 +2124,21 @@ type MetroTicketBookingScreenProps = {
 
 data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote
 
+derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
+instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
+instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
+
 data TicketType = ONE_WAY | ROUND_TRIP
 
 derive instance genericTicketType :: Generic TicketType _
 instance eqTicketType :: Eq TicketType where eq = genericEq
 
-derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
-instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
-instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
+data LocationActionId = Src | Dest
+
+derive instance genericLocationActionId :: Generic LocationActionId _
+instance eqLocationActionId :: Eq LocationActionId where eq = genericEq
+instance showLocationActionId :: Show LocationActionId where show = genericShow
+
 
 -- ######################################### MetroTicketStatusScreenState ####################################################
 type MetroTicketStatusScreenState = {

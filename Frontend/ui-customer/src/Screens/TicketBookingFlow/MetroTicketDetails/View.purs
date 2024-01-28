@@ -29,6 +29,9 @@ import Helpers.Utils
 import Effect.Uncurried
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
+import Engineering.Helpers.Commons
+import PrestoDOM.Properties (cornerRadii)
+import PrestoDOM.Types.DomAttributes (Corners(..))
 
 screen :: ST.MetroTicketDetailsScreenState -> Screen Action ST.MetroTicketDetailsScreenState ScreenOutput
 screen initialState =
@@ -61,6 +64,11 @@ view push state =
     , orientation VERTICAL
     ][
       headerView push state
+    , linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background Color.greySmoke
+          ][]
     , bodyView push state
     ] 
 
@@ -91,7 +99,7 @@ headerView push state =
       , text headerText
       , color Color.black800
       , margin $ MarginLeft 8
-      ] <> FontStyle.subHeading1 TypoGraphy 
+      ] <> FontStyle.h3 TypoGraphy 
     , linearLayout [
         height WRAP_CONTENT
       , weight 1.0
@@ -114,7 +122,7 @@ headerView push state =
         , text "Share Ticket"
         , color Color.blue900
         , margin $ MarginLeft 8
-        ] <> FontStyle.tags TypoGraphy
+        ] <> FontStyle.body1 TypoGraphy
       ]
     ]
 
@@ -143,7 +151,11 @@ ticketDetailsView push state =
   , orientation VERTICAL
   , gravity CENTER
   , id $ getNewIDWithTag "metro_ticket_details_view"
-  ][
+  ][ relativeLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    ][
     linearLayout[
       width MATCH_PARENT
     , height WRAP_CONTENT
@@ -151,11 +163,25 @@ ticketDetailsView push state =
     , padding $ Padding 16 30 16 16
     , margin $ Margin 16 24 16 0
     , background Color.white900
-    , cornerRadius 8.0
+    , cornerRadii $ Corners 8.0 true true false false
     ][
       metroHeaderView push state
     , qrCodeView push state
     , ticketNumberAndValidView push state
+    ]
+    , linearLayout 
+     [  height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , margin $ MarginTop 12
+     ][ textView $ [
+        text "Active"
+      , background Color.green900
+      , color Color.white900
+      , padding $ Padding 8 5 8 5
+      , cornerRadius 100.0
+      ] <> FontStyle.tags TypoGraphy
+    ]
     ]
   , linearLayout[
       width MATCH_PARENT
@@ -164,7 +190,7 @@ ticketDetailsView push state =
     , background Color.white900
     , padding $ Padding 16 30 16 16
     , margin $ MarginHorizontal 16 16 
-    , cornerRadius 8.0
+    , cornerRadii $ Corners 8.0 false false true true 
     ][
       originAndDestinationView push state
     ]
@@ -455,7 +481,7 @@ paymentInfoView push state =
     width MATCH_PARENT
   , height WRAP_CONTENT
   , padding $ Padding 16 20 16 20
-  , margin $ Margin 16 48 16 16
+  , margin $ Margin 16 20 16 16
   , onClick push $ const ViewPaymentInfoClick
   , background Color.white900
   , cornerRadius 8.0
@@ -470,8 +496,8 @@ paymentInfoView push state =
     , weight 1.0
     ][]
   , imageView [
-      width $ V 20
-    , height $ V 20
+      width $ V 16
+    , height $ V 16
     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_down"
     ]
   ]
@@ -505,7 +531,7 @@ linePillView line =
 
 mapView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 mapView push state = 
-  linearLayout [
+  PrestoAnim.animationSet [Anim.fadeIn true] $  linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity START 
@@ -520,7 +546,7 @@ mapView push state =
 
 routeDetailsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 routeDetailsView push state = 
-  linearLayout [
+  PrestoAnim.animationSet [Anim.fadeIn true] $ linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
   , margin $ Margin 16 24 16 0
@@ -613,8 +639,8 @@ routeDetailsItemView push index routeDetails =
               , color metroPrimaryColor
               ] <> FontStyle.tags TypoGraphy
               , imageView [
-                width $ V 24
-              , height $ V 15
+                width $ V 20
+              , height $ V 20
               , padding $ PaddingLeft 8
               , imageWithFallback $ fetchImage FF_COMMON_ASSET (if routeDetails.listExpanded then "ny_ic_chevron_up" else "ny_ic_chevron_down" )
               ]
