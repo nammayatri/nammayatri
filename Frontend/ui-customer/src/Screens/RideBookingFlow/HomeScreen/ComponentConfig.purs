@@ -396,6 +396,22 @@ disabilityBannerConfig state =
       , stroke = "1,"<> Color.fadedPurple
       }
   in config'
+  
+sosSetupBannerConfig :: ST.HomeScreenState -> Banner.Config
+sosSetupBannerConfig state = 
+  let 
+    config = Banner.config
+    config' = config
+      { 
+        backgroundColor = Color.lightMintGreen
+      , title = getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE
+      , titleColor = Color.elfGreen
+      , actionText = (getString SETUP_NOW)
+      , actionTextColor = Color.elfGreen
+      , imageUrl = fetchImage FF_ASSET "ny_ic_banner_sos"
+      , isBanner = true
+      }
+  in config'
 
 ticketBannerConfig :: ST.HomeScreenState -> Banner.Config
 ticketBannerConfig state =
@@ -1560,7 +1576,7 @@ getCarouselData :: ST.HomeScreenState -> Array CarouselData
 getCarouselData state =
   map (\item -> 
     { imageConfig : { image : item.image , height : item.imageHeight , width : 200, bgColor : item.imageBgColor, cornerRadius : 8.0 },
-      youtubeConfig : (EHC.getYoutubeData item.videoLink "PORTRAIT_VIDEO" item.videoHeight),
+      youtubeConfig : (EHC.getYoutubeData item.videoLink "PORTRAIT_VIDEO" item.videoHeight false true),
       contentType : if item.videoLink == "" then "IMAGE" else "VIDEO" ,
       gravity : item.gravity ,
       backgroundColor : item.carouselBgColor,
@@ -1633,3 +1649,73 @@ getChatSuggestions state = do
         else if hideInitial then getSuggestionsfromKey "customerInitialBP" --"customerInitialBP2" --TODO Revert during suggestions update
         else getSuggestionsfromKey "customerInitialBP" --"customerInitialBP1" --TODO Revert during suggestions update
   else state.data.chatSuggestionsList
+  
+safetyAlertConfig :: ST.HomeScreenState -> PopUpModal.Config
+safetyAlertConfig state =
+  let
+    config' = PopUpModal.config
+
+    alertData = getSafetyAlertData $ getValueToLocalStore SAFETY_ALERT_TYPE
+
+    popUpConfig' =
+      config'
+        { dismissPopup = true
+        , optionButtonOrientation = "VERTICAL"
+        , buttonLayoutMargin = Margin 24 0 24 20
+        , gravity = CENTER
+        , margin = MarginHorizontal 20 20
+        , primaryText
+          { text = getString EVERYTHING_OKAY_Q
+          , margin = Margin 16 0 16 10
+          }
+        , secondaryText
+          { text = alertData.text
+          , margin = MarginHorizontal 16 16
+          }
+        , option1
+          { text = getString I_FEEL_SAFE
+          , color = Color.yellow900
+          , background = Color.black900
+          , strokeColor = Color.transparent
+          , width = MATCH_PARENT
+          , margin = MarginVertical 20 10
+          }
+        , option2
+          { text = getString I_NEED_HELP
+          , color = Color.black700
+          , background = Color.white900
+          , width = MATCH_PARENT
+          , margin = MarginBottom 10
+          }
+        , cornerRadius = Corners 15.0 true true true true
+        , coverImageConfig
+          { imageUrl = HU.fetchImage HU.FF_ASSET alertData.image
+          , visibility = VISIBLE
+          , margin = Margin 16 16 16 16
+          , width = MATCH_PARENT
+          , height = V 225
+          }
+        }
+  in
+    popUpConfig'
+
+getSafetyAlertData :: String -> { text :: String, image :: String }
+getSafetyAlertData reason
+  | reason == "deviation" = { text: getString WE_NOTICED_YOUR_RIDE_IS_ON_DIFFERENT_ROUTE, image: "ny_ic_safety_alert_deroute" }
+  | otherwise = { text: getString WE_NOTICED_YOUR_RIDE_HASNT_MOVED, image: "ny_ic_safety_alert_stationary" }
+
+shareRideButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
+shareRideButtonConfig state =
+  PrimaryButton.config
+    { textConfig
+      { text = getString $ SHARE_RIDE_WITH_CONTACT $ show numberOfSelectedContacts
+      , accessibilityHint = "Share Ride Button"
+      }
+    , id = "ShareRideButton"
+    , enableLoader = (JB.getBtnLoader "ShareRideButton")
+    , margin = MarginTop 20
+    , isClickable = numberOfSelectedContacts /= 0
+    , alpha = if numberOfSelectedContacts /= 0 then 1.0 else 0.5
+    }
+  where
+  numberOfSelectedContacts = DA.length $ DA.filter (\contact -> contact.isSelected) state.data.contactList

@@ -18,7 +18,6 @@ module Services.Backend where
 import Services.API
 
 import Accessor (_deviceToken)
-import Common.Types.App (Version(..), SignatureAuthData(..), LazyCheck(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
 import Data.Array ((!!), catMaybes, concat, take, any, singleton, find, filter, length, null, mapMaybe)
@@ -620,7 +619,9 @@ postContactsReq contacts = EmergContactsReq {
   "defaultEmergencyNumbers" : map (\item -> ContactDetails {
       "mobileNumber": item.number,
       "name": item.name,
-      "mobileCountryCode": "+91"
+      "mobileCountryCode": "+91",
+      "priority": Just item.priority,
+      "enableForFollowing": Just item.enableForFollowing
   }) contacts
 }
 
@@ -891,9 +892,10 @@ createUserSosFlow tag content = UserSosFlow {
     "contents" : content
 }
 
-makeSosStatus :: String -> SosStatus
-makeSosStatus sosStatus = SosStatus {
-     "status" : sosStatus
+makeSosStatus :: String -> String -> SosStatus
+makeSosStatus sosStatus comment= SosStatus {
+     "status" : sosStatus,
+     "comment" : comment
 }
 
 
@@ -1076,3 +1078,57 @@ updateIssue language issueId req = do
           errorHandler _ = do
                 BackT $ pure GoBack
 
+------------------------------------------------------------------------ SafetyFlow --------------------------------------------------------------------------------
+
+getEmergencySettingsBT :: String -> FlowBT String GetEmergencySettingsRes
+getEmergencySettingsBT _  = do
+        headers <- getHeaders' "" true
+        withAPIResultBT (EP.getEmergencySettings "") (\x → x) errorHandler (lift $ lift $ callAPI headers (GetEmergencySettingsReq))
+    where
+    errorHandler (errorPayload) =  do
+        BackT $ pure GoBack
+
+updateEmergencySettings (UpdateEmergencySettingsReq payload) = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.updateEmergencySettings "") unwrapResponse $ callAPI headers (UpdateEmergencySettingsReq payload)
+    where
+        unwrapResponse (x) = x
+
+markRideAsSafe sosId= do
+        headers <- getHeaders "" false
+        withAPIResult (EP.updateSafeRide sosId) unwrapResponse $ callAPI headers (UpdateAsSafeReq sosId)
+    where
+        unwrapResponse (x) = x
+
+getSosDetails :: String -> FlowBT String GetSosDetailsRes
+getSosDetails rideId = do
+        headers <- getHeaders' "" true
+        withAPIResultBT (EP.getSosDetails rideId) (\x → x) errorHandler (lift $ lift $ callAPI headers (GetSosDetailsReq rideId))
+    where
+    errorHandler (errorPayload) =  do
+        BackT $ pure GoBack
+
+sendSafetySupport req = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.safetySupport "") unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse (x) = x
+
+makeAskSupportRequest :: String -> Boolean -> String -> AskSupportReq
+makeAskSupportRequest bId isSafe description = AskSupportReq{
+    "bookingId" : bId,
+    "isSafe" : isSafe,
+    "description" : description
+}
+
+createMockSos dummy = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.createMockSos "") unwrapResponse $ callAPI headers (CreateMockSosReq "")
+    where
+        unwrapResponse (x) = x
+
+shareRide (ShareRideReq req) = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.shareRide "") unwrapResponse $ callAPI headers (ShareRideReq req)
+    where
+        unwrapResponse (x) = x

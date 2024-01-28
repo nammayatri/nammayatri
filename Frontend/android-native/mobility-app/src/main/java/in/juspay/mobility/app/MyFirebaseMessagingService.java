@@ -384,7 +384,9 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 }
                             }
                             break;
-
+                        case NotificationTypes.SAFETY_ALERT:
+                            showSafetyAlert(title, body, payload, imageUrl);
+                            break;
                         default:
                             if (payload.get("show_notification").equals("true")) {
                                 NotificationUtils.showNotification(this, title, body, payload, imageUrl);
@@ -591,6 +593,23 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         return ob;
     }
 
+    private void showSafetyAlert(String title, String body, JSONObject payload, String imageUrl){
+        try {
+            String notificationBody = null;
+            String notificationTitle = getString(R.string.everything_okay);
+            SharedPreferences sharedPref = this.getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            sharedPref.edit().putString("SAFETY_ALERT_TYPE", body).apply();
+            CleverTapAPI cleverTapAPI = CleverTapAPI.getDefaultInstance(this);
+            HashMap<String, Object> cleverTapParams = new HashMap<>();
+            cleverTapParams.put("searchRequestId", body);
+            cleverTapAPI.pushEvent("ny_user_night_safety_alert", cleverTapParams);
+            notificationBody = body == "Deviation" ? getString(R.string.safety_deviation_alert) : getString(R.string.we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip);
+            NotificationUtils.showNotification(this, notificationTitle, notificationBody, payload, imageUrl);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     private static class NotificationTypes {
         private static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
         private static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
@@ -616,5 +635,6 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         private static final String UPDATE_BUNDLE = "UPDATE_BUNDLE";
         private static final String FCM_UPDATE_BUNDLE = "FCM_UPDATE_BUNDLE";
         private static final String COINS_SUCCESS = "COINS_SUCCESS";
+        private static final String SAFETY_ALERT = "SAFETY_ALERT";
     }
 }

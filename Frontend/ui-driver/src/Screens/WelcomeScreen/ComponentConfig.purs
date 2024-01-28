@@ -61,4 +61,5 @@ dummyYoutubeData =
   , videoId: ""
   , videoType: ""
   , videoHeight: 0
+  , showFullScreen : false
   }
