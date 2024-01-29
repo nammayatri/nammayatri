@@ -15,17 +15,18 @@
 
 module Screens.RentalBookingFlow.RentalScreen.ComponentConfig where
 
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), RateCardType(..))
 import Components.GenericHeader as GenericHeader
 import Components.IncrementDecrementModel.Controller as IncrementDecrement
 import Components.InputView as InputView
 import Components.PrimaryButton as PrimaryButton
+import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
-import Data.Array ((!!))
+import Data.Array ((!!), singleton)
 import Data.Maybe as MB
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
-import Language.Strings (getString)
+import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
 import Prelude (map, show, (<>), (==), ($), (>), (-), (<))
@@ -201,6 +202,32 @@ mapInputViewConfig state =
     getHeaderText stage = case stage of
       RENTAL_SELECT_PACKAGE -> getString TRIP_DETAILS_
       _ -> getString CHOOSE_YOUR_RIDE
+
+
+rentalRateCardConfig :: RentalScreenState -> RateCard.Config
+rentalRateCardConfig _ =
+  let config = RateCard.config
+      rentalRateCardConfig' = config
+        { currentRateCardType = RentalRateCard
+        , title = getString RENTAL_PACKAGE
+        , primaryButtonConfig {
+            margin = MarginTop 16,
+            text = getString GOT_IT,
+            color = Color.blue800,
+            height = V 40,
+            cornerRadius = 8.0,
+            background = Color.white900,
+            visibility = VISIBLE
+          }
+        , additionalStrings = [
+            {key : "FINAL_FARE_DESCRIPTION", val : (getString FINAL_FARE_DESCRIPTION)}
+          , {key : "EXCESS_DISTANCE_CHARGE_DESCRIPTION", val : (getString EXCESS_DISTANCE_CHARGE_DESCRIPTION)}
+          , {key : "NIGHT_TIME_FEE_DESCRIPTION", val : (getVarString NIGHT_TIME_FEE_DESCRIPTION $ singleton "")}
+          , {key : "PARKING_FEES_AND_TOLLS_NOT_INCLUDED", val : (getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED)}
+          ]
+        }
+  in rentalRateCardConfig'
+
 
 separatorConfig :: SeparatorView.Config
 separatorConfig = 

@@ -17,12 +17,14 @@ module Components.DriverInfoCard.Controller where
 
 import MerchantConfig.Types
 
+import Common.Types.App (RentalBookingConfig, RideType(..))
 import Components.ChatView.Controller (ChatComponentConfig)
 import Components.MessagingView as MessagingView
 import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..))
+import MerchantConfig.Types
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -89,4 +91,6 @@ type DriverInfoCardData =
   , vehicleVariant :: String
   , defaultPeekHeight :: Int
   , bottomSheetState :: SheetState
+  , rentalData :: RentalBookingConfig
+  , rideType :: RideType
   }

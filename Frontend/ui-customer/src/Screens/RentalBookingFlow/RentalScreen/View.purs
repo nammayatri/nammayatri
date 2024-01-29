@@ -24,6 +24,7 @@ import Components.GenericHeader.View as GenericHeader
 import Components.IncrementDecrementModel.View as IncrementDecrement
 import Components.InputView.View as InputView
 import Components.PrimaryButton as PrimaryButton
+import Components.RateCard as RateCard
 import Data.Array (singleton)
 import Debug (spy)
 import Effect (Effect)
@@ -33,8 +34,8 @@ import Helpers.CommonView (emptyTextView)
 import JBridge (renderSlider, sliderConfig)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, scrollView, stroke, text, textView, weight, width)
-import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width)
+import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, rentalRateCardConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval)
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
 import Styles.Colors as Color
@@ -54,20 +55,20 @@ rentalScreen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+  relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
-    ]
-    [ if state.data.currentStage == RENTAL_SELECT_PACKAGE then rentalPackageSelectionView push state
-      else if state.data.currentStage == RENTAL_SELECT_VARIANT then rentalVariantSelectionView push state
-      else fareBreakupView push state
-      -- case state.data.currentStage of
-      --   RENTAL_SELECT_PACKAGE -> rentalPackageSelectionView push state
-      --   RENTAL_SELECT_VARIANT -> rentalVariantSelectionView push state
-      --   RENTAL_CONFIRMATION -> fareBreakupView push state
-    ]
+    ] $
+    [ getRentalScreenView push state
+    ] <> if state.props.showRateCard then [RateCard.view (push <<< RateCardAC) (rentalRateCardConfig state)] else []
+  where 
+    getRentalScreenView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
+    getRentalScreenView push state = case state.data.currentStage of
+        RENTAL_SELECT_PACKAGE -> rentalPackageSelectionView push state
+        RENTAL_SELECT_VARIANT -> rentalVariantSelectionView push state
+        RENTAL_CONFIRMATION -> fareBreakupView push state
 
 rentalPackageSelectionView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
 rentalPackageSelectionView push state =

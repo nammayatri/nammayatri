@@ -59,5 +59,6 @@ initData =
     , maxDistance : 30
     , farePerKm : ""
     , maxDateBooking : 15
+    , showRateCard : false
     }
   }

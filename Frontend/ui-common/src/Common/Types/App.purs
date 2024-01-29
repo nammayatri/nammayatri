@@ -221,7 +221,7 @@ type LayoutBound =
 -- instance encodeLocationLatLong :: Encode LocationLatLong where encode = defaultEncode
 -- instance decodeLocationLatLong :: Decode LocationLatLong where decode = defaultDecode
 
-data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges
+data RateCardType = DefaultRateCard | DriverAddition | FareUpdate | PaymentFareBreakup | WaitingCharges | RentalRateCard
 derive instance genericRateCardType :: Generic RateCardType _
 instance eqRateCardType :: Eq RateCardType where eq = genericEq
 
@@ -444,3 +444,10 @@ type RentalBookingConfig = {
   , finalFare :: Int
   , nightCharge :: String
 }
+
+data RideType =
+  NORMAL_RIDE | RENTAL_RIDE 
+
+derive instance genericRideType :: Generic RideType _
+instance showRideType :: Show RideType where show = genericShow
+instance eqRideType :: Eq RideType where eq = genericEq
