@@ -115,7 +115,8 @@ sendOverlay driver overlayKey udf1 amount = do
   whenJust mOverlay $ \overlay -> do
     let okButtonText = T.replace (templateText "dueAmount") (show amount) <$> overlay.okButtonText
     let description = T.replace (templateText "dueAmount") (show amount) <$> overlay.description
-    TN.sendOverlay driver.merchantOperatingCityId driver.id driver.deviceToken $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
+    fork ("sending overlay to driver with driverId " <> (show driver.id)) $ do
+      TN.sendOverlay driver.merchantOperatingCityId driver.id driver.deviceToken $ TN.mkOverlayReq overlay description okButtonText overlay.cancelButtonText overlay.endPoint
 
 getSendOverlaySchedulerDriverIdsLength :: (CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id AnyJob -> m Integer
 getSendOverlaySchedulerDriverIdsLength merchantId jobId = Hedis.lLen $ makeSendOverlaySchedulerDriverIdsKey merchantId jobId
