@@ -28,7 +28,7 @@ import Data.Number (ceil)
 import Effect (Effect)
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, os)
+import Engineering.Helpers.Commons (flowRunner, os, parseFloat)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
@@ -151,7 +151,7 @@ driverRatingView state  =
       , textView (
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
-        , text $ if ceil state.driverRating == 0.0 then (getString NEW_) else show $ ceil state.driverRating
+        , text $ if state.driverRating == 0.0 then (getString NEW_) else parseFloat state.driverRating 2
         ] <> FontStyle.tags LanguageStyle)
     ]
 

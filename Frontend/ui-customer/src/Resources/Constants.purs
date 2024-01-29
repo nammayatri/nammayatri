@@ -46,7 +46,7 @@ getDelayForLocateOnMap :: Int
 getDelayForLocateOnMap = 1000
 
 getSearchRadius :: Int
-getSearchRadius = 100000
+getSearchRadius = 50000
 
 getLanguages :: Array Language
 getLanguages =

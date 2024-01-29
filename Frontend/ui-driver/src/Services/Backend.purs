@@ -1150,7 +1150,7 @@ autoComplete searchVal lat lon language = do
         components : "",
         sessionToken : Nothing,
         location : (lat <> "," <> lon),
-        radius : 100000,
+        radius : 50000,
         input : searchVal,
         language : language,
         strictbounds : Nothing,
