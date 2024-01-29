@@ -26,6 +26,12 @@ rideAppName = "rider-app"
 driverAppName :: FilePath
 driverAppName = "dynamic-offer-driver-app"
 
+riderAppDatabaseName :: String
+riderAppDatabaseName = "atlas_app"
+
+driverAppDatabaseName :: String
+driverAppDatabaseName = "atlas_driver_offer_bpp"
+
 riderAppPath :: FilePath
 riderAppPath = "Backend" </> "app" </> "rider-platform" </> rideAppName </> "Main"
 
@@ -47,15 +53,15 @@ main = do
   maybeGitRoot <- findGitRoot currentDir
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
 
-  processApp rootDir riderAppPath rideAppName
-  processApp rootDir driverAppPath driverAppName
+  processApp riderAppDatabaseName rootDir riderAppPath rideAppName
+  processApp driverAppDatabaseName rootDir driverAppPath driverAppName
   where
-    processApp :: FilePath -> FilePath -> FilePath -> IO ()
-    processApp rootDir appPath appName = do
-      applyDirectory (rootDir </> appPath </> "spec" </> "Storage") (processStorageDSL rootDir appPath appName)
+    processApp :: String -> FilePath -> FilePath -> FilePath -> IO ()
+    processApp dbName rootDir appPath appName = do
+      applyDirectory (rootDir </> appPath </> "spec" </> "Storage") (processStorageDSL dbName rootDir appPath appName)
       applyDirectory (rootDir </> appPath </> "spec" </> "API") (processAPIDSL rootDir appPath)
 
-    processStorageDSL rootDir appPath appName inputFile = do
+    processStorageDSL dbName' rootDir appPath appName inputFile = do
       let readOnlySrc = rootDir </> appPath </> "src-read-only/"
       let src = rootDir </> appPath </> "src"
       let readOnlyMigration = rootDir </> sqlOutputPathPrefix </> appName
@@ -63,7 +69,7 @@ main = do
       NammaDSL.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
       NammaDSL.mkBeamQueries (readOnlySrc </> "Storage/Queries") (Just (src </> "Storage/Queries")) inputFile
       NammaDSL.mkDomainType (readOnlySrc </> "Domain/Types") inputFile
-      NammaDSL.mkSQLFile readOnlyMigration inputFile
+      NammaDSL.mkSQLFile (Just dbName') readOnlyMigration inputFile
 
     processAPIDSL rootDir appPath inputFile = do
       let readOnlySrc = rootDir </> appPath </> "src-read-only/"
