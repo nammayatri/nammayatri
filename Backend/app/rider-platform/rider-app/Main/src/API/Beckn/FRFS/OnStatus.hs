@@ -38,6 +38,7 @@ onStatus ::
   FlowHandler Spec.AckResponse
 onStatus _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  logDebug $ "Received OnStatus request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     dOnStatusReq <- ACL.buildOnStatusReq req
     Redis.whenWithLockRedis (onConfirmLockKey dOnStatusReq.bppOrderId) 60 $ do

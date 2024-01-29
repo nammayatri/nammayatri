@@ -38,6 +38,7 @@ onSearch ::
   FlowHandler Spec.AckResponse
 onSearch _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onSearchReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
+  logDebug $ "Received OnSearch request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     message_id <- req.onSearchReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
     onSearchReq <- ACL.buildOnSearchReq req
