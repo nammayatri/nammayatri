@@ -8,7 +8,6 @@ import AWS.S3 as S3
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
 import qualified Data.ByteString as BS
 import Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Action.UI.Profile as DP
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.RiderConfig as DRC
@@ -46,7 +45,7 @@ import Tools.Ticket as Ticket
 
 data SOSVideoUploadReq = SOSVideoUploadReq
   { video :: FilePath,
-    fileType :: Common.FileType,
+    fileType :: S3.FileType,
     reqContentType :: Text
   }
   deriving stock (Eq, Show, Generic)
@@ -169,7 +168,7 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
   when (fileSize > fromIntegral riderConfig.videoFileSizeUpperLimit) $
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile video
-  filePath <- createFilePath (getId sosId) DMF.Video contentType
+  filePath <- createFilePath "/sos-video/" ("sos-" <> getId sosId) Video contentType
   let fileUrl =
         merchantConfig.publicMediaFileUrlPattern
           & T.replace "<DOMAIN>" "sos-video"
@@ -188,25 +187,8 @@ addSosVideo sosId personId SOSVideoUploadReq {..} = do
   where
     validateContentType = do
       case fileType of
-        Common.Video | reqContentType == "video/mp4" -> pure "mp4"
+        S3.Video | reqContentType == "video/mp4" -> pure "mp4"
         _ -> throwError $ FileFormatNotSupported reqContentType
-
-createFilePath ::
-  Text ->
-  DMF.MediaType ->
-  Text ->
-  Flow Text
-createFilePath sosId fileType videoExtension = do
-  pathPrefix <- asks (.s3EnvPublic.pathPrefix)
-  now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> "/sos-video/" <> "sos-" <> sosId <> "/"
-        <> show fileType
-        <> "/"
-        <> fileName
-        <> videoExtension
-    )
 
 createMediaEntry :: Common.AddLinkAsMedia -> Flow AddSosVideoRes
 createMediaEntry Common.AddLinkAsMedia {..} = do
@@ -223,7 +205,7 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
       return $
         DMF.MediaFile
           { id,
-            _type = DMF.Video,
+            _type = S3.Video,
             url = fileUrl,
             createdAt = now
           }

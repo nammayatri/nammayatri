@@ -17,14 +17,20 @@ module Domain.Action.UI.Ride
   ( DriverRideRes (..),
     DriverRideListRes (..),
     OTPRideReq (..),
+    UploadOdometerReq (..),
+    UploadOdometerResp (..),
     listDriverRides,
     arrivedAtPickup,
     otpRideCreate,
     arrivedAtStop,
+    uploadOdometerReading,
   )
 where
 
+import qualified AWS.S3 as S3
+import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as T hiding (count, map)
 import Data.Time (Day)
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.BapMetadata as DSM
@@ -33,17 +39,26 @@ import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideDetails as RD
 import qualified Domain.Types.Vehicle as DVeh
 import Environment
+import qualified EulerHS.Language as L
+import EulerHS.Prelude (withFile)
+import EulerHS.Types (base64Encode)
+import GHC.IO.Handle (hFileSize)
+import GHC.IO.IOMode (IOMode (..))
+import qualified IssueManagement.Domain.Types.MediaFile as MediaFile
+import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps (HasCoordinates (getCoordinates))
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import Kernel.ServantMultipart
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.APISuccess
 import Kernel.Types.Common
@@ -54,9 +69,11 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.FareCalculator (fareSum)
 import SharedLogic.Ride
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.BapMetadata as CQSM
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import Storage.CachedQueries.Merchant as QM
+import Storage.CachedQueries.Merchant.TransporterConfig as QMTC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import Storage.Queries.Location as QLoc
@@ -64,7 +81,35 @@ import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
 import Storage.Queries.Vehicle as QVeh
+import qualified Text.Read as TR (read)
 import Tools.Error
+
+data UploadOdometerReq = UploadOdometerReq
+  { file :: FilePath,
+    reqContentType :: Text,
+    fileType :: S3.FileType
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance FromMultipart Tmp UploadOdometerReq where
+  fromMultipart form = do
+    UploadOdometerReq
+      <$> fmap fdPayload (lookupFile "file" form)
+      <*> fmap fdFileCType (lookupFile "file" form)
+      <*> fmap (TR.read . T.unpack) (lookupInput "fileType" form)
+
+instance ToMultipart Tmp UploadOdometerReq where
+  toMultipart uploadOdometerReq =
+    MultipartData
+      [Input "fileType" (show uploadOdometerReq.fileType)]
+      [FileData "file" (T.pack uploadOdometerReq.file) "" (uploadOdometerReq.file)]
+
+newtype UploadOdometerResp = UploadOdometerResp
+  { fileId :: Id MediaFile.MediaFile
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverRideRes = DriverRideRes
   { id :: Id DRide.Ride,
@@ -109,7 +154,8 @@ data DriverRideRes = DriverRideRes
 
 data OTPRideReq = OTPRideReq
   { specialZoneOtpCode :: Text,
-    point :: LatLong
+    point :: LatLong,
+    odometer :: Maybe DRide.OdometerReading
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -247,7 +293,7 @@ otpRideCreate driver otpCode booking = do
       (bookingVehicle == DVeh.TAXI_PLUS || bookingVehicle == DVeh.SEDAN || bookingVehicle == DVeh.SUV || bookingVehicle == DVeh.HATCHBACK)
         && driverVehicle == DVeh.TAXI
 
-arrivedAtStop :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasField "isBecknSpecVersion2" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasHttpClientOptions r c, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters]) => Id DRide.Ride -> LatLong -> m APISuccess
+arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
 arrivedAtStop rideId pt = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
@@ -266,3 +312,48 @@ arrivedAtStop rideId pt = do
       pure Success
   where
     isValidRideStatus status = status == DRide.INPROGRESS
+
+uploadOdometerReading ::
+  Id DMOC.MerchantOperatingCity ->
+  Id DRide.Ride ->
+  UploadOdometerReq ->
+  Flow UploadOdometerResp
+uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
+  contentType <- validateContentType
+  config <- QMTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  fileSize <- L.runIO $ withFile file ReadMode hFileSize
+  when (fileSize > fromIntegral config.mediaFileSizeUpperLimit) $
+    throwError $ FileSizeExceededError (show fileSize)
+  mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
+  filePath <- S3.createFilePath "odometer-reading/" ("rideId-" <> rideId.getId) fileType contentType
+  let fileUrl =
+        config.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" "issue"
+          & T.replace "<FILE_PATH>" filePath
+  _ <- fork "S3 Put Odometer Reading File" $ S3.put (T.unpack filePath) mediaFile
+  createMediaEntry fileUrl
+  where
+    validateContentType = do
+      case fileType of
+        S3.Audio | reqContentType == "audio/wave" -> pure "wav"
+        S3.Audio | reqContentType == "audio/mpeg" -> pure "mp3"
+        S3.Audio | reqContentType == "audio/mp4" -> pure "mp4"
+        S3.Image | reqContentType == "image/png" -> pure "png"
+        S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
+        _ -> throwError $ FileFormatNotSupported reqContentType
+
+    createMediaEntry url = do
+      fileEntity <- mkFile url
+      QMediaFile.create fileEntity
+      return $ UploadOdometerResp {fileId = cast $ fileEntity.id}
+      where
+        mkFile fileUrl = do
+          id <- generateGUID
+          now <- getCurrentTime
+          return $
+            MediaFile.MediaFile
+              { id,
+                _type = fileType,
+                url = fileUrl,
+                createdAt = now
+              }

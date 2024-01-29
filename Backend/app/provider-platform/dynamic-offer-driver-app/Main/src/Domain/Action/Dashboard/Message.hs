@@ -22,7 +22,6 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
 import qualified Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601Show)
 import Data.Tuple.Extra (secondM)
 import qualified Data.Vector as V
 import qualified Domain.Types.Merchant as DM
@@ -55,24 +54,6 @@ import Tools.Error
 lookupBroadcastPush :: IO Bool
 lookupBroadcastPush = fromMaybe False . (>>= readMaybe) <$> lookupEnv "BROADCAST_KAFKA_PUSH"
 
-createFilePath ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
-  Text ->
-  Common.FileType ->
-  Text ->
-  m Text
-createFilePath merchantId fileType validatedFileExtention = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
-  now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> "/message-media/" <> "org-" <> merchantId <> "/"
-        <> show fileType
-        <> "/"
-        <> fileName
-        <> validatedFileExtention
-    )
-
 addLinkAsMedia :: ShortId DM.Merchant -> Context.City -> Common.AddLinkAsMedia -> Flow Common.UploadFileResponse
 addLinkAsMedia merchantShortId _ req = do
   _ <- findMerchantByShortId merchantShortId
@@ -84,22 +65,13 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
   _ <- MFQuery.create fileEntity
   return $ Common.UploadFileResponse {fileId = cast $ fileEntity.id}
   where
-    mapToDomain = \case
-      Common.Audio -> Domain.Audio
-      Common.Video -> Domain.Video
-      Common.Image -> Domain.Image
-      Common.AudioLink -> Domain.AudioLink
-      Common.VideoLink -> Domain.VideoLink
-      Common.ImageLink -> Domain.ImageLink
-      Common.PortraitVideoLink -> Domain.PortraitVideoLink
-
     mkFile fileUrl = do
       id <- generateGUID
       now <- getCurrentTime
       return $
         Domain.MediaFile
           { id,
-            _type = mapToDomain fileType,
+            _type = fileType,
             url = fileUrl,
             createdAt = now
           }
@@ -109,7 +81,7 @@ uploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
   -- _ <- validateContentType
   merchant <- findMerchantByShortId merchantShortId
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile file
-  filePath <- createFilePath merchant.id.getId fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
+  filePath <- S3.createFilePath "/message-media/" ("org-" <> merchant.id.getId) fileType "" -- TODO: last param is extension (removed it as the content-type header was not comming with proxy api)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let fileUrl =
@@ -150,16 +122,6 @@ toCommonType :: Domain.MessageType -> Common.MessageType
 toCommonType = \case
   Domain.Read -> Common.Read
   Domain.Action str -> Common.Action str
-
-toCommonMediaFileType :: Domain.MediaType -> Common.FileType
-toCommonMediaFileType = \case
-  Domain.Audio -> Common.Audio
-  Domain.Video -> Common.Video
-  Domain.Image -> Common.Image
-  Domain.ImageLink -> Common.ImageLink
-  Domain.VideoLink -> Common.VideoLink
-  Domain.AudioLink -> Common.AudioLink
-  Domain.PortraitVideoLink -> Common.PortraitVideoLink
 
 translationToDomainType :: UTCTime -> Common.MessageTranslation -> Domain.MessageTranslation
 translationToDomainType createdAt Common.MessageTranslation {..} = Domain.MessageTranslation {..}
@@ -253,7 +215,7 @@ messageInfo merchantShortId _ messageId = do
           description,
           shortDescription,
           title,
-          mediaFiles = (\mediaFile -> Common.MediaFile (toCommonMediaFileType mediaFile._type) mediaFile.url) <$> mf
+          mediaFiles = (\mediaFile -> Common.MediaFile mediaFile._type mediaFile.url) <$> mf
         }
 
 messageDeliveryInfo :: ShortId DM.Merchant -> Context.City -> Id Domain.Message -> Flow Common.MessageDeliveryInfoResponse

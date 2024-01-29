@@ -91,3 +91,18 @@ isRideOtpBooking (Rental RideOtp) = True
 isRideOtpBooking (RoundTrip RideOtp) = True
 isRideOtpBooking (RideShare RideOtp) = True
 isRideOtpBooking _ = False
+
+-- Move it to configs later if required
+isEndOtpRequired :: TripCategory -> Bool
+isEndOtpRequired (Rental _) = True
+isEndOtpRequired _ = False
+
+-- Move it to configs later if required
+isOdometerReadingsRequired :: TripCategory -> Bool
+isOdometerReadingsRequired (Rental _) = True
+isOdometerReadingsRequired _ = False
+
+-- Move it to configs later if required
+isGoHomeAvailable :: TripCategory -> Bool
+isGoHomeAvailable (OneWay _) = True
+isGoHomeAvailable _ = False

@@ -84,7 +84,6 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (UTCTime, utctDay), fromGregorian)
-import Data.Time.Format.ISO8601 (iso8601Show)
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
@@ -337,7 +336,7 @@ data DriverStatsRes = DriverStatsRes
 
 data DriverPhotoUploadReq = DriverPhotoUploadReq
   { image :: Text,
-    fileType :: Common.FileType,
+    fileType :: S3.FileType,
     reqContentType :: Text,
     brisqueFeatures :: [Double]
   }
@@ -981,7 +980,7 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
   when transporterConfig.enableFaceVerification
     let req = IF.FaceValidationReq {file = image, brisqueFeatures}
      in void $ validateFaceImage merchantId merchantOpCityId req
-  filePath <- createFilePath (getId driverId) fileType imageExtension
+  filePath <- S3.createFilePath "/driver-profile-picture/" ("driver-" <> getId driverId) fileType imageExtension
   let fileUrl =
         transporterConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "driver/profile/photo"
@@ -999,7 +998,7 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
   where
     validateContentType = do
       case fileType of
-        Common.Image -> case reqContentType of
+        S3.Image -> case reqContentType of
           "image/png" -> pure "png"
           "image/jpeg" -> pure "jpg"
           _ -> throwError $ FileFormatNotSupported reqContentType
@@ -1007,24 +1006,6 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
 
 fetchDriverPhoto :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> Flow Text
 fetchDriverPhoto _ filePath = S3.get $ T.unpack filePath
-
-createFilePath ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3.S3Env m)) =>
-  Text ->
-  Common.FileType ->
-  Text ->
-  m Text
-createFilePath driverId fileType imageExtension = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
-  now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> "/driver-profile-picture/" <> "driver-" <> driverId <> "/"
-        <> show fileType
-        <> "/"
-        <> fileName
-        <> imageExtension
-    )
 
 createMediaEntry :: Id SP.Person -> Common.AddLinkAsMedia -> Flow APISuccess
 createMediaEntry driverId Common.AddLinkAsMedia {..} = do
@@ -1039,7 +1020,7 @@ createMediaEntry driverId Common.AddLinkAsMedia {..} = do
       return $
         Domain.MediaFile
           { id,
-            _type = Domain.Image,
+            _type = S3.Image,
             url = fileUrl,
             createdAt = now
           }

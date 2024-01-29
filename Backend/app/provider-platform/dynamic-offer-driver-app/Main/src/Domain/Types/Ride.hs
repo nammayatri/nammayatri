@@ -25,12 +25,19 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
+import IssueManagement.Domain.Types.MediaFile (MediaFile)
 import Kernel.External.Maps.Types
 import qualified Kernel.Prelude as BP
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+
+data OdometerReading = OdometerReading
+  { value :: Centesimal,
+    fileId :: Maybe (Id MediaFile)
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
 data RideStatus
   = NEW
@@ -52,6 +59,7 @@ data Ride = Ride
     status :: RideStatus,
     driverId :: Id DPers.Person,
     otp :: Text,
+    endOtp :: Maybe Text,
     trackingUrl :: BaseUrl,
     fare :: Maybe Money,
     traveledDistance :: HighPrecMeters,
@@ -66,6 +74,8 @@ data Ride = Ride
     fareParametersId :: Maybe (Id DFare.FareParameters),
     distanceCalculationFailed :: Maybe Bool,
     pickupDropOutsideOfThreshold :: Maybe Bool,
+    startOdometerReading :: Maybe OdometerReading,
+    endOdometerReading :: Maybe OdometerReading,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     driverDeviatedFromRoute :: Maybe Bool,

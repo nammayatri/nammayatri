@@ -250,6 +250,35 @@ updateStartTimeAndLoc rideId point = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
+updateEndRideOtp :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Maybe Text -> m ()
+updateEndRideOtp rideId endOtp = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.endOtp endOtp,
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updateStartOdometerReading :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> OdometerReading -> m ()
+updateStartOdometerReading rideId odometer = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.startOdometerReadingValue $ Just odometer.value,
+      Se.Set BeamR.startOdometerReadingFileId $ (getId <$> odometer.fileId),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
+updateEndOdometerReading :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> OdometerReading -> m ()
+updateEndOdometerReading rideId odometer = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.endOdometerReadingValue $ Just odometer.value,
+      Se.Set BeamR.endOdometerReadingFileId $ (getId <$> odometer.fileId),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateStatusByIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Ride] -> RideStatus -> m ()
 updateStatusByIds rideIds status = do
   now <- getCurrentTime
@@ -734,6 +763,9 @@ instance FromTType' BeamR.Ride Ride where
         CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
       Just mId -> CQM.findById (Id mId) >>= fromMaybeM (MerchantNotFound mId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant Nothing
+
+    let startOdometerReading = startOdometerReadingValue <&> (\value -> OdometerReading value (Id <$> startOdometerReadingFileId))
+        endOdometerReading = endOdometerReadingValue <&> (\value -> OdometerReading value (Id <$> endOdometerReadingFileId))
     pure $
       Just
         Ride
@@ -763,6 +795,7 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.status = status,
         BeamR.driverId = getId driverId,
         BeamR.otp = otp,
+        BeamR.endOtp = endOtp,
         BeamR.trackingUrl = showBaseUrl trackingUrl,
         BeamR.fare = fare,
         BeamR.traveledDistance = traveledDistance,
@@ -774,6 +807,10 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.tripEndLat = lat <$> tripEndPos,
         BeamR.tripStartLon = lon <$> tripStartPos,
         BeamR.tripEndLon = lon <$> tripEndPos,
+        BeamR.startOdometerReadingValue = startOdometerReading <&> (.value),
+        BeamR.startOdometerReadingFileId = getId <$> (startOdometerReading >>= (.fileId)),
+        BeamR.endOdometerReadingValue = endOdometerReading <&> (.value),
+        BeamR.endOdometerReadingFileId = getId <$> (endOdometerReading >>= (.fileId)),
         BeamR.pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
         BeamR.fareParametersId = getId <$> fareParametersId,
         BeamR.distanceCalculationFailed = distanceCalculationFailed,

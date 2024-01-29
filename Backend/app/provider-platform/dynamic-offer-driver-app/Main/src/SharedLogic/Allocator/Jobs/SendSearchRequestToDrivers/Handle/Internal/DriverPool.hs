@@ -209,27 +209,23 @@ prepareDriverPoolBatch driverPoolCfg searchReq searchTry batchNum goHomeConfig =
               driverPoolCfg.distanceBasedBatchSplit
 
         calcGoHomeDriverPool specialDrivers opCityId = do
-          case (searchReq.toLocation, searchTry.tripCategory) of
-            (Just toLoc, OneWay OneWayOnDemandDynamicOffer) -> calcGoHomeDriverPool' toLoc specialDrivers opCityId
-            (Just toLoc, OneWay OneWayOnDemandStaticOffer) -> calcGoHomeDriverPool' toLoc specialDrivers opCityId
-            (Just toLoc, OneWay OneWayRideOtp) -> calcGoHomeDriverPool' toLoc specialDrivers opCityId
+          case (searchReq.toLocation, isGoHomeAvailable searchTry.tripCategory) of
+            (Just toLoc, True) -> do
+              calculateGoHomeDriverPoolBatch <-
+                calculateGoHomeDriverPool
+                  ( CalculateGoHomeDriverPoolReq
+                      { poolStage = DriverSelection,
+                        driverPoolCfg = driverPoolCfg,
+                        goHomeCfg = goHomeConfig,
+                        variant = Just searchTry.vehicleVariant,
+                        fromLocation = searchReq.fromLocation,
+                        toLocation = toLoc, -- last or all ?
+                        merchantId = searchReq.providerId
+                      }
+                  )
+                  opCityId
+              return $ filterSpecialDrivers specialDrivers calculateGoHomeDriverPoolBatch
             _ -> return []
-
-        calcGoHomeDriverPool' toLoc specialDrivers opCityId = do
-          calculateGoHomeDriverPoolBatch <-
-            calculateGoHomeDriverPool
-              ( CalculateGoHomeDriverPoolReq
-                  { poolStage = DriverSelection,
-                    driverPoolCfg = driverPoolCfg,
-                    goHomeCfg = goHomeConfig,
-                    variant = Just searchTry.vehicleVariant,
-                    fromLocation = searchReq.fromLocation,
-                    toLocation = toLoc, -- last or all ?
-                    merchantId = searchReq.providerId
-                  }
-              )
-              opCityId
-          return $ filterSpecialDrivers specialDrivers calculateGoHomeDriverPoolBatch
 
         calcDriverPool radiusStep merchantOpCityId = do
           let vehicleVariant = searchTry.vehicleVariant

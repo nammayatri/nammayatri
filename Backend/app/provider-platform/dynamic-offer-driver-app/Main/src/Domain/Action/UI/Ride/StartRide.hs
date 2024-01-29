@@ -26,6 +26,7 @@ where
 import Data.Maybe (listToMaybe)
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -57,19 +58,21 @@ data StartRideReq = DriverReq DriverStartRideReq | DashboardReq DashboardStartRi
 data DriverStartRideReq = DriverStartRideReq
   { rideOtp :: Text,
     point :: LatLong,
-    requestor :: DP.Person
+    requestor :: DP.Person,
+    odometer :: Maybe DRide.OdometerReading
   }
 
 data DashboardStartRideReq = DashboardStartRideReq
   { point :: Maybe LatLong,
     merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    odometer :: Maybe DRide.OdometerReading
   }
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> m (),
+    startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> Maybe DRide.OdometerReading -> m (),
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> Maybe LatLong -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
     initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
@@ -148,24 +151,35 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
 
-  point <- case req of
+  (point, odometer) <- case req of
     DriverReq driverReq -> do
+      when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
       when (driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
       logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      pure driverReq.point
+      pure (driverReq.point, driverReq.odometer)
     DashboardReq dashboardReq -> do
+      when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing dashboardReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
       logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
       case dashboardReq.point of
-        Just point -> pure point
+        Just point -> pure (point, dashboardReq.odometer)
         Nothing -> do
           driverLocation <- do
             driverLocations <- LF.driversLocation [driverId]
             listToMaybe driverLocations & fromMaybeM LocationNotFound
-          pure $ getCoordinates driverLocation
+          pure (getCoordinates driverLocation, dashboardReq.odometer)
+
+  updatedRide <-
+    if DTC.isEndOtpRequired booking.tripCategory
+      then do
+        endOtp <- Just <$> generateOTPCode
+        QRide.updateEndRideOtp ride.id endOtp
+        return $ ride {DRide.endOtp = endOtp}
+      else pure ride
+
   whenWithLocationUpdatesLock driverId $ do
-    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId ride booking.id point booking.providerId
-    withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation ride.id driverId point
-    withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking ride (Just point)
+    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
+    withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
+    withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking updatedRide (Just point)
 
   pure APISuccess.Success
   where
