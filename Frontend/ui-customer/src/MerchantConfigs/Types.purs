@@ -71,7 +71,12 @@ type AppConfig =
   , geoCoder :: GeoCoderConfig
   , appLink :: String
   , homeScreen :: HomeScreen
+  , permissionScreen :: PermissionScreenConfig
   }
+
+type PermissionScreenConfig = {
+  showGoback :: Boolean
+}
 
 type GeoCoderConfig = {
   enableLLtoAddress :: Boolean,

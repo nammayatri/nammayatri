@@ -22,13 +22,16 @@ import Effect.Uncurried (EffectFn3, mkEffectFn3, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
 import JBridge (firebaseLogEvent, isInternetAvailable, requestLocation, getLocationPermissionStatus)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, pure, unit, ($), (==), (&&))
+import Prelude (class Show, Unit, bind, discard, pure, unit, ($), (==), (&&), void)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types (PermissionScreenState, PermissionScreenStage(..))
+import Helpers.Utils (emitTerminateApp)
 import Effect.Unsafe 
 import Engineering.Helpers.LogEvent (logEvent)
+import Data.Maybe
+import Data.Array
 
 instance showAction :: Show Action where 
     show _ = ""
@@ -70,7 +73,9 @@ data ScreenOutput = GoBack | Refresh | InternetCallBack PermissionScreenState | 
 
 eval :: Action -> PermissionScreenState -> Eval Action ScreenOutput PermissionScreenState
 
-eval BackPressed state = exit GoBack 
+eval BackPressed state = do
+  void $ pure $ emitTerminateApp Nothing true
+  continue state
 
 eval (ErrorModalActionController (ErrorModalController.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = do
   continueWithCmd state [do 
@@ -83,8 +88,8 @@ eval (ErrorModalActionController (ErrorModalController.PrimaryButtonActionContro
 
 eval (LocationPermissionCallBackCustomer isLocationPermissionEnabled) state = do 
   let status = getLocationPermissionStatus unit
-  if isLocationPermissionEnabled then updateAndExit state (LocationCallBack state)
-    else continue state {stage = (if status == "DENIED" then LOCATION_DENIED else NORMAL)}
+  if isLocationPermissionEnabled && elem state.stage [LOCATION_DISABLED, LOCATION_DENIED] then updateAndExit state (LocationCallBack state)
+    else continue state {stage = (if status == "DENIED" then LOCATION_DENIED else state.stage)}
 eval (InternetCallBackCustomer isInternetAvailable) state = do 
   if( isInternetAvailable == "true") then do
     updateAndExit state (InternetCallBack state)

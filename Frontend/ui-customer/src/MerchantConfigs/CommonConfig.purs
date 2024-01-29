@@ -136,6 +136,9 @@ commonConfig =
         , editTextDefaultColor : "#A7A7A7"
         }
         , appLink : ""
+        , permissionScreen : {
+          showGoback : true
+        }
         , homeScreen: {
             primaryBackground : "#2C2F3A",
             pickUpViewColor : "#303440",

@@ -250,8 +250,10 @@ window["onEvent'"] = function (_event, args) {
   } else if (_event == "onPause") {
     previousDateObject = new Date();
     window.onPause();
+    purescript.onEvent(_event)();
   } else if (_event == "onResume") {
     window.onResume();
+    purescript.onEvent(_event)();
     refreshFlow();
   } else if (_event == "onLocationChanged" && !(window.receiverFlag)) {
     purescript.onConnectivityEvent("LOCATION_DISABLED")();
