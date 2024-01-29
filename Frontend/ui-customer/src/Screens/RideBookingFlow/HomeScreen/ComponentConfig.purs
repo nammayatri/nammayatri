@@ -80,6 +80,7 @@ import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
 import Locale.Utils
+import Common.Types.App (RideType(..)) as RideType
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -981,6 +982,8 @@ driverInfoTransformer state =
     , vehicleVariant : cardState.vehicleVariant
     , defaultPeekHeight : getDefaultPeekHeight state
     , bottomSheetState : state.props.bottomSheetState
+    , rentalData : RideCompletedCard.dummyRentalBookingConfig
+    , rideType : state.data.rideType
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1480,7 +1483,9 @@ rideCompletedCardConfig state =
         },
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.feature.enableSupport,
-        needHelpText = getString NEED_HELP
+        needHelpText = getString NEED_HELP,
+        showRentalRideDetails = state.data.rideType == RideType.RENTAL_RIDE,
+        rentalBookingData = RideCompletedCard.dummyRentalBookingConfig
       }
   where 
     mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}
@@ -1663,3 +1668,21 @@ locationTagBarConfig state  = let
           { image : "ny_ic_ambulance", text : "Ambulance", id : "AMBULANCE" }]
   in 
     { tagList : locTagList }
+  
+endOTPAnimConfig :: ST.HomeScreenState -> AnimConfig.AnimConfig
+endOTPAnimConfig state =
+  if EHC.os == "IOS" 
+    then
+      AnimConfig.animConfig
+      { fromX = -30
+      , toX = 0
+      , duration = 1500
+      , ifAnim = state.props.showEndOTP
+      }
+    else
+      AnimConfig.animConfig
+      { fromX =  -20
+      , toX =  0
+      , duration = 1500
+      , ifAnim = state.props.showEndOTP
+      }

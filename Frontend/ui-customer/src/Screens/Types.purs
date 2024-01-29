@@ -17,7 +17,7 @@ module Screens.Types where
 
 import MerchantConfig.Types
 
-import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer, CarouselModal, CategoryListType)
+import Common.Types.App (CountryCodeObj, OTPChannel, OptionButtonList, RateCardType, FeedbackAnswer, CarouselModal, CategoryListType, RentalBookingConfig, RideType(..))
 import Common.Types.App as Common
 import Components.ChatView.Controller (ChatComponentConfig, Config)
 import Components.ChooseVehicle.Controller as ChooseVehicle
@@ -41,7 +41,6 @@ import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
-import Screens(ScreenName)
 
 type Contacts = {
   name :: String,
@@ -762,6 +761,7 @@ type HomeScreenStateData =
   , peekHeight :: Int
   , rideHistoryTrip :: Maybe Trip
   , rentalsInfo :: Maybe RentalsInfo
+  , rideType :: RideType
   }
 
 type RentalsInfo = 
@@ -916,6 +916,7 @@ type HomeScreenStateProps =
   , autoScroll :: Boolean
   , enableChatWidget :: Boolean
   , focussedBottomIcon :: BottomNavBarIcon
+  , showEndOTP :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1879,6 +1880,9 @@ type RideScheduledScreenState = {
   , baseDistance :: String
   , driverAllocationTime :: String
 }
+
+-- ######################################### SearchLocationScreenState ####################################################
+
 data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | REPORTED_ISSUES_MODAL | RESOLVED_ISSUES_MODAL
 
 derive instance genericIssueModalType :: Generic IssueModalType _
@@ -1990,20 +1994,7 @@ type RentalScreenProps = {
   , maxDistance :: Int
   , farePerKm :: String
   , maxDateBooking :: Int
-}
-
-type RentalBookingConfig = {
-    selectedDate :: String
-  , selectedTime :: String
-  , baseDuration :: Int
-  , baseDistance :: Int
-  , finalDuration :: Int
-  , finalDistance :: Int
-  , startOdometer :: String
-  , endOdometer :: String
-  , estimatedFare :: Int
-  , finalFare :: Int
-  , nightCharge :: String
+  , showRateCard :: Boolean
 }
 
 type DateTimeConfig = {

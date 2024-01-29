@@ -779,7 +779,6 @@ rentalTripRowView config push description =
             EstimatedFare -> if isTitle then rentalRowDetails.estimatedFare else "₹" <> show rentalBookingData.estimatedFare
             ExtraTimePrice -> if isTitle then rentalRowDetails.extraTimePrice else "₹" <> show (rentalBookingData.finalFare - rentalBookingData.estimatedFare)
             TotalFare -> if isTitle then rentalRowDetails.totalFare else "₹" <>  show rentalBookingData.finalFare
-            _ -> ""
 
       rideDurationOrDistanceProp :: Config -> RentalRowView -> Array (Prop (Effect Unit))
       rideDurationOrDistanceProp config description =

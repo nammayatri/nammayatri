@@ -26,6 +26,7 @@ import Components.GenericHeader.Controller as GenericHeaderController
 import Components.IncrementDecrementModel.Controller as IncrementDecrementModelController
 import Components.InputView.Controller as InputViewController
 import Components.PrimaryButton.Controller as PrimaryButtonController
+import Components.RateCard.Controller as RateCardController
 import Data.Array as DA
 import Data.Eq.Generic (genericEq)
 import Data.Generic.Rep (class Generic)
@@ -66,6 +67,7 @@ data Action =
   | DateTimePickerAction String Int Int Int String Int Int
   | InputViewAC InputViewController.Action
   | SliderCallback Int
+  | RateCardAC RateCardController.Action
 
 data ScreenOutput = NoScreen
                   | GoToHomeScreen
@@ -108,6 +110,9 @@ eval (ChooseVehicleAC (ChooseVehicleController.OnSelect variant)) state =
   let updatedQuotes = map (\item -> item {activeIndex = variant.index}) state.data.quoteList
   in  continue state { data { quoteList = updatedQuotes }}
 
+eval (ChooseVehicleAC (ChooseVehicleController.ShowRateCard _)) state = 
+  continue state { props { showRateCard = true }}
+
 eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
   let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
       validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
@@ -128,6 +133,11 @@ eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFoc
       else genericBackPressed state
     _ -> continue state
 
+eval (RateCardAC action) state =
+  case action of
+    RateCardController.NoAction -> continue state
+    RateCardController.PrimaryButtonAC (PrimaryButtonController.NoAction) -> continue state
+    _ -> continue state { props {showRateCard = false}}
 
 eval _ state = continue state
 

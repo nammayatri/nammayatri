@@ -535,7 +535,9 @@ rideInfoView push state =
           , gravity BOTTOM
           , clickable isClickable
           , clipChildren false
-          ]$[ otpAndWaitView push state 
+          ] $
+          [ otpAndWaitView push state
+          , endOTPView push state
           ] <> if state.props.currentStage == RideStarted then [trackRideView push state] else []
         , linearLayout[weight 1.0][]
         , linearLayout
@@ -4302,3 +4304,61 @@ additionalServicesView push state =
           ][  LocationTagBarV2.view (push <<< LocationTagBarAC) (locationTagBarConfig state)]
       ]
 
+endOTPView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+endOTPView push state =
+  linearLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , cornerRadius if os == "IOS" then 18.0 else 32.0
+  , background Color.white900
+  , gravity CENTER
+  , clickable true
+  , accessibility DISABLE
+  , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
+  , visibility $ boolToVisibility $ state.props.currentStage == RideStarted
+  , margin $ MarginRight 4
+  ]
+  [ textView $
+    [ width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , accessibilityHint $ "O T P : " <> (DS.replaceAll (DS.Pattern "") (DS.Replacement " ")  state.data.driverInfoCardState.otp) -- TODO :: Add endOTP during API Integration
+    , accessibility ENABLE
+    , text $ getString END_OTP
+    , padding $ Padding 12 0 4 if os == "IOS" then 0 else 3
+    , color Color.black700
+    ] <> FontStyle.body22 TypoGraphy
+  , linearLayout 
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , background Color.grey700
+    , onClick push $ const ShowEndOTP
+    , visibility $ boolToVisibility $ not state.props.showEndOTP
+    , margin $ Margin 4 4 4 4
+    , padding $ Padding 8 4 8 4
+    , cornerRadius 16.0
+    , rippleColor Color.rippleShade
+    ]
+    [ imageView 
+      [ gravity CENTER_VERTICAL
+      , height $ V 22
+      , width $ V 22
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_chevron_right"
+      ] 
+    ]
+  , linearLayout
+    [ height $ WRAP_CONTENT
+    , width $ WRAP_CONTENT
+    , cornerRadius 16.0
+    , visibility $ boolToVisibility state.props.showEndOTP
+    ]
+    [ PrestoAnim.animationSet [translateInXAnim $ endOTPAnimConfig state]
+      $ textView $ 
+      [ text $ state.data.driverInfoCardState.otp -- TODO-codex :: Add endOTP during API Integration
+      , color Color.black900
+      , cornerRadius if os == "IOS" then 12.0 else 16.0
+      , padding $ Padding 8 4 8 6
+      , margin $ Margin 0 4 4 4
+      , background Color.grey700
+      ] <> FontStyle.body22 TypoGraphy
+    ]
+  ]

@@ -902,6 +902,7 @@ data Action = NoAction
             | LocationTagBarAC LocationTagBarV2Controller.Action
             | RentalBannerAction Banner.Action
             | BottomNavBarAction BottomNavBarIcon
+            | ShowEndOTP
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -2479,6 +2480,8 @@ eval (BottomNavBarAction id) state = do
     TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
     MOBILITY -> continue newState 
     _ -> continue state 
+
+eval ShowEndOTP state = continue state { props { showEndOTP = true } }
 
 eval _ state = continue state
 

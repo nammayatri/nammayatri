@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..))
+import Common.Types.App (RateCardType(..), RideType(..))
 import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
@@ -143,6 +143,7 @@ initData = {
     , peekHeight : 0
     , rideHistoryTrip : Nothing
     , rentalsInfo : Just {rentalsScheduledAt : "12 : 45 PM"}
+    , rideType : NORMAL_RIDE
     },
     props: {
       rideRequestFlow : false
@@ -282,6 +283,7 @@ initData = {
     , autoScrollTimerId : ""
     , autoScroll : true
     , enableChatWidget : false
+    , showEndOTP : false
     }
 }
 

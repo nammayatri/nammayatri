@@ -813,7 +813,10 @@ rateCardState state =
         , description = getString (YATRI_SATHI_FEE_PAYABLE_FOR_DATE "YATRI_SATHI_FEE_PAYABLE_FOR_DATE") <> " " <> state.data.paymentState.date
         , buttonText = Nothing
         , currentRateCardType = CommonTypes.PaymentFareBreakup
-        , primaryButtonText = getString GOT_IT
+        , primaryButtonConfig {
+            text = getString GOT_IT
+          , visibility = VISIBLE
+          }
         , additionalStrings = [
           {key : "FEE_CORRESPONDING_TO_DISTANCE", val : getString FEE_CORRESPONDING_TO_THE_DISTANCE},
           {key : "GOT_IT", val : getString GOT_IT},
