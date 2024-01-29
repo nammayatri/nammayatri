@@ -28,7 +28,7 @@ import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, unit, (<<<), ($), (==), (<>), (/=),(&&))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width,visibility, id, accessibilityHint, accessibility)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..), PrestoDOM, Screen, afterRender, alignParentBottom, background, clickable, color, cornerRadius, fontStyle, gravity, height, imageView, imageWithFallback, lineHeight, linearLayout, margin, orientation, padding, text, textSize, textView, width,visibility, id, accessibilityHint, accessibility, onBackPressed, onClick)
 import Screens.OnBoardingFlow.PermissionScreen.ComponentConfig (errorModalConfig, primaryButtonConfig, getLocationBlockerPopUpConfig)
 import Screens.PermissionScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
@@ -59,6 +59,7 @@ view push state =
   , width MATCH_PARENT
   , clickable true
   , visibility if (EHC.os == "IOS" && state.stage == ST.LOCATION_DISABLED) then GONE else VISIBLE
+  , onBackPressed push (const $ BackPressed)
   ][ linearLayout
      [ height MATCH_PARENT
      , width MATCH_PARENT
@@ -74,49 +75,61 @@ view push state =
 locationAccessPermissionView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
 locationAccessPermissionView push state = 
   linearLayout
-  [ height MATCH_PARENT
+  ([ height MATCH_PARENT
   , width MATCH_PARENT
   , gravity CENTER
   , padding (Padding 16 16 16 (if EHC.safeMarginBottom == 0 then 24 else 0))
   , background Color.blackLessTrans
-  ][ linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , gravity CENTER
-      , padding $ Padding 20 20 20 20
-      , margin $ MarginHorizontal 20 20
-      , cornerRadius 8.0
-      , background Color.white900
-      ][  imageView
-          [ imageWithFallback $ fetchImage FF_ASSET "ic_location_permission_logo"
-          , height $ V 213
-          , width $ V 240
-          , gravity CENTER
+  ] <> if state.appConfig.permissionScreen.showGoback 
+    then [onClick push $ const $ BackPressed]
+    else [])
+      [ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , gravity CENTER
+        , padding $ Padding 20 20 20 20
+        , margin $ MarginHorizontal 20 20
+        , cornerRadius 8.0
+        , background Color.white900
+        ]$[  imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ic_location_permission_logo"
+            , height $ V 213
+            , width $ V 240
+            , gravity CENTER
+            ]
+          , textView 
+            [ text $ "Hey " <> (getValueToLocalStore USER_NAME) <> "!"
+            , textSize FontSize.a_22
+            , color Color.black800
+            , gravity CENTER
+            , lineHeight "27"
+            , margin $ Margin 0 22 0 16
+            , fontStyle $ FontStyle.bold LanguageStyle
           ]
-        , textView 
-          [ text $ "Hey " <> (getValueToLocalStore USER_NAME) <> "!"
-          , textSize FontSize.a_22
-          , color Color.black800
-          , gravity CENTER
-          , lineHeight "27"
-          , margin $ Margin 0 22 0 16
-          , fontStyle $ FontStyle.bold LanguageStyle
+          , textView
+            [ text $ getString if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then (LOCATION_PERMISSION_SUBTITLE_NEW_USER "LOCATION_PERMISSION_SUBTITLE_NEW_USER") else LOCATION_PERMISSION_SUBTITLE
+            , textSize FontSize.a_16
+            , color Color.black800
+            , fontStyle $ FontStyle.regular LanguageStyle
+            , lineHeight "22"
+            , gravity CENTER
+            , margin $ MarginBottom 15
+            ]
+          , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
+        ] <> if state.appConfig.permissionScreen.showGoback then
+              [ textView $
+                [ text (getString GO_BACK_)
+                , width MATCH_PARENT
+                , height WRAP_CONTENT 
+                , color Color.black800
+                , margin (Margin 0 20 0 0)
+                , onClick push (const $ BackPressed)
+                , gravity CENTER
+                ] <> FontStyle.subHeading1 TypoGraphy
+              ]
+            else []
         ]
-        , textView
-          [ text $ getString if (getValueToLocalStore PERMISSION_POPUP_TIRGGERED) /= "true" then (LOCATION_PERMISSION_SUBTITLE_NEW_USER "LOCATION_PERMISSION_SUBTITLE_NEW_USER") else LOCATION_PERMISSION_SUBTITLE
-          , textSize FontSize.a_16
-          , color Color.black800
-          , fontStyle $ FontStyle.regular LanguageStyle
-          , lineHeight "22"
-          , gravity CENTER
-          , margin $ MarginBottom 15
-          ]
-        , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
-      ]
-
-      
-  ]
 
 buttonView :: forall w. (Action -> Effect Unit) -> ST.PermissionScreenState -> PrestoDOM (Effect Unit) w 
 buttonView push state  = 
@@ -127,7 +140,7 @@ buttonView push state  =
   , alignParentBottom "true,-1"
   ][  PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
   -- ,  textView $
-  --     [ text (getString DENY_ACCESS)
+  --     [ text (getString GO_BACK_)
   --     , width MATCH_PARENT
   --     , height WRAP_CONTENT 
   --     , color Color.black800

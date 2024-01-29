@@ -217,6 +217,9 @@ config =
       physicalImpairmentVideo : "",
       hearingImpairmentVideo : ""
     }
+  , permissionScreen : {
+      showGoback : true
+    }
   , homeScreen: {
       primaryBackground : "#2C2F3A",
       pickUpViewColor : "#303440",

@@ -65,8 +65,13 @@ type AppConfigCustomer a =
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
+  , permissionScreen :: PermissionScreenConfig
   | a
   }
+
+type PermissionScreenConfig = {
+  showGoback :: Boolean
+}
 
 type GeoCoderConfig = {
   enableLLtoAddress :: Boolean,
