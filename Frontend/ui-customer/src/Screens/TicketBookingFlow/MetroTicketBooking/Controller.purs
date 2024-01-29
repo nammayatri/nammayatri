@@ -29,6 +29,7 @@ import Data.Array
 import Data.Maybe
 import Debug (spy)
 import JBridge (toast, toggleBtnLoader)
+import Components.RequestInfoCard as InfoCard
 
 instance showAction :: Show Action where
   show _ = ""
@@ -49,6 +50,8 @@ data Action = AfterRender
             | ToggleTermsAndConditions
             | GetMetroQuotesAction (Array MetroQuote)
             | SelectLocation ST.LocationActionId
+            | ShowMetroBookingTimeError Boolean
+            | InfoCardAC InfoCard.Action
 
 data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
@@ -94,6 +97,20 @@ eval (GetMetroQuotesAction resp) state = do
     updateAndExit state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}} $ Refresh state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}}
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
+
+eval (ShowMetroBookingTimeError withinTimeRange) state = 
+  continue state {
+    props{
+      showMetroBookingTimeError = not withinTimeRange
+    }
+  }
+
+eval (InfoCardAC (InfoCard.Close)) state = 
+  exit $ GoBack state { 
+    props { 
+      showMetroBookingTimeError = false
+    }
+  }
 
 eval _ state = continue state
 

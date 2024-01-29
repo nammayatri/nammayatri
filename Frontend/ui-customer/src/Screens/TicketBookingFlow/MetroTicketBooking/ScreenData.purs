@@ -36,5 +36,6 @@ initData = {
     , termsAndConditionsSelected : true
     , currentStage : ST.MetroTicketSelection
     , isButtonActive : false
+    , showMetroBookingTimeError : false
   }
 }

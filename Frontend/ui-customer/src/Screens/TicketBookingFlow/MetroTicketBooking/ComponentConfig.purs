@@ -28,6 +28,10 @@ import Data.Maybe
 import Font.Style as FontStyle
 import JBridge as JB
 import Screens.Types as ST
+import Components.RequestInfoCard as InfoCard
+import Language.Strings 
+import Resources.Localizable.EN
+import Language.Types
 
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
@@ -68,3 +72,42 @@ updateButtonConfig state = let
         , alpha = if state.props.isButtonActive then 1.0 else 0.5
         }
     in updateButtonConfig'
+
+
+
+metroTimeErrorPopupConfig :: ST.MetroTicketBookingScreenState -> InfoCard.Config
+metroTimeErrorPopupConfig state = let
+  requestInfoCardConfig' =  InfoCard.config{
+    title {
+      text = "Metro Booking Timings",
+      accessibilityHint = "Metro Booking Timings"
+    }
+  , primaryText {
+      text = "Chennai Metro allows QR ticket purchase from 4:30 AM to 10:30 PM on all days. ",
+      padding = Padding 16 16 0 0,
+      textStyle = FontStyle.ParagraphText,
+      color = Color.black700,
+      accessibilityHint = "Chennai Metro allows QR ticket purchase from 4:30am to 22:30 PM on all days."
+    }
+  , secondaryText {
+      text = "Please come back later during the eligible time to purchase tickets.",
+      visibility = VISIBLE,
+      padding = PaddingLeft 16,
+      color = Color.black700,
+      textStyle = FontStyle.ParagraphText,
+      width = V $ JB.getWidthFromPercent 100,
+      accessibilityHint = "Please come back later during the eligible time to purchase tickets."
+    }
+  , imageConfig {
+      imageUrl = fetchImage FF_COMMON_ASSET "ny_ic_red_warning_with_red_circle_bg",
+      height = V 130,
+      width = V 130,
+      padding = Padding 0 2 2 0
+    }
+  , buttonConfig {
+      text = getString GOT_IT,
+      padding = PaddingVertical 16 20,
+      accessibilityHint = (getEN GOT_IT) <> " : Button"
+    }
+  }
+  in requestInfoCardConfig'
