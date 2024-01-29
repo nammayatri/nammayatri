@@ -430,3 +430,17 @@ type DisplayBase64ImageConig = {
   , scaleType :: String
   , inSampleSize :: Int -- reduce image qulaity by this factor (highValue = low quality)
 }
+
+type RentalBookingConfig = {
+    selectedDate :: String
+  , selectedTime :: String
+  , baseDuration :: Int
+  , baseDistance :: Int
+  , finalDuration :: Int
+  , finalDistance :: Int
+  , startOdometer :: String
+  , endOdometer :: String
+  , estimatedFare :: Int
+  , finalFare :: Int
+  , nightCharge :: String
+}
