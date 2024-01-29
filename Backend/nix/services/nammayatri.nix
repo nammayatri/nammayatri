@@ -166,6 +166,7 @@ in
         postgres-with-replica.db-primary = {
           enable = true;
           extraMasterDBSettings = { name, ... }: {
+            # Unix socket length is supposed to be under 108 chars, see: https://linux.die.net/man/7/unix
             socketDir = "$HOME/NY/socket/${name}";
             extensions = extensions: [
               extensions.postgis
