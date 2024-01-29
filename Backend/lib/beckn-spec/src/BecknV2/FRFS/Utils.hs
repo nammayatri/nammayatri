@@ -5,7 +5,7 @@ import qualified BecknV2.FRFS.Types as Spec hiding (Domain)
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time
-import Data.Time.Format.ISO8601 (iso8601ParseM)
+import Data.Time.Format.ISO8601 (iso8601ParseM, iso8601Show)
 import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Error as Error
@@ -13,8 +13,8 @@ import Kernel.Utils.Error
 
 tfDescriptor :: Maybe Text -> Maybe Text -> Maybe Spec.Descriptor
 tfDescriptor mCode mName = do
-  name <- mCode
-  code <- mName
+  code <- mCode
+  name <- mName
   return
     Spec.Descriptor
       { descriptorCode = Just $ code,
@@ -40,6 +40,9 @@ parseISO8601Duration durationStr = do
 -- Add the parsed duration to a given UTCTime
 addDurationToUTCTime :: UTCTime -> NominalDiffTime -> UTCTime
 addDurationToUTCTime time duration = addUTCTime duration time
+
+durationToText :: NominalDiffTime -> Text
+durationToText duration = T.pack $ iso8601Show $ calendarTimeTime duration
 
 ack :: Spec.AckResponse
 ack =

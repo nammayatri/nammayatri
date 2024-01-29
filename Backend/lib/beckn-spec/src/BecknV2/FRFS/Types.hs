@@ -9,12 +9,16 @@ module BecknV2.FRFS.Types
     AckResponse (..),
     Authorization (..),
     Billing (..),
+    CancelReq (..),
+    CancelReqMessage (..),
     CancellationTerm (..),
     Catalog (..),
     Category (..),
+    City (..),
     ConfirmReq (..),
     ConfirmReqMessage (..),
     Context (..),
+    Country (..),
     Descriptor (..),
     Domain (..),
     Error (..),
@@ -34,6 +38,7 @@ module BecknV2.FRFS.Types
     OnSearchReq (..),
     OnSearchReqMessage (..),
     OnStatusReq (..),
+    Option (..),
     Order (..),
     Payment (..),
     PaymentParams (..),
@@ -210,6 +215,64 @@ optionsBilling =
         ("billingPhone", "phone")
       ]
 
+-- |
+data CancelReq = CancelReq
+  { -- |
+    cancelReqContext :: Context,
+    -- |
+    cancelReqMessage :: CancelReqMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON CancelReq where
+  parseJSON = genericParseJSON optionsCancelReq
+
+instance ToJSON CancelReq where
+  toJSON = genericToJSON optionsCancelReq
+
+optionsCancelReq :: Options
+optionsCancelReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("cancelReqContext", "context"),
+        ("cancelReqMessage", "message")
+      ]
+
+-- |
+-- |
+data CancelReqMessage = CancelReqMessage
+  { -- |
+    cancelReqMessageCancellationReasonId :: Maybe Text,
+    -- |
+    cancelReqMessageDescriptor :: Maybe Descriptor,
+    -- |
+    cancelReqMessageOrderId :: Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON CancelReqMessage where
+  parseJSON = genericParseJSON optionsCancelReqMessage
+
+instance ToJSON CancelReqMessage where
+  toJSON = genericToJSON optionsCancelReqMessage
+
+optionsCancelReqMessage :: Options
+optionsCancelReqMessage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("cancelReqMessageCancellationReasonId", "cancellation_reason_id"),
+        ("cancelReqMessageDescriptor", "descriptor"),
+        ("cancelReqMessageOrderId", "order_id")
+      ]
+
 -- | Describes the cancellation terms of an item or an order. This can be referenced at an item or order level. Item-level cancellation terms can override the terms at the order level.
 data CancellationTerm = CancellationTerm
   { -- |
@@ -286,6 +349,33 @@ optionsCategory =
     table =
       [ ("categoryDescriptor", "descriptor"),
         ("categoryId", "id")
+      ]
+
+-- | Describes a city
+data City = City
+  { -- | City code
+    cityCode :: Maybe Text,
+    -- | Name of the city
+    cityName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON City where
+  parseJSON = genericParseJSON optionsCity
+
+instance ToJSON City where
+  toJSON = genericToJSON optionsCity
+
+optionsCity :: Options
+optionsCity =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("cityCode", "code"),
+        ("cityName", "name")
       ]
 
 -- |
@@ -398,6 +488,33 @@ optionsContext =
         ("contextTransactionId", "transaction_id"),
         ("contextTtl", "ttl"),
         ("contextVersion", "version")
+      ]
+
+-- | Describes a country
+data Country = Country
+  { -- | Country code as per ISO 3166-1 and ISO 3166-2 format
+    countryCode :: Maybe Text,
+    -- | Name of the country
+    countryName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Country where
+  parseJSON = genericParseJSON optionsCountry
+
+instance ToJSON Country where
+  toJSON = genericToJSON optionsCountry
+
+optionsCountry :: Options
+optionsCountry =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("countryCode", "code"),
+        ("countryName", "name")
       ]
 
 -- | Physical description of something.
@@ -746,6 +863,10 @@ optionsItemQuantitySelected =
 -- | The physical location of something
 data Location = Location
   { -- |
+    locationCity :: Maybe City,
+    -- |
+    locationCountry :: Maybe Country,
+    -- |
     locationDescriptor :: Maybe Descriptor,
     -- | Describes a GPS coordinate
     locationGps :: Maybe Text
@@ -766,7 +887,9 @@ optionsLocation =
     }
   where
     table =
-      [ ("locationDescriptor", "descriptor"),
+      [ ("locationCity", "city"),
+        ("locationCountry", "country"),
+        ("locationDescriptor", "descriptor"),
         ("locationGps", "gps")
       ]
 
@@ -945,6 +1068,30 @@ optionsOnStatusReq =
       ]
 
 -- |
+-- | Describes a selectable option
+data Option = Option
+  { -- |
+    optionId :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Option where
+  parseJSON = genericParseJSON optionsOption
+
+instance ToJSON Option where
+  toJSON = genericToJSON optionsOption
+
+optionsOption :: Options
+optionsOption =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("optionId", "id")
+      ]
+
 -- | Describes a legal purchase order. It contains the complete details of the legal contract created between the buyer and the seller.
 data Order = Order
   { -- |

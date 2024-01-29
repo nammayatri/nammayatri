@@ -14,6 +14,14 @@ BecknConfig:
     gatewayUrl: BaseUrl
     registryUrl: BaseUrl
     uniqueKeyId: Text
+    settlementType: Maybe Text
+    paymentParamsJson: Maybe Text
+
+  types:
+    BknPaymentParams:
+      bankAccNumber: Maybe Text
+      bankCode: Maybe Text
+      vpa: Maybe Text
 
   queries:
     findByMerchantIdAndDomain:

@@ -81,3 +81,11 @@ type OnStatusAPI =
 
 onStatusAPI :: Proxy OnStatusAPI
 onStatusAPI = Proxy
+
+type CancelAPI =
+  "cancel"
+    :> ReqBody '[JSON] Spec.CancelReq
+    :> Post '[JSON] Spec.AckResponse
+
+cancelAPI :: Proxy CancelAPI
+cancelAPI = Proxy

@@ -14,7 +14,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Beckn.ACL.FRFS.Status (buildStatusReq) where
+module Beckn.ACL.FRFS.Cancel (buildCancelReq) where
 
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
@@ -26,30 +26,38 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 
-buildStatusReq ::
+buildCancelReq ::
   (MonadFlow m) =>
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
   Utils.BppData ->
-  m (Spec.StatusReq)
-buildStatusReq booking bapConfig bppData = do
+  m (Spec.CancelReq)
+buildCancelReq booking bapConfig bppData = do
   now <- getCurrentTime
   let transactionId = booking.searchId.getId
-  messageId <- generateGUID
-  let validTill = addUTCTime (intToNominalDiffTime 30) now
+      validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
+  messageId <- generateGUID
 
-  context <- Utils.buildContext Spec.STATUS bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData)
+  context <- Utils.buildContext Spec.CANCEL bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData)
 
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "bppOrderId not found")
   pure $
-    Spec.StatusReq
-      { statusReqContext = context,
-        statusReqMessage = tfStatusMessage bppOrderId
+    Spec.CancelReq
+      { cancelReqContext = context,
+        cancelReqMessage = tfCancelMessage bppOrderId
       }
 
-tfStatusMessage :: Text -> Spec.StatusReqMessage
-tfStatusMessage bppOrderId =
-  Spec.StatusReqMessage
-    { statusReqMessageOrderId = bppOrderId
+tfCancelMessage :: Text -> Spec.CancelReqMessage
+tfCancelMessage bppOrderId =
+  Spec.CancelReqMessage
+    { cancelReqMessageCancellationReasonId = Just "7", -- TODO: Get details around this from ONDC
+      cancelReqMessageDescriptor =
+        Just $
+          Spec.Descriptor
+            { descriptorName = Just "Ride Cancellation",
+              descriptorCode = Just "CONFIRM_CANCEL",
+              descriptorImages = Nothing
+            },
+      cancelReqMessageOrderId = bppOrderId
     }

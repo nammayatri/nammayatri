@@ -34,18 +34,21 @@ buildContext ::
   Text ->
   Text ->
   Maybe Text ->
+  Maybe BppData ->
   m Spec.Context
-buildContext action bapConfig txnId msgId mTTL = do
+buildContext action bapConfig txnId msgId mTTL bppData = do
   now <- getCurrentTime
   let bapUrl = showBaseUrl bapConfig.subscriberUrl
   let bapId = bapConfig.subscriberId
+      contextBppId = bppData <&> (.bppId)
+      contextBppUri = bppData <&> (.bppUri)
   return $
     Spec.Context
       { contextAction = encodeToText' action,
         contextBapId = Just bapId,
         contextBapUri = Just bapUrl,
-        contextBppId = Nothing,
-        contextBppUri = Nothing,
+        contextBppId,
+        contextBppUri,
         contextDomain = encodeToText' Spec.FRFS,
         contextKey = Nothing,
         contextLocation = Just $ tfLocation "std:044",
@@ -59,14 +62,20 @@ buildContext action bapConfig txnId msgId mTTL = do
 tfLocation :: Text -> Spec.Location
 tfLocation location_code =
   Spec.Location
-    { locationDescriptor =
+    { locationDescriptor = Nothing,
+      locationGps = Nothing,
+      locationCity =
         Just $
-          Spec.Descriptor
-            { descriptorCode = Just location_code,
-              descriptorImages = Nothing,
-              descriptorName = Nothing
+          Spec.City
+            { cityCode = Just location_code,
+              cityName = Nothing
             },
-      locationGps = Nothing
+      locationCountry =
+        Just $
+          Spec.Country
+            { countryCode = Just "IND",
+              countryName = Nothing
+            }
     }
 
 getStartStop :: [Spec.Stop] -> Maybe Spec.Stop
@@ -129,33 +138,40 @@ type TxnId = Text
 
 type Amount = Text
 
-mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Spec.Payment
-mkPayment paymentStatus mAmount mTxnId =
+mkPayment :: Spec.PaymentStatus -> Maybe Amount -> Maybe TxnId -> Maybe BknPaymentParams -> Maybe Text -> Spec.Payment
+mkPayment paymentStatus mAmount mTxnId mPaymentParams mSettlementType =
   Spec.Payment
     { paymentCollectedBy = Just "BAP",
-      paymentId = Nothing,
-      paymentParams = mTxnId >>= (\txnId -> mAmount <&> (mkPaymentParams txnId)),
+      paymentId = mTxnId,
+      paymentParams =
+        if anyTrue [isJust mTxnId, isJust mAmount, isJust mPaymentParams]
+          then Just $ mkPaymentParams mPaymentParams mTxnId mAmount
+          else Nothing,
       paymentStatus = encodeToText' paymentStatus,
-      paymentTags = Just $ mkPaymentTags mAmount,
+      paymentTags = Just $ mkPaymentTags mSettlementType mAmount,
       paymentType = encodeToText' Spec.PRE_ORDER
     }
+  where
+    anyTrue = any (== True)
 
-mkPaymentParams :: TxnId -> Amount -> Spec.PaymentParams
-mkPaymentParams txnId amount =
+mkPaymentParams :: Maybe BknPaymentParams -> Maybe TxnId -> Maybe Amount -> Spec.PaymentParams
+mkPaymentParams mPaymentParams mTxnId mAmount =
   Spec.PaymentParams
-    { paymentParamsAmount = Just amount,
-      paymentParamsBankAccountNumber = Nothing,
-      paymentParamsBankCode = Nothing,
+    { paymentParamsAmount = mAmount,
+      paymentParamsBankAccountNumber = mPaymentParams >>= (.bankAccNumber),
+      paymentParamsBankCode = mPaymentParams >>= (.bankCode),
       paymentParamsCurrency = Just "INR",
-      paymentParamsTransactionId = Just txnId,
-      paymentParamsVirtualPaymentAddress = Nothing
+      paymentParamsTransactionId = mTxnId,
+      paymentParamsVirtualPaymentAddress = mPaymentParams >>= (.vpa)
     }
 
-mkPaymentTags :: Maybe Amount -> [Spec.TagGroup]
-mkPaymentTags mAmount =
-  [ mkBuyerFinderFeeTagGroup,
-    mkSettlementTagGroup mAmount
-  ]
+mkPaymentTags :: Maybe Text -> Maybe Amount -> [Spec.TagGroup]
+mkPaymentTags mSettlementType mAmount =
+  catMaybes
+    [ Just mkBuyerFinderFeeTagGroup,
+      Just $ mkSettlementTagGroup mAmount,
+      mkSettlementDetailsTagGroup mSettlementType
+    ]
 
 mkBuyerFinderFeeTagGroup :: Spec.TagGroup
 mkBuyerFinderFeeTagGroup =
@@ -163,7 +179,7 @@ mkBuyerFinderFeeTagGroup =
     { tagGroupDescriptor =
         Just $
           Spec.Descriptor
-            { descriptorCode = Just "BUYER_FINDER_FEE",
+            { descriptorCode = Just "BUYER_FINDER_FEES",
               descriptorImages = Nothing,
               descriptorName = Nothing
             },
@@ -215,11 +231,55 @@ mkSettlementTagGroup mAmount =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
+                      { descriptorCode = Just "SETTLEMENT_WINDOW",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "PT1D"
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
                       { descriptorCode = Just "DELAY_INTEREST",
                         descriptorImages = Nothing,
                         descriptorName = Nothing
                       },
                 tagValue = Just "0"
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "SETTLEMENT_BASIS",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "INVOICE_RECIEPT"
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "MANDATORY_ARBITRATION",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "TRUE"
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "COURT_JURISDICTION",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "Bengaluru" -- TODO: make it dynamic
               },
           Just $
             Spec.Tag
@@ -233,6 +293,34 @@ mkSettlementTagGroup mAmount =
                 tagValue = Just "https://api.example-bap.com/booking/terms" -- TODO: update with actual terms url
               }
         ]
+
+mkSettlementDetailsTagGroup :: Maybe Text -> Maybe Spec.TagGroup
+mkSettlementDetailsTagGroup mSettlementType = do
+  st <- mSettlementType
+  return $
+    Spec.TagGroup
+      { tagGroupDescriptor =
+          Just $
+            Spec.Descriptor
+              { descriptorCode = Just "SETTLEMENT_DETAILS",
+                descriptorImages = Nothing,
+                descriptorName = Nothing
+              },
+        tagGroupDisplay = Just False,
+        tagGroupList = Just [stTag st]
+      }
+  where
+    stTag st =
+      Spec.Tag
+        { tagDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "SETTLEMENT_TYPE",
+                  descriptorImages = Nothing,
+                  descriptorName = Nothing
+                },
+          tagValue = Just st
+        }
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode
@@ -254,3 +342,9 @@ castTicketStatus :: (MonadFlow m) => Text -> m Ticket.FRFSTicketStatus
 castTicketStatus "UNCLAIMED" = return Ticket.ACTIVE
 castTicketStatus "CLAIMED" = return Ticket.USED
 castTicketStatus _ = throwError $ InternalError "Invalid ticket status"
+
+data BppData = BppData
+  { bppId :: Text,
+    bppUri :: Text
+  }
+  deriving (Show, Eq, Generic)

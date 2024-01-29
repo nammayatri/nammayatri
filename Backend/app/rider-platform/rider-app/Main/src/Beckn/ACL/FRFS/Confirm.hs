@@ -19,6 +19,7 @@ module Beckn.ACL.FRFS.Confirm (buildConfirmReq) where
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
+import qualified BecknV2.FRFS.Utils as Utils
 import Data.List (singleton)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
@@ -30,27 +31,32 @@ buildConfirmReq ::
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
   Text ->
+  Utils.BppData ->
   m (Spec.ConfirmReq)
-buildConfirmReq booking bapConfig txnId = do
+buildConfirmReq booking bapConfig txnId bppData = do
   let transactionId = booking.searchId.getId
       messageId = booking.id.getId
 
-  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId Nothing
+  now <- getCurrentTime
+  let ttl = diffUTCTime booking.validTill now
+  let mPaymentParams = bapConfig.paymentParamsJson >>= decodeFromText
+  let mSettlementType = bapConfig.settlementType
+  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData)
 
   pure $
     Spec.ConfirmReq
       { confirmReqContext = context,
-        confirmReqMessage = tfConfirmMessage booking txnId
+        confirmReqMessage = tfConfirmMessage booking txnId mPaymentParams mSettlementType
       }
 
-tfConfirmMessage :: DBooking.FRFSTicketBooking -> Text -> Spec.ConfirmReqMessage
-tfConfirmMessage booking txnId =
+tfConfirmMessage :: DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Spec.ConfirmReqMessage
+tfConfirmMessage booking txnId mPaymentParams mSettlementType =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder booking txnId
+    { confirmReqMessageOrder = tfOrder booking txnId mPaymentParams mSettlementType
     }
 
-tfOrder :: DBooking.FRFSTicketBooking -> Text -> Spec.Order
-tfOrder booking txnId =
+tfOrder :: DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Spec.Order
+tfOrder booking txnId mPaymentParams mSettlementType =
   Spec.Order
     { orderBilling = tfBilling booking,
       orderCancellationTerms = Nothing,
@@ -58,7 +64,7 @@ tfOrder booking txnId =
       orderFulfillments = Nothing,
       orderId = Nothing,
       orderItems = tfItems booking,
-      orderPayments = tfPayments booking txnId,
+      orderPayments = tfPayments booking txnId mPaymentParams mSettlementType,
       orderProvider = tfProvider booking,
       orderQuote = Nothing,
       orderStatus = Nothing,
@@ -102,11 +108,11 @@ tfQuantity booking =
               }
       }
 
-tfPayments :: DBooking.FRFSTicketBooking -> Text -> Maybe [Spec.Payment]
-tfPayments booking txnId =
+tfPayments :: DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Maybe [Spec.Payment]
+tfPayments booking txnId mPaymentParams mSettlementType =
   Just $
     singleton $
-      Utils.mkPayment Spec.NOT_PAID (Utils.encodeToText' booking.price) (Just txnId)
+      Utils.mkPayment Spec.NOT_PAID (Utils.encodeToText' booking.price) (Just txnId) mPaymentParams mSettlementType
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =

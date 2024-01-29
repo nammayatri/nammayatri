@@ -12,3 +12,9 @@ ALTER TABLE atlas_app.beckn_config ADD COLUMN merchant_operating_city_id charact
 ALTER TABLE atlas_app.beckn_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.beckn_config ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.beckn_config ADD COLUMN settlement_type text ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN payment_params_json text ;

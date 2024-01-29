@@ -14,10 +14,14 @@
 
 module Domain.Action.Beckn.FRFS.OnConfirm where
 
+import qualified Beckn.ACL.FRFS.Cancel as ACL
 import qualified Beckn.ACL.FRFS.Utils as Utils
+import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Action.Beckn.FRFS.Common
+import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Domain.Types.Merchant as Merchant
 import Environment
 import Kernel.Beam.Functions
@@ -25,8 +29,10 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallFRFSBPP as CallBPP
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
@@ -35,9 +41,20 @@ validateRequest :: DOrder -> Flow (Merchant, Booking.FRFSTicketBooking)
 validateRequest DOrder {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QTBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
-  merchantId <- booking.merchantId & fromMaybeM (InternalError "MerchantId not found in booking") -- TODO: Make merchantId required
-  merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  return (merchant, booking)
+  merchantId <- booking.merchantId & fromMaybeM (InternalError "MerchantId not found in booking")
+  now <- getCurrentTime
+
+  if booking.validTill < now
+    then do
+      -- Booking is expired
+      bapConfig <- QBC.findByMerchantIdAndDomain (Just merchantId) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
+      void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
+      callBPPCancel booking bapConfig
+      throwM $ (InvalidRequest "Booking expired, initated cancel request")
+    else do
+      -- Booking is valid, proceed to onConfirm handler
+      merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      return (merchant, booking)
 
 onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onConfirm _merchant booking dOrder = do
@@ -66,3 +83,10 @@ mkTicket booking dTicket = do
         Ticket.createdAt = now,
         Ticket.updatedAt = now
       }
+
+callBPPCancel :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environment.Flow ()
+callBPPCancel booking bapConfig = do
+  fork "FRFS Cancel Req" $ do
+    providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
+    bknStatusReq <- ACL.buildCancelReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl}
+    void $ CallBPP.cancel providerUrl bknStatusReq
