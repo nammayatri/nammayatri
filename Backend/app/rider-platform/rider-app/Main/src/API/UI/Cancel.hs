@@ -73,7 +73,12 @@ cancel ::
 cancel bookingId (personId, merchantId) req =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dCancelRes <- DCancel.cancel bookingId (personId, merchantId) req
-    void $ withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+    if isBecknSpecVersion2
+      then do
+        void $ withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes
+      else do
+        void $ withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< ACL.buildCancelReq dCancelRes
     return Success
 
 disputeCancellationDues :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler APISuccess

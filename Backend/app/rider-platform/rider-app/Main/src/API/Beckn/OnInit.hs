@@ -17,11 +17,14 @@ module API.Beckn.OnInit (API, handler) where
 import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
 import qualified Beckn.ACL.OnInit as TaxiACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
+import qualified BecknV2.OnDemand.Utils.Common as Common
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Cancel as DCancel
 import Domain.Types.CancellationReason
 import Environment
+import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
@@ -39,26 +42,52 @@ handler = onInit
 
 onInit ::
   SignatureAuthResult ->
-  OnInit.OnInitReq ->
+  -- OnInit.OnInitReq ->
+  ByteString ->
   FlowHandler AckResponse
-onInit _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  mbDOnInitReq <- TaxiACL.buildOnInitReq req
-  whenJust mbDOnInitReq $ \onInitReq ->
-    Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
-      fork "oninit request processing" $ do
-        onInitRes <- DOnInit.onInit onInitReq
-        booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
-        handle (errHandler booking) $
-          void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
+onInit _ reqBS = withFlowHandlerBecknAPI $ do
+  req <- Common.decodeReq reqBS
+  (txnId, mbDOnInitReq) <- case req of
+    Right reqV2 -> do
+      transactionId <- Common.getTransactionId reqV2.onInitReqContext
+      Utils.withTransactionIdLogTag transactionId $ do
+        mreq <- TaxiACL.buildOnInitReqV2 reqV2
+        return (transactionId, mreq)
+    Left reqV1 -> withTransactionIdLogTag reqV1 $ do
+      let txnId = fromMaybe "Unknown" $ reqV1.context.transaction_id
+      mreq <- TaxiACL.buildOnInitReq reqV1
+      return (txnId, mreq)
+
+  Utils.withTransactionIdLogTag txnId $
+    whenJust mbDOnInitReq $ \onInitReq ->
+      Redis.whenWithLockRedis (onInitLockKey onInitReq.bppBookingId.getId) 60 $
+        fork "oninit request processing" $ do
+          onInitRes <- DOnInit.onInit onInitReq
+          booking <- QRideB.findById onInitRes.bookingId >>= fromMaybeM (BookingDoesNotExist onInitRes.bookingId.getId)
+          isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+          handle (errHandler booking) $
+            if isBecknSpecVersion2
+              then void $ withShortRetry $ CallBPP.confirmV2 onInitRes.bppUrl =<< ACL.buildConfirmReqV2 onInitRes
+              else void $ withShortRetry $ CallBPP.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
   pure Ack
   where
     errHandler booking exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = do
         dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-        void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
+        isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+        if isBecknSpecVersion2
+          then do
+            void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+          else do
+            void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = do
         dCancelRes <- DCancel.cancel booking.id (booking.riderId, booking.merchantId) cancelReq
-        void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
+        isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+        if isBecknSpecVersion2
+          then do
+            void . withShortRetry $ CallBPP.cancelV2 dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes
+          else do
+            void . withShortRetry $ CallBPP.cancel dCancelRes.bppUrl =<< CancelACL.buildCancelReq dCancelRes
       | otherwise = throwM exc
 
     cancelReq =

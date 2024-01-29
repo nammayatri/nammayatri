@@ -15,6 +15,8 @@
 module Beckn.ACL.Cancel where
 
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.Cancel as DCancel
 import EulerHS.Prelude
 import Kernel.Product.Validation.Context
@@ -39,6 +41,28 @@ buildCancelReq req = do
             }
     else do
       let transactionId = req.message.item_id
+      return $
+        Right $
+          DCancel.CancelSearchReq
+            { ..
+            }
+
+buildCancelReqV2 ::
+  (HasFlowEnv m r '["_version" ::: Text]) =>
+  Spec.CancelReq ->
+  m (Either DCancel.CancelReq DCancel.CancelSearchReq)
+buildCancelReqV2 req = do
+  ContextV2.validateContext Context.CANCEL req.cancelReqContext
+  if isNothing (req.cancelReqMessage.cancelReqMessageDescriptor)
+    then do
+      let bookingId = Id $ req.cancelReqMessage.cancelReqMessageOrderId
+      return $
+        Left $
+          DCancel.CancelReq
+            { ..
+            }
+    else do
+      let transactionId = req.cancelReqMessage.cancelReqMessageOrderId
       return $
         Right $
           DCancel.CancelSearchReq

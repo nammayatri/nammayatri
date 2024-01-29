@@ -137,6 +137,7 @@ oneWaySearch ::
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool,
     HasBAPMetrics m r,
     MonadProducer PublicTransportSearch m,
     EventStreamFlow m r
@@ -150,8 +151,18 @@ oneWaySearch ::
 oneWaySearch personId bundleVersion clientVersion device req = do
   dSearchRes <- DOneWaySearch.oneWaySearch personId req bundleVersion clientVersion device
   fork "search cabs" . withShortRetry $ do
-    becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
-    void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+    if isBecknSpecVersion2
+      then do
+        -- becknTaxiReq <- TaxiACL.buildOneWaySearchReqV2 dSearchRes
+        -- void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReq
+        becknTaxiReqV2 <- TaxiACL.buildOneWaySearchReqV2 dSearchRes
+        let generatedJson = encode becknTaxiReqV2
+        logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
+        void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2
+      else do
+        becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchRes
+        void $ CallBPP.search dSearchRes.gatewayUrl becknTaxiReq
   -- fork "search metro" . withShortRetry $ do
   --   becknMetroReq <- MetroACL.buildSearchReq dSearchRes
   --   CallBPP.searchMetro dSearchRes.gatewayUrl becknMetroReq
@@ -167,6 +178,7 @@ rentalSearch ::
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "isBecknSpecVersion2" r Bool,
     HasBAPMetrics m r
   ) =>
   Id Person.Person ->

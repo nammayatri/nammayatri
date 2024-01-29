@@ -12,12 +12,15 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Beckn.ACL.Select (buildSelectReq) where
+module Beckn.ACL.Select (buildSelectReq, buildSelectReqV2) where
 
-import Beckn.ACL.Common (getTag)
+import Beckn.ACL.Common (getTag, getTagV2)
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Select
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Data.Text as T
+import qualified Data.UUID as UUID
 import qualified Domain.Action.Beckn.Select as DSelect
 import Kernel.Prelude hiding (error, setField)
 import Kernel.Product.Validation.Context
@@ -63,8 +66,67 @@ buildSelectReq subscriber req = do
         estimateId = Id order.fulfillment.id
       }
 
+buildSelectReqV2 ::
+  ( HasFlowEnv m r '["_version" ::: Text],
+    CoreMetrics m
+  ) =>
+  Subscriber.Subscriber ->
+  Select.SelectReqV2 ->
+  m DSelect.DSelectReq
+buildSelectReqV2 subscriber req = do
+  let context = req.selectReqContext
+  ContextV2.validateContext Context.SELECT context
+  now <- getCurrentTime
+  bap_id <- context.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")
+  bap_uriText <- context.contextBapUri & fromMaybeM (InvalidRequest "Missing bap_uri")
+  bap_uri <- parseBaseUrl bap_uriText
+  let order = req.selectReqMessage.confirmReqMessageOrder
+  unless (subscriber.subscriber_id == bap_id) $
+    throwError (InvalidRequest "Invalid bap_id")
+  unless (subscriber.subscriber_url == bap_uri) $
+    throwError (InvalidRequest "Invalid bap_uri")
+  messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
+  transactionUuid <- context.contextTransactionId & fromMaybeM (InvalidRequest "Missing transaction_id")
+  let messageId = UUID.toText messageUuid
+      transactionId = UUID.toText transactionUuid
+  item <- case order.orderItems of
+    Just [item] -> pure item
+    _ -> throwError $ InvalidRequest "There should be only one item"
+  let customerExtraFee = getCustomerExtraFeeV2 =<< item.itemTags
+  let autoAssignEnabled = getAutoAssignEnabledV2 =<< item.itemTags
+  fulfillment <- case order.orderFulfillments of
+    Just [fulfillment] -> pure fulfillment
+    _ -> throwError $ InvalidRequest "There should be only one fulfillment"
+  estimateIdText <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Missing fulfillment_id")
+  pure
+    DSelect.DSelectReq
+      { messageId = messageId,
+        transactionId = transactionId,
+        bapId = subscriber.subscriber_id,
+        bapUri = subscriber.subscriber_url,
+        pickupTime = now,
+        autoAssignEnabled = fromJust autoAssignEnabled,
+        customerExtraFee = customerExtraFee,
+        estimateId = Id estimateIdText
+      }
+
 getCustomerExtraFee :: Select.TagGroups -> Maybe Money
 getCustomerExtraFee tagGroups = do
   tagValue <- getTag "customer_tip_info" "customer_tip" tagGroups
   customerExtraFee <- readMaybe $ T.unpack tagValue
   Just $ Money customerExtraFee
+
+getCustomerExtraFeeV2 :: [Spec.TagGroup] -> Maybe Money
+getCustomerExtraFeeV2 tagGroups = do
+  tagValue <- getTagV2 "customer_tip_info" "customer_tip" tagGroups
+  customerExtraFee <- readMaybe $ T.unpack tagValue
+  Just $ Money customerExtraFee
+
+getAutoAssignEnabledV2 :: [Spec.TagGroup] -> Maybe Bool
+getAutoAssignEnabledV2 tagGroups = do
+  tagValue <- getTagV2 "auto_assign_enabled" "auto_assign_enabled" tagGroups
+  autoAssignEnabledText <- readMaybe $ T.unpack tagValue :: Maybe Text
+  case autoAssignEnabledText of
+    "True" -> Just True
+    "False" -> Just False
+    _ -> Just False

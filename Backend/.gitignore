@@ -35,6 +35,7 @@ s3
 !/dev/osrm/README
 !/dev/osrm/Dockerfile.osrm
 *Generate*
+dump.rdb
 
 # load test files
 .dev/load-test/*.json
