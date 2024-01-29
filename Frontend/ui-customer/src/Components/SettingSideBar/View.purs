@@ -93,7 +93,7 @@ settingsView state push =
   , padding (Padding 18 24 18 8)
   , orientation VERTICAL
   ](map (\item -> 
-        case (spy "itemValue" item) of
+        case item of
         "MyRides" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : ""} push
         "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : ""} push
         "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : ""} push

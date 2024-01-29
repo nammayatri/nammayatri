@@ -46,6 +46,7 @@ import Services.Backend as Remote
 import Data.Either (Either(..))
 import Effect.Class (liftEffect)
 import Data.Time.Duration (Milliseconds(..))
+import Components.RequestInfoCard as InfoCard
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
@@ -60,6 +61,8 @@ screen initialState =
   }
   where
     getQuotes push = do
+      let withinTimeRange = JB.withinTimeRange "04:30:00" "22:30:00" $ EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
+      push $ ShowMetroBookingTimeError withinTimeRange
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ getQuotesPolling initialState.data.searchId 5 3000.0 initialState push GetMetroQuotesAction
       pure $ pure unit
 
@@ -90,7 +93,7 @@ view push state =
     , width MATCH_PARENT
     , background Color.black6000
     , onBackPressed push $ const BackPressed
-    ]
+    ] $ 
     [ linearLayout 
         [ height MATCH_PARENT
         , width MATCH_PARENT
@@ -106,7 +109,7 @@ view push state =
         , infoSelectioView state push
         ]
         , updateButtonView state push
-    ]
+    ] <> if state.props.showMetroBookingTimeError then [InfoCard.view (push <<< InfoCardAC) (metroTimeErrorPopupConfig state)] else [linearLayout [visibility GONE] []]
 
 infoSelectioView :: forall w . ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 infoSelectioView state push =
@@ -238,7 +241,7 @@ termsAndConditionsView termsAndConditions isMarginTop =
   ) termsAndConditions )
 
 getTermsAndConditions :: forall w . String -> Array String
-getTermsAndConditions _ = ["Cancellation of tickets is not applicable" ,"The tickets can be purchased between 4:30 am to 22:30 pm on all days."]
+getTermsAndConditions _ = ["Cancellation of tickets is not applicable" ,"The tickets can be purchased between 4:30 AM to 10:30 PM on all days."]
 
 headerView :: forall w. ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push =
