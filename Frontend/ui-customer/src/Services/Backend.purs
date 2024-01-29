@@ -38,10 +38,10 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
 import ModifyScreenState (modifyScreenState)
-import Prelude (Unit, bind, discard, map, pure, unit, void, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
+import Prelude (not, Unit, bind, discard, map, pure, unit, void, ($), ($>), (>), (&&), (*>), (<<<), (=<<), (==), (<=), (||), show, (<>), (/=), when)
 import Presto.Core.Types.API (Header(..), Headers(..), ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, APIResult, callAPI, doAff, loadS)
-import Screens.Types (AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..), TicketServiceData, PeopleCategoriesRespData)
+import Screens.Types (TicketServiceDataV22, AccountSetUpScreenState(..), HomeScreenState(..), NewContacts, DisabilityT(..), Address, Stage(..), TicketBookingScreenData(..))
 import Services.Config as SC
 import Storage (getValueToLocalStore, deleteValueFromLocalStore, getValueToLocalNativeStore, KeyStore(..), setValueToLocalStore)
 import Tracker (trackApiCallFlow, trackExceptionFlow)
@@ -947,43 +947,47 @@ bookTicketsBT payload placeId = do
 mkBookingTicketReq :: TicketBookingScreenData -> TicketBookingReq -- TODO:: Refactor and make it generic without having state for serviceType
 mkBookingTicketReq ticketBookingScreenData = 
   TicketBookingReq 
-    { services : createTicketServiceRequest ticketBookingScreenData.servicesInfo,
+    { services : createTicketServiceRequest ticketBookingScreenData.servicesInfoV2,
       visitDate : convertUTCtoISC ticketBookingScreenData.dateOfVisit "YYYY-MM-DD"
     }
   where
-    createTicketServiceRequest :: Array TicketServiceData -> Array TicketService
+    createTicketServiceRequest :: Array TicketServiceDataV22 -> Array TicketService
     createTicketServiceRequest services = catMaybes $ map createPeopleCategoriesRespRequest services
       where
-        createPeopleCategoriesRespRequest :: TicketServiceData -> Maybe TicketService
-        createPeopleCategoriesRespRequest service = do
-          let mbBhId = service.selectedBHid
-          case mbBhId of
-            Nothing -> Nothing
-            Just bhId -> do
-              let mbbh = find (\bh -> bh.bhourId == bhId) service.businessHours
-              case mbbh of
+        createPeopleCategoriesRespRequest :: TicketServiceDataV22 -> Maybe TicketService
+        createPeopleCategoriesRespRequest service =
+            let filteredSelCategories = filter (\category -> category.isSelected ) service.serviceCategories 
+                updateFilteredSCOntheBasisOfPC = updateServiceCategories filteredSelCategories
+                finalCategoires = filter (\sc -> not null sc.peopleCategories) updateFilteredSCOntheBasisOfPC
+                mbbusinessHourId = case service.selectedBHId of
+                                    Nothing -> getBHIdForSelectedTimeIntervals finalCategoires
+                                    Just val -> Just val
+            in
+            case mbbusinessHourId of
                 Nothing -> Nothing
-                Just bh -> do
-                  let categories = filter (\cat -> cat.isSelected) bh.categories
-                  if null categories then Nothing
-                  else do 
-                    let filteredValidCat = catMaybes $ map getValidCategories categories
-                    if null filteredValidCat 
-                      then Nothing
-                      else
-                        Just $ 
-                          TicketService {
-                            serviceId : service.id,
-                            businessHourId : bhId,
-                            categories : filteredValidCat
-                        }
-    
-        getValidCategories category = do
-          let filteredPC = filter (\pc -> pc.currentValue > 0) category.peopleCategories
-          if length filteredPC == 0 then Nothing
-          else Just $ TicketBookingCategory {
-            categoryId : category.categoryId,
-            peopleCategories : map (\pc -> TicketBookingPeopleCategory {peopleCategoryId : pc.peopleCategoryId, numberOfUnits : pc.currentValue}) filteredPC
+                Just bhourId -> 
+                    let generatedCatsData = map generateCatData finalCategoires in 
+                    if null generatedCatsData then Nothing 
+                    else Just $
+                            TicketService 
+                            {   serviceId : service.id,
+                                businessHourId : bhourId,
+                                categories : map generateCatData finalCategoires
+                            }
+
+        getBHIdForSelectedTimeIntervals categories = 
+            case (categories !! 0) of 
+                Nothing -> Nothing
+                Just cat -> maybe Nothing (\selTimeInterval -> Just selTimeInterval.bhourId) (getMbTimeInterval cat)
+                
+        getMbTimeInterval cat = maybe Nothing (\opDay -> opDay.timeIntervals !! 0) cat.validOpDay
+                     
+        updateServiceCategories serviceCategories = map (\cat -> cat {peopleCategories = filter (\pc -> pc.currentValue > 0) cat.peopleCategories}) serviceCategories
+
+        generateCatData category = 
+          TicketBookingCategory
+          {  categoryId : category.categoryId,
+             peopleCategories : map (\pc -> TicketBookingPeopleCategory {peopleCategoryId : pc.peopleCategoryId, numberOfUnits : pc.currentValue}) category.peopleCategories
           }
 
 ------------------------------------------------------------------------ ZoneTicketBookingFlow --------------------------------------------------------------------------------

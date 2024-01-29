@@ -25,7 +25,7 @@ initData :: TicketBookingScreenState
 initData = 
   { data : {
       placeInfo : Nothing,
-      servicesInfo : [],
+      servicesInfoV2 : [],
       servicesAvailing : [],
       shortOrderId: "",
       dateOfVisit : "",

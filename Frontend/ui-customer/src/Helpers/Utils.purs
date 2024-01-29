@@ -193,9 +193,10 @@ convertUTCToISTAnd12HourFormat inputTime = do
       
       let paddingHours = if adjustedHours < 10 then "0" else ""
           paddingMinutes = if adjustedMinutes < 10 then "0" else ""
+          formattedTime = if (paddingHours <> show adjustedHours) == "00" then "12" else  (paddingHours <> show adjustedHours)
 
       -- Format the adjusted time
-      let adjustedTime = paddingHours <> show adjustedHours <> ":" <> paddingMinutes <> show adjustedMinutes <> " " <> period
+      let adjustedTime = formattedTime <> ":" <> paddingMinutes <> show adjustedMinutes <> " " <> period
   
       pure adjustedTime
     _ -> Nothing

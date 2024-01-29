@@ -2485,10 +2485,13 @@ fillBookingDetails (TicketBookingDetails resp) shortOrderID ticketStatus = do
                                 val: (maybe (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "hh:mm A") (\sl -> fromMaybe "" (convertUTCToISTAnd12HourFormat sl)) serviceDetails.slot )  
                                      <> ", " <> (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "Do MMM YYYY") } ] 
                           else []
-                , bookedForArray = (map (\(TicketBookingServiceDetails item) -> item.ticketServiceName) resp.services)
+                , bookedForArray = (map (\(TicketBookingServiceDetails item) ->  getTicketBookingForName item) resp.services)
                 }
               }
         )
+  where
+    getTicketBookingForName ticket = ticket.ticketServiceName <> (DS.joinWith "" $ (map (\(TicketBookingCategoryDetails cat) ->  if cat.name /= "all" then " ( " <> cat.name <> " ) " else "") ticket.categories))
+
 
 dummyTicketPlaceResp :: TicketPlaceResp -- TODO:: Temp done for testing, remove after the release
 dummyTicketPlaceResp = TicketPlaceResp
