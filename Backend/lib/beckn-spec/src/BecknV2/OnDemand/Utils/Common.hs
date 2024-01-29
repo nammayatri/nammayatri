@@ -56,8 +56,8 @@ getTransactionId context = context.contextTransactionId <&> UUID.toText & fromMa
 decodeReq :: (MonadFlow m, A.FromJSON v1, A.FromJSON v2) => ByteString -> m (Either v1 v2)
 decodeReq reqBS =
   case A.eitherDecodeStrict reqBS of
-    Right reqV2 -> pure $ Right reqV2
+    Right reqV1 -> pure $ Left reqV1
     Left _ ->
       case A.eitherDecodeStrict reqBS of
-        Right reqV1 -> pure $ Left reqV1
+        Right reqV2 -> pure $ Right reqV2
         Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS

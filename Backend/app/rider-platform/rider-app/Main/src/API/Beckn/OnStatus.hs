@@ -56,8 +56,8 @@ onStatus _ reqBS = withFlowHandlerBecknAPI do
 decodeReq :: MonadFlow m => ByteString -> m (Either OnStatus.OnStatusReq OnStatus.OnStatusReqV2)
 decodeReq reqBS =
   case A.eitherDecodeStrict reqBS of
-    Right reqV2 -> pure $ Right reqV2
+    Right reqV1 -> pure $ Left reqV1
     Left _ ->
       case A.eitherDecodeStrict reqBS of
-        Right reqV1 -> pure $ Left reqV1
+        Right reqV2 -> pure $ Right reqV2
         Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS
