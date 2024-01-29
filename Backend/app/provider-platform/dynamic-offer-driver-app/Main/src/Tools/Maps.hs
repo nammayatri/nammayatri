@@ -134,7 +134,7 @@ snapToRoadWithFallback ::
   ( ServiceFlow m r,
     HasFlowEnv m r '["snapToRoadSnippetThreshold" ::: HighPrecMeters],
     HasFlowEnv m r '["droppedPointsThreshold" ::: HighPrecMeters],
-    HasFlowEnv m r '["osrmMatchPreCheckThreshold" ::: HighPrecMeters]
+    HasFlowEnv m r '["osrmMatchThreshold" ::: HighPrecMeters]
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
