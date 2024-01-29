@@ -165,7 +165,8 @@ in
       services = {
         postgres-with-replica.db-primary = {
           enable = true;
-          extraMasterDBSettings = {
+          extraMasterDBSettings = { name, ... }: {
+            socketDir = "$HOME/NY/socket/${name}";
             extensions = extensions: [
               extensions.postgis
             ];
@@ -197,7 +198,10 @@ in
             '';
             port = 5434;
           };
-          extraReplicaDBSettings.port = 5435;
+          extraReplicaDBSettings = { name, ... }: {
+            socketDir = "$HOME/NY/socket/${name}-replica";
+            port = 5435;
+          };
         };
 
         redis."redis".enable = true;
@@ -225,7 +229,10 @@ in
       services.passetto = {
         enable = true;
         port = 8021;
-        extraDbSettings.port = 5422;
+        extraDbSettings = { name, ... }: {
+          port = 5422;
+          socketDir = "$HOME/NY/socket/${name}";
+        };
         # FIXME: https://github.com/juspay/passetto/issues/2
         package = lib.getBin
           (if pkgs.stdenv.isDarwin
