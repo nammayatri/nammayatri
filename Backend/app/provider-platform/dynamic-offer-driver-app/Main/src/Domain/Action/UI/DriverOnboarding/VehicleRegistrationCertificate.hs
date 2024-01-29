@@ -36,7 +36,6 @@ where
 import AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
-import qualified Data.HashMap as HML
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import Data.Text as T hiding (find, length, map, null, zip)
@@ -419,7 +418,7 @@ createRC ::
   UTCTime ->
   Maybe Vehicle.Variant ->
   Maybe Text ->
-  HML.Map Text Text ->
+  HM.HashMap Text Text ->
   EncryptedHashedField 'AsEncrypted Text ->
   UTCTime ->
   Domain.VehicleRegistrationCertificate
@@ -452,7 +451,7 @@ createRC rcconfigs rcInsurenceConfigs output id imageId now mbVariant mbFleetOwn
       updatedAt = now
     }
   where
-    updateModel modelFromIdfy = Just . fromMaybe "" $ HML.lookup modelFromIdfy modelNamesHashMap
+    updateModel modelFromIdfy = Just . fromMaybe "" $ HM.lookup modelFromIdfy modelNamesHashMap
     readFromJson (A.String val) = Just val
     readFromJson (A.Number val) = Just $ show val
     readFromJson _ = Nothing

@@ -89,7 +89,6 @@ library
     , errors
     , esqueleto
     , euler-hs
-    , hashmap
     , hedis
     , hw-kafka-client
     , mobility-core
@@ -170,7 +169,6 @@ executable kafka-consumers-exe
     , errors
     , esqueleto
     , euler-hs
-    , hashmap
     , hedis
     , hw-kafka-client
     , kafka-consumers

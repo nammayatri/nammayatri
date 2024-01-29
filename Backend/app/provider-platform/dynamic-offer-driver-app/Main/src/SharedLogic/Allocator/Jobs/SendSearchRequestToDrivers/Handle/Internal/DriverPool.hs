@@ -22,7 +22,7 @@ where
 
 import qualified Control.Monad as CM
 import Data.Foldable.Extra (notNull)
-import qualified Data.HashMap as HM
+import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -400,7 +400,7 @@ fetchScore ::
   DriverPoolConfig ->
   CancellationScoreRelatedConfig ->
   IntelligentFactors ->
-  m (HM.Map Text Double)
+  m (HM.HashMap Text Double)
 fetchScore merchantOpCityId driverActualDistanceList driverIds intelligentPoolConfig driverPoolCfg cancellationScoreRelatedConfig factor =
   HM.fromList <$> case factor of
     AcceptanceRatio | intelligentPoolConfig.acceptanceRatioWeightage /= 0 -> do
