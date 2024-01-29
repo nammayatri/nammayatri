@@ -19,6 +19,7 @@ import Components.ChooseVehicle.Controller (SearchType(..)) as CV
 import Data.Maybe(Maybe(..))
 import PrestoDOM (Margin(..))
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
+import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
 
 initData :: RentalScreenState
 initData = 
@@ -48,6 +49,8 @@ initData =
       , hour : 0
       , minute : 0
     }
+    , pickUpLoc : dummyLocationInfo
+    , dropLoc : Nothing
     }
   , props : {
       maxDuration : 12

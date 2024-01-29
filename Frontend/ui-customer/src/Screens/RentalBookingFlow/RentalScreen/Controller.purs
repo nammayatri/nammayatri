@@ -68,7 +68,9 @@ data Action =
   | SliderCallback Int
 
 data ScreenOutput = NoScreen
-
+                  | GoToHomeScreen
+                  | SearchLocationForRentals RentalScreenState String
+                  
 data FareBreakupRowType = BookingTime | BookingDistance | BaseFare | TollFee
 
 derive instance genericFareBreakupRowType :: Generic FareBreakupRowType _
@@ -118,9 +120,9 @@ eval (InputViewAC (InputViewController.BackPressed)) state = genericBackPressed 
 
 eval (InputViewAC (InputViewController.DateTimePickerButtonClicked)) state = openDateTimePicker state
 
-eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused)) state = do
+eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFocus)) state = do
   case state.data.currentStage of
-    RENTAL_SELECT_PACKAGE -> continue state
+    RENTAL_SELECT_PACKAGE -> exit $ SearchLocationForRentals state id
     RENTAL_SELECT_VARIANT -> 
       if (id == "DateAndTime") then openDateTimePicker state
       else genericBackPressed state
@@ -132,7 +134,7 @@ eval _ state = continue state
 
 genericBackPressed :: RentalScreenState -> Eval Action ScreenOutput RentalScreenState
 genericBackPressed state = case state.data.currentStage of
-  RENTAL_SELECT_PACKAGE -> exit NoScreen
+  RENTAL_SELECT_PACKAGE -> exit GoToHomeScreen
   RENTAL_SELECT_VARIANT -> continue state { data { currentStage = RENTAL_SELECT_PACKAGE }}
   RENTAL_CONFIRMATION -> continue state { data { currentStage = RENTAL_SELECT_VARIANT }}
 

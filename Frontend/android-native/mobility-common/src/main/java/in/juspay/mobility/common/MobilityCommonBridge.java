@@ -1034,11 +1034,17 @@ public class MobilityCommonBridge extends HyperBridge {
 
 
     @SuppressLint({"MissingPermission", "PotentialBehaviorOverride"})
-    private void getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom) {
-        if (bridgeComponents.getActivity() != null) {
+    private void  getMapAsync(SupportMapFragment mapFragment, boolean isEnableCurrentLocation, final String mapType, final String callback, final String pureScriptId, final float zoom) {
+        if (bridgeComponents.getActivity() != null ) {
             mapFragment.getMapAsync(googleMap -> {
                 this.googleMap = googleMap;
+                System.out.println("IngetMapAsyncside  " + googleMapInstance.get(pureScriptId));
+                if(googleMapInstance.get(pureScriptId) != null) {
+
+                    return;
+                }
                 googleMapInstance.put(pureScriptId, googleMap);
+                System.out.println("Inside getMapAsync " + googleMap);
                 googleMap.setMinZoomPreference(7.0f);
                 googleMap.setMaxZoomPreference(googleMap.getMaxZoomLevel());
                 googleMap.getUiSettings().setRotateGesturesEnabled(false);
@@ -1229,6 +1235,7 @@ public class MobilityCommonBridge extends HyperBridge {
     public void drawRouteV2 (final String drawRouteConfig) {
         ExecutorManager.runOnMainThread(() -> {
             try{
+                System.out.println("Inside DrawrouteV2");
                 JSONObject drawRouteConfigObject = new JSONObject(drawRouteConfig);
                 String purescriptId = drawRouteConfigObject.optString("pureScriptID","");
                 JSONObject routes = drawRouteConfigObject.optJSONObject("routes");
@@ -1247,6 +1254,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 JSONObject mapRouteConfigObject = normalRoute.optJSONObject("mapRouteConfig");
 
                 GoogleMap gMap = googleMapInstance.get(purescriptId);
+                System.out.println("INside drawRouteV2" + gMap);
                 if (gMap != null) {
                 PolylineOptions polylineOptions = new PolylineOptions();
                 int color = Color.parseColor(trackColor);
@@ -1336,6 +1344,7 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName, final String mapRouteConfig) {
         ExecutorManager.runOnMainThread(() -> {
+            System.out.println("INside drawRoute" + googleMap);
             if (googleMap != null) {
                 PolylineOptions polylineOptions = new PolylineOptions();
                 int color = Color.parseColor(trackColor);
@@ -1530,6 +1539,7 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void removeAllPolylines(String stringifyArray) {
         ExecutorManager.runOnMainThread(() -> {
+            System.out.println("Inside remove all polylines");
             if (stringifyArray.equals("")) {
                 // TODO:: TO BE DEPRECATED AS THIS BLOCK OF CODE IS NOT IN USE
                 removeMarker("ic_auto_nav_on_map");
@@ -1739,6 +1749,7 @@ public class MobilityCommonBridge extends HyperBridge {
     @JavascriptInterface
     public void showMap(final String pureScriptId, boolean isEnableCurrentLocation, final String mapType, final float zoom, final String callback, final String mapConfig) {
         try {
+            System.out.println("Inside showMap 123");
             ExecutorManager.runOnMainThread(() -> {
                 if (bridgeComponents.getActivity() != null) {
                     try {

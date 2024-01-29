@@ -133,7 +133,7 @@ mapInputViewConfig state =
       , height : WRAP_CONTENT
       , canClearText : false
       , isEditable : false
-      , isClickable : false
+      , isClickable : true
       , prefixImage : { 
           imageName : item.imageName,
           height : V 15,
@@ -153,16 +153,20 @@ mapInputViewConfig state =
 
     inputTextConfigArray :: Boolean -> Array (InputView.InputTextConfig)
     inputTextConfigArray isSelectPackageStage = 
-      [ { textValue : if isSelectPackageStage then getString CURRENT_LOCATION else getDateString state.data.selectedDateTimeConfig false
+      let 
+        pickUpText = if state.data.pickUpLoc.address == "" then getString CURRENT_LOCATION else state.data.pickUpLoc.address
+        dropLocText = MB.maybe (getString FIRST_STOP_OPTIONAL)  (\loc -> loc.address) state.data.dropLoc
+      in
+      [ { textValue : if isSelectPackageStage then pickUpText else getDateString state.data.selectedDateTimeConfig false
         , isFocussed : false
         , imageName : "ny_ic_green_circle"
         , margin : MarginTop 0
         , placeHolder : ""
-        , id : if isSelectPackageStage then "CurrentLocation" else "DateAndTime"
+        , id : if isSelectPackageStage then "PickUpLoc" else "DateAndTime"
         , cornerRadius : 4.0
         , textColor : if isSelectPackageStage then Color.black600 else Color.white900
         } ,
-        { textValue : if isSelectPackageStage then getString FIRST_STOP_OPTIONAL else show state.data.rentalBookingData.baseDuration <> " hr · " <> show state.data.rentalBookingData.baseDistance <> " km"
+        { textValue : if isSelectPackageStage then dropLocText else show state.data.rentalBookingData.baseDuration <> " hr · " <> show state.data.rentalBookingData.baseDistance <> " km"
         , isFocussed : false
         , imageName : "ny_ic_blue_circle"
         , margin : MarginVertical 12 8

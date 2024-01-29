@@ -21,7 +21,9 @@ import Language.Strings (getString)
 
 import Language.Types (STR(..))
 import Common.Types.App (LazyCheck(..))
+import Mobility.Prelude (boolToVisibility)
 import Screens 
+import Debug(spy)
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -78,7 +80,7 @@ primaryButtonConfig state =
   let
     buttonText = case state.props.searchLocStage of 
       ST.ConfirmLocationStage -> (getString CONFIRM_PICKUP_LOCATION)
-      ST.LocateOnMapStage -> MB.maybe "" (\currTextField -> if currTextField == ST.SearchLocPickup then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP)) state.props.focussedTextField
+      ST.LocateOnMapStage -> MB.maybe "" (\currTextField -> if currTextField == ST.SearchLocPickup then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP_LOCATION)) state.props.focussedTextField
       _ -> ""
     config = PrimaryButton.config
     primaryButtonConfig' = config
@@ -116,10 +118,15 @@ confirmLocBtnConfig state =
 
 mapInputViewConfig :: ST.SearchLocationScreenState -> Boolean -> InputView.InputViewConfig
 mapInputViewConfig state isEditable = let 
+    headerVisibility = not (state.props.actionType == ST.SearchLocationAction)
+    imageLayoutMargin = if headerVisibility then MarginLeft 24 else MarginLeft 16
+    backIconPadding = if headerVisibility then PaddingTop 16 else PaddingTop 8
     config = InputView.config 
     inputViewConfig' = config
       { headerText = MB.maybe ("Trip Details") ( \ currTextField -> if currTextField == ST.SearchLocPickup then "Edit Pickup" else "Add Stop") state.props.focussedTextField,
         suffixButtonVisibility = GONE,
+        headerVisibility = headerVisibility ,
+        imageLayoutMargin = imageLayoutMargin ,
         inputView = map 
           ( \item -> 
             { padding : Padding 8 7 8 7 
@@ -134,13 +141,13 @@ mapInputViewConfig state isEditable = let
                 padding : Padding 0 0 0 0 }
             , stroke : ((if item.isFocussed then "1," else "0,") <> Color.yellow900)
             , imageSeparator : separatorConfig 
-            , fontStyle : FontStyle.h1 LanguageStyle -- FontStyle.subHeading2 TypoGraphy
+            , fontStyle : FontStyle.subHeading2 TypoGraphy
             , clearTextIcon : { 
                 imageName : (state.appConfig.searchLocationConfig.clearTextImage) ,
                 height : V 19,
                 width : V 19 ,
                 padding : PaddingVertical 10 2 }
-            , gravity : CENTER
+            , gravity : LEFT
             , inputTextConfig : 
                { textValue : item.textValue
                , isFocussed : item.isFocussed
@@ -166,28 +173,26 @@ inputViewArray state =
     pickUpFocussed = state.props.focussedTextField == MB.Just ST.SearchLocPickup 
     dropLocFocussed = state.props.focussedTextField == MB.Just ST.SearchLocDrop 
   in 
-    [ { textValue : if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc
+    [ { textValue :  if addressOnMap /= "" && pickUpFocussed then addressOnMap else (if state.props.textFieldText.pickUpLoc == "" then srcLoc else state.props.textFieldText.pickUpLoc )
       , isFocussed : pickUpFocussed
       , prefixImageName : "ny_ic_green_circle"
       , margin : MarginTop 8
-      , placeHolder : "Enter Pickup Location"
+      , placeHolder : if state.props.actionType == ST.SearchLocationAction then "Start" else "Enter Pickup Location"
       , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
       , id : ST.SearchLocPickup
       , isEditable : not $ (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
       } ,
       { textValue : if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc
       , isFocussed : dropLocFocussed
-      , prefixImageName : "ny_ic_blue_circle"
+      , prefixImageName : if state.props.actionType == ST.SearchLocationAction then "ny_ic_red_circle" else "ny_ic_blue_circle"
       , margin : MarginTop 8
-      , placeHolder : "Add Stop"
+      , placeHolder : if state.props.actionType == ST.SearchLocationAction then "Where To?" else "Add Stop"
       , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
       , id : ST.SearchLocDrop
       , isEditable : true
       }
     ]
    
-
-
 
 menuButtonConfig :: ST.SearchLocationScreenState -> ST.Location -> MenuButton.Config
 menuButtonConfig state item = let

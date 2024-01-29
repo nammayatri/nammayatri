@@ -677,6 +677,7 @@ data Stage = HomeScreen
            | RetryFindingQuote
            | PickUpFarFromCurrentLocation
            | LoadMap
+           | RideSearch
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -1914,7 +1915,12 @@ type SearchLocationScreenProps =
   , showLoader :: Boolean
   , canClearText :: Boolean 
   , locUnserviceable :: Boolean
-  , isAutoComplete :: Boolean  }
+  , isAutoComplete :: Boolean
+  , textFieldText :: {
+      pickUpLoc :: String ,
+      dropLoc :: String
+      }
+  , pickUpSelectedOnMap :: Boolean  }
 
 data SearchLocationActionType = AddingStopAction 
                               | SearchLocationAction
@@ -1967,6 +1973,8 @@ type RentalScreenData = {
   , endOTP :: Maybe String
   , nextStop :: Maybe String
   , selectedDateTimeConfig :: DateTimeConfig
+  , pickUpLoc :: LocationInfo 
+  , dropLoc :: Maybe LocationInfo
 }
 
 data RentalScreenStage = RENTAL_SELECT_PACKAGE | RENTAL_SELECT_VARIANT | RENTAL_CONFIRMATION

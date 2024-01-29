@@ -210,9 +210,11 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EXIT_TO_TICKETING HomeScreenState
                         | GO_TO_HELP_AND_SUPPORT 
                         | REALLOCATE_RIDE HomeScreenState
-                        | GO_TO_RENTALS_FLOW
+                        | GO_TO_RENTALS_FLOW HomeScreenState
                         | GO_TO_SCHEDULED_RIDES
                         | ADD_STOP HomeScreenState
+                        | GO_TO_SEARCH_LOCATION_SCREEN HomeScreenState Boolean
+                        | GO_TO_RIDE_SEARCH_FLOW 
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 

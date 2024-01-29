@@ -6,15 +6,16 @@ import Components.InputView.Controller
 import Components.SeparatorView.View as SeparatorView
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable)
+import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender)
 import Data.Array (mapWithIndex, length)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
-import JBridge (debounceFunction)
+import JBridge (debounceFunction, showKeyboard)
 import Resources.Constants (getDelayForAutoComplete)
 import Helpers.CommonView (emptyTextView)
+import Debug (spy)
 
 view :: forall w. (Action -> Effect Unit) -> InputViewConfig -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -24,13 +25,14 @@ view push state =
     , orientation VERTICAL
     , padding $ PaddingHorizontal 16 16
     , background Color.black900 
-    ][  backPressView state push
+    ][  if state.headerVisibility then backPressView state push else emptyTextView
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , padding $ PaddingVertical 16 16
         , gravity CENTER_VERTICAL
-        ][  inputImageView push state
+        ][  if not state.headerVisibility then backPressView state push else emptyTextView
+          , inputImageView push state
           , inputLayoutViews push state]
         ]
 
@@ -38,8 +40,8 @@ backPressView :: forall w. InputViewConfig -> (Action -> Effect Unit) -> PrestoD
 backPressView config push = 
   linearLayout
     [ height MATCH_PARENT
-    , width WRAP_CONTENT
-    , padding $ config.backIcon.padding 
+    , width $ if config.headerVisibility then MATCH_PARENT else WRAP_CONTENT
+    , padding $ spy "" config.backIcon.padding 
     , onClick push $ const $ BackPressed
     ][  imageView
         [ height $ config.backIcon.height 
@@ -108,17 +110,12 @@ dateTimePickerButton :: forall w. InputViewConfig -> (Action -> Effect Unit) -> 
 dateTimePickerButton config push =
   linearLayout
     [ height MATCH_PARENT
-    , width MATCH_PARENT
+    , weight 1.0
+    , gravity RIGHT
     , orientation HORIZONTAL
-    , margin $ MarginTop 16
     , visibility config.suffixButtonVisibility
     ]
     [ linearLayout
-        [ height WRAP_CONTENT
-        , weight 1.0
-        ]
-        []
-    , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , background Color.squidInkBlue
@@ -156,19 +153,18 @@ nonEditableTextView push config = let
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , gravity CENTER
+    , gravity config.gravity
     , padding $ config.padding 
     , background Color.squidInkBlue
     , margin $ config.inputTextConfig.margin
     , cornerRadius $ config.inputTextConfig.cornerRadius
     , clickable $ config.isClickable 
-    , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true
+    , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true true
     , stroke $ strokeValue 
     ]
     [  textView $ 
-          [ text $ config.inputTextConfig.textValue
+          [ text $ if config.inputTextConfig.textValue == "" then config.inputTextConfig.placeHolder else config.inputTextConfig.textValue
           , color Color.black600
-          , width MATCH_PARENT
           , height WRAP_CONTENT
           , maxLines 1
           , ellipsize true
@@ -177,7 +173,7 @@ nonEditableTextView push config = let
 
 
 inputTextField :: forall w. (Action -> Effect Unit ) -> InputView -> PrestoDOM (Effect Unit) w
-inputTextField push config = 
+inputTextField push config =
   linearLayout 
     [ height WRAP_CONTENT
     , width MATCH_PARENT
@@ -205,12 +201,35 @@ inputTextField push config =
           , pattern "[^\n]*,255"
           , id $ getNewIDWithTag $ config.inputTextConfig.id
           , onChange (\action -> do 
-              void $ debounceFunction getDelayForAutoComplete push AutoCompleteCallBack config.inputTextConfig.isFocussed
-              void $ push action
+              let _ = spy "Itemmmm" config
+              case action of 
+                InputChanged text -> if text /= "false" && text /= config.inputTextConfig.textValue then do 
+                  void $ debounceFunction getDelayForAutoComplete push AutoCompleteCallBack config.inputTextConfig.isFocussed
+                  void $ push action
+                  else pure unit 
+                _ -> push action
+              pure unit
             ) InputChanged
-          , onFocus push $ const $ TextFieldFocusChanged config.inputTextConfig.id true
+          , afterRender (\_ -> do 
+              if (config.inputTextConfig.isFocussed) then do
+                void $ pure $ showKeyboard $ getNewIDWithTag config.inputTextConfig.id 
+                pure unit
+                else 
+                  pure unit
+              ) $ const NoAction
+          , onFocus 
+              (\action -> do 
+                case action of 
+                  TextFieldFocusChanged _ _ hasFocus -> do 
+                    if (isTrue hasFocus) then do 
+                      push action
+                      else  
+                        pure unit
+                  _ -> pure unit
+
+              ) $ TextFieldFocusChanged config.inputTextConfig.id true
           , cursorColor Color.yellow900
-          ] <> FontStyle.body6 LanguageStyle
+          ] <> FontStyle.subHeading1 TypoGraphy
         , crossButtonView push config
         ]
     , bottomStrokeView $ boolToVisibility config.inputTextConfig.isFocussed

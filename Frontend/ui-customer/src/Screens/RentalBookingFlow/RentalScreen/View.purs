@@ -60,10 +60,13 @@ view push state =
     , orientation VERTICAL
     , background Color.white900
     ]
-    [ case state.data.currentStage of
-        RENTAL_SELECT_PACKAGE -> rentalPackageSelectionView push state
-        RENTAL_SELECT_VARIANT -> rentalVariantSelectionView push state
-        RENTAL_CONFIRMATION -> fareBreakupView push state
+    [ if state.data.currentStage == RENTAL_SELECT_PACKAGE then rentalPackageSelectionView push state
+      else if state.data.currentStage == RENTAL_SELECT_VARIANT then rentalVariantSelectionView push state
+      else fareBreakupView push state
+      -- case state.data.currentStage of
+      --   RENTAL_SELECT_PACKAGE -> rentalPackageSelectionView push state
+      --   RENTAL_SELECT_VARIANT -> rentalVariantSelectionView push state
+      --   RENTAL_CONFIRMATION -> fareBreakupView push state
     ]
 
 rentalPackageSelectionView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w

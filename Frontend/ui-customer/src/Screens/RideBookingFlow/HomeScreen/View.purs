@@ -120,7 +120,8 @@ screen initialState =
   , name: "HomeScreen"
   , globalEvents:
       [ ( \push -> do
-            _ <- pure $ printLog "storeCallBackCustomer initially" "."
+            _ <- pure $ printLog "storeCallBackCustomer initially" "." 
+            _ <- pure $ spy "Inside homeScreen" initialState
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
             _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
@@ -167,11 +168,16 @@ screen initialState =
                 else do 
                   push RemoveShimmer 
                   pure unit
+                -- when (isJust initialState.data.startRideSearch) $ do 
+                --   let _ = spy "startRideSearch" initialState.data.startRideSearch
+                --   push $ RideSearchAction
                 when (isJust initialState.data.rideHistoryTrip) $ do 
                   push $ RepeatRide 0 (fromMaybe HomeScreenData.dummyTrip initialState.data.rideHistoryTrip)
+                
                 when (initialState.props.autoScroll) $ 
                   startTimer initialState.data.config.suggestedTripsAndLocationConfig.autoScrollTime "autScroll" "1" push AutoScrollCountDown
                 _ <- pure $ setValueToLocalStore SESSION_ID (generateSessionId unit)
+                void $ pure $ spy "inside remove all polylines" "hgh"
                 _ <- pure $ removeAllPolylines ""
                 _ <- pure $ enableMyLocation true
                 _ <- pure $ setValueToLocalStore NOTIFIED_CUSTOMER "false"
@@ -233,6 +239,9 @@ screen initialState =
               TryAgain -> do
                 _ <- launchAff $ flowRunner defaultGlobalState $ getEstimate EstimatesTryAgain CheckFlowStatusAction 10 1000.0 push initialState
                 pure unit
+              RideSearch -> do 
+                push $ RideSearchAction 
+                pure unit
               FindEstimateAndSearch -> do
                 push $ SearchForSelectedLocation
                 pure unit
@@ -278,6 +287,7 @@ view push state =
     , onBackPressed push (const BackPressed)
     , clickable true
     , afterRender push (const AfterRender)
+    
     , accessibility DISABLE
     ]
     [ linearLayout
@@ -309,7 +319,7 @@ view push state =
                   , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
                   ][ 
                     if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
-                  , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen"
+                  , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen" (not isHomeScreenView state)
                     ]
                 , linearLayout
                     [ width MATCH_PARENT
@@ -3422,7 +3432,7 @@ homeScreenViewV2 push state =
                                     (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
                                       [locationUnserviceableView push state]
                                     else 
-                                      [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state
+                                      [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" (isHomeScreenView state) else emptyTextView state
                                       -- , if state.data.config.feature.enableZooTicketBookingFlow
                                       --     then zooTicketBookingBanner state push 
                                       --     else linearLayout[visibility GONE][]
@@ -3759,9 +3769,9 @@ pickupLocationView push state =
             ]
         ]
 
-mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
-mapView push state idTag = 
-  let mapDimensions = getMapDimensions state
+mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Boolean -> PrestoDOM (Effect Unit) w
+mapView push state idTag isVisible = 
+  let mapDimensions = spy "getMapDimensions" $ getMapDimensions state
   in
   PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
   relativeLayout
@@ -3787,6 +3797,10 @@ mapView push state idTag =
         , width $ mapDimensions.width 
         , accessibility DISABLE_DESCENDANT
         , id (getNewIDWithTag idTag)
+        , afterRender (\action -> do 
+            let _ = spy "inside action" "afterRender"
+            void $ push action
+            ) $ const NoAction
         , visibility if state.props.isSrcServiceable then VISIBLE else GONE
         , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
         , clickable $ not isHomeScreenView state 
@@ -3796,6 +3810,20 @@ mapView push state idTag =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
+        , afterRender
+            ( \action -> do
+                _ <- push action
+                _ <- getCurrentPosition push CurrentLocation
+                _ <- pure $ spy "Inside showMap " "mapViewjbsdcmjb"
+                _ <- showMap (getNewIDWithTag if isHomeScreenView state then "CustomerHomeScreenMap" else "CustomerHomeScreen") isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
+                if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
+                else pure unit
+                case state.props.currentStage of
+                  HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
+                  -- RideSearch -> push RideSearchAction
+                  _ -> pure unit
+            )
+            (const MapReadyAction)
         , gravity RIGHT
         , padding $ Padding 0 0 16 16
         , visibility $ if isHomeScreenView state then VISIBLE else GONE

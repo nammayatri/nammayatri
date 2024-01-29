@@ -6,12 +6,13 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Prelude
 import PrestoDOM ( Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), Prop)
 
-data Action = TextFieldFocusChanged String Boolean 
+data Action = TextFieldFocusChanged String Boolean Boolean
             | ClearTextField String 
             | InputChanged String 
             | AutoCompleteCallBack String Boolean
             | DateTimePickerButtonClicked
             | BackPressed
+            | NoAction
 
 type InputViewConfig = 
   { backIcon :: ImageConfig

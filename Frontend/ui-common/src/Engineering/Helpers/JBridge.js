@@ -673,6 +673,7 @@ export const storeCallBackMessageUpdated = function (cb) {
 export const drawRouteV2 = function (drawRouteConfig){
   return function() {
     try{
+      console.log("Inside drawRouteV2")
       const { locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig } = drawRouteConfig.routes.normalRoute;
       if (window.JBridge.drawRouteV2){
         return window.JBridge.drawRouteV2(JSON.stringify(drawRouteConfig));
