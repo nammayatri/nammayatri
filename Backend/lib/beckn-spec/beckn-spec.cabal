@@ -199,6 +199,9 @@ library
       BecknV2.FRFS.Enums
       BecknV2.FRFS.Types
       BecknV2.FRFS.Utils
+      BecknV2.OnDemand.Types
+      BecknV2.OnDemand.Utils.Common
+      BecknV2.OnDemand.Utils.Context
   other-modules:
       Paths_beckn_spec
   hs-source-dirs:
@@ -259,6 +262,7 @@ library
     , fast-logger
     , generic-lens
     , geojson
+    , hashmap
     , hedis
     , hex-text
     , hspec
@@ -298,6 +302,7 @@ library
     , servant-server
     , stm
     , string-conversions
+    , syb
     , tasty
     , tasty-hunit
     , template-haskell

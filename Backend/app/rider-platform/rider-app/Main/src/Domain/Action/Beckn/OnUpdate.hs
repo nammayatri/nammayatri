@@ -271,6 +271,7 @@ onUpdate ::
     -- HasShortDurationRetryCfg r c, -- uncomment for test update api
     HasField "minTripDistanceForReferralCfg" r (Maybe HighPrecMeters),
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["isBecknSpecVersion2" ::: Bool],
     HasBAPMetrics m r,
     EventStreamFlow m r
   ) =>
@@ -546,6 +547,7 @@ mkBookingCancellationReason ::
   Id DMerchant.Merchant ->
   SBCR.BookingCancellationReason
 mkBookingCancellationReason bookingId mbRideId cancellationSource merchantId =
+  -- cancellationSource merchantId =
   SBCR.BookingCancellationReason
     { bookingId = bookingId,
       rideId = mbRideId,

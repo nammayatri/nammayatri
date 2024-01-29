@@ -83,8 +83,14 @@ select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate ->
 select2 (personId, _) estimateId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select personId estimateId req
-    becknReq <- ACL.buildSelectReq dSelectReq
-    void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
+    isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+    if isBecknSpecVersion2
+      then do
+        becknReq <- ACL.buildSelectReqV2 dSelectReq
+        void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq
+      else do
+        becknReq <- ACL.buildSelectReq dSelectReq
+        void $ withShortRetry $ CallBPP.select dSelectReq.providerUrl becknReq
   pure Success
 
 selectList :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
@@ -106,8 +112,13 @@ cancelSearch (personId, _) estimateId = withFlowHandlerAPI . withPersonIdLogTag 
       let sendToBpp = dCancelSearch.estimateStatus /= DEstimate.NEW
       result <-
         try @_ @SomeException $
-          when sendToBpp . void . withShortRetry $
-            CallBPP.cancel dCancelSearch.providerUrl =<< CACL.buildCancelSearchReq dCancelSearch
+          when sendToBpp . void . withShortRetry $ do
+            isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+            if isBecknSpecVersion2
+              then do
+                CallBPP.cancelV2 dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
+              else do
+                CallBPP.cancel dCancelSearch.providerUrl =<< CACL.buildCancelSearchReq dCancelSearch
       case result of
         Left err -> do
           logTagInfo "Failed to cancel" $ show err

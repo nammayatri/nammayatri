@@ -15,6 +15,8 @@
 module Beckn.ACL.Status where
 
 import qualified Beckn.Types.Core.Taxi.API.Status as Status
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified Domain.Action.Beckn.Status as DStatus
 import EulerHS.Prelude
 import Kernel.Product.Validation.Context
@@ -36,6 +38,23 @@ buildStatusReq subscriber req = do
     throwError (InvalidRequest "Invalid bap_id")
 
   let bookingId = Id req.message.order_id
+  return $
+    DStatus.StatusReq
+      { ..
+      }
+
+buildStatusReqV2 ::
+  (HasFlowEnv m r '["_version" ::: Text]) =>
+  Subscriber.Subscriber ->
+  Spec.StatusReq ->
+  m DStatus.DStatusReq
+buildStatusReqV2 subscriber req = do
+  ContextV2.validateContext Context.STATUS req.statusReqContext
+  unless (Just subscriber.subscriber_id == req.statusReqContext.contextBapId) $
+    throwError (InvalidRequest "Invalid bap_id")
+
+  statusReqMessageRefId <- req.statusReqMessage.statusReqMessageRefId & fromMaybeM (InvalidRequest "Invalid statusReqMessageRefId")
+  let bookingId = Id statusReqMessageRefId
   return $
     DStatus.StatusReq
       { ..

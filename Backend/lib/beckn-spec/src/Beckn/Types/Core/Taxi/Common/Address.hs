@@ -11,9 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE DeriveDataTypeable #-}
 
 module Beckn.Types.Core.Taxi.Common.Address where
 
+import Data.Data (Data)
 import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import Kernel.Prelude
 import Kernel.Utils.JSON
@@ -30,7 +32,7 @@ data Address = Address
     ward :: Maybe Text,
     door :: Maybe Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Data)
 
 instance ToSchema Address where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

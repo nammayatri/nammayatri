@@ -125,7 +125,9 @@ data AppCfg = AppCfg
     jobInfoMapx :: M.Map RiderJobType Bool,
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
-    internalEndPointMap :: M.Map BaseUrl BaseUrl
+    internalEndPointMap :: M.Map BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    _version :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -193,7 +195,9 @@ data AppEnv = AppEnv
     maxMessages :: Text,
     incomingAPIResponseTimeout :: Int,
     maxShards :: Int,
-    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl
+    internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    _version :: Text
   }
   deriving (Generic)
 

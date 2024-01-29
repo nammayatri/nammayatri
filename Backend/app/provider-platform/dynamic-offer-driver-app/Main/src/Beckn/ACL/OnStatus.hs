@@ -14,11 +14,14 @@
 
 module Beckn.ACL.OnStatus
   ( buildOnStatusMessage,
+    mkOnStatusMessageV2,
   )
 where
 
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.ACL.Common.Order as Common
+import qualified Beckn.OnDemand.Utils.Common as Utils
+import qualified Beckn.OnDemand.Utils.OnUpdate as UtilsOU
 import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
 import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder as BookingCancelledOS
@@ -27,6 +30,7 @@ import qualified Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder as NewBook
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as RideAssignedOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as RideCompletedOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Domain.Action.Beckn.Status as DStatus
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -126,4 +130,130 @@ buildOnStatusMessage DStatus.BookingReallocationBuildReq {bookingReallocationInf
                 reallocation_reason = Common.castCancellationSource cancellationSource,
                 fulfillment
               }
+      }
+
+mkOnStatusMessageV2 ::
+  (EsqDBFlow m r, EncFlow m r) =>
+  DStatus.OnStatusBuildReq ->
+  m (Maybe Spec.ConfirmReqMessage)
+mkOnStatusMessageV2 res = do
+  order <- tfOrder res
+  pure . Just $
+    Spec.ConfirmReqMessage
+      { confirmReqMessageOrder = order
+      }
+
+tfOrder :: (MonadFlow m, EncFlow m r) => DStatus.OnStatusBuildReq -> m Spec.Order
+tfOrder (DStatus.NewBookingBuildReq {bookingId}) =
+  pure
+    Spec.Order
+      { orderId = Just bookingId.getId,
+        orderStatus = Just $ show NewBookingOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
+        orderFulfillments = Nothing,
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Nothing
+      }
+tfOrder (DStatus.RideAssignedBuildReq {newRideInfo}) = do
+  let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
+  let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing False False Nothing
+  pure
+    Spec.Order
+      { orderId = Just $ booking.id.getId,
+        orderStatus = Just $ show RideAssignedOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
+        orderFulfillments = Just [fulfillment],
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Nothing
+      }
+tfOrder (DStatus.RideStartedBuildReq {newRideInfo}) = do
+  let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
+  let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing False False Nothing
+  pure
+    Spec.Order
+      { orderId = Just $ booking.id.getId,
+        orderStatus = Just $ show RideStartedOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
+        orderFulfillments = Just [fulfillment],
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Nothing
+      }
+tfOrder (DStatus.RideCompletedBuildReq {newRideInfo, rideCompletedInfo}) = do
+  let SyncRide.NewRideInfo {driver, image, vehicle, ride, booking} = newRideInfo
+  let SyncRide.RideCompletedInfo {fareParams, paymentMethodInfo, paymentUrl} = rideCompletedInfo
+  let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
+  distanceTagGroup <- UtilsOU.mkDistanceTagGroup ride
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup <> distanceTagGroup) Nothing False False Nothing
+  quote <- UtilsOU.mkRideCompletedQuote ride fareParams
+  pure
+    Spec.Order
+      { orderId = Just $ booking.id.getId,
+        orderStatus = Just $ show RideCompletedOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
+        orderFulfillments = Just [fulfillment],
+        orderPayments = Just $ UtilsOU.mkRideCompletedPayment paymentMethodInfo paymentUrl,
+        orderQuote = Just quote,
+        orderBilling = Nothing,
+        orderCancellation = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderProvider = Nothing
+      }
+tfOrder (DStatus.BookingCancelledBuildReq {bookingCancelledInfo, mbNewRideInfo}) = do
+  let SyncRide.BookingCancelledInfo {booking, cancellationSource} = bookingCancelledInfo
+  fulfillment <- forM mbNewRideInfo $ \newRideInfo -> do
+    let SyncRide.NewRideInfo {driver, image, vehicle, ride} = newRideInfo
+    let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
+    Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing False False Nothing
+  pure
+    Spec.Order
+      { orderId = Just $ booking.id.getId,
+        orderStatus = Just $ show BookingCancelledOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
+        orderFulfillments = Just $ maybeToList fulfillment,
+        orderCancellation =
+          Just $
+            Spec.Cancellation
+              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
+              },
+        orderBilling = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Nothing
+      }
+tfOrder (DStatus.BookingReallocationBuildReq {bookingReallocationInfo, newRideInfo}) = do
+  let SyncRide.BookingCancelledInfo {booking, cancellationSource} = bookingReallocationInfo
+  let SyncRide.NewRideInfo {driver, image, vehicle, ride} = newRideInfo
+  let arrivalTimeTagGroup = Utils.mkArrivalTimeTagGroupV2 ride.driverArrivalTime
+  fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) image (Just arrivalTimeTagGroup) Nothing False False Nothing
+  pure
+    Spec.Order
+      { orderId = Just $ booking.id.getId,
+        orderStatus = Just $ show BookingReallocationOS.orderState, -- TODO::Beckn, confirm mapping as we only have 5 states in v2 spec.
+        orderFulfillments = Just [fulfillment],
+        orderCancellation =
+          Just $
+            Spec.Cancellation
+              { cancellationCancelledBy = Just . show $ UtilsOU.castCancellationSource cancellationSource
+              },
+        orderBilling = Nothing,
+        orderCancellationTerms = Nothing,
+        orderItems = Nothing,
+        orderPayments = Nothing,
+        orderProvider = Nothing,
+        orderQuote = Nothing
       }

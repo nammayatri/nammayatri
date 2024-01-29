@@ -54,7 +54,20 @@ search ::
   m API.SearchRes
 search gatewayUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "search" API.searchAPI gatewayUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "search" API.searchAPIV1 gatewayUrl internalEndPointHashMap req
+
+searchV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  API.SearchReqV2 ->
+  m API.SearchRes
+searchV2 gatewayUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- req.searchReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
+  callBecknAPIWithSignature bapId "search" API.searchAPIV2 gatewayUrl internalEndPointHashMap req
 
 searchMetro ::
   ( MonadFlow m,
@@ -78,19 +91,45 @@ select ::
   m SelectRes
 select providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "select" API.selectAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "select" API.selectAPIV1 providerUrl internalEndPointHashMap req
 
-init ::
+selectV2 ::
   ( MonadFlow m,
     CoreMetrics m,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
-  API.InitReq ->
-  m API.InitRes
-init providerUrl req = do
+  API.SelectReqV2 ->
+  m API.SelectRes
+selectV2 providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "init" API.initAPI providerUrl internalEndPointHashMap req
+  bapId <- req.selectReqContext.contextBapId & fromMaybeM (InvalidRequest "BapId is missing")
+  callBecknAPIWithSignature bapId "select" API.selectAPIV2 providerUrl internalEndPointHashMap req
+
+-- init ::
+--   ( MonadFlow m,
+--     CoreMetrics m,
+--     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+--   ) =>
+--   BaseUrl ->
+--   API.InitReq ->
+--   m API.InitRes
+-- init providerUrl req = do
+--   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+--   callBecknAPIWithSignature req.context.bap_id "init" API.initAPIV1 providerUrl internalEndPointHashMap req
+
+initV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  API.InitReqV2 ->
+  m API.InitRes
+initV2 providerUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.initReqContext.contextBapId
+  callBecknAPIWithSignature bapId "init" API.initAPIV2 providerUrl internalEndPointHashMap req
 
 confirm ::
   ( MonadFlow m,
@@ -102,7 +141,20 @@ confirm ::
   m ConfirmRes
 confirm providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "confirm" API.confirmAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "confirm" API.confirmAPIV1 providerUrl internalEndPointHashMap req
+
+confirmV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  ConfirmReqV2 ->
+  m ConfirmRes
+confirmV2 providerUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.confirmReqContext.contextBapId
+  callBecknAPIWithSignature bapId "confirm" API.confirmAPIV2 providerUrl internalEndPointHashMap req
 
 cancel ::
   ( MonadFlow m,
@@ -114,7 +166,20 @@ cancel ::
   m CancelRes
 cancel providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "cancel" API.cancelAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "cancel" API.cancelAPIV1 providerUrl internalEndPointHashMap req
+
+cancelV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  CancelReqV2 ->
+  m CancelRes
+cancelV2 providerUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.cancelReqContext.contextBapId
+  callBecknAPIWithSignature bapId "cancel" API.cancelAPIV2 providerUrl internalEndPointHashMap req
 
 update ::
   ( MonadFlow m,
@@ -126,7 +191,19 @@ update ::
   m UpdateRes
 update providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "update" API.updateAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "update" API.updateAPIV1 providerUrl internalEndPointHashMap req
+
+-- updateV2 ::
+--   ( MonadFlow m,
+--     CoreMetrics m,
+--     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+--   ) =>
+--   BaseUrl ->
+--   UpdateReqV2 ->
+--   m UpdateRes
+-- updateV2 providerUrl req = do
+--   internalEndPointHashMap <- asks (.internalEndPointHashMap)
+--   callBecknAPIWithSignature req.context.bap_id "update" API.updateAPIV2 providerUrl internalEndPointHashMap req
 
 callTrack ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -134,7 +211,8 @@ callTrack ::
     CoreMetrics m,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["isBecknSpecVersion2" ::: Bool]
   ) =>
   DB.Booking ->
   DRide.Ride ->
@@ -145,7 +223,7 @@ callTrack booking ride = do
   let merchantOperatingCityId = booking.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  let trackBUildReq =
+  let trackBuildReq =
         TrackACL.TrackBuildReq
           { bppId = booking.providerId,
             bppUrl = booking.providerUrl,
@@ -153,7 +231,12 @@ callTrack booking ride = do
             bppRideId = ride.bppRideId,
             ..
           }
-  void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPI booking.providerUrl internalEndPointHashMap =<< TrackACL.buildTrackReq trackBUildReq
+  isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)
+  if isBecknSpecVersion2
+    then do
+      void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPIV2 booking.providerUrl internalEndPointHashMap =<< TrackACL.buildTrackReqV2 trackBuildReq
+    else do
+      void . callBecknAPIWithSignature merchant.bapId "track" API.trackAPIV1 booking.providerUrl internalEndPointHashMap =<< TrackACL.buildTrackReq trackBuildReq
 
 data GetLocationRes = GetLocationRes
   { currPoint :: MapSearch.LatLong,
@@ -196,7 +279,20 @@ callStatus ::
   m StatusRes
 callStatus providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "status" API.statusAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "status" API.statusAPIV1 providerUrl internalEndPointHashMap req
+
+callStatusV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  StatusReqV2 ->
+  m StatusRes
+callStatusV2 providerUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.statusReqContext.contextBapId
+  callBecknAPIWithSignature bapId "status" API.statusAPIV2 providerUrl internalEndPointHashMap req
 
 callBecknAPIWithSignature ::
   ( MonadFlow m,

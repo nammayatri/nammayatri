@@ -16,6 +16,8 @@
 module Beckn.ACL.Status where
 
 import qualified Beckn.Types.Core.Taxi.Status as Status
+import qualified BecknV2.OnDemand.Types as Spec
+import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Text as T
 import Domain.Types.Booking.Type (Booking)
@@ -59,3 +61,37 @@ buildStatusReq DStatusReq {..} = do
       Status.StatusMessage
         { order_id = bppBookingId.getId
         }
+
+buildStatusReqV2 ::
+  (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  DStatusReq ->
+  m Spec.StatusReq
+buildStatusReqV2 DStatusReq {..} = do
+  bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+  messageId <- generateGUID
+  bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
+  -- TODO :: Add request city, after multiple city support on gateway.
+  context <-
+    ContextV2.buildContextV2
+      Context.STATUS
+      Context.MOBILITY
+      messageId
+      (Just booking.transactionId)
+      merchant.bapId
+      bapUrl
+      (Just merchant.id.getId)
+      (Just booking.providerUrl)
+      merchant.defaultCity
+      merchant.country
+
+  pure $
+    Spec.StatusReq
+      { statusReqContext = context,
+        statusReqMessage = tfMessage bppBookingId.getId
+      }
+
+tfMessage :: Text -> Spec.StatusReqMessage
+tfMessage bppBookingId =
+  Spec.StatusReqMessage
+    { statusReqMessageRefId = Just bppBookingId
+    }
