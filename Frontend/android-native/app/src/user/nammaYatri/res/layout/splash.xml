@@ -16,37 +16,15 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:gravity="bottom"
         android:orientation="vertical"
-        android:gravity="bottom">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="#FFFFFF"
-            android:gravity="center"
-            android:textSize="14dp"
-            android:fontFamily="@font/plus_jakartasans_medium"
-            android:alpha="0.7"
-            android:text="Backed by"/>
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:layout_marginBottom="60dp"
-            android:layout_gravity="bottom"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
-            <ImageView
-                android:layout_width="60dp"
-                android:layout_height="40dp"
-                android:src="@drawable/juspay_logo"/>
-            <ImageView
-                android:layout_width="60dp"
-                android:layout_height="40dp"
-                android:layout_marginLeft="10dp"
-                android:src="@drawable/ondc_logo"/>
-        </LinearLayout>
-    </LinearLayout>
+        android:paddingBottom="50dp">
+        <ImageView
+            android:layout_width="300dp"
+            android:layout_height="47.45dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_powered_by" />
+    </LinearLayout>    
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/splash_lottie"
         android:layout_width="match_parent"
