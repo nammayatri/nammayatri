@@ -1,6 +1,6 @@
 module Screens.SearchLocationScreen.ComponentConfig where
 
-import PrestoDOM(Margin(..), Padding(..), Length(..), Orientation(..), Gravity(..))
+import PrestoDOM(Margin(..), Padding(..), Length(..), Orientation(..), Gravity(..), Visibility(..))
 import Components.PrimaryButton as PrimaryButton
 import Components.SeparatorView.View as SeparatorView
 import Components.LocationTagBarV2 as LTB
@@ -18,7 +18,9 @@ import Helpers.Utils as HU
 import Data.String (length) as DS
 import Prelude (show, (&&))
 import Language.Strings (getString)
+
 import Language.Types (STR(..))
+import Common.Types.App (LazyCheck(..))
 import Screens 
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
@@ -117,15 +119,11 @@ mapInputViewConfig state isEditable = let
     config = InputView.config 
     inputViewConfig' = config
       { headerText = MB.maybe ("Trip Details") ( \ currTextField -> if currTextField == ST.SearchLocPickup then "Edit Pickup" else "Add Stop") state.props.focussedTextField,
+        suffixButtonVisibility = GONE,
         inputView = map 
           ( \item -> 
-            { margin : item.margin
-            , padding : Padding 8 7 8 7 
-            , textValue : item.textValue
+            { padding : Padding 8 7 8 7 
             , height : WRAP_CONTENT
-            , isFocussed : item.isFocussed
-            , id : show item.id
-            , placeHolder : item.placeHolder 
             , canClearText : (item.canClearText  || state.props.canClearText ) && item.isFocussed
             , isEditable : isEditable && item.isEditable
             , isClickable : item.isEditable
@@ -136,12 +134,23 @@ mapInputViewConfig state isEditable = let
                 padding : Padding 0 0 0 0 }
             , stroke : ((if item.isFocussed then "1," else "0,") <> Color.yellow900)
             , imageSeparator : separatorConfig 
+            , fontStyle : FontStyle.h1 LanguageStyle -- FontStyle.subHeading2 TypoGraphy
             , clearTextIcon : { 
                 imageName : (state.appConfig.searchLocationConfig.clearTextImage) ,
                 height : V 19,
                 width : V 19 ,
                 padding : PaddingVertical 10 2 }
-            , cornerRadius : 4.0
+            , gravity : CENTER
+            , inputTextConfig : 
+               { textValue : item.textValue
+               , isFocussed : item.isFocussed
+               , id : show item.id
+               , placeHolder : item.placeHolder 
+               , cornerRadius : 4.0
+               , margin : item.margin
+               , imageName : item.prefixImageName
+               , textColor : Color.white900
+               }
             } 
           ) 
           (inputViewArray state)
@@ -176,7 +185,7 @@ inputViewArray state =
       , isEditable : true
       }
     ]
-
+   
 
 
 

@@ -439,8 +439,8 @@ export const scanQrCode = function (requestCode) {
 export const timePicker = function (cb) {
   return function (action) {
     return function () {
-      const callback = callbackMapper.map(function (resp, hour, min) {
-        cb(action(resp)(hour)(min))();
+      const callback = callbackMapper.map(function (hour, min, resp) {
+        cb(action(hour)(min)(resp))();
       });
       return window.JBridge.timePicker(callback);
     };
@@ -1121,22 +1121,6 @@ export const getCurrentPositionWithTimeoutImpl = function (cb, action, delay, sh
     window.JBridge.getCurrentPosition(callback);
   }
 }
-
-export const datePickerImpl = function (cb , action, delay){
-  const callback = callbackMapper.map(function (str, year, month, date) {
-    cb(action(str)(year)(month)(date))();
-  })
-  window.JBridge.datePicker(callback, "");
-}
-
-export const timePickerImpl = function (cb , action, delay){
-  const callback = callbackMapper.map(function (str, hour, min) {
-    cb(action(str)(hour)(min))();
-  })
-  window.JBridge.timePicker(callback);
-}
-
-
 
 export const translateStringWithTimeout = function (cb) {
   return function (action) {
@@ -2327,3 +2311,28 @@ export const displayBase64Image = (configObj) => {
     }
   }
 } 
+
+export const datePickerImpl = function (cb , action, delay){
+  const callback = callbackMapper.map(function (str, year, month, date) {
+    cb(action(str)(year)(month)(date))();
+  })
+  window.JBridge.datePicker(callback, "");
+}
+
+export const timePickerImpl = function (cb , action, delay){
+  const callback = callbackMapper.map(function (hour, min, str) {
+    cb(action(hour)(min)(str))();
+  })
+  window.JBridge.timePicker(callback);
+}
+
+export const renderSliderImpl = (cb, action, config) => {
+  
+  const callback = callbackMapper.map(function (val) {
+    cb(action(parseInt(val)))();
+  });
+  const { id, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId, enableToolTip, progressColor, thumbColor, bgColor, bgAlpha } = config;
+  const configg =  { id, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId, enableToolTip, progressColor, thumbColor, bgColor, bgAlpha, callback };
+
+  window.JBridge.renderSlider(JSON.stringify(configg));
+};

@@ -41,7 +41,7 @@ window.getMerchantConfig = function () {
     "isGradient" : "false",
     "gradient": [],
     "primaryTextColor": "#FCC32C",
-    "primaryBackground": "#2C2F3A",
+    "primaryBackground": "#FFFFFF",
     "estimateConfirmText": "Request a NammaYatri Ride",
     "autoConfirmingLoaderColor": "#80B2FF",
     "quoteListModelBackground": "#2C2F3A",

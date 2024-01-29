@@ -102,7 +102,7 @@ eval (InputViewAC globalProps (InputViewController.ClearTextField textField)) st
   continue state { data {locationList = fetchSortedCachedSearches state globalProps textField }
                  , props {canClearText = false, isAutoComplete = false, locUnserviceable = false}}
   
-eval (InputViewAC _ (InputViewController.BackPress)) state = handleBackPress state  
+eval (InputViewAC _ (InputViewController.BackPressed)) state = handleBackPress state  
 
 eval (BackpressAction) state = handleBackPress state 
 

@@ -1,33 +1,35 @@
 module Components.InputView.Controller where
 
-import Prelude
-import PrestoDOM ( Length(..), Padding(..), Margin(..))
+import Effect (Effect)
 import Components.SeparatorView.View as SeparatorView
+import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import Prelude
+import PrestoDOM ( Length(..), Padding(..), Margin(..), Gravity(..), Visibility(..), Prop)
 
 data Action = TextFieldFocusChanged String Boolean 
             | ClearTextField String 
             | InputChanged String 
             | AutoCompleteCallBack String Boolean
-            | BackPress 
+            | DateTimePickerButtonClicked
+            | BackPressed
 
 type InputViewConfig = 
   { backIcon :: ImageConfig
   , headerText :: String 
+  , suffixButton :: ButtonLayoutConfig
   , headerVisibility :: Boolean
   , inputView :: Array InputView
   , imageLayoutMargin :: Margin
   , imageLayoutWidth :: Length
+  , imageLayoutVisibility :: Visibility
+  , suffixButtonVisibility :: Visibility
   , inputLayoutPading :: Padding
   }
 
 type InputView =
-  { margin :: Margin 
-  , padding :: Padding
-  , textValue :: String 
+  { padding :: Padding
   , height :: Length
-  , isFocussed :: Boolean 
-  , id :: String 
-  , placeHolder :: String 
+  , gravity :: Gravity
   , canClearText :: Boolean 
   , isEditable :: Boolean 
   , isClickable :: Boolean
@@ -35,7 +37,20 @@ type InputView =
   , stroke :: String
   , imageSeparator :: SeparatorView.Config 
   , clearTextIcon :: ImageConfig
+  , fontStyle :: forall properties. Array (Prop properties)
+  , inputTextConfig :: InputTextConfig
+  }
+  
+
+type InputTextConfig =
+  { textValue :: String
+  , isFocussed :: Boolean
+  , imageName :: String
+  , margin :: Margin
+  , placeHolder :: String
+  , id :: String
   , cornerRadius :: Number
+  , textColor :: String
   }
 
 type ImageConfig = 
@@ -45,10 +60,19 @@ type ImageConfig =
   , padding :: Padding
   }
 
+type ButtonLayoutConfig = 
+  { text :: String
+  , fontStyle :: Array (Prop (Effect Unit))
+  , prefixImage :: String
+  , suffixImage :: String
+  , padding :: Padding
+  , gravity :: Gravity
+  }
+
 config :: InputViewConfig
 config = {
   backIcon : {
-    imageName : "ny_ic_chevron_left_white,https://assets.juspay.in/beckn/mobilitypaytm/user/ny_ic_chevron_left_white.png"
+      imageName : fetchImage FF_ASSET "ny_ic_chevron_left_white"
     , height : V 24
     , width : V 24
     , padding : PaddingTop 16 
@@ -58,5 +82,15 @@ config = {
   inputView : [],
   imageLayoutMargin : MarginLeft 24,
   imageLayoutWidth : V 20,
-  inputLayoutPading : PaddingLeft 8
+  inputLayoutPading : PaddingLeft 8,
+  imageLayoutVisibility : VISIBLE,
+  suffixButtonVisibility : GONE,
+  suffixButton : {
+    text : "",
+    fontStyle : [],
+    prefixImage : "",
+    suffixImage : "",
+    padding : Padding 0 0 0 0,
+    gravity : CENTER_VERTICAL
+  }
 }

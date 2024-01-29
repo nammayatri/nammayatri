@@ -1,5 +1,6 @@
 package in.juspay.mobility.app;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
@@ -45,17 +46,18 @@ public class SliderComponent {
         }
     }
 
-    public void addSlider(String id, String callback, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId, BridgeComponents bridgeComponents){
+    @SuppressLint("Range")
+    public void addSlider(String id, String callback, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId, Boolean enableToolTip, String progressColor, String thumbColor, String bgColor, int bgAlpha, BridgeComponents bridgeComponents){
         Activity activity = bridgeComponents.getActivity();
         Context context = bridgeComponents.getContext();
         if (activity != null) {
             LinearLayout layout = activity.findViewById(Integer.parseInt(id));
             LinearLayout toolTipView = activity.findViewById(Integer.parseInt(toolTipId));
-            if (layout == null || toolTipView == null)
+            if (layout == null || (toolTipView == null && enableToolTip))
                 return;
             SeekBar seekBar = new SeekBar(context);
             ShapeDrawable thumbDrawable = new ShapeDrawable(new OvalShape());
-            thumbDrawable.getPaint().setColor(Color.parseColor("#2194FF"));
+            thumbDrawable.getPaint().setColor(Color.parseColor(thumbColor));
             thumbDrawable.setIntrinsicHeight(dpToPx(context, 20));
             thumbDrawable.setIntrinsicWidth(dpToPx(context, 20));
             seekBar.setThumb(thumbDrawable);
@@ -63,10 +65,11 @@ public class SliderComponent {
             Drawable backgroundDrawable = progressDrawable.findDrawableByLayerId(android.R.id.background);
             Drawable progress = progressDrawable.findDrawableByLayerId(android.R.id.progress);
             if (backgroundDrawable != null) {
-                DrawableCompat.setTint(backgroundDrawable, Color.BLACK);
+                DrawableCompat.setTint(backgroundDrawable, Color.parseColor(bgColor));
+                backgroundDrawable.setAlpha(bgAlpha);
             }
             if (progress != null) {
-                DrawableCompat.setTint(progress, Color.parseColor("#2194FF"));
+                DrawableCompat.setTint(progress, Color.parseColor(progressColor));
             }
             seekBar.setProgressDrawable(progressDrawable);
             seekBar.setMax(maxLimit);
@@ -118,15 +121,19 @@ public class SliderComponent {
             int thumbHalfWidth = thumbWidth ;
             final int[] tooltipX = {seekBarPosition - thumbHalfWidth + dpToPx(context, 12)};
             int tooltipY = seekBar.getHeight() - tooltipLayout.getHeight();
-            toolTipView.addView(tooltipLayout);
-            updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
+            if (enableToolTip) {
+                toolTipView.addView(tooltipLayout);
+                updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
+            }
             layout.addView(seekBar);
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override
                 public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                     int thumbPosition = seekBar.getThumb().getBounds().centerX();
-                    tooltipX[0] = thumbPosition - thumbHalfWidth + dpToPx(context, 12);
-                    updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
+                    if (enableToolTip){
+                        tooltipX[0] = thumbPosition - thumbHalfWidth + dpToPx(context, 12);
+                        updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
+                    }
                     float newVal = (progress * conversionRate);
                     String valueToShow = Math.ceil(newVal) == Math.floor(newVal) ? String.valueOf((int) newVal) : String.format("%.2f", newVal);
                     prefTextView.setText(String.valueOf(progress));
@@ -136,19 +143,24 @@ public class SliderComponent {
                 @Override
                 public void onStartTrackingTouch(SeekBar seekBar) {
                     int thumbPosition = seekBar.getThumb().getBounds().centerX();
-                    tooltipX[0] = thumbPosition - thumbHalfWidth + dpToPx(context, 12);
-                    updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
-                }
+                    if (enableToolTip){
+                        tooltipX[0] = thumbPosition - thumbHalfWidth + dpToPx(context, 12);
+                        updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
+                    }
+                    }
 
                 @Override
                 public void onStopTrackingTouch(SeekBar seekBar) {
                     int thumbPosition = seekBar.getThumb().getBounds().centerX();
-                    tooltipX[0] =thumbPosition - thumbHalfWidth + dpToPx(context, 12);
-                    updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
-                    int nearestMultipleOf250 = Math.round(seekBar.getProgress() / 250f) * 250;
-                    seekBar.setProgress(nearestMultipleOf250);
+                    if(enableToolTip){
+                        tooltipX[0] =thumbPosition - thumbHalfWidth + dpToPx(context, 12);
+                        updateTooltipPosition(tooltipLayout, tooltipX[0], tooltipY, (int) (toolTipView.getX()+toolTipView.getWidth()) > tooltipX[0] + tooltipLayout.getWidth());
+                    }
+                    int conversionRateInInt = Math.round(conversionRate);
+                    int nearestMultipleOfConversionRate = Math.round(seekBar.getProgress() / conversionRate) * conversionRateInInt;
+                    seekBar.setProgress(nearestMultipleOfConversionRate);
                     String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                            callback, nearestMultipleOf250);
+                            callback, nearestMultipleOfConversionRate);
                     bridgeComponents.getJsCallback().addJsToWebView(javascript);
                 }
             });

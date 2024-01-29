@@ -805,13 +805,6 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
     }
     //endregion
 
-    @JavascriptInterface
-    public void renderSlider(String id, String callback, float conversionRate, int minLimit, int maxLimit, int defaultValue, String toolTipId) {
-        ExecutorManager.runOnMainThread(() -> {
-            SliderComponent sliderComponent = new SliderComponent();
-            sliderComponent.addSlider(id,callback,conversionRate,minLimit,maxLimit,defaultValue,toolTipId, bridgeComponents);
-        });
-    }
 }
 
 

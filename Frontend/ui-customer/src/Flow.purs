@@ -3261,3 +3261,10 @@ fetchGlobalSavedLocations :: FlowBT String (Array LocationListItemState)
 fetchGlobalSavedLocations = do
   (GlobalState globalState) <- getState
   pure $ (globalState.globalProps.savedLocations)
+
+rentalScreenFlow :: FlowBT String Unit
+rentalScreenFlow = do
+  (GlobalState currentState) <- getState
+  action <- lift $ lift $ runScreen $ UI.rentalScreen currentState.rentalScreen 
+  case action of
+    _ -> pure unit

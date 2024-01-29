@@ -78,6 +78,7 @@ import PrestoDOM.Elements.Keyed as Keyed
 import Mobility.Prelude
 import Timers (startTimer)
 import Locale.Utils
+import Effect.Uncurried (runEffectFn3)
 
 screen :: ST.DriverEarningsScreenState -> Screen Action ST.DriverEarningsScreenState ScreenOutput
 screen initialState =
@@ -1503,7 +1504,7 @@ convertView push state =
                           , id $ getNewIDWithTag "ConvertCoinsSliderView"
                           , onAnimationEnd
                               ( \action ->
-                                  void $ pure $ renderSlider push SliderCallback { id: (getNewIDWithTag "ConvertCoinsSliderView"), sliderConversionRate: state.data.coinConversionRate, sliderMinValue: state.data.config.coinsConfig.minCoinSliderValue, sliderMaxValue: coinBalanceNearest250, sliderDefaultValue: state.data.config.coinsConfig.minCoinSliderValue, toolTipId: getNewIDWithTag "SliderToolTipView" }
+                                  void $ renderSlider push SliderCallback sliderConfig{ id= (getNewIDWithTag "ConvertCoinsSliderView"), sliderConversionRate= state.data.coinConversionRate, sliderMinValue = state.data.config.coinsConfig.minCoinSliderValue, sliderMaxValue = coinBalanceNearest250, sliderDefaultValue = state.data.config.coinsConfig.minCoinSliderValue, toolTipId = getNewIDWithTag "SliderToolTipView", enableToolTip = true }
                               )
                               (const AfterRender)
                           ]
