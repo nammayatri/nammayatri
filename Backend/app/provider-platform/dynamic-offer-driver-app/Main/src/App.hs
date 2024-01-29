@@ -16,6 +16,7 @@ module App where
 
 import AWS.S3
 import qualified App.Server as App
+import qualified Client.Main as CM
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -60,6 +61,7 @@ import "utils" Utils.Common.Events as UE
 
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
+  _ <- CM.main
   appCfg <- configModifier <$> readDhallConfigDefault "dynamic-offer-driver-app"
   Metrics.serve (appCfg.metricsPort)
   runDynamicOfferDriverApp' appCfg

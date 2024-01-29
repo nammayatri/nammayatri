@@ -9,7 +9,7 @@
     ./nix/osrm.nix
     ./load-test
   ];
-  perSystem = { config, self', pkgs, lib, ... }: {
+  perSystem = { config, self', pkgs, lib, system, ... }: {
     pre-commit.settings.imports = [
       ./nix/pre-commit.nix
     ];
@@ -19,6 +19,7 @@
       imports = [
         inputs.beckn-gateway.haskellFlakeProjectModules.output
         # inputs.namma-dsl.haskellFlakeProjectModules.output
+        inputs.haskell-cac.haskellFlakeProjectModules.output
       ];
       autoWire = [ "packages" "checks" "apps" ];
       devShell.tools = _: {
@@ -37,6 +38,9 @@
         namma-dsl.source = inputs.namma-dsl + /lib/namma-dsl;
       };
       settings = {
+        dynamic-offer-driver-app.custom = p: p.overrideAttrs (oa: {
+          DYLD_LIBRARY_PATH = "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib";
+        });
         namma-dsl.libraryProfiling = false;
         location-updates.check = false;
         beckn-test.check = false;
@@ -92,7 +96,11 @@
         config.pre-commit.devShell
         config.haskellProjects.default.outputs.devShell
         config.flake-root.devShell
+        inputs.haskell-cac.devShells.${system}.haskell-cac
       ];
+      shellHook = ''
+        export DYLD_LIBRARY_PATH="${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
+      '';
     };
   };
 }

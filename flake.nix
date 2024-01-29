@@ -21,6 +21,13 @@
       # };
     };
 
+    haskell-cac = {
+      url = "github:piyushKumar-1/haskell_cac_client/Testing";
+      inputs = {
+        common.follows = "common";
+      };
+    };
+
     beckn-gateway = {
       url = "github:nammayatri/beckn-gateway";
       inputs = {
@@ -64,6 +71,7 @@
 
   outputs = inputs:
     inputs.common.lib.mkFlake { inherit inputs; } {
+      debug = true;
       imports = [
         ./Backend/default.nix
         ./Frontend/default.nix

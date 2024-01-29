@@ -151,12 +151,15 @@ library:
           - -j4
   dependencies:
     - mobility-core
+    - haskell-cac
     - beckn-spec
     - location-updates
     - special-zone-a
     - payment
     - sessionizer-metrics
     - utils
+  extra-libraries:
+    - cac_client
 
 executables:
   dynamic-offer-driver-app-exe:
@@ -184,5 +187,8 @@ executables:
     dependencies:
       - dynamic-offer-driver-app
       - mobility-core
+      - haskell-cac
       - beckn-spec
       - beckn-services
+    extra-libraries:
+      - cac_client
