@@ -44,7 +44,6 @@ import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Control.Lens ((%~))
 import qualified Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
-import qualified Data.HashMap as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -241,7 +240,7 @@ sendRideAssignedUpdateToBAP ::
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
     CacheFlow m r,
-    HasField "modelNamesHashMap" r (HM.Map Text Text),
+    HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasField "s3Env" r (S3.S3Env m),
     HasField "isBecknSpecVersion2" r Bool,
@@ -309,7 +308,7 @@ sendRideAssignedUpdateToBAP booking ride driver veh = do
           newVehicle <-
             (flip $ maybe (pure veh)) ((.manufacturer_model) =<< (.extraction_output) =<< (.result) =<< (((A.decode . TLE.encodeUtf8 . TL.fromStrict) =<< (.idfyResponse) =<< driverVehicleIdfyResponse) :: Maybe Idfy.VerificationResponse)) $ \newModel -> do
               modelNamesHashMap <- asks (.modelNamesHashMap)
-              let modelValueToUpdate = fromMaybe "" $ HM.lookup newModel modelNamesHashMap
+              let modelValueToUpdate = fromMaybe "" $ HMS.lookup newModel modelNamesHashMap
               if modelValueToUpdate == veh.model
                 then pure veh
                 else QVeh.updateVehicleModel modelValueToUpdate ride.driverId $> updateVehicle veh modelValueToUpdate

@@ -134,7 +134,6 @@ dependencies:
   - transformers
   - extra
   - hw-kafka-client
-  - hashmap
 
 ghc-options:
   - -fwrite-ide-info

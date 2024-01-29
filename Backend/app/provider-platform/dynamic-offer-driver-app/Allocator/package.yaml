@@ -79,7 +79,6 @@ dependencies:
   - uuid
   - prometheus-client
   - record-hasfield
-  - hashmap
   - record-dot-preprocessor
   - servant-openapi3
   - openapi3

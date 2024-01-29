@@ -53,7 +53,7 @@ buildCancelReqV2 ::
   m (Either DCancel.CancelReq DCancel.CancelSearchReq)
 buildCancelReqV2 req = do
   ContextV2.validateContext Context.CANCEL req.cancelReqContext
-  if isNothing (req.cancelReqMessage.cancelReqMessageDescriptor)
+  if isJust (req.cancelReqMessage.cancelReqMessageDescriptor)
     then do
       let bookingId = Id $ req.cancelReqMessage.cancelReqMessageOrderId
       return $

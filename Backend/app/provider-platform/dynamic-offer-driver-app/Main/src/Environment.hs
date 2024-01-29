@@ -16,7 +16,6 @@
 module Environment where
 
 import AWS.S3
-import qualified Data.HashMap as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -204,7 +203,7 @@ data AppEnv = AppEnv
     schedulerType :: SchedulerType,
     ltsCfg :: LocationTrackingeServiceConfig,
     maxMessages :: Text,
-    modelNamesHashMap :: HM.Map Text Text,
+    modelNamesHashMap :: HMS.HashMap Text Text,
     incomingAPIResponseTimeout :: Int,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
@@ -248,7 +247,7 @@ buildAppEnv cfg@AppCfg {..} = do
       s3Env = buildS3Env cfg.s3Config
       s3EnvPublic = buildS3Env cfg.s3PublicConfig
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
-  return AppEnv {modelNamesHashMap = HM.fromList $ M.toList modelNamesMap, ..}
+  return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do

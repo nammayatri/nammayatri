@@ -262,7 +262,6 @@ library
     , fast-logger
     , generic-lens
     , geojson
-    , hashmap
     , hedis
     , hex-text
     , hspec

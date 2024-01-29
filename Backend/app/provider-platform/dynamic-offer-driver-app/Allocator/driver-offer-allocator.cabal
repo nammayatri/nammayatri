@@ -81,7 +81,6 @@ library
     , exceptions
     , extra
     , generic-lens
-    , hashmap
     , hspec
     , mobility-core
     , openapi3
@@ -164,7 +163,6 @@ executable driver-offer-allocator-exe
     , exceptions
     , extra
     , generic-lens
-    , hashmap
     , hspec
     , mobility-core
     , openapi3
