@@ -235,6 +235,6 @@ in  { esqDBCfg
     , internalEndPointMap = common.internalEndPointMap
     , schedulerSetName = "rider-scheduler-set"
     , schedulerType = common.schedulerType.RedisBased
-    , isBecknSpecVersion2 = True
+    , isBecknSpecVersion2 = False
     , _version = "2.0.0"
     }

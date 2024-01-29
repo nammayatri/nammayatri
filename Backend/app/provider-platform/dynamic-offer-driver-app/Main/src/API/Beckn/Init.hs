@@ -163,10 +163,10 @@ initProcessingLockKey id = "Driver:Init:Processing:DriverQuoteId-" <> id
 decodeReq :: MonadFlow m => ByteString -> m (Either Init.InitReq Init.InitReqV2)
 decodeReq reqBS =
   case A.eitherDecodeStrict reqBS of
-    Right reqV2 -> pure $ Right reqV2
+    Right reqV1 -> pure $ Left reqV1
     Left _ ->
       case A.eitherDecodeStrict reqBS of
-        Right reqV1 -> pure $ Left reqV1
+        Right reqV2 -> pure $ Right reqV2
         Left err -> throwError . InvalidRequest $ "Unable to parse request: " <> T.pack err <> T.decodeUtf8 reqBS
 
 errHandlerV2 :: Spec.Context -> BecknAPIError -> Spec.OnInitReq
