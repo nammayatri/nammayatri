@@ -19,6 +19,7 @@ module Beckn.ACL.FRFS.Cancel (buildCancelReq) where
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
+import qualified BecknV2.FRFS.Utils as Utils
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
@@ -29,12 +30,16 @@ buildCancelReq ::
   (MonadFlow m) =>
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
+  Utils.BppData ->
   m (Spec.CancelReq)
-buildCancelReq booking bapConfig = do
+buildCancelReq booking bapConfig bppData = do
+  now <- getCurrentTime
   let transactionId = booking.searchId.getId
+      validTill = addUTCTime (intToNominalDiffTime 30) now
+      ttl = diffUTCTime validTill now
   messageId <- generateGUID
 
-  context <- Utils.buildContext Spec.CANCEL bapConfig transactionId messageId Nothing
+  context <- Utils.buildContext Spec.CANCEL bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData)
 
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "bppOrderId not found")
   pure $

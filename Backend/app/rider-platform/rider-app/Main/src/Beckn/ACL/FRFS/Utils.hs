@@ -34,18 +34,21 @@ buildContext ::
   Text ->
   Text ->
   Maybe Text ->
+  Maybe BppData ->
   m Spec.Context
-buildContext action bapConfig txnId msgId mTTL = do
+buildContext action bapConfig txnId msgId mTTL bppData = do
   now <- getCurrentTime
   let bapUrl = showBaseUrl bapConfig.subscriberUrl
   let bapId = bapConfig.subscriberId
+      contextBppId = bppData <&> (.bppId)
+      contextBppUri = bppData <&> (.bppUri)
   return $
     Spec.Context
       { contextAction = encodeToText' action,
         contextBapId = Just bapId,
         contextBapUri = Just bapUrl,
-        contextBppId = Nothing,
-        contextBppUri = Nothing,
+        contextBppId,
+        contextBppUri,
         contextDomain = encodeToText' Spec.FRFS,
         contextKey = Nothing,
         contextLocation = Just $ tfLocation "std:044",
@@ -339,3 +342,9 @@ castTicketStatus :: (MonadFlow m) => Text -> m Ticket.FRFSTicketStatus
 castTicketStatus "UNCLAIMED" = return Ticket.ACTIVE
 castTicketStatus "CLAIMED" = return Ticket.USED
 castTicketStatus _ = throwError $ InternalError "Invalid ticket status"
+
+data BppData = BppData
+  { bppId :: Text,
+    bppUri :: Text
+  }
+  deriving (Show, Eq, Generic)

@@ -31,8 +31,9 @@ buildConfirmReq ::
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
   Text ->
+  Utils.BppData ->
   m (Spec.ConfirmReq)
-buildConfirmReq booking bapConfig txnId = do
+buildConfirmReq booking bapConfig txnId bppData = do
   let transactionId = booking.searchId.getId
       messageId = booking.id.getId
 
@@ -40,7 +41,7 @@ buildConfirmReq booking bapConfig txnId = do
   let ttl = diffUTCTime booking.validTill now
   let mPaymentParams = bapConfig.paymentParamsJson >>= decodeFromText
   let mSettlementType = bapConfig.settlementType
-  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId (Just $ Utils.durationToText ttl)
+  context <- Utils.buildContext Spec.CONFIRM bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData)
 
   pure $
     Spec.ConfirmReq

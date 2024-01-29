@@ -30,15 +30,16 @@ buildStatusReq ::
   (MonadFlow m) =>
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
+  Utils.BppData ->
   m (Spec.StatusReq)
-buildStatusReq booking bapConfig = do
+buildStatusReq booking bapConfig bppData = do
   now <- getCurrentTime
   let transactionId = booking.searchId.getId
   messageId <- generateGUID
   let validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
 
-  context <- Utils.buildContext Spec.STATUS bapConfig transactionId messageId (Just $ Utils.durationToText ttl)
+  context <- Utils.buildContext Spec.STATUS bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData)
 
   bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "bppOrderId not found")
   pure $

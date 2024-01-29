@@ -9,6 +9,7 @@ import qualified Beckn.ACL.FRFS.Confirm as ACL
 import qualified Beckn.ACL.FRFS.Init as ACL
 import qualified Beckn.ACL.FRFS.Search as ACL
 import qualified Beckn.ACL.FRFS.Status as ACL
+import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import Control.Monad.Extra hiding (fromMaybeM)
 import Data.OpenApi (ToSchema)
@@ -145,7 +146,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
     bapConfig <- QBC.findByMerchantIdAndDomain (Just merchant.id) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
     let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
     mRiderNumber <- mapM decrypt rider.mobileNumber
-    bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) dConfirmRes bapConfig
+    bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) dConfirmRes bapConfig Utils.BppData {bppId = dConfirmRes.bppSubscriberId, bppUri = dConfirmRes.bppSubscriberUrl}
     void $ CallBPP.init providerUrl bknInitReq
   return $ makeBookingStatusAPI dConfirmRes stations
   where
@@ -264,7 +265,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL)
               fork "FRFS Confirm Req" $ do
                 providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-                bknConfirmReq <- ACL.buildConfirmReq updatedBooking bapConfig txnId.getId
+                bknConfirmReq <- ACL.buildConfirmReq updatedBooking bapConfig txnId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl}
                 void $ CallBPP.confirm providerUrl bknConfirmReq
               buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
             else do
@@ -332,7 +333,7 @@ callBPPStatus :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environm
 callBPPStatus booking bapConfig = do
   fork "FRFS Status Req" $ do
     providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-    bknStatusReq <- ACL.buildStatusReq booking bapConfig
+    bknStatusReq <- ACL.buildStatusReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl}
     void $ CallBPP.status providerUrl bknStatusReq
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]

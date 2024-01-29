@@ -35,8 +35,9 @@ buildInitReq ::
   (Maybe RiderName, Maybe RiderNumber) ->
   DTBooking.FRFSTicketBooking ->
   BecknConfig ->
+  Utils.BppData ->
   m (Spec.InitReq)
-buildInitReq rider tBooking bapConfig = do
+buildInitReq rider tBooking bapConfig bppData = do
   now <- getCurrentTime
   let transactionId = tBooking.searchId.getId
   let messageId = tBooking.id.getId
@@ -45,7 +46,7 @@ buildInitReq rider tBooking bapConfig = do
 
   let mPaymentParams = bapConfig.paymentParamsJson >>= decodeFromText
   let mSettlementType = bapConfig.settlementType
-  context <- Utils.buildContext Spec.INIT bapConfig transactionId messageId (Just $ Utils.durationToText ttl)
+  context <- Utils.buildContext Spec.INIT bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData)
 
   pure $
     Spec.InitReq

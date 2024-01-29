@@ -40,7 +40,7 @@ buildSearchReq search bapConfig fromStation toStation = do
       validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
 
-  context <- Utils.buildContext Spec.SEARCH bapConfig transactionId messageId (Just $ Utils.durationToText ttl)
+  context <- Utils.buildContext Spec.SEARCH bapConfig transactionId messageId (Just $ Utils.durationToText ttl) Nothing
 
   pure $
     Spec.SearchReq
