@@ -257,7 +257,7 @@ mkSettlementTagGroup mAmount =
                         descriptorImages = Nothing,
                         descriptorName = Nothing
                       },
-                tagValue = Just "INVOICE_RECIEPT"
+                tagValue = Just "DELIVERY"
               },
           Just $
             Spec.Tag
