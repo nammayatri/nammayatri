@@ -13,7 +13,7 @@
 -}
 {-# LANGUAGE OverloadedLabels #-}
 
-module Beckn.ACL.Rating (buildRatingReq) where
+module Beckn.ACL.Rating (buildRatingReq, buildRatingReqV2) where
 
 import qualified Beckn.Types.Core.Taxi.Rating as Rating
 import qualified BecknV2.OnDemand.Types as Spec
@@ -60,24 +60,24 @@ buildRatingReq DFeedback.FeedbackRes {..} = do
           }
   pure $ BecknReq context message
 
-_buildRatingReqV2 ::
+buildRatingReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   DFeedback.FeedbackRes ->
   m Spec.RatingReq
-_buildRatingReqV2 res@DFeedback.FeedbackRes {..} = do
+buildRatingReqV2 res@DFeedback.FeedbackRes {..} = do
   msgId <- generateGUID
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchant.id.getId)
   -- TODO :: Add request city, after multiple city support on gateway.
   context <- ContextV2.buildContextV2 Context.RATING Context.MOBILITY msgId (Just transactionId) merchant.bapId bapUrl (Just providerId) (Just providerUrl) merchant.defaultCity merchant.country
-  let message = _tfMessage res
+  let message = tfMessage res
   pure $
     Spec.RatingReq
       { ratingReqContext = context,
         ratingReqMessage = message
       }
 
-_tfMessage :: DFeedback.FeedbackRes -> Spec.RatingReqMessage
-_tfMessage res = do
+tfMessage :: DFeedback.FeedbackRes -> Spec.RatingReqMessage
+tfMessage res = do
   Spec.RatingReqMessage
     { ratingReqMessageRatings = Just [tfRating res]
     }
@@ -88,11 +88,11 @@ tfRating res@DFeedback.FeedbackRes {..} = do
     { ratingId = Just $ bppBookingId.getId,
       ratingValue = Just $ show ratingValue,
       ratingRatingCategory = Nothing,
-      ratingFeedbackForm = Just $ _tfFeedbackForm res
+      ratingFeedbackForm = Just $ tfFeedbackForm res
     }
 
-_tfFeedbackForm :: DFeedback.FeedbackRes -> [Spec.FeedbackForm]
-_tfFeedbackForm DFeedback.FeedbackRes {..} = do
+tfFeedbackForm :: DFeedback.FeedbackRes -> [Spec.FeedbackForm]
+tfFeedbackForm DFeedback.FeedbackRes {..} = do
   [ Spec.FeedbackForm
       { feedbackFormQuestion = "Evaluate your ride experience.",
         feedbackFormAnswer = feedbackDetails
