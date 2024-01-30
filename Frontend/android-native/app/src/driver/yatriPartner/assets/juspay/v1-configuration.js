@@ -119,5 +119,8 @@ window.getMerchantConfig = function () {
         { "isVisible" : false
         }
     }
+  , "profile" : {
+      "checkRCStatusForBookingOption" : false
+    }
   })
 }
