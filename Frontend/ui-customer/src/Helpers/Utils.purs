@@ -87,6 +87,7 @@ import Data.Function.Uncurried (Fn1)
 import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
 import Data.Tuple(Tuple(..) ,snd, fst)
+import MerchantConfig.Types (CityConfig)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -636,3 +637,14 @@ getCityCodeFromCity city =
     let 
       cityCodeTuple = find (\tuple -> (snd tuple) == city) cityCodeMap
     in maybe Nothing (\tuple -> fst tuple) cityCodeTuple
+
+getCityConfig :: Array CityConfig -> String -> CityConfig
+getCityConfig cityConfigs cityName = do
+  let dummyCityConfig = { cityName : "",
+                          cityCode : "",
+                          geoCodeConfig :
+                            { radius : 100000
+                            , strictBounds : false
+                            }
+                        }
+  fromMaybe dummyCityConfig $ find (\item -> item.cityName == cityName) cityConfigs

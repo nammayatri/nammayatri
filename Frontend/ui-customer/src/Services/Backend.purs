@@ -263,15 +263,15 @@ searchLocationBT payload = do
                 BackT $ pure GoBack
 
 
-makeSearchLocationReq :: String -> Number -> Number -> Int -> String -> String-> SearchLocationReq
-makeSearchLocationReq input lat lng radius language components = SearchLocationReq {
+makeSearchLocationReq :: String -> Number -> Number -> Int -> String -> String -> Boolean -> SearchLocationReq
+makeSearchLocationReq input lat lng radius language components strictbounds = SearchLocationReq {
     "input" : input,
     "location" : (show lat <> "," <> show lng),
     "radius" : radius,
     "components" : components,
     "language" : language,
     "sessionToken" : Nothing,
-    "strictbounds": Nothing,
+    "strictbounds": if strictbounds then Just true else Nothing,
     "origin" : LatLong {
             "lat" : lat,
             "lon" : lng

@@ -65,6 +65,7 @@ type AppConfigCustomer a =
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
+  , cityConfig :: Array CityConfig
   | a
   }
 
@@ -338,4 +339,15 @@ type VariantConfig = {
 type VariantInfo = {
   name :: String,
   image :: String
+}
+
+type CityConfig = {
+  cityName :: String,
+  cityCode :: String,
+  geoCodeConfig :: GeoCodeConfig
+}
+
+type GeoCodeConfig = {
+  radius :: Int,
+  strictBounds :: Boolean
 }

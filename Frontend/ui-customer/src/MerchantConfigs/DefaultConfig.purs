@@ -308,4 +308,13 @@ config =
   , textColor : "#454545"
   , stroke: "1,#E5E7EB"
   }
+  , cityConfig :
+      [ { cityCode : "std:080"
+        , cityName : "Bangalore"
+        , geoCodeConfig :
+            { radius : 50000
+            , strictBounds : true
+            }
+        }
+      ]
 }
