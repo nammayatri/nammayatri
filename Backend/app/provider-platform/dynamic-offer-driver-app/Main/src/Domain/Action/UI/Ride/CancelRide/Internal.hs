@@ -110,7 +110,7 @@ cancelRideImpl rideId bookingCReason = do
     transpConf <- QTC.findByMerchantOpCityId searchReq.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
     let searchRepeatLimit = transpConf.searchRepeatLimit
     now <- getCurrentTime
-    farePolicy <- getFarePolicy searchReq.merchantOperatingCityId searchTry.vehicleVariant searchReq.area
+    farePolicy <- getFarePolicyByQuoteId searchReq.merchantOperatingCityId searchTry.vehicleVariant searchReq.area booking.quoteId
     let isSearchTryValid = searchTry.validTill > now
     let isRepeatSearch =
           searchTry.searchRepeatCounter < searchRepeatLimit
@@ -127,8 +127,12 @@ cancelRideImpl rideId bookingCReason = do
         let newDriverPool = filter (\dpr -> cast dpr.driverId `notElem` blockListedDriverList) driverPool
         if not (null newDriverPool)
           then repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
-          else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
-      else BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+          else do
+            void $ clearCachedFarePolicyByQuoteId booking.quoteId
+            BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+      else do
+        void $ clearCachedFarePolicyByQuoteId booking.quoteId
+        BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
   where
     addDriverToSearchCancelledList searchReqId ride = do
       let keyForDriverCancelledList = DP.mkBlockListedDriversKey searchReqId

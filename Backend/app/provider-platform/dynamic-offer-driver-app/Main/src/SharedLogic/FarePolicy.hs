@@ -9,6 +9,8 @@
 
 module SharedLogic.FarePolicy where
 
+import Data.Coerce (coerce)
+import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as FareProductD
 import Domain.Types.Merchant
@@ -16,6 +18,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FareProduct as FareProduct
@@ -30,6 +33,25 @@ data FarePoliciesProduct = FarePoliciesProduct
     area :: FareProductD.Area,
     specialLocationTag :: Maybe Text
   }
+
+makeFarePolicyByQuoteIdKey :: Text -> Text
+makeFarePolicyByQuoteIdKey quoteId = "CachedQueries:FarePolicy:QuoteId-" <> quoteId
+
+getFarePolicyByQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> Variant -> Maybe FareProductD.Area -> Text -> m FarePolicyD.FullFarePolicy
+getFarePolicyByQuoteId merchantOpCityId vehVariant area quoteId = do
+  Redis.get (makeFarePolicyByQuoteIdKey quoteId) >>= \case
+    Nothing -> do
+      logWarning "Old Fare Policy Not Found, Hence using new fare policy."
+      getFarePolicy merchantOpCityId vehVariant area
+    Just a -> return $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+
+cacheFarePolicyByQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> FarePolicyD.FullFarePolicy -> m ()
+cacheFarePolicyByQuoteId quoteId fp = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Redis.setExp (makeFarePolicyByQuoteIdKey quoteId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) expTime
+
+clearCachedFarePolicyByQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> m ()
+clearCachedFarePolicyByQuoteId = Redis.del . makeFarePolicyByQuoteIdKey
 
 getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> Variant -> Maybe FareProductD.Area -> m FarePolicyD.FullFarePolicy
 getFarePolicy merchantOpCityId vehVariant Nothing = do
