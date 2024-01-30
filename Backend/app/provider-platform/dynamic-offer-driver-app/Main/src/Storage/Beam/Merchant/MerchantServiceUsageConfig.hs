@@ -37,7 +37,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     getRoutes :: B.C f MapsService,
     getPickupRoutes :: B.C f MapsService,
     getTripRoutes :: B.C f MapsService,
-    snapToRoad :: B.C f MapsService,
+    snapToRoad :: B.C f MapsService, -- check, is it used?
     getPlaceName :: B.C f MapsService,
     getPlaceDetails :: B.C f MapsService,
     autoComplete :: B.C f MapsService,

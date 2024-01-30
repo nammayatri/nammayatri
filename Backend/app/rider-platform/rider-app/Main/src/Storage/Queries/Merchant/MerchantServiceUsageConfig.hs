@@ -20,11 +20,14 @@ module Storage.Queries.Merchant.MerchantServiceUsageConfig
     #-}
 where
 
+import Database.Beam.Postgres (Postgres)
 import Domain.Types.Merchant.MerchantServiceUsageConfig
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Beam.Functions
+import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -37,19 +40,44 @@ updateMerchantServiceUsageConfig :: MonadFlow m => MerchantServiceUsageConfig ->
 updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set BeamMSUC.getDistances getDistances,
-      Se.Set BeamMSUC.getRoutes getRoutes,
-      Se.Set BeamMSUC.snapToRoad snapToRoad,
-      Se.Set BeamMSUC.getPlaceName getPlaceName,
-      Se.Set BeamMSUC.getPlaceDetails getPlaceDetails,
-      Se.Set BeamMSUC.autoComplete autoComplete,
-      Se.Set BeamMSUC.smsProvidersPriorityList smsProvidersPriorityList,
-      Se.Set BeamMSUC.updatedAt now
-    ]
+    ( concat
+        [ updUsage BeamMSUC.getDistances BeamMSUC.getDistancesPercentage getDistances,
+          updUsage BeamMSUC.getRoutes BeamMSUC.getRoutesPercentage getRoutes,
+          updUsage BeamMSUC.getPickupRoutes BeamMSUC.getPickupRoutesPercentage getPickupRoutes,
+          updUsage BeamMSUC.getTripRoutes BeamMSUC.getTripRoutesPercentage getTripRoutes,
+          updUsage BeamMSUC.snapToRoad BeamMSUC.snapToRoadPercentage snapToRoad,
+          updUsage BeamMSUC.getPlaceName BeamMSUC.getPlaceNamePercentage getPlaceName,
+          updUsage BeamMSUC.getPlaceDetails BeamMSUC.getPlaceDetailsPercentage getPlaceDetails,
+          updUsage BeamMSUC.autoComplete BeamMSUC.autoCompletePercentage autoComplete,
+          updUsage BeamMSUC.getDistancesForCancelRide BeamMSUC.getDistancesForCancelRidePercentage getDistancesForCancelRide,
+          [ Se.Set BeamMSUC.smsProvidersPriorityList smsProvidersPriorityList,
+            Se.Set BeamMSUC.updatedAt now
+          ]
+        ]
+    )
     [Se.Is BeamMSUC.merchantOperatingCityId (Se.Eq $ getId merchantOperatingCityId)]
+  where
+    updUsage ::
+      Se.Column BeamMSUC.MerchantServiceUsageConfigT Maps.MapsService ->
+      Se.Column BeamMSUC.MerchantServiceUsageConfigT Text ->
+      Maps.MapsServiceUsage ->
+      [Se.Set Postgres BeamMSUC.MerchantServiceUsageConfigT]
+    updUsage dbField dbFieldPercentage dField =
+      [ Se.Set dbField dField.mapsService,
+        Se.Set dbFieldPercentage (encodeToText . Maps.mkMapsServiceUsagePercentage $ dField)
+      ]
 
 instance FromTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig where
   fromTType' BeamMSUC.MerchantServiceUsageConfigT {..} = do
+    getDistances' <- parseField Maps.GetDistances getDistances getDistancesPercentage
+    getRoutes' <- parseField Maps.GetRoutes getRoutes getRoutesPercentage
+    getPickupRoutes' <- parseField Maps.GetPickupRoutes getPickupRoutes getPickupRoutesPercentage
+    getTripRoutes' <- parseField Maps.GetTripRoutes getTripRoutes getTripRoutesPercentage
+    snapToRoad' <- parseField Maps.SnapToRoad snapToRoad snapToRoadPercentage
+    getPlaceName' <- parseField Maps.GetPlaceName getPlaceName getPlaceNamePercentage
+    getPlaceDetails' <- parseField Maps.GetPlaceDetails getPlaceDetails getPlaceDetailsPercentage
+    autoComplete' <- parseField Maps.AutoComplete autoComplete autoCompletePercentage
+    getDistancesForCancelRide' <- parseField Maps.GetDistancesForCancelRide getDistancesForCancelRide getDistancesForCancelRidePercentage
     pure $
       Just
         MerchantServiceUsageConfig
@@ -57,16 +85,7 @@ instance FromTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConf
             merchantOperatingCityId = Id merchantOperatingCityId,
             initiateCall = initiateCall,
             notifyPerson = notifyPerson,
-            getDistances = getDistances,
-            getRoutes = getRoutes,
-            snapToRoad = snapToRoad,
-            getPlaceName = getPlaceName,
-            getPickupRoutes = getPickupRoutes,
-            getTripRoutes = getTripRoutes,
-            getPlaceDetails = getPlaceDetails,
-            autoComplete = autoComplete,
             aadhaarVerificationService = aadhaarVerificationService,
-            getDistancesForCancelRide = getDistancesForCancelRide,
             smsProvidersPriorityList = smsProvidersPriorityList,
             whatsappProvidersPriorityList = whatsappProvidersPriorityList,
             issueTicketService = issueTicketService,
@@ -74,32 +93,55 @@ instance FromTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConf
             enableDashboardSms = enableDashboardSms,
             getExophone = getExophone,
             updatedAt = updatedAt,
-            createdAt = createdAt
+            createdAt = createdAt,
+            getDistances = getDistances',
+            getRoutes = getRoutes',
+            getPickupRoutes = getPickupRoutes',
+            getTripRoutes = getTripRoutes',
+            snapToRoad = snapToRoad',
+            getPlaceName = getPlaceName',
+            getPlaceDetails = getPlaceDetails',
+            autoComplete = autoComplete',
+            getDistancesForCancelRide = getDistancesForCancelRide',
+            ..
           }
+    where
+      parseField ::
+        (MonadThrow m, Log m) =>
+        Maps.MapsServiceUsageMethod ->
+        Maps.MapsService ->
+        Text ->
+        m Maps.MapsServiceUsage
+      parseField mapsServiceUsageMethod field fieldPercentage = do
+        let fieldName = show mapsServiceUsageMethod
+        mapsServiceUsagePercentage <-
+          decodeFromText fieldPercentage
+            & fromMaybeM (InternalError $ "Unable to decode MerchantServiceUsageConfigT." <> fieldName <> "Percentage")
+        pure $ Maps.mkMapsServiceUsage field mapsServiceUsagePercentage
 
 instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig where
   toTType' MerchantServiceUsageConfig {..} = do
+    let mkPercentage = encodeToText . Maps.mkMapsServiceUsagePercentage
     BeamMSUC.MerchantServiceUsageConfigT
       { BeamMSUC.merchantId = getId merchantId,
         BeamMSUC.merchantOperatingCityId = getId merchantOperatingCityId,
-        BeamMSUC.initiateCall = initiateCall,
-        BeamMSUC.notifyPerson = notifyPerson,
-        BeamMSUC.getDistances = getDistances,
-        BeamMSUC.getRoutes = getRoutes,
-        BeamMSUC.snapToRoad = snapToRoad,
-        BeamMSUC.getPlaceName = getPlaceName,
-        BeamMSUC.getPickupRoutes = getPickupRoutes,
-        BeamMSUC.getTripRoutes = getTripRoutes,
-        BeamMSUC.getPlaceDetails = getPlaceDetails,
-        BeamMSUC.autoComplete = autoComplete,
-        BeamMSUC.aadhaarVerificationService = aadhaarVerificationService,
-        BeamMSUC.getDistancesForCancelRide = getDistancesForCancelRide,
-        BeamMSUC.smsProvidersPriorityList = smsProvidersPriorityList,
-        BeamMSUC.whatsappProvidersPriorityList = whatsappProvidersPriorityList,
-        BeamMSUC.issueTicketService = issueTicketService,
-        BeamMSUC.useFraudDetection = useFraudDetection,
-        BeamMSUC.enableDashboardSms = enableDashboardSms,
-        BeamMSUC.getExophone = getExophone,
-        BeamMSUC.updatedAt = updatedAt,
-        BeamMSUC.createdAt = createdAt
+        BeamMSUC.getDistances = getDistances.mapsService,
+        BeamMSUC.getDistancesPercentage = mkPercentage getDistances,
+        BeamMSUC.getRoutes = getRoutes.mapsService,
+        BeamMSUC.getRoutesPercentage = mkPercentage getRoutes,
+        BeamMSUC.snapToRoad = snapToRoad.mapsService,
+        BeamMSUC.snapToRoadPercentage = mkPercentage snapToRoad,
+        BeamMSUC.getPlaceName = getPlaceName.mapsService,
+        BeamMSUC.getPlaceNamePercentage = mkPercentage getPlaceName,
+        BeamMSUC.getPickupRoutes = getPickupRoutes.mapsService,
+        BeamMSUC.getPickupRoutesPercentage = mkPercentage getPickupRoutes,
+        BeamMSUC.getTripRoutes = getTripRoutes.mapsService,
+        BeamMSUC.getTripRoutesPercentage = mkPercentage getTripRoutes,
+        BeamMSUC.getPlaceDetails = getPlaceDetails.mapsService,
+        BeamMSUC.getPlaceDetailsPercentage = mkPercentage getPlaceDetails,
+        BeamMSUC.autoComplete = autoComplete.mapsService,
+        BeamMSUC.autoCompletePercentage = mkPercentage autoComplete,
+        BeamMSUC.getDistancesForCancelRide = getDistancesForCancelRide.mapsService,
+        BeamMSUC.getDistancesForCancelRidePercentage = mkPercentage getDistancesForCancelRide,
+        ..
       }

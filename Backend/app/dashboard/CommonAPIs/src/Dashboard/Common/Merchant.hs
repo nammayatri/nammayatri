@@ -33,7 +33,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.SMS as SMS
 import qualified Kernel.External.SMS.ExotelSms.Types as Exotel
 import qualified Kernel.External.Verification as Verification
-import Kernel.Prelude
+import Kernel.Prelude hiding (msum)
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Common
@@ -403,7 +403,6 @@ instance HideSecrets MyValueFirstCfgUpdateReq where
   hideSecrets MyValueFirstCfgUpdateReq {..} = MyValueFirstCfgUpdateTReq {..}
 
 -- ExotelSms
-
 data ExotelSmsCfgUpdateReq = ExotelSmsCfgUpdateReq
   { apiKey :: Text,
     apiToken :: Text,
@@ -532,15 +531,16 @@ type ServiceUsageConfigAPI =
 
 -- Fields with one possible value (verificationService, initiateCall, whatsappProvidersPriorityList) not included here
 data ServiceUsageConfigRes = ServiceUsageConfigRes
-  { getDistances :: Maps.MapsService,
-    getEstimatedPickupDistances :: Maybe Maps.MapsService,
-    getRoutes :: Maps.MapsService,
-    getPickupRoutes :: Maybe Maps.MapsService,
-    getTripRoutes :: Maybe Maps.MapsService,
-    snapToRoad :: Maps.MapsService,
-    getPlaceName :: Maps.MapsService,
-    getPlaceDetails :: Maps.MapsService,
-    autoComplete :: Maps.MapsService,
+  { getDistances :: Maps.MapsServiceUsage,
+    getEstimatedPickupDistances :: Maybe Maps.MapsServiceUsage,
+    getRoutes :: Maps.MapsServiceUsage,
+    getPickupRoutes :: Maybe Maps.MapsServiceUsage,
+    getTripRoutes :: Maybe Maps.MapsServiceUsage,
+    snapToRoad :: Maps.MapsServiceUsage,
+    getPlaceName :: Maps.MapsServiceUsage,
+    getPlaceDetails :: Maps.MapsServiceUsage,
+    autoComplete :: Maps.MapsServiceUsage,
+    getDistancesForCancelRide :: Maybe Maps.MapsServiceUsage,
     smsProvidersPriorityList :: [SMS.SmsService],
     snapToRoadProvidersList :: [Maps.MapsService],
     updatedAt :: UTCTime,
@@ -560,19 +560,32 @@ type MapsServiceUsageConfigUpdateAPI =
     :> Post '[JSON] APISuccess
 
 data MapsServiceUsageConfigUpdateReq = MapsServiceUsageConfigUpdateReq
-  { getDistances :: Maybe Maps.MapsService,
-    getEstimatedPickupDistances :: Maybe Maps.MapsService,
-    getRoutes :: Maybe Maps.MapsService,
-    snapToRoad :: Maybe Maps.MapsService,
-    getPlaceName :: Maybe Maps.MapsService,
-    getPlaceDetails :: Maybe Maps.MapsService,
-    autoComplete :: Maybe Maps.MapsService
+  { getDistances :: Maybe Maps.MapsServiceUsage,
+    getEstimatedPickupDistances :: Maybe Maps.MapsServiceUsage,
+    getRoutes :: Maybe Maps.MapsServiceUsage,
+    getPickupRoutes :: Maybe Maps.MapsServiceUsage,
+    getTripRoutes :: Maybe Maps.MapsServiceUsage,
+    snapToRoad :: Maybe Maps.MapsServiceUsage,
+    getPlaceName :: Maybe Maps.MapsServiceUsage,
+    getPlaceDetails :: Maybe Maps.MapsServiceUsage,
+    autoComplete :: Maybe Maps.MapsServiceUsage,
+    getDistancesForCancelRide :: Maybe Maps.MapsServiceUsage,
+    snapToRoadProvidersList :: Maybe [Maps.MapsService]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 mapsServiceUsedInReq :: MapsServiceUsageConfigUpdateReq -> Maps.MapsService -> Bool
-mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g) service = service `elem` catMaybes [a, b, c, d, e, f, g]
+mapsServiceUsedInReq (MapsServiceUsageConfigUpdateReq a b c d e f g h i j snapToRoadProvidersList) service =
+  any (mapsServiceUsedInReqItem service) (catMaybes [a, b, c, d, e, f, g, h, i, j]) || (service `elem` fromMaybe [] snapToRoadProvidersList)
+
+mapsServiceUsedInReqItem :: Maps.MapsService -> Maps.MapsServiceUsage -> Bool
+mapsServiceUsedInReqItem service req =
+  service == req.mapsService || case service of
+    Maps.Google -> isJust req.googlePercentage
+    Maps.OSRM -> isJust req.osrmPercentage
+    Maps.MMI -> isJust req.mmiPercentage
+    Maps.NextBillion -> isJust req.nextBillionPercentage
 
 instance HideSecrets MapsServiceUsageConfigUpdateReq where
   hideSecrets = identity
@@ -580,15 +593,50 @@ instance HideSecrets MapsServiceUsageConfigUpdateReq where
 validateMapsServiceUsageConfigUpdateReq :: Validate MapsServiceUsageConfigUpdateReq
 validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} = do
   let mkMessage field = field <> " value is not allowed"
-  sequenceA_
-    [ validateField "getDistances" getDistances $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.GetDistances),
-      validateField "getEstimatedPickupDistances" getEstimatedPickupDistances $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.GetEstimatedPickupDistances),
-      validateField "getRoutes" getRoutes $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.GetRoutes),
-      validateField "snapToRoad" snapToRoad $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.SnapToRoad),
-      validateField "getPlaceName" getPlaceName $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.GetPlaceName),
-      validateField "getPlaceDetails" getPlaceDetails $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.GetPlaceDetails),
-      validateField "autoComplete" autoComplete $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.AutoComplete)
+  sequenceA_ $
+    [ validateServiceUsageConfig Maps.GetDistances getDistances,
+      validateServiceUsageConfig Maps.GetEstimatedPickupDistances getEstimatedPickupDistances,
+      validateServiceUsageConfig Maps.GetRoutes getRoutes,
+      validateServiceUsageConfig Maps.GetPickupRoutes getPickupRoutes,
+      validateServiceUsageConfig Maps.GetTripRoutes getTripRoutes,
+      validateServiceUsageConfig Maps.SnapToRoad snapToRoad,
+      validateServiceUsageConfig Maps.GetPlaceName getPlaceName,
+      validateServiceUsageConfig Maps.GetPlaceDetails getPlaceDetails,
+      validateServiceUsageConfig Maps.AutoComplete autoComplete,
+      validateServiceUsageConfig Maps.GetDistancesForCancelRide getDistancesForCancelRide,
+      validateField "snapToRoadProvidersList" snapToRoadProvidersList $ InMaybe $ InList $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.SnapToRoad)
     ]
+
+validateServiceUsageConfig :: Maps.MapsServiceUsageMethod -> Maybe Maps.MapsServiceUsage -> Validation
+validateServiceUsageConfig msum field = do
+  let mkNotAllowedMessage f = f <> " value is not allowed"
+  let mkIncorrectSumMessage f = "sum of percentages should be 100 for field: " <> f
+  sequenceA_
+    [ validateField (show msum) field $
+        InMaybe $
+          PredicateFunc mkIncorrectSumMessage incorrectSumPredicate
+            `And` PredicateFunc mkNotAllowedMessage (notAllowedPredicate msum),
+      whenJust field \mapsServiceUsage ->
+        sequenceA_
+          [ validateField "googlePercentage" mapsServiceUsage.googlePercentage $ InMaybe $ InRange @Int 0 100,
+            validateField "osrmPercentage" mapsServiceUsage.osrmPercentage $ InMaybe $ InRange @Int 0 100,
+            validateField "mmiPercentage" mapsServiceUsage.mmiPercentage $ InMaybe $ InRange @Int 0 100,
+            validateField "nextBillionPercentage" mapsServiceUsage.nextBillionPercentage $ InMaybe $ InRange @Int 0 100
+          ]
+    ]
+
+notAllowedPredicate :: Maps.MapsServiceUsageMethod -> Maps.MapsServiceUsage -> Bool
+notAllowedPredicate msum mapsServiceUsage =
+  Maps.mapsMethodProvided msum mapsServiceUsage.mapsService
+    && (isNothing mapsServiceUsage.googlePercentage || Maps.mapsMethodProvided msum Maps.Google)
+    && (isNothing mapsServiceUsage.osrmPercentage || Maps.mapsMethodProvided msum Maps.OSRM)
+    && (isNothing mapsServiceUsage.mmiPercentage || Maps.mapsMethodProvided msum Maps.MMI)
+    && (isNothing mapsServiceUsage.nextBillionPercentage || Maps.mapsMethodProvided msum Maps.NextBillion)
+
+incorrectSumPredicate :: Maps.MapsServiceUsage -> Bool
+incorrectSumPredicate Maps.MapsServiceUsage {..} = do
+  let percentages = catMaybes [googlePercentage, osrmPercentage, mmiPercentage, nextBillionPercentage]
+  null percentages || sum percentages == 100
 
 ---------------------------------------------------------
 -- merchant sms service config usage update -------------

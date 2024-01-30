@@ -117,6 +117,7 @@ mkServiceUsageConfigRes DMSUC.MerchantServiceUsageConfig {..} =
       getPickupRoutes = Just getPickupRoutes,
       getTripRoutes = Just getTripRoutes,
       snapToRoadProvidersList = [],
+      getDistancesForCancelRide = Just getDistancesForCancelRide,
       ..
     }
 
