@@ -20,6 +20,7 @@ module Storage.Queries.FarePolicy
     #-}
 where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import Data.List.NonEmpty
 import Domain.Types.FarePolicy as Domain
 import Kernel.Beam.Functions
@@ -42,13 +43,41 @@ import qualified Storage.Queries.FarePolicy.FarePolicySlabsDetails.FarePolicySla
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FarePolicy -> m (Maybe FarePolicy)
 findById (Id farePolicyId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq farePolicyId]
 
+update' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
+update' farePolicy = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamFP.nightShiftStart $ (.nightShiftStart) <$> farePolicy.nightShiftBounds,
+      Se.Set BeamFP.nightShiftEnd $ (.nightShiftEnd) <$> farePolicy.nightShiftBounds,
+      Se.Set BeamFP.maxAllowedTripDistance $ (.maxAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
+      Se.Set BeamFP.minAllowedTripDistance $ (.minAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
+      Se.Set BeamFP.govtCharges $ farePolicy.govtCharges,
+      Se.Set BeamFP.perMinuteRideExtraTimeCharge $ farePolicy.perMinuteRideExtraTimeCharge,
+      Se.Set BeamFP.description $ farePolicy.description,
+      Se.Set BeamFP.updatedAt now
+    ]
+    [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
+
+  case farePolicy.farePolicyDetails of
+    ProgressiveDetails fPPD ->
+      updateOneWithKV
+        [ Se.Set BeamFPPD.baseFare $ fPPD.baseFare,
+          Se.Set BeamFPPD.baseDistance $ fPPD.baseDistance,
+          Se.Set BeamFPPD.deadKmFare $ fPPD.deadKmFare,
+          Se.Set BeamFPPD.waitingCharge $ (.waitingCharge) <$> fPPD.waitingChargeInfo,
+          Se.Set BeamFPPD.freeWatingTime $ (.freeWaitingTime) <$> fPPD.waitingChargeInfo,
+          Se.Set BeamFPPD.nightShiftCharge $ fPPD.nightShiftCharge
+        ]
+        [Se.Is BeamFPPD.farePolicyId (Se.Eq $ getId farePolicy.id)]
+    SlabsDetails (FPSlabsDetails _slabs) -> pure ()
+
 update :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FarePolicy -> m ()
 update farePolicy = do
   now <- getCurrentTime
   void $
     updateOneWithKV
-      [ Se.Set BeamFP.nightShiftStart $ Domain.nightShiftStart <$> farePolicy.nightShiftBounds,
-        Se.Set BeamFP.nightShiftEnd $ Domain.nightShiftEnd <$> farePolicy.nightShiftBounds,
+      [ Se.Set BeamFP.nightShiftStart $ (.nightShiftStart) <$> farePolicy.nightShiftBounds,
+        Se.Set BeamFP.nightShiftEnd $ (.nightShiftEnd) <$> farePolicy.nightShiftBounds,
         Se.Set BeamFP.updatedAt now
       ]
       [Se.Is BeamFP.id (Se.Eq $ getId farePolicy.id)]
@@ -79,10 +108,10 @@ instance ToTType' BeamFP.FarePolicy FarePolicy where
     BeamFP.FarePolicyT
       { BeamFP.id = getId id,
         BeamFP.serviceCharge = serviceCharge,
-        BeamFP.nightShiftStart = Domain.nightShiftStart <$> nightShiftBounds,
-        BeamFP.nightShiftEnd = Domain.nightShiftEnd <$> nightShiftBounds,
-        BeamFP.maxAllowedTripDistance = Domain.maxAllowedTripDistance <$> allowedTripDistanceBounds,
-        BeamFP.minAllowedTripDistance = Domain.minAllowedTripDistance <$> allowedTripDistanceBounds,
+        BeamFP.nightShiftStart = (.nightShiftStart) <$> nightShiftBounds,
+        BeamFP.nightShiftEnd = (.nightShiftEnd) <$> nightShiftBounds,
+        BeamFP.maxAllowedTripDistance = (.maxAllowedTripDistance) <$> allowedTripDistanceBounds,
+        BeamFP.minAllowedTripDistance = (.minAllowedTripDistance) <$> allowedTripDistanceBounds,
         BeamFP.govtCharges = govtCharges,
         BeamFP.perMinuteRideExtraTimeCharge = perMinuteRideExtraTimeCharge,
         BeamFP.farePolicyType = getFarePolicyType $ FarePolicy {..},
@@ -115,10 +144,10 @@ instance FromTType' BeamFP.FarePolicy Domain.FarePolicy where
             Domain.FarePolicy
               { id = Id id,
                 serviceCharge = serviceCharge,
-                nightShiftBounds = NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
+                nightShiftBounds = DPM.NightShiftBounds <$> nightShiftStart <*> nightShiftEnd,
                 allowedTripDistanceBounds =
                   ((,) <$> minAllowedTripDistance <*> maxAllowedTripDistance) <&> \(minAllowedTripDistance', maxAllowedTripDistance') ->
-                    Domain.AllowedTripDistanceBounds
+                    DPM.AllowedTripDistanceBounds
                       { minAllowedTripDistance = minAllowedTripDistance',
                         maxAllowedTripDistance = maxAllowedTripDistance'
                       },

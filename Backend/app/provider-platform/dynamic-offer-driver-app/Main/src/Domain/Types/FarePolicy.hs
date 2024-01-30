@@ -16,6 +16,7 @@
 
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import Domain.Types.Common
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
@@ -31,8 +32,8 @@ data FarePolicyD (s :: UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
-    nightShiftBounds :: Maybe NightShiftBounds,
-    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    nightShiftBounds :: Maybe DPM.NightShiftBounds,
+    allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     farePolicyDetails :: FarePolicyDetailsD s,
@@ -57,18 +58,6 @@ instance FromJSON (FarePolicyDetailsD 'Unsafe)
 
 instance ToJSON (FarePolicyDetailsD 'Unsafe)
 
-data NightShiftBounds = NightShiftBounds
-  { nightShiftStart :: TimeOfDay,
-    nightShiftEnd :: TimeOfDay
-  }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
-
-data AllowedTripDistanceBounds = AllowedTripDistanceBounds
-  { maxAllowedTripDistance :: Meters,
-    minAllowedTripDistance :: Meters
-  }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
-
 data FarePolicyType = Progressive | Slabs
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -86,8 +75,8 @@ data FullFarePolicy = FullFarePolicy
     vehicleVariant :: Variant,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
-    nightShiftBounds :: Maybe NightShiftBounds,
-    allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
+    nightShiftBounds :: Maybe DPM.NightShiftBounds,
+    allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
     farePolicyDetails :: FarePolicyDetails,

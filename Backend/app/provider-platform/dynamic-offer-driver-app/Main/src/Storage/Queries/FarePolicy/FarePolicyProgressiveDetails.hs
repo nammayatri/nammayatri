@@ -15,9 +15,9 @@
 
 module Storage.Queries.FarePolicy.FarePolicyProgressiveDetails where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Types.FarePolicy as Domain
-import Domain.Types.FarePolicy.Common as Common
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -44,7 +44,7 @@ instance FromTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyP
               deadKmFare = deadKmFare,
               waitingChargeInfo =
                 ((,) <$> waitingCharge <*> freeWatingTime) <&> \(waitingCharge', freeWaitingTime') ->
-                  Domain.WaitingChargeInfo
+                  DPM.WaitingChargeInfo
                     { waitingCharge = waitingCharge',
                       freeWaitingTime = freeWaitingTime'
                     },
@@ -58,8 +58,8 @@ instance ToTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyPro
       { farePolicyId = farePolicyId,
         baseDistance = baseDistance,
         baseFare = baseFare,
-        freeWatingTime = freeWaitingTime <$> waitingChargeInfo,
+        freeWatingTime = (.freeWaitingTime) <$> waitingChargeInfo,
         deadKmFare = deadKmFare,
-        waitingCharge = Common.waitingCharge <$> waitingChargeInfo,
+        waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge
       }
