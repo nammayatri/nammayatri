@@ -33,6 +33,11 @@ pipeline {
                         }
                     }
                     stage ('Load Test') {
+                        when {
+                            allOf {
+                                expression { 'x86_64-linux' == env.SYSTEM }
+                            }
+                        }
                         steps {
                             sh '''
                                 nix run .#load-test-prepare

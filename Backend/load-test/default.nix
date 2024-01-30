@@ -43,6 +43,27 @@
         '';
 
         settings.processes = {
+          # Temporarily disable
+          driver-offer-allocator-exe.disabled = true;
+          dynamic-offer-driver-drainer-exe.disabled = true;
+          rider-app-drainer-exe.disabled = true;
+          rider-app-scheduler-exe.disabled = true;
+          image-api-helper-exe.disabled = true;
+          kafka-consumers-exe.disabled = true;
+          mock-fcm-exe.disabled = false;
+          mock-google-exe.disabled = false;
+          mock-idfy-exe.disabled = false;
+          mock-sms-exe.disabled = false;
+          provider-dashboard-exe.disabled = true;
+          producer-exe.disabled = true;
+          public-transport-rider-platform-exe.disabled = true;
+          public-transport-search-consumer-exe.disabled = true;
+          rider-app-exe.disabled = false;
+          dynamic-offer-driver-app-exe.disabled = false;
+          rider-dashboard-exe.disabled = true;
+          search-result-aggregator-exe.disabled = true;
+          special-zone-exe.disabled = true;
+
           load-test-init = {
             imports = [ common ];
             command = "echo Waiting for load-test dependencies to start";
