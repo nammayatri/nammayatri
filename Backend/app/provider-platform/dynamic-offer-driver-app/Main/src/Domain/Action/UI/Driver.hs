@@ -887,6 +887,7 @@ respondQuote (driverId, _, merchantOpCityId) req = do
                   ..
                 }
           driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId fareParams
+          void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
           triggerQuoteEvent QuoteEventData {quote = driverQuote}
           void $ QDrQt.create driverQuote
           void $ QSRD.updateDriverResponse sReqFD.id req.response

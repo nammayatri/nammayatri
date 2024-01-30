@@ -201,14 +201,17 @@ handler merchant sReq = do
                     nightShiftCharge = Nothing,
                     customerCancellationDues = customerCancellationDue
                   }
-            buildSpecialZoneQuote
-              searchRequestSpecialZone
-              fareParams
-              merchant.id
-              result.distance
-              farePolicy.vehicleVariant
-              result.duration
-              allFarePoliciesProduct.specialLocationTag
+            quote <-
+              buildSpecialZoneQuote
+                searchRequestSpecialZone
+                fareParams
+                merchant.id
+                result.distance
+                farePolicy.vehicleVariant
+                result.duration
+                allFarePoliciesProduct.specialLocationTag
+            void $ cacheFarePolicyByQuoteId quote.id.getId farePolicy
+            return quote
         for_ listOfSpecialZoneQuotes QQuoteSpecialZone.create
         return (Just (mkQuoteInfo fromLocation toLocation now <$> listOfSpecialZoneQuotes), Nothing)
       DFareProduct.NORMAL -> buildEstimates farePolicies result fromLocation toLocation allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area routeInfo merchantOpCityId customerCancellationDue

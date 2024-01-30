@@ -75,12 +75,7 @@ data FarePolicyType = Progressive | Slabs
 
 $(mkBeamInstancesForEnum ''FarePolicyType)
 
-getFarePolicyType :: FarePolicy -> FarePolicyType
-getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
-  ProgressiveDetails _ -> Progressive
-  SlabsDetails _ -> Slabs
-
-data FullFarePolicy = FullFarePolicy
+data FullFarePolicyD (s :: UsageSafety) = FullFarePolicy
   { id :: Id FarePolicy,
     merchantId :: Id Merchant,
     vehicleVariant :: Variant,
@@ -90,17 +85,28 @@ data FullFarePolicy = FullFarePolicy
     allowedTripDistanceBounds :: Maybe AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
-    farePolicyDetails :: FarePolicyDetails,
+    farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 
-farePolicyToFullFarePolicy :: Id Merchant -> Variant -> FarePolicy -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId vehicleVariant FarePolicy {..} =
-  FullFarePolicy {..}
+type FullFarePolicy = FullFarePolicyD 'Safe
+
+instance FromJSON (FullFarePolicyD 'Unsafe)
+
+instance ToJSON (FullFarePolicyD 'Unsafe)
 
 type FullDriverExtraFeeBounds = (Id FarePolicy, DriverExtraFeeBounds)
 
 type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)
+
+getFarePolicyType :: FarePolicy -> FarePolicyType
+getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
+  ProgressiveDetails _ -> Progressive
+  SlabsDetails _ -> Slabs
+
+farePolicyToFullFarePolicy :: Id Merchant -> Variant -> FarePolicy -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId vehicleVariant FarePolicy {..} =
+  FullFarePolicy {..}
