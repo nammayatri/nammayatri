@@ -38,7 +38,6 @@ instance defaultApiErrorHandler :: ApiErrorHandler CustomerDefaultErrorHandler G
     case clientErr of
       AuthenticationError -> do
         deleteValueFromLocalStore REGISTERATION_TOKEN
-        deleteValueFromLocalStore REGISTRATION_APPROVED
         lift $ lift $ liftFlow $ stopChatListenerService
         pure $ factoryResetApp ""
       _ -> pure unit
