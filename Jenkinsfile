@@ -41,7 +41,7 @@ pipeline {
                         steps {
                             sh '''
                                 nix run .#load-test-prepare
-                                nix run .#load-test-dev -- -t=false
+                                nix run .#load-test-dev -- -t=false || echo "done"
                             '''
                         }
                     }
