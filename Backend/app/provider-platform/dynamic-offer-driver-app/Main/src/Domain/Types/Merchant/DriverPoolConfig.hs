@@ -111,7 +111,7 @@ jsonToDriverPoolConfig v =
     <*> ((KP.read :: (String -> [BatchSplitByPickupDistance])) <$> (v .: DAK.fromText (Text.pack "distanceBasedBatchSplit")))
     <*> ((KP.read :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "maxNumberOfBatches")))
     <*> ((KP.read :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "maxParallelSearchRequests")))
-    <*> ((KP.read :: (String -> PoolSortingType)) <$> v .: DAK.fromText (Text.pack "poolSortingType")) -- Think about something
+    <*> ((KP.read :: (String -> PoolSortingType)) <$> v .: DAK.fromText (Text.pack "poolSortingType"))
     <*> (Seconds <$> KP.read <$> (v .: DAK.fromText (Text.pack "singleBatchProcessTime")))
     <*> (Meters <$> KP.read <$> (v .: DAK.fromText (Text.pack "tripDistance")))
     <*> (Meters <$> KP.read <$> (v .: DAK.fromText (Text.pack "radiusShrinkValueForDriversOnRide")))
@@ -119,7 +119,7 @@ jsonToDriverPoolConfig v =
     <*> (Seconds <$> KP.read <$> (v .: DAK.fromText (Text.pack "driverToDestinationDuration")))
     <*> (pure (posixSecondsToUTCTime 0))
     <*> (pure (posixSecondsToUTCTime 0))
-    <*> (pure Nothing) -- Think about something
+    <*> ((KP.readMaybe :: (String -> Maybe DVeh.Variant)) <$> (v .: DAK.fromText (Text.pack "vehicleVariant")))
 
 instance FromJSON (DriverPoolConfigD 'Unsafe)
 

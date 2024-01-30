@@ -33,16 +33,6 @@ pipeline {
                         }
                     }
                     stage ('Docker image') {
-                        when {
-                            allOf {
-                                // TODO: Build for aarch64-linux
-                                // Requires https://github.com/juspay/jenkins-nix-ci/issues/32
-                                expression { 'x86_64-linux' == env.SYSTEM }
-                                anyOf {
-                                    branch 'main'; branch 'prodHotPush-Common'; branch 'prodHotPush-BAP'; branch 'prodHotPush-BPP'; branch 'prodHotPush-Schedulers';
-                                }
-                            }
-                        }
                         steps {
                             dockerPush "dockerImage", "ghcr.io"
                         }
