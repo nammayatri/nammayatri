@@ -26,14 +26,19 @@ import qualified Domain.Types.FRFSTicketBooking as DBooking
 import Kernel.Prelude
 import Kernel.Utils.Common
 
+type RiderName = Text
+
+type RiderNumber = Text
+
 buildConfirmReq ::
   (MonadFlow m) =>
+  (Maybe RiderName, Maybe RiderNumber) ->
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
   Text ->
   Utils.BppData ->
   m (Spec.ConfirmReq)
-buildConfirmReq booking bapConfig txnId bppData = do
+buildConfirmReq rider booking bapConfig txnId bppData = do
   let transactionId = booking.searchId.getId
       messageId = booking.id.getId
 
@@ -46,19 +51,19 @@ buildConfirmReq booking bapConfig txnId bppData = do
   pure $
     Spec.ConfirmReq
       { confirmReqContext = context,
-        confirmReqMessage = tfConfirmMessage booking txnId mPaymentParams mSettlementType
+        confirmReqMessage = tfConfirmMessage rider booking txnId mPaymentParams mSettlementType
       }
 
-tfConfirmMessage :: DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Spec.ConfirmReqMessage
-tfConfirmMessage booking txnId mPaymentParams mSettlementType =
+tfConfirmMessage :: (Maybe RiderName, Maybe RiderNumber) -> DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Spec.ConfirmReqMessage
+tfConfirmMessage rider booking txnId mPaymentParams mSettlementType =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder booking txnId mPaymentParams mSettlementType
+    { confirmReqMessageOrder = tfOrder rider booking txnId mPaymentParams mSettlementType
     }
 
-tfOrder :: DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Spec.Order
-tfOrder booking txnId mPaymentParams mSettlementType =
+tfOrder :: (Maybe RiderName, Maybe RiderNumber) -> DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Spec.Order
+tfOrder rider booking txnId mPaymentParams mSettlementType =
   Spec.Order
-    { orderBilling = tfBilling booking,
+    { orderBilling = tfBilling rider,
       orderCancellationTerms = Nothing,
       orderCreatedAt = Nothing,
       orderFulfillments = Nothing,
@@ -72,13 +77,13 @@ tfOrder booking txnId mPaymentParams mSettlementType =
       orderUpdatedAt = Nothing
     }
 
-tfBilling :: DBooking.FRFSTicketBooking -> Maybe Spec.Billing
-tfBilling _quote =
+tfBilling :: (Maybe RiderName, Maybe RiderNumber) -> Maybe Spec.Billing
+tfBilling (mRiderName, mRiderNumber) =
   Just $
     Spec.Billing
       { billingEmail = Nothing,
-        billingName = Just "N/A", -- TODO: fix billing details
-        billingPhone = Nothing
+        billingName = mRiderName,
+        billingPhone = mRiderNumber
       }
 
 tfItems :: DBooking.FRFSTicketBooking -> Maybe [Spec.Item]
@@ -112,7 +117,7 @@ tfPayments :: DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Ma
 tfPayments booking txnId mPaymentParams mSettlementType =
   Just $
     singleton $
-      Utils.mkPayment Spec.NOT_PAID (Utils.encodeToText' booking.price) (Just txnId) mPaymentParams mSettlementType
+      Utils.mkPayment Spec.PAID (Just $ encodeToText booking.price) (Just txnId) mPaymentParams mSettlementType
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =
