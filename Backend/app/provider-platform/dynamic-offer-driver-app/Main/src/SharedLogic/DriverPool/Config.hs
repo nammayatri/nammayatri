@@ -24,15 +24,18 @@ import Data.Aeson as DA
 -- import qualified Data.Text.Encoding as DTE
 import Data.Aeson.Types as DAT
 import Data.HashMap.Strict as HashMap
-import Data.Text as Text
+import Data.Text as Text hiding (find)
 import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import Kernel.Types.Common
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
+import Kernel.Utils.Error
 import Kernel.Utils.Logging
+import qualified Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 
 data CancellationScoreRelatedConfig = CancellationScoreRelatedConfig
   { popupDelayToAddAsPenalty :: Maybe Seconds,
@@ -56,11 +59,33 @@ getDriverPoolConfig merchantOpCityId mbvt dist = do
     Right contextValue' -> do
       logDebug $ "the fetched context value is " <> show contextValue'
       --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
-      let valueHere = buildDpcType contextValue'
+      valueHere <- buildDpcType contextValue'
       logDebug $ "the build context value is1 " <> show valueHere
       return valueHere
   where
     buildDpcType cv =
       case (DAT.parse jsonToDriverPoolConfig cv) of
-        Success dpc -> dpc
-        Error err -> error $ (pack "error in parsing the context value ") <> (pack err)
+        Success dpc -> pure $ dpc
+        Error err -> do
+          logError $ (pack "error in parsing the context value ") <> (pack err)
+
+          configs <- CDP.findAllByMerchantOpCityId merchantOpCityId
+          case mbvt of
+            Nothing -> getDefaultDriverPoolConfig configs dist
+            (Just vehicle) -> do
+              let mbApplicableConfig = find (filterByDistAndDveh (Just vehicle) dist) configs
+              case configs of
+                [] -> throwError $ InvalidRequest "DriverPoolConfig not found"
+                _ ->
+                  case mbApplicableConfig of
+                    Just applicableConfig -> return applicableConfig
+                    Nothing -> getDefaultDriverPoolConfig configs dist
+
+filterByDistAndDveh :: Maybe Variant.Variant -> Meters -> DriverPoolConfig -> Bool
+filterByDistAndDveh mbVehicle_ dist cfg =
+  dist >= cfg.tripDistance && cfg.vehicleVariant == mbVehicle_
+
+getDefaultDriverPoolConfig :: (EsqDBFlow m r) => [DriverPoolConfig] -> Meters -> m DriverPoolConfig
+getDefaultDriverPoolConfig configs dist = do
+  find (filterByDistAndDveh Nothing dist) configs
+    & fromMaybeM (InvalidRequest "DriverPool default config not found")
