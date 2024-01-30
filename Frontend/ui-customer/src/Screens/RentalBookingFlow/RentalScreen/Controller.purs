@@ -72,6 +72,7 @@ data Action =
 data ScreenOutput = NoScreen
                   | GoToHomeScreen
                   | SearchLocationForRentals RentalScreenState String
+                  | GoToRideScheduledScreen RentalScreenState
                   
 data FareBreakupRowType = BookingTime | BookingDistance | BaseFare | TollFee
 
@@ -90,7 +91,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state =
   case state.data.currentStage of
     RENTAL_SELECT_PACKAGE -> continue state { data { currentStage = RENTAL_SELECT_VARIANT }}
     RENTAL_SELECT_VARIANT -> continue state { data { currentStage = RENTAL_CONFIRMATION }}
-    RENTAL_CONFIRMATION -> exit NoScreen
+    RENTAL_CONFIRMATION -> exit $ GoToRideScheduledScreen state
 
 eval (DurationIncrementDecrementAC (IncrementDecrementModelController.OnIncrement)) state = 
   continue $ incrementDecrementDuration true state

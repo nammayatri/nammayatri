@@ -90,6 +90,7 @@ sourceToDestinationConfig state =
           , ellipsize = true
           , maxLines = 1
           , margin = MarginLeft 12
+          , isClickable = true
           }
       , distanceConfig { distanceVisibility = GONE }
       , separatorMargin = 24

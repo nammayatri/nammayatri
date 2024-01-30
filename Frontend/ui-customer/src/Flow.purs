@@ -137,6 +137,7 @@ import Screens.SearchLocationScreen.Controller as SearchLocationController
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
 import Screens.RentalBookingFlow.RentalScreen.Controller as RentalScreenController
 import Screens (ScreenName(..), getScreen) as Screen
+import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -2910,6 +2911,7 @@ rideScheduledFlow = do
   action <- lift $ lift $ runScreen $ UI.rideScheduledScreen currentState.rideScheduledScreen 
   case action of
     RideScheduledScreenOutput.GoToHomeScreen -> homeScreenFlow
+    RideScheduledScreenOutput.GoToSearchLocationScreen _ -> searchLocationFlow
     _ -> pure unit
     
 
@@ -3387,6 +3389,19 @@ rentalScreenFlow = do
             (\_ -> SearchLocationScreenData.initData{data{locationList = globalState.globalProps.cachedSearches, fromScreen = (Screen.getScreen Screen.RENTAL_SCREEN), srcLoc = Just updatedState.data.pickUpLoc , destLoc = updatedState.data.dropLoc}
                                                      , props {focussedTextField = Just locToBeUpdated'}})
       searchLocationFlow
+    RentalScreenController.GoToRideScheduledScreen updatedState -> do
+      modifyScreenState $ RideScheduledScreenStateType 
+        (\_ -> RideScheduledScreenData.initData {
+            primaryButtonText = getString STR.GO_HOME
+          , source = updatedState.data.pickUpLoc.address
+          , destination = maybe (Nothing) (\dropLoc -> Just dropLoc.address) updatedState.data.dropLoc
+          , startTime = ""
+          , finalPrice = ""
+          , baseDuration = "" 
+          , baseDistance = ""
+          , driverAllocationTime = "15"
+        })
+      rideScheduledFlow
     _ -> pure unit
     
 enterRideSearchFLow = do
