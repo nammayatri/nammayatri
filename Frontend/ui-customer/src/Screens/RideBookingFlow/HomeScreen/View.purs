@@ -112,6 +112,7 @@ import Mobility.Prelude
 import Timers
 import PrestoDOM.Core
 import Locale.Utils
+import Common.Types.App (RideType(..)) as RideType
 
 screen :: HomeScreenState -> Screen Action HomeScreenState ScreenOutput
 screen initialState =
@@ -4298,7 +4299,7 @@ endOTPView push state =
   , clickable true
   , accessibility DISABLE
   , shadow $ Shadow 0.1 0.1 10.0 24.0 Color.greyBackDarkColor 0.5
-  , visibility $ boolToVisibility $ state.props.currentStage == RideStarted
+  , visibility $ boolToVisibility $ state.data.rideType == RideType.RENTAL_RIDE && state.props.currentStage == RideStarted
   , margin $ MarginRight 4
   ]
   [ textView $

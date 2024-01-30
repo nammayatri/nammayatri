@@ -917,6 +917,8 @@ type HomeScreenStateProps =
   , enableChatWidget :: Boolean
   , focussedBottomIcon :: BottomNavBarIcon
   , showEndOTP :: Boolean
+  , rideDurationTimer :: String
+  , rideDurationTimerId :: String
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

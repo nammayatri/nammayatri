@@ -284,6 +284,8 @@ initData = {
     , autoScroll : true
     , enableChatWidget : false
     , showEndOTP : false
+    , rideDurationTimer : ""
+    , rideDurationTimerId : ""
     }
 }
 

@@ -20,6 +20,7 @@ import Data.Maybe(Maybe(..))
 import PrestoDOM (Margin(..))
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
+import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 
 initData :: RentalScreenState
 initData = 
