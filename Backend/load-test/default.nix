@@ -18,6 +18,14 @@
       };
     in
     {
+      packages.load-test-prepare = pkgs.writeShellApplication {
+        name = "load-test-prepare";
+        runtimeInputs = [ ];
+        text = ''
+          cp Backend/dhall-configs/dev/secrets/top-secret-template.dhall Backend/dhall-configs/dev/secrets/top-secret.dhall
+        '';
+      };
+
       process-compose.load-test-dev = {
         imports = [
           (import ../nix/services/nammayatri.nix { inherit (perSystem) config self' inputs'; inherit inputs; })

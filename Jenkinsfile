@@ -32,6 +32,14 @@ pipeline {
                             nixCI system: env.SYSTEM
                         }
                     }
+                    stage ('Load Test') {
+                        steps {
+                            sh '''
+                                nix run .#load-test-prepare
+                                nix run .#load-test-dev -- -t=false
+                            '''
+                        }
+                    }
                     stage ('Docker image') {
                         when {
                             allOf {
