@@ -38,10 +38,10 @@ in
             # Question: we would expect master and replica to be using same `package`?
             runtimeInputs = [ postgres."${name}".package pkgs.coreutils ];
             text = ''
-              MASTER_DATA_DIR=$(readlink -f ${postgres.${name}.dataDir})
-              REPLICA_DATA_DIR=$(readlink -f ${postgres."${name}-replica".dataDir})
+              MASTER_SOCKET_DIR=$(readlink -f "${postgres.${name}.socketDir}")
+              REPLICA_DATA_DIR=$(readlink -f "${postgres."${name}-replica".dataDir}")
               if [ ! -d "$REPLICA_DATA_DIR" ]; then
-                pg_basebackup -h "$MASTER_DATA_DIR" -U repl_user --checkpoint=fast -D "$REPLICA_DATA_DIR"  -R --slot=some_name  -C --port=${builtins.toString postgres.${name}.port}
+                pg_basebackup -h "$MASTER_SOCKET_DIR" -U repl_user --checkpoint=fast -D "$REPLICA_DATA_DIR"  -R --slot=some_name  -C --port=${builtins.toString postgres.${name}.port}
               else
                 echo "Replica datadir already exists, not doing anything."
               fi
