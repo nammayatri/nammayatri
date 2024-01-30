@@ -169,7 +169,7 @@ mkPaymentTags :: Maybe Text -> Maybe Amount -> [Spec.TagGroup]
 mkPaymentTags mSettlementType mAmount =
   catMaybes
     [ Just mkBuyerFinderFeeTagGroup,
-      Just $ mkSettlementTagGroup mAmount,
+      Just $ mkSettlementTagGroup mAmount mSettlementType,
       mkSettlementDetailsTagGroup mSettlementType
     ]
 
@@ -199,8 +199,8 @@ mkBuyerFinderFeeTagGroup =
           tagValue = Just "0"
         }
 
-mkSettlementTagGroup :: Maybe Text -> Spec.TagGroup
-mkSettlementTagGroup mAmount =
+mkSettlementTagGroup :: Maybe Text -> Maybe Text -> Spec.TagGroup
+mkSettlementTagGroup mAmount mSettlementType =
   Spec.TagGroup
     { tagGroupDescriptor =
         Just $
@@ -225,6 +225,17 @@ mkSettlementTagGroup mAmount =
                         descriptorName = Nothing
                       },
                 tagValue = Just amount
+              },
+          mSettlementType <&> \settlementType ->
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "SETTLEMENT_TYPE",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just settlementType
               },
           Just $
             Spec.Tag
