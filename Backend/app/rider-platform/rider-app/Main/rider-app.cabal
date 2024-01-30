@@ -29,6 +29,7 @@ library
   exposed-modules:
       API
       API.Beckn
+      API.Beckn.FRFS.OnCancel
       API.Beckn.FRFS.OnConfirm
       API.Beckn.FRFS.OnInit
       API.Beckn.FRFS.OnSearch

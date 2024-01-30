@@ -65,6 +65,7 @@ tfOrder :: (Maybe RiderName, Maybe RiderNumber) -> DTBooking.FRFSTicketBooking -
 tfOrder rider tBooking mPaymentParams mSettlementType =
   Spec.Order
     { orderBilling = tfBilling rider,
+      orderCancellation = Nothing,
       orderCancellationTerms = Nothing,
       orderCreatedAt = Nothing,
       orderFulfillments = Nothing,

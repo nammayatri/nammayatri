@@ -11,6 +11,7 @@ module BecknV2.FRFS.Types
     Billing (..),
     CancelReq (..),
     CancelReqMessage (..),
+    Cancellation (..),
     CancellationTerm (..),
     Catalog (..),
     Category (..),
@@ -33,6 +34,7 @@ module BecknV2.FRFS.Types
     ItemQuantitySelected (..),
     Location (..),
     MediaFile (..),
+    OnCancelReq (..),
     OnConfirmReq (..),
     OnInitReq (..),
     OnSearchReq (..),
@@ -271,6 +273,33 @@ optionsCancelReqMessage =
       [ ("cancelReqMessageCancellationReasonId", "cancellation_reason_id"),
         ("cancelReqMessageDescriptor", "descriptor"),
         ("cancelReqMessageOrderId", "order_id")
+      ]
+
+-- | Describes a cancellation event
+data Cancellation = Cancellation
+  { -- |
+    cancellationCancelledBy :: Maybe Text,
+    -- | Date-time when the order was cancelled by the buyer
+    cancellationTime :: Maybe UTCTime
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON Cancellation where
+  parseJSON = genericParseJSON optionsCancellation
+
+instance ToJSON Cancellation where
+  toJSON = genericToJSON optionsCancellation
+
+optionsCancellation :: Options
+optionsCancellation =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("cancellationCancelledBy", "cancelled_by"),
+        ("cancellationTime", "time")
       ]
 
 -- | Describes the cancellation terms of an item or an order. This can be referenced at an item or order level. Item-level cancellation terms can override the terms at the order level.
@@ -921,6 +950,37 @@ optionsMediaFile =
       ]
 
 -- |
+data OnCancelReq = OnCancelReq
+  { -- |
+    onCancelReqContext :: Context,
+    -- |
+    onCancelReqError :: Maybe Error,
+    -- |
+    onCancelReqMessage :: Maybe ConfirmReqMessage
+  }
+  deriving (Show, Eq, Generic, Data)
+
+instance FromJSON OnCancelReq where
+  parseJSON = genericParseJSON optionsOnCancelReq
+
+instance ToJSON OnCancelReq where
+  toJSON = genericToJSON optionsOnCancelReq
+
+optionsOnCancelReq :: Options
+optionsOnCancelReq =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("onCancelReqContext", "context"),
+        ("onCancelReqError", "error"),
+        ("onCancelReqMessage", "message")
+      ]
+
+-- |
+-- |
 data OnConfirmReq = OnConfirmReq
   { -- |
     onConfirmReqContext :: Context,
@@ -1096,6 +1156,8 @@ optionsOption =
 data Order = Order
   { -- |
     orderBilling :: Maybe Billing,
+    -- |
+    orderCancellation :: Maybe Cancellation,
     -- | Cancellation terms of this item
     orderCancellationTerms :: Maybe [CancellationTerm],
     -- | The date-time of creation of this order
@@ -1136,6 +1198,7 @@ optionsOrder =
   where
     table =
       [ ("orderBilling", "billing"),
+        ("orderCancellation", "cancellation"),
         ("orderCancellationTerms", "cancellation_terms"),
         ("orderCreatedAt", "created_at"),
         ("orderFulfillments", "fulfillments"),
