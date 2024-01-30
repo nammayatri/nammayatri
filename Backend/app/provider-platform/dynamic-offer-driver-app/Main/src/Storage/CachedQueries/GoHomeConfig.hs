@@ -24,10 +24,14 @@ import Data.Text
 import Domain.Types.GoHomeConfig
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
+import qualified Storage.Queries.GoHomeConfig as Queries
+import Tools.Error (GenericError (..))
 
 findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
 findByMerchantOpCityId id = do
@@ -39,11 +43,22 @@ findByMerchantOpCityId id = do
     Right contextValue' -> do
       logDebug $ "the fetched context value is :" <> show contextValue'
       --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
-      let valueHere = buildGhcType contextValue'
+      valueHere <- buildGhcType contextValue'
       logDebug $ "the build context value is : " <> show valueHere
       return valueHere
   where
     buildGhcType cv =
       case (DAT.parse jsonToGoHomeConfig cv) of
-        Success ghc -> ghc
-        Error err -> error $ (pack "error in parsing the context value for GoHomeConfig : ") <> (pack err)
+        Success ghc -> pure ghc
+        Error err -> do
+          logError $ (pack "error in parsing the context value for GoHomeConfig : ") <> (pack err)
+          expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+          Hedis.safeGet (makeGoHomeKey id) >>= \case
+            Just cfg -> return cfg
+            Nothing -> do
+              cfg <- fromMaybeM (InternalError ("Could not find Go-To config corresponding to the stated merchant id" <> show id)) =<< Queries.findByMerchantOpCityId id
+              Hedis.setExp (makeGoHomeKey id) cfg expTime
+              return cfg
+
+makeGoHomeKey :: Id MerchantOperatingCity -> Text
+makeGoHomeKey id = "driver-offer:CachedQueries:GoHomeConfig:MerchantOpCityId-" <> id.getId
