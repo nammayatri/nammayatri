@@ -154,7 +154,8 @@ type MapConfig = {
 type WaitTimeConfig = {
   enableWaitTime :: Boolean,
   thresholdDist :: Number,
-  thresholdTime :: Int
+  thresholdTime :: Int,
+  routeDistance :: Int
 }
 
 type FlowConfig = {
