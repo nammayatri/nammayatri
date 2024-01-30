@@ -581,13 +581,13 @@ validateMapsServiceUsageConfigUpdateReq :: Validate MapsServiceUsageConfigUpdate
 validateMapsServiceUsageConfigUpdateReq MapsServiceUsageConfigUpdateReq {..} = do
   let mkMessage field = field <> " value is not allowed"
   sequenceA_
-    [ validateField "getDistances" getDistances $ InMaybe $ PredicateFunc mkMessage Maps.getDistancesProvided,
-      validateField "getEstimatedPickupDistances" getEstimatedPickupDistances $ InMaybe $ PredicateFunc mkMessage Maps.getDistancesProvided,
-      validateField "getRoutes" getRoutes $ InMaybe $ PredicateFunc mkMessage Maps.getRoutesProvided,
-      validateField "snapToRoad" snapToRoad $ InMaybe $ PredicateFunc mkMessage Maps.snapToRoadProvided,
-      validateField "getPlaceName" getPlaceName $ InMaybe $ PredicateFunc mkMessage Maps.getPlaceNameProvided,
-      validateField "getPlaceDetails" getPlaceDetails $ InMaybe $ PredicateFunc mkMessage Maps.getPlaceDetailsProvided,
-      validateField "autoComplete" autoComplete $ InMaybe $ PredicateFunc mkMessage Maps.autoCompleteProvided
+    [ validateField "getDistances" getDistances $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.GetDistances),
+      validateField "getEstimatedPickupDistances" getEstimatedPickupDistances $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.GetEstimatedPickupDistances),
+      validateField "getRoutes" getRoutes $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.GetRoutes),
+      validateField "snapToRoad" snapToRoad $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.SnapToRoad),
+      validateField "getPlaceName" getPlaceName $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.GetPlaceName),
+      validateField "getPlaceDetails" getPlaceDetails $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.GetPlaceDetails),
+      validateField "autoComplete" autoComplete $ InMaybe $ PredicateFunc mkMessage (Maps.mapsMethodProvided Maps.AutoComplete)
     ]
 
 ---------------------------------------------------------

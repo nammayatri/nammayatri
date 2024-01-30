@@ -2,10 +2,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.PickedService where
+module Storage.Queries.PickedServices where
 
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.PickedService
+import qualified Domain.Types.PickedServices
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
@@ -15,15 +15,15 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
-import qualified Storage.Beam.PickedService as Beam
+import qualified Storage.Beam.PickedServices as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.PickedService.PickedService -> m ()
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.Types.PickedServices.PickedServices -> m ()
 create = createWithKV
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.PickedService.PickedService] -> m ()
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Domain.Types.PickedServices.PickedServices] -> m ()
 createMany = traverse_ createWithKV
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.PickedService.PickedService -> m (Maybe (Domain.Types.PickedService.PickedService))
+findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.PickedServices.PickedServices -> m (Maybe (Domain.Types.PickedServices.PickedServices))
 findByPrimaryKey (Kernel.Types.Id.Id searchRequestId) = do
   findOneWithKV
     [ Se.And
@@ -31,8 +31,8 @@ findByPrimaryKey (Kernel.Types.Id.Id searchRequestId) = do
         ]
     ]
 
-updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.PickedService.PickedService -> m ()
-updateByPrimaryKey Domain.Types.PickedService.PickedService {..} = do
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.PickedServices.PickedServices -> m ()
+updateByPrimaryKey Domain.Types.PickedServices.PickedServices {..} = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.autoComplete $ autoComplete,
@@ -53,11 +53,11 @@ updateByPrimaryKey Domain.Types.PickedService.PickedService {..} = do
         ]
     ]
 
-instance FromTType' Beam.PickedService Domain.Types.PickedService.PickedService where
-  fromTType' Beam.PickedServiceT {..} = do
+instance FromTType' Beam.PickedServices Domain.Types.PickedServices.PickedServices where
+  fromTType' Beam.PickedServicesT {..} = do
     pure $
       Just
-        Domain.Types.PickedService.PickedService
+        Domain.Types.PickedServices.PickedServices
           { autoComplete = autoComplete,
             getDistances = getDistances,
             getDistancesForCancelRide = getDistancesForCancelRide,
@@ -73,9 +73,9 @@ instance FromTType' Beam.PickedService Domain.Types.PickedService.PickedService 
             updatedAt = updatedAt
           }
 
-instance ToTType' Beam.PickedService Domain.Types.PickedService.PickedService where
-  toTType' Domain.Types.PickedService.PickedService {..} = do
-    Beam.PickedServiceT
+instance ToTType' Beam.PickedServices Domain.Types.PickedServices.PickedServices where
+  toTType' Domain.Types.PickedServices.PickedServices {..} = do
+    Beam.PickedServicesT
       { Beam.autoComplete = autoComplete,
         Beam.getDistances = getDistances,
         Beam.getDistancesForCancelRide = getDistancesForCancelRide,

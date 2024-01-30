@@ -24,6 +24,7 @@ module Tools.Maps
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
+    runWithServiceConfig1,
   )
 where
 
@@ -32,6 +33,8 @@ import qualified Domain.Types.Merchant.MerchantServiceConfig as DMSC
 import Domain.Types.Merchant.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import Domain.Types.Person (Person)
+import qualified Domain.Types.PickedServices as DPickedServices
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.External.Maps as Reexport hiding
   ( autoComplete,
     getDistance,
@@ -50,6 +53,7 @@ import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as QMSUC
 import qualified Storage.CachedQueries.Person as CQP
+import qualified Storage.Queries.PickedServices as QPickedServices
 import Tools.Error
 
 getDistance ::
@@ -138,7 +142,43 @@ runWithServiceConfig func getCfg merchantId merchantOperatingCityId req = do
     DMSC.MapsServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"
 
+runWithServiceConfig1 ::
+  ServiceFlow m r =>
+  (MapsServiceConfig -> req -> m resp) ->
+  Maybe (Id DSR.SearchRequest) ->
+  (DPickedServices.PickedServices -> MapsService) ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  req ->
+  m resp
+runWithServiceConfig1 func mbSearchRequestId getCfg merchantId merchantOperatingCityId req = do
+  pickedService <- case mbSearchRequestId of
+    Nothing -> do
+      merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      pickService merchantConfig
+    Just searchRequestId -> do
+      mbPickedServices <- QPickedServices.findByPrimaryKey (cast @DSR.SearchRequest @DPickedServices.PickedServices searchRequestId)
+      case mbPickedServices of
+        Just pickedServices -> pure $ getCfg pickedServices
+        Nothing -> do
+          merchantConfig <- QMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+          pickedServices <- buildPickedServices merchantConfig
+          QPickedServices.create pickedServices
+          pure $ getCfg pickedServices
+  merchantMapsServiceConfig <-
+    QMSC.findByMerchantIdAndService merchantId (DMSC.MapsService pickedService)
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Maps" (show pickedService))
+  case merchantMapsServiceConfig.serviceConfig of
+    DMSC.MapsServiceConfig msc -> func msc req
+    _ -> throwError $ InternalError "Unknown Service Config"
+
 getMerchantOperatingCityId :: ServiceFlow m r => Id Person -> Maybe (Id MerchantOperatingCity) -> m (Id MerchantOperatingCity)
 getMerchantOperatingCityId personId = \case
   Just mOprCityId -> pure mOprCityId
   Nothing -> CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
+
+pickService :: MerchantServiceUsageConfig -> m Maps.MapsService
+pickService = error "TODO"
+
+buildPickedServices :: MerchantServiceUsageConfig -> m DPickedServices.PickedServices
+buildPickedServices = error "TODO"

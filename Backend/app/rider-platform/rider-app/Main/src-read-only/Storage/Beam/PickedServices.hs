@@ -3,11 +3,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Beam.PickedService where
+module Storage.Beam.PickedServices where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.PickedService
+import qualified Domain.Types.PickedServices
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -15,7 +15,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
-data PickedServiceT f = PickedServiceT
+data PickedServicesT f = PickedServicesT
   { autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
     getDistances :: B.C f Kernel.External.Maps.Types.MapsService,
     getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,
@@ -32,13 +32,13 @@ data PickedServiceT f = PickedServiceT
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table PickedServiceT where
-  data PrimaryKey PickedServiceT f = PickedServiceId (B.C f Kernel.Prelude.Text)
+instance B.Table PickedServicesT where
+  data PrimaryKey PickedServicesT f = PickedServicesId (B.C f Kernel.Prelude.Text)
     deriving (Generic, B.Beamable)
-  primaryKey = PickedServiceId . searchRequestId
+  primaryKey = PickedServicesId . searchRequestId
 
-type PickedService = PickedServiceT Identity
+type PickedServices = PickedServicesT Identity
 
-$(enableKVPG ''PickedServiceT ['searchRequestId] [])
+$(enableKVPG ''PickedServicesT ['searchRequestId] [])
 
-$(mkTableInstances ''PickedServiceT "picked_service")
+$(mkTableInstances ''PickedServicesT "picked_services")

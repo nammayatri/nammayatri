@@ -3,11 +3,11 @@ imports:
   MapsService: Kernel.External.Maps.Types
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
 
-PickedService:
-  tableName: picked_service
+PickedServices:
+  tableName: picked_services
 
   fields:
-    searchRequestId: Id PickedService
+    searchRequestId: Id PickedServices
     getDistances: MapsService
     getRoutes: MapsService
     snapToRoad: MapsService
