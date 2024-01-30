@@ -31,13 +31,15 @@ import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging
 import qualified Storage.Queries.GoHomeConfig as Queries
+import qualified System.Environment as SE
 import Tools.Error (GenericError (..))
 
 findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
 findByMerchantOpCityId id = do
   ghcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id))]
   logDebug $ "the context is " <> show ghcCond
-  contextValue <- liftIO $ CM.evalCtx "test" ghcCond
+  tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
+  contextValue <- liftIO $ CM.evalCtx (fromMaybe "atlas_driver_offer_bpp_v2" tenant) ghcCond
   case contextValue of
     Left err -> error $ (pack "error in fetching the context value for GoHomeConfig ") <> (pack err)
     Right contextValue' -> do
