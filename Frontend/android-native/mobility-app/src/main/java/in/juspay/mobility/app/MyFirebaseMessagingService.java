@@ -49,7 +49,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.TimeZone;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -611,7 +610,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             e.printStackTrace();
         }
     }
-    private static class NotificationTypes {
+    public static class NotificationTypes {
         public static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
         public static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
         public static final String CLEARED_FARE = "CLEARED_FARE";

@@ -915,7 +915,7 @@ homeScreenFlow = do
                                       currentFlowStatus
             "SOS_MOCK_DRILL"         -> do
                                       modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen{ data{ currentStage = MockFollowRide }})
-                                      followRideScreenFlow
+                                      followRideScreenFlow false 
             _                     -> homeScreenFlow
 
     LOGOUT -> do
@@ -1198,7 +1198,7 @@ homeScreenFlow = do
           sourceLng = (resp^._lon)
           destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
           destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-      _ <- lift $ lift $ fork $ liftFlow $ openNavigation sourceLat sourceLng destLat destLng "DRIVE"
+      _ <- pure $ openNavigation sourceLat sourceLng destLat destLng "DRIVE"
       homeScreenFlow
     IN_APP_TRACK_STATUS state -> do
       case state.props.currentStage of
@@ -1438,16 +1438,18 @@ homeScreenFlow = do
       setValueToLocalStore TRACKING_DRIVER "False"
       setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
       modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen{data{followers = followers, currentFollower = if noOfFollowers == 1 then Arr.head followers else followRideScreen.data.currentFollower, currentStage = if noOfFollowers > 1 then PersonList else FollowingRide}, props {city = allState.homeScreen.props.city}})
-      followRideScreenFlow
+      followRideScreenFlow false
     _ -> homeScreenFlow
 
-followRideScreenFlow :: FlowBT String Unit
-followRideScreenFlow = do
+followRideScreenFlow :: Boolean -> FlowBT String Unit
+followRideScreenFlow callInitUI = do
+  hideLoaderFlow
+  when callInitUI $ lift $ lift $ initUI
   flow <- UI.followRideScreen
   case flow of
     RESTART_TRACKING -> do
       void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
-      followRideScreenFlow
+      followRideScreenFlow false
     GO_TO_HS_FROM_FOLLOW_RIDE -> do
       void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
       void $ liftFlowBT $ runEffectFn1 clearMap ""
@@ -1456,15 +1458,15 @@ followRideScreenFlow = do
       currentFlowStatus
     OPEN_GOOGLE_MAPS_FOLLOW_RIDE state -> do
       case state.data.driverInfoCardState of
-        Nothing -> followRideScreenFlow
+        Nothing -> followRideScreenFlow false
         Just ride -> do
           (GetDriverLocationResp resp) <- Remote.getDriverLocationBT ride.rideId
           let sourceLat = (resp^._lat)
               sourceLng = (resp^._lon)
               destLat =  ride.destinationLat
               destLng =  ride.destinationLng
-          liftFlowBT $ openNavigation 0.0 0.0 sourceLat sourceLng "DRIVE"
-          followRideScreenFlow
+          void $ pure $ openNavigation 0.0 0.0 sourceLat sourceLng "DRIVE"
+          followRideScreenFlow false
 
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
@@ -2833,7 +2835,7 @@ placeDetailsFlow = do
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
   where
     openGoogleMaps lat long = do
-      void $ lift $ lift $ fork $ liftFlow $ openNavigation 0.0 0.0 lat long "DRIVE"
+      void $ pure $ openNavigation 0.0 0.0 lat long "DRIVE"
       placeDetailsFlow
  
 ticketStatusFlow :: FlowBT String Unit
@@ -2872,7 +2874,7 @@ ticketListFlow = do
   case flow of
     GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
     GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW dstLat1 dstLon2  -> do
-      _ <- lift $ lift $ fork $ liftFlow $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
+      _ <- pure $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
       ticketListFlow
     GET_BOOKING_INFO_SCREEN state bookingStatus -> do
       (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId

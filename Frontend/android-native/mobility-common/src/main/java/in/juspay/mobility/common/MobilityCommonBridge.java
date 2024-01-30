@@ -1610,6 +1610,10 @@ public class MobilityCommonBridge extends HyperBridge {
                 markerActionImage.setVisibility(View.VISIBLE);
                 markerActionImage.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(actionImage, "drawable", context.getPackageName())));
             }
+            if (actionImage == null && locationName.equals("")){
+                View mainLableLayout = customMarkerView.findViewById(R.id.main_label_layout);
+                mainLableLayout.setVisibility(View.GONE);
+            }
         } catch (Exception e) {
             Log.e("getMarkerBitmapFromView", "Exception in rendering Image" + e);
         }

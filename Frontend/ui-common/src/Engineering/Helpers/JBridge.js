@@ -1157,20 +1157,20 @@ export const openNavigation = function (slat) {
     return function (dlat) {
       return function (dlong) {
         return function (mode) {
-          return function () {
-            if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery) {
-              if (window.__OS == "IOS") {
-                const query = mode == "WALK" ? window.appConfig.navigationAppConfig.ios.walkQuery : window.appConfig.navigationAppConfig.ios.query;
-                return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
-              } else {
-                const query = mode == "WALK" ? window.appConfig.navigationAppConfig.android.walkQuery : window.appConfig.navigationAppConfig.android.query;
-                const packageName = window.appConfig.navigationAppConfig.android.packageName;
-                return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
-              }
+          if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery) {
+            const config = window.appConfig.navigationAppConfig;
+            const isIOS = window.__OS === "IOS";
+            const platformConfig = isIOS ? config.ios : config.android;
+            const query = mode == "WALK" ? platformConfig.walkQuery : platformConfig.query;
+            if (isIOS) {
+              return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
             } else {
-              // deprecated 
-              return window.JBridge.openNavigation(slat, slong, dlat, dlong);
+              const packageName = platformConfig.packageName;
+              return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
             }
+          } else {
+            // deprecated 
+            return window.JBridge.openNavigation(slat, slong, dlat, dlong);
           }
         };
       };

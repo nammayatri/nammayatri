@@ -171,7 +171,7 @@ foreign import getAAID :: String -> String
 foreign import removeAllPolylinesAndMarkers :: Fn2 (Array String) Unit Unit
 -- foreign import removeAllPolylines :: String -> Unit
 foreign import currentPosition  :: String -> Unit
-foreign import openNavigation  :: Number -> Number -> Number -> Number -> String -> Effect Unit
+foreign import openNavigation  :: Number -> Number -> Number -> Number -> String -> Unit
 foreign import stopLocationPollingAPI :: Effect Unit
 foreign import startLocationPollingAPI :: Effect Unit
 foreign import startChatListenerService :: Effect Unit

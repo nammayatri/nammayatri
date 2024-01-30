@@ -2585,7 +2585,7 @@ subScriptionFlow = do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> state { props {subView = FindHelpCentre, showShimmer = true}})
       subScriptionFlow
     GO_TO_OPEN_GOOGLE_MAPS state -> do
-      _ <- lift $ lift $ fork $ liftFlow $ openNavigation state.props.currentLat state.props.currentLon state.props.destLat state.props.destLon "DRIVE"
+      _ <- pure $ openNavigation state.props.currentLat state.props.currentLon state.props.destLat state.props.destLon "DRIVE"
       subScriptionFlow
     SUBSCRIBE_API state -> nyPaymentFlow state.data.myPlanData.planEntity "MYPLAN"
     CLEAR_DUES_ACT -> clearPendingDuesFlow false

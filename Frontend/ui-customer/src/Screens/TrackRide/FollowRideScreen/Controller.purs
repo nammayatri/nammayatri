@@ -96,7 +96,11 @@ eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideSc
 eval action state = case action of
   BackPressed -> do 
     _ <- pure $ clearAudioPlayer ""
-    exit $ Exit state { data { emergencyAudioStatus = COMPLETED } }
+    if state.data.currentStage == MockFollowRide 
+      then void $ pure $ removeSOSAlarmStatus "mock_drill"
+      else pure unit
+    let newState = state { data { emergencyAudioStatus = COMPLETED },props{ startMapAnimation = false} }
+    updateAndExit newState $ Exit newState
   UpdatePeekHeight -> continue state { data { counter = state.data.counter + 1 } }
   UpdateCurrentStage stage -> continue state{data{currentStage = stage}}
   NotificationListener notification -> 
@@ -114,7 +118,6 @@ eval action state = case action of
     if ((fromMaybe NotResolved state.data.sosStatus) == Pending) && (state.data.emergencyAudioStatus /= COMPLETED)
       then startAudioPlayerCmd state { data { emergencyAudioStatus = RESTARTED } }
       else continueWithCmd state [ pure StopAudioPlayer]
-  DismissOverlay -> continue state { props { isOverlayDimissed = true } }
   UpdateRoute route -> continue state { data { route = Just route } }
   CallPolice -> do
     void $ pure $ performHapticFeedback unit
@@ -212,7 +215,7 @@ eval action state = case action of
             pure MessageEmergencyContact
         ]
   MessageEmergencyContact -> do
-    -- if state.data.config.feature.enableChat then do
+    -- if state.data.config.feature.enableChat then do -- Need this when we enable chat
     --   if not state.props.chatCallbackInitiated then continue state else do
     --     _ <- pure $ performHapticFeedback unit
     --     _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
@@ -318,7 +321,8 @@ startAudioPlayerCmd state = do
         ]
 canStartAudioPlayer :: FollowRideScreenState -> Boolean
 canStartAudioPlayer state = 
-  let currentFollower = fromMaybe dummyFollower state.data.currentFollower
+  let defaultFollower = if state.data.currentStage == MockFollowRide then mockFollower else dummyFollower
+      currentFollower = fromMaybe defaultFollower state.data.currentFollower
       status = state.data.emergencyAudioStatus
   in (status == STOPPED && checkCurrentFollower currentFollower) || (status == RESTARTED)
 

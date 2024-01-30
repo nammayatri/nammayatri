@@ -1990,7 +1990,7 @@ type FollowRideScreenProps = {
 , sheetState :: Maybe BottomSheetState
 , currentSheetState :: BottomSheetState
 , isNotificationExpanded :: Boolean
-, isOverlayDimissed :: Boolean
+, startMapAnimation :: Boolean
 }
 
 

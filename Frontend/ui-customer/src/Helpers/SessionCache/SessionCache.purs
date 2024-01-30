@@ -8,6 +8,7 @@ import Data.Function.Uncurried
 import Constants as ReExport
 import Data.Array
 import SessionCache.Types
+import Data.Array
 
 getSosAlarmStatus :: String -> SosAlarmStatus
 getSosAlarmStatus key = do
@@ -18,6 +19,10 @@ getSosAlarmStatus key = do
           decodeObject = decodeForeignObject (parseJSON objString) []
       in runFn2 setAnyInWindow key decodeObject
     Just value -> value
+
+removeSOSAlarmStatus :: String -> SosAlarmStatus
+removeSOSAlarmStatus id = setSosAlarmStatus $ delete id $ getSosAlarmStatus ReExport.sosAlarmStatus
+
 
 setSosAlarmStatus :: SosAlarmStatus -> SosAlarmStatus
 setSosAlarmStatus obj = 
