@@ -59,12 +59,12 @@ buildRatingReq subscriber req = do
           ]
       }
 
-buildRatingReqBecknV2 ::
+buildRatingReqV2 ::
   (HasFlowEnv m r '["_version" ::: Text]) =>
   Subscriber.Subscriber ->
   Spec.RatingReq ->
   m DRating.DRatingReq
-buildRatingReqBecknV2 subscriber req = do
+buildRatingReqV2 subscriber req = do
   let context = req.ratingReqContext
   ContextV2.validateContext Context.RATING context
   bap_id <- context.contextBapId & fromMaybeM (InvalidRequest "Missing bap_id")

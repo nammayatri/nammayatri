@@ -267,7 +267,20 @@ feedback ::
   m RatingRes
 feedback providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "feedback" API.ratingAPI providerUrl internalEndPointHashMap req
+  callBecknAPIWithSignature req.context.bap_id "feedback" API.ratingAPIV1 providerUrl internalEndPointHashMap req
+
+feedbackV2 ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  BaseUrl ->
+  RatingReqV2 ->
+  m RatingRes
+feedbackV2 providerUrl req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.ratingReqContext.contextBapId
+  callBecknAPIWithSignature bapId "feedback" API.ratingAPIV2 providerUrl internalEndPointHashMap req
 
 callStatus ::
   ( MonadFlow m,
