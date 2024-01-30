@@ -270,6 +270,7 @@ driverActiveInactiveBT status status_n = do
             BackT $ pure GoBack
 --------------------------------- startRide ---------------------------------------------------------------------------------------------------------------------------------
 
+startRide :: String -> StartRideReq -> Flow GlobalState (Either ErrorResponse StartRideResponse)
 startRide productId payload = do
         headers <- getHeaders "" false
         withAPIResult (EP.startRide productId) unwrapResponse $ callAPI headers ((StartRideRequest productId payload))
