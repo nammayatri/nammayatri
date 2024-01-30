@@ -261,7 +261,8 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
         else
           if (paymentBookingStatus == FRFSTicketService.SUCCESS)
             then do
-              let updatedTTL = addUTCTime (60 :: NominalDiffTime) now -- 1 min from time of payment success
+              -- Add default TTL of 1 min or the value provided in the config
+              let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
               void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
               void $ QFRFSTicketBooking.updateValidTillAndStatusById DFRFSTicketBooking.CONFIRMING updatedTTL booking.id
               transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
