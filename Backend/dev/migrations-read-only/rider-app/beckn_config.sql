@@ -18,3 +18,10 @@ ALTER TABLE atlas_app.beckn_config ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.beckn_config ADD COLUMN settlement_type text ;
 ALTER TABLE atlas_app.beckn_config ADD COLUMN payment_params_json text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.beckn_config ADD COLUMN init_ttl_sec integer ;
+ALTER TABLE atlas_app.beckn_config ADD COLUMN confirm_ttl_sec integer ;

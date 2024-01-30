@@ -17,9 +17,11 @@ import qualified Servant.Client.Core
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
-  { domain :: B.C f Kernel.Prelude.Text,
+  { confirmTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    domain :: B.C f Kernel.Prelude.Text,
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    initTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     paymentParamsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registryUrl :: B.C f Kernel.Prelude.Text,
     settlementType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

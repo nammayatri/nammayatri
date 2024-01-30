@@ -10,9 +10,11 @@ import qualified Kernel.Types.Id
 import qualified Servant.Client.Core
 
 data BecknConfig = BecknConfig
-  { domain :: Kernel.Prelude.Text,
+  { confirmTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    domain :: Kernel.Prelude.Text,
     gatewayUrl :: Servant.Client.Core.BaseUrl,
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
+    initTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     paymentParamsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registryUrl :: Servant.Client.Core.BaseUrl,
     settlementType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

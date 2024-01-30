@@ -16,6 +16,8 @@ BecknConfig:
     uniqueKeyId: Text
     settlementType: Maybe Text
     paymentParamsJson: Maybe Text
+    initTTLSec: Maybe Int
+    confirmTTLSec: Maybe Int
 
   types:
     BknPaymentParams:

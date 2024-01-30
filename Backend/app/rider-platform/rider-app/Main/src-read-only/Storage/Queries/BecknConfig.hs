@@ -51,8 +51,10 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.domain $ domain,
+    [ Se.Set Beam.confirmTTLSec $ confirmTTLSec,
+      Se.Set Beam.domain $ domain,
       Se.Set Beam.gatewayUrl $ showBaseUrl $ gatewayUrl,
+      Se.Set Beam.initTTLSec $ initTTLSec,
       Se.Set Beam.paymentParamsJson $ paymentParamsJson,
       Se.Set Beam.registryUrl $ showBaseUrl $ registryUrl,
       Se.Set Beam.settlementType $ settlementType,
@@ -77,9 +79,11 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
     pure $
       Just
         Domain.Types.BecknConfig.BecknConfig
-          { domain = domain,
+          { confirmTTLSec = confirmTTLSec,
+            domain = domain,
             gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
+            initTTLSec = initTTLSec,
             paymentParamsJson = paymentParamsJson,
             registryUrl = registryUrl',
             settlementType = settlementType,
@@ -95,9 +99,11 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
 instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   toTType' Domain.Types.BecknConfig.BecknConfig {..} = do
     Beam.BecknConfigT
-      { Beam.domain = domain,
+      { Beam.confirmTTLSec = confirmTTLSec,
+        Beam.domain = domain,
         Beam.gatewayUrl = showBaseUrl (gatewayUrl),
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.initTTLSec = initTTLSec,
         Beam.paymentParamsJson = paymentParamsJson,
         Beam.registryUrl = showBaseUrl (registryUrl),
         Beam.settlementType = settlementType,

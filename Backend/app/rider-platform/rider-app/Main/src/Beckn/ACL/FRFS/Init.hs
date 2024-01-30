@@ -41,7 +41,8 @@ buildInitReq rider tBooking bapConfig bppData = do
   now <- getCurrentTime
   let transactionId = tBooking.searchId.getId
   let messageId = tBooking.id.getId
-      validTill = addUTCTime (intToNominalDiffTime 30) now
+      -- Add default TTL of 30 seconds or the value provided in the config
+      validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.initTTLSec) now
       ttl = diffUTCTime validTill now
 
   let mPaymentParams = bapConfig.paymentParamsJson >>= decodeFromText
