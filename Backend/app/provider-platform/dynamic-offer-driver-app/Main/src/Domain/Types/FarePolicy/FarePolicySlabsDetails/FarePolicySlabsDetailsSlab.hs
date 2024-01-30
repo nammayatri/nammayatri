@@ -14,14 +14,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
-  ( module Reexport,
-    module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab,
-  )
-where
+module Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab where
 
+import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
 import Domain.Types.Common
-import Domain.Types.FarePolicy.Common as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common
 import Tools.Beam.UtilsTH (mkBeamInstancesForJSON)
