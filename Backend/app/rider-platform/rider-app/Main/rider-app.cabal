@@ -412,6 +412,7 @@ library
       Domain.Types.FRFSTrip
       Domain.Types.MerchantOperatingCity
       Domain.Types.NextBillionData
+      Domain.Types.PickedService
       Domain.Types.RiderConfig
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
@@ -435,6 +436,7 @@ library
       Storage.Beam.FRFSTrip
       Storage.Beam.MerchantOperatingCity
       Storage.Beam.NextBillionData
+      Storage.Beam.PickedService
       Storage.Beam.RiderConfig
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
@@ -458,6 +460,7 @@ library
       Storage.Queries.FRFSTrip
       Storage.Queries.MerchantOperatingCity
       Storage.Queries.NextBillionData
+      Storage.Queries.PickedService
       Storage.Queries.RiderConfig
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
