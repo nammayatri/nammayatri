@@ -194,6 +194,10 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [bppOrderId, status, updatedAt]
       where: id
+    updatePriceById:
+      kvFunction: updateWithKV
+      params: [price, updatedAt]
+      where: id
 # Make use of FareBreakup to store the fare breakup of a ticket
 
 # Get transaction_id from Payment Transaction table

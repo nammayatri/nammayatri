@@ -69,6 +69,16 @@ updateBPPOrderIdAndStatusById bppOrderId status (Kernel.Types.Id.Id id) = do
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
+updatePriceById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
+updatePriceById price (Kernel.Types.Id.Id id) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.price $ price,
+      Se.Set Beam.updatedAt $ now
+    ]
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
 updateStatusById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
 updateStatusById status (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime

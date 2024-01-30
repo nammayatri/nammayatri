@@ -166,7 +166,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
       unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
       maybeM (buildAndCreateBooking rider quote) (\booking -> return (rider, booking)) (QFRFSTicketBooking.findByQuoteId quoteId)
 
-    buildAndCreateBooking rider DFRFSQuote.FRFSQuote {..} = do
+    buildAndCreateBooking rider quote@DFRFSQuote.FRFSQuote {..} = do
       uuid <- generateGUID
       now <- getCurrentTime
       let booking =
@@ -178,6 +178,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
                 createdAt = now,
                 updatedAt = now,
                 merchantId = Just merchantId_,
+                price = HighPrecMoney $ (quote.price.getHighPrecMoney) * (toRational quote.quantity),
                 ..
               }
       QFRFSTicketBooking.create booking

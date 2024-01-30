@@ -49,7 +49,8 @@ validateRequest DOrder {..} = do
       -- Booking is expired
       bapConfig <- QBC.findByMerchantIdAndDomain (Just merchantId) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
       void $ QTBooking.updateBPPOrderIdAndStatusById (Just bppOrderId) Booking.FAILED booking.id
-      callBPPCancel booking bapConfig
+      let updatedBooking = booking {Booking.bppOrderId = (Just bppOrderId)}
+      callBPPCancel updatedBooking bapConfig
       throwM $ (InvalidRequest "Booking expired, initated cancel request")
     else do
       -- Booking is valid, proceed to onConfirm handler

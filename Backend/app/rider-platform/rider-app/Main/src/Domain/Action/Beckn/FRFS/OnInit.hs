@@ -15,7 +15,7 @@
 module Domain.Action.Beckn.FRFS.OnInit where
 
 import Domain.Action.Beckn.FRFS.Common (DFareBreakUp)
-import qualified Domain.Types.FRFSTicketBooking as Init
+import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
@@ -48,7 +48,7 @@ data DOnInit = DOnInit
     messageId :: Text
   }
 
-validateRequest :: DOnInit -> Flow (Merchant, Init.FRFSTicketBooking)
+validateRequest :: DOnInit -> Flow (Merchant, FTBooking.FRFSTicketBooking)
 validateRequest DOnInit {..} = do
   _ <- runInReplica $ QSearch.findById (Id transactionId) >>= fromMaybeM (SearchRequestDoesNotExist transactionId)
   booking <- runInReplica $ QFRFSTicketBooking.findById (Id messageId) >>= fromMaybeM (BookingDoesNotExist messageId)
@@ -59,14 +59,16 @@ validateRequest DOnInit {..} = do
 onInit ::
   DOnInit ->
   Merchant ->
-  Init.FRFSTicketBooking ->
+  FTBooking.FRFSTicketBooking ->
   Flow ()
-onInit onInitReq merchant booking = do
-  person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+onInit onInitReq merchant booking_ = do
+  person <- QP.findById booking_.riderId >>= fromMaybeM (PersonNotFound booking_.riderId.getId)
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   personEmail <- mapM decrypt person.email
 
-  whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity booking.id)
+  whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity booking_.id)
+  void $ QFRFSTicketBooking.updatePriceById onInitReq.totalPrice booking_.id
+  let booking = booking_ {FTBooking.price = onInitReq.totalPrice}
 
   orderShortId <- generateShortId
   orderId <- generateGUID
@@ -109,7 +111,7 @@ onInit onInitReq merchant booking = do
   case mCreateOrderRes of
     Just _ -> do
       void $ QFRFSTicketBookingPayment.create ticketBookingPayment
-      void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId Init.APPROVED booking.id
+      void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
     Nothing -> do
-      void $ QFRFSTicketBooking.updateStatusById Init.FAILED booking.id
+      void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
       throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
