@@ -1,10 +1,11 @@
 module Beckn.OnDemand.Utils.Init where
 
 import Beckn.ACL.Common (getTagV2)
+import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Text as T
 import qualified Domain.Action.Beckn.Init as DInit
-import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM (PaymentCollector (..), PaymentInstrument (..), PaymentMethodInfo (..), PaymentType (..))
+import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Vehicle.Variant as VehVar
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -52,7 +53,7 @@ getMaxEstimateDistance tagGroups = do
 mkPaymentMethodInfo :: MonadFlow m => Spec.Payment -> m (Maybe DMPM.PaymentMethodInfo)
 mkPaymentMethodInfo Spec.Payment {..} = do
   _params <- paymentParams & fromMaybeM (InvalidRequest "Payment Params not found")
-  collectedBy <- paymentCollectedBy & fromMaybeM (InvalidRequest "Payment Params not found") >>= castPaymentCollector
-  pType <- paymentType & fromMaybeM (InvalidRequest "Payment Params not found") >>= castPaymentType
+  collectedBy <- paymentCollectedBy & fromMaybeM (InvalidRequest "Payment Params not found") >>= Common.castPaymentCollector
+  pType <- paymentType & fromMaybeM (InvalidRequest "Payment Params not found") >>= Common.castPaymentType
   paymentInstrument <- castPaymentInstrument _params
   return $ Just $ DMPM.PaymentMethodInfo {paymentType = pType, ..}

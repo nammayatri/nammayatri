@@ -543,3 +543,13 @@ mkArrivalTimeTagGroupV2 arrivalTime =
             ]
       }
   ]
+
+castPaymentCollector :: MonadFlow m => Text -> m DMPM.PaymentCollector
+castPaymentCollector "BAP" = return DMPM.BAP
+castPaymentCollector "BPP" = return DMPM.BPP
+castPaymentCollector _ = throwM $ InvalidRequest "Unknown Payment Collector"
+
+castPaymentType :: MonadFlow m => Text -> m DMPM.PaymentType
+castPaymentType "ON_ORDER" = return DMPM.PREPAID
+castPaymentType "ON_FULFILLMENT" = return DMPM.POSTPAID
+castPaymentType _ = throwM $ InvalidRequest "Unknown Payment Type"

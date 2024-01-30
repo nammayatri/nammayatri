@@ -15,6 +15,7 @@
 module API.Beckn.Update (API, handler) where
 
 import qualified Beckn.ACL.Update as ACL
+import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Update as Update
 import qualified Domain.Action.Beckn.Update as DUpdate
 import Domain.Types.Merchant (Merchant)
@@ -31,7 +32,7 @@ import Storage.Beam.SystemConfigs ()
 type API =
   Capture "merchantId" (Id Merchant)
     :> SignatureAuth "Authorization"
-    :> Update.UpdateAPIV1
+    :> Update.UpdateAPIV2
 
 handler :: FlowServer API
 handler = update
@@ -39,10 +40,11 @@ handler = update
 update ::
   Id Merchant ->
   SignatureAuthResult ->
-  Update.UpdateReq ->
+  Update.UpdateReqV2 ->
   FlowHandler AckResponse
-update _ (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
+update _ (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $ do
+  transactionId <- Utils.getTransactionId req.updateReqContext
+  Utils.withTransactionIdLogTag transactionId $ do
     logTagInfo "updateAPI" "Received update API call."
     dUpdateReq <- ACL.buildUpdateReq subscriber req
     Redis.whenWithLockRedis (updateLockKey dUpdateReq.bookingId.getId) 60 $ do

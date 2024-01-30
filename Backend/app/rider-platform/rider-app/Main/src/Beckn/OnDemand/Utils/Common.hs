@@ -261,3 +261,28 @@ mkStops' origin mDestination =
   where
     mkAddress :: DLoc.LocationAddress -> Text
     mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]
+
+mkStop :: Maybe DLoc.Location -> Maybe Text -> Maybe Spec.Stop
+mkStop Nothing _ = Nothing
+mkStop (Just location) stopType =
+  let locationGps = Gps.Gps {lat = location.lat, lon = location.lon}
+   in Just $
+        Spec.Stop
+          { stopLocation =
+              Just $
+                Spec.Location
+                  { locationAddress = Just $ mkAddress location.address,
+                    locationAreaCode = location.address.areaCode,
+                    locationCity = Just $ Spec.City Nothing location.address.city,
+                    locationCountry = Just $ Spec.Country Nothing location.address.country,
+                    locationGps = A.decode $ A.encode locationGps,
+                    locationState = Just $ Spec.State location.address.state,
+                    locationId = Nothing
+                  },
+            stopType = stopType,
+            stopAuthorization = Nothing,
+            stopTime = Nothing
+          }
+  where
+    mkAddress :: DLoc.LocationAddress -> Text
+    mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]

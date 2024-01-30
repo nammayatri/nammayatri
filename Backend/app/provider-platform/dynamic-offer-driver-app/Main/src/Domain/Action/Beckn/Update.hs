@@ -48,8 +48,8 @@ data DUpdateReq
   | EditLocationReq
       { bookingId :: Id DBooking.Booking,
         rideId :: Id DRide.Ride,
-        origin :: Maybe Common.Location,
-        destination :: Maybe Common.Location
+        origin :: Maybe DL.Location,
+        destination :: Maybe DL.Location
       }
 
 data PaymentStatus = PAID | NOT_PAID
@@ -82,8 +82,7 @@ handler req@PaymentCompletedReq {} = do
 handler EditLocationReq {..} = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   person <- runInReplica $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  whenJust origin $ \pickup -> do
-    startLocation <- buildLocation pickup
+  whenJust origin $ \startLocation -> do
     QL.create startLocation
     pickupMapForBooking <- SLM.buildPickUpLocationMapping startLocation.id bookingId.getId DLM.BOOKING (Just person.merchantId) (Just person.merchantOperatingCityId)
     QLM.create pickupMapForBooking
@@ -91,31 +90,6 @@ handler EditLocationReq {..} = do
     QLM.create pickupMapForRide
     let entityData = Notify.EditLocationReq {..}
     Notify.notifyPickupOrDropLocationChange person.merchantOperatingCityId person.id person.deviceToken entityData
-
-buildLocation :: MonadFlow m => Common.Location -> m DL.Location
-buildLocation location = do
-  guid <- generateGUID
-  now <- getCurrentTime
-  return $
-    DL.Location
-      { id = guid,
-        createdAt = now,
-        updatedAt = now,
-        lat = location.gps.lat,
-        lon = location.gps.lon,
-        address =
-          DL.LocationAddress
-            { street = location.address.street,
-              door = location.address.door,
-              city = location.address.city,
-              state = location.address.state,
-              country = location.address.country,
-              building = location.address.building,
-              areaCode = location.address.area_code,
-              area = location.address.locality,
-              fullAddress = mkFullAddress location.address
-            }
-      }
 
 mkFullAddress :: Common.Address -> Maybe Text
 mkFullAddress Common.Address {..} = do

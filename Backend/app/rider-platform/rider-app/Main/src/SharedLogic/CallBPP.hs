@@ -25,6 +25,7 @@ import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Core.Taxi.API.Status as API
 import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Core.Taxi.API.Update as API
+import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Ride as DRide
@@ -187,11 +188,12 @@ update ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   BaseUrl ->
-  UpdateReq ->
+  Spec.UpdateReq ->
   m UpdateRes
 update providerUrl req = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  callBecknAPIWithSignature req.context.bap_id "update" API.updateAPIV1 providerUrl internalEndPointHashMap req
+  bapId <- fromMaybeM (InvalidRequest "BapId is missing") req.updateReqContext.contextBapId
+  callBecknAPIWithSignature bapId "update" API.updateAPIV2 providerUrl internalEndPointHashMap req
 
 -- updateV2 ::
 --   ( MonadFlow m,

@@ -15,11 +15,14 @@
 module Beckn.Types.Core.Taxi.API.Update where
 
 import Beckn.Types.Core.Taxi.Update
+import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
 import Kernel.Utils.Servant.JSONBS
 import Servant (JSON, Post, ReqBody, (:>))
+
+type UpdateReqV2 = Spec.UpdateReq
 
 type UpdateReq = BecknReq UpdateMessage
 
@@ -38,7 +41,7 @@ type UpdateAPIV1 =
 
 type UpdateAPIV2 =
   "update"
-    :> ReqBody '[JSON] UpdateReq
+    :> ReqBody '[JSON] UpdateReqV2
     :> Post '[JSON] UpdateRes
 
 updateAPI :: Proxy UpdateAPI

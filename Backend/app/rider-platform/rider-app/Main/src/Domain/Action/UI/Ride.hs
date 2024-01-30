@@ -24,7 +24,6 @@ module Domain.Action.UI.Ride
 where
 
 import qualified Beckn.ACL.Update as ACL
-import qualified Beckn.Types.Core.Taxi.Common.Location as Common
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking.Type as DB
 import Domain.Types.Location (LocationAPIEntity, makeLocationAPIEntity)
@@ -222,8 +221,7 @@ editLocation rideId (_, merchantId) req = do
     QLM.create pickupMapForBooking
     pickupMapForRide <- SLM.buildPickUpLocationMapping startLocation.id ride.id.getId DLM.RIDE (Just merchantId) ride.merchantOperatingCityId
     QLM.create pickupMapForRide
-
-    let origin = Just $ mkDomainLocation pickup
+    origin <- buildLocation pickup
     bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
     let dUpdateReq =
           ACL.EditLocationBuildReq
@@ -232,6 +230,7 @@ editLocation rideId (_, merchantId) req = do
               bppUrl = booking.providerUrl,
               transactionId = booking.transactionId,
               destination = Nothing,
+              origin = Just origin,
               ..
             }
     becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
@@ -252,25 +251,3 @@ buildLocation location = do
         lon = location.gps.lon,
         address = location.address
       }
-
-mkDomainLocation :: EditLocation -> Common.Location
-mkDomainLocation EditLocation {..} =
-  Common.Location
-    { gps =
-        Common.Gps
-          { lat = gps.lat,
-            lon = gps.lon
-          },
-      address =
-        Common.Address
-          { locality = address.area,
-            area_code = address.areaCode,
-            state = address.state,
-            country = address.country,
-            building = address.building,
-            street = address.street,
-            city = address.city,
-            ward = address.ward,
-            door = address.door
-          }
-    }
