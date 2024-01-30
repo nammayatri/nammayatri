@@ -894,7 +894,7 @@ type HomeScreenData =  {
   coinBalance :: Int,
   subsRemoteConfig :: RC.RCSubscription,
   bannerData :: BannerCarousalData,
-  latLonArray :: Maybe Location
+  prevLatLon :: Maybe Location
 }
 
 type BannerCarousalData = {

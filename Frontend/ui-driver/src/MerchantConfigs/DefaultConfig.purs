@@ -87,7 +87,8 @@ config =
   , waitTimeConfig : {
     enableWaitTime : true,
     thresholdDist : 0.05,
-    thresholdTime : 180
+    thresholdTime : 180,
+    routeDistance : 30
   }
   , bottomNavConfig : {
       home : 
