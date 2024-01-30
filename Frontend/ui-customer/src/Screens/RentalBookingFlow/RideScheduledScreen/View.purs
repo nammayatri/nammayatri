@@ -10,6 +10,7 @@ import Data.Array (singleton)
 import Data.Maybe (maybe)
 import Debug (spy)
 import Effect (Effect)
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
@@ -150,7 +151,7 @@ rideDetailsView push state =
         , height WRAP_CONTENT
         , margin $ MarginLeft 28
         , color Color.blue800
-        , onClick push $ const $ AddFirstStop state.destination
+        , onClick push $ const $ AddFirstStop
         , text $ getString EDIT
         ] <> FontStyle.paragraphText TypoGraphy
 
@@ -181,7 +182,7 @@ rideStartDetails push state =
             ]
             [ textView
                 ( [ textSize FontSize.a_14
-                  , text $ state.startDate
+                  , text $ EHC.convertUTCtoISC state.startTime "ddd" <> ", " <> EHC.convertUTCtoISC state.startTime "D" <> " " <> EHC.convertUTCtoISC state.startTime "MMM"
                   , color Color.black700
                   ] <> FontStyle.body1 TypoGraphy
                 )
@@ -191,7 +192,7 @@ rideStartDetails push state =
                 ] <> FontStyle.body1 TypoGraphy
             , textView $
                 [ textSize FontSize.a_14
-                , text $ " " <> state.startTime
+                , text $ " " <> EHC.convertUTCtoISC state.startTime "hh" <> ":" <> EHC.convertUTCtoISC state.startTime "mm" <> " " <> EHC.convertUTCtoISC state.startTime "a"
                 , color Color.black700
                 ] <> FontStyle.body1 TypoGraphy
             ]

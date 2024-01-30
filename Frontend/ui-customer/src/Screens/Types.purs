@@ -917,6 +917,8 @@ type HomeScreenStateProps =
   , enableChatWidget :: Boolean
   , focussedBottomIcon :: BottomNavBarIcon
   , showEndOTP :: Boolean
+  , rideDurationTimer :: String
+  , rideDurationTimerId :: String
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -1871,8 +1873,8 @@ type ReAllocationProp =
 
 type RideScheduledScreenState = {
     primaryButtonText :: String
-  , source :: String
-  , destination :: Maybe String
+  , source :: LocationInfo
+  , destination :: Maybe LocationInfo
   , startDate :: String
   , startTime :: String
   , finalPrice :: String
@@ -1973,7 +1975,7 @@ type RentalScreenState = {
 
 type RentalScreenData = {
     rentalBookingData :: RentalBookingConfig
-  , currentTime :: String
+  , startTimeUTC :: String
   , currentStage :: RentalScreenStage
   , quoteList :: Array ChooseVehicle.Config
   , endOTP :: Maybe String

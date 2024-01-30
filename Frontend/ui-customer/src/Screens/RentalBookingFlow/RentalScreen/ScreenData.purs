@@ -20,6 +20,7 @@ import Data.Maybe(Maybe(..))
 import PrestoDOM (Margin(..))
 import Screens.Types (RentalScreenState, RentalScreenStage(..))
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
+import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 
 initData :: RentalScreenState
 initData = 
@@ -37,7 +38,7 @@ initData =
         , finalFare : 0
         , nightCharge : ""
       }
-    , currentTime : ""
+    , startTimeUTC : ""
     , currentStage : RENTAL_SELECT_PACKAGE
     , quoteList : []
     , endOTP : Nothing
@@ -58,7 +59,7 @@ initData =
     , minDistance : 20
     , maxDistance : 30
     , farePerKm : ""
-    , maxDateBooking : 15
+    , maxDateBooking : 5
     , showRateCard : false
     }
   }

@@ -117,6 +117,7 @@ import Mobility.Prelude (boolToInt, toBool)
 import SuggestionUtils
 import Data.Tuple (Tuple(..))
 import PrestoDOM.Core (getPushFn)
+import Common.Types.App (RideType(..)) as RideType
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1561,43 +1562,46 @@ eval WhereToClick state = do
   -- exit $ UpdateSavedLocation updateState 
 
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = 
-  case state.data.ratingViewState.issueFacedView of
-    true -> do
-            void $ pure $ toggleBtnLoader "SkipButton" false
-            _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-            continue
-              state
-                { props { nightSafetyFlow = false }
-                , data
-                  { rideRatingState =
-                    dummyRideRatingState
-                      { driverName = state.data.driverInfoCardState.driverName
-                      , rideId = state.data.driverInfoCardState.rideId
-                      },
-                    ratingViewState {issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1, doneButtonVisibility = false}
+  if state.data.rideType == RideType.RENTAL_RIDE then 
+    continue state {data {rideType = RideType.NORMAL_RIDE}}
+  else   
+    case state.data.ratingViewState.issueFacedView of
+      true -> do
+              void $ pure $ toggleBtnLoader "SkipButton" false
+              _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
+              continue
+                state
+                  { props { nightSafetyFlow = false }
+                  , data
+                    { rideRatingState =
+                      dummyRideRatingState
+                        { driverName = state.data.driverInfoCardState.driverName
+                        , rideId = state.data.driverInfoCardState.rideId
+                        },
+                      ratingViewState {issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1, doneButtonVisibility = false}
+                    }
                   }
-                }
-    false ->  
-      if state.props.showOfferedAssistancePopUp then do
-        void $ pure $ toggleBtnLoader "SkipButton" false
-        continue state {data {ratingViewState {selectedYesNoButton = -1, doneButtonVisibility = false}} , props{showOfferedAssistancePopUp = false}} 
-      else 
-        if state.data.ratingViewState.selectedRating > 0 then updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
-            else do
-              _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
-              _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
-              _ <- pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
-                                          event : "process_result"
-                                        , payload : Just {
-                                          action : "feedback_skipped"
-                                        , trip_amount : Just state.data.finalAmount
-                                        , trip_id : Just state.props.bookingId
-                                        , ride_status : Nothing
-                                        , screen : Just $ getScreenFromStage state.props.currentStage
-                                        , exit_app : false
-                                        }
-                                        }
-              updateAndExit state $ GoToHome state
+      false ->  
+        if state.props.showOfferedAssistancePopUp then do
+          void $ pure $ toggleBtnLoader "SkipButton" false
+          continue state {data {ratingViewState {selectedYesNoButton = -1, doneButtonVisibility = false}} , props{showOfferedAssistancePopUp = false}} 
+        else 
+          if state.data.ratingViewState.selectedRating > 0 then updateAndExit state $ SubmitRating state{ data {rideRatingState {rating = state.data.ratingViewState.selectedRating }}}
+              else do
+                _ <- pure $ firebaseLogEvent "ny_user_ride_skip_feedback"
+                _ <- pure $ setValueToLocalStore RATING_SKIPPED "true"
+                _ <- pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
+                                            event : "process_result"
+                                          , payload : Just {
+                                            action : "feedback_skipped"
+                                          , trip_amount : Just state.data.finalAmount
+                                          , trip_id : Just state.props.bookingId
+                                          , ride_status : Nothing
+                                          , screen : Just $ getScreenFromStage state.props.currentStage
+                                          , exit_app : false
+                                          }
+                                          }
+                updateAndExit state $ GoToHome state
 
 eval OpenSettings state = do
   _ <- pure $ hideKeyboardOnNavigation true
@@ -1654,6 +1658,9 @@ eval (WaitingTimeAction timerID timeInMinutes seconds) state = do
                 then setValueToLocalStore DRIVER_ARRIVAL_ACTION "WAITING_ACTION_TRIGGERED"
                 else pure unit
   continue state { data { driverInfoCardState { waitingTime = timeInMinutes} }, props { waitingTimeTimerIds = union state.props.waitingTimeTimerIds [timerID] } }
+
+eval (DriverInfoCardActionController (DriverInfoCardController.RideDurationTimer timerID timeInHHMM _)) state = 
+  continue state{props{rideDurationTimerId = timerID, rideDurationTimer = timeInHHMM}}
 
 eval (SpecialZoneOTPExpiryAction seconds status timerID) state = do
   if status == "EXPIRED" then do

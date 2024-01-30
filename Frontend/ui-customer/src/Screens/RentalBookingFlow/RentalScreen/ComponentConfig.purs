@@ -24,6 +24,7 @@ import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
 import Data.Array ((!!), singleton)
 import Data.Maybe as MB
+import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString, getVarString)
@@ -111,10 +112,13 @@ mapInputViewConfig :: RentalScreenState -> InputView.InputViewConfig
 mapInputViewConfig state = 
   let config = InputView.config 
       isSelectPackageStage = state.data.currentStage == RENTAL_SELECT_PACKAGE
+      suffixButtonText = if state.data.selectedDateTimeConfig.year == 0 
+                          then getString NOW
+                          else formatDate "hh" <> ":" <> formatDate "mm" <> " " <> formatDate "A" <> ", " <> formatDate "MMM" <> " " <> formatDate "D"
       inputViewConfig' = config
         { headerText = getHeaderText state.data.currentStage
         , suffixButton {
-            text = getDateString state.data.selectedDateTimeConfig true
+            text = suffixButtonText
           , fontStyle = FontStyle.subHeading2 LanguageStyle
           , prefixImage = "ny_ic_clock_unfilled"
           , suffixImage = "ny_ic_chevron_down"
@@ -128,6 +132,9 @@ mapInputViewConfig state =
         }
   in inputViewConfig'
   where 
+    formatDate :: String -> String
+    formatDate formatSTR = EHC.convertUTCtoISC state.data.startTimeUTC formatSTR
+  
     inputViewArray :: Boolean -> InputView.InputTextConfig -> InputView.InputView
     inputViewArray isSelectPackageStage item =
       { padding : Padding 8 7 8 7 
@@ -188,7 +195,7 @@ mapInputViewConfig state =
         hour = dateTimeConfig.hour
         hourAndMinute = if(hour > 12) then show (hour - 12) <> ":" <> minute <> " PM" else show hour <> ":" <> minute <> " AM"
       in
-        if year == 0 then "Now" 
+        if year == 0 then getString NOW 
         else if isShort then hourAndMinute <> ", " <> getShortMonthFromInt month <> " " <> show day
         else show day <> " " <> getFullMonthFromInt month <> " " <> show year <> ", " <> show hour <> ":" <> minute
 

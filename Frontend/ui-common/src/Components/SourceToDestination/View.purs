@@ -15,10 +15,10 @@
 
 module Components.SourceToDestination.View where
 
-import Prelude (Unit, ($), (<>), (/), (<), (>), (==))
+import Prelude (Unit, ($), (<>), (/), (<), (>), (==), const)
 import Effect (Effect)
-import Components.SourceToDestination.Controller (Action,Config)
-import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), Accessiblity(..), Visibility(..), background, color, ellipsize, fontStyle, relativeLayout, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback, id, accessibilityHint, accessibility)
+import Components.SourceToDestination.Controller (Action(..), Config)
+import PrestoDOM (Gravity(..), Length(..), Orientation(..), PrestoDOM, Margin(..), Padding(..), Accessiblity(..), Visibility(..), background, color, ellipsize, fontStyle, relativeLayout, frameLayout, gravity, height, imageUrl, imageView, layoutGravity, linearLayout, margin, maxLines, orientation, padding, text, textSize, textView, visibility, width, cornerRadius, stroke, margin, imageWithFallback, id, accessibilityHint, accessibility, onClick, clickable)
 import Common.Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
@@ -48,7 +48,7 @@ view push config =
         , width MATCH_PARENT
         , margin $ MarginTop config.separatorMargin
         ][SeparatorView.view $ separatorConfig config
-      , destinationLayout config]
+      , destinationLayout config push]
       , sourceLayout config
       ]
     , distanceLayout config
@@ -113,8 +113,8 @@ sourceLayout config =
     
 
 
-destinationLayout :: forall w. Config -> PrestoDOM (Effect Unit) w
-destinationLayout config =
+destinationLayout :: forall w. Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+destinationLayout config push =
   linearLayout
   [ orientation HORIZONTAL
   , height WRAP_CONTENT
@@ -147,7 +147,9 @@ destinationLayout config =
           , color config.destinationTextConfig.color
           , maxLines config.destinationTextConfig.maxLines
           , accessibility DISABLE
+          , clickable config.destinationTextConfig.isClickable
           , ellipsize config.destinationTextConfig.ellipsize
+          , onClick push $ const DestinationClicked 
           ] <> (FontStyle.getFontStyle config.destinationTextConfig.textStyle LanguageStyle)
         , textView $
           [ text config.rideEndedAtConfig.text

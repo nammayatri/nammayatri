@@ -195,8 +195,8 @@ skipButtonConfig state =
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
         , visibility = boolToVisibility $ doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
-        , isClickable = issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
-        , alpha = if issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
+        , isClickable = state.data.rideType == RideType.RENTAL_RIDE || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
+        , alpha = if state.data.rideType == RideType.RENTAL_RIDE || issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
         }
   in
     primaryButtonConfig'
@@ -895,6 +895,8 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType.priorityTag
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , merchantCity : state.props.city
+                                  , rideDurationTimer : state.props.rideDurationTimer
+                                  , rideDurationTimerId : state.props.rideDurationTimerId
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -954,7 +956,7 @@ driverInfoTransformer state =
     , vehicleDetails : cardState.vehicleDetails
     , registrationNumber : cardState.registrationNumber
     , rating : cardState.rating
-    , startedAt : cardState.startedAt
+    , startedAt : cardState.createdAt
     , endedAt : cardState.endedAt
     , source : cardState.source
     , destination : cardState.destination
@@ -1485,7 +1487,18 @@ rideCompletedCardConfig state =
         enableContactSupport = state.data.config.feature.enableSupport,
         needHelpText = getString NEED_HELP,
         showRentalRideDetails = state.data.rideType == RideType.RENTAL_RIDE,
-        rentalBookingData = RideCompletedCard.dummyRentalBookingConfig
+        rentalBookingData = RideCompletedCard.dummyRentalBookingConfig,
+        rentalRowDetails {
+          rideTime = getString RIDE_TIME
+        , rideDistance = getString RIDE_DISTANCE
+        , rideStartedAt = getString RIDE_STARTED_AT
+        , rideEndedAt = getString RIDE_ENDED_AT
+        , estimatedFare = getString ESTIMATED_FARE
+        , extraTimePrice = getString EXTRA_TIME_PRICE
+        , totalFare = getString TOTAL_FARE
+        , rideDetailsTitle = getString RIDE_DETAILS
+        , fareUpdateTitle = getString FARE_UPDATE
+        }
       }
   where 
     mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}

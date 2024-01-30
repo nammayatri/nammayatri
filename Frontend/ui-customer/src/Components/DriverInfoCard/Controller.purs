@@ -37,6 +37,7 @@ data Action = NoAction
             | OnNavigateToZone
             | ToggleBottomSheet
             | CollapseBottomSheet
+            | RideDurationTimer String String Int
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -53,7 +54,9 @@ type DriverInfoCardProps =
     isSpecialZone :: Boolean,
     estimatedTime :: String,
     zoneType :: ZoneType,
-    merchantCity :: City
+    merchantCity :: City,
+    rideDurationTimer :: String,
+    rideDurationTimerId :: String
   }
 
 type DriverInfoCardData =

@@ -654,7 +654,6 @@ stickyButtonView config push =
   linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
-  , weight 1.0
   , cornerRadii $ Corners 16.0 true true false false
   , background Color.white900
   , layoutGravity "bottom"
