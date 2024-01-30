@@ -46,6 +46,7 @@ types:
     payment: Maybe FRFSBookingPaymentAPI
     tickets: [FRFSTicketAPI]
     stations: [FRFSStationAPI]
+    createdAt: UTCTime
 
   FRFSTicketAPI:
     status: FRFSTicketStatus

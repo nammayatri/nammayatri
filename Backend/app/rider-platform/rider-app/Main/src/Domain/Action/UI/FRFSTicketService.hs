@@ -194,6 +194,7 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
           status = booking.status,
           payment = Nothing,
           tickets = [],
+          createdAt = booking.createdAt,
           ..
         }
 
@@ -367,6 +368,7 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
         validTill = booking.validTill,
         vehicleType = booking.vehicleType,
         status = booking.status,
+        createdAt = booking.createdAt,
         ..
       }
 
