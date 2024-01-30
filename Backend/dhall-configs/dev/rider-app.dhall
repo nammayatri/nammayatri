@@ -237,4 +237,5 @@ in  { esqDBCfg
     , schedulerType = common.schedulerType.RedisBased
     , isBecknSpecVersion2 = False
     , _version = "2.0.0"
+    , hotSpotExpiry = +604800
     }

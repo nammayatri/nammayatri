@@ -77,9 +77,10 @@ filterAccordingMaxFrequency threshold =
 
 groupAndFilterHotSpotWithPrecision :: (CacheFlow m r, EsqDBFlow m r) => Int -> Int -> [HotSpot] -> m [HotSpot]
 groupAndFilterHotSpotWithPrecision precision geohashPerGroup geohashes = do
-  let grouped = Dl.groupBy (\gh1 gh2 -> Dl.take precision (Dt.unpack gh1._geoHash) == Dl.take precision (Dt.unpack gh2._geoHash)) geohashes
+  let sortLexicographically = Dl.sortBy (\gh1 gh2 -> compare (gh2._geoHash) (gh1._geoHash)) geohashes
+      grouped = Dl.groupBy (\gh1 gh2 -> Dl.take precision (Dt.unpack gh1._geoHash) == Dl.take precision (Dt.unpack gh2._geoHash)) sortLexicographically
       selected = concatMap (Dl.take geohashPerGroup) grouped
-  logInfo $ "hotspot groupAndFilterWithPrecision : " <> show grouped
+  logInfo $ "hotspot groupAndFilterWithPrecision : " <> show selected
   pure selected
 
 getHotspot ::
