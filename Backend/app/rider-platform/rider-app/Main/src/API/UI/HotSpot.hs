@@ -75,13 +75,16 @@ filterAccordingMaxFrequency threshold =
         sumOfFrequency >= threshold
     )
 
-groupAndFilterHotSpotWithPrecision :: (CacheFlow m r, EsqDBFlow m r) => Int -> Int -> [HotSpot] -> m [HotSpot]
-groupAndFilterHotSpotWithPrecision precision geohashPerGroup geohashes = do
+groupAndFilterHotSpotWithPrecision :: (CacheFlow m r, EsqDBFlow m r) => HotSpotConfig -> Int -> Int -> [HotSpot] -> m [HotSpot]
+groupAndFilterHotSpotWithPrecision hotSpotConfig precision geohashPerGroup geohashes = do
   let sortLexicographically = Dl.sortBy (\gh1 gh2 -> compare (gh2._geoHash) (gh1._geoHash)) geohashes
       grouped = Dl.groupBy (\gh1 gh2 -> Dl.take precision (Dt.unpack gh1._geoHash) == Dl.take precision (Dt.unpack gh2._geoHash)) sortLexicographically
-      selected = concatMap (Dl.take geohashPerGroup) grouped
+      selected = concatMap (Dl.take geohashPerGroup . sortWithFrequency hotSpotConfig) grouped
   logInfo $ "hotspot groupAndFilterWithPrecision : " <> show selected
   pure selected
+
+sortWithFrequency :: HotSpotConfig -> [HotSpot] -> [HotSpot]
+sortWithFrequency HotSpotConfig {..} = Dl.sortOn $ Down . (\x -> do (x._manualMovedSaved * weightOfManualSaved) + (x._manualMovedPickup * weightOfManualPickup) + (x._nonManualMovedPickup * weightOfAutoPickup) + (x._nonManualMovedSaved * weightOfAutoSaved) + (x._tripStart * weightOfTripStart) + (x._tripEnd * weightOfTripEnd) + (x._specialLocation * weightOfSpecialLocation))
 
 getHotspot ::
   ( CacheFlow m r,
@@ -102,9 +105,9 @@ getHotspot Maps.LatLong {..} merchantId = do
               let neighbourGeoHashes = neighboringGeohashes currentGeoHash hotSpotRadius (geoHashCellHeight precisionToGetGeohash)
               filteredHotSpots :: [HotSpot] <- concat <$> mapMaybeM (Hedis.hGet makeHotSpotKey . Dt.pack) neighbourGeoHashes
               let finalHotSpot = filterAccordingMaxFrequency minFrequencyOfHotSpot filteredHotSpots
-              let sortedHotSpotWithFrequency = Dl.sortOn (Down . (\x -> do (x._manualMovedSaved * weightOfManualSaved) + (x._manualMovedPickup * weightOfManualPickup) + (x._nonManualMovedPickup * weightOfAutoPickup) + (x._nonManualMovedSaved * weightOfAutoSaved) + (x._tripStart * weightOfTripStart) + (x._tripEnd * weightOfTripEnd) + (x._specialLocation * weightOfSpecialLocation))) finalHotSpot
-              filteredHotSpotWithPrecisions <- groupAndFilterHotSpotWithPrecision precisionToFilterGeohash maxGeoHashToFilter sortedHotSpotWithFrequency
-              let hotSpots = take maxNumHotSpotsToShow filteredHotSpotWithPrecisions
+              filteredHotSpotWithPrecisions <- groupAndFilterHotSpotWithPrecision HotSpotConfig {..} precisionToFilterGeohash maxGeoHashToFilter finalHotSpot
+              let sortedHotSpotWithFrequency = sortWithFrequency HotSpotConfig {..} filteredHotSpotWithPrecisions
+              let hotSpots = take maxNumHotSpotsToShow sortedHotSpotWithFrequency
               let hotSpotInfo = map (\HotSpot {..} -> HotSpotInfo {..}) hotSpots
               return HotSpotResponse {blockRadius = Just blockRadius, ..}
             Nothing ->
