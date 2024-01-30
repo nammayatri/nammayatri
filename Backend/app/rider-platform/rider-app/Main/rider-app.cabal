@@ -97,8 +97,6 @@ library
       API.UI.Serviceability
       API.UI.Sos
       API.UI.Support
-      API.UI.Webengage.InfoBIPWebhook
-      API.UI.Webengage.Webengage
       API.UI.Whatsapp
       App
       App.Server
@@ -192,8 +190,6 @@ library
       Domain.Action.UI.Sos
       Domain.Action.UI.Support
       Domain.Action.UI.TicketService
-      Domain.Action.UI.Webengage.InfoBIPWebhook
-      Domain.Action.UI.Webengage.Webengage
       Domain.Action.UI.Whatsapp
       Domain.Types.AadhaarVerification.AadhaarOtp
       Domain.Types.AadhaarVerification.AadhaarVerification
@@ -245,7 +241,6 @@ library
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
       Domain.Types.VehicleVariant
-      Domain.Types.Webengage
       Environment
       Lib.Mesh
       SharedLogic.CallBPP
@@ -315,7 +310,6 @@ library
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
-      Storage.Beam.Webengage
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.Exophone
@@ -382,7 +376,6 @@ library
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
-      Storage.Queries.Webengage
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH

@@ -56,7 +56,6 @@ import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
-import qualified "rider-app" Storage.Beam.Webengage as Webengage
 import Utils.Parse
 
 -- Each update option contains a list of (key, value) pairs to set during
@@ -105,7 +104,6 @@ data UpdateModel
   | SosUpdate
   | SpecialZoneQuoteUpdate
   | TripTermsUpdate
-  | WebengageUpdate
   | FeedbackFormUpdate
   | HotSpotConfigUpdate
   | BecknRequestUpdate
@@ -157,7 +155,6 @@ getTagUpdate SearchRequestUpdate = "SearchRequestOptions"
 getTagUpdate SosUpdate = "SosOptions"
 getTagUpdate SpecialZoneQuoteUpdate = "SpecialZoneQuoteOptions"
 getTagUpdate TripTermsUpdate = "TripTermsOptions"
-getTagUpdate WebengageUpdate = "WebengageOptions"
 getTagUpdate FeedbackFormUpdate = "FeedbackFormOptions"
 getTagUpdate HotSpotConfigUpdate = "HotSpotConfigOptions"
 getTagUpdate BecknRequestUpdate = "BecknRequestOptions"
@@ -208,7 +205,6 @@ parseTagUpdate "SearchRequestOptions" = return SearchRequestUpdate
 parseTagUpdate "SosOptions" = return SosUpdate
 parseTagUpdate "SpecialZoneQuoteOptions" = return SpecialZoneQuoteUpdate
 parseTagUpdate "TripTermsOptions" = return TripTermsUpdate
-parseTagUpdate "WebengageOptions" = return WebengageUpdate
 parseTagUpdate "FeedbackFormOptions" = return FeedbackFormUpdate
 parseTagUpdate "HotSpotConfigOptions" = return HotSpotConfigUpdate
 parseTagUpdate "BecknRequestOptions" = return BecknRequestUpdate
@@ -260,7 +256,6 @@ data DBUpdateObject
   | SosOptions UpdateModel [Set Postgres Sos.SosT] (Where Postgres Sos.SosT)
   | SpecialZoneQuoteOptions UpdateModel [Set Postgres SpecialZoneQuote.SpecialZoneQuoteT] (Where Postgres SpecialZoneQuote.SpecialZoneQuoteT)
   | TripTermsOptions UpdateModel [Set Postgres TripTerms.TripTermsT] (Where Postgres TripTerms.TripTermsT)
-  | WebengageOptions UpdateModel [Set Postgres Webengage.WebengageT] (Where Postgres Webengage.WebengageT)
   | FeedbackFormOptions UpdateModel [Set Postgres FeedbackForm.FeedbackFormT] (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigOptions UpdateModel [Set Postgres HotSpotConfig.HotSpotConfigT] (Where Postgres HotSpotConfig.HotSpotConfigT)
   | BecknRequestOptions UpdateModel [Set Postgres BecknRequest.BecknRequestT] (Where Postgres BecknRequest.BecknRequestT)
@@ -404,9 +399,6 @@ instance FromJSON DBUpdateObject where
       TripTermsUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ TripTermsOptions updateModel updVals whereClause
-      WebengageUpdate -> do
-        (updVals, whereClause) <- parseUpdateCommandValues contents
-        return $ WebengageOptions updateModel updVals whereClause
       FeedbackFormUpdate -> do
         (updVals, whereClause) <- parseUpdateCommandValues contents
         return $ FeedbackFormOptions updateModel updVals whereClause
