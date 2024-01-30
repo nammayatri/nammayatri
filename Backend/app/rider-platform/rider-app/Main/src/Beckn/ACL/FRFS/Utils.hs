@@ -279,7 +279,7 @@ mkSettlementTagGroup mAmount =
                         descriptorImages = Nothing,
                         descriptorName = Nothing
                       },
-                tagValue = Just "Bengaluru" -- TODO: make it dynamic
+                tagValue = Just "Chennai" -- TODO: make it dynamic
               },
           Just $
             Spec.Tag
