@@ -37,6 +37,13 @@ in
     let
       inherit (ny) inputs self' inputs';
       cfg = config.services.nammayatri;
+
+      common = { name, ... }: {
+        working_dir = "Backend";
+        namespace = "ny";
+        log_location = "${name}.log";
+      };
+
       # The cabal executables we want to run as part of the nammayatri service
       # group.
       cabalExecutables = [
@@ -76,10 +83,12 @@ in
           (name: {
             inherit name;
             value = {
-              imports = [ (haskellProcessFor name) ];
-              log_location = "${name}.log";
-              working_dir = "Backend";
+              imports = [
+                common
+                (haskellProcessFor name)
+              ];
               depends_on."nammayatri-init".condition = "process_completed_successfully";
+              shutdown.signal = 9; #cabal run doesn’t accept SIGTERM sending SIGKILL to kill all process
             };
           })
           cabalExecutables);
@@ -93,7 +102,7 @@ in
         processes = {
           # Things to do before local Haskell processes are started
           nammayatri-init = {
-            working_dir = "Backend";
+            imports = [ common ];
             depends_on = {
               # Compile Haskell code
               "cabal-build".condition = "process_completed_successfully";
@@ -125,7 +134,7 @@ in
 
           # Run 'cabal build' for all local Haskel processes
           cabal-build = {
-            working_dir = "Backend";
+            imports = [ common ];
             disabled = !cfg.useCabal;
             command = pkgs.writeShellApplication {
               name = "cabal-build";
@@ -138,24 +147,60 @@ in
 
           # Processes from other repos in nammayatri GitHub org
           beckn-gateway = {
+            imports = [ common ];
             command = ny.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
-            working_dir = "Backend";
           };
           mock-registry = {
+            imports = [ common ];
             command = ny.config.haskellProjects.default.outputs.finalPackages.mock-registry;
-            working_dir = "Backend";
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 2;
+              max_restarts = 5;
+            };
           };
           location-tracking-service = {
+            imports = [ common ];
             command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
-            working_dir = "Backend";
           };
           osrm-server = {
+            imports = [ common ];
             command = self'.packages.osrm-server;
           };
 
           kafka-consumers-exe = {
             environment = {
               CONSUMER_TYPE = "AVAILABILITY_TIME";
+            };
+          };
+
+          dynamic-offer-driver-app-exe = {
+            readiness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8016;
+                path = "/ui";
+              };
+            };
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 2;
+              max_restarts = 5;
+            };
+          };
+
+          rider-app-exe = {
+            readiness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8013;
+                path = "/v2";
+              };
+            };
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 2;
+              max_restarts = 5;
             };
           };
         };
