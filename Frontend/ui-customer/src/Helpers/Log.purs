@@ -61,9 +61,11 @@ baseAppLogs = do
 updateCTEventData :: GetProfileRes -> FlowBT String Unit
 updateCTEventData response = do
   let name = catMaybeStrings [ response ^. _firstName, response ^. _middleName, response ^. _lastName ]
+      mobileNumber = getValueToLocalStore MOBILE_NUMBER
   void $ liftFlowBT $ setCleverTapUserData "Name" name
   void $ liftFlowBT $ traverse (setCleverTapUserData "gender") $ response ^. _gender
   void $ liftFlowBT $ traverse (setCleverTapUserData "preferred Language") $ response ^. _language
-  void $ liftFlowBT $ setCleverTapUserData "Identity" $ getValueToLocalStore CUSTOMER_ID
-  void $ liftFlowBT $ setCleverTapUserData "Phone" $ "+91" <> getValueToLocalStore MOBILE_NUMBER
+  void $ liftFlowBT $ setCleverTapUserData "Identity" $ response ^._id
+  void $ liftFlowBT $ setCleverTapUserData "Phone" $ "+91" <> mobileNumber
   void $ liftFlowBT $ traverse (setCleverTapUserData "email") $ response ^. _email
+  void $ pure $ setCleverTapUserProp [{key : "Mobile Number", value : unsafeToForeign $ getValueToLocalStore COUNTRY_CODE <> mobileNumber}]

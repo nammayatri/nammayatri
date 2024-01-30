@@ -327,7 +327,7 @@ enterMobileNumberScreenFlow = do
                         _ <- lift $ lift $ setLogField "customer_id" $ encode (customerId)
                         pure unit
                     setValueToLocalStore CUSTOMER_ID customerId
-                    void $ liftFlowBT $ setCleverTapUserData "Identity" (getValueToLocalStore CUSTOMER_ID)
+                    void $ liftFlowBT $ setCleverTapUserData "Identity" customerId
                     setValueToLocalStore REGISTERATION_TOKEN response.token
                     setValueToLocalStore USER_NAME $ (fromMaybe "" $ response.person ^. _firstName) <> " " <> (fromMaybe "" $ response.person ^. _middleName) <> " " <> (fromMaybe "" $ response.person ^. _lastName)
                     if isNothing (response.person ^. _firstName) then currentFlowStatus else handleDeepLinks Nothing false
@@ -962,6 +962,7 @@ homeScreenFlow = do
                                                   }) srcSpecialLocation.gates
             if (sourceServiceabilityResp.serviceable ) then do
               let cityName = getCityNameFromCode sourceServiceabilityResp.city
+              void $ pure $ setCleverTapUserProp [{key : "Customer Location", value : unsafeToForeign $ show cityName}]
               setValueToLocalStore CUSTOMER_LOCATION $ show cityName
               modifyScreenState $ HomeScreenStateType 
                 (\homeScreen -> 
