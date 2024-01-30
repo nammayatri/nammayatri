@@ -1143,7 +1143,7 @@ profileOptionsLayout state push =
             _ -> true
         disableCondition optionItem = 
           case optionItem.menuOptions of
-            DRIVER_BOOKING_OPTIONS -> not state.data.activeRCData.rcStatus
+            DRIVER_BOOKING_OPTIONS -> state.data.config.profile.checkRCStatusForBookingOption && (not state.data.activeRCData.rcStatus)
             GO_TO_LOCATIONS -> state.data.goHomeActive || state.props.isRideActive
             _ -> false
         disabledOptionClickable optionItem = optionItem.menuOptions /= DRIVER_BOOKING_OPTIONS

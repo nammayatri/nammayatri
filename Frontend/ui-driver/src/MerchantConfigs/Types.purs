@@ -122,6 +122,8 @@ type RideCompletedCardConfig = {
 type ProfileConfig = {
   bookingOptionMenuForTaxi :: Boolean,
   showBookingOption :: Boolean
+, checkRCStatusForBookingOption :: Boolean
+
 }
 
 type GotoConfig = {
