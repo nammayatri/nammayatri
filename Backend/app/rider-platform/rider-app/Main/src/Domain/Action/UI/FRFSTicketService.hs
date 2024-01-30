@@ -209,7 +209,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
   unless (personId == booking'.riderId) $ throwError AccessDenied
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
-  when ((booking'.status /= DFRFSTicketBooking.CONFIRMED || booking'.status /= DFRFSTicketBooking.FAILED) && booking'.validTill < now) $
+  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.validTill < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
