@@ -178,9 +178,42 @@ window.getMerchantConfig = function () {
     , "showDisabilityBanner" : false
     , "enableContactSupport" : false
     , "enableGeocoder" : true
-    , "estimateAndQuoteConfig" :
-                { "enableOnlyAuto" : true
-                }
+    , "estimateAndQuoteConfig" : 
+      { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
+      , "variantOrder" : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV", "AUTO_RICKSHAW"]
+      , "variantInfo" : {
+        "hatchback" : {
+          "name" : "Hatchback",
+          "image" : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
+          },
+        "taxiPlus" : {
+          "name" : "AC Taxi",
+          "image" : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
+        },
+        "sedan" : {
+          "name" : "Sedan",
+          "image" : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+        },
+        "taxi" : {
+          "name" : "Non-AC Taxi",
+          "image" : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
+        },
+        "suv" : {
+          "name" : "SUV",
+          "image" : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv.png"
+        },
+        "autoRickshaw" : {
+          "name" : "Auto Rickshaw",
+          "image" : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
+        }
+
+      }
+      , "enableOnlyAuto" : true
+      , "showNearByDrivers": false
+      , "enableBookingPreference": true
+      , "textColor": "#6D7280"
+      , "showInfoIcon" : true 
+      }
     , "feature" : {
       "enableSupport" : false
       , "enableSuggestions" : true
