@@ -172,27 +172,27 @@ config =
       , variantInfo : {
         hatchback : {
           name : "Hatchback",
-          image : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_hatchback.png"
+          image : "ny_ic_hatchback,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_hatchback-2.png"
           },
         taxiPlus : {
           name : "AC Taxi",
-          image : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_sedan_ac.png"
+          image : "ny_ic_sedan_ac,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan_ac.png"
         },
         sedan : {
           name : "Sedan",
-          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_sedan.png"
+          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
         },
         taxi : {
           name : "Non-AC Taxi",
-          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_sedan.png"
+          image : "ny_ic_sedan,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_sedan.png"
         },
         suv : {
           name : "SUV",
-          image : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_suv.png"
+          image : "ny_ic_suv,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_suv.png"
         },
         autoRickshaw : {
           name : "Auto Rickshaw",
-          image : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/ny_ic_auto_quote_list.png"
+          image : "ny_ic_auto_quote_list,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_auto_quote_list.png"
         }
 
       }
