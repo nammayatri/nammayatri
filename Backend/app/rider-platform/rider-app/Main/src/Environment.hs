@@ -32,7 +32,7 @@ import qualified Data.Map.Strict as M
 import Domain.Types.FeedbackForm
 import EulerHS.Prelude (newEmptyTMVarIO)
 import Kernel.External.Encryption (EncTools)
-import Kernel.External.Infobip.Types (InfoBIPConfig, WebengageConfig)
+import Kernel.External.Infobip.Types (InfoBIPConfig)
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Sms.Config
@@ -77,7 +77,6 @@ data AppCfg = AppCfg
     hedisMigrationStage :: Bool,
     smsCfg :: SmsConfig,
     infoBIPCfg :: InfoBIPConfig,
-    webengageCfg :: WebengageConfig,
     port :: Int,
     metricsPort :: Int,
     hostName :: Text,
@@ -139,7 +138,6 @@ data AppEnv = AppEnv
     jobInfoMap :: M.Map Text Bool,
     schedulerSetName :: Text,
     schedulerType :: SchedulerType,
-    webengageCfg :: WebengageConfig,
     hostName :: Text,
     searchRequestExpiry :: Maybe Seconds,
     coreVersion :: Text,

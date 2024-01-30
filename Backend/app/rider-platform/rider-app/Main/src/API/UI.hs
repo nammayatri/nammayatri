@@ -52,8 +52,6 @@ import qualified API.UI.Select as Select
 import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
-import qualified API.UI.Webengage.InfoBIPWebhook as InfoBIPWebhook
-import qualified API.UI.Webengage.Webengage as Webengage
 import qualified API.UI.Whatsapp as Whatsapp
 import Environment
 import EulerHS.Prelude
@@ -83,8 +81,6 @@ type API =
            :<|> GoogleTranslateProxy.API
            :<|> CancellationReason.API
            :<|> SavedReqLocation.API
-           :<|> Webengage.API
-           :<|> InfoBIPWebhook.API
            :<|> Frontend.API
            :<|> Whatsapp.API
            :<|> Sos.API
@@ -125,8 +121,6 @@ handler =
     :<|> GoogleTranslateProxy.handler
     :<|> CancellationReason.handler
     :<|> SavedReqLocation.handler
-    :<|> Webengage.handler
-    :<|> InfoBIPWebhook.handler
     :<|> Frontend.handler
     :<|> Whatsapp.handler
     :<|> Sos.handler
