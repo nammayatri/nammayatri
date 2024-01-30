@@ -62,7 +62,8 @@ updateButtonConfig :: ST.MetroTicketBookingScreenState -> PrimaryButton.Config
 updateButtonConfig state = let
     config = PrimaryButton.config
     updateButtonConfig' = config 
-        { textConfig{ text = if state.data.ticketPrice /= 0 then ("Pay " <> " ₹" <> (show state.data.ticketPrice) )  else "Get Fare"}
+        { 
+         textConfig{ text = if state.props.currentStage /= ST.MetroTicketSelection then ("Pay " <> " ₹" <> (show (state.data.ticketPrice * state.data.ticketCount )) )  else "Get Fare"}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)

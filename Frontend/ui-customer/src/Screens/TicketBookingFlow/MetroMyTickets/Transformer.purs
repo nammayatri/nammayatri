@@ -21,6 +21,7 @@ import Screens.Types
 import Services.API
 import Data.Array
 import Data.Maybe
+import Engineering.Helpers.Commons
 
 
 metroTicketListApiToMyTicketsTransformer ::  (Array MetroTicketBookingStatus) -> MetroMyTicketsScreenState -> MetroMyTicketsScreenState 
@@ -51,7 +52,7 @@ ticketItemTransformer (MetroTicketBookingStatus bookingItem) =
     createdAt' = ""
     metroTicketStatusApiResp' = (MetroTicketBookingStatus bookingItem)
     status' = bookingItem.status
-    validUntill' = bookingItem.validTill
+    validUntill' = (convertUTCtoISC bookingItem.validTill "hh:mm A") <> ", " <> (convertUTCtoISC bookingItem.validTill "Do MMM YYYY") 
   in 
   {
       sourceName : sourceName'

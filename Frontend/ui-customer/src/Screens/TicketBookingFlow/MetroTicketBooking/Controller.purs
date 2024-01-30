@@ -40,6 +40,7 @@ instance loggableAction :: Loggable Action where
 
 data Action = AfterRender
             | BackPressed
+            | NoAction
             | GenericHeaderAC GenericHeader.Action
             | UpdateButtonAction PrimaryButton.Action
             | MyMetroTicketAction
@@ -70,19 +71,21 @@ eval MyMetroTicketAction state = exit $ MyMetroTicketScreen
 
 eval IncrementTicket state = do
   if state.data.ticketCount < 6
-    then continue state { data {ticketCount = state.data.ticketCount + 1 }}
+    then continue state { data {ticketCount = state.data.ticketCount + 1 }, props {currentStage  = ST.MetroTicketSelection}}
     else continue state
 
 eval DecrementTicket state = do
   if state.data.ticketCount > 1
-    then continue state { data {ticketCount = state.data.ticketCount - 1 }}
+    then continue state { data {ticketCount = state.data.ticketCount - 1 }, props {currentStage  = ST.MetroTicketSelection}}
     else continue state
 
 eval MetroRouteMapAction state = exit $ GoToMetroRouteMap
 
-eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSelected = not state.props.termsAndConditionsSelected}}
+eval ToggleTermsAndConditions state = continue state{props{termsAndConditionsSelected = not state.props.termsAndConditionsSelected, currentStage  = ST.MetroTicketSelection}}
 
-eval (ChangeTicketTab ticketType) state = continue state { data {ticketType = ticketType }}
+eval (ChangeTicketTab ticketType) state = do
+  let ticketCount = if ticketType == ST.ONE_WAY then state.data.ticketCount else 1
+  continue state { data {ticketType = ticketType, ticketCount = ticketCount }, props {currentStage  = ST.MetroTicketSelection}}
 
 eval (SelectLocation loc ) state = exit $ SelectSrcDest loc
 

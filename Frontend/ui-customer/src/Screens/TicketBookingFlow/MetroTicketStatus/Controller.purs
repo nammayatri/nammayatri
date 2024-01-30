@@ -43,6 +43,8 @@ import Services.API
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Screens.Types as ST
+import Screens.TicketBookingFlow.MetroTicketStatus.Transformer
+import Storage
 
 instance showAction :: Show Action where
   show _ = ""
@@ -62,7 +64,7 @@ data Action = BackPressed
 
 data ScreenOutput = NoOutput 
                   | GoBack
-                  | GoToMetroTicketDetails MetroTicketStatusScreenState
+                  | GoToMetroTicketDetails MetroTicketStatusScreenState MetroTicketBookingStatus
                   | RefreshPaymentStatus MetroTicketStatusScreenState
                   | GoToTryAgainPayment MetroTicketStatusScreenState
 
@@ -72,14 +74,9 @@ eval (BackPressed) state = exit GoBack --continue state -- Handle Back Press
 
 eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatus)) state =
   case metroTicketBookingStatus.status of 
-    "CONFIRMED" -> 
-      continue 
-        state{
-          props{
-            paymentStatus = Common.Success
-          , showShimmer = false
-          }
-        }
+    "CONFIRMED" -> do
+      void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+      continue state{ props{paymentStatus = Common.Success, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
     "FAILED" -> 
       continue 
         state{
@@ -101,7 +98,7 @@ eval (Copy text) state =
 
 eval (ViewTicketBtnOnClick PrimaryButton.OnClick) state = 
   case state.props.paymentStatus of 
-    Common.Success -> exit $ GoToMetroTicketDetails state
+    Common.Success -> updateAndExit state $ GoToMetroTicketDetails state state.data.resp
     Common.Failed -> exit $ GoToTryAgainPayment state
     _ -> continue state
 

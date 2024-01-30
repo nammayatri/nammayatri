@@ -2891,15 +2891,16 @@ newtype MetroTicketBookingStatus = MetroTicketBookingStatus {
   , payment :: Maybe FRFSBookingPaymentAPI
   , tickets :: Array FRFSTicketAPI
   , stations :: Array FRFSStationAPI
+  , createdAt :: String
 }
 
 newtype FRFSBookingPaymentAPI = FRFSBookingPaymentAPI {
     status :: String
-  , paymentOrder :: CreateOrderRes
+  , paymentOrder :: Maybe CreateOrderRes
 }
 
 newtype FRFSTicketAPI = FRFSTicketAPI {
-    status :: FRFSTicketStatus
+    status :: String --FRFSTicketStatus
   , qrData :: String
   , validTill :: String
   , ticketNumber :: String

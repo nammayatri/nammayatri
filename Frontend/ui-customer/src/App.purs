@@ -260,7 +260,7 @@ data TICKET_STATUS_SCREEN_OUTPUT = GET_BOOKING_INFO_SCREEN_FROM_TICKET_STATUS Ti
                                  | GO_TO_TICKET_LIST_FROM_STATUS_SCREEN TicketStatusScreenState
 
 data METRO_TICKET_STATUS_SCREEN_OUTPUT = NO_OUTPUT_METRO_TICKET_STATUS_SCREEN
-                                       | GO_TO_METRO_TICKET_DETAILS MetroTicketStatusScreenState
+                                       | GO_TO_METRO_TICKET_DETAILS MetroTicketStatusScreenState MetroTicketBookingStatus
                                        | REFRESH_STATUS_AC MetroTicketStatusScreenState
                                        | GO_TO_TRY_AGAIN_PAYMENT MetroTicketStatusScreenState
 

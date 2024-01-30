@@ -177,6 +177,7 @@ activeTicketView push ticketCard =
   , cornerRadius 8.0
   , orientation VERTICAL
   , background Color.grey900
+  , margin $ MarginBottom 16
   , onClick push $ const $ ActiveTicketPressed ticketCard.metroTicketStatusApiResp
   ][ 
     linearLayout [

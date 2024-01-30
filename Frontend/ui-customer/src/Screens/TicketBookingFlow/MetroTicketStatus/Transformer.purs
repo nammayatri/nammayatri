@@ -21,6 +21,8 @@ import Data.String as DS
 import Screens.Types
 import Services.API
 import Common.Types.App as Common
+import Engineering.Helpers.Commons
+import Data.Maybe
 
 metroTicketStatusTransformer :: MetroTicketBookingStatus -> String -> MetroTicketStatusScreenState -> MetroTicketStatusScreenState
 metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus) shortOrderId' state = 
@@ -29,6 +31,7 @@ metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus)
     paymentStatus' = case metroTicketBookingStatus.status of 
       "CONFIRMED" -> Common.Success
       "PAYMENT_PENDING" -> Common.Pending
+      "CONFIRMING" -> Common.Pending
       _ -> Common.Failed
     ticketName' = "Tickets for Chennai Metro"
     validUntil' =  metroTicketBookingStatus.validTill
@@ -50,12 +53,15 @@ metroTicketDetailsKeyVals ::  MetroTicketBookingStatus -> Array KeyVal
 metroTicketDetailsKeyVals (MetroTicketBookingStatus metroTicketBookingStatus) = 
   let 
     payment = metroTicketBookingStatus.payment
-    date = ""
+    date = convertUTCtoISC metroTicketBookingStatus.createdAt "hh:mm A, Do MMM YYYY"
     noOfTickets = show $ DA.length metroTicketBookingStatus.tickets
     totalPaid =   show $ metroTicketBookingStatus.price
     bookingId = metroTicketBookingStatus.bookingId
-    transactionId = ""
-    validUntill =  metroTicketBookingStatus.validTill
+    paymentOrder = metroTicketBookingStatus.payment >>= (\(FRFSBookingPaymentAPI payment') ->  payment'.paymentOrder)
+    transactionId = case paymentOrder of 
+      Just (CreateOrderRes orderResp) -> orderResp.id
+      Nothing -> ""
+    validUntill = (convertUTCtoISC metroTicketBookingStatus.validTill "hh:mm A") <> ", " <> (convertUTCtoISC metroTicketBookingStatus.validTill "Do MMM YYYY")
   in
     [ {key : "Date", val : date}
     , {key : "No of Tickets", val : noOfTickets }

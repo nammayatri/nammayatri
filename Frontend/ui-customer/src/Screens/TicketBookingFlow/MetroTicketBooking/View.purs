@@ -189,11 +189,11 @@ infoSelectioView state push =
                             , textView $ 
                               [ text " Terms & Conditions"
                               , color Color.blue900
-                              -- , onClick (\action -> do
-                              --         _<- push action
-                              --         _ <- JB.openUrlInApp $ "url" -- uncomment once doc link is available
-                              --         pure unit
-                              --         ) (const NoAction)
+                              , onClick (\action -> do
+                                      _<- push action
+                                      _ <- JB.openUrlInApp $ "https://metro-terms.triffy.in/chennai/index.html"
+                                      pure unit
+                                      ) (const NoAction)
                               ] <> FontStyle.body1 TypoGraphy
                           ]
                   , termsAndConditionsView (getTermsAndConditions "") true
@@ -278,7 +278,8 @@ headerView state push =
 
 incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 incrementDecrementView push state =
-  let ticketLimit = 6
+  let ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then 1 else 6
+      limitReached = (state.data.ticketType == ST.ROUND_TRIP && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY && state.data.ticketCount >= ticketLimit)
   in 
   linearLayout
         [ height WRAP_CONTENT
@@ -334,6 +335,8 @@ incrementDecrementView push state =
               , width WRAP_CONTENT
               , height WRAP_CONTENT
               , gravity CENTER
+              , alpha $ if limitReached then 0.5 else 1.0
+              , clickable $ if limitReached then false else true
               ] <> FontStyle.body10 TypoGraphy
           ]
         , linearLayout
@@ -350,7 +353,7 @@ incrementDecrementView push state =
                     , textView $
                       [ height WRAP_CONTENT
                       , width WRAP_CONTENT
-                      , text "Maximum 6 tickets are allowed per user."
+                      , text $ "Maximum "<> (show ticketLimit) <> " tickets are allowed per user."
                       , color Color.black600
                       , gravity LEFT
                       , singleLine true

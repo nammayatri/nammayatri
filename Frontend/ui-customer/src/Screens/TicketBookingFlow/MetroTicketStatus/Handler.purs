@@ -34,9 +34,9 @@ metroTicketStatusScreen = do
   case action of
     GoBack ->  App.BackT $ pure App.GoBack 
     NoOutput -> pure NO_OUTPUT_METRO_TICKET_STATUS_SCREEN
-    GoToMetroTicketDetails updatedState -> do
+    GoToMetroTicketDetails updatedState resp -> do
       modifyScreenState $ MetroTicketStatusScreenStateType (\_ ->updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_TICKET_DETAILS updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_METRO_TICKET_DETAILS updatedState resp)
     RefreshPaymentStatus updatedState -> do
       modifyScreenState $ MetroTicketStatusScreenStateType (\_ ->updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_STATUS_AC updatedState)

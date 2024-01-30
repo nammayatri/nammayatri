@@ -493,7 +493,7 @@ homeScreenFlow = do
       myRidesScreenFlow true
     GO_TO_HELP -> do
       _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_help"
-      metroTicketDetailsFlow
+      helpAndSupportScreenFlow
     CHANGE_LANGUAGE ->  selectLanguageScreenFlow
     GO_TO_EMERGENCY_CONTACTS -> do
       modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> EmergencyContactsScreenData.initData)
@@ -2799,10 +2799,14 @@ metroTicketBookingFlow = do
           let (MetroTicketBookingStatus metroBookingStatus) = confirmMetroQuoteResp
           modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ bookingId = ( (metroBookingStatus.bookingId))}})
           void $ pure $ spy "METRO_FARE_AND_PAYMENT LIST CALLED" (show $ (metroBookingStatus.bookingId))
+          void $ lift $ lift $ delay $ Milliseconds 3000.0
           metroTicketPaymentFlow metroBookingStatus.bookingId
           else do
             metroTicketBookingFlow  
-    GO_TO_MY_METRO_TICKET_SCREEN -> metroTicketDetailsFlow
+    GO_TO_MY_METRO_TICKET_SCREEN -> do
+      (GetMetroBookingListResp resp)<- Remote.getMetroBookingStatusListBT
+      modifyScreenState $ MetroMyTicketsScreenStateType (\metroMyTicketsScreen -> metroTicketListApiToMyTicketsTransformer resp metroMyTicketsScreen)
+      metroMyTicketsFlow
     GO_TO_METRO_ROUTE_MAP -> do
       modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
       modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{props{stage = ST.MetroMapStage, previousScreenStage = ST.MetroTicketSelectionStage}})
@@ -2820,17 +2824,33 @@ metroTicketPaymentFlow bookingId = do
   let (MetroTicketBookingStatus metroTicketStatusResp) = getMetroStatusResp
   case metroTicketStatusResp.payment of
     Just (FRFSBookingPaymentAPI paymentInfo) -> do
-      let (CreateOrderRes orderResp) = paymentInfo.paymentOrder
-          (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
-          (PayPayload innerpayload) = sdk_payload.payload
-          finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
-          sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
-          shortOrderID = orderResp.order_id
-      lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
-      _ <- paymentPageUI sdkPayload
-      void $ lift $ lift $ toggleLoader true
-      _ <- pure $ toggleBtnLoader "" false
-      pure unit
+      case paymentInfo.paymentOrder of
+        Just (CreateOrderRes orderResp) -> do
+          let (PaymentPagePayload sdk_payload) = orderResp.sdk_payload
+              (PayPayload innerpayload) = sdk_payload.payload
+              finalPayload = PayPayload $ innerpayload{ language = Just (getPaymentPageLangKey (getLanguageLocale languageKey)) }
+              sdkPayload = PaymentPagePayload $ sdk_payload{payload = finalPayload}
+              shortOrderID = orderResp.order_id
+          lift $ lift $ doAff $ makeAff \cb -> runEffectFn1 checkPPInitiateStatus (cb <<< Right) $> nonCanceler
+          _ <- paymentPageUI sdkPayload
+          void $ lift $ lift $ toggleLoader true
+          void $ lift $ lift $ delay $ Milliseconds 3000.0
+          setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "true"
+          modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusScreen{data{bookingId = bookingId}})
+
+          (GetMetroBookingStatusResp getMetroStatusResp2) <- Remote.getMetroStatusBT bookingId
+          let (MetroTicketBookingStatus metroTicketStatusResp2) = getMetroStatusResp2
+          _ <- pure $ toggleBtnLoader "" false
+          void $ lift $ lift $ toggleLoader false
+          case metroTicketStatusResp2.payment of
+             Just (FRFSBookingPaymentAPI paymentInfo) -> do
+              if paymentInfo.status == "NEW" then metroTicketBookingFlow
+              else do
+                modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer getMetroStatusResp metroTicketDetailsState)
+                modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer getMetroStatusResp shortOrderID metroTicketStatusScreen)
+                metroTicketStatusFlow
+             Nothing -> metroTicketBookingFlow
+        Nothing -> metroTicketBookingFlow
     Nothing -> pure unit
 
 sdkPayload :: PaymentPagePayload
@@ -3111,7 +3131,10 @@ metroTicketStatusFlow = do
   (GlobalState currentState) <- getState
   flow <- UI.metroTicketStatusScreen
   case flow of 
-    GO_TO_METRO_TICKET_DETAILS _ -> metroTicketDetailsFlow
+    GO_TO_METRO_TICKET_DETAILS state resp -> do
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\_ -> MetroTicketDetailsScreenData.initData)
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer resp metroTicketDetailsState)
+      metroTicketDetailsFlow
     REFRESH_STATUS_AC state -> do
       resp <- (Remote.retryMetroTicketPayment state.data.shortOrderId)
       case resp of 

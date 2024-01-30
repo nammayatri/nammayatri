@@ -2152,8 +2152,11 @@ type MetroTicketStatusScreenData = {
   shortOrderId :: String,
   keyValArray :: Array KeyVal,
   ticketName :: String,
-  validUntil :: String
+  validUntil :: String,
+  bookingId :: String,
+  resp :: MetroTicketBookingStatus
 }
+
 
 type MetroTicketStatusScreenProps = {
   showShimmer :: Boolean

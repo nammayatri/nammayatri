@@ -20,8 +20,6 @@ import Common.Types.App as Common
 import ConfigProvider
 import Screens.Types 
 
-
-
 initData :: MetroTicketDetailsScreenState
 initData = {
   data : {
@@ -77,35 +75,3 @@ dummyMetroRoute =
     }
   ]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
--- module Screens.TicketBookingFlow.MetroTicketDetails.ScreenData where
-
--- import Prelude
-
--- import Common.Types.App as Common
--- import ConfigProvider
--- import Screens.Types 
-
-
-
--- initData :: MetroTicketDetailsScreenState
--- initData = {
---   data : {
---     dummyData : ""
---   }
--- , props :  {
---     dummyProps : ""
---   }
--- }

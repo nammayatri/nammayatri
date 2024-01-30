@@ -88,26 +88,26 @@ screen initialState =
   where
   getPlaceDataEvent push = do
     void $ pure $ spy "getPlaceDataEvent" ""
-    void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.shortOrderId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
+    void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
     pure $ pure unit
 --------------------------------------------------------------------------------------------
 
 metroPaymentStatusPooling :: forall action. String -> String -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (MetroTicketBookingStatus -> action) -> Flow GlobalState Unit
-metroPaymentStatusPooling shortOrderId validUntil delayDuration state push action = do
+metroPaymentStatusPooling bookingId validUntil delayDuration state push action = do
   let dummy = spy (getCurrentUTC "") validUntil
   let diffSec = spy "DIFF" $ runFn2 JB.differenceBetweenTwoUTC  validUntil (getCurrentUTC "")
-  if (getValueToLocalStore METRO_PAYMENT_STATUS_POOLING) == "true"  && diffSec > 0 && shortOrderId /= "" then do
-    ticketStatus <-  Remote.getMetroBookingStatus shortOrderId 
+  if (getValueToLocalStore METRO_PAYMENT_STATUS_POOLING) == "true" && bookingId /= "" then do
+    ticketStatus <-  Remote.getMetroBookingStatus bookingId 
     void $ pure $ spy "ticketStatus" ticketStatus
     case ticketStatus of
       Right (API.GetMetroBookingStatusResp resp) -> do
         let (MetroTicketBookingStatus statusResp) = resp
-        if (DA.any (_ == statusResp.status) ["CONFIRMED", "FAILED"]) then do
+        if ((DA.any (_ == statusResp.status) ["CONFIRMED", "FAILED", "EXPIRED"]) || diffSec < 0) then do
             _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
             doAff do liftEffect $ push $ action resp
         else do
             void $ delay $ Milliseconds delayDuration
-            metroPaymentStatusPooling shortOrderId validUntil delayDuration state push action
+            metroPaymentStatusPooling bookingId validUntil delayDuration state push action
       Left _ -> pure unit
   else pure unit
 
@@ -254,6 +254,7 @@ bookingStatusBody state push paymentStatus =
             , padding $ Padding 10 10 10 10
             , cornerRadius 8.0
             , background Color.white900
+            , visibility if paymentStatus == Common.Success then GONE else VISIBLE
             ][ linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
@@ -420,7 +421,7 @@ keyValueView push state key value index =
 getTransactionConfig :: Common.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
 getTransactionConfig status = 
   case status of
-    Common.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : "Your ticket has been generated below", title : "Your booking is Confirmed!"}
+    Common.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : "Please wait while we generate your ticket", title : "Payment Received!"}
     Common.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : "Please check back in a few minutes.", title : "Your booking is Pending!"}
     Common.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : "Please retry booking.", title : "Booking Failed!"}
     Common.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}

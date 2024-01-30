@@ -144,7 +144,7 @@ eval _ state = continue state
 
 shareImageMessageConfig :: String ->  Common.ShareImageConfig 
 shareImageMessageConfig _ = {
-    viewId : getNewIDWithTag "MetroTicketView"
+    viewId : getNewIDWithTag "metro_ticket_details_view"
   , code : ""
   , logoId : getNewIDWithTag "metro_ticket_qr_code"
   , isReferral : false
