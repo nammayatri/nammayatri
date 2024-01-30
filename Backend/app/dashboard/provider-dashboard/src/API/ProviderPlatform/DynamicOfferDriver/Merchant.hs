@@ -56,6 +56,7 @@ type API =
            :<|> CreateFPDriverExtraFee
            :<|> UpdateFPDriverExtraFee
            :<|> UpdateFPPerExtraKmRate
+           :<|> UpdateFarePolicy
            :<|> SchedulerTriggerAPI
        )
 
@@ -139,6 +140,10 @@ type UpdateFPPerExtraKmRate =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_FP_PER_EXTRA_KM_RATE
     :> Common.UpdateFPPerExtraKmRate
 
+type UpdateFarePolicy =
+  ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'UPDATE_FARE_POLICY
+    :> Common.UpdateFarePolicy
+
 type SchedulerTriggerAPI =
   ApiAuth 'DRIVER_OFFER_BPP_MANAGEMENT 'MERCHANT 'SCHEDULER_TRIGGER
     :> Common.SchedulerTriggerAPI
@@ -165,6 +170,7 @@ handler merchantId city =
     :<|> createFPDriverExtraFee merchantId city
     :<|> updateFPDriverExtraFee merchantId city
     :<|> updateFPPerExtraKmRate merchantId city
+    :<|> updateFarePolicy merchantId city
     :<|> schedulerTrigger merchantId city
 
 buildTransaction ::
@@ -411,3 +417,9 @@ updateFPPerExtraKmRate merchantShortId opCity apiTokenInfo farePolicyId startDis
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction Common.UpdateFPPerExtraKmRate apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFPPerExtraKmRate) farePolicyId startDistance req
+
+updateFarePolicy :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.FarePolicy -> Common.UpdateFarePolicyReq -> FlowHandler APISuccess
+updateFarePolicy merchantShortId opCity apiTokenInfo farePolicyId req = withFlowHandlerAPI' $ do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction Common.UpdateFarePolicy apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callDriverOfferBPPOperations checkedMerchantId opCity (.merchant.updateFarePolicy) farePolicyId req

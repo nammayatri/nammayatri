@@ -48,6 +48,7 @@ type API =
            :<|> Common.CreateFPDriverExtraFee
            :<|> Common.UpdateFPDriverExtraFee
            :<|> Common.UpdateFPPerExtraKmRate
+           :<|> Common.UpdateFarePolicy
            :<|> Common.SchedulerTriggerAPI
        )
 
@@ -73,6 +74,7 @@ handler merchantId city =
     :<|> createFPDriverExtraFee merchantId city
     :<|> updateFPDriverExtraFee merchantId city
     :<|> updateFPPerExtraKmRate merchantId city
+    :<|> updateFarePolicy merchantId city
     :<|> schedulerTrigger merchantId city
 
 merchantUpdate ::
@@ -212,3 +214,6 @@ updateFPDriverExtraFee merchantShortId opCity farePolicyId startDistance req = w
 
 updateFPPerExtraKmRate :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Meters -> Common.UpdateFPPerExtraKmRateReq -> FlowHandler APISuccess
 updateFPPerExtraKmRate merchantShortId opCity farePolicyId startDistance req = withFlowHandlerAPI $ DMerchant.updateFPPerExtraKmRate merchantShortId opCity (cast farePolicyId) startDistance req
+
+updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Common.UpdateFarePolicyReq -> FlowHandler APISuccess
+updateFarePolicy merchantShortId opCity farePolicyId req = withFlowHandlerAPI $ DMerchant.updateFarePolicy merchantShortId opCity (cast farePolicyId) req

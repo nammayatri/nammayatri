@@ -58,6 +58,7 @@ data MerchantEndpoint
   | VerificationServiceConfigUpdateEndpoint
   | CreateFPDriverExtraFeeEndpoint
   | UpdateFPDriverExtraFeeEndpoint
+  | UpdateFarePolicy
   | UpdateFPPerExtraKmRate
   | SchedulerTriggerAPIEndpoint
   deriving (Show, Read)

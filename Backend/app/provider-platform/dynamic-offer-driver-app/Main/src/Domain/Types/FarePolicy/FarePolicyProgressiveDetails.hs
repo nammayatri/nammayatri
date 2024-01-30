@@ -18,8 +18,8 @@ module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
   )
 where
 
+import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
 import Domain.Types.Common
-import Domain.Types.FarePolicy.Common as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as Reexport
 import Kernel.Prelude
 import Kernel.Types.Common

@@ -225,7 +225,6 @@ library
       Domain.Types.Exophone
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
-      Domain.Types.FarePolicy.Common
       Domain.Types.FarePolicy.DriverExtraFeeBounds
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails
       Domain.Types.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection

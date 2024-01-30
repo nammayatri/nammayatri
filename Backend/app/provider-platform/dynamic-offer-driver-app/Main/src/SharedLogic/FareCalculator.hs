@@ -23,6 +23,7 @@ module SharedLogic.FareCalculator
   )
 where
 
+import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant hiding (Variant (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Time
   ( LocalTime (localTimeOfDay),
@@ -319,7 +320,7 @@ countFullFareOfParamsDetails = \case
   DFParams.SlabDetails det -> (0, 0, roundToIntegral (fromMaybe 0 det.platformFee + fromMaybe 0 det.sgst + fromMaybe 0 det.cgst))
 
 isNightShift ::
-  DFP.NightShiftBounds ->
+  NightShiftBounds ->
   UTCTime ->
   Bool
 isNightShift nightShiftBounds time = do
