@@ -45,6 +45,7 @@ import Environment
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -307,7 +308,9 @@ skipDriverPoolCheck (DTC.OneWay DTC.OneWayOnDemandDynamicOffer) = False
 skipDriverPoolCheck _ = True
 
 buildSearchRequest ::
-  ( EsqDBFlow m r,
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   DSearchReq ->
@@ -345,7 +348,9 @@ buildSearchRequest DSearchReq {..} startTime isScheduled providerId merchantOpCi
       }
 
 buildQuote ::
-  ( EsqDBFlow m r,
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   DSR.SearchRequest ->
@@ -380,6 +385,7 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
           timeDiffFromUtc = Nothing
         }
   quoteId <- Id <$> generateGUID
+  void $ cacheFarePolicyByQuoteId quoteId.getId fullFarePolicy
   now <- getCurrentTime
   let estimatedFare = fareSum fareParams
       estimatedFinishTime = (\duration -> fromIntegral duration `addUTCTime` now) <$> mbDuration
@@ -401,7 +407,7 @@ buildQuote searchRequest transporterId pickupTime isScheduled mbDistance mbDurat
       }
 
 buildEstimate ::
-  (EsqDBFlow m r, CacheFlow m r) =>
+  (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) =>
   Id DSR.SearchRequest ->
   UTCTime ->
   Bool ->
@@ -433,12 +439,13 @@ buildEstimate searchReqId startTime isScheduled mbDistance specialLocationTag cu
         }
   let baseFare = fareSum fareParams
   logDebug $ "baseFare: " <> show baseFare
-  uuid <- generateGUID
+  estimateId <- Id <$> generateGUID
   now <- getCurrentTime
+  void $ cacheFarePolicyByEstimateId estimateId.getId fullFarePolicy
   let mbDriverExtraFeeBounds = DFP.findDriverExtraFeeBoundsByDistance dist <$> fullFarePolicy.driverExtraFeeBounds
   pure
     DEst.Estimate
-      { id = Id uuid,
+      { id = estimateId,
         requestId = searchReqId,
         vehicleVariant = fullFarePolicy.vehicleVariant,
         tripCategory = fullFarePolicy.tripCategory,

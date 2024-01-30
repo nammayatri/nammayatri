@@ -33,6 +33,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.FarePolicy
 import SharedLogic.SearchTry
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -91,11 +92,19 @@ cancelRideImpl rideId bookingCReason = do
             result <- try @_ @SomeException (initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq driverQuote.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId)
             case result of
               Right _ -> BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source
-              Left _ -> BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+              Left _ -> cancelRideTransactionForNonReallocation booking searchTry merchant bookingCReason.source
           else -- repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
-            BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
-      _ -> BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source
+            cancelRideTransactionForNonReallocation booking searchTry merchant bookingCReason.source
+      _ -> do
+        driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
+        searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
+        cancelRideTransactionForNonReallocation booking searchTry merchant bookingCReason.source
   where
+    cancelRideTransactionForNonReallocation booking searchTry merchant bookingCancellationReason = do
+      void $ clearCachedFarePolicyByEstOrQuoteId searchTry.estimateId
+      void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
+      BP.sendBookingCancelledUpdateToBAP booking merchant bookingCancellationReason
+
     addDriverToSearchCancelledList searchReqId ride = do
       let keyForDriverCancelledList = DP.mkBlockListedDriversKey searchReqId
       cacheBlockListedDrivers keyForDriverCancelledList ride.driverId

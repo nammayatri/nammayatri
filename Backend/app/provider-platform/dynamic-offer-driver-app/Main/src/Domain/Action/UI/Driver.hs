@@ -894,7 +894,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
       quoteCount <- runInReplica $ QDrQt.countAllBySTId searchTry.id
       when (quoteCount >= quoteLimit) (throwError QuoteAlreadyRejected)
 
-      farePolicy <- getFarePolicy merchantOpCityId searchTry.tripCategory sReqFD.vehicleVariant searchReq.area
+      farePolicy <- getFarePolicyByEstOrQuoteId merchantOpCityId searchTry.tripCategory sReqFD.vehicleVariant searchReq.area searchTry.estimateId
       let driverExtraFeeBounds = DFarePolicy.findDriverExtraFeeBoundsByDistance (fromMaybe 0 searchReq.estimatedDistance) <$> farePolicy.driverExtraFeeBounds
       whenJust req.offeredFare $ \off ->
         whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
@@ -921,6 +921,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
             }
       QFP.updateFareParameters fareParams
       driverQuote <- buildDriverQuote driver searchReq sReqFD searchTry.estimateId searchTry.tripCategory fareParams
+      void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
       triggerQuoteEvent QuoteEventData {quote = driverQuote}
       void $ QDrQt.create driverQuote
       driverFCMPulledList <-

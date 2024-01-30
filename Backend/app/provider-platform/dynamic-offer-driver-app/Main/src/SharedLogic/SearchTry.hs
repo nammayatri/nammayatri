@@ -102,7 +102,7 @@ initiateDriverSearchBatch ::
   Text ->
   m ()
 initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCategory vehicleVariant estOrQuoteId customerExtraFee messageId = do
-  farePolicy <- getFarePolicy searchReq.merchantOperatingCityId tripCategory vehicleVariant searchReq.area
+  farePolicy <- getFarePolicyByEstOrQuoteId searchReq.merchantOperatingCityId tripCategory vehicleVariant searchReq.area estOrQuoteId
   searchTry <- createNewSearchTry farePolicy searchReq.customerCancellationDues
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleVariant searchTry.tripCategory searchReq.estimatedDistance
   goHomeCfg <- CQGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId
