@@ -1,17 +1,14 @@
-### To set up your environment for load-test
+# Nammayatri Load Testing
 
-```
-You should have the Nammayatri servers and services running using
-, run-mobility-stack-dev
-```
+Load testing is automatted via Nix.
 
 ### To run the load-test
 
-You can run the load test by
+You can run the load test by running the following in the Nix dev shell:
+
 ```
  , run-load-test-dev
 ```
-
 
 ### To make changes in the load-test
 
@@ -30,5 +27,4 @@ You can go to `.env` and modify the `NUM_DRIVERS` option
 
 ### Checking the results
 
-You can check the results at `/load-test/output/driverOffer.html` and `/load-test/output/riderApp.html` <br/>
-The output files consists of `latency, number of requests and errors` of all the APIs.
+You can check the results at `/load-test/output/driverOffer.html` and `/load-test/output/riderApp.html`. The output files consists of `latency, number of requests and errors` of all the APIs.
