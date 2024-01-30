@@ -28,6 +28,7 @@ initData = {
         , nearByGates : []
         , specialZoneCoordinates : ""
         , confirmLocCategory : ""
+        , predictionSelectedFromHome : locationListStateObj
   } ,
   props : {
     searchLocStage : PredictionsStage ,

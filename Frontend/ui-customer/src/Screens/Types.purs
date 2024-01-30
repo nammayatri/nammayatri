@@ -1906,7 +1906,8 @@ type SearchLocationScreenData =
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
-    confirmLocCategory :: String
+    confirmLocCategory :: String,
+    predictionSelectedFromHome :: LocationListItemState
   }
 
 type SearchLocationScreenProps = 
@@ -1943,6 +1944,7 @@ data SearchLocationStage =  ConfirmLocationStage
                           | PredictionsStage 
                           | LocateOnMapStage
                           | AllFavouritesStage
+                          | PredictionSelectedFromHome
 
 derive instance genericSearchLocationStage :: Generic SearchLocationStage _
 instance eqSearchLocationStage :: Eq SearchLocationStage where eq = genericEq

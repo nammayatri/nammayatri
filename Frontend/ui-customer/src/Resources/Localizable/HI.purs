@@ -806,3 +806,4 @@ getHI stringKey =
         DISTANCE -> "दूरत्व"
         STARTING_ODO -> "शुरुआती ODO"
         END_OTP -> "समाप्त OTP"
+        ONLY_LOCATION_WITHIN_CITY_LIMITS -> "शहर सीमा के अंदर के स्थानों को ही किराए पर लेने के लिए योग्य माना जाएगा।"

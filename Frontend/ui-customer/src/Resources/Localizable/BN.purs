@@ -805,3 +805,4 @@ getBN stringKey =
         DISTANCE -> "দূরত্ব"
         STARTING_ODO -> "শুরু হওয়া ODO"
         END_OTP -> "শেষ OTP"
+        ONLY_LOCATION_WITHIN_CITY_LIMITS -> "শহরের সীমার মধ্যে থাকা স্থানগুলির জন্যই ভাড়া নেয়া যাবে।"

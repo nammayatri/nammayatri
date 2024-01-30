@@ -805,3 +805,4 @@ getFR stringKey =
         DISTANCE -> "Distance"
         STARTING_ODO -> "Départ ODO"
         END_OTP -> "Fin OTP"
+        ONLY_LOCATION_WITHIN_CITY_LIMITS -> "Seuls les emplacements à l'intérieur des limites de la ville sont éligibles pour les locations."

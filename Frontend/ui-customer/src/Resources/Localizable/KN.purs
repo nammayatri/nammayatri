@@ -805,3 +805,4 @@ getKN stringKey =
         DISTANCE -> "ದೂರತ್ವ"
         STARTING_ODO -> "ಆರಂಭ ODO"
         END_OTP -> "ಕೊನೆ OTP"
+        ONLY_LOCATION_WITHIN_CITY_LIMITS -> "ನಗರ ನಿರ್ದಿಷ್ಟದಲ್ಲಿರುವ ಸ್ಥಳಗಳೇ ರೆಂಟಲ್ ಚಾಲನೆಗಳಿಗೆ ಯೋಗ್ಯವಾಗಿವೆ."

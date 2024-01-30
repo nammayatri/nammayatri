@@ -822,3 +822,4 @@ getML stringKey =
         DISTANCE -> "ദൂരം"
         STARTING_ODO -> "ആരംഭ ODO"
         END_OTP -> "അവസാന OTP"
+        ONLY_LOCATION_WITHIN_CITY_LIMITS -> "നഗര പരിമിതിക്കുള്ളിലെ സ്ഥാനങ്ങളാണ് കാർ ഉപയോഗിക്കാൻ യോഗ്യത."

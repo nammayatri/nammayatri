@@ -18,9 +18,10 @@ import Helpers.Utils as HU
 import Data.String (length) as DS
 import Prelude (show, (&&))
 import Language.Strings (getString)
-
+import Components.PopUpModal as PopUpModal
 import Language.Types (STR(..))
 import Common.Types.App (LazyCheck(..))
+import PrestoDOM.Types.DomAttributes as PTD
 import Mobility.Prelude (boolToVisibility)
 import Screens 
 import Debug(spy)
@@ -229,3 +230,41 @@ menuButtonConfig state item = let
       , layoutBg = layoutBg
     }
     in menuButtonConfig'
+
+locUnserviceablePopUpConfig :: ST.SearchLocationScreenState -> PopUpModal.Config
+locUnserviceablePopUpConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER,
+    margin = (MarginHorizontal 16 16),
+    buttonLayoutMargin = (Margin 0 16 16 0),
+    editTextVisibility = GONE,
+    dismissPopupConfig {
+      visibility = GONE
+      },
+    primaryText {
+      text = (getString LOCATION_UNSERVICEABLE), 
+      gravity = CENTER,
+      margin = MarginTop 16
+      },
+    secondaryText { 
+      text = getString ONLY_LOCATION_WITHIN_CITY_LIMITS ,
+      margin = MarginTop 4
+      },
+    option1 {
+      visibility = false
+      },
+    option2 { 
+      text = (getString GOT_IT),
+      padding = (Padding 16 0 16 0)
+    },
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+      imageUrl = HU.fetchImage HU.FF_ASSET "ny_ic_location_unserviceable"
+      , visibility = VISIBLE
+      , margin = Margin 16 16 16 24
+      , width = MATCH_PARENT
+      , height = V 200
+    }
+  }
+  in popUpConfig'

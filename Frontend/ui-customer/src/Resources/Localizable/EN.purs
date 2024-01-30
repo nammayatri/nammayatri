@@ -805,3 +805,4 @@ getEN stringKey =
         DISTANCE -> "Distance"
         STARTING_ODO -> "Starting ODO"
         END_OTP -> "End OTP"
+        ONLY_LOCATION_WITHIN_CITY_LIMITS -> "Only locations within the city limits are eligible for rental rides."

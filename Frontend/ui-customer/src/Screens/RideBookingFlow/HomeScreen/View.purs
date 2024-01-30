@@ -2146,9 +2146,10 @@ searchLocationModelView push state =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
+    , visibility GONE
     , background if state.props.isRideServiceable then Color.transparent else Color.white900
-    ]
-    [ SearchLocationModel.view (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]
+    ][]
+    -- [ SearchLocationModel.view (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]
 
 ------------------------ quoteListModelView ---------------------------
 quoteListModelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -3799,10 +3800,6 @@ mapView push state idTag isVisible =
         , width $ mapDimensions.width 
         , accessibility DISABLE_DESCENDANT
         , id (getNewIDWithTag idTag)
-        , afterRender (\action -> do 
-            let _ = spy "inside action" "afterRender"
-            void $ push action
-            ) $ const NoAction
         , visibility if state.props.isSrcServiceable then VISIBLE else GONE
         , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
         , clickable $ not isHomeScreenView state 
@@ -3812,20 +3809,6 @@ mapView push state idTag isVisible =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
-        , afterRender
-            ( \action -> do
-                _ <- push action
-                _ <- getCurrentPosition push CurrentLocation
-                _ <- pure $ spy "Inside showMap " "mapViewjbsdcmjb"
-                _ <- showMap (getNewIDWithTag if isHomeScreenView state then "CustomerHomeScreenMap" else "CustomerHomeScreen") isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
-                if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
-                else pure unit
-                case state.props.currentStage of
-                  HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
-                  -- RideSearch -> push RideSearchAction
-                  _ -> pure unit
-            )
-            (const MapReadyAction)
         , gravity RIGHT
         , padding $ Padding 0 0 16 16
         , visibility $ if isHomeScreenView state then VISIBLE else GONE

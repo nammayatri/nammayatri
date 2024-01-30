@@ -143,7 +143,7 @@ initData = {
     , peekHeight : 0
     , rideHistoryTrip : Nothing
     , rentalsInfo : Just {rentalsScheduledAt : "12 : 45 PM"}
-    , rideType : NORMAL_RIDE
+    , rideType : RENTAL_RIDE
     },
     props: {
       rideRequestFlow : false

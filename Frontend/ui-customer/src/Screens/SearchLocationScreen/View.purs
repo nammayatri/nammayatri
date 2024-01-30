@@ -1,14 +1,14 @@
 module Screens.SearchLocationScreen.View where
 
-import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), bind, show, pure, const, unit, not, void, discard, map)
+import Prelude ((<<<), (==), Unit, ($), (<>), (&&), (-), (/), (>), (/=), (+), (||), bind, show, pure, const, unit, not, void, discard, map)
 import Screens.SearchLocationScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig)
+import Screens.SearchLocationScreen.ComponentConfig (locationTagBarConfig, separatorConfig, primaryButtonConfig, mapInputViewConfig, menuButtonConfig, confirmLocBtnConfig, locUnserviceablePopUpConfig)
 import Components.InputView as InputView
 import Effect (Effect)
 import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps)
 import Styles.Colors as Color
 import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed)
+import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, onAnimationEnd)
 import JBridge (showMap, debounceFunction, startLottieProcess, lottieAnimationConfig, storeCallBackLocateOnMap)
 import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner, os)
 import Components.SeparatorView.View as SeparatorView
@@ -16,6 +16,7 @@ import Components.LocationListItem as LocationListItem
 import Components.FavouriteLocationModel as FavouriteLocationModel
 import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.MenuButton as MenuButton
+import Components.PopUpModal as PopUpModal
 import Mobility.Prelude (boolToVisibility)
 import Font.Size as FontSize
 import Font.Style as FontStyle
@@ -34,10 +35,14 @@ import Control.Monad.Free (runFree)
 import Helpers.Utils (fetchAndUpdateCurrentLocation)
 import Data.Maybe (isNothing, maybe, Maybe(..), isJust ) as MB
 import Resources.Constants (getDelayForAutoComplete)
-import Engineering.Helpers.Commons (os, screenHeight, screenWidth) as EHC
+import Engineering.Helpers.Commons (os, screenHeight, screenWidth, safeMarginBottom) as EHC
 import Data.String (length, null, take) as DS
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Animation (translateYAnimFromTop, fadeInWithDelay)
+import PrestoDOM.Animation as PrestoAnim
+import Animation.Config (translateFullYAnimWithDurationConfig)
+import Helpers.CommonView (emptyTextView)
 
 searchLocationScreen :: SearchLocationScreenState -> GlobalProps -> Screen Action SearchLocationScreenState ScreenOutput
 searchLocationScreen initialState globalProps = 
@@ -55,7 +60,8 @@ searchLocationScreen initialState globalProps =
     globalEventsFunc push = do
       case initialState.props.searchLocStage of 
         LocateOnMapStage -> storeCallBackLocateOnMap push LocFromMap 
-        ConfirmLocationStage -> storeCallBackLocateOnMap push LocFromMap
+        ConfirmLocationStage -> do 
+          storeCallBackLocateOnMap push LocFromMap
         _ -> pure unit 
       pure $ pure unit 
 
@@ -65,35 +71,23 @@ view globalProps push state =
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , afterRender 
-        (\action -> mapRenderAction action)
-        $ const AfterRender
-    , onBackPressed push $ const BackpressAction
-    ][  mapView push state
-      , markerView push state
-      , if currentStageOn state PredictionsStage then searchLocationView push state globalProps else textView[]
-      , locateOnMapFooterView push state 
-      , popUpViews push state globalProps
-      , if currentStageOn state LocateOnMapStage then locateOnMapView push state globalProps else textView[]
-      , confirmLocationView push state
-    ]
-    
+    , background Color.white900
+    ][  PrestoAnim.animationSet
+          [ translateYAnimFromTop $ translateFullYAnimWithDurationConfig 500 ]  $ 
+        relativeLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , onBackPressed push $ const BackpressAction
+          ][  mapViewView push state globalProps
+            , markerView push state
+            , if currentStageOn state PredictionsStage then searchLocationView push state globalProps else emptyTextView
+            , locateOnMapFooterView push state 
+            , popUpViews push state globalProps
+            , if currentStageOn state LocateOnMapStage then locateOnMapView push state globalProps else emptyTextView
+            , confirmLocationView push state
+          ]
+      ]
   where
-    mapRenderAction :: Action -> Effect Unit
-    mapRenderAction action = do
-      void $ push action
-      void $ showMap (getNewIDWithTag "SearchLocationScreenMap") true "satellite" 17.0 push MapReady
-      void $ fetchAndUpdateCurrentLocation push (UpdateLocAndLatLong globalProps.recentSearches) RecenterCurrentLocation
-      pure unit
-
-    mapView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
-    mapView push state = 
-      linearLayout
-        [ height MATCH_PARENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , id (getNewIDWithTag "SearchLocationScreenMap")
-        ][]
 
     markerView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
     markerView push state = let 
@@ -130,6 +124,30 @@ view globalProps push state =
             , visibility $ boolToVisibility $ DA.any (_ == state.props.searchLocStage) [LocateOnMapStage, ConfirmLocationStage]
             ]
           ]
+
+mapViewView push state globalProps = 
+  PrestoAnim.animationSet [fadeInWithDelay 250 true] $
+  relativeLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , onAnimationEnd (\action -> mapRenderAction action)
+              $ const AfterRender
+    ][  linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , id (getNewIDWithTag "SearchLocationScreenMap")
+        ][]
+
+    ]
+
+  where 
+    mapRenderAction :: Action -> Effect Unit
+    mapRenderAction action = do
+      void $ push action
+      void $ showMap (getNewIDWithTag "SearchLocationScreenMap") true "satellite" 17.0 push MapReady
+      void $ fetchAndUpdateCurrentLocation push (UpdateLocAndLatLong globalProps.recentSearches) RecenterCurrentLocation
+      pure unit
 
 confirmLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 confirmLocationView push state = let 
@@ -340,16 +358,31 @@ recenterButtonView push state =
 
 
 popUpViews :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps -> PrestoDOM (Effect Unit) w
-popUpViews push state globalProps = 
+popUpViews push state globalProps = let 
+  ifAnyTrue = currentStageOn state AllFavouritesStage  || state.props.showSaveFavCard || state.props.locUnserviceable
+  bgColor = if ifAnyTrue then Color.white900 else Color.transparent
+  in
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
+    , background bgColor
     , orientation VERTICAL
     ] [if currentStageOn state AllFavouritesStage 
             then favouriteLocationModel state globalProps push
             else if (state.props.showSaveFavCard)
             then saveFavCardView push state globalProps
-            else textView[]]
+            else if (state.props.locUnserviceable)
+            then locUnserviceaableView push state
+            else emptyTextView]
+
+
+locUnserviceaableView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
+locUnserviceaableView push state = 
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , gravity CENTER 
+    ][ PopUpModal.view (push <<< PopUpModalAC) (locUnserviceablePopUpConfig state) ]
 
 locateOnMapFooterView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
 locateOnMapFooterView push state = let 
@@ -368,31 +401,32 @@ locateOnMapFooterView push state = let
         ] (DA.mapWithIndex (\index item -> let 
               isNotLastIndex = index /= (DA.length (footerArray state) - 1)
               in
-              linearLayout[height WRAP_CONTENT, weight 1.0]
-              $ [
-                linearLayout
+              linearLayout
                 [ height WRAP_CONTENT
-                , weight 1.0
-                , padding $ PaddingVertical 16 16
-                , gravity CENTER
-                , alpha $ if MB.isNothing state.props.focussedTextField then 0.5 else 1.0
-                , clickable $ MB.isJust state.props.focussedTextField
-                ][  imageView 
-                    [ height $ V 20
-                    , width $ V 20
-                    , margin $ MarginRight 8
-                    , layoutGravity "center"
-                    , imageWithFallback item.imageName
-                    ]  
-                  , textView
-                    [ text $ item.text
-                    , layoutGravity "center"
-                    , height WRAP_CONTENT
-                    , gravity CENTER
-                    , onClick push $ const $ item.action
+                , weight 1.0] $ 
+                [ linearLayout
+                  [ height WRAP_CONTENT
+                  , weight 1.0
+                  , padding $ PaddingVertical 16 16
+                  , gravity CENTER
+                  , alpha $ if MB.isNothing state.props.focussedTextField then 0.5 else 1.0
+                  , clickable $ MB.isJust state.props.focussedTextField
+                  ][  imageView 
+                      [ height $ V 20
+                      , width $ V 20
+                      , margin $ MarginRight 8
+                      , layoutGravity "center"
+                      , imageWithFallback item.imageName
+                      ]  
+                    , textView
+                      [ text $ item.text
+                      , layoutGravity "center"
+                      , height WRAP_CONTENT
+                      , gravity CENTER
+                      , onClick push $ const $ item.action
+                      ]
                     ]
-                  ]
-            ] <> if isNotLastIndex then [horizontalSeparatorView 2] else []
+                ] <> if isNotLastIndex then [horizontalSeparatorView 2] else []
         ) (footerArray state ))
     ]
   where 
@@ -422,7 +456,7 @@ footerArray state = if state.props.focussedTextField == MB.Just SearchLocPickup 
 
 searchLocationView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps ->  PrestoDOM (Effect Unit) w
 searchLocationView push state globalProps = let
-  viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage 
+  viewVisibility = boolToVisibility $ currentStageOn state PredictionsStage  || currentStageOn state PredictionSelectedFromHome 
   in 
   linearLayout
     [ height MATCH_PARENT
@@ -560,7 +594,7 @@ favouriteLocationModel state globalProps push =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , background Color.transparent--Color.white900
+    , background Color.white900
     , clickable true
     ]
     [ FavouriteLocationModel.view (push <<< FavouriteLocationModelAC) (globalProps.savedLocations) ]

@@ -13,6 +13,7 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.InputView as InputViewController
 import Components.MenuButton as MenuButtonController
 import Components.SavedLocationCard as SavedLocationCardController
+import Components.PopUpModal as PopUpModalController
 import Screens.SearchLocationScreen.ScreenData (dummyLocationInfo)
 import PrestoDOM.Types.Core (class Loggable)
 import Log (trackAppActionClick)
@@ -56,6 +57,7 @@ data Action = NoAction
             | InputViewAC GlobalProps InputViewController.Action 
             | MenuButtonAC MenuButtonController.Action
             | BackpressAction
+            | PopUpModalAC PopUpModalController.Action
             | CurrentLocation 
 
 data ScreenOutput = NoOutput  
@@ -73,6 +75,12 @@ data ScreenOutput = NoOutput
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
+eval (MapReady _ _ _) state = do 
+  if state.props.searchLocStage == PredictionSelectedFromHome then 
+    continueWithCmd state [do 
+      pure (LocationListItemAC [] (LocationListItemController.OnClick state.data.predictionSelectedFromHome))
+    ]
+    else continue state
 eval (MenuButtonAC (MenuButtonController.OnClick config)) state = do 
   continueWithCmd state{data{defaultGate = config.id}} [do
       let focusedIndex = DA.findIndex (\item -> item.place == config.id) state.data.nearByGates

@@ -1038,11 +1038,6 @@ public class MobilityCommonBridge extends HyperBridge {
         if (bridgeComponents.getActivity() != null ) {
             mapFragment.getMapAsync(googleMap -> {
                 this.googleMap = googleMap;
-                System.out.println("IngetMapAsyncside  " + googleMapInstance.get(pureScriptId));
-                if(googleMapInstance.get(pureScriptId) != null) {
-
-                    return;
-                }
                 googleMapInstance.put(pureScriptId, googleMap);
                 System.out.println("Inside getMapAsync " + googleMap);
                 googleMap.setMinZoomPreference(7.0f);
