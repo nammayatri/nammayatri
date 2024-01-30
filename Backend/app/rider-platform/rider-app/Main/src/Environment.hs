@@ -127,7 +127,8 @@ data AppCfg = AppCfg
     schedulerType :: SchedulerType,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
-    _version :: Text
+    _version :: Text,
+    hotSpotExpiry :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -197,7 +198,8 @@ data AppEnv = AppEnv
     maxShards :: Int,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
-    _version :: Text
+    _version :: Text,
+    hotSpotExpiry :: Seconds
   }
   deriving (Generic)
 

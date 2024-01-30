@@ -140,7 +140,8 @@ oneWaySearch ::
     HasField "isBecknSpecVersion2" r Bool,
     HasBAPMetrics m r,
     MonadProducer PublicTransportSearch m,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Person.Person ->
   Maybe Version ->

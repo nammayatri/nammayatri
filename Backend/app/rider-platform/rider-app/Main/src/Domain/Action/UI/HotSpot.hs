@@ -34,7 +34,8 @@ import Storage.CachedQueries.Maps.LocationMapCache
 
 frequencyUpdator ::
   ( CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Merchant ->
   LatLong ->
@@ -65,11 +66,11 @@ frequencyUpdator merchantId latLong _ movement = do
                           hotSpots
                   filterAndUpdateHotSpotWithExpiry (Dt.take precisionToGetGeohash _geoHash) updatedHotSpot hotSpotExpiry
                 else do
-                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  expTime <- getSeconds <$> asks (.hotSpotExpiry)
                   let createdGeoHash = createGeoHash HotSpot {..} now
                   hSetExp makeHotSpotKey (Dt.take precisionToGetGeohash _geoHash) (hotSpots ++ [createdGeoHash]) expTime
             Nothing -> do
-              expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+              expTime <- getSeconds <$> asks (.hotSpotExpiry)
               let createdGeoHash = createGeoHash HotSpot {..} now
               hSetExp makeHotSpotKey (Dt.take precisionToGetGeohash _geoHash) [createdGeoHash] expTime
         Nothing -> return ()
@@ -86,14 +87,15 @@ frequencyUpdator merchantId latLong _ movement = do
 
 filterAndUpdateHotSpotWithExpiry ::
   ( CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   Text ->
   [HotSpot] ->
   Int ->
   m ()
 filterAndUpdateHotSpotWithExpiry geohash hotSpots hotSpotExpiry = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  expTime <- getSeconds <$> asks (.hotSpotExpiry)
   filterWithExpiry <-
     filterM
       ( \hotSpot -> case hotSpot._updatedAt of
@@ -105,7 +107,8 @@ filterAndUpdateHotSpotWithExpiry geohash hotSpots hotSpotExpiry = do
 
 removeExpiredHotSpots ::
   ( CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Merchant ->
   m APISuccess

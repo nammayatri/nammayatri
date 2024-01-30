@@ -96,7 +96,8 @@ data OneWaySearchRes = OneWaySearchRes
 
 hotSpotUpdate ::
   ( CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Merchant ->
   Maybe SavedReqLocation ->
@@ -112,7 +113,8 @@ updateForSpecialLocation ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Merchant ->
   OneWaySearchReq ->
@@ -135,7 +137,8 @@ oneWaySearch ::
     EsqDBFlow m r,
     HasBAPMetrics m r,
     MonadFlow m,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "hotSpotExpiry" r Seconds
   ) =>
   Id Person.Person ->
   OneWaySearchReq ->
