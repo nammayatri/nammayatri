@@ -115,7 +115,7 @@ data ServiceHandle m = ServiceHandle
     getMerchant :: Id DM.Merchant -> m (Maybe DM.Merchant),
     endRideTransaction :: Id DP.Driver -> SRB.Booking -> DRide.Ride -> Maybe FareParameters -> Maybe (Id RD.RiderDetails) -> FareParameters -> DTConf.TransporterConfig -> m (),
     notifyCompleteToBAP :: SRB.Booking -> DRide.Ride -> Fare.FareParameters -> Maybe DMPM.PaymentMethodInfo -> Maybe Text -> Maybe LatLong -> m (),
-    getFarePolicy :: Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVeh.Variant -> Maybe DFareProduct.Area -> m DFP.FullFarePolicy,
+    getFarePolicyByEstOrQuoteId :: Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVeh.Variant -> Maybe DFareProduct.Area -> Text -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
     isDistanceCalculationFailed :: Id DP.Person -> m Bool,
@@ -140,7 +140,7 @@ buildEndRideHandle merchantId merchantOpCityId = do
         getMerchant = MerchantS.findById,
         notifyCompleteToBAP = CallBAP.sendRideCompletedUpdateToBAP,
         endRideTransaction = RideEndInt.endRideTransaction,
-        getFarePolicy = FarePolicy.getFarePolicy,
+        getFarePolicyByEstOrQuoteId = FarePolicy.getFarePolicyByEstOrQuoteId,
         calculateFareParameters = Fare.calculateFareParameters,
         putDiffMetric = RideEndInt.putDiffMetric,
         isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
@@ -390,7 +390,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance thresh
   -- maybe compare only distance fare?
   let estimatedFare = Fare.fareSum booking.fareParams
   tripEndTime <- getCurrentTime
-  farePolicy <- getFarePolicy booking.merchantOperatingCityId booking.tripCategory booking.vehicleVariant booking.area
+  farePolicy <- getFarePolicyByEstOrQuoteId booking.merchantOperatingCityId booking.tripCategory booking.vehicleVariant booking.area booking.quoteId
   fareParams <-
     calculateFareParameters
       Fare.CalculateFareParametersParams

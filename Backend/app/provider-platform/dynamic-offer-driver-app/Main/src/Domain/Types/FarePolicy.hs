@@ -65,13 +65,7 @@ data FarePolicyType = Progressive | Slabs | Rental
 
 $(mkBeamInstancesForEnum ''FarePolicyType)
 
-getFarePolicyType :: FarePolicy -> FarePolicyType
-getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
-  ProgressiveDetails _ -> Progressive
-  SlabsDetails _ -> Slabs
-  RentalDetails _ -> Rental
-
-data FullFarePolicy = FullFarePolicy
+data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
   { id :: Id FarePolicy,
     merchantId :: Id Merchant,
     vehicleVariant :: Variant,
@@ -82,12 +76,24 @@ data FullFarePolicy = FullFarePolicy
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
-    farePolicyDetails :: FarePolicyDetails,
+    farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show)
+
+type FullFarePolicy = FullFarePolicyD 'DTC.Safe
+
+instance FromJSON (FullFarePolicyD 'DTC.Unsafe)
+
+instance ToJSON (FullFarePolicyD 'DTC.Unsafe)
+
+type FullDriverExtraFeeBounds = (Id FarePolicy, DriverExtraFeeBounds)
+
+type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)
+
+type FullFarePolicyRentalDetails = (Id FarePolicy, FPRentalDetails)
 
 farePolicyToFullFarePolicy :: Id Merchant -> Variant -> DTC.TripCategory -> FarePolicy -> FullFarePolicy
 farePolicyToFullFarePolicy merchantId vehicleVariant tripCategory FarePolicy {..} =
@@ -97,8 +103,8 @@ fullFarePolicyToFarePolicy :: FullFarePolicy -> FarePolicy
 fullFarePolicyToFarePolicy FullFarePolicy {..} =
   FarePolicy {..}
 
-type FullDriverExtraFeeBounds = (Id FarePolicy, DriverExtraFeeBounds)
-
-type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)
-
-type FullFarePolicyRentalDetails = (Id FarePolicy, FPRentalDetails)
+getFarePolicyType :: FarePolicy -> FarePolicyType
+getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
+  ProgressiveDetails _ -> Progressive
+  SlabsDetails _ -> Slabs
+  RentalDetails _ -> Rental

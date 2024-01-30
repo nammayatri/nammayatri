@@ -10,9 +10,11 @@
 module SharedLogic.FarePolicy where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
+import Data.Coerce (coerce)
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
 import Data.Text as T
+import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FareProduct as FareProductD
@@ -21,6 +23,7 @@ import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import Domain.Types.Vehicle.Variant (Variant (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FareProduct as FareProduct
@@ -34,6 +37,29 @@ data FarePoliciesProduct = FarePoliciesProduct
     area :: FareProductD.Area,
     specialLocationTag :: Maybe Text
   }
+
+makeFarePolicyByEstOrQuoteIdKey :: Text -> Text
+makeFarePolicyByEstOrQuoteIdKey estOrQuoteId = "CachedQueries:FarePolicy:EstOrQuoteId-" <> estOrQuoteId
+
+getFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> Variant -> Maybe FareProductD.Area -> Text -> m FarePolicyD.FullFarePolicy
+getFarePolicyByEstOrQuoteId merchantOpCityId tripCategory vehVariant area estOrQuoteId = do
+  Redis.get (makeFarePolicyByEstOrQuoteIdKey estOrQuoteId) >>= \case
+    Nothing -> do
+      logWarning "Old Fare Policy Not Found, Hence using new fare policy."
+      getFarePolicy merchantOpCityId tripCategory vehVariant area
+    Just a -> return $ coerce @(FarePolicyD.FullFarePolicyD 'Unsafe) @FarePolicyD.FullFarePolicy a
+
+cacheFarePolicyByQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> FarePolicyD.FullFarePolicy -> m ()
+cacheFarePolicyByQuoteId quoteId fp = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Redis.setExp (makeFarePolicyByEstOrQuoteIdKey quoteId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) expTime
+
+-- 30 Mins, Assuming that all searchTries would be done by then. Correct logic would be searchRequestExpirationTime * searchRepeatLimit
+cacheFarePolicyByEstimateId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> FarePolicyD.FullFarePolicy -> m ()
+cacheFarePolicyByEstimateId estimateId fp = Redis.setExp (makeFarePolicyByEstOrQuoteIdKey estimateId) (coerce @FarePolicyD.FullFarePolicy @(FarePolicyD.FullFarePolicyD 'Unsafe) fp) 1800
+
+clearCachedFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> m ()
+clearCachedFarePolicyByEstOrQuoteId = Redis.del . makeFarePolicyByEstOrQuoteIdKey
 
 getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> Variant -> Maybe FareProductD.Area -> m FarePolicyD.FullFarePolicy
 getFarePolicy merchantOpCityId tripCategory vehVariant Nothing = do
