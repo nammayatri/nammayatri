@@ -166,8 +166,8 @@
             imports = [ common ];
             command = "echo Waiting for load-test processes to end";
             depends_on = {
-              "load-test-driver".condition = "process_completed_successfully";
-              "load-test-rider".condition = "process_completed_successfully";
+              "load-test-driver".condition = "process_completed";
+              "load-test-rider".condition = "process_completed";
             };
             availability.exit_on_end = true;
           };
