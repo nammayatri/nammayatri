@@ -22,6 +22,7 @@ module Lib.Payment.Domain.Action
     createNotificationService,
     createExecutionService,
     buildSDKPayload,
+    refundService,
   )
 where
 
@@ -29,6 +30,7 @@ import qualified Data.Text as T
 import Data.Time.Clock.POSIX hiding (getCurrentTime)
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.External.Payment.Juspay.Types (RefundStatus (REFUND_PENDING))
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value)
@@ -40,9 +42,11 @@ import Kernel.Utils.Common
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
+import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
+import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 
 data PaymentStatusResp
   = PaymentStatus
@@ -497,6 +501,39 @@ createExecutionService (request, orderId) merchantId executionCall = do
             createdAt = now,
             updatedAt = now
           }
+
+--- refunds api ----
+
+refundService ::
+  ( EncFlow m r,
+    BeamFlow m r
+  ) =>
+  (Payment.AutoRefundReq, Id Refunds) ->
+  Id Merchant ->
+  (Payment.AutoRefundReq -> m Payment.AutoRefundResp) ->
+  m Payment.AutoRefundResp
+refundService (request, refundId) merchantId refundsCall = do
+  now <- getCurrentTime
+  QRefunds.create $ mkRefundsEntry now
+  response <- refundsCall request
+  mapM_ (`QRefunds.updateRefundsEntryByResponse` refundId) response.refunds
+  return response
+  where
+    mkRefundsEntry now =
+      Refunds
+        { id = refundId,
+          merchantId = merchantId.getId,
+          shortId = request.requestId,
+          status = REFUND_PENDING,
+          orderId = Id request.orderId,
+          refundAmount = request.amount,
+          errorMessage = Nothing,
+          errorCode = Nothing,
+          idAssignedByServiceProvider = Nothing,
+          initiatedBy = Nothing,
+          createdAt = now,
+          updatedAt = now
+        }
 
 txnProccessingKey :: Text -> Text
 txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid

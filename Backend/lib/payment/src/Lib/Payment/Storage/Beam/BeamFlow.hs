@@ -19,11 +19,13 @@ import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
+import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
 
 type BeamFlow m r =
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
     HasSchemaName BeamPO.PaymentOrderT,
-    HasSchemaName BeamPT.PaymentTransactionT
+    HasSchemaName BeamPT.PaymentTransactionT,
+    HasSchemaName BeamRF.RefundsT
   )
