@@ -611,7 +611,8 @@ driverDetailsView push state uid =
             ]
         ]
     ]
-  where getVehicleType = case getMerchant FunctionCall of
+  where 
+    getVehicleType = case getMerchant FunctionCall of
                           YATRISATHI -> case state.data.vehicleVariant of
                                           "TAXI" -> getEN NON_AC_TAXI
                                           "SUV"  -> getEN AC_SUV
@@ -620,7 +621,28 @@ driverDetailsView push state uid =
                                         "TAXI_PLUS" -> (getEN AC_TAXI)
                                         "TAXI" -> (getEN NON_AC_TAXI)
                                         _ -> ""
-
+    getVehicleImage :: String -> String -> City -> String
+    getVehicleImage variant vehicleDetail city = do
+      let details = (toLower vehicleDetail)
+      fetchImage FF_ASSET $ 
+        if variant == "AUTO_RICKSHAW" then mkAutoImage city
+        else
+          if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
+          else 
+            case (getMerchant FunctionCall) of
+              YATRISATHI -> case variant of
+                              "SUV" -> "ny_ic_suv_concept"
+                              _     -> "ny_ic_sedan_concept"
+              _          -> "ic_white_taxi"
+        where 
+          mkAutoImage :: City -> String
+          mkAutoImage city = 
+            case city of 
+              Hyderabad -> "ic_auto_rickshaw_black_yellow"
+              Chennai -> "ic_auto_rickshaw_black_yellow"
+              Kochi -> "ny_ic_black_auto"
+              _ -> "ic_auto_rickshaw"
+          
 ---------------------------------- ratingView ---------------------------------------
 
 ratingView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
@@ -1203,25 +1225,6 @@ configurations =
               , letterSpacing : 3.0
               , paddingOTP : Padding 11 0 11 7
               }
-
-getVehicleImage :: String -> String -> City -> String
-getVehicleImage variant vehicleDetail city = do
-  let details = (toLower vehicleDetail)
-  fetchImage FF_ASSET $ 
-    if variant == "AUTO_RICKSHAW" then mkVehicleImage city
-    else
-      if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
-      else 
-        case (getMerchant FunctionCall) of
-          YATRISATHI -> case variant of
-                          "SUV" -> "ny_ic_suv_concept"
-                          _     -> "ny_ic_sedan_concept"
-          _          -> "ic_white_taxi"
-    where 
-      mkVehicleImage :: City -> String
-      mkVehicleImage city = 
-        if city == Hyderabad then "ic_auto_rickshaw_black_yellow"
-          else "ic_auto_rickshaw"
 
 getAnimationDelay :: LazyCheck -> Int
 getAnimationDelay dummy = 100

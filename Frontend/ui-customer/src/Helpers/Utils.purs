@@ -575,6 +575,7 @@ fetchDefaultPickupPoint locations lati longi =
 getVehicleVariantImage :: String -> String
 getVehicleVariantImage variant =
   let variantConfig = (getAppConfig appConfig).estimateAndQuoteConfig.variantInfo
+      city = getCityFromString $ getValueToLocalStore CUSTOMER_LOCATION
   in 
     case variant of
       "TAXI"          ->  variantConfig.taxi.image 
@@ -582,7 +583,11 @@ getVehicleVariantImage variant =
       "SEDAN"         -> variantConfig.sedan.image
       "SUV"           -> variantConfig.suv.image
       "HATCHBACK"     -> variantConfig.hatchback.image
-      "AUTO_RICKSHAW" -> variantConfig.autoRickshaw.image
+      "AUTO_RICKSHAW" -> case city of 
+                          Kochi -> fetchImage FF_ASSET "ny_ic_black_auto_quote_list" 
+                          Chennai -> fetchImage FF_ASSET "ny_ic_black_yellow_auto_quote_list" 
+                          Hyderabad -> fetchImage FF_ASSET "ny_ic_black_yellow_auto_quote_list"
+                          _ -> variantConfig.autoRickshaw.image
       _               -> fetchImage FF_ASSET "ic_sedan_non_ac"
         
 getVariantRideType :: String -> String
@@ -625,6 +630,25 @@ cityCodeMap =
   , Tuple (Just "std:0816") Tumakuru
   , Tuple Nothing AnyCity
   ]
+
+getCityFromString :: String -> City
+getCityFromString cityString =
+  case cityString of 
+    "Bangalore" -> Bangalore
+    "Kolkata" -> Kolkata
+    "Paris" -> Paris
+    "Kochi" -> Kochi
+    "Delhi" -> Delhi
+    "Hyderabad" -> Hyderabad
+    "Mumbai" -> Mumbai
+    "Chennai" -> Chennai
+    "Coimbatore" -> Coimbatore
+    "Pondicherry" -> Pondicherry
+    "Goa" -> Goa
+    "Pune" -> Pune
+    "Mysore" -> Mysore
+    "Tumakuru" -> Tumakuru
+    _ -> AnyCity
 
 getCityNameFromCode :: Maybe String -> City
 getCityNameFromCode mbCityCode =
