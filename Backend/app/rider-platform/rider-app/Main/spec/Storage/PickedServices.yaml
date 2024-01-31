@@ -8,6 +8,7 @@ PickedServices:
 
   fields:
     searchRequestId: Id PickedServices
+    merchantOperatingCityId: Id MerchantOperatingCity
     getDistances: MapsService
     getRoutes: MapsService
     snapToRoad: MapsService

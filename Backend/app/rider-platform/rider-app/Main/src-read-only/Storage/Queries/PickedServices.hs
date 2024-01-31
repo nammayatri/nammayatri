@@ -43,8 +43,8 @@ updateByPrimaryKey Domain.Types.PickedServices.PickedServices {..} = do
       Se.Set Beam.getPlaceName $ getPlaceName,
       Se.Set Beam.getRoutes $ getRoutes,
       Se.Set Beam.getTripRoutes $ getTripRoutes,
+      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.snapToRoad $ snapToRoad,
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt $ createdAt,
       Se.Set Beam.updatedAt $ now
     ]
@@ -66,9 +66,9 @@ instance FromTType' Beam.PickedServices Domain.Types.PickedServices.PickedServic
             getPlaceName = getPlaceName,
             getRoutes = getRoutes,
             getTripRoutes = getTripRoutes,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             searchRequestId = Kernel.Types.Id.Id searchRequestId,
             snapToRoad = snapToRoad,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -84,9 +84,9 @@ instance ToTType' Beam.PickedServices Domain.Types.PickedServices.PickedServices
         Beam.getPlaceName = getPlaceName,
         Beam.getRoutes = getRoutes,
         Beam.getTripRoutes = getTripRoutes,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.searchRequestId = Kernel.Types.Id.getId searchRequestId,
         Beam.snapToRoad = snapToRoad,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

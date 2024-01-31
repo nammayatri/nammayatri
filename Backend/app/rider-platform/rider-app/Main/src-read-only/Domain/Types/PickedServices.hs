@@ -19,9 +19,9 @@ data PickedServices = PickedServices
     getPlaceName :: Kernel.External.Maps.Types.MapsService,
     getRoutes :: Kernel.External.Maps.Types.MapsService,
     getTripRoutes :: Kernel.External.Maps.Types.MapsService,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.PickedServices.PickedServices,
     snapToRoad :: Kernel.External.Maps.Types.MapsService,
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

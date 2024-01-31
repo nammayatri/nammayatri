@@ -8,9 +8,9 @@ ALTER TABLE atlas_app.picked_services ADD COLUMN get_place_details text NOT NULL
 ALTER TABLE atlas_app.picked_services ADD COLUMN get_place_name text NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN get_routes text NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN get_trip_routes text NOT NULL;
+ALTER TABLE atlas_app.picked_services ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN search_request_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN snap_to_road text NOT NULL;
-ALTER TABLE atlas_app.picked_services ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_app.picked_services ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.picked_services ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.picked_services ADD PRIMARY KEY ( search_request_id);

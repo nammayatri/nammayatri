@@ -24,9 +24,9 @@ data PickedServicesT f = PickedServicesT
     getPlaceName :: B.C f Kernel.External.Maps.Types.MapsService,
     getRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
     getTripRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     searchRequestId :: B.C f Kernel.Prelude.Text,
     snapToRoad :: B.C f Kernel.External.Maps.Types.MapsService,
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

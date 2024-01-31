@@ -148,14 +148,14 @@ runWithServiceConfig h merchantId merchantOperatingCityId req = do
   pickedService <- case mbSearchRequestId of
     Nothing -> do
       merchantConfig <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-      pickService merchantOperatingCityId h.serviceMethod (h.getServiceUsage merchantConfig)
+      pickService merchantOperatingCityId (h.getServiceUsage merchantConfig) h.serviceMethod
     Just searchRequestId -> do
       mbPickedServices <- QPickedServices.findByPrimaryKey (cast @DSR.SearchRequest @DPickedServices.PickedServices searchRequestId)
       case mbPickedServices of
         Just pickedServices -> pure $ h.getPickedService pickedServices
         Nothing -> do
           merchantConfig <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-          pickedServices <- buildPickedServices merchantConfig
+          pickedServices <- buildPickedServices searchRequestId merchantOperatingCityId merchantConfig
           QPickedServices.create pickedServices
           pure $ h.getPickedService pickedServices
   merchantMapsServiceConfig <-
@@ -170,17 +170,44 @@ getMerchantOperatingCityId personId = \case
   Just mOprCityId -> pure mOprCityId
   Nothing -> CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
 
-buildPickedServices :: MerchantServiceUsageConfig -> m DPickedServices.PickedServices
-buildPickedServices = error "TODO"
+buildPickedServices :: (MonadFlow m) => Id DSR.SearchRequest -> Id MerchantOperatingCity -> MerchantServiceUsageConfig -> m DPickedServices.PickedServices
+buildPickedServices searchRequestId' merchantOperatingCityId merchantConfig = do
+  let searchRequestId = cast @DSR.SearchRequest @DPickedServices.PickedServices searchRequestId'
+  now <- getCurrentTime
+  let pickService' field = pickService merchantOperatingCityId (field merchantConfig)
+  autoComplete' <- pickService' (.autoComplete) Maps.AutoComplete
+  getDistances' <- pickService' (.getDistances) Maps.GetDistances
+  getDistancesForCancelRide' <- pickService' (.getDistancesForCancelRide) Maps.GetDistancesForCancelRide
+  getPickupRoutes' <- pickService' (.getPickupRoutes) Maps.GetPickupRoutes
+  getPlaceDetails' <- pickService' (.getPlaceDetails) Maps.GetPlaceDetails
+  getPlaceName' <- pickService' (.getPlaceName) Maps.GetPlaceName
+  getRoutes' <- pickService' (.getRoutes) Maps.GetRoutes
+  getTripRoutes' <- pickService' (.getTripRoutes) Maps.GetTripRoutes
+  snapToRoad' <- pickService' (.snapToRoad) Maps.SnapToRoad
+  pure
+    DPickedServices.PickedServices
+      { autoComplete = autoComplete',
+        getDistances = getDistances',
+        getDistancesForCancelRide = getDistancesForCancelRide',
+        getPickupRoutes = getPickupRoutes',
+        getPlaceDetails = getPlaceDetails',
+        getPlaceName = getPlaceName',
+        getRoutes = getRoutes',
+        getTripRoutes = getTripRoutes',
+        snapToRoad = snapToRoad',
+        createdAt = now,
+        updatedAt = now,
+        ..
+      }
 
 -- TODO move to kernel
 pickService ::
   (Log m, MonadIO m) =>
   Id MerchantOperatingCity ->
-  Maps.MapsServiceUsageMethod ->
   Maps.MapsServiceUsage ->
+  Maps.MapsServiceUsageMethod ->
   m Maps.MapsService
-pickService merchantOpCityId mapsMethod MapsServiceUsage {..} = do
+pickService merchantOpCityId MapsServiceUsage {..} mapsMethod = do
   let percentages =
         [(Maps.Google, googlePercentage), (Maps.OSRM, osrmPercentage), (Maps.MMI, mmiPercentage), (Maps.NextBillion, nextBillionPercentage)] <&> \(element, percentage) -> do
           Random.Percentage {element, percentage = fromMaybe 0 percentage}
