@@ -65,6 +65,7 @@ type AppConfigCustomer a =
   , shareAppConfig :: ShareAppConfig
   , homeScreen :: HomeScreen
   , locationTagBar :: LocationTagBarConfig
+  , cityConfig :: Array CityConfig
   | a
   }
 
@@ -121,8 +122,8 @@ type DriverInfoConfig = {
 }
 
 type SearchLocationConfig = {
-  searchLocationTheme :: String, 
-  setLocationOnMapColor :: String, 
+  searchLocationTheme :: String,
+  setLocationOnMapColor :: String,
   strokeColor :: String,
   enableLocationTagbar :: String,
   resultsCardCornerRadius :: Number,
@@ -196,7 +197,7 @@ type BannerViewState = {
   imageUrl :: String
 }
 type TerminateBtnConfig = {
-    visibility :: Boolean, 
+    visibility :: Boolean,
     title :: String,
     imageUrl :: String,
     backgroundColor :: String
@@ -264,6 +265,7 @@ type LocateOnMapConfigs = {
   dottedLineConfig :: DottedLineConfig
 , apiTriggerRadius :: Number
 , pickUpToSourceThreshold :: Number
+, hotSpotConfig :: HotSpotConfig
 }
 
 type DottedLineConfig = {
@@ -339,4 +341,21 @@ type VariantConfig = {
 type VariantInfo = {
   name :: String,
   image :: String
+}
+
+type HotSpotConfig = {
+  goToNearestPointWithinRadius :: Number,
+  showHotSpotsWithinRadius :: Number,
+  enableHotSpot :: Boolean
+}
+
+type CityConfig = {
+  cityName :: String,
+  cityCode :: String,
+  geoCodeConfig :: GeoCodeConfig
+}
+
+type GeoCodeConfig = {
+  radius :: Int,
+  strictBounds :: Boolean
 }

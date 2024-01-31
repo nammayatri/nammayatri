@@ -53,6 +53,7 @@ import Foreign.Object (empty)
 import Data.String as DS
 import ConfigProvider as CP
 import Locale.Utils
+import MerchantConfig.Types (GeoCodeConfig)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -263,15 +264,15 @@ searchLocationBT payload = do
                 BackT $ pure GoBack
 
 
-makeSearchLocationReq :: String -> Number -> Number -> Int -> String -> String-> SearchLocationReq
-makeSearchLocationReq input lat lng radius language components = SearchLocationReq {
+makeSearchLocationReq :: String -> Number -> Number -> String -> String -> GeoCodeConfig -> SearchLocationReq
+makeSearchLocationReq input lat lng language components geoCodeConfig = SearchLocationReq {
     "input" : input,
     "location" : (show lat <> "," <> show lng),
-    "radius" : radius,
+    "radius" : geoCodeConfig.radius,
     "components" : components,
     "language" : language,
     "sessionToken" : Nothing,
-    "strictbounds": Nothing,
+    "strictbounds": if geoCodeConfig.strictBounds then Just true else Nothing,
     "origin" : LatLong {
             "lat" : lat,
             "lon" : lng
