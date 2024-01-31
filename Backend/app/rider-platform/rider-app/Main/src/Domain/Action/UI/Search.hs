@@ -249,18 +249,18 @@ search personId req bundleVersion clientVersion device = do
                   calcPoints = True,
                   mode = Just Maps.CAR
                 }
-        routeResponse <- Maps.getRoutes person.id person.merchantId (Just merchantOperatingCity.id) request
+        routeResponse <- Maps.getRoutes person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId) request
         fork "calling next billion directions api" $ do
           nextBillionConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
           case nextBillionConfigs.serviceConfig of
             DMSC.MapsServiceConfig mapsCfg -> do
               case mapsCfg of
                 MapsK.NextBillionConfig msc -> do
-                  nextBillionrouteResponse <- NextBillion.getRoutes msc request
-                  logInfo $ "NextBillion route response: " <> show nextBillionrouteResponse
+                  nextBillionRouteResponse <- NextBillion.getRoutes msc request
+                  logInfo $ "NextBillion route response: " <> show nextBillionRouteResponse
                   let routeData =
                         DNB.NextBillionData
-                          { routes = map show nextBillionrouteResponse,
+                          { routes = map show nextBillionRouteResponse,
                             searchRequestId = searchRequestId,
                             merchantId = Just merchant.id,
                             merchantOperatingCityId = Just merchantOperatingCity.id,

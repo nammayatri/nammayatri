@@ -92,7 +92,7 @@ processStop bookingId loc merchantId isEdit = do
             ACL.EditStopBuildReq
               { bppId = booking.providerId,
                 bppUrl = booking.providerUrl,
-                transactionId = booking.transactionId,
+                transactionId = booking.transactionId.getId,
                 stops = [mkDomainLocation location],
                 ..
               }
@@ -100,7 +100,7 @@ processStop bookingId loc merchantId isEdit = do
             ACL.AddStopBuildReq
               { bppId = booking.providerId,
                 bppUrl = booking.providerUrl,
-                transactionId = booking.transactionId,
+                transactionId = booking.transactionId.getId,
                 stops = [mkDomainLocation location],
                 ..
               }

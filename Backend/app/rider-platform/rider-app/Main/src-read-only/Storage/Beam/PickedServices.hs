@@ -16,13 +16,13 @@ import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data PickedServicesT f = PickedServicesT
-  { autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
-    getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,
-    getPickupRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
-    getPlaceDetails :: B.C f Kernel.External.Maps.Types.MapsService,
-    getPlaceName :: B.C f Kernel.External.Maps.Types.MapsService,
-    getRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
-    getTripRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
+  { autoComplete :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
+    getDistancesForCancelRide :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
+    getPickupRoutes :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
+    getPlaceDetails :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
+    getPlaceName :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
+    getRoutes :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
+    getTripRoutes :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     searchRequestId :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

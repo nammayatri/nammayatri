@@ -11,13 +11,13 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data PickedServices = PickedServices
-  { autoComplete :: Kernel.External.Maps.Types.MapsService,
-    getDistancesForCancelRide :: Kernel.External.Maps.Types.MapsService,
-    getPickupRoutes :: Kernel.External.Maps.Types.MapsService,
-    getPlaceDetails :: Kernel.External.Maps.Types.MapsService,
-    getPlaceName :: Kernel.External.Maps.Types.MapsService,
-    getRoutes :: Kernel.External.Maps.Types.MapsService,
-    getTripRoutes :: Kernel.External.Maps.Types.MapsService,
+  { autoComplete :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
+    getDistancesForCancelRide :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
+    getPickupRoutes :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
+    getPlaceDetails :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
+    getPlaceName :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
+    getRoutes :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
+    getTripRoutes :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.PickedServices.PickedServices,
     createdAt :: Kernel.Prelude.UTCTime,

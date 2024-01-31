@@ -9,28 +9,15 @@ PickedServices:
   fields:
     searchRequestId: Id PickedServices
     merchantOperatingCityId: Id MerchantOperatingCity
-    getRoutes: MapsService
-    getPlaceName: MapsService
-    getPickupRoutes: MapsService
-    getTripRoutes: MapsService
-    getPlaceDetails: MapsService
-    autoComplete: MapsService
-    getDistancesForCancelRide: MapsService
+    getRoutes: Maybe MapsService
+    getPlaceName: Maybe MapsService
+    getPickupRoutes: Maybe MapsService
+    getTripRoutes: Maybe MapsService
+    getPlaceDetails: Maybe MapsService
+    autoComplete: Maybe MapsService
+    getDistancesForCancelRide: Maybe MapsService
 
   excludedFields: [city, merchantId]
 
   constraints:
     searchRequestId: PrimaryKey
-
-  # queries:
-  #   findById:
-  #     kvFunction: findOneWithKV
-  #     where: id
-  #   findByMerchantShortIdAndCity:
-  #     kvFunction: findOneWithKV
-  #     where:
-  #       and: [merchantShortId, city]
-  #   findByMerchantIdAndCity:
-  #     kvFunction: findOneWithKV
-  #     where:
-  #       and: [merchantId, city]
