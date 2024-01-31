@@ -175,6 +175,42 @@ getNightShiftEnd tagGroups = do
   tagValue <- getTagV2 "rate_card" "night_shift_end" tagGroups
   readMaybe $ T.unpack tagValue
 
+getRentalBaseFare :: [Spec.TagGroup] -> Maybe Money
+getRentalBaseFare tagGroups = do
+  tagValue <- getTagV2 "general_info" "MIN_FARE" tagGroups
+  baseFare <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral baseFare
+
+getRentalPerHourCharge :: [Spec.TagGroup] -> Maybe Money
+getRentalPerHourCharge tagGroups = do
+  tagValue <- getTagV2 "rate_card" "PER_HOUR_CHARGE" tagGroups
+  perHourCharge <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral perHourCharge
+
+getRentalPerExtraMinRate :: [Spec.TagGroup] -> Maybe Money
+getRentalPerExtraMinRate tagGroups = do
+  tagValue <- getTagV2 "rate_card" "PER_MINUTE_CHARGE" tagGroups
+  perExtraMinRate <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral perExtraMinRate
+
+getRentalPerExtraKmRate :: [Spec.TagGroup] -> Maybe Money
+getRentalPerExtraKmRate tagGroups = do
+  tagValue <- getTagV2 "rate_card" "UNPLANNED_PER_KM_CHARGE" tagGroups
+  perExtraKmRate <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral perExtraKmRate
+
+getRentalIncludedKmPerHr :: [Spec.TagGroup] -> Maybe Kilometers
+getRentalIncludedKmPerHr tagGroups = do
+  tagValue <- getTagV2 "rate_card" "PER_HOUR_DISTANCE_KM" tagGroups
+  includedKmPerHr <- DecimalValue.valueFromString tagValue
+  Just . Kilometers $ roundToIntegral includedKmPerHr
+
+getRentalPlannedPerKmRate :: [Spec.TagGroup] -> Maybe Money
+getRentalPlannedPerKmRate tagGroups = do
+  tagValue <- getTagV2 "rate_card" "PLANNED_PER_KM_CHARGE" tagGroups
+  plannedPerKmRate <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral plannedPerKmRate
+
 buildWaitingChargeInfo' :: [Spec.TagGroup] -> Maybe Money
 buildWaitingChargeInfo' tagGroups = do
   tagValue <- getTagV2 "rate_card" "waiting_charge_per_min" tagGroups

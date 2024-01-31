@@ -78,8 +78,9 @@ buildOnSearchReqV2 req = do
       let catalog = message.onSearchReqMessageCatalog
       providers <- catalog.catalogProviders & fromMaybeM (InvalidRequest "Missing Providers")
       provider <- safeHead providers & fromMaybeM (InvalidRequest "Missing Provider")
+      fulfillments <- provider.providerFulfillments & fromMaybeM (InvalidRequest "Missing Fulfillments")
       items <- provider.providerItems & fromMaybeM (InvalidRequest "Missing Items")
-      Just <$> TOnSearch.buildOnSearchReq req provider items
+      Just <$> TOnSearch.buildOnSearchReq req provider items fulfillments
     Just err -> do
       logTagError "on_search req" $ "on_search error: " <> show err
       pure Nothing
@@ -216,12 +217,12 @@ buildRentalQuoteDetails ::
   m DOnSearch.RentalQuoteDetails
 buildRentalQuoteDetails item = do
   let bppQuoteId = item.fulfillment_id
-  baseFare <- (getRentalBaseFare =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_base_fare in rental search item")
-  perHourCharge <- (getRentalPerHourCharge =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_per_hour_charge in rental search item")
-  perExtraMinRate <- (getRentalPerExtraMinRate =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_per_extra_min_rate in rental search item")
-  perExtraKmRate <- (getRentalPerExtraKmRate =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_per_extra_km_rate in rental search item")
-  includedKmPerHr <- (getRentalIncludedKmPerHr =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_included_km_per_hr in rental search item")
-  plannedPerKmRate <- (getRentalPlannedPerKmRate =<< item.tags) & fromMaybeM (InvalidRequest "Missing rental_planned_per_km_rate in rental search item")
+  baseFare <- (getRentalBaseFare =<< item.tags) & fromMaybeM (InvalidRequest "Missing MIN_FARE in rental search item")
+  perHourCharge <- (getRentalPerHourCharge =<< item.tags) & fromMaybeM (InvalidRequest "Missing PER_HOUR_CHARGE in rental search item")
+  perExtraMinRate <- (getRentalPerExtraMinRate =<< item.tags) & fromMaybeM (InvalidRequest "Missing PER_MINUTE_CHARGE in rental search item")
+  perExtraKmRate <- (getRentalPerExtraKmRate =<< item.tags) & fromMaybeM (InvalidRequest "Missing UNPLANNED_PER_KM_CHARGE in rental search item")
+  includedKmPerHr <- (getRentalIncludedKmPerHr =<< item.tags) & fromMaybeM (InvalidRequest "Missing PER_HOUR_DISTANCE_KM in rental search item")
+  plannedPerKmRate <- (getRentalPlannedPerKmRate =<< item.tags) & fromMaybeM (InvalidRequest "Missing PLANNED_PER_KM_CHARGE in rental search item")
   let nightShiftInfo = buildNightShiftInfo =<< item.tags
   logInfo $ "nightShiftCharge: " <> show ((.nightShiftCharge) <$> nightShiftInfo) <> " " <> show ((.nightShiftStart) <$> nightShiftInfo) <> " " <> show ((.nightShiftEnd) <$> nightShiftInfo)
   pure DOnSearch.RentalQuoteDetails {id = bppQuoteId, ..}
@@ -315,36 +316,36 @@ getNightShiftEnd tagGroups = do
 
 getRentalBaseFare :: OnSearch.TagGroups -> Maybe Money
 getRentalBaseFare tagGroups = do
-  tagValue <- getTag "general_info" "rental_base_fare" tagGroups
+  tagValue <- getTag "rate_card" "MIN_FARE" tagGroups
   baseFare <- readMaybe $ T.unpack tagValue
   Just $ Money baseFare
 
 getRentalPerHourCharge :: OnSearch.TagGroups -> Maybe Money
 getRentalPerHourCharge tagGroups = do
-  tagValue <- getTag "rate_card" "rental_per_hour_charge" tagGroups
+  tagValue <- getTag "rate_card" "PER_HOUR_CHARGE" tagGroups
   perHourCharge <- readMaybe $ T.unpack tagValue
   Just $ Money perHourCharge
 
 getRentalPerExtraMinRate :: OnSearch.TagGroups -> Maybe Money
 getRentalPerExtraMinRate tagGroups = do
-  tagValue <- getTag "rate_card" "rental_per_extra_min_rate" tagGroups
+  tagValue <- getTag "rate_card" "PER_MINUTE_CHARGE" tagGroups
   perExtraMinRate <- readMaybe $ T.unpack tagValue
   Just $ Money perExtraMinRate
 
 getRentalPerExtraKmRate :: OnSearch.TagGroups -> Maybe Money
 getRentalPerExtraKmRate tagGroups = do
-  tagValue <- getTag "rate_card" "rental_per_extra_km_rate" tagGroups
+  tagValue <- getTag "rate_card" "UNPLANNED_PER_KM_CHARGE" tagGroups
   perExtraKmRate <- readMaybe $ T.unpack tagValue
   Just $ Money perExtraKmRate
 
 getRentalIncludedKmPerHr :: OnSearch.TagGroups -> Maybe Kilometers
 getRentalIncludedKmPerHr tagGroups = do
-  tagValue <- getTag "rate_card" "rental_included_km_per_hr" tagGroups
+  tagValue <- getTag "rate_card" "PER_HOUR_DISTANCE_KM" tagGroups
   includedKmPerHr <- readMaybe $ T.unpack tagValue
   Just $ Kilometers includedKmPerHr
 
 getRentalPlannedPerKmRate :: OnSearch.TagGroups -> Maybe Money
 getRentalPlannedPerKmRate tagGroups = do
-  tagValue <- getTag "rate_card" "rental_planned_per_km_rate" tagGroups
+  tagValue <- getTag "rate_card" "PLANNED_PER_KM_CHARGE" tagGroups
   plannedPerKmRate <- readMaybe $ T.unpack tagValue
   Just $ Money plannedPerKmRate

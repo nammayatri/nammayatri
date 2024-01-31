@@ -128,7 +128,30 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
     processAdditionalDetails = \case
       FarePolicyD.ProgressiveDetails det -> mkAdditionalProgressiveBreakups det
       FarePolicyD.SlabsDetails det -> mkAdditionalSlabBreakups $ FarePolicyD.findFPSlabsDetailsSlabByDistance (fromMaybe 0 mbDistance) det.slabs
-      FarePolicyD.RentalDetails _ -> [] -- TODO: Later
+      FarePolicyD.RentalDetails det -> mkAdditionalRentalBreakups det
+
+    mkAdditionalRentalBreakups det = do
+      let minFareCaption = "MIN_FARE"
+          minFareItem = mkBreakupItem minFareCaption . mkValue $ show det.baseFare
+
+          perHourChargeCaption = "PER_HOUR_CHARGE"
+          perHourChargeItem = mkBreakupItem perHourChargeCaption . mkValue $ show det.perHourCharge
+
+          perExtraMinRateCaption = "PER_MINUTE_CHARGE"
+          perExtraMinRateItem = mkBreakupItem perExtraMinRateCaption . mkValue $ show det.perExtraMinRate
+
+          perExtraKmRateCaption = "UNPLANNED_PER_KM_CHARGE"
+          perExtraKmRateItem = mkBreakupItem perExtraKmRateCaption . mkValue $ show det.perExtraKmRate
+
+          includedKmPerHrCaption = "PER_HOUR_DISTANCE_KM"
+          includedKmPerHrItem = mkBreakupItem includedKmPerHrCaption . mkValue $ show det.includedKmPerHr
+
+          plannedPerKmRateCaption = "PLANNED_PER_KM_CHARGE"
+          plannedPerKmRateItem = mkBreakupItem plannedPerKmRateCaption . mkValue $ show det.plannedPerKmRate
+
+      [minFareItem, perHourChargeItem, perExtraMinRateItem, perExtraKmRateItem, includedKmPerHrItem, plannedPerKmRateItem]
+        <> (nightShiftChargeBreakups det.nightShiftCharge)
+
     mkAdditionalProgressiveBreakups det = do
       let perExtraKmFareSections = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
           mkPerExtraKmFareItem section = do
