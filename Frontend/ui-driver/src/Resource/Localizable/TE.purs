@@ -1235,3 +1235,5 @@ getTE stringKey =
         LOWEST_FEES_FROM -> "{} నుండి అత్యల్ప ఫీజు"
         ZERO_FEE_TILL -> "{} వరకు జీరో ఫీజు"
         ZERO_COMMISION_UNLIMITED_RIDES -> "జీరో కమీషన్, ఉన్లిమితెద్ రైడ్‌లు"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "మేము ప్రస్తుతం మీ నగరంలో ఆటోరిక్షాలతో మాత్రమే ప్రత్యక్ష ప్రసారం చేస్తున్నాము"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "మరిన్ని నవీకరణల కోసం వేచి ఉండండి"

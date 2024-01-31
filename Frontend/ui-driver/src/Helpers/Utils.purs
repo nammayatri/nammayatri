@@ -612,6 +612,7 @@ getCityConfig cityConfig cityName = do
                           showDriverReferral : false,
                           showCustomerReferral : false,
                           uploadRCandDL : true,
+                          vehicleNSImg : "",
                           registration : { 
                             callSupport : false,
                             supportWAN : "", 

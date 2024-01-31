@@ -153,7 +153,8 @@ initData = {
         , currentPage : 0
       },
       prevLatLon : [],
-      noOfLocations : 0
+      noOfLocations : 0,
+      isVehicleSupported : true
     },
     props: {
         isFreeRide : false,
@@ -207,7 +208,8 @@ initData = {
         showCoinsPopup : false,
         isStatsModelExpanded : false,
         tobeLogged : false,
-        safetyAudioAutoPlay : false
+        safetyAudioAutoPlay : false,
+        vehicleNSPopup : false
     }
 }
 

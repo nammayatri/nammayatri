@@ -185,6 +185,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : true,
+        "vehicleNSImg" : "ny_ic_auto_image",
         "registration" : {
             "supportWAN" : "918618963188",
             "callSupport" : true,
@@ -204,6 +205,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
         "registration" : {
             "supportWAN" : "919392636637",
             "callSupport" : true,
@@ -223,6 +225,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : true,
+        "vehicleNSImg" : "ny_ic_auto_image",
         "registration" : {
             "supportWAN" : "918618963188",
             "callSupport" : true,
@@ -242,6 +245,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image",
         "registration" : {
             "supportWAN" : "919625724848",
             "callSupport" : true,
@@ -261,6 +265,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : false,
         "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image_old",
         "registration" : {
             "supportWAN" : "917483117936",
             "callSupport" : true,
@@ -280,6 +285,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image",
         "registration" : {
             "supportWAN" : "",
             "callSupport" : true,
@@ -299,6 +305,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image",
         "registration" : {
           "supportWAN" : "917483117936",
           "callSupport" : true,
@@ -337,6 +344,7 @@ window.getMerchantConfig = function () {
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
+        "vehicleNSImg" : "ny_ic_auto_image",
         "registration" : {
           "supportWAN" : "919625724848",
           "callSupport" : true,

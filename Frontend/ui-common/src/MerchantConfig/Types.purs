@@ -98,7 +98,8 @@ type CityConfig = {
   showCustomerReferral :: Boolean,
   uploadRCandDL :: Boolean,
   enableYatriCoins :: Boolean,
-  registration :: RegistrationConfig
+  registration :: RegistrationConfig,
+  vehicleNSImg :: String
 }
 
 type DashboardConfig = {
