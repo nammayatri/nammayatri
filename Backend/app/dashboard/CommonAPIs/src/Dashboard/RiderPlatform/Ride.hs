@@ -46,6 +46,11 @@ type ShareRideInfoAPI =
     :> "info"
     :> Get '[JSON] ShareRideInfoRes
 
+type ShareRideInfoByShortIdAPI =
+  Capture "rideShortId" (ShortId DP.Ride)
+    :> "rideInfo"
+    :> Get '[JSON] ShareRideInfoRes
+
 type RideInfoAPI =
   "rideinfo"
     :> Capture "rideId" (Id DP.Ride)
@@ -68,7 +73,8 @@ data ShareRideInfoRes = ShareRideInfoRes
     userLastName :: Maybe Text,
     fromLocation :: Location,
     toLocation :: Maybe Location,
-    sosStatus :: Maybe SosStatus
+    sosStatus :: Maybe SosStatus,
+    vehicleVariant :: Variant
   }
   deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 

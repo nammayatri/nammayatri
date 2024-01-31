@@ -32,6 +32,7 @@ import Storage.Beam.SystemConfigs ()
 type API =
   "ride"
     :> ( ShareRideInfoAPI
+           :<|> Common.ShareRideInfoByShortIdAPI
            :<|> Common.RideListAPI
            :<|> Common.TripRouteAPI
            :<|> Common.RideInfoAPI
@@ -50,6 +51,7 @@ type MultipleRideCancelAPI =
 handler :: ShortId DM.Merchant -> FlowServer API
 handler merchantId =
   shareRideInfo merchantId
+    :<|> shareRideInfoByShortId merchantId
     :<|> rideList merchantId
     :<|> callGetTripRoute merchantId
     :<|> callRideInfo merchantId
@@ -62,6 +64,12 @@ shareRideInfo ::
   Id Common.Ride ->
   FlowHandler Common.ShareRideInfoRes
 shareRideInfo merchantShortId reqRideId = withFlowHandlerAPI $ DRide.shareRideInfo merchantShortId reqRideId
+
+shareRideInfoByShortId ::
+  ShortId DM.Merchant ->
+  ShortId Common.Ride ->
+  FlowHandler Common.ShareRideInfoRes
+shareRideInfoByShortId merchantShortId reqRideShortId = withFlowHandlerAPI $ DRide.shareRideInfoByShortId merchantShortId reqRideShortId
 
 rideList ::
   ShortId DM.Merchant ->
