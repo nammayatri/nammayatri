@@ -38,7 +38,7 @@ initData =
         , finalFare : 0
         , nightCharge : ""
       }
-    , currentTime : ""
+    , startTimeUTC : ""
     , currentStage : RENTAL_SELECT_PACKAGE
     , quoteList : []
     , endOTP : Nothing

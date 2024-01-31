@@ -33,7 +33,7 @@ instance loggableAction :: Loggable Action where
     PrimaryButtonActionController _-> trackAppActionClick appId (getScreen RIDE_SCHEDULED_SCREEN) "primary_button" "on_click"
     SourceToDestinationAC _ -> trackAppActionClick appId (getScreen RIDE_SCHEDULED_SCREEN) "source_to_destination" "dummy_action"
     CancelRide -> trackAppActionClick appId (getScreen RIDE_SCHEDULED_SCREEN) "cancel_ride" "on_click"
-    AddFirstStop _ -> do 
+    AddFirstStop -> do 
       trackAppActionClick appId (getScreen RIDE_SCHEDULED_SCREEN) "add_first_stop" "on_click"
       trackAppEndScreen appId (getScreen RIDE_SCHEDULED_SCREEN)
     _ -> pure unit
@@ -43,7 +43,7 @@ data Action
   | PrimaryButtonActionController PrimaryButtonController.Action
   | SourceToDestinationAC SourceToDestinationActionController.Action
   | CancelRide
-  | AddFirstStop (Maybe String)
+  | AddFirstStop
   | GenericHeaderAC GenericHeaderController.Action
 
 data ScreenOutput = GoToHomeScreen 
@@ -53,8 +53,10 @@ eval :: Action -> RideScheduledScreenState -> Eval Action ScreenOutput RideSched
 
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = exit $ GoToHomeScreen
 
--- eval (AddFirstStop _) _ = exit GoToSearchLocationScreen
+eval AddFirstStop state = exit $ GoToSearchLocationScreen state
 
 eval (SourceToDestinationAC (SourceToDestinationActionController.DestinationClicked)) state = exit $ GoToSearchLocationScreen state
+
+eval (GenericHeaderAC (GenericHeaderController.PrefixImgOnClick)) state = exit $ GoToHomeScreen
 
 eval _ state = continue state
