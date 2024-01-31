@@ -2,6 +2,10 @@ let common = ./common.dhall
 
 let sec = ./secrets/dynamic-offer-driver-app.dhall
 
+let genericCommon = ../generic/common.dhall
+
+let appCfg = ./dynamic-offer-driver-app.dhall
+
 let esqDBCfg =
       { connectHost = "localhost"
       , connectPort = 5434
@@ -49,6 +53,8 @@ let consumerProperties =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let kvConfigUpdateFrequency = +10
+
 let kafkaConsumerCfg =
       { topicNames = [ "broadcast-messages" ], consumerProperties }
 
@@ -80,6 +86,8 @@ in  { hedisCfg
     , availabilityTimeWindowOption
     , granualityPeriodType = common.periodType.Hours
     , httpClientOptions = common.httpClientOptions
+    , metricsPort = +9994
+    , encTools = appCfg.encTools
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/kafka-consumers-broadcast-messages.log"
@@ -88,4 +96,6 @@ in  { hedisCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , cacConfig
+    , kvConfigUpdateFrequency
+    , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
     }

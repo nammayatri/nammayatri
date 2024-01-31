@@ -18,6 +18,7 @@ module Consumer.Flow where
 import qualified Consumer.AvailabilityTime.Processor as ATProcessor
 import qualified Consumer.BroadcastMessage.Processor as BMProcessor
 import qualified Consumer.CustomerStats.Processor as PSProcessor
+import qualified Consumer.LocationUpdate.Processor as LCProcessor
 import Control.Error.Util
 import qualified Data.Aeson as A
 import Data.ByteString (ByteString)
@@ -29,7 +30,7 @@ import qualified EulerHS.Runtime as L
 import qualified Kafka.Consumer as Consumer
 import Kernel.Prelude
 import Kernel.Types.Flow
-import Kernel.Utils.Common (generateGUID, withLogTag)
+import Kernel.Utils.Common hiding (id)
 import qualified Streamly.Internal.Data.Fold as SF
 import Streamly.Internal.Data.Stream.Serial (SerialT)
 import qualified Streamly.Prelude as S
@@ -40,6 +41,7 @@ runConsumer flowRt appEnv consumerType kafkaConsumer = do
     AVAILABILITY_TIME -> availabilityConsumer flowRt appEnv kafkaConsumer
     BROADCAST_MESSAGE -> broadcastMessageConsumer flowRt appEnv kafkaConsumer
     PERSON_STATS -> updateCustomerStatsConsumer flowRt appEnv kafkaConsumer
+    LOCATION_UPDATE -> locationUpdateConsumer flowRt appEnv kafkaConsumer
 
 updateCustomerStatsConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
 updateCustomerStatsConsumer flowRt appEnv kafkaConsumer =
@@ -67,7 +69,7 @@ availabilityConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO 
 availabilityConsumer flowRt appEnv kafkaConsumer =
   readMessages kafkaConsumer
     & S.mapM (\(message, messageKey, cr) -> processRealtimeLocationUpdates message messageKey $> (message, messageKey, cr))
-    & S.intervalsOf (fromIntegral appEnv.dumpEvery) (SF.lmap (\(message, messageKey, cr) -> ((messageKey, message.mId), (message, cr))) (SF.classify buildTimeSeries))
+    & S.intervalsOf (fromIntegral appEnv.dumpEvery) (SF.lmap (\(message, messageKey, cr) -> ((messageKey, message.m_id), (message, cr))) (SF.classify buildTimeSeries))
     & S.mapM (Map.traverseWithKey calculateAvailableTime)
     & S.mapM (Map.traverseWithKey commitAllPartitions)
     & S.drain
@@ -109,6 +111,17 @@ availabilityConsumer flowRt appEnv kafkaConsumer =
         start = SF.Partial ([], Nothing)
         extract = id
 
+locationUpdateConsumer :: L.FlowRuntime -> AppEnv -> Consumer.KafkaConsumer -> IO ()
+locationUpdateConsumer flowRt appEnv kafkaConsumer =
+  readMessages kafkaConsumer
+    & S.mapM (\(message, messageKey, cr) -> processRealtimeLocationUpdates message messageKey $> (message, messageKey, cr))
+    & S.drain
+  where
+    processRealtimeLocationUpdates locationUpdate driverId =
+      runFlowR flowRt appEnv . withLogTag driverId $
+        generateGUID
+          >>= flip withLogTag (LCProcessor.processLocationData locationUpdate driverId)
+
 readMessages ::
   (FromJSON message, ConvertUtf8 messageKey ByteString) =>
   Consumer.KafkaConsumer ->
@@ -135,3 +148,4 @@ getConfigNameFromConsumertype = \case
   AVAILABILITY_TIME -> pure "driver-availability-calculator"
   BROADCAST_MESSAGE -> pure "broadcast-message"
   PERSON_STATS -> pure "person-stats"
+  LOCATION_UPDATE -> pure "location-update"
