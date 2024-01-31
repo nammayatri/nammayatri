@@ -956,7 +956,7 @@ driverInfoTransformer state =
     , vehicleDetails : cardState.vehicleDetails
     , registrationNumber : cardState.registrationNumber
     , rating : cardState.rating
-    , startedAt : cardState.startedAt
+    , startedAt : cardState.createdAt
     , endedAt : cardState.endedAt
     , source : cardState.source
     , destination : cardState.destination

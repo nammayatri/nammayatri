@@ -38,7 +38,7 @@ import Language.Strings (getString)
 import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+), void, when)
+import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+), void)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, rippleColor, layoutGravity)
 import PrestoDOM.Animation as PrestoAnim
@@ -1269,15 +1269,15 @@ rentalTimeView push state showText =
   let rentalData = state.data.rentalData
       isRideStarted = state.props.currentStage == RideStarted
   in 
+    PrestoAnim.animationSet [ fadeIn true] $
     linearLayout
     [ height WRAP_CONTENT
     , width WRAP_CONTENT
     , gravity $ if isTime showText then LEFT else CENTER
     , orientation VERTICAL
-    , afterRender (\_ -> do
-        when isRideStarted do 
-          void $ pure $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") state.data.startedAt))/60) "1" "RideDurationTimer" push RideDurationTimer
-        pure unit
+    , onAnimationEnd (\_ -> do
+        if isRideStarted then void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") state.data.startedAt))/60) "1" "RideDurationTimer" push RideDurationTimer
+        else pure unit
       ) (const NoAction)
     ]
     [ textView $
