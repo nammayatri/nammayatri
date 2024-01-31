@@ -23,7 +23,6 @@ import Beckn.Types.Core.Taxi.Common.Authorization as Reexport
 import Beckn.Types.Core.Taxi.Common.BreakupItem as Reexport
 import Beckn.Types.Core.Taxi.Common.Customer as Reexport
 import Beckn.Types.Core.Taxi.Common.Descriptor as Reexport
-import Beckn.Types.Core.Taxi.Common.FulfillmentType as Reexport
 import Beckn.Types.Core.Taxi.Common.Location as Reexport
 import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Types.Core.Taxi.Common.Price as Reexport

@@ -68,6 +68,7 @@ data RideListItem = RideListItem
     customerPhoneNo :: Text,
     driverName :: Text,
     driverPhoneNo :: Maybe Text,
+    tripCategory :: TripCategory,
     vehicleNo :: Text,
     fareDiff :: Maybe Money,
     bookingStatus :: BookingStatus,
@@ -79,6 +80,10 @@ data RideListItem = RideListItem
 data BookingStatus = UPCOMING | UPCOMING_6HRS | ONGOING | ONGOING_6HRS | COMPLETED | CANCELLED
   deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data TripCategory = OneWay | RoundTrip | Rental | RideShare
+  deriving stock (Eq, Ord, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 derivePersistField "BookingStatus"
 
@@ -93,8 +98,9 @@ type RideStartAPI =
     :> ReqBody '[JSON] StartRideReq
     :> Post '[JSON] APISuccess
 
-newtype StartRideReq = StartRideReq
-  { point :: Maybe LatLong
+data StartRideReq = StartRideReq
+  { point :: Maybe LatLong,
+    odometerReadingValue :: Maybe Centesimal
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -111,8 +117,9 @@ type RideEndAPI =
     :> ReqBody '[JSON] EndRideReq
     :> Post '[JSON] APISuccess
 
-newtype EndRideReq = EndRideReq
-  { point :: Maybe LatLong
+data EndRideReq = EndRideReq
+  { point :: Maybe LatLong,
+    odometerReadingValue :: Maybe Centesimal
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -233,6 +240,8 @@ data RideInfoRes = RideInfoRes
     actualDriverArrivalTime :: Maybe UTCTime,
     rideStartTime :: Maybe UTCTime,
     rideEndTime :: Maybe UTCTime,
+    tripCategory :: TripCategory,
+    scheduledAt :: Maybe UTCTime,
     rideDistanceEstimated :: Maybe Meters,
     rideDistanceActual :: Meters,
     chargeableDistance :: Maybe Meters,
@@ -252,7 +261,9 @@ data RideInfoRes = RideInfoRes
     bookingToRideStartDuration :: Maybe Minutes,
     distanceCalculationFailed :: Maybe Bool,
     driverDeviatedFromRoute :: Maybe Bool,
-    vehicleVariant :: Maybe Variant
+    vehicleVariant :: Maybe Variant,
+    nextStopLocation :: Maybe LocationAPIEntity,
+    lastStopLocation :: Maybe LocationAPIEntity
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

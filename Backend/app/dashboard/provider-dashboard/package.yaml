@@ -82,6 +82,7 @@ dependencies:
   - openapi3
   - servant-openapi3
   - unordered-containers
+  - beckn-services
 
 ghc-options:
   - -Wall

@@ -20,6 +20,7 @@ module Domain.Action.Dashboard.Ride
     rideRoute,
     currentActiveRide,
     bookingWithVehicleNumberAndPhone,
+    mkLocationFromLocationMapping,
     ticketRideList,
   )
 where
@@ -31,8 +32,10 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
+import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
 import qualified Domain.Types.CancellationReason as DCReason
+import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverOnboarding.DriverRCAssociation
 import Domain.Types.DriverOnboarding.Error
 import qualified Domain.Types.Location as DLoc
@@ -63,6 +66,8 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverOnboarding.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverOnboarding.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.DriverQuote as DQ
+import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideDetails
@@ -120,6 +125,7 @@ buildRideListItem QRide.RideItem {..} = do
         driverName = rideDetails.driverName,
         driverPhoneNo,
         vehicleNo = rideDetails.vehicleNumber,
+        tripCategory = castTripCategory tripCategory,
         fareDiff,
         bookingStatus,
         rideCreatedAt = rideCreatedAt
@@ -260,6 +266,9 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         _ -> Nothing
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
+  (nextStopLoc, lastStopLoc) <- case booking.tripCategory of
+    DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
+    _ -> return (Nothing, Nothing)
   now <- getCurrentTime
   pure
     Common.RideInfoRes
@@ -268,7 +277,7 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         customerPhoneNo,
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
-        customerDropLocation = Just $ mkLocationAPIEntity booking.toLocation,
+        customerDropLocation = mkLocationAPIEntity <$> booking.toLocation,
         actualDropLocation = ride.tripEndPos,
         driverId = cast @DP.Person @Common.Driver driverId,
         driverName = rideDetails.driverName,
@@ -282,11 +291,11 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         actualDriverArrivalTime = ride.driverArrivalTime,
         rideStartTime = ride.tripStartTime,
         rideEndTime = ride.tripEndTime,
-        rideDistanceEstimated = Just booking.estimatedDistance,
+        rideDistanceEstimated = booking.estimatedDistance,
         rideDistanceActual = roundToIntegral ride.traveledDistance,
         chargeableDistance = ride.chargeableDistance,
         maxEstimatedDistance = highPrecMetersToMeters <$> booking.maxEstimatedDistance,
-        estimatedRideDuration = Just $ secondsToMinutes booking.estimatedDuration,
+        estimatedRideDuration = secondsToMinutes <$> booking.estimatedDuration,
         estimatedFare = booking.estimatedFare,
         actualFare = ride.fare,
         driverOfferedFare = (.fareParams.driverSelectedFare) =<< mQuote,
@@ -297,16 +306,51 @@ rideInfo merchantId merchantOpCityId reqRideId = do
         cancelledBy,
         cancellationReason,
         driverInitiatedCallCount,
+        scheduledAt = Just booking.startTime,
+        tripCategory = castTripCategory booking.tripCategory,
         bookingToRideStartDuration = timeDiffInMinutes <$> ride.tripStartTime <*> (Just booking.createdAt),
         distanceCalculationFailed = ride.distanceCalculationFailed,
         driverDeviatedFromRoute = ride.driverDeviatedFromRoute,
-        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant
+        vehicleVariant = castDVehicleVariant <$> rideDetails.vehicleVariant,
+        nextStopLocation = mkLocationAPIEntity <$> nextStopLoc,
+        lastStopLocation = mkLocationAPIEntity <$> lastStopLoc
       }
+
+calculateLocations ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id SRB.Booking ->
+  Maybe (Id DLoc.Location) ->
+  m (Maybe DLoc.Location, Maybe DLoc.Location)
+calculateLocations bookingId stopLocationId = do
+  maxOrder <- QLM.maxOrderByEntity bookingId.getId
+  case stopLocationId of
+    Nothing -> do
+      lastLoc <- mkLocationFromLocationMapping bookingId.getId maxOrder
+      return (Nothing, lastLoc)
+    Just nextStopId -> do
+      nextLoc <- QL.findById nextStopId
+      lastLoc <- mkLocationFromLocationMapping bookingId.getId (maxOrder - 1)
+      return (nextLoc, lastLoc)
 
 mkLocationAPIEntity :: DLoc.Location -> Common.LocationAPIEntity
 mkLocationAPIEntity DLoc.Location {..} = do
   let DLoc.LocationAddress {..} = address
   Common.LocationAPIEntity {..}
+
+mkLocationFromLocationMapping ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Text ->
+  Int ->
+  m (Maybe DLoc.Location)
+mkLocationFromLocationMapping bookingId order = do
+  locMap <- listToMaybe <$> QLM.findByEntityIdOrderAndVersion bookingId order "LATEST"
+  case locMap of
+    Nothing -> pure Nothing
+    Just locMap_ -> QL.findById locMap_.locationId
 
 castCancellationSource :: DBCReason.CancellationSource -> Common.CancellationSource
 castCancellationSource = \case
@@ -315,6 +359,13 @@ castCancellationSource = \case
   DBCReason.ByMerchant -> Common.ByMerchant
   DBCReason.ByAllocator -> Common.ByAllocator
   DBCReason.ByApplication -> Common.ByApplication
+
+castTripCategory :: DTC.TripCategory -> Common.TripCategory
+castTripCategory = \case
+  DTC.OneWay _ -> Common.OneWay
+  DTC.RoundTrip _ -> Common.RoundTrip
+  DTC.Rental _ -> Common.Rental
+  DTC.RideShare _ -> Common.RideShare
 
 timeDiffInMinutes :: UTCTime -> UTCTime -> Minutes
 timeDiffInMinutes t1 = secondsToMinutes . nominalDiffTimeToSeconds . diffUTCTime t1
@@ -457,6 +508,6 @@ bookingWithVehicleNumberAndPhone merchant merchantOpCityId req = do
 
 endActiveRide :: Id DRide.Ride -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 endActiveRide rideId merchantId merchantOperatingCityId = do
-  let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, merchantId, merchantOperatingCityId}
+  let dashboardReq = EHandler.DashboardEndRideReq {point = Nothing, merchantId, merchantOperatingCityId, odometer = Nothing}
   shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId
   void $ EHandler.dashboardEndRide shandle rideId dashboardReq

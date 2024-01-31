@@ -36,7 +36,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.RentalSlab as DRentalSlab
+import qualified Domain.Types.RentalDetails as DRentalDetails
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
@@ -103,7 +103,7 @@ data EstimateInfo = EstimateInfo
 
 data NightShiftInfo = NightShiftInfo
   { nightShiftCharge :: Money,
-    oldNightShiftCharge :: Centesimal,
+    oldNightShiftCharge :: Maybe Centesimal,
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
@@ -147,8 +147,14 @@ newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
   }
 
 data RentalQuoteDetails = RentalQuoteDetails
-  { baseDistance :: Kilometers,
-    baseDuration :: Hours
+  { id :: Text,
+    baseFare :: Money,
+    perHourCharge :: Money,
+    perExtraMinRate :: Money,
+    includedKmPerHr :: Kilometers,
+    plannedPerKmRate :: Money,
+    perExtraKmRate :: Money,
+    nightShiftInfo :: Maybe NightShiftInfo
   }
 
 validateRequest :: DOnSearchReq -> Flow ValidatedOnSearchReq
@@ -237,8 +243,8 @@ buildQuote requestId providerInfo now _searchRequest QuoteInfo {..} = do
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
       pure.DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
-    RentalDetails rentalSlab -> do
-      DQuote.RentalDetails <$> buildRentalSlab rentalSlab
+    RentalDetails rentalDetails -> do
+      DQuote.RentalDetails <$> buildRentalDetails rentalDetails
     OneWaySpecialZoneDetails details -> do
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
   pure
@@ -264,10 +270,15 @@ buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
   id <- generateGUID
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 
-buildRentalSlab :: MonadFlow m => RentalQuoteDetails -> m DRentalSlab.RentalSlab
-buildRentalSlab RentalQuoteDetails {..} = do
-  id <- generateGUID
-  pure DRentalSlab.RentalSlab {..}
+buildRentalDetails :: MonadFlow m => RentalQuoteDetails -> m DRentalDetails.RentalDetails
+buildRentalDetails RentalQuoteDetails {..} = do
+  let quoteId = Id id
+      nightShiftinfo' =
+        ( \nightShiftInfo'' ->
+            DRentalDetails.NightShiftInfo nightShiftInfo''.nightShiftCharge Nothing nightShiftInfo''.nightShiftStart nightShiftInfo''.nightShiftEnd
+        )
+          <$> nightShiftInfo
+  pure DRentalDetails.RentalDetails {id = quoteId, nightShiftInfo = nightShiftinfo', ..}
 
 buildTripTerms ::
   MonadFlow m =>

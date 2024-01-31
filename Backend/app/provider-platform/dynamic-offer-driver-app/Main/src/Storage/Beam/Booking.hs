@@ -18,6 +18,7 @@ module Storage.Beam.Booking where
 
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking as Domain
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Vehicle.Variant as Veh
 import Kernel.Prelude
@@ -30,7 +31,8 @@ data BookingT f = BookingT
     transactionId :: B.C f Text,
     quoteId :: B.C f Text,
     status :: B.C f Domain.BookingStatus,
-    bookingType :: B.C f Domain.BookingType,
+    bookingType :: B.C f Domain.BookingType, -- Just for backward compatibilty
+    tripCategory :: B.C f (Maybe DTC.TripCategory),
     specialLocationTag :: B.C f (Maybe Text),
     specialZoneOtpCode :: B.C f (Maybe Text),
     disabilityTag :: B.C f (Maybe Text),
@@ -47,17 +49,19 @@ data BookingT f = BookingT
     fromLocationId :: B.C f (Maybe Text),
     toLocationId :: B.C f (Maybe Text),
     vehicleVariant :: B.C f Veh.Variant,
-    estimatedDistance :: B.C f Meters,
+    estimatedDistance :: B.C f (Maybe Meters),
     maxEstimatedDistance :: B.C f (Maybe HighPrecMeters),
     estimatedFare :: B.C f Money,
-    estimatedDuration :: B.C f Seconds,
+    estimatedDuration :: B.C f (Maybe Seconds),
     fareParametersId :: B.C f Text,
     riderName :: B.C f (Maybe Text),
     paymentUrl :: B.C f (Maybe Text),
     paymentMethodId :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    distanceToPickup :: B.C f (Maybe Meters)
+    stopLocationId :: B.C f (Maybe Text),
+    distanceToPickup :: B.C f (Maybe Meters),
+    isScheduled :: B.C f (Maybe Bool)
   }
   deriving (Generic, B.Beamable)
 

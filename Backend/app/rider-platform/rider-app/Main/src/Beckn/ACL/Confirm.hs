@@ -90,10 +90,11 @@ mkConfirmMessage res = do
       VehVar.TAXI -> Confirm.TAXI
       VehVar.TAXI_PLUS -> Confirm.TAXI_PLUS
     fulfillmentType = case res.bookingDetails of
-      DRB.OneWaySpecialZoneDetails _ -> Confirm.RIDE_OTP
-      _ -> Confirm.RIDE
+      DRB.OneWaySpecialZoneDetails _ -> "RIDE_OTP"
+      DRB.RentalDetails _ -> "RENTAL"
+      _ -> "RIDE"
 
-mkFulfillment :: Maybe Text -> Confirm.FulfillmentType -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Bool -> Confirm.FulfillmentInfo
+mkFulfillment :: Maybe Text -> Text -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Bool -> Confirm.FulfillmentInfo
 mkFulfillment fulfillmentId fulfillmentType startLoc mbStopLoc riderPhoneCountryCode riderPhoneNumber mbRiderName vehicleVariant nightSafetyCheck =
   Confirm.FulfillmentInfo
     { id = fulfillmentId,
@@ -237,6 +238,7 @@ tfFulfillments res =
   where
     mkFulfillmentType = \case
       DRB.OneWaySpecialZoneDetails _ -> "RIDE_OTP"
+      DRB.RentalDetails _ -> "RENTAL"
       _ -> "RIDE"
 
 tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]

@@ -20,6 +20,7 @@ module Dashboard.Common.Message
   )
 where
 
+import AWS.S3 (FileType (..))
 import Dashboard.Common as Reexport
 import Data.Aeson
 import Data.OpenApi hiding (description, name, password, summary, title, url)
@@ -87,10 +88,6 @@ instance ToMultipart Tmp UploadFileRequest where
     MultipartData
       [Input "fileType" (show uploadFileRequest.fileType)]
       [FileData "file" (T.pack uploadFileRequest.file) "" (uploadFileRequest.file)]
-
-data FileType = Audio | Video | Image | AudioLink | VideoLink | ImageLink | PortraitVideoLink
-  deriving stock (Eq, Show, Read, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype UploadFileResponse = UploadFileResponse
   { fileId :: Id File

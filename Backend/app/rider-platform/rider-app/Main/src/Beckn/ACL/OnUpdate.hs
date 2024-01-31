@@ -142,6 +142,8 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
 parseEvent _ (OnUpdate.RideStarted rsEvent) = do
   let personTagsGroup = rsEvent.fulfillment.person.tags
   let tripStartLocation = getLocationFromTag personTagsGroup "current_location" "current_location_lat" "current_location_lon"
+  authorization <- fromMaybeM (InvalidRequest "authorization is not present in RideStarted Event.") $ rsEvent.fulfillment.start.authorization
+  let endOtp_ = Just authorization.token
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
@@ -240,6 +242,11 @@ parseEvent _ (OnUpdate.SafetyAlert saEvent) = do
         reason = deviation,
         code = "deviation"
       }
+parseEvent _ (OnUpdate.StopArrived saEvent) = do
+  return $
+    DOnUpdate.StopArrivedReq
+      { bppRideId = Id saEvent.fulfillment.id
+      }
 
 parseEventV2 :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
 parseEventV2 transactionId order = do
@@ -261,6 +268,7 @@ parseEventV2 transactionId order = do
     "ESTIMATE_REPETITION" -> parseEstimateRepetitionEvent transactionId order
     "NEW_MESSAGE" -> parseNewMessageEvent order
     "SAFETY_ALERT" -> parseSafetyAlertEvent order
+    "STOP_ARRIVED" -> parseStopArrivedEvent order
     _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseRideAssignedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -306,12 +314,16 @@ parseRideStartedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
 parseRideStartedEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideStarted Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideStarted Event.")
+  stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideStarted Event.")
+  start <- Utils.getStartLocation stops & fromMaybeM (InvalidRequest "pickup stop is not present in RideStarted Event.")
+  endOtp' <- start.stopAuthorization >>= (.authorizationToken) & fromMaybeM (InvalidRequest "authorization_token is not present in RideStarted Event.")
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
   let tripStartLocation = getLocationFromTagV2 personTagsGroup "current_location" "current_location_lat" "current_location_lon"
   pure $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id bppBookingId,
         bppRideId = Id bppRideId,
+        endOtp_ = Just endOtp',
         ..
       }
 
@@ -420,4 +432,12 @@ parseSafetyAlertEvent order = do
         bppRideId = Id bppRideId,
         reason = deviation,
         code = "deviation"
+      }
+
+parseStopArrivedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
+parseStopArrivedEvent order = do
+  bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in StopArrived Event.")
+  return $
+    DOnUpdate.StopArrivedReq
+      { bppRideId = Id bppRideId
       }

@@ -46,7 +46,9 @@ data Handle m = Handle
     setBatchDurationLock :: m (Maybe UTCTime),
     createRescheduleTime :: UTCTime -> m UTCTime,
     isSearchTryValid :: m Bool,
-    cancelSearchTry :: m ()
+    initiateDriverSearchBatch :: m (),
+    cancelSearchTry :: m (),
+    isScheduledBooking :: Bool
   }
 
 handler :: HandleMonad m => Handle m -> GoHomeConfig -> m (ExecutionResult, Bool)
@@ -76,18 +78,17 @@ processRequestSending Handle {..} goHomeCfg = do
       isBatchNumExceedLimit' <- isBatchNumExceedLimit
       if isBatchNumExceedLimit'
         then do
-          metrics.incrementFailedTaskCounter
-          logInfo "No driver accepted"
-          cancelSearchTry
-          return (Complete, False)
+          if isScheduledBooking
+            then do
+              initiateDriverSearchBatch
+              return (Complete, False)
+            else do
+              metrics.incrementFailedTaskCounter
+              logInfo "No driver accepted"
+              cancelSearchTry
+              return (Complete, False)
         else do
           driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg
-          if null driverPoolWithFlags.driverPoolWithActualDistResult
-            then do
-              metrics.incrementFailedTaskCounter
-              logInfo "No driver available"
-              cancelSearchTry
-              return (Complete, driverPoolWithFlags.isGoHomeBatch)
-            else do
-              sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
-              ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.isGoHomeBatch)
+          when (not $ null driverPoolWithFlags.driverPoolWithActualDistResult) $
+            sendSearchRequestToDrivers driverPoolWithFlags.driverPoolWithActualDistResult driverPoolWithFlags.prevBatchDrivers goHomeCfg
+          ReSchedule <$> getRescheduleTime <&> (,driverPoolWithFlags.isGoHomeBatch)

@@ -30,10 +30,11 @@ import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Ride as QRide
 import Tools.Event
 
-startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r, LT.HasLocationService m r) => Id SP.Person -> SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> m ()
-startRideTransaction driverId ride bookingId firstPoint merchantId = do
+startRideTransaction :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EventStreamFlow m r, LT.HasLocationService m r) => Id SP.Person -> SRide.Ride -> Id SRB.Booking -> LatLong -> Id Dmerch.Merchant -> Maybe SRide.OdometerReading -> m ()
+startRideTransaction driverId ride bookingId firstPoint merchantId odometer = do
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
   void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId
   QRide.updateStatus ride.id SRide.INPROGRESS
   QRide.updateStartTimeAndLoc ride.id firstPoint
+  whenJust odometer $ \odometerReading -> QRide.updateStartOdometerReading ride.id odometerReading
   QBE.logRideCommencedEvent (cast driverId) bookingId ride.id

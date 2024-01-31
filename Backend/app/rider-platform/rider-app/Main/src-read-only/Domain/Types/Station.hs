@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.Station where
 
@@ -9,7 +10,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
 data Station = Station
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -29,6 +30,6 @@ data Station = Station
 data FRFSVehicleType = METRO | BUS
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(mkBeamInstancesForEnum ''FRFSVehicleType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSVehicleType)
 
 $(mkHttpInstancesForEnum ''FRFSVehicleType)

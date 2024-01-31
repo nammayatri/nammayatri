@@ -21,8 +21,10 @@ import Control.Lens
 import Data.Aeson
 import qualified Data.Aeson as A
 import qualified Data.List as List
+import Data.Maybe
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Common as DCT
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -44,44 +46,49 @@ firstStop = find (\stop -> Spec.stopType stop == Just "START")
 lastStop :: [Spec.Stop] -> Maybe Spec.Stop
 lastStop = find (\stop -> Spec.stopType stop == Just "END")
 
-mkStops :: LatLong -> LatLong -> Maybe [Spec.Stop]
-mkStops origin destination = do
+mkStops :: LatLong -> Maybe LatLong -> Maybe [Spec.Stop]
+mkStops origin mbDestination = do
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
-      destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
-  Just
-    [ Spec.Stop
-        { stopLocation =
-            Just $
-              Spec.Location
-                { locationAddress = Nothing, -- For start and end in on_search, we send address as nothing
-                  locationAreaCode = Nothing,
-                  locationCity = Nothing,
-                  locationCountry = Nothing,
-                  locationGps = A.decode $ A.encode originGps,
-                  locationState = Nothing,
-                  locationId = Nothing
-                },
-          stopType = Just "START",
-          stopAuthorization = Nothing,
-          stopTime = Nothing
-        },
-      Spec.Stop
-        { stopLocation =
-            Just $
-              Spec.Location
-                { locationAddress = Nothing,
-                  locationAreaCode = Nothing,
-                  locationCity = Nothing,
-                  locationCountry = Nothing,
-                  locationGps = A.decode $ A.encode destinationGps,
-                  locationState = Nothing,
-                  locationId = Nothing
-                },
-          stopType = Just "END",
-          stopAuthorization = Nothing,
-          stopTime = Nothing
-        }
-    ]
+      destinationGps destination = Gps.Gps {lat = destination.lat, lon = destination.lon}
+  Just $
+    catMaybes
+      [ Just $
+          Spec.Stop
+            { stopLocation =
+                Just $
+                  Spec.Location
+                    { locationAddress = Nothing, -- For start and end in on_search, we send address as nothing
+                      locationAreaCode = Nothing,
+                      locationCity = Nothing,
+                      locationCountry = Nothing,
+                      locationGps = A.decode $ A.encode originGps,
+                      locationState = Nothing,
+                      locationId = Nothing
+                    },
+              stopType = Just "START",
+              stopAuthorization = Nothing,
+              stopTime = Nothing
+            },
+        ( \destination ->
+            Spec.Stop
+              { stopLocation =
+                  Just $
+                    Spec.Location
+                      { locationAddress = Nothing, -- JAYPAL, Confirm if it is correct to put it here
+                        locationAreaCode = Nothing,
+                        locationCity = Nothing,
+                        locationCountry = Nothing,
+                        locationGps = A.decode $ A.encode $ destinationGps destination,
+                        locationState = Nothing,
+                        locationId = Nothing
+                      },
+                stopType = Just "END",
+                stopAuthorization = Nothing,
+                stopTime = Nothing
+              }
+        )
+          <$> mbDestination
+      ]
 
 parseLatLong :: Text -> LatLong
 parseLatLong a =
@@ -152,6 +159,14 @@ castVariant Variant.AUTO_RICKSHAW = ("AUTO_RICKSHAW", "AUTO_RICKSHAW")
 castVariant Variant.TAXI = ("CAB", "TAXI")
 castVariant Variant.TAXI_PLUS = ("CAB", "TAXI_PLUS")
 
+mkFulfillmentType :: DCT.TripCategory -> Text
+mkFulfillmentType = \case
+  DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
+  DCT.RoundTrip DCT.RideOtp -> "RIDE_OTP"
+  DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
+  DCT.Rental _ -> "RENTAL"
+  _ -> "RIDE"
+
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
 
@@ -194,44 +209,49 @@ parseAddress Spec.Location {..} = do
     isEmpty :: Maybe Text -> Bool
     isEmpty = maybe True (T.null . T.replace " " "")
 
-mkStops' :: DLoc.Location -> DLoc.Location -> Maybe Text -> Maybe [Spec.Stop]
-mkStops' origin destination mAuthorization =
+mkStops' :: DLoc.Location -> Maybe DLoc.Location -> Maybe Text -> Maybe [Spec.Stop]
+mkStops' origin mbDestination mAuthorization =
   let originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
-      destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
-   in Just
-        [ Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = Just $ mkAddress origin.address,
-                      locationAreaCode = origin.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing origin.address.city,
-                      locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                      locationGps = A.decode $ A.encode originGps,
-                      locationState = Just $ Spec.State origin.address.state,
-                      locationId = Nothing
-                    },
-              stopType = Just "START",
-              stopAuthorization = mAuthorization >>= mkAuthorization,
-              stopTime = Nothing
-            },
-          Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = Just $ mkAddress destination.address,
-                      locationAreaCode = destination.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing destination.address.city,
-                      locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                      locationGps = A.decode $ A.encode destinationGps,
-                      locationState = Just $ Spec.State destination.address.state,
-                      locationId = Nothing
-                    },
-              stopType = Just "END",
-              stopAuthorization = Nothing,
-              stopTime = Nothing
-            }
-        ]
+      destinationGps dest = Gps.Gps {lat = dest.lat, lon = dest.lon}
+   in Just $
+        catMaybes
+          [ Just $
+              Spec.Stop
+                { stopLocation =
+                    Just $
+                      Spec.Location
+                        { locationAddress = Just $ mkAddress origin.address,
+                          locationAreaCode = origin.address.areaCode,
+                          locationCity = Just $ Spec.City Nothing origin.address.city,
+                          locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                          locationGps = A.decode $ A.encode originGps,
+                          locationState = Just $ Spec.State origin.address.state,
+                          locationId = Nothing
+                        },
+                  stopType = Just "START",
+                  stopAuthorization = mAuthorization >>= mkAuthorization,
+                  stopTime = Nothing
+                },
+            ( \destination ->
+                Spec.Stop
+                  { stopLocation =
+                      Just $
+                        Spec.Location
+                          { locationAddress = Just $ mkAddress destination.address,
+                            locationAreaCode = destination.address.areaCode,
+                            locationCity = Just $ Spec.City Nothing destination.address.city,
+                            locationCountry = Just $ Spec.Country Nothing destination.address.country,
+                            locationGps = A.decode $ A.encode $ destinationGps destination,
+                            locationState = Just $ Spec.State destination.address.state,
+                            locationId = Nothing
+                          },
+                    stopType = Just "END",
+                    stopAuthorization = Nothing,
+                    stopTime = Nothing
+                  }
+            )
+              <$> mbDestination
+          ]
   where
     mkAddress :: DLoc.LocationAddress -> Text
     mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]
@@ -250,11 +270,6 @@ data DriverInfo = DriverInfo
     tags :: Maybe [Spec.TagGroup]
   }
 
-mkFulfillmentType :: DBooking.BookingType -> Text
-mkFulfillmentType = \case
-  DBooking.NormalBooking -> "RIDE"
-  DBooking.SpecialZoneBooking -> "RIDE_OTP"
-
 showVariant :: DVeh.Variant -> Maybe Text
 showVariant = A.decode . A.encode
 
@@ -262,48 +277,53 @@ showVariant = A.decode . A.encode
 mkStopsOUS :: DBooking.Booking -> DRide.Ride -> Text -> Maybe [Spec.Stop]
 mkStopsOUS booking ride rideOtp =
   let origin = booking.fromLocation
-      destination = booking.toLocation
+      mbDestination = booking.toLocation
       originGps = Gps.Gps {lat = origin.lat, lon = origin.lon}
-      destinationGps = Gps.Gps {lat = destination.lat, lon = destination.lon}
-   in Just
-        [ Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = Just $ mkAddress origin.address,
-                      locationAreaCode = origin.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing origin.address.city,
-                      locationCountry = Just $ Spec.Country Nothing origin.address.country,
-                      locationGps = A.decode $ A.encode originGps,
-                      locationState = Just $ Spec.State origin.address.state,
-                      locationId = Nothing
-                    },
-              stopType = Just "START",
-              stopAuthorization =
-                Just $
-                  Spec.Authorization
-                    { authorizationToken = Just rideOtp,
-                      authorizationType = Just "OTP"
-                    },
-              stopTime = Just $ Spec.Time {timeTimestamp = ride.tripStartTime}
-            },
-          Spec.Stop
-            { stopLocation =
-                Just $
-                  Spec.Location
-                    { locationAddress = Just $ mkAddress destination.address,
-                      locationAreaCode = destination.address.areaCode,
-                      locationCity = Just $ Spec.City Nothing destination.address.city,
-                      locationCountry = Just $ Spec.Country Nothing destination.address.country,
-                      locationGps = A.decode $ A.encode destinationGps,
-                      locationState = Just $ Spec.State destination.address.state,
-                      locationId = Nothing
-                    },
-              stopType = Just "END",
-              stopAuthorization = Nothing,
-              stopTime = Just $ Spec.Time {timeTimestamp = ride.tripEndTime}
-            }
-        ]
+      destinationGps dest = Gps.Gps {lat = dest.lat, lon = dest.lon}
+   in Just $
+        catMaybes
+          [ Just $
+              Spec.Stop
+                { stopLocation =
+                    Just $
+                      Spec.Location
+                        { locationAddress = Just $ mkAddress origin.address,
+                          locationAreaCode = origin.address.areaCode,
+                          locationCity = Just $ Spec.City Nothing origin.address.city,
+                          locationCountry = Just $ Spec.Country Nothing origin.address.country,
+                          locationGps = A.decode $ A.encode originGps,
+                          locationState = Just $ Spec.State origin.address.state,
+                          locationId = Nothing
+                        },
+                  stopType = Just "START",
+                  stopAuthorization =
+                    Just $
+                      Spec.Authorization
+                        { authorizationToken = Just rideOtp,
+                          authorizationType = Just "OTP"
+                        },
+                  stopTime = Just $ Spec.Time {timeTimestamp = ride.tripStartTime}
+                },
+            ( \destination ->
+                Spec.Stop
+                  { stopLocation =
+                      Just $
+                        Spec.Location
+                          { locationAddress = Just $ mkAddress destination.address,
+                            locationAreaCode = destination.address.areaCode,
+                            locationCity = Just $ Spec.City Nothing destination.address.city,
+                            locationCountry = Just $ Spec.Country Nothing destination.address.country,
+                            locationGps = A.decode $ A.encode $ destinationGps destination,
+                            locationState = Just $ Spec.State destination.address.state,
+                            locationId = Nothing
+                          },
+                    stopType = Just "END",
+                    stopAuthorization = Nothing,
+                    stopTime = Just $ Spec.Time {timeTimestamp = ride.tripEndTime}
+                  }
+            )
+              <$> mbDestination
+          ]
   where
     mkAddress :: DLoc.LocationAddress -> Text
     mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]
@@ -324,11 +344,14 @@ mkFulfillmentV2 ::
   m Spec.Fulfillment
 mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent = do
   mbDInfo <- driverInfo
+  let rideOtp = case ride.status of
+        DRide.INPROGRESS -> fromMaybe ride.otp ride.endOtp
+        _ -> ride.otp
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
-        fulfillmentStops = mkStopsOUS booking ride ride.otp,
-        fulfillmentType = Just $ mkFulfillmentType booking.bookingType,
+        fulfillmentStops = mkStopsOUS booking ride rideOtp,
+        fulfillmentType = Just $ mkFulfillmentType booking.tripCategory,
         fulfillmentAgent =
           Just $
             Spec.Agent

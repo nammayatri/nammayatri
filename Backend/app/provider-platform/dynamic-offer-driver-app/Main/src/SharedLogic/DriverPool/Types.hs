@@ -27,10 +27,10 @@ where
 
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
+import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Merchant.DriverIntelligentPoolConfig (IntelligentScores)
-import Domain.Types.Merchant.DriverPoolConfig (DriverPoolConfig)
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)

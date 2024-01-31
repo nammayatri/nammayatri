@@ -51,7 +51,7 @@ buildTransaction ::
 buildTransaction endpoint apiTokenInfo =
   T.buildTransaction (DT.SearchAPI endpoint) (Just APP_BACKEND) (Just apiTokenInfo) Nothing Nothing
 
-callSearch :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchRes
+callSearch :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id DP.Person -> SH.SearchReq -> FlowHandler SH.SearchResp
 callSearch merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction BAP.SearchEndPoint apiTokenInfo T.emptyRequest

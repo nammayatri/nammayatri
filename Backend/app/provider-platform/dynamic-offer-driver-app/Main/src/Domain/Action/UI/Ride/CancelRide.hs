@@ -37,7 +37,6 @@ import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
 import Kernel.Prelude
-import Kernel.Tools.Metrics.CoreMetrics.Types (CoreMetrics)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -45,7 +44,6 @@ import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
-import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.Queries.Booking as QRB
@@ -54,8 +52,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps
-
-type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id DRide.Ride -> m (Maybe DRide.Ride),
@@ -90,69 +86,33 @@ data CancelRideResp = CancelRideResp
 data RequestorId = PersonRequestorId (Id DP.Person) | DashboardRequestorId (Id DM.Merchant, Id DMOC.MerchantOperatingCity)
 
 driverCancelRideHandler ::
-  ( MonadHandler m,
-    CacheFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r,
-    LT.HasLocationService m r,
-    CoreMetrics m,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters),
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
-  ) =>
-  ServiceHandle m ->
+  ServiceHandle Flow ->
   Id DP.Person ->
   Id DRide.Ride ->
   CancelRideReq ->
-  m CancelRideResp
+  Flow CancelRideResp
 driverCancelRideHandler shandle personId rideId req =
   withLogTag ("rideId-" <> rideId.getId) $
     cancelRideHandler shandle (PersonRequestorId personId) rideId req
 
 dashboardCancelRideHandler ::
-  ( MonadHandler m,
-    CacheFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r,
-    LT.HasLocationService m r,
-    CoreMetrics m,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters),
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
-  ) =>
-  ServiceHandle m ->
+  ServiceHandle Flow ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id DRide.Ride ->
   CancelRideReq ->
-  m APISuccess.APISuccess
+  Flow APISuccess.APISuccess
 dashboardCancelRideHandler shandle merchantId merchantOpCityId rideId req =
   withLogTag ("merchantId-" <> merchantId.getId) $ do
     void $ cancelRideImpl shandle (DashboardRequestorId (merchantId, merchantOpCityId)) rideId req
     return APISuccess.Success
 
 cancelRideHandler ::
-  ( MonadHandler m,
-    CacheFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r,
-    LT.HasLocationService m r,
-    CoreMetrics m,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters),
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
-  ) =>
-  ServiceHandle m ->
+  ServiceHandle Flow ->
   RequestorId ->
   Id DRide.Ride ->
   CancelRideReq ->
-  m CancelRideResp
+  Flow CancelRideResp
 cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.getId) do
   (cancellationCnt, isGoToDisabled) <- cancelRideImpl sh requestorId rideId req
   pure $ buildCancelRideResp cancellationCnt isGoToDisabled
@@ -165,22 +125,11 @@ cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.ge
         }
 
 cancelRideImpl ::
-  ( MonadHandler m,
-    CacheFlow m r,
-    MonadFlow m,
-    EsqDBFlow m r,
-    LT.HasLocationService m r,
-    CoreMetrics m,
-    HasField
-      "minTripDistanceForReferralCfg"
-      r
-      (Maybe HighPrecMeters)
-  ) =>
-  ServiceHandle m ->
+  ServiceHandle Flow ->
   RequestorId ->
   Id DRide.Ride ->
   CancelRideReq ->
-  m (Maybe Int, Maybe Bool)
+  Flow (Maybe Int, Maybe Bool)
 cancelRideImpl ServiceHandle {..} requestorId rideId req = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"

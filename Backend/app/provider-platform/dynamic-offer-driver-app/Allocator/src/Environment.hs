@@ -22,7 +22,9 @@ module Environment
   )
 where
 
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
+import qualified Data.Map.Strict as MS
 import Data.String.Conversions (cs)
 import "dynamic-offer-driver-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
@@ -83,6 +85,9 @@ data HandlerEnv = HandlerEnv
     ltsCfg :: LT.LocationTrackingeServiceConfig,
     schedulerSetName :: Text,
     kvConfigUpdateFrequency :: Int,
+    nwAddress :: BaseUrl,
+    isBecknSpecVersion2 :: Bool,
+    internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     schedulerType :: SchedulerType
   }
   deriving (Generic)
@@ -98,6 +103,7 @@ buildHandlerEnv HandlerCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg
   hedisEnv <- connectHedis appCfg.hedisCfg ("driver-offer-allocator:" <>)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
+  let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
   hedisClusterEnv <-
     if cutOffHedisCluster
       then pure hedisEnv

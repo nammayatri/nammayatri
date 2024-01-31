@@ -19,7 +19,7 @@ module SharedLogic.PublicTransport
   )
 where
 
-import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
+import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Prelude
@@ -33,9 +33,9 @@ import Kernel.Utils.Common
 sendPublicTransportSearchRequest ::
   MonadProducer PublicTransportSearch m =>
   Id Person.Person ->
-  DOneWaySearch.OneWaySearchRes ->
+  DSearch.SearchRes ->
   m ()
-sendPublicTransportSearchRequest personId DOneWaySearch.OneWaySearchRes {..} = do
+sendPublicTransportSearchRequest personId DSearch.SearchRes {..} = do
   producePublicTransportSearchMessage publicTransportSearch
   where
     publicTransportSearch =

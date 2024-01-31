@@ -89,7 +89,7 @@ instance ToSchema EditLocationEvent where
 data FulfillmentInfo = FulfillmentInfo
   { id :: Text,
     origin :: StartInfo,
-    destination :: EndInfo
+    destination :: Maybe EndInfo
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

@@ -66,7 +66,7 @@ data BPPEstimate
 
 data NightShiftInfo = NightShiftInfo
   { nightShiftCharge :: Money,
-    oldNightShiftCharge :: Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
+    oldNightShiftCharge :: Maybe Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }
@@ -119,7 +119,7 @@ data EstimateAPIEntity = EstimateAPIEntity
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data NightShiftRateAPIEntity = NightShiftRateAPIEntity
-  { nightShiftMultiplier :: Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
+  { nightShiftMultiplier :: Maybe Centesimal, -- TODO: this field works wrong, value in it not always make sense, it have to be removed later
     nightShiftStart :: TimeOfDay,
     nightShiftEnd :: TimeOfDay
   }

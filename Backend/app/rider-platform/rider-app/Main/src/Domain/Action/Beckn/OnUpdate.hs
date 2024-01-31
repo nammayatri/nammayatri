@@ -89,7 +89,8 @@ data OnUpdateReq
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
-        tripStartLocation :: Maybe LatLong
+        tripStartLocation :: Maybe LatLong,
+        endOtp_ :: Maybe Text
       }
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -134,6 +135,9 @@ data OnUpdateReq
         reason :: Text,
         code :: Text
       }
+  | StopArrivedReq
+      { bppRideId :: Id SRide.BPPRide
+      }
 
 data ValidatedOnUpdateReq
   = ValidatedRideAssignedReq
@@ -158,7 +162,8 @@ data ValidatedOnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         booking :: SRB.Booking,
         ride :: SRide.Ride,
-        tripStartLocation :: Maybe LatLong
+        tripStartLocation :: Maybe LatLong,
+        endOtp_ :: Maybe Text
       }
   | ValidatedRideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -218,6 +223,10 @@ data ValidatedOnUpdateReq
         ride :: SRide.Ride,
         code :: Text,
         reason :: Text
+      }
+  | ValidatedStopArrivedReq
+      { booking :: SRB.Booking,
+        ride :: SRide.Ride
       }
 
 data OnUpdateFareBreakup = OnUpdateFareBreakup
@@ -329,6 +338,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             rideRating = Nothing,
             safetyCheckStatus = Nothing,
             isFreeRide = Just isFreeRide,
+            endOtp = Nothing,
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
@@ -340,7 +350,8 @@ onUpdate ValidatedRideStartedReq {..} = do
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
              rideStartTime = Just rideStartTime,
-             rideEndTime = Nothing
+             rideEndTime = Nothing,
+             endOtp = endOtp_
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
@@ -463,6 +474,9 @@ onUpdate ValidatedEstimateRepetitionReq {..} = do
   Notify.notifyOnEstimatedReallocated booking estimate.id
 onUpdate ValidatedSafetyAlertReq {..} = do
   Notify.notifySafetyAlert booking code
+onUpdate ValidatedStopArrivedReq {..} = do
+  QRB.updateStop booking Nothing
+  Notify.notifyOnStopReached booking ride
 
 validateRequest ::
   ( CacheFlow m r,
@@ -540,6 +554,17 @@ validateRequest SafetyAlertReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (ride.status == SRide.INPROGRESS) $ throwError (BookingInvalidStatus "$ show booking.status")
   return ValidatedSafetyAlertReq {..}
+validateRequest StopArrivedReq {..} = do
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
+  booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> ride.bookingId.getId)
+  unless (ride.status == SRide.INPROGRESS) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress")
+  case booking.bookingDetails of
+    SRB.OneWayDetails _ -> throwError $ InvalidRequest "Stops are not present in static offer on demand rides"
+    SRB.DriverOfferDetails _ -> throwError $ InvalidRequest "Stops are not present in dynamic offer on demand rides"
+    SRB.OneWaySpecialZoneDetails _ -> throwError $ InvalidRequest "Stops are not present in on ride otp rides"
+    SRB.RentalDetails SRB.RentalBookingDetails {..} -> do
+      unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
+      return $ ValidatedStopArrivedReq {..}
 
 mkBookingCancellationReason ::
   Id SRB.Booking ->

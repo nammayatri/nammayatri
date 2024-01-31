@@ -55,6 +55,9 @@ mkFulfillment ::
   Bool ->
   m RideFulfillment.FulfillmentInfo
 mkFulfillment mbDriver ride booking mbVehicle mbImage tags personTags isDriverBirthDay isFreeRide = do
+  let rideOtp = case ride.status of
+        DRide.INPROGRESS -> fromMaybe ride.otp ride.endOtp
+        _ -> ride.otp
   agent <-
     forM mbDriver $ \driver -> do
       let agentTags =
@@ -91,7 +94,7 @@ mkFulfillment mbDriver ride booking mbVehicle mbImage tags personTags isDriverBi
   let authorization =
         RideFulfillment.Authorization
           { _type = "OTP",
-            token = ride.otp
+            token = rideOtp
           }
   let person =
         RideFulfillment.Person
@@ -102,10 +105,7 @@ mkFulfillment mbDriver ride booking mbVehicle mbImage tags personTags isDriverBi
       { id = ride.id.getId,
         start =
           RideFulfillment.StartInfo
-            { authorization =
-                case booking.bookingType of
-                  DRB.SpecialZoneBooking -> Just authorization
-                  DRB.NormalBooking -> Just authorization, -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
+            { authorization = Just authorization, -- TODO :: Remove authorization for NormalBooking once Customer side code is decoupled.
               location =
                 RideFulfillment.Location
                   { gps = RideFulfillment.Gps {lat = booking.fromLocation.lat, lon = booking.fromLocation.lon}
@@ -113,15 +113,18 @@ mkFulfillment mbDriver ride booking mbVehicle mbImage tags personTags isDriverBi
               time = ride.tripStartTime <&> \tripStartTime -> RideFulfillment.TimeTimestamp {timestamp = tripStartTime}
             },
         end =
-          RideFulfillment.EndInfo
-            { location =
-                RideFulfillment.Location
-                  { gps = RideFulfillment.Gps {lat = booking.toLocation.lat, lon = booking.toLocation.lon} -- assuming locations will always be in correct order in list
-                  },
-              time = ride.tripEndTime <&> \tripEndTime -> RideFulfillment.TimeTimestamp {timestamp = tripEndTime}
-            },
+          ( \toLocation ->
+              RideFulfillment.EndInfo
+                { location =
+                    RideFulfillment.Location
+                      { gps = RideFulfillment.Gps {lat = toLocation.lat, lon = toLocation.lon} -- assuming locations will always be in correct order in list
+                      },
+                  time = ride.tripEndTime <&> \tripEndTime -> RideFulfillment.TimeTimestamp {timestamp = tripEndTime}
+                }
+          )
+            <$> booking.toLocation,
         agent,
-        _type = if booking.bookingType == DRB.NormalBooking then RideFulfillment.RIDE else RideFulfillment.RIDE_OTP,
+        _type = Common.mkFulfillmentType booking.tripCategory,
         vehicle = veh,
         ..
       }
@@ -180,7 +183,7 @@ buildRideCompletedQuote ride fareParams = do
             computed_value = fare
           }
       breakup =
-        Fare.mkBreakupList (Breakup.BreakupItemPrice currency . fromIntegral) Breakup.BreakupItem fareParams
+        Fare.mkFareParamsBreakups (Breakup.BreakupItemPrice currency . fromIntegral) Breakup.BreakupItem fareParams
           & filter (Common.filterRequiredBreakups $ DFParams.getFareParametersType fareParams) -- TODO: Remove after roll out
   pure
     Quote.RideCompletedQuote

@@ -12,7 +12,7 @@ import qualified Domain.Types.TicketService
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
 data TicketBookingService = TicketBookingService
   { amount :: Kernel.Types.Common.HighPrecMoney,
@@ -34,4 +34,4 @@ data TicketBookingService = TicketBookingService
 data ServiceStatus = Pending | Failed | Confirmed | Verified
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''ServiceStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceStatus)

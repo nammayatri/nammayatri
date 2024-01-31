@@ -18,6 +18,7 @@
 module Storage.Beam.SearchTry where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.SearchTry as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant (Variant)
 import Kernel.Prelude
@@ -38,7 +39,9 @@ data SearchTryT f = SearchTryT
     status :: B.C f Domain.SearchTryStatus,
     vehicleVariant :: B.C f Variant.Variant,
     searchRepeatCounter :: B.C f Int,
+    tripCategory :: B.C f (Maybe DTC.TripCategory),
     searchRepeatType :: B.C f Domain.SearchRepeatType,
+    isScheduled :: B.C f (Maybe Bool),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

@@ -36,6 +36,7 @@ data OnUpdateBuildReq
   | EstimateRepetitionBuildReq DEstimateRepetitionReq
   | NewMessageBuildReq DNewMessageReq
   | SafetyAlertBuildReq DSafetyAlertReq
+  | StopArrivedBuildReq DStopArrivedBuildReq
 
 data DRideAssignedReq = DRideAssignedReq
   { driver :: SP.Person,
@@ -47,12 +48,18 @@ data DRideAssignedReq = DRideAssignedReq
     isFreeRide :: Bool
   }
 
+data DStopArrivedBuildReq = DStopArrivedBuildReq
+  { ride :: DRide.Ride,
+    booking :: DRB.Booking
+  }
+
 data DRideStartedReq = DRideStartedReq
   { driver :: SP.Person,
     vehicle :: SVeh.Vehicle,
     ride :: DRide.Ride,
     booking :: DRB.Booking,
-    tripStartLocation :: Maybe Maps.LatLong
+    tripStartLocation :: Maybe Maps.LatLong,
+    endOtp_ :: Maybe Text
   }
 
 data DRideCompletedReq = DRideCompletedReq

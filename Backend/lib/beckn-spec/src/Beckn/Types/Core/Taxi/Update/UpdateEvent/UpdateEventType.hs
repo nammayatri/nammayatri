@@ -20,4 +20,6 @@ import Kernel.Prelude
 data UpdateEventType
   = PAYMENT_COMPLETED
   | EDIT_LOCATION
+  | ADD_STOP
+  | EDIT_STOP
   deriving (Show, Eq, Ord, Read, Generic, ToSchema, FromJSON, ToJSON)

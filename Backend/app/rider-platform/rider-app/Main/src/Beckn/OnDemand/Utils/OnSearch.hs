@@ -141,19 +141,18 @@ buildEstimateBreakUpItem currency tag = do
             }
       }
 
-buildNightShiftInfo :: MonadFlow m => Spec.Item -> m (Maybe OnSearch.NightShiftInfo)
+buildNightShiftInfo :: Spec.Item -> Maybe OnSearch.NightShiftInfo
 buildNightShiftInfo item = do
-  itemTags <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tags")
-  let nightShiftCharge = fromMaybe (Money 0) (getNightShiftCharge itemTags)
-  let oldNightShiftCharge = fromMaybe 0 (getOldNightShiftCharge itemTags)
-  let nightShiftStart = fromMaybe (TimeOfDay 22 00 00) (getNightShiftStart itemTags)
-  let nightShiftEnd = fromMaybe (TimeOfDay 06 00 00) (getNightShiftEnd itemTags)
-  return $
-    Just $
-      OnSearch.NightShiftInfo
-        { oldNightShiftCharge = realToFrac oldNightShiftCharge,
-          ..
-        }
+  itemTags <- item.itemTags
+  nightShiftCharge <- getNightShiftCharge itemTags
+  let oldNightShiftCharge = getOldNightShiftCharge itemTags
+  nightShiftStart <- getNightShiftStart itemTags
+  nightShiftEnd <- getNightShiftEnd itemTags
+  Just $
+    OnSearch.NightShiftInfo
+      { oldNightShiftCharge = realToFrac <$> oldNightShiftCharge,
+        ..
+      }
 
 getNightShiftCharge :: [Spec.TagGroup] -> Maybe Money
 getNightShiftCharge tagGroup = do
@@ -175,6 +174,42 @@ getNightShiftEnd :: [Spec.TagGroup] -> Maybe TimeOfDay
 getNightShiftEnd tagGroups = do
   tagValue <- getTagV2 "rate_card" "night_shift_end" tagGroups
   readMaybe $ T.unpack tagValue
+
+getRentalBaseFare :: [Spec.TagGroup] -> Maybe Money
+getRentalBaseFare tagGroups = do
+  tagValue <- getTagV2 "general_info" "MIN_FARE" tagGroups
+  baseFare <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral baseFare
+
+getRentalPerHourCharge :: [Spec.TagGroup] -> Maybe Money
+getRentalPerHourCharge tagGroups = do
+  tagValue <- getTagV2 "rate_card" "PER_HOUR_CHARGE" tagGroups
+  perHourCharge <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral perHourCharge
+
+getRentalPerExtraMinRate :: [Spec.TagGroup] -> Maybe Money
+getRentalPerExtraMinRate tagGroups = do
+  tagValue <- getTagV2 "rate_card" "PER_MINUTE_CHARGE" tagGroups
+  perExtraMinRate <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral perExtraMinRate
+
+getRentalPerExtraKmRate :: [Spec.TagGroup] -> Maybe Money
+getRentalPerExtraKmRate tagGroups = do
+  tagValue <- getTagV2 "rate_card" "UNPLANNED_PER_KM_CHARGE" tagGroups
+  perExtraKmRate <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral perExtraKmRate
+
+getRentalIncludedKmPerHr :: [Spec.TagGroup] -> Maybe Kilometers
+getRentalIncludedKmPerHr tagGroups = do
+  tagValue <- getTagV2 "rate_card" "PER_HOUR_DISTANCE_KM" tagGroups
+  includedKmPerHr <- DecimalValue.valueFromString tagValue
+  Just . Kilometers $ roundToIntegral includedKmPerHr
+
+getRentalPlannedPerKmRate :: [Spec.TagGroup] -> Maybe Money
+getRentalPlannedPerKmRate tagGroups = do
+  tagValue <- getTagV2 "rate_card" "PLANNED_PER_KM_CHARGE" tagGroups
+  plannedPerKmRate <- DecimalValue.valueFromString tagValue
+  Just . Money $ roundToIntegral plannedPerKmRate
 
 buildWaitingChargeInfo' :: [Spec.TagGroup] -> Maybe Money
 buildWaitingChargeInfo' tagGroups = do

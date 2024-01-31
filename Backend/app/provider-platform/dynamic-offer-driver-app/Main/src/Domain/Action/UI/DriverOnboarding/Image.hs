@@ -98,14 +98,6 @@ validateImage isDashboard (personId, _, merchantOpCityId) ImageValidateRequest {
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
   org <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  -- not needed org now because it is used to notify
-  -- org <- case mbMerchant of
-  --   Nothing -> do
-  --     CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  --   Just merchant -> do
-  --     -- merchant access checking
-  --     unless (merchant.id == merchantId) $ throwError (PersonNotFound personId.getId)
-  --     pure merchant
 
   images <- Query.findRecentByPersonIdAndImageType personId merchantOpCityId imageType
   unless isDashboard $ do

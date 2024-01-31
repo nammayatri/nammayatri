@@ -17,9 +17,10 @@
 module Domain.Types.FarePolicy (module Reexport, module Domain.Types.FarePolicy) where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
-import Domain.Types.Common
+import qualified Domain.Types.Common as DTC
 import Domain.Types.FarePolicy.DriverExtraFeeBounds as Reexport
 import Domain.Types.FarePolicy.FarePolicyProgressiveDetails as Reexport
+import Domain.Types.FarePolicy.FarePolicyRentalDetails as Reexport
 import Domain.Types.FarePolicy.FarePolicySlabsDetails as Reexport
 import Domain.Types.Merchant
 import Domain.Types.Vehicle.Variant
@@ -28,7 +29,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id (Id)
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
 
-data FarePolicyD (s :: UsageSafety) = FarePolicy
+data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
   { id :: Id FarePolicy,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
@@ -41,55 +42,69 @@ data FarePolicyD (s :: UsageSafety) = FarePolicy
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic)
-
-type FarePolicy = FarePolicyD 'Safe
-
-instance FromJSON (FarePolicyD 'Unsafe)
-
-instance ToJSON (FarePolicyD 'Unsafe)
-
-data FarePolicyDetailsD (s :: UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s)
   deriving (Generic, Show)
 
-type FarePolicyDetails = FarePolicyDetailsD 'Safe
+type FarePolicy = FarePolicyD 'DTC.Safe
 
-instance FromJSON (FarePolicyDetailsD 'Unsafe)
+instance FromJSON (FarePolicyD 'DTC.Unsafe)
 
-instance ToJSON (FarePolicyDetailsD 'Unsafe)
+instance ToJSON (FarePolicyD 'DTC.Unsafe)
 
-data FarePolicyType = Progressive | Slabs
+data FarePolicyDetailsD (s :: DTC.UsageSafety) = ProgressiveDetails (FPProgressiveDetailsD s) | SlabsDetails (FPSlabsDetailsD s) | RentalDetails (FPRentalDetailsD s)
+  deriving (Generic, Show)
+
+type FarePolicyDetails = FarePolicyDetailsD 'DTC.Safe
+
+instance FromJSON (FarePolicyDetailsD 'DTC.Unsafe)
+
+instance ToJSON (FarePolicyDetailsD 'DTC.Unsafe)
+
+data FarePolicyType = Progressive | Slabs | Rental
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 $(mkBeamInstancesForEnum ''FarePolicyType)
 
-getFarePolicyType :: FarePolicy -> FarePolicyType
-getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
-  ProgressiveDetails _ -> Progressive
-  SlabsDetails _ -> Slabs
-
-data FullFarePolicy = FullFarePolicy
+data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
   { id :: Id FarePolicy,
     merchantId :: Id Merchant,
     vehicleVariant :: Variant,
+    tripCategory :: DTC.TripCategory,
     driverExtraFeeBounds :: Maybe (NonEmpty DriverExtraFeeBounds),
     serviceCharge :: Maybe Money,
     nightShiftBounds :: Maybe DPM.NightShiftBounds,
     allowedTripDistanceBounds :: Maybe DPM.AllowedTripDistanceBounds,
     govtCharges :: Maybe Double,
     perMinuteRideExtraTimeCharge :: Maybe HighPrecMoney,
-    farePolicyDetails :: FarePolicyDetails,
+    farePolicyDetails :: FarePolicyDetailsD s,
     description :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show)
 
-farePolicyToFullFarePolicy :: Id Merchant -> Variant -> FarePolicy -> FullFarePolicy
-farePolicyToFullFarePolicy merchantId vehicleVariant FarePolicy {..} =
-  FullFarePolicy {..}
+type FullFarePolicy = FullFarePolicyD 'DTC.Safe
+
+instance FromJSON (FullFarePolicyD 'DTC.Unsafe)
+
+instance ToJSON (FullFarePolicyD 'DTC.Unsafe)
 
 type FullDriverExtraFeeBounds = (Id FarePolicy, DriverExtraFeeBounds)
 
 type FullFarePolicyProgressiveDetails = (Id FarePolicy, FPProgressiveDetails)
+
+type FullFarePolicyRentalDetails = (Id FarePolicy, FPRentalDetails)
+
+farePolicyToFullFarePolicy :: Id Merchant -> Variant -> DTC.TripCategory -> FarePolicy -> FullFarePolicy
+farePolicyToFullFarePolicy merchantId vehicleVariant tripCategory FarePolicy {..} =
+  FullFarePolicy {..}
+
+fullFarePolicyToFarePolicy :: FullFarePolicy -> FarePolicy
+fullFarePolicyToFarePolicy FullFarePolicy {..} =
+  FarePolicy {..}
+
+getFarePolicyType :: FarePolicy -> FarePolicyType
+getFarePolicyType farePolicy = case farePolicy.farePolicyDetails of
+  ProgressiveDetails _ -> Progressive
+  SlabsDetails _ -> Slabs
+  RentalDetails _ -> Rental

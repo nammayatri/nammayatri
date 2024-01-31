@@ -16,6 +16,7 @@
 module Storage.Queries.SearchTry where
 
 import qualified Database.Beam.Query ()
+import Domain.Types.Common
 import Domain.Types.SearchRequest (SearchRequest)
 import Domain.Types.SearchTry as Domain
 import Kernel.Beam.Functions
@@ -101,20 +102,11 @@ instance FromTType' BeamST.SearchTry SearchTry where
         SearchTry
           { id = Id id,
             requestId = Id requestId,
-            estimateId = Id estimateId,
             merchantId = Id <$> merchantId,
             merchantOperatingCityId = merchantOpCityId,
-            messageId = messageId,
-            startTime = startTime,
-            validTill = validTill,
-            vehicleVariant = vehicleVariant,
-            baseFare = baseFare,
-            customerExtraFee = customerExtraFee,
-            status = status,
-            searchRepeatCounter = searchRepeatCounter,
-            searchRepeatType = searchRepeatType,
-            createdAt = createdAt,
-            updatedAt = updatedAt
+            tripCategory = fromMaybe (OneWay OneWayOnDemandDynamicOffer) tripCategory,
+            isScheduled = fromMaybe False isScheduled,
+            ..
           }
 
 instance ToTType' BeamST.SearchTry SearchTry where
@@ -122,7 +114,7 @@ instance ToTType' BeamST.SearchTry SearchTry where
     BeamST.SearchTryT
       { id = getId id,
         requestId = getId requestId,
-        estimateId = getId estimateId,
+        estimateId = estimateId,
         merchantId = getId <$> merchantId,
         merchantOperatingCityId = Just $ getId merchantOperatingCityId,
         messageId = messageId,
@@ -134,6 +126,8 @@ instance ToTType' BeamST.SearchTry SearchTry where
         status = status,
         searchRepeatCounter = searchRepeatCounter,
         searchRepeatType = searchRepeatType,
+        tripCategory = Just tripCategory,
+        isScheduled = Just isScheduled,
         createdAt = createdAt,
         updatedAt = updatedAt
       }

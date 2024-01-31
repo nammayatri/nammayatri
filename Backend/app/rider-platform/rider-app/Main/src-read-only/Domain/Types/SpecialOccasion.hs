@@ -10,7 +10,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Tools.Beam.UtilsTH
+import qualified Tools.Beam.UtilsTH
 
 data SpecialOccasion = SpecialOccasion
   { businessHours :: [Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour],
@@ -30,4 +30,4 @@ data SpecialOccasion = SpecialOccasion
 data SpecialDayType = Open | Closed
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(mkBeamInstancesForEnum ''SpecialDayType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SpecialDayType)

@@ -239,7 +239,7 @@ endRide ::
   Id AppRB.Booking ->
   ClientsM ()
 endRide driver destination tRide bBookingId = do
-  void . callBPP $ API.ui.ride.rideEnd driver.token tRide.id $ RideAPI.EndRideReq destination Nothing Nothing
+  void . callBPP $ API.ui.ride.rideEnd driver.token tRide.id $ RideAPI.EndRideReq Nothing destination Nothing Nothing Nothing
   void $
     pollDesc "ride completed" $ do
       completedRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)

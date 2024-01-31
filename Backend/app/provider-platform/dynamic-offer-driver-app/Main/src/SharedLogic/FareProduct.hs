@@ -9,6 +9,7 @@
 
 module SharedLogic.FareProduct where
 
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FareProduct as DFareProduct
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -49,10 +50,10 @@ getDropSpecialLocation merchantId dropSpecialLocation = do
   -- dropSpecialLocationPriority <- QSpecialLocationPriority.findByMerchantIdAndCategory merchantId.getId dropSpecialLocation.category
   return (dropSpecialLocation, maybe 999 (.dropPriority) dropSpecialLocationPriority)
 
-getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> m FareProducts
-getAllFareProducts merchantId merchantOpCityId fromLocationLatLong toLocationLatLong = do
+getAllFareProducts :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> Maybe LatLong -> DTC.TripCategory -> m FareProducts
+getAllFareProducts merchantId merchantOpCityId fromLocationLatLong mToLocationLatLong tripCategory = do
   mbPickupSpecialLocation <- mapM (getPickupSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong fromLocationLatLong
-  mbDropSpecialLocation <- mapM (getDropSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong toLocationLatLong
+  mbDropSpecialLocation <- maybe (pure Nothing) (\toLoc -> mapM (getDropSpecialLocation merchantId . fst) =<< QSpecialLocation.findSpecialLocationByLatLong toLoc) mToLocationLatLong
   case (mbPickupSpecialLocation, mbDropSpecialLocation) of
     (Just (pickupSpecialLocation, pickupPriority), Just (dropSpecialLocation, dropPriority)) ->
       if pickupPriority > dropPriority
@@ -82,7 +83,7 @@ getAllFareProducts merchantId merchantOpCityId fromLocationLatLong toLocationLat
           }
 
     getDefaultFareProducts = do
-      fareProducts <- QFareProduct.findAllFareProductForVariants merchantOpCityId DFareProduct.Default
+      fareProducts <- QFareProduct.findAllFareProductForVariants merchantOpCityId tripCategory DFareProduct.Default
       return $
         FareProducts
           { fareProducts,
@@ -93,7 +94,7 @@ getAllFareProducts merchantId merchantOpCityId fromLocationLatLong toLocationLat
     mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority
 
     getFareProducts area = do
-      fareProducts <- QFareProduct.findAllFareProductForVariants merchantOpCityId area
+      fareProducts <- QFareProduct.findAllFareProductForVariants merchantOpCityId tripCategory area
       if null fareProducts && area /= DFareProduct.Default
-        then QFareProduct.findAllFareProductForVariants merchantOpCityId DFareProduct.Default
+        then QFareProduct.findAllFareProductForVariants merchantOpCityId tripCategory DFareProduct.Default
         else return fareProducts

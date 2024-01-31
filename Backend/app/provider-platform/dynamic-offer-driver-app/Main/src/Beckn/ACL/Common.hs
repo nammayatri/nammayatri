@@ -23,6 +23,7 @@ import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
 import Data.Maybe
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.Common as DCT
 import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
@@ -139,6 +140,29 @@ filterRequiredBreakups fParamsType breakup = do
                  "EXTRA_TIME_FARE",
                  "CUSTOMER_CANCELLATION_DUES"
                ]
+    DFParams.Rental ->
+      title
+        `elem` [ "BASE_FARE",
+                 "SERVICE_CHARGE",
+                 "DEAD_KILOMETER_FARE",
+                 "DIST_BASED_FARE",
+                 "TIME_BASED_FARE",
+                 "DRIVER_SELECTED_FARE",
+                 "CUSTOMER_SELECTED_FARE",
+                 "TOTAL_FARE",
+                 "WAITING_OR_PICKUP_CHARGES",
+                 "EXTRA_TIME_FARE",
+                 "CUSTOMER_CANCELLATION_DUES"
+               ]
+
+-- Fix these tage properly
+mkFulfillmentType :: DCT.TripCategory -> Text
+mkFulfillmentType = \case
+  DCT.OneWay DCT.OneWayRideOtp -> "RIDE_OTP"
+  DCT.RoundTrip DCT.RideOtp -> "RIDE_OTP"
+  DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
+  DCT.Rental _ -> "RENTAL"
+  _ -> "RIDE"
 
 getTagV2 :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text
 getTagV2 tagGroupCode tagCode tagGroups = do

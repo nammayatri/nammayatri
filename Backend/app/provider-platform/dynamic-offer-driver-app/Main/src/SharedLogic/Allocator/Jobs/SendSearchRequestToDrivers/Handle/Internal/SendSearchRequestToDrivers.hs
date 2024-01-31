@@ -19,10 +19,10 @@ where
 
 import Control.Monad.Extra (anyM)
 import qualified Data.Map as M
+import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
-import Domain.Types.Merchant.DriverPoolConfig
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
@@ -190,7 +190,7 @@ translateSearchReq ::
   m DSR.SearchRequest
 translateSearchReq DSR.SearchRequest {..} language = do
   from <- buildTranslatedSearchReqLocation fromLocation (Just language)
-  to <- buildTranslatedSearchReqLocation toLocation (Just language)
+  to <- (\loc -> buildTranslatedSearchReqLocation loc (Just language)) `mapM` toLocation
   pure
     DSR.SearchRequest
       { fromLocation = from,

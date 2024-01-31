@@ -16,15 +16,15 @@
 
 module IssueManagement.Storage.Beam.MediaFile where
 
+import AWS.S3 (FileType (..))
 import qualified Database.Beam as B
 import Database.Beam.MySQL ()
-import qualified IssueManagement.Domain.Types.MediaFile as Domain
 import IssueManagement.Tools.UtilsTH hiding (Generic)
 import Kernel.Prelude
 
 data MediaFileT f = MediaFileT
   { id :: B.C f Text,
-    fileType :: B.C f Domain.MediaType,
+    fileType :: B.C f FileType,
     url :: B.C f Text,
     createdAt :: B.C f LocalTime
   }

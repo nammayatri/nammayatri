@@ -60,7 +60,7 @@ getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantI
   drivers <- Int.getDrivers vehicles
   driverQuote <- Int.getDriverQuote $ map ((.getId) . (.id)) drivers
   bookingInfo <- Int.getBookingInfo driverQuote
-  bookingLocation <- QL.getBookingLocs (bookingInfo <&> (.toLocation.id))
+  bookingLocation <- QL.getBookingLocs (mapMaybe (\b -> (.id) <$> b.toLocation) bookingInfo)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> " Dquotes:- " <> show (length driverQuote) <> " BInfos:- " <> show (length bookingInfo) <> " BLocs:- " <> show (length bookingLocation)
   let res = linkArrayListForOnRide driverQuote bookingInfo bookingLocation driverLocs driverInfos vehicles drivers (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
@@ -80,7 +80,8 @@ getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantI
       location <- HashMap.lookup driverId' locationHashMap
       quote <- HashMap.lookup driverId' quotesHashMap
       booking <- HashMap.lookup quote.id bookingHashMap
-      bookingLocation <- HashMap.lookup booking.toLocation.id bookingLocsHashMap
+      toLocation <- booking.toLocation
+      bookingLocation <- HashMap.lookup toLocation.id bookingLocsHashMap
       info <- HashMap.lookup driverId' driverInfoHashMap
       person <- HashMap.lookup driverId' personHashMap
       let driverLocationPoint = LatLong {lat = location.lat, lon = location.lon}
