@@ -55,7 +55,6 @@ import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
-import qualified "rider-app" Storage.Beam.Webengage as Webengage
 
 data DBCreateObject
   = AppInstallsObject AppInstalls.AppInstalls
@@ -101,7 +100,6 @@ data DBCreateObject
   | SosObject Sos.Sos
   | SpecialZoneQuoteObject SpecialZoneQuote.SpecialZoneQuote
   | TripTermsObject TripTerms.TripTerms
-  | WebengageObject Webengage.Webengage
   | FeedbackFormObject FeedbackForm.FeedbackForm
   | HotSpotConfigObject HotSpotConfig.HotSpotConfig
   | BecknRequestObject BecknRequest.BecknRequest
@@ -154,7 +152,6 @@ modelName (SearchRequestObject _) = "SearchRequest"
 modelName (SosObject _) = "Sos"
 modelName (SpecialZoneQuoteObject _) = "SpecialZoneQuote"
 modelName (TripTermsObject _) = "TripTerms"
-modelName (WebengageObject _) = "Webengage"
 modelName (FeedbackFormObject _) = "FeedbackForm"
 modelName (HotSpotConfigObject _) = "HotSpotConfig"
 modelName (BecknRequestObject _) = "BecknRequest"

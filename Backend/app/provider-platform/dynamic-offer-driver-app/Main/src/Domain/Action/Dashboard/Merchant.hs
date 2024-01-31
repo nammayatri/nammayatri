@@ -33,6 +33,7 @@ module Domain.Action.Dashboard.Merchant
     createFPDriverExtraFee,
     updateFPDriverExtraFee,
     updateFPPerExtraKmRate,
+    updateFarePolicy,
     schedulerTrigger,
   )
 where
@@ -75,6 +76,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.Merchant.OnboardingDocumentConfig as CQODC
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
+import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails as QFPPD
 import qualified Storage.Queries.FarePolicy.FarePolicyProgressiveDetails.FarePolicyProgressiveDetailsPerExtraKmRateSection as QFPPDEKM
 import Tools.Error
 
@@ -708,3 +710,42 @@ updateFPPerExtraKmRate _ _ farePolicyId startDistance req = do
   _ <- QFPPDEKM.updatePerExtraKmRate farePolicyId startDistance req.perExtraKmRate
   CQFP.clearCacheById farePolicyId
   pure Success
+
+updateFarePolicy :: ShortId DM.Merchant -> Context.City -> Id FarePolicy.FarePolicy -> Common.UpdateFarePolicyReq -> Flow APISuccess
+updateFarePolicy _ _ farePolicyId req = do
+  farePolicy <- CQFP.findById farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
+  CQFP.update' updatedFarePolicy
+  CQFP.clearCacheById farePolicyId
+  pure Success
+  where
+    mkUpdatedFarePolicy FarePolicy.FarePolicy {..} = do
+      fPDetails <- mkFarePolicyDetails farePolicyDetails
+      pure $
+        FarePolicy.FarePolicy
+          { serviceCharge = req.serviceCharge <|> serviceCharge,
+            nightShiftBounds = req.nightShiftBounds <|> nightShiftBounds,
+            allowedTripDistanceBounds = req.allowedTripDistanceBounds <|> allowedTripDistanceBounds,
+            govtCharges = req.govtCharges <|> govtCharges,
+            perMinuteRideExtraTimeCharge = req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
+            farePolicyDetails = fPDetails,
+            description = req.description <|> description,
+            ..
+          }
+
+    mkFarePolicyDetails fPDetails =
+      case fPDetails of
+        FarePolicy.ProgressiveDetails _ -> do
+          (_, fPProgressiveDetails) <- QFPPD.findById' farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy Progressive Details not found")
+          pure $ FarePolicy.ProgressiveDetails $ mkUpdatedFPProgressiveDetails fPProgressiveDetails
+        FarePolicy.SlabsDetails _ -> pure fPDetails
+
+    mkUpdatedFPProgressiveDetails FarePolicy.FPProgressiveDetails {..} =
+      FarePolicy.FPProgressiveDetails
+        { baseFare = fromMaybe baseFare req.baseFare,
+          baseDistance = fromMaybe baseDistance req.baseDistance,
+          deadKmFare = fromMaybe deadKmFare req.deadKmFare,
+          waitingChargeInfo = req.waitingChargeInfo <|> waitingChargeInfo,
+          nightShiftCharge = req.nightShiftCharge <|> nightShiftCharge,
+          ..
+        }

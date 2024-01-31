@@ -41,6 +41,7 @@ import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat)
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
+import Screens(ScreenName)
 
 type Contacts = {
   name :: String,
@@ -759,8 +760,13 @@ type HomeScreenStateData =
   , suggestionsData :: SuggestionsData
   , peekHeight :: Int
   , rideHistoryTrip :: Maybe Trip
+  , rentalsInfo :: Maybe RentalsInfo
   }
 
+type RentalsInfo = 
+  {
+    rentalsScheduledAt :: String 
+  }
 type QuoteListItemState = 
   {
     seconds :: Int
@@ -879,7 +885,8 @@ type HomeScreenStateProps =
   , confirmLocationCategory :: String
   , zoneTimerExpired :: Boolean
   , canSendSuggestion :: Boolean
-  , sheetState :: BottomSheetState
+  , sheetState :: Maybe BottomSheetState
+  , currentSheetState :: BottomSheetState
   , showOfferedAssistancePopUp :: Boolean
   , showDisabilityPopUp :: Boolean
   , isChatNotificationDismissed :: Boolean
@@ -908,7 +915,14 @@ type HomeScreenStateProps =
   , autoScrollTimerId :: String
   , autoScroll :: Boolean
   , enableChatWidget :: Boolean
+  , focussedBottomIcon :: BottomNavBarIcon
   }
+
+data BottomNavBarIcon = TICKETING | MOBILITY
+
+derive instance genericBottomNavBarIcon :: Generic BottomNavBarIcon _
+instance showBottomNavBarIcon :: Show BottomNavBarIcon where show = genericShow
+instance eqBottomNavBarIcon :: Eq BottomNavBarIcon where eq = genericEq
 
 data City
   = Bangalore
@@ -1381,6 +1395,7 @@ type AddNewAddressScreenProps =
   , isLocateOnMap :: Boolean
   , isLocationServiceable :: Boolean
   , fromHome :: Boolean
+  , fromScreen :: String
   , selectFromCurrentOrMap :: Boolean
   , isSearchedLocationServiceable :: Boolean
   , editSavedLocation :: Boolean
@@ -1510,7 +1525,6 @@ type SaveFavouriteCardState =
   , tag :: String
   , tagExists :: Boolean
   , selectedItem :: LocationListItemState
-  , tagData :: Array String
   , isBtnActive :: Boolean
   }
 
@@ -1867,3 +1881,72 @@ data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | REPORTED_ISSUES_MODAL | RE
 
 derive instance genericIssueModalType :: Generic IssueModalType _
 instance eqIssueModalType :: Eq IssueModalType where eq = genericEq
+
+type SearchLocationScreenState = 
+  { data :: SearchLocationScreenData ,
+    props :: SearchLocationScreenProps,
+    appConfig :: AppConfig
+  }
+
+type SearchLocationScreenData = 
+  {
+    srcLoc :: Maybe LocationInfo,
+    destLoc :: Maybe LocationInfo,
+    currentLoc :: Maybe LocationInfo,
+    locationList :: Array LocationListItemState,
+    fromScreen :: String,
+    saveFavouriteCard :: SaveFavouriteCardState,
+    latLonOnMap :: LocationInfo,
+    defaultGate :: String,
+    nearByGates :: Array Location,
+    specialZoneCoordinates :: String,
+    confirmLocCategory :: String
+  }
+
+type SearchLocationScreenProps = 
+  { searchLocStage :: SearchLocationStage
+  , focussedTextField :: Maybe SearchLocationTextField
+  , actionType :: SearchLocationActionType
+  , showSaveFavCard :: Boolean
+  , areBothLocMandatory :: Boolean
+  , canSelectFromFav :: Boolean
+  , showLoader :: Boolean
+  , canClearText :: Boolean 
+  , locUnserviceable :: Boolean
+  , isAutoComplete :: Boolean  }
+
+data SearchLocationActionType = AddingStopAction 
+                              | SearchLocationAction
+
+derive instance genericSearchLocationActionType :: Generic SearchLocationActionType _
+instance eqSearchLocationActionType :: Eq SearchLocationActionType where eq = genericEq
+
+data SearchLocationTextField =  SearchLocPickup
+                              | SearchLocDrop
+
+derive instance genericSearchLocationTextField :: Generic SearchLocationTextField _
+instance showSearchLocationTextField :: Show SearchLocationTextField where show = genericShow
+instance eqSearchLocationTextField :: Eq SearchLocationTextField where eq = genericEq
+
+data SearchLocationStage =  ConfirmLocationStage 
+                          | PredictionsStage 
+                          | LocateOnMapStage
+                          | AllFavouritesStage
+
+derive instance genericSearchLocationStage :: Generic SearchLocationStage _
+instance eqSearchLocationStage :: Eq SearchLocationStage where eq = genericEq
+
+type GlobalProps = 
+  { savedLocations :: Array LocationListItemState
+  , recentSearches :: Array LocationListItemState
+  , cachedSearches :: Array LocationListItemState
+  }
+
+type LocationInfo = 
+  { lat :: Maybe Number ,
+    lon :: Maybe Number ,
+    placeId :: Maybe String ,
+    address :: String ,
+    addressComponents :: Address ,
+    city :: Maybe City
+  }

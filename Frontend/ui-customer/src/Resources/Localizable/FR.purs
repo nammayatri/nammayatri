@@ -766,3 +766,5 @@ getFR stringKey =
         PLEASE_SELECT_THE_RIDE_TO_CALL_DRIVER -> "Veuillez sélectionner le trajet pour appeler le chauffeur"
         ADD_IMAGE_S -> "Ajouter une image"
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "Vous avez déjà un trajet actif"
+        CONFIRM_STOP_LOCATION -> "Confirm stop location"
+        CONFIRM_DROP -> "Confirm Drop"

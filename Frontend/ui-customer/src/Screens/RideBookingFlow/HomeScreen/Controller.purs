@@ -30,6 +30,7 @@ import Components.FavouriteLocationModel as FavouriteLocationModelController
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.LocationListItem.Controller as LocationListItemController
 import Components.LocationTagBar as LocationTagBarController
+import Components.LocationTagBarV2 as LocationTagBarV2Controller
 import Components.MenuButton as MenuButton
 import Components.MenuButton as MenuButton
 import Components.RideCompletedCard.Controller as RideCompletedCard
@@ -91,7 +92,7 @@ import Screens.HomeScreen.ScreenData (dummyAddress, dummyQuoteAPIEntity, dummyZo
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip)
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -114,6 +115,8 @@ import Data.Function.Uncurried (Fn3, runFn3, Fn1, runFn1)
 import Timers (clearTimerWithId)
 import Mobility.Prelude (boolToInt, toBool)
 import SuggestionUtils
+import Data.Tuple (Tuple(..))
+import PrestoDOM.Core (getPushFn)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -746,6 +749,9 @@ data ScreenOutput = LogoutUser
                   | ExitToTicketing HomeScreenState
                   | GoToHelpAndSupport HomeScreenState
                   | ReAllocateRide HomeScreenState
+                  | GoToRentalsFlow 
+                  | GoToScheduledRides
+                  | Add_Stop HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -888,10 +894,14 @@ data Action = NoAction
             | UpdateRepeatTrips RideBookingListRes 
             | RemoveShimmer 
             | ReportIssueClick
+            | DateTimePickerAction String Int Int Int String Int Int
             | ChooseSingleVehicleAction ChooseVehicleController.Action
+            | UpdateSheetState BottomSheetState
+            | LocationTagBarAC LocationTagBarV2Controller.Action
+            | RentalBannerAction Banner.Action
+            | BottomNavBarAction BottomNavBarIcon
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
-
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
   continue state 
     { props 
@@ -1168,15 +1178,14 @@ eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) s
       _ <- pure $ updateLocalStage ChatWithDriver
       _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
       let allMessages = getChatMessages FunctionCall
-      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = COLLAPSED}} 
-      -- [ do
-      --   pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
-      -- ]
+      continueWithCmd state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = Just COLLAPSED}}  [ do pure $ UpdateSheetState COLLAPSED]
   else continueWithCmd state[ do
         pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
       ]
 
-eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = COLLAPSED}}
+eval (UpdateSheetState sheetState) state = continue state {props {sheetState = Nothing, currentSheetState = sheetState}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = Just COLLAPSED, currentSheetState = COLLAPSED}}
 
 eval RemoveNotification state = do
   continue state {props { showChatNotification = false, isChatNotificationDismissed = true}}
@@ -1223,7 +1232,7 @@ eval (ScrollStateChanged scrollState) state = do
               "5" -> STATE_HIDDEN
               "6" -> STATE_HALF_EXPANDED
               _ -> STATE_HIDDEN
-  continue state {props {bottomSheetState = sheetState, sheetState = if sheetState == STATE_EXPANDED then EXPANDED else state.props.sheetState}}
+  continue state {props {bottomSheetState = sheetState, currentSheetState = if sheetState == STATE_EXPANDED then EXPANDED else state.props.currentSheetState, sheetState = Nothing}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) state = do
   if length state.data.config.callOptions > 1 then
@@ -1671,7 +1680,7 @@ eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
   continue state{props{emergencyHelpModal = true}}
 
-eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{sheetState = if state.props.sheetState == EXPANDED then COLLAPSED else EXPANDED}}
+eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
 eval ShareRide state = do
   continueWithCmd state
@@ -1774,7 +1783,7 @@ eval (PredictionClickedAction (LocationListItemController.FavClick item)) state 
   if (length state.data.savedLocations >= 20) then do
     void $ pure $ toast (getString SORRY_LIMIT_EXCEEDED_YOU_CANT_ADD_ANY_MORE_FAVOURITES)
     continue state
-    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, tagData = [], isBtnActive = false }, selectedLocationListItem = Just item}}
+    else exit $ CheckFavDistance state{data{saveFavouriteCard{ address = item.description, selectedItem = item, tag = "", tagExists = false, isBtnActive = false }, selectedLocationListItem = Just item}}
 
 eval (SaveFavouriteCardAction (SaveFavouriteCardController.OnClose)) state = continue state{props{isSaveFavourite = false},data{selectedLocationListItem = Nothing, saveFavouriteCard {address = "" , tag = "", isBtnActive = false}}}
 
@@ -2418,6 +2427,24 @@ eval (TriggerPermissionFlow flowType) state = exit $ ExitToPermissionFlow flowTy
 eval (GenderBannerModal (Banner.OnClick)) state = exit $ GoToMyProfile state true
 
 eval ReportIssueClick state = exit $  GoToHelp state
+
+eval (DateTimePickerAction dateResp year month day timeResp hour minute) state = do 
+  let _ = spy "DatePIcker Action" "kuhjhh" 
+  continue state
+
+eval (LocationTagBarAC (LocationTagBarV2Controller.TagClicked tag)) state = do 
+  case tag of 
+    "RENTALS" -> exit $ GoToRentalsFlow 
+    _ -> continue state
+  
+eval (RentalBannerAction Banner.OnClick) state = exit $ GoToScheduledRides
+
+eval (BottomNavBarAction id) state = do 
+  let newState = state {props {focussedBottomIcon = id}}
+  case id of 
+    TICKETING -> updateAndExit newState $ GoToTicketBookingFlow newState
+    MOBILITY -> continue newState 
+    _ -> continue state 
 
 eval _ state = continue state
 

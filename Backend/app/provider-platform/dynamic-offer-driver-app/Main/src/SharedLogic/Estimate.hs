@@ -18,6 +18,7 @@ module SharedLogic.Estimate
   )
 where
 
+import "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
 import Domain.Types.Estimate as DEst
@@ -102,8 +103,8 @@ buildEstimate searchReqId startTime dist specialLocationTag customerCancellation
           waitingOrPickupCharges = mbWaitingOrPickupCharges
         }
     getOldNightShiftCharge farePolicyDetails = do
-      let getNightShiftChargeValue (DFP.ProgressiveNightShiftCharge a) = realToFrac a --TODO Doesn't make sense, to be removed
-          getNightShiftChargeValue (DFP.ConstantNightShiftCharge a) = fromIntegral a
+      let getNightShiftChargeValue (ProgressiveNightShiftCharge a) = realToFrac a --TODO Doesn't make sense, to be removed
+          getNightShiftChargeValue (ConstantNightShiftCharge a) = fromIntegral a
       case farePolicyDetails of
         DFP.SlabsDetails det -> getNightShiftChargeValue <$> (DFP.findFPSlabsDetailsSlabByDistance dist det.slabs).nightShiftCharge
         DFP.ProgressiveDetails det -> getNightShiftChargeValue <$> det.nightShiftCharge

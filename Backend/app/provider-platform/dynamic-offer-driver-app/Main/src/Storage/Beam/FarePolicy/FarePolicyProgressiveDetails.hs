@@ -16,8 +16,8 @@
 
 module Storage.Beam.FarePolicy.FarePolicyProgressiveDetails where
 
+import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as DPM
 import qualified Database.Beam as B
-import qualified Domain.Types.FarePolicy as Domain
 import Kernel.Prelude
 import Kernel.Types.Common hiding (id)
 import Tools.Beam.UtilsTH
@@ -27,9 +27,9 @@ data FarePolicyProgressiveDetailsT f = FarePolicyProgressiveDetailsT
     baseDistance :: B.C f Meters,
     baseFare :: B.C f Money,
     deadKmFare :: B.C f Money,
-    waitingCharge :: B.C f (Maybe Domain.WaitingCharge),
+    waitingCharge :: B.C f (Maybe DPM.WaitingCharge),
     freeWatingTime :: B.C f (Maybe Minutes), -- FIXME typo
-    nightShiftCharge :: B.C f (Maybe Domain.NightShiftCharge)
+    nightShiftCharge :: B.C f (Maybe DPM.NightShiftCharge)
   }
   deriving (Generic, B.Beamable)
 

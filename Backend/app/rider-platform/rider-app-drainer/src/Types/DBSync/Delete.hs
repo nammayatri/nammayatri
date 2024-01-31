@@ -56,7 +56,6 @@ import qualified "rider-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "rider-app" Storage.Beam.Sos as Sos
 import qualified "rider-app" Storage.Beam.SpecialZoneQuote as SpecialZoneQuote
 import qualified "rider-app" Storage.Beam.TripTerms as TripTerms
-import qualified "rider-app" Storage.Beam.Webengage as Webengage
 import Utils.Parse
 
 data DeleteModel
@@ -102,7 +101,6 @@ data DeleteModel
   | SosDelete
   | SpecialZoneQuoteDelete
   | TripTermsDelete
-  | WebengageDelete
   | FeedbackFormDelete
   | HotSpotConfigDelete
   | BecknRequestDelete
@@ -154,7 +152,6 @@ getTagDelete SearchRequestDelete = "SearchRequestOptions"
 getTagDelete SosDelete = "SosOptions"
 getTagDelete SpecialZoneQuoteDelete = "SpecialZoneQuoteOptions"
 getTagDelete TripTermsDelete = "TripTermsOptions"
-getTagDelete WebengageDelete = "WebengageOptions"
 getTagDelete FeedbackFormDelete = "FeedbackFormOptions"
 getTagDelete HotSpotConfigDelete = "HotSpotConfigOptions"
 getTagDelete BecknRequestDelete = "BecknRequestOptions"
@@ -205,7 +202,6 @@ parseTagDelete "SearchRequestOptions" = return SearchRequestDelete
 parseTagDelete "SosOptions" = return SosDelete
 parseTagDelete "SpecialZoneQuoteOptions" = return SpecialZoneQuoteDelete
 parseTagDelete "TripTermsOptions" = return TripTermsDelete
-parseTagDelete "WebengageOptions" = return WebengageDelete
 parseTagDelete "FeedbackFormOptions" = return FeedbackFormDelete
 parseTagDelete "HotSpotConfigOptions" = return HotSpotConfigDelete
 parseTagDelete "BecknRequestOptions" = return BecknRequestDelete
@@ -257,7 +253,6 @@ data DBDeleteObject
   | SosDeleteOptions DeleteModel (Where Postgres Sos.SosT)
   | SpecialZoneQuoteDeleteOptions DeleteModel (Where Postgres SpecialZoneQuote.SpecialZoneQuoteT)
   | TripTermsDeleteOptions DeleteModel (Where Postgres TripTerms.TripTermsT)
-  | WebengageDeleteOptions DeleteModel (Where Postgres Webengage.WebengageT)
   | FeedbackFormDeleteOptions DeleteModel (Where Postgres FeedbackForm.FeedbackFormT)
   | HotSpotConfigDeleteOptions DeleteModel (Where Postgres HotSpotConfig.HotSpotConfigT)
   | BecknRequestDeleteOptions DeleteModel (Where Postgres BecknRequest.BecknRequestT)
@@ -399,9 +394,6 @@ instance FromJSON DBDeleteObject where
       TripTermsDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ TripTermsDeleteOptions deleteModel whereClause
-      WebengageDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ WebengageDeleteOptions deleteModel whereClause
       FeedbackFormDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ FeedbackFormDeleteOptions deleteModel whereClause

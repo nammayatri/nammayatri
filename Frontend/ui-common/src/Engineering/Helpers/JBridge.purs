@@ -19,7 +19,6 @@ module JBridge where
 import Prelude
 
 import Effect (Effect)
-import Effect.Aff (Fiber)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
@@ -51,6 +50,9 @@ import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
 import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2)
 import Foreign.Class (encode)
+import Effect.Aff (makeAff, nonCanceler, Fiber,  launchAff)
+import Prelude((<<<))
+import Effect.Class (liftEffect)
 -- -- import Control.Monad.Except.Trans (lift)
 -- -- foreign import _keyStoreEntryPresent :: String -> Effect Boolean
 -- -- foreign import _createKeyStoreEntry :: String -> String -> (Effect Unit) -> (String -> Effect Unit) -> Effect Unit
@@ -92,7 +94,6 @@ foreign import getVersionName   :: Effect String
 foreign import getAndroidVersion :: Effect Int
 -- foreign import showQrCodeImpl      :: String -> String -> Effect Unit
 -- foreign import scanQrCode       :: forall action. String MerchantConfig.Utils-> (action -> Effect Unit) ->  (String -> action) -> Effect Unit
--- foreign import timePicker       :: forall action. (action -> Effect Unit) -> (Int -> Int -> action) -> Effect Unit
 foreign import datePicker       :: forall action. String -> (action -> Effect Unit)  -> (String -> Int -> Int -> Int -> action) -> Effect Unit
 foreign import setFCMToken :: forall action. (action -> Effect Unit) -> (String  -> action) -> Effect Unit
 foreign import setFCMTokenWithTimeOut :: EffectFn2 Int (String -> Effect Unit) Unit
@@ -265,6 +266,8 @@ foreign import getLatLonFromAddress :: Fn1 String { latitude :: Number, longitud
 foreign import isNotificationPermissionEnabled :: Unit -> Effect Boolean
 
 foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
+foreign import datePickerImpl :: forall action. EffectFn3 (action -> Effect Unit) (String -> Int -> Int -> Int -> action) Int Unit
+foreign import timePickerImpl :: forall action. EffectFn2 (action -> Effect Unit) (String -> Int -> Int -> action) Unit
 
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 
@@ -273,6 +276,12 @@ setMapPadding = runEffectFn4 setMapPaddingImpl
 
 getCurrentPositionWithTimeout :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Int -> Boolean -> Effect Unit
 getCurrentPositionWithTimeout = runEffectFn4 getCurrentPositionWithTimeoutImpl
+
+datePickerWithTimeout :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> Int -> action) -> Int -> Effect Unit
+datePickerWithTimeout = runEffectFn3 datePickerImpl
+
+timePickerWithoutTimeout :: forall action. (action -> Effect Unit) -> (String -> Int -> Int -> action) -> Effect Unit
+timePickerWithoutTimeout = runEffectFn2 timePickerImpl
 
 type LottieAnimationConfig = {
     rawJson :: String
@@ -565,3 +574,15 @@ displayBase64ImageConfig = {
   , scaleType : "CENTER_CROP"
   , inSampleSize : 1
 }
+data DatePicker = DatePicker String Int Int Int
+
+data TimePicker = TimePicker String Int Int 
+
+showDatePicker push action= do
+  datePicker <- makeAff \cb -> datePickerWithTimeout (cb <<< Right) DatePicker 30000 $> nonCanceler
+  let (DatePicker dateResp year month day) = datePicker
+  timePicker <- makeAff \cb -> timePickerWithoutTimeout (cb <<< Right) TimePicker $> nonCanceler
+  let (TimePicker timeResp hour minute) = timePicker
+  liftEffect $ push $ action dateResp year month day timeResp hour minute
+  
+  

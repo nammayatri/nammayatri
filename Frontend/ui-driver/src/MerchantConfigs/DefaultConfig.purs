@@ -80,6 +80,7 @@ config =
   , profile : { 
     bookingOptionMenuForTaxi : false,
     showBookingOption : true
+  , checkRCStatusForBookingOption : true 
   }
   , waitTimeConfig : {
     enableWaitTime : true,
