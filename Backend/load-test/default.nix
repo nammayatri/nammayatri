@@ -18,6 +18,14 @@
       };
     in
     {
+      packages.load-test-prepare = pkgs.writeShellApplication {
+        name = "load-test-prepare";
+        runtimeInputs = [ ];
+        text = ''
+          cp Backend/dhall-configs/dev/secrets/top-secret-template.dhall Backend/dhall-configs/dev/secrets/top-secret.dhall
+        '';
+      };
+
       process-compose.load-test-dev = {
         imports = [
           (import ../nix/services/nammayatri.nix { inherit (perSystem) config self' inputs'; inherit inputs; })
@@ -32,9 +40,26 @@
 
         postHook = ''
           echo "Load test completed"
+          cat Backend/load-test/output/riderApp/riderApp.csv_stats.csv
+          cat Backend/load-test/output/driverApp/driverOffer.csv_stats.csv
         '';
 
         settings.processes = {
+          # Disable nammayatri processes we don't need for load test
+          driver-offer-allocator-exe.disabled = true;
+          dynamic-offer-driver-drainer-exe.disabled = true;
+          rider-app-drainer-exe.disabled = true;
+          rider-app-scheduler-exe.disabled = true;
+          image-api-helper-exe.disabled = true;
+          kafka-consumers-exe.disabled = true;
+          provider-dashboard-exe.disabled = true;
+          producer-exe.disabled = true;
+          public-transport-rider-platform-exe.disabled = true;
+          public-transport-search-consumer-exe.disabled = true;
+          rider-dashboard-exe.disabled = true;
+          search-result-aggregator-exe.disabled = true;
+          special-zone-exe.disabled = true;
+
           load-test-init = {
             imports = [ common ];
             command = "echo Waiting for load-test dependencies to start";
@@ -116,7 +141,6 @@
               '';
             };
             depends_on."auth".condition = "process_completed_successfully";
-            availability.exit_on_end = true;
           };
           load-test-driver = {
             imports = [
@@ -131,6 +155,14 @@
               '';
             };
             depends_on."auth".condition = "process_completed_successfully";
+          };
+          load-test-exit = {
+            imports = [ common ];
+            command = "echo Waiting for load-test processes to end";
+            depends_on = {
+              "load-test-driver".condition = "process_completed";
+              "load-test-rider".condition = "process_completed";
+            };
             availability.exit_on_end = true;
           };
         };
