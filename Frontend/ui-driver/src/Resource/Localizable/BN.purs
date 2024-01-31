@@ -1235,3 +1235,5 @@ getBN stringKey =
         LOWEST_FEES_FROM -> "{} থেকে সর্বনিম্ন ফি"
         ZERO_FEE_TILL -> "{} অক্টোবর পর্যন্ত কোন ফি নেই"
         ZERO_COMMISION_UNLIMITED_RIDES -> "শূন্য কমিশন, অসীম চালনা"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "আমরা বর্তমানে আপনার শহরে শুধুমাত্র অটোরিকশার সাথে লাইভ করছি"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "আরো আপডেটের জন্য সাথে থাকুন"

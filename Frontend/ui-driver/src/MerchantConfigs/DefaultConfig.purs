@@ -137,6 +137,7 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : true,
+              vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig
             },
             {
@@ -152,6 +153,7 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
+              vehicleNSImg : "ny_ic_auto_image_old",
               registration : registrationConfig
             },
             {
@@ -167,6 +169,7 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
+              vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig
             },
             {
@@ -182,6 +185,7 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
+              vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig
             },
             {
@@ -197,6 +201,7 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : false,
               enableYatriCoins : false,
+              vehicleNSImg : "ny_ic_auto_image_old",
               registration : registrationConfig
             },
             {
@@ -212,6 +217,7 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
+              vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig
             },
             {
@@ -227,6 +233,7 @@ config =
               showCustomerReferral : false,
               uploadRCandDL : true,
               enableYatriCoins : false,
+              vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig
             },
             {
@@ -242,6 +249,7 @@ config =
               showCustomerReferral : true,
               uploadRCandDL : true,
               enableYatriCoins : false,
+              vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig
             },
             {             
@@ -257,6 +265,7 @@ config =
               showCustomerReferral : true,
               uploadRCandDL : true,
               enableYatriCoins : false,
+              vehicleNSImg : "ny_ic_auto_image",
               registration : registrationConfig
             }--, For future use
             -- {

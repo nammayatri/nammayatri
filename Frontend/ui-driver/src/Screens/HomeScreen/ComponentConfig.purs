@@ -1681,6 +1681,44 @@ accountBlockedPopup state = PopUpModal.config {
     , height = V 118
     }
   }
+
+vehicleNotSupportedPopup :: ST.HomeScreenState -> PopUpModal.Config
+vehicleNotSupportedPopup state = 
+  let cityConfig = HU.getCityConfig state.data.config.cityConfig $ getValueToLocalStore DRIVER_LOCATION
+  in PopUpModal.config {
+      gravity = CENTER,
+      backgroundClickable = false,
+      optionButtonOrientation = "HORIZONTAL",
+      buttonLayoutMargin = Margin 16 0 16 20,
+      margin = MarginHorizontal 25 25, 
+      primaryText {
+        text = getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE
+      , textStyle = Heading2
+      , margin = Margin 16 0 16 10},
+      secondaryText{
+        text = getString WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC
+      , textStyle = Body5
+      , margin = Margin 16 0 16 15 },
+      option1 {
+        text = getString OKAY
+      , color = Color.yellow900
+      , background = Color.black900
+      , strokeColor = Color.transparent
+      , textStyle = FontStyle.SubHeading1
+      , width = MATCH_PARENT
+      },
+      option2 {
+      visibility = false
+    },
+      cornerRadius = PTD.Corners 15.0 true true true true,
+      coverImageConfig {
+        imageUrl = fetchImage FF_ASSET cityConfig.vehicleNSImg
+      , visibility = VISIBLE
+      , margin = MarginHorizontal 16 16
+      , width = V 300
+      , height = V 315
+      }
+    }
   
     
 introducingCoinsPopup :: ST.HomeScreenState -> PopUpModal.Config
