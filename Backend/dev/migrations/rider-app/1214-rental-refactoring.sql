@@ -1,5 +1,6 @@
 ALTER TABLE atlas_app.booking ADD COLUMN stop_location_id character varying(36);
 ALTER TABLE atlas_app.quote ADD COLUMN rental_details_id character varying(36);
+ALTER TABLE atlas_app.ride ADD COLUMN end_otp text;
 
 CREATE TABLE atlas_app.rental_details ();
 ALTER TABLE atlas_app.rental_details ADD COLUMN id character varying(36);

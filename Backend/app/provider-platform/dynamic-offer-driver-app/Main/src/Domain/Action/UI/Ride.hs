@@ -32,8 +32,10 @@ import qualified Data.ByteString as BS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T hiding (count, map)
 import Data.Time (Day)
+import Domain.Action.Dashboard.Ride
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
@@ -76,7 +78,8 @@ import Storage.CachedQueries.Merchant as QM
 import Storage.CachedQueries.Merchant.TransporterConfig as QMTC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
-import Storage.Queries.Location as QLoc
+import qualified Storage.Queries.Location as QLoc
+import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
@@ -148,7 +151,11 @@ data DriverRideRes = DriverRideRes
     autoPayStatus :: Maybe DI.DriverAutoPayStatus,
     customerCancellationDues :: HighPrecMoney,
     isFreeRide :: Maybe Bool,
-    stopLocationId :: Maybe (Id DLoc.Location)
+    stopLocationId :: Maybe (Id DLoc.Location),
+    tripCategory :: DTC.TripCategory,
+    nextStopLocation :: Maybe DLoc.Location,
+    lastStopLocation :: Maybe DLoc.Location,
+    tripScheduledAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -186,10 +193,14 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay = do
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findById (Id booking.bapId)
     let goHomeReqId = ride.driverGoHomeRequestId
-    pure $ mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo)
+    mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo)
   pure . DriverRideListRes $ driverRideLis
 
 mkDriverRideRes ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
   RD.RideDetails ->
   Maybe Text ->
   Maybe DRating.Rating ->
@@ -198,7 +209,7 @@ mkDriverRideRes ::
   Maybe DSM.BapMetadata ->
   Maybe (Id DDGR.DriverGoHomeRequest) ->
   Maybe DI.DriverInformation ->
-  DriverRideRes
+  m DriverRideRes
 mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo = do
   let fareParams = booking.fareParams
       estimatedBaseFare =
@@ -206,45 +217,71 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
           fareParams{driverSelectedFare = Nothing -- it should not be part of estimatedBaseFare
                     }
   let initial = "" :: Text
-  DriverRideRes
-    { id = ride.id,
-      shortRideId = ride.shortId,
-      status = ride.status,
-      fromLocation = DLoc.makeLocationAPIEntity booking.fromLocation,
-      toLocation = DLoc.makeLocationAPIEntity <$> booking.toLocation,
-      driverName = rideDetails.driverName,
-      driverNumber,
-      vehicleNumber = rideDetails.vehicleNumber,
-      vehicleColor = fromMaybe initial rideDetails.vehicleColor,
-      vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
-      vehicleModel = fromMaybe initial rideDetails.vehicleModel,
-      computedFare = ride.fare,
-      estimatedBaseFare = estimatedBaseFare,
-      estimatedDistance = booking.estimatedDistance,
-      driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,
-      actualRideDistance = ride.traveledDistance,
-      createdAt = ride.createdAt,
-      updatedAt = ride.updatedAt,
-      riderName = booking.riderName,
-      pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
-      tripStartTime = ride.tripStartTime,
-      tripEndTime = ride.tripEndTime,
-      specialLocationTag = booking.specialLocationTag,
-      rideRating = rideRating <&> (.ratingValue),
-      chargeableDistance = ride.chargeableDistance,
-      exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
-      customerExtraFee = fareParams.customerExtraFee,
-      bapName = bapMetadata <&> (.name),
-      bapLogo = bapMetadata <&> (.logoUrl),
-      disabilityTag = booking.disabilityTag,
-      requestedVehicleVariant = booking.vehicleVariant,
-      driverGoHomeRequestId = goHomeReqId,
-      payerVpa = driverInfo >>= (.payerVpa),
-      autoPayStatus = driverInfo >>= (.autoPayStatus),
-      isFreeRide = ride.isFreeRide,
-      customerCancellationDues = fareParams.customerCancellationDues,
-      stopLocationId = (.id) <$> booking.toLocation
-    }
+  (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
+    DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
+    _ -> return (Nothing, Nothing)
+  return $
+    DriverRideRes
+      { id = ride.id,
+        shortRideId = ride.shortId,
+        status = ride.status,
+        fromLocation = DLoc.makeLocationAPIEntity booking.fromLocation,
+        toLocation = DLoc.makeLocationAPIEntity <$> booking.toLocation,
+        driverName = rideDetails.driverName,
+        driverNumber,
+        vehicleNumber = rideDetails.vehicleNumber,
+        vehicleColor = fromMaybe initial rideDetails.vehicleColor,
+        vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
+        vehicleModel = fromMaybe initial rideDetails.vehicleModel,
+        computedFare = ride.fare,
+        estimatedBaseFare = estimatedBaseFare,
+        estimatedDistance = booking.estimatedDistance,
+        driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,
+        actualRideDistance = ride.traveledDistance,
+        createdAt = ride.createdAt,
+        updatedAt = ride.updatedAt,
+        riderName = booking.riderName,
+        pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
+        tripStartTime = ride.tripStartTime,
+        tripEndTime = ride.tripEndTime,
+        specialLocationTag = booking.specialLocationTag,
+        rideRating = rideRating <&> (.ratingValue),
+        chargeableDistance = ride.chargeableDistance,
+        exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
+        customerExtraFee = fareParams.customerExtraFee,
+        bapName = bapMetadata <&> (.name),
+        bapLogo = bapMetadata <&> (.logoUrl),
+        disabilityTag = booking.disabilityTag,
+        requestedVehicleVariant = booking.vehicleVariant,
+        driverGoHomeRequestId = goHomeReqId,
+        payerVpa = driverInfo >>= (.payerVpa),
+        autoPayStatus = driverInfo >>= (.autoPayStatus),
+        isFreeRide = ride.isFreeRide,
+        customerCancellationDues = fareParams.customerCancellationDues,
+        stopLocationId = (.id) <$> booking.toLocation,
+        tripCategory = booking.tripCategory,
+        nextStopLocation = nextStopLocation,
+        lastStopLocation = lastStopLocation,
+        tripScheduledAt = booking.startTime
+      }
+
+calculateLocations ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DRB.Booking ->
+  Maybe (Id DLoc.Location) ->
+  m (Maybe DLoc.Location, Maybe DLoc.Location)
+calculateLocations bookingId stopLocationId = do
+  maxOrder <- QLM.maxOrderByEntity bookingId.getId
+  case stopLocationId of
+    Nothing -> do
+      lastLoc <- mkLocationFromLocationMapping bookingId.getId maxOrder
+      return (Nothing, lastLoc)
+    Just nextStopId -> do
+      nextLoc <- QLoc.findById nextStopId
+      lastLoc <- mkLocationFromLocationMapping bookingId.getId (maxOrder - 1)
+      return (nextLoc, lastLoc)
 
 arrivedAtPickup :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, HasShortDurationRetryCfg r c, HasFlowEnv m r '["nwAddress" ::: BaseUrl], HasField "isBecknSpecVersion2" r Bool, HasHttpClientOptions r c, HasFlowEnv m r '["driverReachedDistance" ::: HighPrecMeters], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => Id DRide.Ride -> LatLong -> m APISuccess
 arrivedAtPickup rideId req = do
@@ -282,7 +319,7 @@ otpRideCreate driver otpCode booking = do
   driverNumber <- RD.getDriverNumber rideDetails
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findById (Id booking.bapId)
-  pure $ mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing
+  mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
