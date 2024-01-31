@@ -14,18 +14,23 @@
 
 module Domain.Types.Merchant.DriverIntelligentPoolConfig where
 
-import Data.Time (UTCTime)
+import Data.Aeson
+import Data.Aeson.Key as DAK
+import Data.Aeson.Types
+import Data.Text as Text
+import Data.Time.Clock.POSIX
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
-import Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Merchant.MerchantOperatingCity as DTMM
 import EulerHS.Prelude hiding (id)
+import Kernel.Prelude as KP
 import Kernel.Types.Common
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 
 data DriverIntelligentPoolConfigD u = DriverIntelligentPoolConfig
   { merchantId :: Id Merchant,
-    merchantOperatingCityId :: Id MerchantOperatingCity,
+    merchantOperatingCityId :: Id DTMM.MerchantOperatingCity,
     actualPickupDistanceWeightage :: Int,
     availabilityTimeWeightage :: Int,
     availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
@@ -55,6 +60,7 @@ instance FromJSON (DriverIntelligentPoolConfigD 'Unsafe)
 instance ToJSON (DriverIntelligentPoolConfigD 'Unsafe)
 
 data IntelligentFactors = AcceptanceRatio | CancellationRatio | AvailableTime | DriverSpeed | ActualPickupDistance | RideFrequency
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data IntelligentScores = IntelligentScores
   { acceptanceRatio :: Maybe Double,
@@ -65,4 +71,34 @@ data IntelligentScores = IntelligentScores
     rideFrequency :: Maybe Double,
     rideRequestPopupDelayDuration :: Seconds
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, Read)
+
+readWithInfo :: (Read a, Show a) => String -> a
+readWithInfo s = case KP.readMaybe s of
+  Just val -> val
+  Nothing -> error . Text.pack $ "Failed to parse: " ++ s
+
+jsonToDriverIntelligentPoolConfig :: Object -> (Parser DriverIntelligentPoolConfig)
+jsonToDriverIntelligentPoolConfig v =
+  DriverIntelligentPoolConfig
+    <$> (Id <$> (v .: DAK.fromText (Text.pack "merchantId")))
+    <*> (Id <$> (v .: DAK.fromText (Text.pack "merchantOperatingCityId")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "actualPickupDistanceWeightage")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "availabilityTimeWeightage")))
+    <*> ((readWithInfo :: (String -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "availabilityTimeWindowOption")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "acceptanceRatioWeightage")))
+    <*> ((readWithInfo :: (String -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "acceptanceRatioWindowOption")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "cancellationRatioWeightage")))
+    <*> ((readWithInfo :: (String -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "cancellationAndRideFrequencyRatioWindowOption")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "minQuotesToQualifyForIntelligentPool")))
+    <*> ((readWithInfo :: (String -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "minQuotesToQualifyForIntelligentPoolWindowOption")))
+    <*> ((v .: DAK.fromText (Text.pack "intelligentPoolPercentage")))
+    <*> ((readWithInfo :: (String -> Double)) <$> (v .: DAK.fromText (Text.pack "speedNormalizer")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverSpeedWeightage")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "minLocationUpdates")))
+    <*> ((readWithInfo :: (String -> Minutes)) <$> (v .: DAK.fromText (Text.pack "locationUpdateSampleTime")))
+    <*> ((readWithInfo :: (String -> Double)) <$> (v .: DAK.fromText (Text.pack "defaultDriverSpeed")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "maxNumRides")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "numRidesWeightage")))
+    <*> (pure (posixSecondsToUTCTime 0))
+    <*> (pure (posixSecondsToUTCTime 0))

@@ -22,7 +22,18 @@ module Storage.CachedQueries.Merchant.TransporterConfig
   )
 where
 
+import qualified Client.Main as CM
+import qualified Data.Aeson as DA
+-- import Domain.Types.Merchant.DriverPoolConfig as DPC
+
+-- import Data.Aeson.Key
+-- import qualified Data.Time.Clock as DTC
+-- import qualified Data.ByteString.Lazy.Char8 as BL
+-- import qualified Data.Text.Encoding as DTE
+import Data.Aeson.Types as DAT
 import Data.Coerce (coerce)
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Text as Text
 import Domain.Types.Common
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.TransporterConfig
@@ -36,7 +47,20 @@ findByMerchantOpCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Merc
 findByMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
-    Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
+    Nothing -> do
+      confCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(Text.pack "merchantOperatingCityId", DA.String (getId id))])
+      logDebug $ "transporterConfig Cond: " <> show confCond
+      context' <- liftIO $ CM.evalCtx "test" confCond
+      logDebug $ "transporterConfig: " <> show context'
+      let ans = case context' of
+            Left err -> error $ (Text.pack "error in fetching the context value ") <> (Text.pack err)
+            Right contextValue' ->
+              case (DAT.parse jsonToTransporterConfig contextValue') of
+                Success dpc -> dpc
+                DAT.Error err -> error $ (Text.pack "error in parsing the context value ") <> (Text.pack err)
+
+      logDebug $ "transporterConfig: " <> show ans
+      flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
 
 cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do
