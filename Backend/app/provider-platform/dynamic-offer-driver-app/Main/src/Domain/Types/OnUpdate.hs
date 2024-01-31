@@ -58,7 +58,8 @@ data DRideStartedReq = DRideStartedReq
     vehicle :: SVeh.Vehicle,
     ride :: DRide.Ride,
     booking :: DRB.Booking,
-    tripStartLocation :: Maybe Maps.LatLong
+    tripStartLocation :: Maybe Maps.LatLong,
+    endOtp_ :: Maybe Text
   }
 
 data DRideCompletedReq = DRideCompletedReq

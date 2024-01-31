@@ -55,6 +55,9 @@ mkFulfillment ::
   Bool ->
   m RideFulfillment.FulfillmentInfo
 mkFulfillment mbDriver ride booking mbVehicle mbImage tags personTags isDriverBirthDay isFreeRide = do
+  let rideOtp = case ride.status of
+        DRide.INPROGRESS -> fromMaybe ride.otp ride.endOtp
+        _ -> ride.otp
   agent <-
     forM mbDriver $ \driver -> do
       let agentTags =
@@ -91,7 +94,7 @@ mkFulfillment mbDriver ride booking mbVehicle mbImage tags personTags isDriverBi
   let authorization =
         RideFulfillment.Authorization
           { _type = "OTP",
-            token = ride.otp
+            token = rideOtp
           }
   let person =
         RideFulfillment.Person

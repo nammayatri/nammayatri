@@ -21,6 +21,7 @@ import Control.Lens
 import Data.Aeson
 import qualified Data.Aeson as A
 import qualified Data.List as List
+import Data.Maybe
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DCT
@@ -343,10 +344,13 @@ mkFulfillmentV2 ::
   m Spec.Fulfillment
 mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent = do
   mbDInfo <- driverInfo
+  let rideOtp = case ride.status of
+        DRide.INPROGRESS -> fromMaybe ride.otp ride.endOtp
+        _ -> ride.otp
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,
-        fulfillmentStops = mkStopsOUS booking ride ride.otp,
+        fulfillmentStops = mkStopsOUS booking ride rideOtp,
         fulfillmentType = Just $ mkFulfillmentType booking.tripCategory,
         fulfillmentAgent =
           Just $

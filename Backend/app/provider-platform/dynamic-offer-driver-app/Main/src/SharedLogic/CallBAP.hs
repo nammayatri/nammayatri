@@ -351,7 +351,7 @@ sendRideStartedUpdateToBAP booking ride tripStartLocation = do
       >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId) -- shrey00 : are these 2 lines needed?
-  let rideStartedBuildReq = ACL.RideStartedBuildReq ACL.DRideStartedReq {..}
+  let rideStartedBuildReq = ACL.RideStartedBuildReq ACL.DRideStartedReq {endOtp_ = ride.endOtp, ..}
   retryConfig <- asks (.longDurationRetryCfg)
 
   isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)

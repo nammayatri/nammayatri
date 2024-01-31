@@ -142,6 +142,8 @@ parseEvent _ (OnUpdate.RideAssigned taEvent) = do
 parseEvent _ (OnUpdate.RideStarted rsEvent) = do
   let personTagsGroup = rsEvent.fulfillment.person.tags
   let tripStartLocation = getLocationFromTag personTagsGroup "current_location" "current_location_lat" "current_location_lon"
+  authorization <- fromMaybeM (InvalidRequest "authorization is not present in RideStarted Event.") $ rsEvent.fulfillment.start.authorization
+  let endOtp_ = Just authorization.token
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
@@ -312,12 +314,16 @@ parseRideStartedEvent :: (MonadFlow m) => Spec.Order -> m DOnUpdate.OnUpdateReq
 parseRideStartedEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in RideStarted Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in RideStarted Event.")
+  stops <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentStops) & fromMaybeM (InvalidRequest "fulfillment_stops is not present in RideStarted Event.")
+  start <- Utils.getStartLocation stops & fromMaybeM (InvalidRequest "pickup stop is not present in RideStarted Event.")
+  endOtp' <- start.stopAuthorization >>= (.authorizationToken) & fromMaybeM (InvalidRequest "authorization_token is not present in RideStarted Event.")
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
   let tripStartLocation = getLocationFromTagV2 personTagsGroup "current_location" "current_location_lat" "current_location_lon"
   pure $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id bppBookingId,
         bppRideId = Id bppRideId,
+        endOtp_ = Just endOtp',
         ..
       }
 

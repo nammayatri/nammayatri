@@ -89,7 +89,8 @@ data OnUpdateReq
   | RideStartedReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
-        tripStartLocation :: Maybe LatLong
+        tripStartLocation :: Maybe LatLong,
+        endOtp_ :: Maybe Text
       }
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -161,7 +162,8 @@ data ValidatedOnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         booking :: SRB.Booking,
         ride :: SRide.Ride,
-        tripStartLocation :: Maybe LatLong
+        tripStartLocation :: Maybe LatLong,
+        endOtp_ :: Maybe Text
       }
   | ValidatedRideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -336,6 +338,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             rideRating = Nothing,
             safetyCheckStatus = Nothing,
             isFreeRide = Just isFreeRide,
+            endOtp = Nothing,
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
@@ -347,7 +350,8 @@ onUpdate ValidatedRideStartedReq {..} = do
   let updRideForStartReq =
         ride{status = SRide.INPROGRESS,
              rideStartTime = Just rideStartTime,
-             rideEndTime = Nothing
+             rideEndTime = Nothing,
+             endOtp = endOtp_
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
