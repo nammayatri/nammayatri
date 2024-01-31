@@ -39,7 +39,7 @@ import Data.Int (round, toNumber, fromString)
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Number (pi, sin, cos, sqrt, asin, abs)
-import Data.Ord (comparing)
+import Data.Ord (comparing, Ordering)
 import Data.Profunctor.Strong (first)
 import Data.Show.Generic (genericShow)
 import Data.String (replace, split, Pattern(..), Replacement(..))
@@ -77,7 +77,7 @@ import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location, MetroStationsList)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
 import Services.API (Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -339,6 +339,31 @@ addToPrevCurrLoc currLoc currLocArr =
             else (cons currLoc currLocArr)
     else currLocArr
 
+ --------------------------------------------------------------------------------------------------
+fetchMetroStations :: Decode MetroStationsList => String -> Flow GlobalState (Maybe MetroStationsList)
+fetchMetroStations objName = do
+  (maybeEncodedState :: Maybe String) <- liftFlow $ fetchFromLocalStore' objName Just Nothing
+  void $ pure $ spy "fetchMetroStations: maybeEncodedState" maybeEncodedState
+  case maybeEncodedState of
+    
+    Just encodedState -> do
+      case runExcept (decodeJSON encodedState) of
+        Right obj -> pure $ Just obj
+        Left err -> do
+          _ <- liftFlow (logShow $ "fetchMetroStations: Error while decoding " <> (show err))
+          pure Nothing
+    Nothing -> pure Nothing
+
+getMetroStationsObjFromLocal :: String -> Flow GlobalState MetroStationsList
+getMetroStationsObjFromLocal _ = do
+  (metroStationsList :: Maybe MetroStationsList) <- (fetchMetroStations "METRO_STATIONS")
+  case metroStationsList of
+    Just stations -> pure stations
+    Nothing -> pure emptyMetroStationsList
+
+
+emptyMetroStationsList :: MetroStationsList
+emptyMetroStationsList = {stations : [],lastUpdatedAt : "" }
  --------------------------------------------------------------------------------------------------
 
 checkPrediction :: LocationListItemState -> Array LocationListItemState -> Boolean
@@ -664,11 +689,6 @@ getCityCodeFromCity city =
       cityCodeTuple = find (\tuple -> (snd tuple) == city) cityCodeMap
     in maybe Nothing (\tuple -> fst tuple) cityCodeTuple
 
--- fetchGlobalSavedLocations :: Array LocationListItemState 
--- fetchGlobalSavedLocations = do
---   (GlobalState globalState) <- getState
---   globalState.globalProps.savedLocations
-
 getCard :: CardType -> String 
 getCard cardType = case cardType of 
   HOME_TAG -> "Home"
@@ -720,42 +740,6 @@ getDistInfo savedLoc excludeLocation lat lon placeId = do
 
 getExistingTags :: Array LocationListItemState -> Array String 
 getExistingTags savedLoc = map (\item -> DS.toLower $ item.tag) savedLoc
-
--- savedLocTransformer :: (Array SavedReqLocationAPIEntity) -> Array LocationListItemState
--- savedLocTransformer savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
---   {
---   prefixImageUrl : fetchImage FF_ASSET $ case (DS.toLower (item.tag) ) of 
---                 "home" -> "ny_ic_home_blue"
---                 "work" -> "ny_ic_work_blue"
---                 _      -> "ny_ic_fav_red"
--- , postfixImageUrl : ""
--- , postfixImageVisibility : false
--- , title : (fromMaybe "" (head (split (Pattern ",") (decodeAddress(SavedLoc (SavedReqLocationAPIEntity item))))))
--- , subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))) + 2) (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))
--- , lat : (Just item.lat)
--- , lon : (Just item.lon)
--- , description : (fromMaybe "" (head (split (Pattern ":") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))))
--- , placeId : item.placeId
--- , tag : item.tag
--- , tagType : Just (show LOC_LIST)
--- , cardType : Nothing
--- , address : ""
--- , tagName : ""
--- , isEditEnabled : true
--- , savedLocation : ""
--- , placeName : ""
--- , isClickable : true
--- , alpha : 1.0
--- , fullAddress : getAddressFromSaved (SavedReqLocationAPIEntity item)
--- , locationItemType : Just SAVED_LOCATION
--- , distance : Nothing
--- , showDistance : Just false
--- , actualDistance : Nothing
--- , frequencyCount : Nothing
--- , recencyDate : Nothing
--- , locationScore : Nothing
-
--- }) savedLocation )
 
 getCityConfig :: Array CityConfig -> String -> CityConfig
 getCityConfig cityConfigs cityName = do

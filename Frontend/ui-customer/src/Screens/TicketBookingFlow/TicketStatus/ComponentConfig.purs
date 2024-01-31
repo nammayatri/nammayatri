@@ -15,7 +15,7 @@ import Screens.Types as ST
 import Data.Array as DA
 import JBridge as JB
 
-genericHeaderConfig :: ST.TicketBookingScreenState -> GenericHeader.Config
+genericHeaderConfig :: ST.TicketStatusScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
   config = GenericHeader.config
   genericHeaderConfig' = config 
@@ -46,7 +46,7 @@ genericHeaderConfig state = let
     }
   in genericHeaderConfig'
 
-primaryButtonConfig :: ST.TicketBookingScreenState -> PrimaryButton.Config
+primaryButtonConfig :: ST.TicketStatusScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
@@ -67,7 +67,7 @@ primaryButtonConfig state = let
       }
   in primaryButtonConfig'
 
-primaryButtonConfig1 :: ST.TicketBookingScreenState -> PrimaryButton.Config
+primaryButtonConfig1 :: ST.TicketStatusScreenState -> PrimaryButton.Config
 primaryButtonConfig1 state = 
   let config = PrimaryButton.config
       primaryButtonConfig' = config
@@ -114,7 +114,7 @@ shareTicketButtonConfig visibility' = PrimaryButton.config
   , id = "ShareButton"
   }
 
-refreshStatusButtonConfig :: ST.TicketBookingScreenState -> PrimaryButton.Config
+refreshStatusButtonConfig :: ST.TicketStatusScreenState -> PrimaryButton.Config
 refreshStatusButtonConfig state = PrimaryButton.config
     { textConfig 
       { text = "Refresh Status"

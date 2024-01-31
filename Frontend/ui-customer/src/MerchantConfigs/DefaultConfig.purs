@@ -102,7 +102,7 @@ config =
   , profileName: "#FFFFFF"
   , profileImage: "#012A72"
   , feedbackBackground: "#2C2F3A"
-  , sideBarList: [ "MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout" ]
+  , sideBarList: [ "MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout", "MetroTickets"]
   , rateCardColor: "#2C2F3A"
   , nyBrandingVisibility: false
   , fontType: "Assets"
@@ -255,6 +255,9 @@ config =
       , animationDuration : 500
       , vehicleMarkerSize: 90
       }
+  , metroTicketingConfig : {
+    metroStationTtl : 10080 -- in Minutes
+  }
   , purpleRideConfig : {
       genericVideoUrl : "" ,
       visualImpairmentVideo : "" ,
