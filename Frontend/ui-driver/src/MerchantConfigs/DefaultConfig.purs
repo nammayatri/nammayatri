@@ -303,6 +303,7 @@ config =
   , enableOtpRide: false
   , enableSuggestions : true
   , enableYatriCoins : false
+  , enableAutoReferral : true
   }
   , showCorporateAddress : false
   , engilshInNative: "English"

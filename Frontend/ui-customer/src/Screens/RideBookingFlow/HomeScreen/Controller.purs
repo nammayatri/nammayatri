@@ -93,7 +93,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..), ReferralStatus(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..), FollowRideRes(..), Followers(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -930,6 +930,7 @@ data Action = NoAction
             | DismissShareRide
             | UpdateFollowers FollowRideRes
             | GoToFollowRide 
+            | PopUpModalReferralAction PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -2387,6 +2388,16 @@ eval (PopUpModalShareAppAction PopUpModal.OnButton2Click) state= do
   let shareAppConfig = state.data.config.shareAppConfig
   _ <- pure $ shareTextMessage shareAppConfig.title shareAppConfig.description
   continue state{props{showShareAppPopUp=false}}
+
+eval (PopUpModalReferralAction PopUpModal.OnButton1Click) state = 
+  case state.props.referral.referralStatus of
+    REFERRAL_INVALID -> exit $ GoToReferral state{ props{ referral{ referralStatus = NO_REFERRAL } } }
+    REFERRAL_APPLIED -> do
+      void $ pure $ setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"
+      continue state{ props{ referral{ referralStatus = NO_REFERRAL }, isReferred = true } } 
+    _ -> continue state{ props{ referral{ referralStatus = NO_REFERRAL } } } 
+
+eval (PopUpModalReferralAction PopUpModal.OnButton2Click) state = continue state{ props{ referral{ referralStatus = NO_REFERRAL } } }
 
 eval (CallSupportAction PopUpModal.OnButton1Click) state= do
   _ <- pure $ performHapticFeedback unit

@@ -92,7 +92,7 @@ import Screens.RideBookingFlow.HomeScreen.Config
 import Services.API
 import Screens.NammaSafetyFlow.Components.ContactsList (contactCardView)
 import Services.API (GetDriverLocationResp(..), GetQuotesRes(..), GetRouteResp(..), LatLong(..), RideAPIEntity(..), RideBookingRes(..), Route(..), SavedLocationsListRes(..), SearchReqLocationAPIEntity(..), SelectListRes(..), Snapped(..), GetPlaceNameResp(..), PlaceName(..), RideBookingListRes(..))
-import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..), NewContacts)
+import Screens.Types (Followers(..), CallType(..), HomeScreenState, LocationListItemState, PopupType(..), SearchLocationModelType(..), SearchResultType(..), Stage(..), ZoneType(..), SheetState(..), Trip(..), SuggestionsMap(..), Suggestions(..),City(..), BottomNavBarIcon(..), NewContacts, ReferralStatus(..))
 import Services.Backend (getDriverLocation, getQuotes, getRoute, makeGetRouteReq, rideBooking, selectList, getRouteMarkers, walkCoordinates, walkCoordinate, getSavedLocationList)
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore, updateLocalStage, getValueToLocalNativeStore)
@@ -400,6 +400,7 @@ view push state =
             , if state.data.waitTimeInfo && state.props.currentStage == RideAccepted then waitTimeInfoPopUp push state else emptyTextView state
             , if showSafetyAlertPopup then safetyAlertPopup push state else  emptyTextView state
             , if state.props.showShareRide then shareRidePopup push state else emptyTextView state
+            , if state.props.referral.referralStatus /= NO_REFERRAL then referralPopUp push state else emptyTextView state 
             , if state.props.repeatRideTimer /= "0" 
               then linearLayout
                     [ width MATCH_PARENT
@@ -4486,3 +4487,11 @@ getFollowRide push action = do
     Left err -> do
       _ <- pure $ printLog "api error " err
       pure unit
+      
+referralPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+referralPopUp push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , background Color.blackLessTrans
+  ][PopUpModal.view (push <<< PopUpModalReferralAction) (referralPopUpConfig state)]

@@ -46,7 +46,7 @@ import Effect.Uncurried (runEffectFn1, runEffectFn2)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import Engineering.Helpers.Commons (liftFlow, os, getNewIDWithTag, getExpiryTime, convertUTCtoISC, getCurrentUTC, getWindowVariable, flowRunner)
 import Engineering.Helpers.Commons as EHC
-import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, saveObject, reboot, showSplash, fetchLanguage, handleUpdatedTerms, getReferralCode)
 import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
@@ -91,7 +91,7 @@ import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreen
 import Screens.TicketBookingFlow.PlaceList.ScreenData as PlaceListData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..))
+import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..), ReferralStatus(..))
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig, getTipViewData, setTipViewData)
 import Screens.SavedLocationScreen.Controller (getSavedLocationForAddNewAddressScreen)
 import Screens.SelectLanguageScreen.ScreenData as SelectLanguageScreenData
@@ -238,7 +238,7 @@ currentFlowStatus = do
       response <- Remote.getProfileBT ""
       updateVersion (response ^. _clientVersion) (response ^. _bundleVersion)
       updateFirebaseToken (response ^. _maskedDeviceToken) getUpdateToken
-      updateUserLanguage $ response ^. _language
+      updateLanguageAndReferralCode $ response ^. _language
       updateFlowStatusStorage response
       updateCTEventData response
       if isNothing (response ^. _firstName) 
@@ -281,10 +281,34 @@ currentFlowStatus = do
       in
         void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq requiredData)
     
-    updateUserLanguage :: Maybe String -> FlowBT String Unit
-    updateUserLanguage language = 
-      when (isNothing language || (getKeyByLanguage (fromMaybe "ENGLISH" language) /= (getLanguageLocale languageKey)))
-        $ void $ lift $ lift $ Remote.updateProfile (Remote.mkUpdateProfileRequest FunctionCall)
+    updateLanguageAndReferralCode :: Maybe String -> FlowBT String Unit
+    updateLanguageAndReferralCode language = do
+      config <- getAppConfigFlowBT appConfig
+      let referralStatus = getValueToLocalStore REFERRAL_STATUS
+      let referralCode =  if config.feature.enableReferral && config.feature.enableAutoReferral then do
+                            case referralStatus of
+                              "NOT_REFERRED_NOT_TAKEN_RIDE" -> getReferralCode (getValueToLocalStore REFERRER_URL)
+                              _                             -> Nothing
+                          else Nothing
+      if isNothing language || (getKeyByLanguage (fromMaybe "ENGLISH" language) /= (getLanguageLocale languageKey)) || isJust referralCode then do
+        let UpdateProfileReq updateProfileConfig = Remote.mkUpdateProfileRequest FunctionCall
+        if isJust referralCode && referralStatus == "NOT_REFERRED_NOT_TAKEN_RIDE" then do
+          let updateProfileReq = UpdateProfileReq updateProfileConfig{ referralCode = referralCode }
+          res <- lift $ lift $ Remote.updateProfile updateProfileReq
+          case res of
+            Right response -> do
+              setValueToLocalStore REFERRAL_STATUS "REFERRED_NOT_TAKEN_RIDE"  
+              setValueToLocalStore REFERRER_URL ""
+              void $ pure $ cleverTapCustomEvent "ny_user_referral_code_applied"
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{ referral{ referralStatus = REFERRAL_APPLIED }, isReferred = true } })
+            Left err -> do
+              if ((err.code == 500 && (decodeError err.response.errorMessage "errorCode") == "BPP_INTERNAL_API_ERROR")) then do
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ referral{ referralStatus = REFERRAL_INVALID } } })
+                setValueToLocalStore REFERRER_URL ""
+                void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
+              else pure unit
+        else void $ lift $ lift $ Remote.updateProfile (UpdateProfileReq updateProfileConfig)
+      else pure unit
 
     goToFindingQuotesStage :: String -> Boolean -> FlowBT String Unit
     goToFindingQuotesStage estimateId driverOfferedQuote = do
@@ -336,10 +360,7 @@ enterMobileNumberScreenFlow = do
   hideLoaderFlow -- Removed initial choose langauge screen
   if( any (_ == getLanguageLocale languageKey) ["__failed", "(null)"]) then void $ pure $ setLanguageLocale config.defaultLanguage else pure unit
   logField_ <- lift $ lift $ getLogFields
-  if config.feature.forceLogReferrerUrl || ( any (_ == getValueToLocalStore REGISTERATION_TOKEN) ["__failed", "(null)"]) && ( any (_ == getValueToLocalStore REFERRER_URL) ["__failed", "(null)"]) then do
-    _ <- pure $ extractReferrerUrl unit
-    _ <- lift $ lift $ liftFlow $ logEvent logField_ $ "referrer_url_inside_pure_script_" <> getValueToLocalStore REFERRER_URL
-    pure unit
+  if any (_ == getValueToLocalStore REFERRER_URL) ["__failed", "(null)"] then void $ pure $ extractReferrerUrl unit
   else pure unit
   void $ lift $ lift $ toggleLoader false
   _ <- lift $ lift $ liftFlow $ logEvent logField_ "ny_user_enter_mob_num_scn_view"

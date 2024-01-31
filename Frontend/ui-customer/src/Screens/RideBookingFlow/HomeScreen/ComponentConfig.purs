@@ -65,7 +65,7 @@ import MerchantConfig.Utils as MU
 import PrestoDOM (Accessiblity(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Resources.Constants (getKmMeter)
-import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..))
+import Screens.Types (DriverInfoCard, Stage(..), ZoneType(..), TipViewData, TipViewStage(..), TipViewProps, City(..), ReferralStatus(..))
 import Screens.Types as ST
 import Storage (KeyStore(..), getValueToLocalStore, isLocalStageOn, setValueToLocalStore)
 import Styles.Colors as Color
@@ -1729,3 +1729,63 @@ shareRideButtonConfig state =
     }
   where
   numberOfSelectedContacts = DA.length $ DA.filter (\contact -> contact.isSelected) state.data.contactList
+    
+referralPopUpConfig :: ST.HomeScreenState -> PopUpModal.Config 
+referralPopUpConfig state = 
+  let status = state.props.referral.referralStatus
+      config' = PopUpModal.config 
+      primaryButtonText = case status of
+                            REFERRAL_INVALID -> getString EDIT
+                            _ -> getString OKAY
+      secondaryButtonText = getString TRY_LATER
+      secondaryButtonVisibility = status == REFERRAL_INVALID
+      primaryText = case status of
+                      REFERRAL_APPLIED -> getString REFERRAL_CODE_IS_APPLIED
+                                            <> maybe "" (\code -> "- " <> code) state.props.referral.referralCode
+                      REFERRAL_INVALID -> getString INVALID_REFERRAL_CODE
+                      _ -> getString YOU_HAVE_ALREADY_USED_DIFFERENT_REFERRAL_CODE
+      image = case status of
+                REFERRAL_INVALID -> "ny_ic_referral_invalid"
+                REFERRAL_ALREADY_APPLIED -> "ny_ic_referral_already_applied"
+                _ -> "ny_ic_referral"
+      popUpConfig' = config'{
+        backgroundClickable = false,
+        gravity = CENTER,
+        buttonLayoutMargin = Margin 0 0 0 0,
+        cornerRadius = Corners 16.0 true true true true, 
+        padding = Padding 16 24 16 16,
+        optionButtonOrientation = "VERTICAL",
+        margin = MarginHorizontal 24 24, 
+        primaryText {
+          text = primaryText, 
+          margin = MarginVertical 16 16
+        },
+        secondaryText { visibility = GONE },
+        option1 {
+          background = Color.black900,
+          text = primaryButtonText,
+          color = Color.yellow900,
+          textStyle = FontStyle.SubHeading1,
+          height = WRAP_CONTENT,
+          width = MATCH_PARENT,
+          padding = Padding 16 10 16 10
+        } , 
+        option2 {
+          background = Color.white900, 
+          text = secondaryButtonText,
+          width = MATCH_PARENT,
+          height = if secondaryButtonVisibility then WRAP_CONTENT else V 1,
+          color =  Color.black650,
+          strokeColor = Color.white900, 
+          padding = Padding 16 10 16 10, 
+          margin = Margin 0 8 0 0,
+          textStyle = FontStyle.SubHeading1
+        }, 
+        coverImageConfig {
+          visibility = VISIBLE,
+          imageUrl = fetchImage FF_ASSET image,
+          height = V 182,
+          width = V 280
+        }
+      }
+  in popUpConfig'

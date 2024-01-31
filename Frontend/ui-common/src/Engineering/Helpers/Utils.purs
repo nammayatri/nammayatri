@@ -47,7 +47,8 @@ import Presto.Core.Types.Language.Flow (Flow, doAff, getState, modifyState, dela
 import PrestoDOM.Core (terminateUI)
 import Types.App (FlowBT, GlobalState(..))
 import Unsafe.Coerce (unsafeCoerce)
-import Data.Array (find, elem)
+import Data.Array (elem)
+import Data.Array as DA
 import Data.Tuple (Tuple(..), fst, snd)
 import ConfigProvider
 import Storage (getValueToLocalStore, setValueToLocalStore, KeyStore(..))
@@ -320,13 +321,13 @@ cityCodeMap =
 getCityFromCode :: String -> String
 getCityFromCode code = 
   let 
-    cityCodeTuple = find (\ tuple -> (fst tuple) == code) cityCodeMap
+    cityCodeTuple = DA.find (\ tuple -> (fst tuple) == code) cityCodeMap
   in maybe "" (\tuple -> snd tuple) cityCodeTuple
 
 getCodeFromCity :: String -> String
 getCodeFromCity city = 
   let 
-    cityCodeTuple = find (\tuple -> (snd tuple) == (toLower city)) cityCodeMap
+    cityCodeTuple = DA.find (\tuple -> (snd tuple) == (toLower city)) cityCodeMap
   in maybe "" (\tuple -> fst tuple) cityCodeTuple
   
 capitalizeFirstChar :: String -> String
@@ -351,4 +352,27 @@ handleUpdatedTerms message = do
   if isTermsUpdated then do
       void $ pure $ runFn2 setKeyInSharedPref "T_AND_C_VERSION" (show appConfig.termsVersion)
       void $ pure $ toast $ message
-  else pure unit              
+  else pure unit        
+        
+                  
+getReferralCode :: String -> Maybe String
+getReferralCode referralData =
+  let tuples = parseKeyValues referralData "&" "="
+  in findValueFromTuples tuples "utm_campaign"
+
+parseKeyValues :: String -> String -> String -> Array (Tuple String String)
+parseKeyValues string queryPattern keyValuePattern = DA.catMaybes $ map (\query -> parseKeyValueWithPattern query keyValuePattern) (split (Pattern queryPattern) string)
+
+parseKeyValueWithPattern :: String -> String -> Maybe (Tuple String String)
+parseKeyValueWithPattern string pattern = 
+  let afterSplit = split (Pattern pattern) string 
+  in  if DA.length afterSplit == 2 then
+        Just (Tuple (fromMaybe "" (afterSplit DA.!! 0)) (fromMaybe "" (afterSplit DA.!! 1)))
+      else Nothing
+      
+findValueFromTuples :: Array (Tuple String String) -> String -> Maybe String
+findValueFromTuples tuples key = 
+  let tuple = DA.find (\(Tuple a _) -> a == key) tuples
+  in case tuple of
+        Just (Tuple _ b) -> Just b
+        Nothing          -> Nothing

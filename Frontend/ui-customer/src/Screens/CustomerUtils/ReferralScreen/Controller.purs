@@ -50,6 +50,9 @@ instance loggableAction :: Loggable Action where
         trackAppEndScreen appId (getScreen REFERRAL_SCREEN)
       GenericHeader.SuffixImgOnClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "generic_header_action" "forward_icon"
     ExpandReference -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "in_screen" "referral_program_drop_down"
+    EditReferralCode act -> case act of
+      PrimaryButton.OnClick -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "edit_referral_primary_button" "edit_referral"
+      PrimaryButton.NoAction -> trackAppScreenEvent appId (getScreen REFERRAL_SCREEN) "edit_referral_primary_button" "no_action"
 
 data Action
   = AfterRender
@@ -59,6 +62,7 @@ data Action
   | ExpandReference
   | BackPressed
   | GoToHomeButtonAC PrimaryButton.Action
+  | EditReferralCode PrimaryButton.Action
 
 data ScreenOutput
   = UpdateReferral ReferralScreenState
@@ -84,6 +88,8 @@ eval (ContinueButtonAC PrimaryButton.OnClick) state = do
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [ do pure BackPressed ]
 
 eval (GoToHomeButtonAC PrimaryButton.OnClick) state = continueWithCmd state [ do pure BackPressed ]
+
+eval (EditReferralCode PrimaryButton.OnClick) state = continue state{ showThanks = false }
 
 eval ExpandReference state = continue state { isExpandReference = not state.isExpandReference }
 

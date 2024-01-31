@@ -46,6 +46,7 @@ import Data.Array as DA
 import Effect.Uncurried (runEffectFn1)
 import Screens.Types as ST
 import Common.Types.App as Common
+import Storage (KeyStore(..), setValueToLocalStore)
 
 main :: Event -> Effect Unit
 main event = do
@@ -124,6 +125,10 @@ onNewIntent event = do
     _ ← runExceptT $ runBackT $ case event.type of
       "DEEP_VIEW_NEW_INTENT" -> Flow.baseAppFlow false (Just event)
       "DEEP_VIEW" -> Flow.baseAppFlow true (Just event)
+      "REFERRAL" -> setValueToLocalStore REFERRER_URL event.data
+      "REFERRAL_NEW_INTENT" -> do
+        setValueToLocalStore REFERRER_URL event.data
+        Flow.baseAppFlow true Nothing
       _ -> Flow.baseAppFlow false Nothing
     pure unit
   _ <- launchAff $ flowRunner defaultGlobalState $ do liftFlow fetchAssets

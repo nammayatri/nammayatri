@@ -160,6 +160,14 @@ function makeEvent(_type, _data) {
   return { type : _type, data : _data };
 }
 
+function checkForReferral(viewParam, eventType) {
+  if (viewParam.slice(0,8) == "referrer") {
+    let referralData = viewParam.substring(viewParam.indexOf('=')+1);
+    purescript.onNewIntent(makeEvent(eventType, referralData))();
+    return true;
+  }
+  return false;
+}
 
 window.onMerchantEvent = function (_event, payload) {
   console.log(payload);
@@ -212,13 +220,19 @@ window.onMerchantEvent = function (_event, payload) {
       }else if (parsedPayload.payload.notificationData && parsedPayload.payload.notificationData.notification_type == "PAYMENT_MODE_MANUAL") {
         purescript.main(makeEvent("PAYMENT_MODE_MANUAL", ""))();
       } else if (parsedPayload.payload.viewParam){
-        purescript.onNewIntent(makeEvent("DEEP_VIEW", parsedPayload.payload.viewParam))();
+        if (!checkForReferral(parsedPayload.payload.viewParam, "REFERRAL_NEW_INTENT")) {
+          purescript.onNewIntent(makeEvent("DEEP_VIEW", parsedPayload.payload.viewParam))();
+        }
       } else if (parsedPayload.payload.view_param){
-        const deepLinkType = parsedPayload.payload.onNewIntent ? "DEEP_VIEW_NEW_INTENT" : "DEEP_VIEW";
-        const param = parsedPayload.payload.viewParam ? parsedPayload.payload.viewParam : parsedPayload.payload.view_param;
-        purescript.onNewIntent(makeEvent(deepLinkType, param))();
+        if (!checkForReferral(parsedPayload.payload.view_param, parsedPayload.payload.onNewIntent ? "REFERRAL" : "REFERRAL_NEW_INTENT")) {
+          const deepLinkType = parsedPayload.payload.onNewIntent ? "DEEP_VIEW_NEW_INTENT" : "DEEP_VIEW";
+          const param = parsedPayload.payload.viewParam ? parsedPayload.payload.viewParam : parsedPayload.payload.view_param;
+          purescript.onNewIntent(makeEvent(deepLinkType, param))();
+        }
       } else if (parsedPayload.payload.viewParamNewIntent){
-        purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
+        if (!checkForReferral(parsedPayload.payload.viewParamNewIntent, "REFERRAL_NEW_INTENT")) {
+          purescript.onNewIntent(makeEvent("DEEP_VIEW_NEW_INTENT", parsedPayload.payload.viewParamNewIntent))();
+        }
       } else{
         purescript.main(makeEvent("", ""))();
       }

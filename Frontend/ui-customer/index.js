@@ -70,6 +70,9 @@ const eventObject = {
   , data : ""
 }
 
+function makeEvent(_type, _data) {
+  return { type : _type, data : _data };
+}
 
 window.isObject = function (object) {
   return (typeof object == "object");
@@ -177,19 +180,18 @@ window.onMerchantEvent = function (_event, globalPayload) {
       }
     }
     else {
-      eventObject["type"] = "";
-      eventObject["data"] = "";
-      if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type){
-        eventObject["type"] = clientPaylod.notificationData.notification_type;
-      } else if (clientPaylod.notification_type) {
-        eventObject["type"] = clientPaylod.notification_type;
-      }
-      window.__payload = JSON.parse(globalPayload);
+      window.__payload = JSON.parse(GlobalPayload);
       console.log("window Payload: ", window.__payload);
-      if (eventObject.type != "" && eventObject.type == "SOS_MOCK_DRILL") {
-        purescript.mockFollowRideEvent(eventObject)();
-      } else if (!clientPaylod.onNewIntent) {
-        purescript.main(eventObject)();
+      if(clientPaylod.notification_type == "SOS_MOCK_DRILL" || clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "SOS_MOCK_DRILL"){
+        purescript.mockFollowRideEvent(makeEvent("SOS_MOCK_DRILL", ""))();
+      }else if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
+        purescript.main(makeEvent("CHAT_MESSAGE", ""))();
+      }else if (window.__payload.payload.viewParamNewIntent && window.__payload.payload.viewParamNewIntent.slice(0, 8) == "referrer") {
+        purescript.onNewIntent(makeEvent("REFERRAL", window.__payload.payload.viewParamNewIntent.slice(9)))();
+      }else if (window.__payload.payload.viewParam && window.__payload.payload.viewParam.slice(0, 8) == "referrer") {
+        purescript.onNewIntent(makeEvent("REFERRAL_NEW_INTENT", window.__payload.payload.viewParam.slice(9)))();
+      }else {
+        purescript.main(makeEvent("", ""))();
       }
     }
   }

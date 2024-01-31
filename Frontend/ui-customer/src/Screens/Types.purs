@@ -938,6 +938,7 @@ type HomeScreenStateProps =
   , sosBannerType :: Maybe SosBannerType
   , showShareRide :: Boolean
   , followsRide :: Boolean 
+  , referral :: ReferralStatusProp
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY
@@ -2056,3 +2057,13 @@ data EmAudioPlayStatus = STOPPED | STARTED | COMPLETED | RESTARTED
 
 derive instance genericEmAudioPlayStatus :: Generic EmAudioPlayStatus _
 instance eqEmAudioPlayStatus :: Eq EmAudioPlayStatus where eq = genericEq
+
+type ReferralStatusProp = {
+  referralStatus :: ReferralStatus,
+  referralCode :: Maybe String
+}
+
+data ReferralStatus = NO_REFERRAL | REFERRAL_APPLIED | REFERRAL_INVALID | REFERRAL_ALREADY_APPLIED
+
+derive instance genericReferralStatus :: Generic ReferralStatus _
+instance eqReferralStatus :: Eq ReferralStatus where eq = genericEq

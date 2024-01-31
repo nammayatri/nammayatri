@@ -63,7 +63,7 @@ import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.LogEvent (logEvent, logEventWithParams, logEventWithMultipleParams)
 import Engineering.Helpers.Suggestions (suggestionsDefinitions, getSuggestions)
 import Engineering.Helpers.Suggestions as EHS
-import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), fetchLanguage, capitalizeFirstChar, getCityFromCode, handleUpdatedTerms)
+import Engineering.Helpers.Utils (loaderText, toggleLoader, reboot, showSplash, (?), fetchLanguage, capitalizeFirstChar, getCityFromCode, handleUpdatedTerms, getReferralCode)
 import Foreign (unsafeToForeign)
 import Foreign.Class (class Encode, encode, decode)
 import Helpers.Utils (LatLon(..), decodeErrorCode, decodeErrorMessage, getCurrentLocation, getDatebyCount, getDowngradeOptions, getGenderIndex, getNegotiationUnit, getPastDays, getPastWeeks, getTime, getcurrentdate, hideSplash, isDateGreaterThan, isYesterday, onBoardingSubscriptionScreenCheck, parseFloat, secondsLeft, toStringJSON, translateString, getDistanceBwCordinates, getCityConfig)
@@ -351,8 +351,11 @@ enterOTPFlow = do
       setValueToLocalStore DRIVER_ID driverId
       void $ liftFlowBT $ setCleverTapUserData "Identity" (getValueToLocalStore DRIVER_ID)
       setValueToLocalStore REGISTERATION_TOKEN resp.token -- add from response
-      void $ lift $ lift $ toggleLoader false
+      if (getValueToLocalStore REFERRER_URL) == "__failed" then
+        void $ pure $ JB.extractReferrerUrl unit
+      else pure unit
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ mkUpdateDriverInfoReq ""
+      void $ lift $ lift $ toggleLoader false
       getDriverInfoFlow Nothing Nothing
     RETRY updatedState -> do
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen -> updatedState)
@@ -492,14 +495,23 @@ onBoardingFlow = do
   logField_ <- lift $ lift $ getLogFields
   _ <- pure $ hideKeyboardOnNavigation true
   config <- getAppConfigFlowBT Constants.appConfig
-  globalstate <- getState 
+  let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  (GlobalState allState) <- getState 
+  let registrationState = allState.registrationScreen
   permissions <- checkAllPermissions false config.permissions.locationPermission
-  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache globalstate false
+  (GetDriverInfoResp getDriverInfoResp) <- getDriverInfoDataFromCache (GlobalState allState) false
   (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT (DriverRegistrationStatusReq { })
+  if DA.all (_ == ST.COMPLETED) [ registrationState.data.vehicleDetailsStatus, registrationState.data.drivingLicenseStatus, registrationState.data.permissionsStatus ] && config.feature.enableAutoReferral && (cityConfig.showDriverReferral || config.enableDriverReferral) then do
+    let referralCode = getReferralCode (getValueToLocalStore REFERRER_URL)
+    if getValueToLocalStore REFERRAL_CODE_ADDED /= "true" && isJust referralCode then do
+      case referralCode of
+        Just code -> activateReferralCode registrationState code
+        Nothing   -> pure unit
+    else pure unit
+  else pure unit
   let limitReachedFor = if resp.rcVerificationStatus == "LIMIT_EXCEED" then Just "RC"
                         else if resp.dlVerificationStatus == "LIMIT_EXCEED" then Just "DL" 
                         else Nothing
-      cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       referralCodeAdded = getValueToLocalStore REFERRAL_CODE_ADDED == "true"
   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
                   registerationScreen { data { 
@@ -519,7 +531,6 @@ onBoardingFlow = do
                       cityConfig = cityConfig
                   }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded}})
   liftFlowBT hideSplash
-  (GlobalState allState) <- getState
   when (allState.globalProps.addTimestamp) $ do
     liftFlowBT $ setEventTimestamp "onBoardingFlow"
     logData <- liftFlowBT $ getTimeStampObject unit
@@ -546,17 +557,8 @@ onBoardingFlow = do
       let onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
       onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount
     REFERRAL_CODE_SUBMIT state -> do
-      referDriverResponse <- lift $ lift $ Remote.referDriver $ makeReferDriverReq state.data.referralCode
-      case referDriverResponse of
-        Right (ReferDriverResp resp) -> do
-          liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ref_code_submitted" $ [{key : "Referee Code", value : unsafeToForeign state.data.referralCode}]
-          void $ pure $ setCleverTapUserProp [{key : "Entered Referral Code", value : unsafeToForeign state.data.referralCode}]
-          modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = true, referralCodeSubmitted = true, enterReferralCodeModal = false}})
-          setValueToLocalStore REFERRAL_CODE_ADDED "true"
-          onBoardingFlow
-        Left errorPayload -> do
-          modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = false}})
-          onBoardingFlow
+      activateReferralCode state state.data.referralCode
+      onBoardingFlow
 
 updateDriverVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
 updateDriverVersion dbClientVersion dbBundleVersion = do
@@ -3214,3 +3216,28 @@ driverEarningsFlow = do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = (<$>) (\(DriverProfileStatsResp stats) -> DriverProfileStatsResp stats{ coinBalance = state.data.coinBalance }) globalProps.driverRideStats}
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{coinBalance = state.data.coinBalance}})
       flow
+      
+activateReferralCode :: ST.RegistrationScreenState -> String -> FlowBT String Unit
+activateReferralCode state code = do
+  referDriverResponse <- lift $ lift $ Remote.referDriver $ makeReferDriverReq code
+  case referDriverResponse of
+    Right (ReferDriverResp (API.ApiSuccessResult res)) -> do
+      case res.result of
+        "Success" -> do
+          logField_ <- lift $ lift $ getLogFields
+          liftFlowBT $ logEventWithMultipleParams logField_ "ny_driver_ref_code_submitted" $ [{key : "Referee Code", value : unsafeToForeign code}]
+          void $ pure $ setCleverTapUserProp [{key : "Entered Referral Code", value : unsafeToForeign code}]
+        _         -> do
+          void $ pure $ cleverTapCustomEvent "ny_driver_ref_code_already_applied"
+      referralCodeAppliedStage state
+    Left errorPayload -> do
+      if (decodeErrorCode errorPayload.response.errorMessage) == "ALREADY_REFFERED" then
+        referralCodeAppliedStage state
+      else  
+        modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = false}})
+  where
+    referralCodeAppliedStage :: ST.RegistrationScreenState -> FlowBT String Unit
+    referralCodeAppliedStage state = do
+      modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = true, referralCodeSubmitted = true, enterReferralCodeModal = false}})
+      setValueToLocalStore REFERRER_URL ""
+      setValueToLocalStore REFERRAL_CODE_ADDED "true"
