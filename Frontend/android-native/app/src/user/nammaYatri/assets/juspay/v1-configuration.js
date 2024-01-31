@@ -155,7 +155,7 @@ window.getMerchantConfig = function () {
       "isServiceablePopupFullScreen" : true,
     }
     , "autoSelectBackground" : "#53BB6F"
-    , "enableMockLocation" : true
+    , "enableMockLocation" : false
     , "defaultLanguage" : "EN_US"
     , "specialLocationView" : false
     , "geoCoder": {

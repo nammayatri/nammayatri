@@ -760,6 +760,13 @@ getRouteMarkers variant city trackingType =
         case trackingType of 
             RIDE_TRACKING -> "ny_ic_dest_marker"
             DRIVER_TRACKING -> "ny_ic_src_marker"
+
+    getAutoImage :: City -> String
+    getAutoImage city = case city of
+        Hyderabad -> "ny_ic_black_yellow_auto"
+        Kochi -> "ny_ic_koc_auto_on_map"
+        Chennai -> "ny_ic_black_yellow_auto"
+        _         -> "ny_ic_auto_nav_on_map"
       
 
 
