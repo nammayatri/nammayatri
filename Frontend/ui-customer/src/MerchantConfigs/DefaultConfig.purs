@@ -249,6 +249,9 @@ config =
       , animationDuration : 500
       , vehicleMarkerSize: 90
       }
+  , metroTicketingConfig : {
+    metroStationTtl : 10080 -- in Minutes
+  }
   , purpleRideConfig : {
       genericVideoUrl : "" ,
       visualImpairmentVideo : "" ,

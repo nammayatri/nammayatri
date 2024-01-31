@@ -35,12 +35,16 @@ metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus)
       _ -> Common.Failed
     ticketName' = "Tickets for Chennai Metro"
     validUntil' =  metroTicketBookingStatus.validTill
+    paymentOrder = metroTicketBookingStatus.payment >>= (\(FRFSBookingPaymentAPI payment') ->  payment'.paymentOrder)
+    transactionId = case paymentOrder of 
+      Just (CreateOrderRes orderResp) -> orderResp.order_id
+      Nothing -> ""
   in
     state {
       data{
         ticketName = ticketName'
       , keyValArray = keyValArray'
-      , shortOrderId = shortOrderId'
+      , shortOrderId = transactionId
       , validUntil = validUntil'
       }
     , props{
@@ -54,12 +58,12 @@ metroTicketDetailsKeyVals (MetroTicketBookingStatus metroTicketBookingStatus) =
   let 
     payment = metroTicketBookingStatus.payment
     date = convertUTCtoISC metroTicketBookingStatus.createdAt "hh:mm A, Do MMM YYYY"
-    noOfTickets = show $ DA.length metroTicketBookingStatus.tickets
+    noOfTickets = show $ metroTicketBookingStatus.quantity
     totalPaid =   show $ metroTicketBookingStatus.price
     bookingId = metroTicketBookingStatus.bookingId
     paymentOrder = metroTicketBookingStatus.payment >>= (\(FRFSBookingPaymentAPI payment') ->  payment'.paymentOrder)
     transactionId = case paymentOrder of 
-      Just (CreateOrderRes orderResp) -> orderResp.id
+      Just (CreateOrderRes orderResp) -> orderResp.order_id
       Nothing -> ""
     validUntill = (convertUTCtoISC metroTicketBookingStatus.validTill "hh:mm A") <> ", " <> (convertUTCtoISC metroTicketBookingStatus.validTill "Do MMM YYYY")
   in

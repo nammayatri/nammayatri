@@ -45,6 +45,7 @@ import Language.Types (STR(..))
 import Screens.Types as ST
 import Screens.TicketBookingFlow.MetroTicketStatus.Transformer
 import Storage
+import Timers (clearTimerWithId)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -61,6 +62,7 @@ data Action = BackPressed
             | RefreshStatusAC PrimaryButton.Action
             | MetroPaymentStatusAction MetroTicketBookingStatus
             | ViewTicketBtnOnClick PrimaryButton.Action
+            | CountDown Int String String
 
 data ScreenOutput = NoOutput 
                   | GoBack
@@ -108,6 +110,13 @@ eval (AfterRender) state = continue state{
   }
 }
 
+eval (CountDown seconds status timerID) state = do
+  void $ pure $ spy "status" status
+  if status == "EXPIRED" then do
+    void $ pure $ clearTimerWithId state.data.timerId
+    continueWithCmd state { data { timerId = ""} } [pure (ViewTicketBtnOnClick PrimaryButton.OnClick)]
+    else do
+      continue $ state { data { timerId = timerID } }
 
 eval _ state = continue state
 

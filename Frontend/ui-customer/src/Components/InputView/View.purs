@@ -24,7 +24,7 @@ import Mobility.Prelude (boolToVisibility)
 import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, afterRender)
 import Data.Array (mapWithIndex, length)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
 import JBridge (debounceFunction, showKeyboard)
@@ -133,7 +133,7 @@ nonEditableTextView push config = let
     , background Color.squidInkBlue
     , margin $ config.margin
     , cornerRadius $ config.cornerRadius 
-    , onClick push $ const $ TextFieldFocusChanged config.id true
+    , onClick push $ const $ (TextFieldFocusChanged config.id true false)
     , stroke $ strokeValue 
     ]
     [  textView $ 
@@ -179,8 +179,22 @@ inputTextField push config =
               void $ debounceFunction getDelayForAutoComplete push AutoCompleteCallBack config.isFocussed
               void $ push action
             ) InputChanged
-          , afterRender (\ _ ->  void $ pure $ showKeyboard $ getNewIDWithTag $ config.id) $ const NoAction
-          , onFocus push $ const $ TextFieldFocusChanged config.id true
+          , afterRender (\ _ ->  do 
+              if (config.isFocussed) then do 
+                void $ pure $ showKeyboard $ getNewIDWithTag $ config.id
+                pure unit
+                else pure unit) $ const NoAction
+          , onFocus 
+              (\action -> do 
+                case action of 
+                  TextFieldFocusChanged _ _ hasFocus -> do 
+                    if (isTrue hasFocus) then do 
+                      push action
+                      else  
+                        pure unit
+                  _ -> pure unit
+
+              ) $ TextFieldFocusChanged config.id true
           , cursorColor Color.yellow900
           ] <> FontStyle.body6 LanguageStyle
         , crossButtonView push config

@@ -24,7 +24,7 @@ import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import ModifyScreenState (modifyScreenState)
 import Screens.TicketBookingFlow.MetroTicketStatus.View as MetroTicketStatusView
 import Types.App 
-import Screens.TicketBookingFlow.MetroTicketStatus.ScreenData as MetroTicketStatusScreenData
+import Screens.TicketBookingFlow.MetroTicketBooking.ScreenData as MetroTicketBookingScreenData
 import Screens.Types as ST
 
 metroTicketStatusScreen :: FlowBT String METRO_TICKET_STATUS_SCREEN_OUTPUT
@@ -32,7 +32,9 @@ metroTicketStatusScreen = do
   (GlobalState state) <- getState
   action <- lift $ lift $ runScreen $ MetroTicketStatusView.screen state.metroTicketStatusScreen
   case action of
-    GoBack ->  App.BackT $ pure App.GoBack 
+    GoBack ->  do
+      modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> MetroTicketBookingScreenData.initData)
+      App.BackT $ pure App.GoBack 
     NoOutput -> pure NO_OUTPUT_METRO_TICKET_STATUS_SCREEN
     GoToMetroTicketDetails updatedState resp -> do
       modifyScreenState $ MetroTicketStatusScreenStateType (\_ ->updatedState)

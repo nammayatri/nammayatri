@@ -72,13 +72,14 @@ import Language.Types (STR(..))
 import Mobility.Prelude  
 import Effect.Uncurried
 import Data.Function.Uncurried
+import Timers (startTimer)
 
 screen :: ST.MetroTicketStatusScreenState -> Screen Action ST.MetroTicketStatusScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "MetroTicketStatusScreen"
-  , globalEvents : [getPlaceDataEvent]
+  , globalEvents : [getMetroStatusEvent]
   , eval :
     \action state -> do
         let _ = spy "MetroTicketStatusScreen action " action
@@ -86,9 +87,13 @@ screen initialState =
         eval action state
   }
   where
-  getPlaceDataEvent push = do
-    void $ pure $ spy "getPlaceDataEvent" ""
+  getMetroStatusEvent push = do
+    void $ pure $ spy "getMetroStatusEvent" ""
     void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
+    if initialState.props.paymentStatus == Common.Success then do
+      void $ pure $ spy "getMetroStatusEvent" ""
+      startTimer 3 "success" "1" push CountDown
+    else pure unit
     pure $ pure unit
 --------------------------------------------------------------------------------------------
 
@@ -102,7 +107,7 @@ metroPaymentStatusPooling bookingId validUntil delayDuration state push action =
     case ticketStatus of
       Right (API.GetMetroBookingStatusResp resp) -> do
         let (MetroTicketBookingStatus statusResp) = resp
-        if ((DA.any (_ == statusResp.status) ["CONFIRMED", "FAILED", "EXPIRED"]) || diffSec < 0) then do
+        if ((DA.any (_ == statusResp.status) ["CONFIRMED", "FAILED", "EXPIRED", "PAYMENT_PENDING"]) || diffSec < 0) then do
             _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
             doAff do liftEffect $ push $ action resp
         else do

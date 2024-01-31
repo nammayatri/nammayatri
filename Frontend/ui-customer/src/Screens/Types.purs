@@ -38,7 +38,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, MetroTicketBookingStatus(..))
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, MetroTicketBookingStatus(..),GetMetroStationResp(..))
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -2095,6 +2095,12 @@ type MetroStation = {
   , address :: Maybe String
   , stationType :: Maybe String
   , color :: Maybe String
+  , sequenceNum :: Maybe Int
+}
+
+type MetroStationsList = {
+  stations :: Array GetMetroStationResp,
+  lastUpdatedAt :: String
 }
 -- ######################################### MetroTicketBookingScreenState ####################################################
 
@@ -2154,7 +2160,9 @@ type MetroTicketStatusScreenData = {
   ticketName :: String,
   validUntil :: String,
   bookingId :: String,
-  resp :: MetroTicketBookingStatus
+  resp :: MetroTicketBookingStatus,
+  timerId :: String,
+  quoteId :: String
 }
 
 

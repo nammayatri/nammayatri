@@ -77,7 +77,7 @@ import Presto.Core.Types.Language.Flow (FlowWrapper(..), getState, modifyState)
 import Screens.Types (RecentlySearchedObject,SuggestionsMap, SuggestionsData(..), HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, City(..))
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM.Core (terminateUI)
-import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location)
+import Screens.Types (AddNewAddressScreenState, Contacts, CurrentLocationDetails, FareComponent, HomeScreenState, LocationItemType(..), LocationListItemState, NewContacts, PreviousCurrentLocations, RecentlySearchedObject, Stage(..), Location, MetroStationsList)
 import Screens.Types (RecentlySearchedObject, HomeScreenState, AddNewAddressScreenState, LocationListItemState, PreviousCurrentLocations(..), CurrentLocationDetails, LocationItemType(..), NewContacts, Contacts, FareComponent, SuggestionsMap, SuggestionsData(..),SourceGeoHash, CardType(..), LocationTagBarState, DistInfo)
 import Services.API (Prediction, SavedReqLocationAPIEntity(..))
 import Storage (KeyStore(..), getValueToLocalStore)
@@ -336,6 +336,31 @@ addToPrevCurrLoc currLoc currLocArr =
             else (cons currLoc currLocArr)
     else currLocArr
 
+ --------------------------------------------------------------------------------------------------
+fetchMetroStations :: Decode MetroStationsList => String -> Flow GlobalState (Maybe MetroStationsList)
+fetchMetroStations objName = do
+  (maybeEncodedState :: Maybe String) <- liftFlow $ fetchFromLocalStore' objName Just Nothing
+  void $ pure $ spy "fetchMetroStations: maybeEncodedState" maybeEncodedState
+  case maybeEncodedState of
+    
+    Just encodedState -> do
+      case runExcept (decodeJSON encodedState) of
+        Right obj -> pure $ Just obj
+        Left err -> do
+          _ <- liftFlow (logShow $ "fetchMetroStations: Error while decoding " <> (show err))
+          pure Nothing
+    Nothing -> pure Nothing
+
+getMetroStationsObjFromLocal :: String -> Flow GlobalState MetroStationsList
+getMetroStationsObjFromLocal _ = do
+  (metroStationsList :: Maybe MetroStationsList) <- (fetchMetroStations "METRO_STATIONS")
+  case metroStationsList of
+    Just stations -> pure stations
+    Nothing -> pure emptyMetroStationsList
+
+
+emptyMetroStationsList :: MetroStationsList
+emptyMetroStationsList = {stations : [],lastUpdatedAt : "" }
  --------------------------------------------------------------------------------------------------
 
 checkPrediction :: LocationListItemState -> Array LocationListItemState -> Boolean

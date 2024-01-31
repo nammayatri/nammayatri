@@ -1139,19 +1139,18 @@ getMetroBookingStatusListBT = do
 
 
 retryMetroTicketPaymentBT :: String -> FlowBT String RetryMetrTicketPaymentResp
-retryMetroTicketPaymentBT shortId = do
+retryMetroTicketPaymentBT quoteId = do
       headers <- getHeaders' "" false
-      withAPIResultBT (EP.retryMetrTicketPayment shortId) (\x → x) errorHandler (lift $ lift $ callAPI headers (RetryMetrTicketPaymentReq shortId))
+      withAPIResultBT (EP.retryMetrTicketPayment quoteId) (\x → x) errorHandler (lift $ lift $ callAPI headers (RetryMetrTicketPaymentReq quoteId))
       where
         errorHandler _ = do
             BackT $ pure GoBack
 
--- retryMetroTicketPayment :: String -> FlowBT String RetryMetrTicketPaymentResp
-retryMetroTicketPayment shortId = pure $ Right dummyRetryResp 
-  -- headers <- getHeaders "" false
-  -- withAPIResult (EP.retryMetrTicketPayment shortOrderID) unwrapResponse $ callAPI headers (RetryMetrTicketPaymentReq shortId)
-  -- where
-  --   unwrapResponse x = x
+retryMetroTicketPayment quoteId = do--pure $ Right dummyRetryResp 
+  headers <- getHeaders "" false
+  withAPIResult (EP.retryMetrTicketPayment quoteId) unwrapResponse $ callAPI headers (RetryMetrTicketPaymentReq quoteId)
+  where
+    unwrapResponse x = x
 
 
 -- data FRFSTicketBookingStatus = NEW | APPROVED | PAYMENT_PENDING | CONFIRMING | FAILED | CONFIRMED

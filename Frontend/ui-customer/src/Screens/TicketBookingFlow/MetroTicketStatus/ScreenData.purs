@@ -30,7 +30,9 @@ initData =
       ticketName : "",
       validUntil : "",
       bookingId : "",
-      resp : dummyMetroBookingStatus
+      resp : dummyMetroBookingStatus,
+      timerId : "",
+      quoteId : ""
   }
   , props : {
       showShimmer : true,

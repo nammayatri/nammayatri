@@ -441,7 +441,7 @@ originAndDestinationView push state =
           , height WRAP_CONTENT
           , text originConfig.name
           ] <> FontStyle.body1 TypoGraphy
-        , linePillView originConfig.line
+        -- , linePillView originConfig.line -- need to enabled once metro line is available
         ]
       ]
     , linearLayout [
@@ -485,7 +485,7 @@ originAndDestinationView push state =
           , height WRAP_CONTENT
           , text destinationConfig.name
           ] <> FontStyle.body1 TypoGraphy
-        , linePillView destinationConfig.line
+        -- , linePillView destinationConfig.line -- need to enabled once metro line is available
         ]
       ]
     ]

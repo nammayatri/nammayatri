@@ -41,9 +41,10 @@ import Helpers.Utils (recentDistance, setText)
 import Data.Ord (comparing)
 import Effect.Unsafe (unsafePerformEffect)
 import Effect.Uncurried (runEffectFn1)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
 import Mobility.Prelude
 import Components.LocationListItem.Controller ( dummyAddress)
+import Data.String (contains, Pattern(..))
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -111,8 +112,8 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
       let metroLocInfo = {stationName: item.title, stationCode : item.tag }
       let updatedLoc = {placeId : MB.Nothing , address : item.title , lat : MB.Nothing , lon : MB.Nothing, city : MB.Nothing, addressComponents : dummyAddress, metroInfo : MB.Just metroLocInfo, stationCode : item.tag}
           newState = if state.props.focussedTextField == MB.Just SearchLocPickup then 
-                          state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false }} 
-                          else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false} }
+                          state { data { srcLoc = MB.Just updatedLoc }, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
+                          else state { data { destLoc = MB.Just updatedLoc}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop} }
       updateAndExit newState $ PredictionClicked item newState
     else do
       void $ pure $ hideKeyboardOnNavigation true
@@ -144,7 +145,7 @@ eval (LocationTagBarAC savedLoc (LocationTagBarController.TagClicked tag) ) stat
     "WORK" -> continue state 
     _ -> continue state{ props {searchLocStage = AllFavouritesStage}}
 
-eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText)) state = do
+eval (InputViewAC globalProps (InputViewController.TextFieldFocusChanged textField isEditText hasFocus)) state = do
   case textField of 
     "SearchLocPickup" -> pure $ setText (getNewIDWithTag textField) $ MB.maybe "" (\srcLoc -> srcLoc.address) state.data.srcLoc
     "SearchLocDrop" ->  pure $ setText (getNewIDWithTag textField) $ MB.maybe "" (\destLoc -> destLoc.address) state.data.destLoc
@@ -280,4 +281,7 @@ fetchSortedCachedSearches state globalProps textField = do
   recentDistance (globalProps.cachedSearches) lat lon
 
 findStationWithPrefix :: String -> Array Station -> Array Station
-findStationWithPrefix prefix arr = DA.filter (\station -> startsWith prefix station.stationName) arr
+findStationWithPrefix prefix arr = DA.filter (\station -> containString prefix station.stationName) arr
+
+containString :: String -> String -> Boolean
+containString prefix str = contains (Pattern (STR.toLower prefix)) (STR.toLower str)

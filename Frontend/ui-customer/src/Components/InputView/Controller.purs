@@ -19,7 +19,7 @@ import Prelude
 import PrestoDOM ( Length(..), Padding(..), Margin(..))
 import Components.SeparatorView.View as SeparatorView
 
-data Action = TextFieldFocusChanged String Boolean 
+data Action = TextFieldFocusChanged String Boolean Boolean
             | ClearTextField String 
             | InputChanged String 
             | AutoCompleteCallBack String Boolean

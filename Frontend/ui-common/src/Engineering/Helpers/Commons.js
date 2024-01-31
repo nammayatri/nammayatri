@@ -526,3 +526,8 @@ export const getValueFromIdMap = function (key) {
   }
   return val;
 };
+
+export const isTrue = function (a) {
+  const bool = true;
+  return a.toString() === bool.toString();
+}
