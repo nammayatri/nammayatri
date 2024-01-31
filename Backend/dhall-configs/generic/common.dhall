@@ -32,7 +32,8 @@ let loggerConfig =
       , prettyPrinting = False
       }
 
-let ConsumerType = < AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS >
+let ConsumerType =
+      < AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS | LOCATION_UPDATE >
 
 let kafkaConfig = { topicName : Text, kafkaKey : Text }
 
@@ -75,6 +76,36 @@ let ServerName =
 
 let SchedulerType = < RedisBased | DbBased >
 
+let loggerConfigT =
+      { level : LogLevel
+      , logToFile : Bool
+      , logToConsole : Bool
+      , logRawSql : Bool
+      , prettyPrinting : Bool
+      , logFilePath : Text
+      }
+
+let smsConfigT =
+      { sessionConfig :
+          { attempts : Integer, authExpiry : Integer, tokenExpiry : Integer }
+      , credConfig : { username : Text, password : Text, otpHash : Text }
+      , useFakeSms : Optional Natural
+      , url : Text
+      , sender : Text
+      }
+
+let healthCheckAppCfgT =
+      { graceTerminationPeriod : Integer
+      , healthcheckPort : Integer
+      , notificationMinDelay : Integer
+      , driverInactiveDelay : Integer
+      , smsCfg : smsConfigT
+      , driverInactiveSmsTemplate : Text
+      , driverAllowedDelayForLocationUpdateInSec : Integer
+      , driverLocationHealthCheckIntervalInSec : Integer
+      , loggerConfig : loggerConfigT
+      }
+
 in  { smsSessionConfig
     , autoMigrate = False
     , loggerConfig
@@ -86,6 +117,7 @@ in  { smsSessionConfig
     , longDurationRetryCfg
     , ServerName
     , S3Config
+    , healthCheckAppCfgT
     , periodType = PeriodType
     , consumerType = ConsumerType
     , kafkaCompression = KafkaCompression

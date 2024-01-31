@@ -42,13 +42,15 @@ data RideStatus
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LocationUpdates = LocationUpdates
-  { rId :: Maybe Text,
+  { r_id :: Maybe Text,
     ts :: UTCTime,
     st :: Maybe UTCTime,
     pt :: LatLong,
     acc :: Maybe Double,
-    rideStatus :: RideStatus,
-    mId :: Text
+    ride_status :: RideStatus,
+    da :: Maybe Bool,
+    mode :: Maybe Text,
+    m_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
