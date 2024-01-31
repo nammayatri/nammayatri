@@ -47,7 +47,6 @@ import Kernel.External.Maps as Reexport hiding
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
-import qualified Kernel.Randomizer as Random
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as SMerchant
@@ -202,25 +201,3 @@ buildPickedServices searchRequestId' merchantOperatingCityId merchantConfig = do
         updatedAt = now,
         ..
       }
-
--- TODO move to kernel
-pickService ::
-  (Log m, MonadIO m) =>
-  Id MerchantOperatingCity ->
-  Maps.MapsServiceUsage ->
-  Maps.MapsServiceUsageMethod ->
-  m Maps.MapsService
-pickService merchantOpCityId MapsServiceUsage {..} mapsMethod = do
-  let percentages =
-        [(Maps.Google, googlePercentage), (Maps.OSRM, osrmPercentage), (Maps.MMI, mmiPercentage), (Maps.NextBillion, nextBillionPercentage)] <&> \(element, percentage) -> do
-          Random.Percentage {element, percentage = fromMaybe 0 percentage}
-  if usePercentage
-    then do
-      result <- Random.getRandomElementUsingPercentages percentages
-      logDebug $ "Pick maps service: " <> show mapsMethod <> "; merchantOperationCityId: " <> merchantOpCityId.getId <> "; result: " <> show result
-      case result.pickedElement of
-        Left err -> do
-          logWarning $ "Fail to pick random service: " <> show err <> "; use configured service instead: " <> show mapsService
-          pure mapsService
-        Right pickedService -> pure pickedService
-    else pure mapsService
