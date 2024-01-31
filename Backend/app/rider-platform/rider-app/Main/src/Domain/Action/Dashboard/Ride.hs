@@ -15,6 +15,7 @@
 
 module Domain.Action.Dashboard.Ride
   ( shareRideInfo,
+    shareRideInfoByShortId,
     rideList,
     rideInfo,
     multipleRideCancel,
@@ -41,6 +42,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Person.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Sos as DSos
+import qualified Domain.Types.VehicleVariant as VehVar
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -107,9 +109,22 @@ shareRideInfo ::
   Flow Common.ShareRideInfoRes
 shareRideInfo merchantId rideId = do
   ride <- B.runInReplica $ QRide.findById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  buildShareRideInfo merchantId ride
+
+shareRideInfoByShortId :: ShortId DM.Merchant -> ShortId Common.Ride -> Flow Common.ShareRideInfoRes
+shareRideInfoByShortId merchantId rideId = do
+  let rideShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) rideId
+  ride <- QRide.findRideByRideShortId rideShortId >>= fromMaybeM (InvalidRequest "Ride ShortId Not Found")
+  buildShareRideInfo merchantId ride
+
+buildShareRideInfo ::
+  ShortId DM.Merchant ->
+  DRide.Ride ->
+  Flow Common.ShareRideInfoRes
+buildShareRideInfo merchantId ride = do
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   merchant <- findByShortId merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getShortId)
-  unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist rideId.getId)
+  unless (merchant.id == booking.merchantId) $ throwError (RideDoesNotExist ride.id.getId)
   case ride.status of
     DRide.COMPLETED -> throwError $ RideInvalidStatus "This ride is completed"
     DRide.CANCELLED -> throwError $ RideInvalidStatus "This ride is cancelled"
@@ -143,7 +158,8 @@ shareRideInfo merchantId rideId = do
         userLastName = person.lastName,
         fromLocation = mkCommonBookingLocation booking.fromLocation,
         toLocation = mbtoLocation,
-        sosStatus = castSosStatus . (.status) <$> sosDetails
+        sosStatus = castSosStatus . (.status) <$> sosDetails,
+        vehicleVariant = castVehicleVariant ride.vehicleVariant
       }
 
 castSosStatus :: DSos.SosStatus -> Common.SosStatus
@@ -151,6 +167,15 @@ castSosStatus = \case
   DSos.Pending -> Common.Pending
   DSos.Resolved -> Common.Resolved
   DSos.NotResolved -> Common.NotResolved
+
+castVehicleVariant :: VehVar.VehicleVariant -> Common.Variant
+castVehicleVariant = \case
+  VehVar.SEDAN -> Common.SEDAN
+  VehVar.HATCHBACK -> Common.HATCHBACK
+  VehVar.SUV -> Common.SUV
+  VehVar.AUTO_RICKSHAW -> Common.AUTO_RICKSHAW
+  VehVar.TAXI -> Common.TAXI
+  VehVar.TAXI_PLUS -> Common.TAXI_PLUS
 
 ---------------------------------------------------------------------
 
