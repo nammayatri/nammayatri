@@ -88,6 +88,8 @@ import Styles.Colors as Color
 import Common.Styles.Colors as CommonColor
 import Data.Tuple(Tuple(..) ,snd, fst)
 import Data.Ord
+import MerchantConfig.Types (CityConfig)
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 foreign import shuffle :: forall a. Array a -> Array a
 
@@ -754,3 +756,7 @@ getExistingTags savedLoc = map (\item -> DS.toLower $ item.tag) savedLoc
 -- , locationScore : Nothing
 
 -- }) savedLocation )
+
+getCityConfig :: Array CityConfig -> String -> CityConfig
+getCityConfig cityConfigs cityName = do
+  fromMaybe defaultCityConfig $ find (\item -> item.cityName == cityName) cityConfigs

@@ -22,6 +22,7 @@
                 <data android:scheme="http"/>
                 <data android:host="getyatri.com"/>
                 <data android:path="/u" />
+                <data android:path="/refer" />
             </intent-filter>
 
         </activity>

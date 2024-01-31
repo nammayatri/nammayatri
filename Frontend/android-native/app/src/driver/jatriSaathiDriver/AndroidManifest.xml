@@ -47,6 +47,7 @@
                 <data android:scheme="http"/>
                 <data android:host="yatrisathi.in"/>
                 <data android:path="/p" />
+                <data android:path="/refer" />
             </intent-filter>
 
         </activity>

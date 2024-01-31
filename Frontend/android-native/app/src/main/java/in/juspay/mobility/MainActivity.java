@@ -630,6 +630,9 @@ public class MainActivity extends AppCompatActivity {
                 if (key.equals("vp")){
                     viewParam = query_params.get(key);
                     break;
+                } else if (key.equals("referrer")) {
+                    viewParam = query;
+                    break;
                 }
             }
             Gson gson = new Gson();
