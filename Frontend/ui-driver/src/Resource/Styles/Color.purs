@@ -421,9 +421,6 @@ transparentWhite = "#30FFFFFF"
 lightGradientBlue :: Color
 lightGradientBlue = "#F5F8FF"
 
-darkGradientBlue :: Color
-darkGradientBlue = "#E2EAFF"
-
 lightPurple :: Color
 lightPurple = "#F4ECFF"
 

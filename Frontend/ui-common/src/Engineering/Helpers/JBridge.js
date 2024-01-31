@@ -967,6 +967,11 @@ export const differenceBetweenTwoUTC = function (date1, date2) {
   return diffInSeconds;
 }
 
+export const differenceBetweenTwoUTCInMinutes = function (date1, date2) {
+  const diffInMinutes = Math.round((new Date(date1) - new Date(date2)) / 60000);
+  return diffInMinutes;
+}
+
 export const isCoordOnPath = function (data) {
   return function (lat) {
     return function (lon) {

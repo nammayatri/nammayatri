@@ -38,7 +38,7 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat)
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, MetroTicketBookingStatus(..),GetMetroStationResp(..))
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -1882,6 +1882,146 @@ data IssueModalType = HELP_AND_SUPPORT_SCREEN_MODAL | REPORTED_ISSUES_MODAL | RE
 derive instance genericIssueModalType :: Generic IssueModalType _
 instance eqIssueModalType :: Eq IssueModalType where eq = genericEq
 
+
+-- ######################################### MetroTicketDetailsState ####################################################
+type MetroTicketDetailsScreenState = {
+    data :: MetroTicketDetailsScreenData
+  , props :: MetroTicketDetailsScreenProps
+}
+
+type MetroTicketDetailsScreenData = {
+  dummyData :: String
+, metroRoute :: Array MetroRoute
+, ticketsInfo :: Array MetroTicketInfo
+}
+
+type MetroTicketInfo = {
+  qrString :: String
+, ticketNumber :: String 
+, validUntil :: String
+, status :: String
+}
+
+type MetroRoute = {
+  name :: String
+, line :: MetroLine 
+, stops :: Array MetroStop
+, listExpanded :: Boolean
+}
+data MetroLine = BlueLine 
+               | GreenLine 
+               | RedLine
+               | NoColorLine
+
+derive instance genericMetroLine :: Generic MetroLine _                                  
+instance showMetroLine :: Show MetroLine where show = genericShow
+instance eqMetroLine :: Eq MetroLine where eq = genericEq 
+
+type MetroStop = {
+  name :: String
+}
+
+type MetroTicketDetailsScreenProps = {
+  dummyProps :: String
+, stage :: MetroTicketDetailsScreenStage
+, currentTicketIndex :: Int
+, previousScreenStage :: PreviousMetroTicketDetailsStage
+}
+
+data PreviousMetroTicketDetailsStage = MetroMyTicketsStage 
+                                     | SearchMetroLocationStage 
+                                     | MetroTicketSelectionStage
+
+derive instance genericPreviousMetroTicketDetailsStage :: Generic PreviousMetroTicketDetailsStage _                                  
+instance showPreviousMetroTicketDetailsStage :: Show PreviousMetroTicketDetailsStage where show = genericShow
+instance eqPreviousMetroTicketDetailsStage :: Eq PreviousMetroTicketDetailsStage where eq = genericEq 
+
+data MetroTicketDetailsScreenStage = MetroTicketDetailsStage 
+                                   | MetroMapStage 
+                                   | MetroRouteDetailsStage 
+
+derive instance genericMetroTicketDetailsScreenStage :: Generic MetroTicketDetailsScreenStage _                                  
+instance showMetroTicketDetailsScreenStage :: Show MetroTicketDetailsScreenStage where show = genericShow
+instance eqMetroTicketDetailsScreenStage :: Eq MetroTicketDetailsScreenStage where eq = genericEq 
+
+
+-- ######################################### MetroMyTicket ####################################################
+type MetroMyTicketsScreenState = {
+    data :: MetroMyTicketsScreenData
+  , props :: MetroMyTicketsScreenProps
+}
+
+type MetroMyTicketsScreenData = {
+  activeTickets :: Array MetroTicketCardData
+, pastTickets :: Array MetroTicketCardData
+}
+
+type MetroMyTicketsScreenProps = {
+  dummyProps :: String
+, showShimmer :: Boolean
+}
+
+type MetroTicketCardData = {
+  sourceName :: String
+  , destinationName :: String
+  , createdAt :: String
+  , noOfTickets :: Int
+  , metroTicketStatusApiResp :: MetroTicketBookingStatus
+  , status :: String
+  , validUntill :: String
+}
+
+
+-- ######################################### TicketBookingStatus #################################################### 
+
+type TicketStatusScreenState =
+  { data :: TicketStatusScreenData,
+    props :: TicketStatusScreenProps
+  }
+
+type TicketStatusScreenData = {
+  servicesAvailing :: Array TicketServiceI, -- TODO:: Use this for generic handling
+  dateOfVisit :: String,
+  keyValArray :: Array KeyVal,
+  transactionId :: String,
+  bookedForArray :: Array String,
+  ticketName :: String,
+  totalAmount :: Int,
+  placeInfo :: Maybe TicketPlaceResp,
+  servicesInfo :: Array TicketServiceData,
+  shortOrderId :: String,
+  selectedPlaceType :: PlaceType
+}
+
+type TicketStatusScreenProps = {
+  currentStage :: TicketBookingScreenStage,
+  previousStage :: TicketBookingScreenStage,
+  termsAndConditionsSelected :: Boolean,
+  validDate :: Boolean,
+  showShimmer :: Boolean,
+  paymentStatus :: Common.PaymentStatus,
+  ticketBookingList :: TicketBookings,
+  selectedBookingId :: String,
+  selectedBookingInfo :: IndividualBookingItem,
+  activeListItem :: TicketBookingServiceDetails,
+  activeIndex :: Int,
+  rightButtonDisable :: Boolean,
+  leftButtonDisable :: Boolean,
+  navigateToHome :: Boolean,
+  selectedOperationalDay :: String,
+  actionType :: TicketStatusEntry
+}
+
+
+data TicketStatusEntry = MetroTicketToPaymentStatusEntry
+                       | ZooTicketToPaymentStatusEntry
+derive instance genericTicketStatusEntry :: Generic TicketStatusEntry _ 
+instance showTicketStatusEntry :: Show TicketStatusEntry where show = genericShow
+instance eqTicketStatusEntry :: Eq TicketStatusEntry where eq = genericEq
+
+--- ######################################### Search Location Screen State ####################################################
+
+
 type SearchLocationScreenState = 
   { data :: SearchLocationScreenData ,
     props :: SearchLocationScreenProps,
@@ -1896,12 +2036,19 @@ type SearchLocationScreenData =
     locationList :: Array LocationListItemState,
     fromScreen :: String,
     saveFavouriteCard :: SaveFavouriteCardState,
-    latLonOnMap :: LocationInfo,
+    mapLoc :: LocationInfo,
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
-    confirmLocCategory :: String
+    confirmLocCategory :: String,
+    metroStations :: Array Station,
+    updatedMetroStations :: Array Station
   }
+
+type Station = {
+  stationName :: String,
+  stationCode :: String
+}
 
 type SearchLocationScreenProps = 
   { searchLocStage :: SearchLocationStage
@@ -1917,6 +2064,7 @@ type SearchLocationScreenProps =
 
 data SearchLocationActionType = AddingStopAction 
                               | SearchLocationAction
+                              | MetroStationSelectionAction
 
 derive instance genericSearchLocationActionType :: Generic SearchLocationActionType _
 instance eqSearchLocationActionType :: Eq SearchLocationActionType where eq = genericEq
@@ -1948,5 +2096,91 @@ type LocationInfo =
     placeId :: Maybe String ,
     address :: String ,
     addressComponents :: Address ,
-    city :: Maybe City
+    city :: Maybe City,
+    metroInfo :: Maybe Station,
+    stationCode :: String
   }
+
+type MetroStation = {
+  code :: String
+  , name :: String
+  , lat :: Maybe Number
+  , lon :: Maybe Number
+  , address :: Maybe String
+  , stationType :: Maybe String
+  , color :: Maybe String
+  , sequenceNum :: Maybe Int
+}
+
+type MetroStationsList = {
+  stations :: Array GetMetroStationResp,
+  lastUpdatedAt :: String
+}
+-- ######################################### MetroTicketBookingScreenState ####################################################
+
+type MetroTicketBookingScreenState = {
+  data :: MetroTicketBookingScreenData,
+  props :: MetroTicketBookingScreenProps
+}
+
+type MetroTicketBookingScreenData = {
+  ticketType :: TicketType
+  , ticketCount :: Int
+  , srcLoc :: String
+  , destLoc :: String
+  , srcCode :: String
+  , destCode :: String
+  , searchId :: String
+  , ticketPrice :: Int
+  , bookingId :: String
+  , quoteId :: String
+}
+
+type MetroTicketBookingScreenProps = {
+  isLimitExceeded :: Boolean
+, termsAndConditionsSelected :: Boolean
+, currentStage :: MetroTicketBookingStage
+, isButtonActive :: Boolean
+, showMetroBookingTimeError :: Boolean
+}
+
+data MetroTicketBookingStage = MetroTicketSelection | GetMetroQuote | ConfirmMetroQuote
+
+derive instance genericMetroTicketBookingStage :: Generic MetroTicketBookingStage _
+instance eqMetroTicketBookingStage :: Eq MetroTicketBookingStage where eq = genericEq
+instance showMetroTicketBookingStage :: Show MetroTicketBookingStage where show = genericShow
+
+data TicketType = ONE_WAY | ROUND_TRIP
+
+derive instance genericTicketType :: Generic TicketType _
+instance eqTicketType :: Eq TicketType where eq = genericEq
+
+data LocationActionId = Src | Dest
+
+derive instance genericLocationActionId :: Generic LocationActionId _
+instance eqLocationActionId :: Eq LocationActionId where eq = genericEq
+instance showLocationActionId :: Show LocationActionId where show = genericShow
+
+
+-- ######################################### MetroTicketStatusScreenState ####################################################
+type MetroTicketStatusScreenState = {
+  data :: MetroTicketStatusScreenData,
+  props :: MetroTicketStatusScreenProps
+}
+
+type MetroTicketStatusScreenData = {
+  shortOrderId :: String,
+  keyValArray :: Array KeyVal,
+  ticketName :: String,
+  validUntil :: String,
+  bookingId :: String,
+  resp :: MetroTicketBookingStatus,
+  timerId :: String,
+  quoteId :: String
+}
+
+
+type MetroTicketStatusScreenProps = {
+  showShimmer :: Boolean
+, paymentStatus :: Common.PaymentStatus
+}

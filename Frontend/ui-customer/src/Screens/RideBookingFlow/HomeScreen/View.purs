@@ -1013,9 +1013,18 @@ zooTicketBookingBanner state push =
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin $ Margin 16 0 16 16
+    , margin $ Margin 16 16 16 16
     ][  Banner.view (push <<< TicketBookingFlowBannerAC) (ticketBannerConfig state)]
-    
+
+metroTicketBookingBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+metroTicketBookingBanner state push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ Margin 16 16 16 16
+    ][  Banner.view (push <<< MetroTicketBookingBannerAC) (metroTicketBannerConfig state)]
+
 emptySuggestionsBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptySuggestionsBanner state push = 
   linearLayout
@@ -3427,8 +3436,9 @@ homeScreenViewV2 push state =
                                     else 
                                       [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state
                                       -- , if state.data.config.feature.enableZooTicketBookingFlow
-                                      --     then zooTicketBookingBanner state push 
+                                      --     then metroTicketBookingBanner state push 
                                       --     else linearLayout[visibility GONE][]
+                                      , metroTicketBookingBanner state push 
                                       , shimmerView state
                                       , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
                                       , suggestionsView push state
