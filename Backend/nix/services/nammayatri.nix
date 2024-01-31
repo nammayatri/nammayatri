@@ -104,16 +104,17 @@ in
           nammayatri-init = {
             imports = [ common ];
             depends_on = {
-              # Compile Haskell code
-              "cabal-build".condition = "process_completed_successfully";
               # Services
               "db-primary".condition = "process_healthy";
               "kafka".condition = "process_healthy";
               "redis".condition = "process_healthy";
-              "redis-cluster".condition = "process_healthy";
+              # "redis-cluster".condition = "process_healthy";
               "nginx".condition = "process_healthy";
-              "osrm-server".condition = "process_healthy";
-              "passetto-server".condition = "process_healthy";
+              "osrm-server".condition = "process_started";
+              "passetto-service".condition = "process_started";
+            } // lib.optionalAttrs cfg.useCabal {
+              # Compile Haskell code
+              "cabal-build".condition = "process_completed_successfully";
             };
             command = pkgs.writeShellApplication {
               name = "run-mobility-stack-init";
