@@ -141,11 +141,10 @@
               name = "load-test-rider";
               runtimeInputs = [ myPython ];
               text = ''
-                locust --headless --run-time 2m --users 50  --only-summary --html Backend/load-test/output/riderApp/riderApp.html --csv  Backend/load-test/output/riderApp/riderApp.csv -f Backend/load-test/scripts/riderApp.py
+                locust --headless --run-time 10s --users 50  --only-summary --html Backend/load-test/output/riderApp/riderApp.html --csv  Backend/load-test/output/riderApp/riderApp.csv -f Backend/load-test/scripts/riderApp.py
               '';
             };
             depends_on."auth".condition = "process_completed_successfully";
-            availability.exit_on_end = true;
           };
           load-test-driver = {
             imports = [
@@ -156,10 +155,18 @@
               name = "load-test-driver";
               runtimeInputs = [ myPython ];
               text = ''
-                locust --headless --run-time 2m --users 50 --only-summary  --html Backend/load-test/output/driverApp/driverOffer.html --csv Backend/load-test/output/driverApp/driverOffer.csv -f Backend/load-test/scripts/driverOffer.py
+                locust --headless --run-time 10s --users 50 --only-summary  --html Backend/load-test/output/driverApp/driverOffer.html --csv Backend/load-test/output/driverApp/driverOffer.csv -f Backend/load-test/scripts/driverOffer.py
               '';
             };
             depends_on."auth".condition = "process_completed_successfully";
+          };
+          load-test-exit = {
+            imports = [ common ];
+            command = "echo Waiting for load-test processes to end";
+            depends_on = {
+              "load-test-driver".condition = "process_completed_successfully";
+              "load-test-rider".condition = "process_completed_successfully";
+            };
             availability.exit_on_end = true;
           };
         };
