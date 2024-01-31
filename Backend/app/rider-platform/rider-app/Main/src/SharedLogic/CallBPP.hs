@@ -227,7 +227,7 @@ callTrack booking ride = do
         TrackACL.TrackBuildReq
           { bppId = booking.providerId,
             bppUrl = booking.providerUrl,
-            transactionId = booking.transactionId,
+            transactionId = booking.transactionId.getId,
             bppRideId = ride.bppRideId,
             ..
           }

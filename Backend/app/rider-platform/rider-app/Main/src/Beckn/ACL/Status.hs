@@ -48,7 +48,7 @@ buildStatusReq DStatusReq {..} = do
     buildTaxiContext
       Context.STATUS
       messageId
-      (Just booking.transactionId)
+      (Just booking.transactionId.getId)
       merchant.bapId
       bapUrl
       (Just merchant.id.getId)
@@ -76,7 +76,7 @@ buildStatusReqV2 DStatusReq {..} = do
       Context.STATUS
       Context.MOBILITY
       messageId
-      (Just booking.transactionId)
+      (Just booking.transactionId.getId)
       merchant.bapId
       bapUrl
       (Just merchant.id.getId)

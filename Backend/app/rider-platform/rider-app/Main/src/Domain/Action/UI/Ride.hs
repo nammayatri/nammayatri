@@ -230,7 +230,7 @@ editLocation rideId (_, merchantId) req = do
             { bppRideId = ride.bppRideId,
               bppId = booking.providerId,
               bppUrl = booking.providerUrl,
-              transactionId = booking.transactionId,
+              transactionId = booking.transactionId.getId,
               destination = Nothing,
               ..
             }

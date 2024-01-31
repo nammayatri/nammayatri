@@ -31,12 +31,12 @@ import qualified Tools.Maps as Maps
 
 getRoutes :: (ServiceFlow m r, EsqDBReplicaFlow m r) => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getRoutes (personId, merchantId) req = do
-  Maps.getRoutes personId merchantId Nothing req
+  Maps.getRoutes personId merchantId Nothing Nothing req
 
 getPickupRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getPickupRoutes (personId, merchantId) req = do
-  Maps.getPickupRoutes personId merchantId Nothing req
+  Maps.getPickupRoutes personId merchantId Nothing Nothing req
 
 getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getTripRoutes (personId, merchantId) req = do
-  Maps.getTripRoutes personId merchantId Nothing req
+  Maps.getTripRoutes personId merchantId Nothing Nothing req

@@ -51,7 +51,7 @@ data BPPBooking
 
 data Booking = Booking
   { id :: Id Booking,
-    transactionId :: Text,
+    transactionId :: Id DSR.SearchRequest,
     driverId :: Maybe Text,
     fulfillmentId :: Maybe Text,
     bppBookingId :: Maybe (Id BPPBooking),

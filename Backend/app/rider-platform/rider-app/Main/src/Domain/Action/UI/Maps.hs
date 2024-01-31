@@ -62,6 +62,7 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
   Maps.autoComplete
     merchantId
     merchantOperatingCityId
+    Nothing
     Maps.AutoCompleteReq
       { country = toInterfaceCountry merchant.country,
         ..
@@ -75,7 +76,7 @@ autoComplete (personId, merchantId) AutoCompleteReq {..} = do
 getPlaceDetails :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
 getPlaceDetails (personId, merchantId) req = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
-  Maps.getPlaceDetails merchantId merchantOperatingCityId req
+  Maps.getPlaceDetails merchantId merchantOperatingCityId Nothing req
 
 getPlaceName :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
 getPlaceName (personId, merchantId) req = do
@@ -99,7 +100,7 @@ getPlaceName (personId, merchantId) req = do
 
 callMapsApi :: (MonadFlow m, ServiceFlow m r) => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
 callMapsApi merchantId merchantOperatingCityId req geoHashPrecisionValue = do
-  res <- Maps.getPlaceName merchantId merchantOperatingCityId req
+  res <- Maps.getPlaceName merchantId merchantOperatingCityId Nothing req
   let firstElement = listToMaybe res
   case firstElement of
     Just element -> do

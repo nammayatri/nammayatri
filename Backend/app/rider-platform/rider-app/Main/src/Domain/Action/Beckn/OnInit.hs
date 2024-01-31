@@ -101,7 +101,7 @@ onInit req = do
         fromLocation = fromLocation,
         mbToLocation = mbToLocation,
         mbRiderName = decRider.firstName,
-        transactionId = booking.transactionId,
+        transactionId = booking.transactionId.getId,
         merchant = merchant,
         nightSafetyCheck = decRider.nightSafetyChecks,
         ..

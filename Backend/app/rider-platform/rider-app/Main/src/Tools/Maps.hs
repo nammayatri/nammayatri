@@ -72,6 +72,7 @@ getDistance ::
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe (Id DSR.SearchRequest) ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistance = runWithServiceConfig (MapsHandler Maps.GetDistances Maps.getDistance (.getDistances) (.getDistances))
@@ -83,6 +84,7 @@ getDistanceForCancelRide ::
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe (Id DSR.SearchRequest) ->
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistanceForCancelRide = runWithServiceConfig (MapsHandler Maps.GetDistancesForCancelRide Maps.getDistance (.getDistancesForCancelRide) (.getDistancesForCancelRide))
@@ -94,27 +96,28 @@ getDistances ::
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe (Id DSR.SearchRequest) ->
   GetDistancesReq a b ->
   m (GetDistancesResp a b)
 getDistances = runWithServiceConfig (MapsHandler Maps.GetDistances Maps.getDistances (.getDistances) (.getDistances))
 
-getRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
-getRoutes personId merchantId mbMOCId req = do
+getRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe (Id DSR.SearchRequest) -> GetRoutesReq -> m GetRoutesResp
+getRoutes personId merchantId mbMOCId mbSearchRequestId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
-  runWithServiceConfig (MapsHandler Maps.GetRoutes (Maps.getRoutes merchant.isAvoidToll) (.getRoutes) (.getRoutes)) merchantId mOCId req
+  runWithServiceConfig (MapsHandler Maps.GetRoutes (Maps.getRoutes merchant.isAvoidToll) (.getRoutes) (.getRoutes)) merchantId mOCId mbSearchRequestId req
 
-getPickupRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
-getPickupRoutes personId merchantId mbMOCId req = do
+getPickupRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe (Id DSR.SearchRequest) -> GetRoutesReq -> m GetRoutesResp
+getPickupRoutes personId merchantId mbMOCId mbSearchRequestId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
-  runWithServiceConfig (MapsHandler Maps.GetPickupRoutes (Maps.getRoutes merchant.isAvoidToll) (.getPickupRoutes) (.getPickupRoutes)) merchantId mOCId req
+  runWithServiceConfig (MapsHandler Maps.GetPickupRoutes (Maps.getRoutes merchant.isAvoidToll) (.getPickupRoutes) (.getPickupRoutes)) merchantId mOCId mbSearchRequestId req
 
-getTripRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> GetRoutesReq -> m GetRoutesResp
-getTripRoutes personId merchantId mbMOCId req = do
+getTripRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe (Id DSR.SearchRequest) -> GetRoutesReq -> m GetRoutesResp
+getTripRoutes personId merchantId mbMOCId mbSearchRequestId req = do
   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mOCId <- getMerchantOperatingCityId personId mbMOCId
-  runWithServiceConfig (MapsHandler Maps.GetTripRoutes (Maps.getRoutes merchant.isAvoidToll) (.getTripRoutes) (.getTripRoutes)) merchantId mOCId req
+  runWithServiceConfig (MapsHandler Maps.GetTripRoutes (Maps.getRoutes merchant.isAvoidToll) (.getTripRoutes) (.getTripRoutes)) merchantId mOCId mbSearchRequestId req
 
 -- not used
 snapToRoad ::
@@ -122,17 +125,18 @@ snapToRoad ::
   ) =>
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Maybe (Id DSR.SearchRequest) ->
   SnapToRoadReq ->
   m SnapToRoadResp
 snapToRoad = runWithServiceConfig (MapsHandler Maps.SnapToRoad Maps.snapToRoad (.snapToRoad) (.snapToRoad))
 
-autoComplete :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> AutoCompleteReq -> m AutoCompleteResp
+autoComplete :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig (MapsHandler Maps.AutoComplete Maps.autoComplete (.autoComplete) (.autoComplete))
 
-getPlaceName :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceNameReq -> m GetPlaceNameResp
+getPlaceName :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> GetPlaceNameReq -> m GetPlaceNameResp
 getPlaceName = runWithServiceConfig (MapsHandler Maps.GetPlaceName Maps.getPlaceName (.getPlaceName) (.getPlaceName))
 
-getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
+getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig (MapsHandler Maps.GetPlaceDetails Maps.getPlaceDetails (.getPlaceDetails) (.getPlaceDetails))
 
 runWithServiceConfig ::
@@ -140,11 +144,10 @@ runWithServiceConfig ::
   MapsHandler m req resp ->
   Id Merchant ->
   Id MerchantOperatingCity ->
-  -- Maybe (Id DSR.SearchRequest) ->
+  Maybe (Id DSR.SearchRequest) ->
   req ->
   m resp
-runWithServiceConfig h merchantId merchantOperatingCityId req = do
-  let mbSearchRequestId = Nothing -- FIXME
+runWithServiceConfig h merchantId merchantOperatingCityId mbSearchRequestId req = do
   pickedService <- case mbSearchRequestId of
     Nothing -> do
       merchantConfig <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
@@ -221,26 +224,3 @@ pickService merchantOpCityId MapsServiceUsage {..} mapsMethod = do
           pure mapsService
         Right pickedService -> pure pickedService
     else pure mapsService
-
--- pickServiceWithDefault ::
---   forall (msum :: Maps.MapsServiceUsageMethod) m r (entity :: Type).
---   (CacheFlow m r, EsqDBFlow m r, SingI msum, Typeable entity) =>
---   Maybe (Maps.SMapsService msum) ->
---   Id Merchant ->
---   Id entity ->
---   m (Maps.SMapsService msum)
--- pickServiceWithDefault mbMapsService merchantId entityId = do
---   let mapsServiceUsageMethod = fromSing (sing @msum)
---   let entityName = show $ typeRep (Proxy @entity)
---   case mbMapsService of
---     Nothing -> do
---       -- only for old rides
---       merchantServiceUsageConfig <- CQMSUC.findByMerchantId merchantId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
---       mapsServiceUsage <- getMapsServiceUsage @msum merchantServiceUsageConfig
---       let defaultService = mapsServiceUsage.mapsService
---       logWarning $
---         "Could not find " <> entityName <> ".mapsServices." <> show mapsServiceUsageMethod <> ": " <> entityName <> "Id: " <> entityId.getId <> "; pick configured service: " <> show defaultService
---       pure defaultService
---     Just service -> do
---       logDebug $ "Use already picked service: " <> entityName <> "Id: " <> entityId.getId <> "; method: " <> show mapsServiceUsageMethod <> "; service: " <> show service
---       pure service

@@ -297,7 +297,7 @@ instance FromTType' BeamB.Booking Booking where
       Just
         Booking
           { id = Id id,
-            transactionId = transactionId,
+            transactionId = Id transactionId,
             bppBookingId = Id <$> bppBookingId,
             quoteId = Id <$> quoteId,
             paymentMethodId = Id <$> paymentMethodId,
@@ -364,7 +364,7 @@ instance ToTType' BeamB.Booking Booking where
           DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
      in BeamB.BookingT
           { BeamB.id = getId id,
-            BeamB.transactionId = transactionId,
+            BeamB.transactionId = getId transactionId,
             BeamB.fareProductType = fareProductType,
             BeamB.bppBookingId = getId <$> bppBookingId,
             BeamB.quoteId = getId <$> quoteId,

@@ -118,7 +118,7 @@ cancel bookingId _ req = do
         case res of
           Right res' -> do
             let merchantOperatingCityId = booking.merchantOperatingCityId
-            disToPickup <- driverDistanceToPickup booking.merchantId merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
+            disToPickup <- driverDistanceToPickup booking merchantOperatingCityId (getCoordinates res'.currPoint) (getCoordinates booking.fromLocation)
             buildBookingCancelationReason (Just res'.currPoint) (Just disToPickup) (Just booking.merchantId)
           Left err -> do
             logTagInfo "DriverLocationFetchFailed" $ show err
@@ -131,7 +131,7 @@ cancel bookingId _ req = do
         bppId = booking.providerId,
         bppUrl = booking.providerUrl,
         cancellationSource = SBCR.ByUser,
-        transactionId = booking.transactionId,
+        transactionId = booking.transactionId.getId,
         merchant = merchant,
         ..
       }
@@ -218,14 +218,14 @@ driverDistanceToPickup ::
     Maps.HasCoordinates tripStartPos,
     Maps.HasCoordinates tripEndPos
   ) =>
-  Id Merchant.Merchant ->
+  SRB.Booking ->
   Id DMOC.MerchantOperatingCity ->
   tripStartPos ->
   tripEndPos ->
   m Meters
-driverDistanceToPickup merchantId merchantOperatingCityId tripStartPos tripEndPos = do
+driverDistanceToPickup booking merchantOperatingCityId tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide merchantId merchantOperatingCityId $
+    Maps.getDistanceForCancelRide booking.merchantId merchantOperatingCityId (Just booking.transactionId) $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,

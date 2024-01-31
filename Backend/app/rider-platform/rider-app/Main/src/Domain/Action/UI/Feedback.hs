@@ -89,7 +89,7 @@ feedback request = do
       { wasOfferedAssistance = request.wasOfferedAssistance,
         providerId = booking.providerId,
         providerUrl = booking.providerUrl,
-        transactionId = booking.transactionId,
+        transactionId = booking.transactionId.getId,
         issueId = issueId',
         ..
       }
