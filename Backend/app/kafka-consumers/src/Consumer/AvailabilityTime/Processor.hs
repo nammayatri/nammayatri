@@ -117,4 +117,4 @@ processData T.LocationUpdates {..} driverId = do
       activeTimePairs
   where
     mkLastTimeStampKey :: T.DriverId -> Text
-    mkLastTimeStampKey = (<> (mId <> "-last-location-update-at"))
+    mkLastTimeStampKey = (<> (m_id <> "-last-location-update-at"))
