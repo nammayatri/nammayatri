@@ -3179,9 +3179,8 @@
         "type": "github"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/Users/chakradhar.k/Projects/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {

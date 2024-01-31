@@ -239,6 +239,8 @@ library
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
       Domain.Types.VehicleVariant
+      Domain.Types.Webengage
+      Domain.Types.WhiteListOrg
       Environment
       Lib.Mesh
       SharedLogic.CallBPP
@@ -308,6 +310,8 @@ library
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
+      Storage.Beam.Webengage
+      Storage.Beam.WhiteListOrg
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.Exophone
@@ -328,6 +332,7 @@ library
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.SavedLocation
       Storage.CachedQueries.Sos
+      Storage.CachedQueries.WhiteListOrg
       Storage.Queries.AadhaarVerification.AadhaarOtp
       Storage.Queries.AadhaarVerification.AadhaarVerification
       Storage.Queries.AppInstalls
@@ -374,6 +379,8 @@ library
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
+      Storage.Queries.Webengage
+      Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH

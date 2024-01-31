@@ -49,7 +49,7 @@ import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig, fromMaybeM)
+import Kernel.Utils.Common (CacheConfig, fromMaybeM, logDebug)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -62,6 +62,7 @@ import SharedLogic.GoogleTranslate
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
 import Storage.CachedQueries.Merchant as CM
+import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -259,13 +260,24 @@ instance AuthenticatingEntity AppEnv where
 instance Registry Flow where
   registryLookup =
     Registry.withSubscriberCache $ \sub -> do
-      fetchFromDB sub.merchant_id >>= \registryUrl ->
-        Registry.registryLookup registryUrl sub >>= Registry.whitelisting isWhiteListed
+      fetchFromDB sub.merchant_id >>= \registryUrl -> do
+        -- x <- Registry.registryLookup registryUrl sub >>= Registry.whitelisting isWhiteListed
+        logDebug $ "Started Registry lookup for " <> " subId xyz "
+        subId <- Registry.registryLookup registryUrl sub
+        logDebug $ "Registry lookup for " <> " subId xyz " <> show subId
+        x <- Registry.whitelisting isWhiteListed subId
+        if (isJust x)
+          then do
+            logDebug $ "Registry lookup for " <> " returned xyz " <> show x
+            Registry.registryLookup registryUrl sub >>= Registry.validateWhitelisting validateWhiteListed
+          else do
+            pure x
     where
       fetchFromDB merchantId = do
         merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
         pure $ merchant.registryUrl
       isWhiteListed subscriberId = QBlackList.findBySubscriberId (ShortId subscriberId) <&> isNothing
+      validateWhiteListed subscriberId = QWhiteList.findBySubscriberId (ShortId subscriberId) <&> isNothing
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
