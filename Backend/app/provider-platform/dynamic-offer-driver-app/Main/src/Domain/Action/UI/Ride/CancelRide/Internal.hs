@@ -22,7 +22,7 @@ import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
 import Environment
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -92,16 +92,14 @@ cancelRideImpl rideId bookingCReason = do
             result <- try @_ @SomeException (initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq driverQuote.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId)
             case result of
               Right _ -> BP.sendEstimateRepetitionUpdateToBAP booking ride (Id searchTry.estimateId) bookingCReason.source
-              Left _ -> cancelRideTransactionForNonReallocation booking searchTry merchant bookingCReason.source
+              Left _ -> cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
           else -- repeatSearch merchant farePolicy searchReq searchTry booking ride SBCR.ByDriver now driverPoolCfg
-            cancelRideTransactionForNonReallocation booking searchTry merchant bookingCReason.source
-      _ -> do
-        driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
-        searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
-        cancelRideTransactionForNonReallocation booking searchTry merchant bookingCReason.source
+            cancelRideTransactionForNonReallocation booking (Just searchTry.estimateId) merchant bookingCReason.source
+      _ -> cancelRideTransactionForNonReallocation booking Nothing merchant bookingCReason.source
   where
-    cancelRideTransactionForNonReallocation booking searchTry merchant bookingCancellationReason = do
-      void $ clearCachedFarePolicyByEstOrQuoteId searchTry.estimateId
+    cancelRideTransactionForNonReallocation booking mbEstimateId merchant bookingCancellationReason = do
+      whenJust mbEstimateId $ \estimateId ->
+        void $ clearCachedFarePolicyByEstOrQuoteId estimateId
       void $ clearCachedFarePolicyByEstOrQuoteId booking.quoteId
       BP.sendBookingCancelledUpdateToBAP booking merchant bookingCancellationReason
 
