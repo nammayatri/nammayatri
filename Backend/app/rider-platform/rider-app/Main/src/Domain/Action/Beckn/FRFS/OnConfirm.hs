@@ -19,6 +19,7 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Types.BecknConfig
+import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
@@ -33,9 +34,11 @@ import qualified SharedLogic.CallFRFSBPP as CallBPP
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.BecknConfig as QBC
+import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
+import qualified Storage.Queries.Station as QStation
 
 validateRequest :: DOrder -> Flow (Merchant, Booking.FRFSTicketBooking)
 validateRequest DOrder {..} = do
@@ -58,10 +61,15 @@ validateRequest DOrder {..} = do
       return (merchant, booking)
 
 onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
-onConfirm _merchant booking dOrder = do
+onConfirm merchant booking' dOrder = do
+  let booking = booking' {Booking.bppOrderId = (Just dOrder.bppOrderId)}
   tickets <- traverse (mkTicket booking) dOrder.tickets
+  bapConfig <- QBC.findByMerchantIdAndDomain (Just merchant.id) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
+  reconEntries <- traverse (mkRecon booking bapConfig) tickets
+
   void $ QTicket.createMany tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
+  void $ QRecon.createMany reconEntries
   return ()
 
 mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Flow Ticket.FRFSTicket
@@ -83,6 +91,48 @@ mkTicket booking dTicket = do
         Ticket.merchantOperatingCityId = booking.merchantOperatingCityId,
         Ticket.createdAt = now,
         Ticket.updatedAt = now
+      }
+
+mkRecon :: Booking.FRFSTicketBooking -> BecknConfig -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
+mkRecon booking bapConfig ticket = do
+  now <- getCurrentTime
+  reconId <- generateGUID
+
+  let totalOrderValue = booking.price
+  let finderFee = fromMaybe 0 (bapConfig.buyerFinderFee)
+
+  fromStation <- runInReplica $ QStation.findById booking.fromStationId >>= fromMaybeM (InternalError "Station not found")
+  toStation <- runInReplica $ QStation.findById booking.toStationId >>= fromMaybeM (InternalError "Station not found")
+  bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
+  return
+    Recon.FRFSRecon
+      { Recon.id = reconId,
+        Recon.beneficiaryIFSC = Nothing,
+        Recon.buyerFinderFee = finderFee,
+        Recon.collectorIFSC = bapConfig.bapIFSC,
+        Recon.collectorSubscriberId = bapConfig.subscriberId,
+        Recon.date = "",
+        Recon.destinationStationCode = toStation.code,
+        Recon.differenceAmount = Nothing,
+        Recon.fare = 0,
+        Recon.frfsTicketBookingId = booking.id,
+        Recon.message = Nothing,
+        Recon.mobileNumber = Nothing,
+        Recon.networkOrderId = bppOrderId,
+        Recon.receiverSubscriberId = booking.bppSubscriberId,
+        Recon.settlementAmount = HighPrecMoney $ (totalOrderValue.getHighPrecMoney - finderFee.getHighPrecMoney),
+        Recon.settlementDate = Nothing,
+        Recon.settlementReferenceNumber = Nothing,
+        Recon.sourceStationCode = fromStation.code,
+        Recon.ticketNumber = ticket.ticketNumber,
+        Recon.ticketQty = booking.quantity,
+        Recon.time = "",
+        Recon.totalOrderValue = booking.price,
+        Recon.transactionRefNumber = "",
+        Recon.merchantId = booking.merchantId,
+        Recon.merchantOperatingCityId = booking.merchantOperatingCityId,
+        Recon.createdAt = now,
+        Recon.updatedAt = now
       }
 
 callBPPCancel :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environment.Flow ()
