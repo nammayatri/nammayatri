@@ -264,3 +264,32 @@ FRFSTicketBookingPayment:
       kvFunction: updateWithKV
       params: [status, updatedAt]
       where: frfsTicketBookingId
+
+FRFSRecon:
+  tableName: frfs_recon
+
+  fields:
+    id: Id FRFSRecon
+    frfsTicketBookingId: Id FRFSTicketBooking
+    networkOrderId: Text # bpp_order_id
+    collectorSubscriberId: Text # bap_subscriber_id
+    receiverSubscriberId: Text # bpp_subscriber_id
+    date: Text # on_confirm date
+    time: Text # on_confirm time
+    mobileNumber: Maybe Text # customer number
+    sourceStationCode: Text # source station code
+    destinationStationCode: Text # destination station code
+    ticketQty: Int # ticket quantity
+    ticketNumber: Text
+    transactionRefNumber: Text # transaction uuid
+    fare: HighPrecMoney # per ticket price
+    buyerFinderFee: HighPrecMoney # populated from bapConfig
+    totalOrderValue: HighPrecMoney # amount paid by customer
+    settlementAmount: HighPrecMoney # settlement amount = totalOrderValue - bff
+    beneficiaryIFSC: Maybe Text # beneficiary ifsc code, from on_confirm
+    collectorIFSC: Maybe Text # collector ifsc code, from bapConfig
+    settlementReferenceNumber: Maybe Text # utr number, to be populated post settlement
+    settlementDate: Maybe UTCTime # to be populated post settlement
+    differenceAmount: Maybe HighPrecMoney # Nothing
+    message: Maybe Text # Nothing
+

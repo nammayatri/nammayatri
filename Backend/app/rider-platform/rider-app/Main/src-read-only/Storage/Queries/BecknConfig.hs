@@ -11,6 +11,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -51,7 +52,9 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.confirmTTLSec $ confirmTTLSec,
+    [ Se.Set Beam.bapIFSC $ bapIFSC,
+      Se.Set Beam.buyerFinderFee $ buyerFinderFee,
+      Se.Set Beam.confirmTTLSec $ confirmTTLSec,
       Se.Set Beam.domain $ domain,
       Se.Set Beam.gatewayUrl $ showBaseUrl $ gatewayUrl,
       Se.Set Beam.initTTLSec $ initTTLSec,
@@ -79,7 +82,9 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
     pure $
       Just
         Domain.Types.BecknConfig.BecknConfig
-          { confirmTTLSec = confirmTTLSec,
+          { bapIFSC = bapIFSC,
+            buyerFinderFee = buyerFinderFee,
+            confirmTTLSec = confirmTTLSec,
             domain = domain,
             gatewayUrl = gatewayUrl',
             id = Kernel.Types.Id.Id id,
@@ -99,7 +104,9 @@ instance FromTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
 instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   toTType' Domain.Types.BecknConfig.BecknConfig {..} = do
     Beam.BecknConfigT
-      { Beam.confirmTTLSec = confirmTTLSec,
+      { Beam.bapIFSC = bapIFSC,
+        Beam.buyerFinderFee = buyerFinderFee,
+        Beam.confirmTTLSec = confirmTTLSec,
         Beam.domain = domain,
         Beam.gatewayUrl = showBaseUrl (gatewayUrl),
         Beam.id = Kernel.Types.Id.getId id,

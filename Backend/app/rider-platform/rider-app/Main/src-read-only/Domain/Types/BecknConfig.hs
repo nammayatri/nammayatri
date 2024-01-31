@@ -1,16 +1,21 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.BecknConfig where
 
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Servant.Client.Core
+import qualified Tools.Beam.UtilsTH
 
 data BecknConfig = BecknConfig
-  { confirmTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { bapIFSC :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    buyerFinderFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    confirmTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     domain :: Kernel.Prelude.Text,
     gatewayUrl :: Servant.Client.Core.BaseUrl,
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,

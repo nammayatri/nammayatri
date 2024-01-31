@@ -415,6 +415,7 @@ library
       Domain.Types.BecknConfig
       Domain.Types.BusinessHour
       Domain.Types.FRFSQuote
+      Domain.Types.FRFSRecon
       Domain.Types.FRFSSearch
       Domain.Types.FRFSTicket
       Domain.Types.FRFSTicketBooking
@@ -438,6 +439,7 @@ library
       Storage.Beam.BecknConfig
       Storage.Beam.BusinessHour
       Storage.Beam.FRFSQuote
+      Storage.Beam.FRFSRecon
       Storage.Beam.FRFSSearch
       Storage.Beam.FRFSTicket
       Storage.Beam.FRFSTicketBooking
@@ -461,6 +463,7 @@ library
       Storage.Queries.BecknConfig
       Storage.Queries.BusinessHour
       Storage.Queries.FRFSQuote
+      Storage.Queries.FRFSRecon
       Storage.Queries.FRFSSearch
       Storage.Queries.FRFSTicket
       Storage.Queries.FRFSTicketBooking

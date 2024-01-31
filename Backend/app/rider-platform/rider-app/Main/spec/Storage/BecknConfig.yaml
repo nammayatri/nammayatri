@@ -18,6 +18,8 @@ BecknConfig:
     paymentParamsJson: Maybe Text
     initTTLSec: Maybe Int
     confirmTTLSec: Maybe Int
+    buyerFinderFee: Maybe HighPrecMoney
+    bapIFSC: Maybe Text
 
   types:
     BknPaymentParams:

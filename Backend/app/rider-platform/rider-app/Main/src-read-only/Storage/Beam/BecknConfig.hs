@@ -12,12 +12,15 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Servant.Client.Core
 import Tools.Beam.UtilsTH
 
 data BecknConfigT f = BecknConfigT
-  { confirmTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+  { bapIFSC :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    buyerFinderFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    confirmTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     domain :: B.C f Kernel.Prelude.Text,
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
