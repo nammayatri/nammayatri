@@ -89,6 +89,7 @@ dependencies:
   - beam-postgres
   - postgresql-simple
   - sequelize
+  - warp
 
 ghc-options:
   - -Wall
