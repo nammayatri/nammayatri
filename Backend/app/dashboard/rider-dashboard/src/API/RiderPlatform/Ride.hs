@@ -43,6 +43,7 @@ import Tools.Auth.Merchant
 type API =
   "ride"
     :> ( ShareRideInfoAPI
+           :<|> Common.ShareRideInfoByShortIdAPI
            :<|> RideListAPI
            :<|> TripRouteAPI
            :<|> RideInfoAPI
@@ -76,6 +77,7 @@ type TicketRideListAPI =
 handler :: ShortId DM.Merchant -> City.City -> FlowServer API
 handler merchantId city =
   shareRideInfo merchantId city
+    :<|> shareRideInfoByShortId merchantId city
     :<|> rideList merchantId city
     :<|> tripRoute merchantId city
     :<|> rideInfo merchantId city
@@ -83,8 +85,8 @@ handler merchantId city =
     :<|> multipleRideSync merchantId city
     :<|> ticketRideList merchantId city
 
-rideInfoHitsCountKey :: Id Common.Ride -> Text
-rideInfoHitsCountKey rideId = "RideInfoHits:" <> getId rideId <> ":hitsCount"
+rideInfoHitsCountKey :: Text -> Text
+rideInfoHitsCountKey rideId = "RideInfoHits:" <> rideId <> ":hitsCount"
 
 -- merchantCityAccessChecks can be removed from this file?
 buildTransaction ::
@@ -105,9 +107,20 @@ shareRideInfo ::
   FlowHandler Common.ShareRideInfoRes
 shareRideInfo merchantShortId opCity rideId = withFlowHandlerAPI' $ do
   shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey rideId) shareRideApiRateLimitOptions
+  checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getId rideId) shareRideApiRateLimitOptions
   checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
   Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfo) rideId
+
+shareRideInfoByShortId ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ShortId Common.Ride ->
+  FlowHandler Common.ShareRideInfoRes
+shareRideInfoByShortId merchantShortId opCity rideShortId = withFlowHandlerAPI' $ do
+  shareRideApiRateLimitOptions <- asks (.shareRideApiRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (rideInfoHitsCountKey $ getShortId rideShortId) shareRideApiRateLimitOptions
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId merchantShortId opCity opCity
+  Client.callRiderAppOperations checkedMerchantId opCity (.rides.shareRideInfoByShortId) rideShortId
 
 rideList ::
   ShortId DM.Merchant ->
