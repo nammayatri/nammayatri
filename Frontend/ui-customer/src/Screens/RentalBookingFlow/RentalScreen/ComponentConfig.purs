@@ -24,6 +24,7 @@ import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
 import Data.Array ((!!), singleton)
 import Data.Maybe as MB
+import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString, getVarString)
@@ -114,7 +115,7 @@ mapInputViewConfig state =
       inputViewConfig' = config
         { headerText = getHeaderText state.data.currentStage
         , suffixButton {
-            text = getDateString state.data.selectedDateTimeConfig true
+            text = EHC.convertUTCtoISC state.data.startTimeUTC "hh" <> ":" <> EHC.convertUTCtoISC state.data.startTimeUTC "mm" <> ", " <> EHC.convertUTCtoISC state.data.startTimeUTC "MMM" <> EHC.convertUTCtoISC state.data.startTimeUTC "D"
           , fontStyle = FontStyle.subHeading2 LanguageStyle
           , prefixImage = "ny_ic_clock_unfilled"
           , suffixImage = "ny_ic_chevron_down"
