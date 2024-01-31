@@ -57,6 +57,11 @@ modifyScreenState st =
     NammaSafetyScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {nammaSafetyScreen = a state.nammaSafetyScreen})
     RideSelectionScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {rideSelectionScreen = a state.rideSelectionScreen})
     ReportIssueChatScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {reportIssueChatScreen = a state.reportIssueChatScreen})
+    MetroTicketDetailsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketDetailsScreen = a state.metroTicketDetailsScreen})
+    MetroMyTicketsScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroMyTicketsScreen = a state.metroMyTicketsScreen})
+    TicketStatusScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {ticketStatusScreen = a state.ticketStatusScreen})
+    MetroTicketBookingScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketBookingScreen = a state.metroTicketBookingScreen})
+    MetroTicketStatusScreenStateType a -> modifyState (\(GlobalState state) -> GlobalState $ state {metroTicketStatusScreen = a state.metroTicketStatusScreen})
 
 updateRideDetails :: MyRidesScreenState -> FlowBT String Unit
 updateRideDetails state = do 

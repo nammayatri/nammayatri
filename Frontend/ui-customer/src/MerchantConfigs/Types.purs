@@ -54,6 +54,7 @@ type AppConfigCustomer a =
   , autoVariantEnabled :: Boolean
   , showDisabilityBanner :: Boolean
   , mapConfig :: MapConfig
+  , metroTicketingConfig :: MetroConfig
   , enableWhatsappOTP :: Array String
   , notifyRideConfirmationConfig :: NotifyRideConfirmationConfig
   , estimateAndQuoteConfig :: EstimateAndQuoteConfig
@@ -261,6 +262,10 @@ type MapConfig = {
   labelTextSize :: Int,
   animationDuration :: Int,
   vehicleMarkerSize :: Int
+}
+
+type MetroConfig = {
+  metroStationTtl :: Int
 }
 
 type LocateOnMapConfigs = {

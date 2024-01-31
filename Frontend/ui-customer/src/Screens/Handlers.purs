@@ -54,3 +54,9 @@ import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.SearchLocationScreen.View (searchLocationScreen) as UI
 import Screens.FollowRideScreen.Handler (followRideScreen) as UI
+import Screens.TicketBookingFlow.MetroTicketDetails.Handler (metroTicketDetailsScreen) as UI
+import Screens.TicketBookingFlow.MetroMyTickets.Handler (metroMyTicketsScreen) as UI
+import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
+import Screens.SearchLocationScreen.View (searchLocationScreen) as UI
+import Screens.TicketBookingFlow.MetroTicketBooking.Handler (metroTicketBookingScreen) as UI
+import Screens.TicketBookingFlow.MetroTicketStatus.Handler (metroTicketStatusScreen) as UI

@@ -18,9 +18,10 @@ import Data.String (null,Pattern(..), contains, joinWith, toLower, take, toUpper
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import PrestoDOM as PD
 import Prelude
-import Data.Array (elem, cons)
+import Data.Array
 import Data.Array as DA
 import Data.Foldable (foldl)
+import Data.String as DS
 
 has :: String -> String -> Boolean
 has msg errorPattern = contains (Pattern errorPattern) msg
@@ -72,3 +73,9 @@ caseInsensitiveCompare str1 str2 =
 groupAdjacent :: forall a. Array a -> Array (Array a)
 groupAdjacent [] = []
 groupAdjacent x = cons (DA.take 2 x) (groupAdjacent (DA.drop 2 x))
+
+findStringWithPrefix :: String -> Array String -> Array String
+findStringWithPrefix prefix arr = filter (\item -> startsWith prefix item) arr
+
+startsWith :: String -> String -> Boolean
+startsWith prefix str = DS.take (DS.length prefix) (DS.toLower str) == (DS.toLower prefix)

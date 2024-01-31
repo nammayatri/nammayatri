@@ -33,13 +33,20 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
 import Mobility.Prelude (boolToVisibility)
-import Prelude
 import PrestoDOM 
 import PrestoDOM.Animation as PrestoAnim
 import Screens.Types (Stage(..))
 import Storage (getValueToLocalStore, KeyStore(..), isLocalStageOn)
 import Styles.Colors as Color
+import Data.Maybe (Maybe(..))
+import Common.Types.App (LazyCheck(..))
+import Data.Array as DA
+import Screens.Types (Stage(..))
+import Data.String as DS
+import Debug
+import Mobility.Prelude
 
 view :: forall w .  (Action  -> Effect Unit) -> SettingSideBarState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -95,6 +102,7 @@ settingsView state push =
         case item of
         "MyRides" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_past_rides", text : (getString MY_RIDES), accessibilityHint : "My Rides " ,tag : SETTINGS_RIDES, iconUrl : "", showNewTag : false} push
         "Tickets" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_TICKETS, iconUrl : "", showNewTag : false} push
+        "MetroTickets" -> settingsMenuView (spy "dfasd" {imageUrl : fetchImage FF_ASSET "ny_ic_ticket_grey", text : getString MY_TICKETS, accessibilityHint : "Tickets", tag : SETTINGS_MY_METRO_TICKETS, iconUrl : "", showNewTag: true}) push
         "Favorites" -> if DA.any (\stage -> isLocalStageOn stage)  [RideStarted, RideAccepted, RideCompleted] then emptyLayout else settingsMenuView {imageUrl : fetchImage FF_ASSET "ic_fav", text : (getString FAVOURITES) , accessibilityHint : "Favourites " , tag : SETTINGS_FAVOURITES, iconUrl : "", showNewTag : false} push
         "NammaSafety" -> settingsMenuView {imageUrl : fetchImage FF_ASSET "ny_ic_shield_heart", text : getString NAMMA_SAFETY, accessibilityHint : " Safety ", tag : SETTINGS_NAMMASAFETY, iconUrl : "", showNewTag : not state.hasCompletedSafetySetup} push
         "HelpAndSupport" -> settingsMenuView {imageUrl : fetchImage FF_ASSET  "ny_ic_help", text :  getString HELP_AND_SUPPORT , accessibilityHint :  "Help And Support", tag : SETTINGS_HELP, iconUrl : "", showNewTag : false} push
@@ -254,7 +262,8 @@ settingsMenuView item push  =
                               SETTINGS_NAMMASAFETY    -> GoToNammaSafety
                               SETTINGS_LOGOUT         -> OnLogout
                               SETTINGS_SHARE_APP      -> ShareAppLink
-                              SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard)
+                              SETTINGS_LIVE_DASHBOARD -> LiveStatsDashboard
+                              SETTINGS_MY_METRO_TICKETS -> GoToMyMetroTickets)
   , accessibility case item.tag of
                               SETTINGS_RIDES          -> ENABLE
                               SETTINGS_TICKETS        -> ENABLE
@@ -266,6 +275,7 @@ settingsMenuView item push  =
                               SETTINGS_SHARE_APP      -> DISABLE_DESCENDANT
                               SETTINGS_NAMMASAFETY       -> ENABLE
                               SETTINGS_LIVE_DASHBOARD -> DISABLE_DESCENDANT
+                              SETTINGS_MY_METRO_TICKETS -> ENABLE
   ][  imageView
       [ width ( V 25 )
       , height ( V 25 )
