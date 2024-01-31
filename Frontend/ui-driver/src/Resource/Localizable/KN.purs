@@ -1235,3 +1235,5 @@ getKN stringKey =
         LOWEST_FEES_FROM -> "{} ರಿಂದ ಕಡಿಮೆ ಶುಲ್ಕ"
         ZERO_FEE_TILL -> "{} ರವರೆಗೆ ಶೂನ್ಯ ಶುಲ್ಕ"
         ZERO_COMMISION_UNLIMITED_RIDES -> "ಶೂನ್ಯ ಕಮಿಷನ್,ಅನಿಯಮಿತ ಸವಾರಿಗಳು"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "ನಾವು ಪ್ರಸ್ತುತ ನಿಮ್ಮ ನಗರದಲ್ಲಿ ಆಟೋರಿಕ್ಷಾಗಳೊಂದಿಗೆ ಮಾತ್ರ ಲೈವ್ ಮಾಡುತ್ತಿದ್ದೇವೆ"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "ಹೆಚ್ಚಿನ ನವೀಕರಣಗಳಿಗಾಗಿ ಟ್ಯೂನ್ ಮಾಡಿ"

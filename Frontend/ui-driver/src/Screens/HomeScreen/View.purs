@@ -272,7 +272,13 @@ view push state =
       , if state.props.showRideRating then RatingCard.view (push <<< RatingCardAC) (getRatingCardConfig state) else dummyTextView
   ]
   where 
-    showPopups = (DA.any (_ == true ) [state.data.driverGotoState.gotoLocInRange, state.data.driverGotoState.goToInfo, state.data.driverGotoState.confirmGotoCancel, state.props.accountBlockedPopup])
+    showPopups = (DA.any (_ == true )
+      [ state.data.driverGotoState.gotoLocInRange,
+        state.data.driverGotoState.goToInfo,
+        state.data.driverGotoState.confirmGotoCancel,
+        state.props.accountBlockedPopup,
+        state.props.vehicleNSPopup
+      ])
 
 
 blockerPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -562,7 +568,7 @@ sourceUnserviceableView push state =
 
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 offlineView push state =
-  let showGoInYellow = state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit)
+  let showGoInYellow = state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.paymentState.driverBlocked || (state.data.paymentState.totalPendingManualDues > state.data.subsRemoteConfig.high_due_warning_limit) || not state.data.isVehicleSupported
   in
   linearLayout
   [ width MATCH_PARENT
@@ -1721,6 +1727,7 @@ popupModals push state =
           ST.KnowMore -> gotoKnowMoreConfig state
           ST.DisableGotoPopup -> disableGotoConfig state
           ST.AccountBlocked -> accountBlockedPopup state
+          ST.VehicleNotSupported -> vehicleNotSupportedPopup state
       ]
   where 
   
@@ -1728,6 +1735,7 @@ popupModals push state =
       else if state.data.driverGotoState.goToInfo then ST.KnowMore
       else if state.data.driverGotoState.confirmGotoCancel then ST.DisableGotoPopup
       else if state.props.accountBlockedPopup then ST.AccountBlocked
+      else if state.props.vehicleNSPopup then ST.VehicleNotSupported
       else ST.KnowMore
 
     clickAction popupType = case popupType of
@@ -1735,6 +1743,7 @@ popupModals push state =
           ST.KnowMore -> GotoKnowMoreAction
           ST.DisableGotoPopup -> ConfirmDisableGoto
           ST.AccountBlocked -> AccountBlockedAC
+          ST.VehicleNotSupported -> VehicleNotSupportedAC
 
 enableCurrentLocation :: HomeScreenState -> Boolean
 enableCurrentLocation state = if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted]) then false else true

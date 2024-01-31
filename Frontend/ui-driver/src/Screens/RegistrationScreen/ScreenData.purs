@@ -90,6 +90,7 @@ dummyCityConfig = {
                     showCustomerReferral : false,
                     uploadRCandDL : true,
                     enableYatriCoins : false,
+                    vehicleNSImg : "",
                     registration : { 
                       callSupport : false,
                       supportWAN : "", 

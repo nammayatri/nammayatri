@@ -3016,6 +3016,7 @@ updateBannerAndPopupFlags = do
                   { savedLocationCount = fromMaybe 0 $ fromString $ getValueToLocalStore SAVED_GOTO_COUNT
                   }
                 , config = appConfig
+                , isVehicleSupported = fromMaybe true getDriverInfoResp.isVehicleSupported
                 }
               , props
                 { autoPayBanner = autopayBannerType

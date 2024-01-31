@@ -365,6 +365,7 @@ data Action = NoAction
             | GoToEarningsScreen Boolean
             | CustomerSafetyPopupAC PopUpModal.Action
             | UpdateLastLoc Number Number Boolean
+            | VehicleNotSupportedAC PopUpModal.Action
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -474,6 +475,7 @@ eval BackPressed state = do
   else if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then continue state { data { driverGotoState { goToPopUpType = ST.NO_POPUP_VIEW }}} 
   else if state.props.showContactSupportPopUp then continue state {props {showContactSupportPopUp = false}}
   else if state.props.accountBlockedPopup then continue state {props {accountBlockedPopup = false}}
+  else if state.props.vehicleNSPopup then continue state { props { vehicleNSPopup = false}}
   else do
     _ <- pure $ minimizeApp ""
     continue state
@@ -887,7 +889,8 @@ eval (RideActiveAction activeRide) state = do
 eval RecenterButtonAction state = continue state
 
 eval (SwitchDriverStatus status) state =
-  if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
+  if not state.data.isVehicleSupported && status /= ST.Offline then continue state { props{ vehicleNSPopup = true }}
+  else if state.data.paymentState.driverBlocked && not state.data.paymentState.subscribed then continue state { props{ subscriptionPopupType = ST.GO_ONLINE_BLOCKER }}
   else if state.data.paymentState.driverBlocked then continue state { data{paymentState{ showBlockingPopup = true}}}
   else if not state.props.rcActive then do
     void $ pure $ toast $ getString PLEASE_ADD_RC
@@ -1003,6 +1006,8 @@ eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWit
   ]
 
 eval (StartEarningPopupAC PopUpModal.OnButton1Click) state = exit $ SubscriptionScreen state { data{paymentState {showBlockingPopup = false}}}
+
+eval (VehicleNotSupportedAC PopUpModal.OnButton1Click) state = continue state { props { vehicleNSPopup = false}}
 
 eval (StartEarningPopupAC (PopUpModal.OptionWithHtmlClick)) state = do
   _ <- pure $ showDialer state.data.config.subscriptionConfig.supportNumber false

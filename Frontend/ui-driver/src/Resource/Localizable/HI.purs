@@ -1235,3 +1235,5 @@ getHI stringKey =
         LOWEST_FEES_FROM -> "{} से सबसे कम फीस"
         ZERO_FEE_TILL -> "{} तक शून्य शुल्क"
         ZERO_COMMISION_UNLIMITED_RIDES -> "शून्य कमीशन और असीमित सवारी"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "हम वर्तमान में आपके शहर में केवल ऑटोरिक्शा के साथ रह रहे हैं"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "अधिक अपडेट के लिए बने रहें"

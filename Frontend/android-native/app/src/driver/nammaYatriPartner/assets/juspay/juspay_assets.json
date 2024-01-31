@@ -191,6 +191,8 @@
       "ny_ic_auto" : true,
       "ny_ic_auto1" : true,
       "ny_ic_auto2" : true,
+      "ny_ic_auto_image" : true,
+      "ny_ic_auto_image_old" : true,
       "ny_ic_auto_map" : true,
       "ny_ic_auto_onboard" : true,
       "ny_ic_auto_side_view" : true,

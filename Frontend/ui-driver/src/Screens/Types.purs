@@ -895,7 +895,8 @@ type HomeScreenData =  {
   subsRemoteConfig :: RC.RCSubscription,
   bannerData :: BannerCarousalData,
   prevLatLon :: Array Location,
-  noOfLocations :: Int
+  noOfLocations :: Int,
+  isVehicleSupported :: Boolean
 }
 
 type BannerCarousalData = {
@@ -1082,7 +1083,8 @@ type HomeScreenProps =  {
   showCoinsPopup :: Boolean,
   isStatsModelExpanded :: Boolean,
   tobeLogged :: Boolean,
-  safetyAudioAutoPlay :: Boolean
+  safetyAudioAutoPlay :: Boolean,
+  vehicleNSPopup :: Boolean
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -2113,7 +2115,7 @@ instance standardEncodeGoToPopUpType :: StandardEncode GoToPopUpType where stand
 instance decodeGoToPopUpType :: Decode GoToPopUpType where decode = defaultDecode
 instance encodeGoToPopUpType  :: Encode GoToPopUpType where encode = defaultEncode
 
-data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked
+data HomeScreenPopUpTypes = KnowMore | DisableGotoPopup | LocInRange | AccountBlocked | VehicleNotSupported
 
 derive instance genericHomeScreenPopUpTypes :: Generic HomeScreenPopUpTypes _
 instance showHomeScreenPopUpTypes :: Show HomeScreenPopUpTypes where show = genericShow

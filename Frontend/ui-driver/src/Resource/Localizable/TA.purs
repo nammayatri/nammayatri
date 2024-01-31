@@ -1235,3 +1235,5 @@ getTA stringKey =
         LOWEST_FEES_FROM -> "{} முதல் குறைந்த கட்டணம்"
         ZERO_FEE_TILL -> "{} வரை கட்டணமில்லை"
         ZERO_COMMISION_UNLIMITED_RIDES -> "வரம்பற்ற சவாரிகள், கமிஷன் இல்லை"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE -> "நாங்கள் தற்போது உங்கள் நகரத்தில் ஆட்டோரிக்ஷாக்களுடன் மட்டுமே வசிக்கிறோம்"
+        WE_ARE_CURRENTLY_LIVE_WITH_VEHICLE_DESC -> "மேலும் புதுப்பிப்புகளுக்கு காத்திருங்கள்"
