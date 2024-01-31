@@ -24,7 +24,7 @@ import JBridge as JB
 import Prelude (not, Unit, discard, void, bind, const, pure, unit, ($), (&&), (/=), (&&), (<<<), (+), (<>), (==), map, show, (||), show, (-), (>), (>>=), mod, negate, (<=), (>=), (<))
 import PrestoDOM (FlexWrap(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), shimmerFrameLayout, afterRender, alignParentBottom, background, color, cornerRadius, fontStyle, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, clickable, id, imageUrl, maxLines, ellipsize, lineHeight, fillViewport)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.TicketBookingFlow.TicketStatus.Controller (Action(..), ScreenOutput, eval, getLimitOfDaysAccToPlaceType)
+import Screens.TicketBookingFlow.TicketStatus.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Screens.TicketBookingFlow.TicketStatus.ComponentConfig 
@@ -57,26 +57,30 @@ import Mobility.Prelude (groupAdjacent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 
-screen :: ST.TicketBookingScreenState -> Screen Action ST.TicketBookingScreenState ScreenOutput
+screen :: ST.TicketStatusScreenState -> Screen Action ST.TicketStatusScreenState ScreenOutput
 screen initialState =
   { initialState
   , view
   , name : "TicketBookingScreen"
+  -- , globalEvents : [if initialState.props.actionType == ST.ZooTicketToPaymentStatusEntry then getPlaceDataEvent else  pure (pure unit)]
   , globalEvents : [getPlaceDataEvent]
   , eval :
     \action state -> do
-        let _ = spy "ZooTicketBookingFlow action " action
-        let _ = spy "ZooTicketBookingFlow state " state
+        let _ = spy "TicketStatusScreen action " action
+        let _ = spy "TicketStatusScreen state " state
         eval action state
   }
   where
   getPlaceDataEvent push = do
     void $ runEffectFn1 consumeBP unit
-    void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.shortOrderId  5 3000.0 initialState push PaymentStatusAction
+    if initialState.props.actionType == ST.ZooTicketToPaymentStatusEntry then
+      void $ launchAff $ flowRunner defaultGlobalState $ paymentStatusPooling initialState.data.shortOrderId  5 3000.0 initialState push PaymentStatusAction
+    else
+      pure unit
     pure $ pure unit
 --------------------------------------------------------------------------------------------
 
-paymentStatusPooling :: forall action. String -> Int -> Number -> ST.TicketBookingScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
+paymentStatusPooling :: forall action. String -> Int -> Number -> ST.TicketStatusScreenState -> (action -> Effect Unit) -> (String -> action) -> Flow GlobalState Unit
 paymentStatusPooling shortOrderId count delayDuration state push action = 
   if (getValueToLocalStore PAYMENT_STATUS_POOLING) == "true" && state.props.currentStage == ST.BookingConfirmationStage  && count > 0 && shortOrderId /= "" then do
     ticketStatus <- Remote.getTicketStatus shortOrderId
@@ -93,7 +97,7 @@ paymentStatusPooling shortOrderId count delayDuration state push action =
     else pure unit
     
 
-view :: forall w . (Action -> Effect Unit) -> ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
+view :: forall w . (Action -> Effect Unit) -> ST.TicketStatusScreenState -> PrestoDOM (Effect Unit) w
 view push state =
     PrestoAnim.animationSet [Anim.fadeIn true]  $ relativeLayout
     [ height MATCH_PARENT
@@ -124,7 +128,7 @@ view push state =
             , fillViewport true
             ]
             [ linearLayout
-                [ height MATCH_PARENT
+                [ height WRAP_CONTENT
                 , width MATCH_PARENT
                 , gravity CENTER
                 , orientation VERTICAL
@@ -136,7 +140,7 @@ view push state =
     , bookingConfirmationActions state push state.props.paymentStatus
     ]
 
-shimmerView :: forall w . ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
+shimmerView :: forall w . ST.TicketStatusScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
   shimmerFrameLayout
     [ width MATCH_PARENT
@@ -170,25 +174,6 @@ shimmerView state =
           )
     ]
 
-termsAndConditionsView :: forall w . Array String -> Boolean -> PrestoDOM (Effect Unit) w
-termsAndConditionsView termsAndConditions isMarginTop =
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , orientation VERTICAL
-  , margin $ if isMarginTop then MarginTop 10 else MarginTop 0
-  ] (mapWithIndex (\index item ->
-      linearLayout
-      [ width MATCH_PARENT
-      , height WRAP_CONTENT
-      , orientation HORIZONTAL
-      ][ textView $
-         [ textFromHtml $ " &#8226;&ensp; " <> item
-         , color Color.black700
-         ] <> FontStyle.tags TypoGraphy
-      ]
-  ) termsAndConditions )
-
 separatorView :: forall w. String -> PrestoDOM (Effect Unit) w
 separatorView color =
   linearLayout
@@ -197,55 +182,29 @@ separatorView color =
   , background color
   ][]
 
-getShareButtonIcon :: String -> String
-getShareButtonIcon ticketServiceName = case ticketServiceName of
-  "Entrance Fee" -> "ny_ic_share_unfilled_white"
-  _ -> "ny_ic_share_unfilled_black"
 
-getShareButtonColor :: String -> String
-getShareButtonColor ticketServiceName = case ticketServiceName of
-  "Entrance Fee" -> Color.white900
-  _ -> Color.black900
 
-getPlaceColor :: String -> String
-getPlaceColor ticketServiceName = case ticketServiceName of
-  "Entrance Fee" -> Color.white900
-  "Videography Fee" -> Color.black800
-  "Aquarium Fee" -> Color.black800
-  _ -> Color.black800
-
-getInfoColor :: String -> String
-getInfoColor ticketServiceName = case ticketServiceName of
-  "Entrance Fee" -> Color.white900
-  "Videography Fee" -> Color.black900
-  "Aquarium Fee" -> Color.black900
-  _ -> Color.black800
-
-getPillInfoColor :: String -> String
-getPillInfoColor ticketServiceName = case ticketServiceName of
-  "Entrance Fee" -> Color.grey900
-  "Videography Fee" -> Color.black800
-  "Aquarium Fee" ->  Color.white900
-  _ -> Color.white900
-
-bookingStatusView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
+bookingStatusView :: forall w. ST.TicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 bookingStatusView state push paymentStatus = 
-  relativeLayout
-  [ width MATCH_PARENT
-  , height MATCH_PARENT
-  , padding $ PaddingTop 20
-  , background "#E2EAFF"
-  ][ linearLayout
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      , orientation VERTICAL
-      , gravity CENTER
-      ][  paymentStatusHeader state push paymentStatus
-        , bookingStatusBody state push paymentStatus
-      ]
-  ]
+  let refundInfoView = if state.props.currentStage == ST.BookingConfirmationStage && state.props.actionType == ST.MetroTicketToPaymentStatusEntry && state.props.paymentStatus == Common.Pending then
+                         refundInfoTextView 
+                       else
+                         linearLayout [visibility GONE] []
+  in 
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , padding $ PaddingTop 20
+    , background "#E2EAFF"
+    , gravity CENTER
+    , orientation VERTICAL
+    ][ 
+      paymentStatusHeader state push paymentStatus
+    , bookingStatusBody state push paymentStatus
+    , refundInfoView
+    ]
 
-copyTransactionIdView :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
+copyTransactionIdView :: forall w. ST.TicketStatusScreenState -> (Action -> Effect Unit) -> Boolean -> PrestoDOM (Effect Unit) w
 copyTransactionIdView state push visibility' = 
   linearLayout
   [ height WRAP_CONTENT
@@ -268,47 +227,61 @@ copyTransactionIdView state push visibility' =
      ] 
   ]
 
-bookingStatusBody :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus ->  PrestoDOM (Effect Unit) w
+bookingStatusBody :: forall w. ST.TicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus ->  PrestoDOM (Effect Unit) w
 bookingStatusBody state push paymentStatus = 
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , weight 1.0
-  , orientation VERTICAL
-  , margin $ Margin 16 16 16 16
-  , visibility if paymentStatus == PP.Failed then GONE else VISIBLE
-  ][ scrollView
-      [ width MATCH_PARENT
-      , height MATCH_PARENT
-      ][ linearLayout
-          [ width MATCH_PARENT
-          , height MATCH_PARENT
-          , gravity CENTER
-          , orientation VERTICAL
-          , padding $ Padding 10 10 10 10
-          , cornerRadius 8.0
-          , background Color.white900
-          ][ linearLayout
-              [ width MATCH_PARENT
-              , height WRAP_CONTENT
-              ][ imageView
-                  [ width $ V 24
-                  , height $ V 24
-                  , imageWithFallback $ fetchImage FF_ASSET "ny_ic_ticket_black" 
-                  , margin $ MarginRight 4
-                  ]
-                , commonTV push state.data.zooName Color.black900 (FontStyle.subHeading1 TypoGraphy) 0 LEFT NoAction
-              ]
-        , linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , orientation VERTICAL
-          ](DA.mapWithIndex ( \index item ->  keyValueView push state item.key item.val index) state.data.keyValArray)
+  let 
+    headerImgConfig = case state.props.actionType of
+                        ST.MetroTicketToPaymentStatusEntry -> {
+                          src : fetchImage FF_COMMON_ASSET "ny_ic_chennai_metro"
+                        , width : V 41
+                        , height : V 41
+                        }
+                        ST.ZooTicketToPaymentStatusEntry -> {
+                          src : fetchImage FF_ASSET "ny_ic_ticket_black"
+                        , width : V 24
+                        , height : V 24
+                        }
+  in 
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , weight 1.0
+    , orientation VERTICAL
+    , margin $ Margin 16 16 16 0
+    , visibility if paymentStatus == Common.Failed then GONE else VISIBLE
+    ][ scrollView
+        [ width MATCH_PARENT
+        , height MATCH_PARENT
+        ][ linearLayout
+            [ width MATCH_PARENT
+            , height MATCH_PARENT
+            , gravity CENTER
+            , orientation VERTICAL
+            , padding $ Padding 10 10 10 10
+            , cornerRadius 8.0
+            , background Color.white900
+            ][ linearLayout
+                [ width MATCH_PARENT
+                , height WRAP_CONTENT
+                , gravity CENTER_VERTICAL
+                ][ imageView
+                    [ width headerImgConfig.width
+                    , height headerImgConfig.height
+                    , imageWithFallback headerImgConfig.src
+                    , margin $ MarginRight 4
+                    ]
+                  , commonTV push state.data.ticketName Color.black900 (FontStyle.subHeading1 TypoGraphy) 0 LEFT NoAction
+                ]
+          , linearLayout
+            [ height WRAP_CONTENT
+            , width MATCH_PARENT
+            , orientation VERTICAL
+            ] $ DA.mapWithIndex ( \index item ->  keyValueView push state item.key item.val index) state.data.keyValArray
           ]
+        ]
       ]
-  ]
 
-bookingConfirmationActions :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
+bookingConfirmationActions :: forall w. ST.TicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 bookingConfirmationActions state push paymentStatus = 
   linearLayout
   [ width MATCH_PARENT
@@ -339,9 +312,10 @@ bookingConfirmationActions state push paymentStatus =
                               PP.Success -> "Go Home"
                               _ -> "Go Back"
 
-paymentStatusHeader :: forall w. ST.TicketBookingScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
+paymentStatusHeader :: forall w. ST.TicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 paymentStatusHeader state push paymentStatus = 
   let transcationConfig = getTransactionConfig paymentStatus
+      paymentSt = spy "paymentStatus" paymentStatus
   in
     linearLayout
     [ width MATCH_PARENT
@@ -389,7 +363,7 @@ commonTV push text' color' fontStyle marginTop gravity' action =
   , margin $ MarginTop marginTop
   ] <> fontStyle
 
-keyValueView :: (Action -> Effect Unit) -> ST.TicketBookingScreenState -> String -> String -> Int -> forall w . PrestoDOM (Effect Unit) w
+keyValueView :: (Action -> Effect Unit) -> ST.TicketStatusScreenState -> String -> String -> Int -> forall w . PrestoDOM (Effect Unit) w
 keyValueView push state key value index = 
   linearLayout 
   [ height WRAP_CONTENT
@@ -414,17 +388,23 @@ keyValueView push state key value index =
       , linearLayout
         [ width MATCH_PARENT
         , gravity RIGHT
-        ][ if index == 1 then bookingForView state else 
-           textView $ 
-            [ text value
-            , color Color.black800
-            , onClick push $ const $ if key == "Booking ID" || key == "Transaction ID" then Copy value else NoAction -- needs refactoring
-            ] <> FontStyle.body6 TypoGraphy
+        ][ if key == "Booking For" then 
+             bookingForView state 
+           else 
+            textView $ 
+              [ text value
+              , color Color.black800
+              , onClick push $ const $ 
+                  if key == "Booking ID" || key == "Transaction ID" then
+                    Copy value 
+                  else
+                    NoAction -- needs refactoring
+              ] <> FontStyle.body6 TypoGraphy
           ]
       ]
   ]
 
-bookingForView :: forall w. ST.TicketBookingScreenState -> PrestoDOM (Effect Unit) w
+bookingForView :: forall w. ST.TicketStatusScreenState -> PrestoDOM (Effect Unit) w
 bookingForView state = 
   linearLayout
     [ width WRAP_CONTENT
@@ -446,3 +426,30 @@ getTransactionConfig status =
     PP.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : "Please check back in a few minutes.", title : "Your booking is Pending!"}
     PP.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : "Please retry booking.", title : "Booking Failed!"}
     PP.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}
+
+
+refundInfoTextView :: forall w. PrestoDOM (Effect Unit) w
+refundInfoTextView = 
+  linearLayout[
+    width MATCH_PARENT
+  , height WRAP_CONTENT
+  , margin $ Margin 16 12 16 0
+  ][
+    linearLayout[
+      width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , gravity CENTER_VERTICAL
+    ][
+      imageView [
+        width $ V 16
+      , height $ V 16
+      , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info"
+      ]
+    ]
+  , textView $ [
+      width WRAP_CONTENT
+    , height WRAP_CONTENT
+    , text "Incase of failure, any money debited will be refunded within 5 - 7 working days."
+    , color Color.black700
+    ] <> FontStyle.body3 TypoGraphy
+  ]

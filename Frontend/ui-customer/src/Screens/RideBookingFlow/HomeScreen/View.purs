@@ -1077,6 +1077,24 @@ bannersCarousal view state push =
   , margin $ MarginTop 12
   ][CarouselHolder.carouselView push $ getCarouselConfig view state]
 
+-- zooTicketBookingBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w -- To be deprecated
+-- zooTicketBookingBanner state push = 
+--   linearLayout
+--     [ height WRAP_CONTENT
+--     , width MATCH_PARENT
+--     , orientation VERTICAL
+--     , margin $ Margin 16 16 16 16
+--     ][  Banner.view (push <<< TicketBookingFlowBannerAC) (ticketBannerConfig state)]
+
+-- metroTicketBookingBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+-- metroTicketBookingBanner state push = 
+--   linearLayout
+--     [ height WRAP_CONTENT
+--     , width MATCH_PARENT
+--     , orientation VERTICAL
+--     , margin $ Margin 16 16 16 16
+--     ][  Banner.view (push <<< MetroTicketBookingBannerAC) (metroTicketBannerConfig state)]
+
 emptySuggestionsBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptySuggestionsBanner state push = 
   linearLayout

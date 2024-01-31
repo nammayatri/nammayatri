@@ -492,6 +492,27 @@ ticketBannerConfig state action =
       }
   in config'
 
+metroTicketBannerConfig :: ST.HomeScreenState -> Banner.Config
+metroTicketBannerConfig state = 
+  let
+    config = Banner.config
+    config' = config
+      {
+        backgroundColor = Color.blue600'
+      , title = "Book metro tickets with \nNamma Yatri Now!"
+      , titleColor = Color.blue800
+      , actionText = "Book Now"
+      , actionTextColor = Color.white900
+      , actionTextBackgroundColor = Color.blue800
+      , actionTextCornerRadius = 12.0
+      , imageUrl = fetchImage FF_ASSET "ny_ic_metro_banner"
+      , margin = MarginTop 0
+      , imageHeight = V 100
+      , imageWidth = V 120
+      , padding = Padding 0 2 5 5
+      , imagePadding = PaddingLeft 24
+      }
+  in config'
 reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 reportIssuePopUpConfig state =
   let

@@ -766,6 +766,8 @@ data ScreenOutput = LogoutUser
                   | GoToNotifyRideShare HomeScreenState
                   | ExitToFollowRide HomeScreenState
                   | GoToReportSafetyIssue HomeScreenState
+                  | GoToMyMetroTickets HomeScreenState
+                  | GoToMetroTicketBookingFlow HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -882,6 +884,7 @@ data Action = NoAction
             | SkipAccessibilityUpdateAC PrimaryButtonController.Action
             | SpecialZoneOTPExpiryAction Int String String
             | TicketBookingFlowBannerAC Banner.Action
+            | MetroTicketBookingBannerAC Banner.Action
             | WaitingInfo
             | ShareRide
             | ScrollStateChanged String
@@ -1531,6 +1534,10 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToNammaSafety))
 eval (SettingSideBarActionController (SettingSideBarController.GoToMyTickets)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_zoo_tickets"
   exit $ GoToMyTickets state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
+
+eval (SettingSideBarActionController (SettingSideBarController.GoToMyMetroTickets)) state = do
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_metro_tickets"
+  exit $ GoToMyMetroTickets state { data{settingSideBar{opened = SettingSideBarController.OPEN}}}
 
 eval (SettingSideBarActionController (SettingSideBarController.ShareAppLink)) state =
   do
@@ -2341,6 +2348,8 @@ eval (UpdateProfileButtonAC PrimaryButtonController.OnClick) state = do
 eval (DisabilityBannerAC Banner.OnClick) state = if (addCarouselWithVideoExists unit ) then continue state{props{showEducationalCarousel = true}} else exit $ GoToMyProfile state true
 
 eval (TicketBookingFlowBannerAC Banner.OnClick) state = exit $ GoToTicketBookingFlow state
+
+eval (MetroTicketBookingBannerAC Banner.OnClick) state = exit $ GoToMetroTicketBookingFlow state
 
 eval (SkipAccessibilityUpdateAC PrimaryButtonController.OnClick) state = do 
   _ <- pure $ pauseYoutubeVideo unit

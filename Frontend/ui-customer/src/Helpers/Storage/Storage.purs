@@ -94,6 +94,8 @@ data KeyStore
   | IS_SOS_ACTIVE
   | SAFETY_ALERT_TYPE
   | SOS_ALARM_STATUS
+  | METRO_PAYMENT_STATUS_POOLING
+  | METRO_STATIONS
 
 derive instance genericKeyStore :: Generic KeyStore _
 
