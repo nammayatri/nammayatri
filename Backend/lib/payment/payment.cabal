@@ -31,11 +31,14 @@ library
       Lib.Payment.Domain.Types.Common
       Lib.Payment.Domain.Types.PaymentOrder
       Lib.Payment.Domain.Types.PaymentTransaction
+      Lib.Payment.Domain.Types.Refunds
       Lib.Payment.Storage.Beam.BeamFlow
       Lib.Payment.Storage.Beam.PaymentOrder
       Lib.Payment.Storage.Beam.PaymentTransaction
+      Lib.Payment.Storage.Beam.Refunds
       Lib.Payment.Storage.Queries.PaymentOrder
       Lib.Payment.Storage.Queries.PaymentTransaction
+      Lib.Payment.Storage.Queries.Refunds
   other-modules:
       Paths_payment
   hs-source-dirs:
