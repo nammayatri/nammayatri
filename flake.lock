@@ -1353,6 +1353,31 @@
         "type": "github"
       }
     },
+    "haskell-cac": {
+      "inputs": {
+        "common": [
+          "common"
+        ],
+        "nixpkgs": [
+          "common",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1706625638,
+        "narHash": "sha256-5JLgLBiHzwXoW8hSVacho2DDweW454N/PgqtACKltbA=",
+        "owner": "piyushKumar-1",
+        "repo": "haskell_cac_client",
+        "rev": "cd4e79e7048a0e7be93dad56f8ab4d5f32a8273a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "piyushKumar-1",
+        "ref": "Testing",
+        "repo": "haskell_cac_client",
+        "type": "github"
+      }
+    },
     "haskell-flake": {
       "locked": {
         "lastModified": 1705067885,
@@ -2992,6 +3017,7 @@
         "beckn-gateway": "beckn-gateway",
         "common": "common",
         "easy-purescript-nix": "easy-purescript-nix",
+        "haskell-cac": "haskell-cac",
         "haskell-flake": [
           "common",
           "haskell-flake"

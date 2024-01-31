@@ -4,7 +4,7 @@ let sec = ./secrets/provider-dashboard.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = 5436
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -14,7 +14,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = 5434
+      , connectPort = 5436
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
