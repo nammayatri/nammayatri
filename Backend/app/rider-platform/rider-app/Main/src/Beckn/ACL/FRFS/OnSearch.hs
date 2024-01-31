@@ -23,6 +23,7 @@ import Domain.Types.FRFSTrip as DTrip
 import qualified Domain.Types.Station as Domain.DStation
 import Kernel.Prelude
 import Kernel.Types.Error
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 
 buildOnSearchReq ::
@@ -39,7 +40,7 @@ buildOnSearchReq onSearchReq = do
 
   timeStamp <- context.contextTimestamp & fromMaybeM (InvalidRequest "Timestamp not found")
 
-  let ttl = context.contextTtl >>= Utils.getQuoteValidTill timeStamp
+  let ttl = context.contextTtl >>= Utils.getQuoteValidTill (convertRFC3339ToUTC timeStamp)
 
   message <- onSearchReq.onSearchReqMessage & fromMaybeM (InvalidRequest "Message not found")
   provider <- message.onSearchReqMessageCatalog.catalogProviders >>= listToMaybe & fromMaybeM (InvalidRequest "Provider not found")

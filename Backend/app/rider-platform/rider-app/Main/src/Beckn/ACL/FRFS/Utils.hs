@@ -25,6 +25,7 @@ import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicket as Ticket
 import Kernel.Prelude
 import Kernel.Types.Error
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 
 buildContext ::
@@ -37,7 +38,7 @@ buildContext ::
   Maybe BppData ->
   m Spec.Context
 buildContext action bapConfig txnId msgId mTTL bppData = do
-  now <- getCurrentTime
+  now <- UTCTimeRFC3339 <$> getCurrentTime
   let bapUrl = showBaseUrl bapConfig.subscriberUrl
   let bapId = bapConfig.subscriberId
       contextBppId = bppData <&> (.bppId)

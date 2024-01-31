@@ -21,6 +21,7 @@ import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnInit as Domain
 import Kernel.Prelude
 import Kernel.Types.Error
+import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
 
 buildOnInitReq ::
@@ -34,7 +35,7 @@ buildOnInitReq onInitReq = do
 
   timeStamp <- onInitReq.onInitReqContext.contextTimestamp & fromMaybeM (InvalidRequest "Timestamp not found")
 
-  let ttl = onInitReq.onInitReqContext.contextTtl >>= Utils.getQuoteValidTill timeStamp
+  let ttl = onInitReq.onInitReqContext.contextTtl >>= Utils.getQuoteValidTill (convertRFC3339ToUTC timeStamp)
 
   order <- onInitReq.onInitReqMessage <&> (.confirmReqMessageOrder) & fromMaybeM (InvalidRequest "Order not found")
 

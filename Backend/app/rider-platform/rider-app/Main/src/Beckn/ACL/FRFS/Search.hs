@@ -35,8 +35,8 @@ buildSearchReq ::
   m (Spec.SearchReq)
 buildSearchReq search bapConfig fromStation toStation = do
   now <- getCurrentTime
+  messageId <- generateGUID
   let transactionId = search.id.getId
-      messageId = transactionId
       validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
 

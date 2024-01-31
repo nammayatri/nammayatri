@@ -74,6 +74,7 @@ import qualified Data.Text as T
 import Data.Time
 import Data.UUID (UUID)
 import GHC.Generics (Generic)
+import Kernel.Types.TimeRFC339 hiding (Domain)
 import Prelude
 
 -- | Describes the acknowledgement sent in response to an API call. If the implementation uses HTTP/S, then Ack must be returned in the same session. Every API call to a BPP must be responded to with an Ack whether the BPP intends to respond with a callback or not. This has one property called &#x60;status&#x60; that indicates the status of the Acknowledgement.
@@ -224,7 +225,7 @@ data CancelReq = CancelReq
     -- |
     cancelReqMessage :: CancelReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON CancelReq where
   parseJSON = genericParseJSON optionsCancelReq
@@ -414,7 +415,7 @@ data ConfirmReq = ConfirmReq
     -- |
     confirmReqMessage :: ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON ConfirmReq where
   parseJSON = genericParseJSON optionsConfirmReq
@@ -480,7 +481,7 @@ data Context = Context
     -- | This is a unique value which persists during a request / callback cycle. Since beckn protocol APIs are asynchronous, BAPs need a common value to match an incoming callback from a BPP to an earlier call. This value can also be used to ignore duplicate messages coming from the BPP. It is recommended to generate a fresh message_id for every new interaction. When sending unsolicited callbacks, BPPs must generate a new message_id.
     contextMessageId :: Maybe Text,
     -- | Time of request generation in RFC3339 format
-    contextTimestamp :: Maybe UTCTime,
+    contextTimestamp :: Maybe UTCTimeRFC3339,
     -- | This is a unique value which persists across all API calls from `search` through `confirm`. This is done to indicate an active user session across multiple requests. The BPPs can use this value to push personalized recommendations, and dynamic offerings related to an ongoing transaction despite being unaware of the user active on the BAP.
     contextTransactionId :: Maybe Text,
     -- | The duration in ISO8601 format after timestamp for which this message holds valid
@@ -488,7 +489,7 @@ data Context = Context
     -- | Version of transaction protocol being used by the sender.
     contextVersion :: Maybe Text
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON Context where
   parseJSON = genericParseJSON optionsContext
@@ -697,7 +698,7 @@ data InitReq = InitReq
     -- |
     initReqMessage :: ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON InitReq where
   parseJSON = genericParseJSON optionsInitReq
@@ -958,7 +959,7 @@ data OnCancelReq = OnCancelReq
     -- |
     onCancelReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON OnCancelReq where
   parseJSON = genericParseJSON optionsOnCancelReq
@@ -989,7 +990,7 @@ data OnConfirmReq = OnConfirmReq
     -- |
     onConfirmReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON OnConfirmReq where
   parseJSON = genericParseJSON optionsOnConfirmReq
@@ -1020,7 +1021,7 @@ data OnInitReq = OnInitReq
     -- |
     onInitReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON OnInitReq where
   parseJSON = genericParseJSON optionsOnInitReq
@@ -1051,7 +1052,7 @@ data OnSearchReq = OnSearchReq
     -- |
     onSearchReqMessage :: Maybe OnSearchReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON OnSearchReq where
   parseJSON = genericParseJSON optionsOnSearchReq
@@ -1106,7 +1107,7 @@ data OnStatusReq = OnStatusReq
     -- |
     onStatusReqMessage :: Maybe ConfirmReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON OnStatusReq where
   parseJSON = genericParseJSON optionsOnStatusReq
@@ -1426,7 +1427,7 @@ data SearchReq = SearchReq
     -- |
     searchReqMessage :: SearchReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON SearchReq where
   parseJSON = genericParseJSON optionsSearchReq
@@ -1478,7 +1479,7 @@ data StatusReq = StatusReq
     -- |
     statusReqMessage :: StatusReqMessage
   }
-  deriving (Show, Eq, Generic, Data)
+  deriving (Show, Eq, Generic)
 
 instance FromJSON StatusReq where
   parseJSON = genericParseJSON optionsStatusReq
