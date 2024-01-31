@@ -57,7 +57,7 @@ data DConfirmReq = DConfirmReq
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: DL.LocationAddress,
-    toAddress :: DL.LocationAddress,
+    toAddress :: Maybe DL.LocationAddress,
     mbRiderName :: Maybe Text,
     nightSafetyCheck :: Bool
   }
@@ -124,7 +124,8 @@ handler merchant req validatedQuote = do
       when isNewRider $ QRD.create riderDetails
       QRB.updateRiderId booking.id riderDetails.id
       QL.updateAddress booking.fromLocation.id req.fromAddress
-      whenJust booking.toLocation $ \toLocation -> QL.updateAddress toLocation.id req.toAddress
+      whenJust booking.toLocation $ \toLocation -> do
+        whenJust req.toAddress $ \toAddress -> QL.updateAddress toLocation.id toAddress
       whenJust req.mbRiderName $ QRB.updateRiderName booking.id
       QBE.logRideConfirmedEvent booking.id
 

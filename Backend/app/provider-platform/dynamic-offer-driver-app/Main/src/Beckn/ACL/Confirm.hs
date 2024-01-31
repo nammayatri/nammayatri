@@ -50,7 +50,7 @@ buildConfirmReq req = do
       vehicleVariant = castVehicleVariant fulfillment.vehicle.category
       driverId = req.message.order.provider <&> (.id)
       nightSafetyCheck = buildNightSafetyCheckTag $ (.tags) =<< fulfillment.customer.person
-  toAddress <- (castAddress . (.location.address) <$> fulfillment.end) & fromMaybeM (InvalidRequest "end location missing")
+  let toAddress = (castAddress . (.location.address) <$> fulfillment.end)
 
   return $
     DConfirm.DConfirmReq
@@ -100,8 +100,7 @@ buildConfirmReqV2 req = do
   vehicleVariant <- Utils.parseVehicleVariant vehCategory vehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:- " <> show vehCategory <> " and variant:- " <> show vehVariant)
   let driverId = req.confirmReqMessage.confirmReqMessageOrder.orderProvider >>= (.providerId)
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag
-  toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) >>= Utils.parseAddress & fromMaybeM (InvalidRequest "End location not found")
-
+  let toAddress = fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) >>= Utils.parseAddress
   return $
     DConfirm.DConfirmReq
       { ..

@@ -81,6 +81,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN schedule_ride_b
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD COLUMN trip_category text;
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD COLUMN fare_policy_id character varying(36);
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD COLUMN is_scheduled boolean;
+ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ALTER COLUMN valid_till type TIMESTAMP WITH TIME ZONE;
+ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ALTER COLUMN created_at type TIMESTAMP WITH TIME ZONE;
+ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ALTER COLUMN updated_at type TIMESTAMP WITH TIME ZONE;
 -- atlas_driver_offer_bpp.drop_not_null_if_exists("atlas_driver_offer_bpp", "quote_special_zone", "distance");
 -- atlas_driver_offer_bpp.drop_not_null_if_exists("atlas_driver_offer_bpp", "quote_special_zone", "estimated_finish_time");
 
