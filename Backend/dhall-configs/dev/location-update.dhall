@@ -1,7 +1,5 @@
 let common = ./common.dhall
 
-let genericCommon = ../generic/common.dhall
-
 let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let appCfg = ./dynamic-offer-driver-app.dhall
@@ -18,7 +16,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = esqDBCfg.connectPort
+      , connectPort = 5434
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -63,13 +61,20 @@ let cacheConfig = { configsExpTime = +86400 }
 
 let kvConfigUpdateFrequency = +10
 
-let cacConfig =
-      { host = "http://localhost:8080"
-      , interval = 10
-      , tenant = "dev"
-      , retryConnection = False
-      , cacExpTime = +86400
-      , enablePolling = True
+let healthCheckAppCfg =
+      { graceTerminationPeriod = appCfg.graceTerminationPeriod
+      , healthcheckPort = +8115
+      , notificationMinDelay = +60000000
+      , driverInactiveDelay = +86400
+      , smsCfg = appCfg.smsCfg
+      , driverInactiveSmsTemplate =
+          "Alert! You have been marked Busy on Namma Yatri Partner, as we have not received any location update from your phone in more than a day. Please open the app and update your location for the app to work properly."
+      , driverAllowedDelayForLocationUpdateInSec = +10
+      , driverLocationHealthCheckIntervalInSec = +60
+      , fcmNofificationSendCount = +2
+      , loggerConfig =
+              appCfg.loggerConfig
+          //  { logFilePath = "/tmp/driver-tracking-healthcheck.log" }
       }
 
 in  { hedisCfg
@@ -95,6 +100,5 @@ in  { hedisCfg
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , kvConfigUpdateFrequency
-    , cacConfig
-    , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
+    , healthCheckAppCfg = Some healthCheckAppCfg
     }

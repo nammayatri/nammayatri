@@ -17,11 +17,14 @@ module Environment where
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
+import Kernel.External.Encryption (EncTools)
+import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Streaming.Kafka.Producer.Types as KT
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import Kernel.Types.Common (Microseconds, Seconds)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.SlidingWindowCounters as SWC
@@ -30,6 +33,7 @@ import Kernel.Utils.Common (CacConfig, CacheConfig)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
+import Kernel.Utils.Shutdown
 import System.Environment (lookupEnv)
 import Prelude (show)
 
@@ -63,7 +67,7 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS deriving (Generic, FromDhall, Read)
+data ConsumerType = LOCATION_UPDATE | AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -71,8 +75,9 @@ instance Show ConsumerType where
   show AVAILABILITY_TIME = "availability-time"
   show BROADCAST_MESSAGE = "broadcast-message"
   show PERSON_STATS = "person-stats"
+  show LOCATION_UPDATE = "location-update"
 
-type Seconds = Integer
+type Seconds' = Integer
 
 type Flow = FlowR AppEnv
 
@@ -87,7 +92,7 @@ data AppCfg = AppCfg
     cutOffHedisCluster :: Bool,
     dumpEvery :: Seconds,
     kafkaConsumerCfg :: ConsumerConfig,
-    timeBetweenUpdates :: Seconds,
+    timeBetweenUpdates :: Seconds',
     availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
     granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig,
@@ -96,7 +101,10 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
-    kvConfigUpdateFrequency :: Int
+    healthCheckAppCfg :: Maybe HealthCheckAppCfg,
+    kvConfigUpdateFrequency :: Int,
+    metricsPort :: Int,
+    encTools :: EncTools
   }
   deriving (Generic, FromDhall)
 
@@ -112,7 +120,7 @@ data AppEnv = AppEnv
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     kafkaConsumerCfg :: ConsumerConfig,
-    timeBetweenUpdates :: Seconds,
+    timeBetweenUpdates :: Seconds',
     availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
     granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig,
@@ -127,9 +135,27 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    cacConfig :: CacConfig
+    cacConfig :: CacConfig,
+    healthCheckAppCfg :: Maybe HealthCheckAppCfg,
+    isShuttingDown :: Shutdown,
+    httpClientOptions :: HttpClientOptions,
+    encTools :: EncTools
   }
   deriving (Generic)
+
+data HealthCheckAppCfg = HealthCheckAppCfg
+  { healthcheckPort :: Int,
+    graceTerminationPeriod :: Seconds,
+    notificationMinDelay :: Microseconds,
+    driverInactiveDelay :: Seconds,
+    driverAllowedDelayForLocationUpdateInSec :: Seconds,
+    driverLocationHealthCheckIntervalInSec :: Seconds,
+    fcmNofificationSendCount :: Int,
+    smsCfg :: SmsConfig,
+    driverInactiveSmsTemplate :: Text,
+    loggerConfig :: LoggerConfig
+  }
+  deriving (Generic, FromDhall)
 
 buildAppEnv :: AppCfg -> ConsumerType -> IO AppEnv
 buildAppEnv AppCfg {..} consumerType = do
@@ -152,4 +178,10 @@ buildAppEnv AppCfg {..} consumerType = do
   coreMetrics <- Metrics.registerCoreMetricsContainer
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  isShuttingDown <- mkShutdown
   pure $ AppEnv {..}
+
+releaseAppEnv :: AppEnv -> IO ()
+releaseAppEnv AppEnv {..} = do
+  releaseLoggerEnv loggerEnv
+  disconnectHedis hedisEnv
