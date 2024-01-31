@@ -15,12 +15,9 @@
 module Tools.Maps
   ( module Reexport,
     autoComplete,
-    getDistance,
-    getDistances,
     getPlaceDetails,
     getPlaceName,
     getRoutes,
-    snapToRoad,
     getPickupRoutes,
     getTripRoutes,
     getDistanceForCancelRide,
@@ -59,22 +56,9 @@ import Tools.Error
 data MapsHandler m req resp = MapsHandler
   { serviceMethod :: Maps.MapsServiceUsageMethod,
     apiCall :: MapsServiceConfig -> req -> m resp,
-    getPickedService :: DPickedServices.PickedServices -> MapsService,
+    getPickedService :: DPickedServices.PickedServices -> MapsService, -- Maybe MapsService -- Nothing if we do not link service to searchRequest
     getServiceUsage :: DMSUC.MerchantServiceUsageConfig -> Maps.MapsServiceUsage
   }
-
--- not used
-getDistance ::
-  ( ServiceFlow m r,
-    HasCoordinates a,
-    HasCoordinates b
-  ) =>
-  Id Merchant ->
-  Id MerchantOperatingCity ->
-  Maybe (Id DSR.SearchRequest) ->
-  GetDistanceReq a b ->
-  m (GetDistanceResp a b)
-getDistance = runWithServiceConfig (MapsHandler Maps.GetDistances Maps.getDistance (.getDistances) (.getDistances))
 
 getDistanceForCancelRide ::
   ( ServiceFlow m r,
@@ -87,18 +71,6 @@ getDistanceForCancelRide ::
   GetDistanceReq a b ->
   m (GetDistanceResp a b)
 getDistanceForCancelRide = runWithServiceConfig (MapsHandler Maps.GetDistancesForCancelRide Maps.getDistance (.getDistancesForCancelRide) (.getDistancesForCancelRide))
-
-getDistances ::
-  ( ServiceFlow m r,
-    HasCoordinates a,
-    HasCoordinates b
-  ) =>
-  Id Merchant ->
-  Id MerchantOperatingCity ->
-  Maybe (Id DSR.SearchRequest) ->
-  GetDistancesReq a b ->
-  m (GetDistancesResp a b)
-getDistances = runWithServiceConfig (MapsHandler Maps.GetDistances Maps.getDistances (.getDistances) (.getDistances))
 
 getRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe (Id DSR.SearchRequest) -> GetRoutesReq -> m GetRoutesResp
 getRoutes personId merchantId mbMOCId mbSearchRequestId req = do
@@ -118,17 +90,6 @@ getTripRoutes personId merchantId mbMOCId mbSearchRequestId req = do
   mOCId <- getMerchantOperatingCityId personId mbMOCId
   runWithServiceConfig (MapsHandler Maps.GetTripRoutes (Maps.getRoutes merchant.isAvoidToll) (.getTripRoutes) (.getTripRoutes)) merchantId mOCId mbSearchRequestId req
 
--- not used
-snapToRoad ::
-  ( ServiceFlow m r
-  ) =>
-  Id Merchant ->
-  Id MerchantOperatingCity ->
-  Maybe (Id DSR.SearchRequest) ->
-  SnapToRoadReq ->
-  m SnapToRoadResp
-snapToRoad = runWithServiceConfig (MapsHandler Maps.SnapToRoad Maps.snapToRoad (.snapToRoad) (.snapToRoad))
-
 autoComplete :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> AutoCompleteReq -> m AutoCompleteResp
 autoComplete = runWithServiceConfig (MapsHandler Maps.AutoComplete Maps.autoComplete (.autoComplete) (.autoComplete))
 
@@ -138,6 +99,7 @@ getPlaceName = runWithServiceConfig (MapsHandler Maps.GetPlaceName Maps.getPlace
 getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig (MapsHandler Maps.GetPlaceDetails Maps.getPlaceDetails (.getPlaceDetails) (.getPlaceDetails))
 
+-- two different functions: with searchRequest and without
 runWithServiceConfig ::
   ServiceFlow m r =>
   MapsHandler m req resp ->
@@ -150,7 +112,7 @@ runWithServiceConfig h merchantId merchantOperatingCityId mbSearchRequestId req 
   pickedService <- case mbSearchRequestId of
     Nothing -> do
       merchantConfig <- CQMSUC.findByMerchantOperatingCityId merchantOperatingCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
-      pickService merchantOperatingCityId (h.getServiceUsage merchantConfig) h.serviceMethod
+      Maps.pickService merchantOperatingCityId (h.getServiceUsage merchantConfig) h.serviceMethod
     Just searchRequestId -> do
       mbPickedServices <- QPickedServices.findByPrimaryKey (cast @DSR.SearchRequest @DPickedServices.PickedServices searchRequestId)
       case mbPickedServices of
@@ -178,25 +140,21 @@ buildPickedServices searchRequestId' merchantOperatingCityId merchantConfig = do
   now <- getCurrentTime
   let pickService' field = pickService merchantOperatingCityId (field merchantConfig)
   autoComplete' <- pickService' (.autoComplete) Maps.AutoComplete
-  getDistances' <- pickService' (.getDistances) Maps.GetDistances
   getDistancesForCancelRide' <- pickService' (.getDistancesForCancelRide) Maps.GetDistancesForCancelRide
   getPickupRoutes' <- pickService' (.getPickupRoutes) Maps.GetPickupRoutes
   getPlaceDetails' <- pickService' (.getPlaceDetails) Maps.GetPlaceDetails
   getPlaceName' <- pickService' (.getPlaceName) Maps.GetPlaceName
   getRoutes' <- pickService' (.getRoutes) Maps.GetRoutes
   getTripRoutes' <- pickService' (.getTripRoutes) Maps.GetTripRoutes
-  snapToRoad' <- pickService' (.snapToRoad) Maps.SnapToRoad
   pure
     DPickedServices.PickedServices
       { autoComplete = autoComplete',
-        getDistances = getDistances',
         getDistancesForCancelRide = getDistancesForCancelRide',
         getPickupRoutes = getPickupRoutes',
         getPlaceDetails = getPlaceDetails',
         getPlaceName = getPlaceName',
         getRoutes = getRoutes',
         getTripRoutes = getTripRoutes',
-        snapToRoad = snapToRoad',
         createdAt = now,
         updatedAt = now,
         ..

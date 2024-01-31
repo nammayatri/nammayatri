@@ -1,7 +1,6 @@
 CREATE TABLE atlas_app.picked_services ();
 
 ALTER TABLE atlas_app.picked_services ADD COLUMN auto_complete text NOT NULL;
-ALTER TABLE atlas_app.picked_services ADD COLUMN get_distances text NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN get_distances_for_cancel_ride text NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN get_pickup_routes text NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN get_place_details text NOT NULL;
@@ -10,7 +9,6 @@ ALTER TABLE atlas_app.picked_services ADD COLUMN get_routes text NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN get_trip_routes text NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN search_request_id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.picked_services ADD COLUMN snap_to_road text NOT NULL;
 ALTER TABLE atlas_app.picked_services ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.picked_services ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.picked_services ADD PRIMARY KEY ( search_request_id);

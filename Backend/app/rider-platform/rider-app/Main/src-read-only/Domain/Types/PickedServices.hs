@@ -12,7 +12,6 @@ import qualified Tools.Beam.UtilsTH
 
 data PickedServices = PickedServices
   { autoComplete :: Kernel.External.Maps.Types.MapsService,
-    getDistances :: Kernel.External.Maps.Types.MapsService,
     getDistancesForCancelRide :: Kernel.External.Maps.Types.MapsService,
     getPickupRoutes :: Kernel.External.Maps.Types.MapsService,
     getPlaceDetails :: Kernel.External.Maps.Types.MapsService,
@@ -21,7 +20,6 @@ data PickedServices = PickedServices
     getTripRoutes :: Kernel.External.Maps.Types.MapsService,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.PickedServices.PickedServices,
-    snapToRoad :: Kernel.External.Maps.Types.MapsService,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

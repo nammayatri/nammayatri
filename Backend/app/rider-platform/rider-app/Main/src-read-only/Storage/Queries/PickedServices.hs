@@ -36,7 +36,6 @@ updateByPrimaryKey Domain.Types.PickedServices.PickedServices {..} = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.autoComplete $ autoComplete,
-      Se.Set Beam.getDistances $ getDistances,
       Se.Set Beam.getDistancesForCancelRide $ getDistancesForCancelRide,
       Se.Set Beam.getPickupRoutes $ getPickupRoutes,
       Se.Set Beam.getPlaceDetails $ getPlaceDetails,
@@ -44,7 +43,6 @@ updateByPrimaryKey Domain.Types.PickedServices.PickedServices {..} = do
       Se.Set Beam.getRoutes $ getRoutes,
       Se.Set Beam.getTripRoutes $ getTripRoutes,
       Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.snapToRoad $ snapToRoad,
       Se.Set Beam.createdAt $ createdAt,
       Se.Set Beam.updatedAt $ now
     ]
@@ -59,7 +57,6 @@ instance FromTType' Beam.PickedServices Domain.Types.PickedServices.PickedServic
       Just
         Domain.Types.PickedServices.PickedServices
           { autoComplete = autoComplete,
-            getDistances = getDistances,
             getDistancesForCancelRide = getDistancesForCancelRide,
             getPickupRoutes = getPickupRoutes,
             getPlaceDetails = getPlaceDetails,
@@ -68,7 +65,6 @@ instance FromTType' Beam.PickedServices Domain.Types.PickedServices.PickedServic
             getTripRoutes = getTripRoutes,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             searchRequestId = Kernel.Types.Id.Id searchRequestId,
-            snapToRoad = snapToRoad,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -77,7 +73,6 @@ instance ToTType' Beam.PickedServices Domain.Types.PickedServices.PickedServices
   toTType' Domain.Types.PickedServices.PickedServices {..} = do
     Beam.PickedServicesT
       { Beam.autoComplete = autoComplete,
-        Beam.getDistances = getDistances,
         Beam.getDistancesForCancelRide = getDistancesForCancelRide,
         Beam.getPickupRoutes = getPickupRoutes,
         Beam.getPlaceDetails = getPlaceDetails,
@@ -86,7 +81,6 @@ instance ToTType' Beam.PickedServices Domain.Types.PickedServices.PickedServices
         Beam.getTripRoutes = getTripRoutes,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.searchRequestId = Kernel.Types.Id.getId searchRequestId,
-        Beam.snapToRoad = snapToRoad,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
