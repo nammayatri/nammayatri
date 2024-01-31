@@ -531,3 +531,8 @@ export const isTrue = function (a) {
   const bool = true;
   return a.toString() === bool.toString();
 }
+
+export const convertDateTimeConfigToUTCImpl = function (year, month, day, hour, minute, second) {
+  const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  return date.toISOString();
+};

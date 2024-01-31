@@ -72,6 +72,7 @@ data ScreenOutput = NoOutput
                   | HomeScreen SearchLocationScreenState
                   | RentalsScreen SearchLocationScreenState
                   | LocSelectedOnMap SearchLocationScreenState
+                  | RideScheduledScreen SearchLocationScreenState
 
 eval :: Action -> SearchLocationScreenState -> Eval Action ScreenOutput SearchLocationScreenState
 
@@ -305,7 +306,7 @@ handleBackPress state = do
       continue state {props {searchLocStage = PredictionsStage}, data{latLonOnMap = dummyLocationInfo}}
     PredictionsStage -> do 
       void $ pure $ hideKeyboardOnNavigation true
-      if state.data.fromScreen == getScreen HOME_SCREEN then 
-        exit $ HomeScreen state 
-        else exit $ RentalsScreen state 
+      if state.data.fromScreen == getScreen HOME_SCREEN then exit $ HomeScreen state 
+      else if state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN then exit $ RideScheduledScreen state
+      else exit $ RentalsScreen state 
     _ -> continue state

@@ -33,12 +33,13 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Data.Show.Generic (genericShow)
 import Effect.Aff (launchAff)
-import Effect.Uncurried (runEffectFn2)
+import Effect.Uncurried (runEffectFn2, runEffectFn6)
 import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
 import JBridge (showDateTimePicker)
 import Log (trackAppActionClick)
-import Prelude (class Eq, class Show, bind, map, negate, pure, show, unit, ($), (&&), (*), (+), (<), (<>), (==), (>))
+import Prelude (class Eq, class Show, bind, map, negate, pure, show, unit, ($), (&&), (*), (+), (<), (<>), (==), (>), (/=))
 import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Core (getPushFn)
 import Screens (getScreen, ScreenName(..))
@@ -115,12 +116,15 @@ eval (ChooseVehicleAC (ChooseVehicleController.ShowRateCard _)) state =
   continue state { props { showRateCard = true }}
 
 eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
-  let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
-      validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
-                      && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
-      updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
-      newState = if validDate then state { data { selectedDateTimeConfig = updatedDateTime }} else state
-  in if DA.all (_ == "SELECTED") [dateResp, timeResp] then continue newState else continue state
+  if DA.all (_ /= "SELECTED") [dateResp, timeResp] then continue state 
+  else
+    let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
+        validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
+                        && (unsafePerformEffect $ runEffectFn2 compareDate selectedDateString (getCurrentDatev2 "" ))
+        updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
+        selectedUTC = unsafePerformEffect $ EHC.convertDateTimeConfigToUTC year (month + 1) day hour minute 0
+        newState = if validDate then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
+    in continue newState
 
 eval (InputViewAC (InputViewController.BackPressed)) state = genericBackPressed state
 

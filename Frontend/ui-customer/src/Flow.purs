@@ -2911,7 +2911,12 @@ rideScheduledFlow = do
   action <- lift $ lift $ runScreen $ UI.rideScheduledScreen currentState.rideScheduledScreen 
   case action of
     RideScheduledScreenOutput.GoToHomeScreen -> homeScreenFlow
-    RideScheduledScreenOutput.GoToSearchLocationScreen _ -> searchLocationFlow
+    RideScheduledScreenOutput.GoToSearchLocationScreen updatedState -> do
+      modifyScreenState
+        $ SearchLocationScreenStateType 
+            (\_ -> SearchLocationScreenData.initData{data{fromScreen = (Screen.getScreen Screen.RIDE_SCHEDULED_SCREEN), srcLoc = Just updatedState.source , destLoc = updatedState.destination}
+                                                     , props {focussedTextField = Just SearchLocDrop, actionType = ST.AddingStopAction}})
+      searchLocationFlow
     _ -> pure unit
     
 
@@ -2939,6 +2944,7 @@ searchLocationFlow = do
       homeScreenFlow 
     SearchLocationController.RentalsScreen state -> rentalScreenFlow
     SearchLocationController.LocSelectedOnMap state -> locSelectedOnMapFlow state 
+    SearchLocationController.RideScheduledScreen state -> rideScheduledFlow
     _ -> pure unit
   where 
   
@@ -3393,12 +3399,12 @@ rentalScreenFlow = do
       modifyScreenState $ RideScheduledScreenStateType 
         (\_ -> RideScheduledScreenData.initData {
             primaryButtonText = getString STR.GO_HOME
-          , source = updatedState.data.pickUpLoc.address
-          , destination = maybe (Nothing) (\dropLoc -> Just dropLoc.address) updatedState.data.dropLoc
-          , startTime = ""
+          , source = updatedState.data.pickUpLoc
+          , destination = updatedState.data.dropLoc
+          , startTime = updatedState.data.startTimeUTC
           , finalPrice = ""
-          , baseDuration = "" 
-          , baseDistance = ""
+          , baseDuration = show updatedState.data.rentalBookingData.baseDuration
+          , baseDistance = show updatedState.data.rentalBookingData.baseDistance
           , driverAllocationTime = "15"
         })
       rideScheduledFlow
