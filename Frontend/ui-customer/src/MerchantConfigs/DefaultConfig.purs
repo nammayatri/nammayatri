@@ -223,7 +223,8 @@ config =
     enableSelfServe : true,
     enableAdditionalServices : false,
     enableSafetyFlow : true, 
-    shareWithEmergencyContacts: true
+    shareWithEmergencyContacts: true,
+    enableAutoReferral : true
   }
 
   , rideCompletedCardConfig : {

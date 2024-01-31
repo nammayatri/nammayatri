@@ -43,6 +43,7 @@ import AssetsProvider (fetchAssets)
 import Timers
 import Effect.Uncurried
 import Engineering.Helpers.BackTrack (liftFlowBT)
+import Storage (setValueToLocalStore, KeyStore(..))
 
 main :: Event -> Effect Unit
 main event = do
@@ -99,13 +100,41 @@ onConnectivityEvent triggertype = do
     Left e -> do
         _ <- launchAff $ flowRunner defaultGlobalState $ do
           throwErr $ show e
-        pure unit        
+        pure unit
+
 updateEventData :: Event -> FlowBT String Unit 
 updateEventData event = do
     case event.type of
       "CHAT_MESSAGE" -> do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props{ openChatScreen = true } })
-      _ -> pure unit            
+      "REFERRER_URL" -> setValueToLocalStore REFERRER_URL event.data
+      _ -> pure unit  
+
+onNewIntent :: Event -> Effect Unit
+onNewIntent event = do
+  payload  ::  Either MultipleErrors GlobalPayload  <- runExcept <<< decode <<< fromMaybe (unsafeToForeign {}) <$> (liftEffect $ getWindowVariable "__payload" Just Nothing)
+  case payload of
+    Right payload'  -> do
+        mainFiber <- launchAff $ flowRunner defaultGlobalState $ do
+          _  <- case (runFn2 JBridge.getMainFiber Just Nothing) of
+            Nothing -> pure unit
+            Just fiber -> liftFlow $ launchAff_ $ killFiber (error "error in killing fiber") fiber
+          _ <- runExceptT $ runBackT do
+                  case event.type of 
+                    "REFERRAL" -> do
+                      setValueToLocalStore REFERRER_URL event.data
+                      Flow.baseAppFlow payload' false
+                    "REFERRAL_NEW_INTENT" -> do
+                      setValueToLocalStore REFERRER_URL event.data
+                      Flow.baseAppFlow payload' true
+                    _ -> Flow.baseAppFlow payload' false
+          pure unit
+        JBridge.storeMainFiberOb mainFiber
+        pure unit
+    Left e -> do
+        _ <- launchAff $ flowRunner defaultGlobalState $ do
+          throwErr $ show e
+        pure unit      
 
 onBundleUpdatedEvent :: FCMBundleUpdate -> Effect Unit
 onBundleUpdatedEvent description= do 

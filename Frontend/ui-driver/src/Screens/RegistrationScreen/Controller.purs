@@ -78,7 +78,6 @@ instance loggableAction :: Loggable Action where
       PrimaryEditText.TextChanged id value -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_changed" "primary_edit_text"
       PrimaryEditText.FocusChanged _ -> trackAppTextInput appId (getScreen VEHICLE_DETAILS_SCREEN) "registration_number_text_focus_changed" "primary_edit_text"
     ReferralCodeTextChanged str -> pure unit
-    SubmitReferralCode -> pure unit
     EnterReferralCode val -> pure unit
     _ -> trackAppActionClick appId (getScreen REGISTRATION_SCREEN) "popup_modal_action" "no_action"
 
@@ -104,7 +103,6 @@ data Action = BackPressed
             | AppOnboardingNavBarAC AppOnboardingNavBar.Action
             | PrimaryEditTextActionController PrimaryEditText.Action 
             | ReferralCodeTextChanged String
-            | SubmitReferralCode
             | EnterReferralCode Boolean
             | InAppKeyboardModalAction InAppKeyboardModal.Action
             | SupportClick Boolean
@@ -165,8 +163,6 @@ eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue $ (st
 eval (PrimaryEditTextActionController (PrimaryEditText.TextChanged id value)) state = continue state
 
 eval (ReferralCodeTextChanged val) state = continue state{data { referralCode = val }, props {isValidReferralCode = true} }
-
-eval SubmitReferralCode state = exit $ ReferralCode state
 
 eval (EnterReferralCode val ) state = if not val then do
                                         pure $ JB.toast $ getString COMPLETE_STEPS_TO_APPLY_REFERRAL

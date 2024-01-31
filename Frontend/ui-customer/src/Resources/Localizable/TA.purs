@@ -962,3 +962,8 @@ getTA stringKey =
     TEST_DRILL -> "சோதனை பயிற்சி"
     RIDE_SHARED_WITH_SELECTED_CONTACTS -> "தேர்ந்தெடுக்கப்பட்ட தொடர்புகளுடன் சவாரி பகிரப்பட்டது"
     TERMS_AND_CONDITIONS_UPDATED -> "T&Cகள் மற்றும் தனியுரிமைக் கொள்கை புதுப்பிக்கப்பட்டது"
+    OKAY -> "சரி"
+    TRY_LATER -> "பிறகு முயற்சி செய்"
+    REFERRAL_CODE_IS_APPLIED -> "பரிந்துரை குறியீடு பயன்படுத்தப்பட்டுள்ளது"
+    YOU_HAVE_ALREADY_USED_DIFFERENT_REFERRAL_CODE -> "நீங்கள் ஏனைய பரிந்துரை குறியீடுகளையும் ஏற்கனவே பயன்படுத்தியுள்ளீர்கள்"
+    INVALID_REFERRAL_CODE -> "தவறான பரிந்துரை குறியீடு"

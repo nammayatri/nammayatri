@@ -185,6 +185,7 @@ type Features = {
 , enableOtpRide :: Boolean
 , enableSuggestions :: Boolean
 , enableYatriCoins :: Boolean
+, enableAutoReferral :: Boolean
 }
  
  -- VV - VechileVerfication
