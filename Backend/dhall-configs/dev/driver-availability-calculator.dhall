@@ -1,6 +1,10 @@
 let common = ./common.dhall
 
+let genericCommon = ../generic/common.dhall
+
 let sec = ./secrets/dynamic-offer-driver-app.dhall
+
+let appCfg = ./dynamic-offer-driver-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
@@ -74,10 +78,13 @@ in  { hedisCfg
     , availabilityTimeWindowOption
     , granualityPeriodType = common.periodType.Hours
     , httpClientOptions = common.httpClientOptions
+    , metricsPort = +9994
+    , encTools = appCfg.encTools
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/kafka-consumers.log", logRawSql = False }
     , enableRedisLatencyLogging = True
     , enablePrometheusMetricLogging = True
     , kvConfigUpdateFrequency
+    , healthCheckAppCfg = None genericCommon.healthCheckAppCfgT
     }

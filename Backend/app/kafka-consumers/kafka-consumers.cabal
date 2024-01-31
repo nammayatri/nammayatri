@@ -35,6 +35,10 @@ library
       Consumer.BroadcastMessage.Processor
       Consumer.CustomerStats.Processor
       Consumer.Flow
+      Consumer.LocationUpdate.Processor
+      Consumer.LocationUpdate.Types
+      DriverTrackingHealthCheck.API
+      DriverTrackingHealthCheck.Service.Runner
       Environment
   other-modules:
       Paths_kafka_consumers
@@ -109,6 +113,7 @@ library
     , text
     , time
     , unordered-containers
+    , warp
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -189,6 +194,7 @@ executable kafka-consumers-exe
     , text
     , time
     , unordered-containers
+    , warp
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
