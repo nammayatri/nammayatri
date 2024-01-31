@@ -304,3 +304,6 @@ jsonToTransporterConfig v =
     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "notificationRetryTimeGap")))))
     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverAutoPayExecutionTimeFallBack")))))
     <*> ((fromIntegral :: (Int -> NominalDiffTime)) <$> (((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "orderAndNotificationStatusCheckFallBackTime")))))
+    <*> ((readWithInfo :: (String -> Text)) <$> (v .: DAK.fromText (Text.pack "kaptureDisposition")))
+    <*> ((readWithInfo :: (String -> DummyLocationInfo)) <$> (v .: DAK.fromText (Text.pack "dummyFromLocation")))
+    <*> ((readWithInfo :: (String -> DummyLocationInfo)) <$> (v .: DAK.fromText (Text.pack "dummyToLocation")))
