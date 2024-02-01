@@ -5,6 +5,7 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN start_odometer_reading_value 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN end_odometer_reading_value double precision;
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN start_odometer_reading_file_id character varying(36);
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN end_odometer_reading_file_id character varying(36);
+update atlas_driver_offer_bpp.driver_pool_config set vehicle_variant = 'All' where vehicle_variant is null;
 
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
 -- @ WARNING: DO NOT RUN IN PROD (Just for Local Testing to work)@ --

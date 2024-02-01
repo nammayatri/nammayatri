@@ -39,8 +39,8 @@ import Tools.Error
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
-mkStops :: DSearch.SearchReqLocation -> [DSearch.SearchReqLocation] -> Maybe [Spec.Stop]
-mkStops origin stops =
+mkStops :: DSearch.SearchReqLocation -> [DSearch.SearchReqLocation] -> UTCTime -> Maybe [Spec.Stop]
+mkStops origin stops startTime =
   let originGps = Gps.Gps {lat = origin.gps.lat, lon = origin.gps.lon}
       destinationGps dest = Gps.Gps {lat = dest.gps.lat, lon = dest.gps.lon}
    in Just
@@ -58,7 +58,7 @@ mkStops origin stops =
                       },
                 stopType = Just "START",
                 stopAuthorization = Nothing,
-                stopTime = Nothing
+                stopTime = Just Spec.Time {timeTimestamp = Just startTime}
               }
           ]
             <> ( ( \stop ->

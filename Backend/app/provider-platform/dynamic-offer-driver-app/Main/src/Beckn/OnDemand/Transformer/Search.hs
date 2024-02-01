@@ -33,6 +33,7 @@ buildSearchReq messageId city subscriber req context = do
   disabilityTag_ <- Beckn.OnDemand.Utils.Search.buildDisabilityTag req
   isReallocationEnabled_ <- Beckn.OnDemand.Utils.Search.getIsReallocationEnabled req
   let messageId_ = messageId
+  now <- Kernel.Types.Common.getCurrentTime
   routeDistance_ <- Beckn.OnDemand.Utils.Search.getDistance req
   routeDuration_ <- Beckn.OnDemand.Utils.Search.getDuration req
   routePoints_ <- Beckn.OnDemand.Utils.Search.buildRoutePoints req
@@ -41,7 +42,7 @@ buildSearchReq messageId city subscriber req context = do
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
   pickupAddress_ <- Beckn.OnDemand.Utils.Search.getPickUpLocation req >>= (tfAddress . Just)
   pickupLocation_ <- Beckn.OnDemand.Utils.Search.getPickUpLocationGps req >>= tfLatLong
-  pickupTime_ <- Kernel.Types.Common.getCurrentTime
+  let pickupTime_ = fromMaybe now $ Beckn.OnDemand.Utils.Search.getPickUpTime req
   transactionId_ <- Beckn.OnDemand.Utils.Common.getTransactionId context
   pure $ Domain.Action.Beckn.Search.DSearchReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, customerLanguage = customerLanguage_, customerPhoneNum = customerPhoneNum_, device = device_, disabilityTag = disabilityTag_, dropAddrress = dropAddrress_, dropLocation = dropLocation_, isReallocationEnabled = isReallocationEnabled_, messageId = messageId_, pickupAddress = pickupAddress_, pickupLocation = pickupLocation_, pickupTime = pickupTime_, routeDistance = routeDistance_, routeDuration = routeDuration_, routePoints = routePoints_, transactionId = transactionId_}
 

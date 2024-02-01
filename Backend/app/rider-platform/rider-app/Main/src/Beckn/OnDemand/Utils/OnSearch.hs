@@ -29,7 +29,6 @@ import Kernel.External.Maps as Maps
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Types.Beckn.DecimalValue as DecimalValue
 import Kernel.Types.Common
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import Tools.Error
 
@@ -41,14 +40,6 @@ getProviderName req =
     >>= (.providerDescriptor)
     >>= (.descriptorName)
     & fromMaybeM (InvalidRequest "Missing Provider Name")
-
-getFulfillmentId :: MonadFlow m => Spec.Item -> m (Id Estimate.BPPEstimate)
-getFulfillmentId item = do
-  fulfillmentId <-
-    item.itemFulfillmentIds
-      >>= listToMaybe
-      & fromMaybeM (InvalidRequest "Missing Fulfillment Ids")
-  return $ Id fulfillmentId
 
 getQuoteFulfillmentId :: MonadFlow m => Spec.Item -> m Text
 getQuoteFulfillmentId item =
@@ -117,22 +108,22 @@ buildEstimateBreakupList item = do
   tagGroupRateCard <- find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just "rate_card") tagGroups & fromMaybeM (InvalidRequest "Missing rate card") -- consume this from now on
   tagList <- tagGroup.tagGroupList & fromMaybeM (InvalidRequest "Missing Tag List")
   tagListRateCard <- tagGroupRateCard.tagGroupList & fromMaybeM (InvalidRequest "Missing Tag List")
-  mapM (buildEstimateBreakUpItem currency) (tagList <> tagListRateCard)
+  let breakups = map (buildEstimateBreakUpItem currency) (tagList <> tagListRateCard)
+  return (catMaybes breakups)
   where
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
     descriptorCode (Just desc) = desc.descriptorCode
     descriptorCode Nothing = Nothing
 
 buildEstimateBreakUpItem ::
-  (MonadThrow m, Log m) =>
   Text ->
   Spec.Tag ->
-  m OnSearch.EstimateBreakupInfo
+  Maybe OnSearch.EstimateBreakupInfo
 buildEstimateBreakUpItem currency tag = do
-  descriptor <- tag.tagDescriptor & fromMaybeM (InvalidRequest "Missing fare breakup item: tagDescriptor")
-  let value = tag.tagValue
-  tagValue <- (DecimalValue.valueFromString =<< value) & fromMaybeM (InvalidRequest "Missing fare breakup item: tagValue")
-  title <- descriptor.descriptorCode & fromMaybeM (InvalidRequest "Missing fare breakup item")
+  descriptor <- tag.tagDescriptor
+  value <- tag.tagValue
+  tagValue <- DecimalValue.valueFromString value
+  title <- descriptor.descriptorCode
   pure
     OnSearch.EstimateBreakupInfo
       { title = title,
@@ -179,7 +170,7 @@ getNightShiftEnd tagGroups = do
 
 getRentalBaseFare :: [Spec.TagGroup] -> Maybe Money
 getRentalBaseFare tagGroups = do
-  tagValue <- getTagV2 "general_info" "MIN_FARE" tagGroups
+  tagValue <- getTagV2 "rate_card" "MIN_FARE" tagGroups
   baseFare <- DecimalValue.valueFromString tagValue
   Just . Money $ roundToIntegral baseFare
 

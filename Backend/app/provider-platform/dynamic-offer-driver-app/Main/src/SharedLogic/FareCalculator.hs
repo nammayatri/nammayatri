@@ -229,13 +229,12 @@ calculateFareParameters params = do
       DFP.RentalDetails det -> processFPRentalDetails det
 
     processFPRentalDetails DFP.FPRentalDetails {..} = do
-      let estimatedDuration = (.getSeconds) <$> params.estimatedRideDuration
-          estimatedDurationInHr = fromMaybe 0 estimatedDuration `div` 3600 -- should be perfectly divisible always
-          actualDuration = (.getSeconds) <$> params.actualRideDuration
-          actualRideDurationInHr = fromMaybe estimatedDurationInHr actualDuration `div` 3600
-          extraHrs = max 0 (actualRideDurationInHr - estimatedDurationInHr)
-          extraMins = (fromMaybe 0 actualDuration `mod` 3600) `div` 60
-          fareByTime = Money $ (extraHrs * 60 + extraMins) * perExtraMinRate.getMoney
+      let estimatedDuration = maybe 0 (.getSeconds) params.estimatedRideDuration
+          actualDuration = maybe estimatedDuration (.getSeconds) params.actualRideDuration
+          actualRideDurationInHr = actualDuration `div` 3600
+          estimatedDurationInHr = estimatedDuration `div` 3600
+          extraMins = max 0 (actualDuration - estimatedDuration)
+          fareByTime = Money $ extraMins * perExtraMinRate.getMoney
 
       let estimatedDistance = (.getMeters) <$> params.estimatedDistance
           estimatedDistanceInKm = fromMaybe 0 estimatedDistance `div` 1000

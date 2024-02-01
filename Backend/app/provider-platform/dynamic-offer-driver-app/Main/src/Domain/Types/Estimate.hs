@@ -39,4 +39,4 @@ data Estimate = Estimate
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)

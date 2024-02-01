@@ -39,4 +39,4 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD PRIMARY KEY ( merchant
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN schedule_try_times integer[] NOT NULL default '{}';
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN schedule_try_times integer[] NOT NULL default '{480, 300}';

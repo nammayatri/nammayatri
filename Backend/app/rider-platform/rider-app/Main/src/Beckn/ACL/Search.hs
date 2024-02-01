@@ -84,6 +84,7 @@ buildSearchReqV2 DSearch.SearchRes {..} = do
     (getPoints shortestRouteInfo)
     phoneNumber
     isReallocationEnabled
+    startTime
   where
     getPoints val = val >>= (\routeInfo -> Just routeInfo.points)
 

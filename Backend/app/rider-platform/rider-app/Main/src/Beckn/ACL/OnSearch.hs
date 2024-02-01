@@ -234,13 +234,12 @@ validateFareRange totalFare DEstimate.FareRange {..} = do
   when (totalFare > maxFare || totalFare < minFare) $ throwError $ InvalidRequest "Discounted price outside of range"
 
 buildEstimateBreakUpItem ::
-  (MonadThrow m, Log m) =>
   Text ->
   OnSearch.Tag ->
-  m DOnSearch.EstimateBreakupInfo
+  Maybe DOnSearch.EstimateBreakupInfo
 buildEstimateBreakUpItem currency tag = do
-  tagValue <- (readMaybe . T.unpack =<< tag.value) & fromMaybeM (InvalidRequest "Missing fare breakup item")
-  title <- tag.code & fromMaybeM (InvalidRequest "Missing fare breakup item")
+  tagValue <- readMaybe . T.unpack =<< tag.value
+  title <- tag.code
   pure
     DOnSearch.EstimateBreakupInfo
       { title = title,
@@ -257,7 +256,8 @@ buildEstimateBreakUpList item = do
 
   tagGroup <- find (\tagGroup -> tagGroup.code == "fare_breakup") tagGroups & fromMaybeM (InvalidRequest "Missing fare breakup") -- kept it for backward compatibility
   tagGroupRateCard <- find (\tagGroup_ -> tagGroup_.code == "rate_card") tagGroups & fromMaybeM (InvalidRequest "Missing rate card") -- consume this
-  mapM (buildEstimateBreakUpItem item.price.currency) (tagGroup.list <> tagGroupRateCard.list)
+  let breakups = map (buildEstimateBreakUpItem item.price.currency) (tagGroup.list <> tagGroupRateCard.list)
+  return (catMaybes breakups)
 
 buildNightShiftInfo ::
   OnSearch.TagGroups ->

@@ -20,11 +20,21 @@ import qualified BecknV2.OnDemand.Types as Spec
 import Control.Lens
 import Data.Aeson
 import qualified Data.Text as T
+import qualified Data.Time
 import EulerHS.Prelude hiding (id, view, (^?))
 import Kernel.External.Maps as Maps
 import Kernel.Types.Common
 import Kernel.Utils.Common (fromMaybeM)
 import Tools.Error (GenericError (InvalidRequest))
+
+getPickUpTime :: Spec.SearchReqMessage -> Maybe Data.Time.UTCTime
+getPickUpTime req =
+  req.searchReqMessageIntent
+    >>= (.intentFulfillment)
+    >>= (.fulfillmentStops)
+    >>= firstStop
+    >>= (.stopTime)
+    >>= (.timeTimestamp)
 
 getPickUpLocation :: MonadFlow m => Spec.SearchReqMessage -> m Spec.Location
 getPickUpLocation req =

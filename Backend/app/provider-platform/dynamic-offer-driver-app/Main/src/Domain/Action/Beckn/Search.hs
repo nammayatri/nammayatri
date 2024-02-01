@@ -167,8 +167,10 @@ handler merchant sReq = do
 
   let buildEstimateHelper = buildEstimate searchReq.id possibleTripOption.schedule possibleTripOption.isScheduled mbDistance allFarePoliciesProduct.specialLocationTag cancellationDues
   let buildQuoteHelper = buildQuote searchReq merchantId possibleTripOption.schedule possibleTripOption.isScheduled mbDistance mbDuration allFarePoliciesProduct.specialLocationTag cancellationDues
-
+  logDebug $ "Selected Fare Policies: " <> show selectedFarePolicies
   (estimates, quotes) <- foldrM (processPolicy buildEstimateHelper buildQuoteHelper) ([], []) selectedFarePolicies
+  logDebug $ "Estimates: " <> show estimates
+  logDebug $ "Quotes: " <> show quotes
   QEst.createMany estimates
   for_ quotes QQuote.create
 
