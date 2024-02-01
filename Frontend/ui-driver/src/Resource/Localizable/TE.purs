@@ -651,7 +651,7 @@ getTE stringKey =
         CANCEL_AUTOPAY_STR -> "ఆటోపేయ్ రద్దు చేయండి"
         WE_MIGHT_BE_LOST -> "ఎర్రర్ సంభవించింది"
         EXEPERIENCING_ERROR -> "ఎర్రర్ సంభవించింది"
-        ENJOY_THESE_BENEFITS -> "మీరు చేరితే ప్రయోజనాలు"
+        ENJOY_THESE_BENEFITS -> "మీ చేరిక ప్రయోజనాలు!"
         CHOOSE_YOUR_PLAN _ -> "ఇప్పుడే ప్రణాళికను ఎంచుకోండి!"
         SKIP_FOR_NOW -> "ప్రస్తుతానికి దాటవేయి"
         SEVEN_DAY_FREE_TRIAL_ACTIVATED -> "7-రోజుల ఉచిత ట్రయల్ ఆక్టివేట్ చేయబడింది!"

@@ -616,7 +616,7 @@ getKN stringKey =
         CANCEL_AUTOPAY_STR ->  "ಸ್ವಯಂ ಪಾವತಿ ರದ್ದುಮಾಡಿ"
         WE_MIGHT_BE_LOST ->  "ಉಹ್ ಓಹ್! ನಾವು ಕಳೆದುಹೋಗಬಹುದು"
         EXEPERIENCING_ERROR ->  "ದೋಷವನ್ನು ಅನುಭವಿಸುತ್ತಿದೆ"
-        ENJOY_THESE_BENEFITS ->  "ಈ ಪ್ರಯೋಜನಗಳನ್ನು ಆನಂದಿಸಿ"
+        ENJOY_THESE_BENEFITS ->  "ನಿಮ್ಮ ಸೇರ್ಪಡೆ ಪ್ರಯೋಜನಗಳು!"
         CHOOSE_YOUR_PLAN _ ->  "ಈಗ ಯೋಜನೆಯನ್ನು ಆರಿಸಿ!"
         SKIP_FOR_NOW ->  "ಇದೀಗ ಬಿಟ್ಟುಬಿಡಿ"
         SEVEN_DAY_FREE_TRIAL_ACTIVATED ->  "7-ದಿನದ ಉಚಿತ ಪ್ರಯೋಗವನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ!"

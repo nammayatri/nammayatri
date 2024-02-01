@@ -651,7 +651,7 @@ getEN stringKey =
         CANCEL_AUTOPAY_STR -> "Cancel Autopay"
         WE_MIGHT_BE_LOST -> "Uh oh! We might be lost"
         EXEPERIENCING_ERROR -> "Experiencing error"
-        ENJOY_THESE_BENEFITS -> "Enjoy these benefits "
+        ENJOY_THESE_BENEFITS -> "Your joining benefits!"
         CHOOSE_YOUR_PLAN _ -> "Choose a Plan Now!"
         SKIP_FOR_NOW -> "Skip For Now"
         SEVEN_DAY_FREE_TRIAL_ACTIVATED -> "7-Day FREE TRIAL Activated!"

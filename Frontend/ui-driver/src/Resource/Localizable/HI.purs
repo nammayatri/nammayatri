@@ -646,7 +646,7 @@ getHI stringKey =
         CANCEL_AUTOPAY_STR ->  "ऑटोपे रद्द करें"
         WE_MIGHT_BE_LOST ->  "उह ओह! हम खो सकते हैं"
         EXEPERIENCING_ERROR ->  "त्रुटि का अनुभव हो रहा है"
-        ENJOY_THESE_BENEFITS ->  "इन लाभों का आनंद लें"
+        ENJOY_THESE_BENEFITS ->  "आपके शामिल होने से लाभ!"
         CHOOSE_YOUR_PLAN _ ->  "अभी एक योजना चुनें!"
         SKIP_FOR_NOW ->  "अभी के लिए छोड़ दे"
         SEVEN_DAY_FREE_TRIAL_ACTIVATED ->  "7-दिवसीय निःशुल्क परीक्षण सक्रिय!"
