@@ -46,6 +46,7 @@ data Handle m = Handle
     setBatchDurationLock :: m (Maybe UTCTime),
     createRescheduleTime :: UTCTime -> m UTCTime,
     isSearchTryValid :: m Bool,
+    isBookingValid :: Bool,
     initiateDriverSearchBatch :: m (),
     cancelSearchTry :: m (),
     cancelBookingIfApplies :: m (),
@@ -58,7 +59,7 @@ handler h@Handle {..} goHomeCfg = do
   metrics.incrementTaskCounter
   measuringDuration (\ms (_, _) -> metrics.putTaskDuration ms) $ do
     isSearchTryValid' <- isSearchTryValid
-    if not isSearchTryValid'
+    if not isSearchTryValid' || not isBookingValid
       then do
         logInfo "Search request is either assigned, cancelled or expired."
         return (Complete, False)

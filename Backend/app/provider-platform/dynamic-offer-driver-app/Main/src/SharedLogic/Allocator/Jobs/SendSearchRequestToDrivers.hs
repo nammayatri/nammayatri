@@ -16,6 +16,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
+import Domain.Types.Booking (BookingStatus (..))
 import Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
@@ -107,9 +108,11 @@ sendSearchRequestToDrivers' ::
   GoHomeConfig ->
   m (ExecutionResult, Bool)
 sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driverExtraFeeBounds goHomeCfg = do
-  handler handle goHomeCfg
+  -- In case of static offer flow we will have booking created before driver ride request is sent
+  mbBooking <- if DTC.isDynamicOfferTrip searchTry.tripCategory then pure Nothing else QRB.findByQuoteId searchTry.estimateId
+  handler (handle mbBooking) goHomeCfg
   where
-    handle =
+    handle mbBooking =
       Handle
         { isBatchNumExceedLimit = I.isBatchNumExceedLimit driverPoolConfig searchTry.id,
           isReceivedMaxDriverQuotes = I.isReceivedMaxDriverQuotes driverPoolConfig searchTry.id,
@@ -128,9 +131,11 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
           initiateDriverSearchBatch = SST.initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq searchTry.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId,
           isScheduledBooking = searchTry.isScheduled,
           cancelSearchTry = I.cancelSearchTry searchTry.id,
+          isBookingValid = do
+            case mbBooking of
+              Just booking -> booking.status `notElem` [COMPLETED, CANCELLED]
+              Nothing -> True,
           cancelBookingIfApplies = do
-            when (not $ DTC.isDynamicOfferTrip searchTry.tripCategory) $ do
-              mbBooking <- QRB.findByQuoteId searchTry.estimateId
-              whenJust mbBooking $ \booking -> do
-                SBooking.cancelBooking booking Nothing merchant
+            whenJust mbBooking $ \booking -> do
+              SBooking.cancelBooking booking Nothing merchant
         }
