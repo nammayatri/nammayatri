@@ -119,10 +119,10 @@ data ServiceHandle m = ServiceHandle
     getFarePolicyByEstOrQuoteId :: Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> DVeh.Variant -> Maybe DFareProduct.Area -> Text -> m DFP.FullFarePolicy,
     calculateFareParameters :: Fare.CalculateFareParametersParams -> m Fare.FareParameters,
     putDiffMetric :: Id DM.Merchant -> Money -> Meters -> m (),
-    isDistanceCalculationFailed :: Maybe (Id DSR.SearchRequest) -> Id DP.Person -> m Bool,
+    isDistanceCalculationFailed :: Id DP.Person -> m Bool,
     finalDistanceCalculation :: Maybe (Id DSR.SearchRequest) -> Id DRide.Ride -> Id DP.Person -> NonEmpty LatLong -> Meters -> Bool -> m (),
-    getInterpolatedPoints :: Maybe (Id DSR.SearchRequest) -> Id DP.Person -> m [LatLong],
-    clearInterpolatedPoints :: Maybe (Id DSR.SearchRequest) -> Id DP.Person -> m (),
+    getInterpolatedPoints :: Id DP.Person -> m [LatLong],
+    clearInterpolatedPoints :: Id DP.Person -> m (),
     findConfig :: m (Maybe DTConf.TransporterConfig),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m (),
     getDistanceBetweenPoints :: Maybe (Id DSR.SearchRequest) -> LatLong -> LatLong -> [LatLong] -> m Meters,
@@ -144,10 +144,10 @@ buildEndRideHandle merchantId merchantOpCityId = do
         getFarePolicyByEstOrQuoteId = FarePolicy.getFarePolicyByEstOrQuoteId,
         calculateFareParameters = Fare.calculateFareParameters,
         putDiffMetric = RideEndInt.putDiffMetric,
-        isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed . defaultRideInterpolationHandler,
-        finalDistanceCalculation = LocUpd.finalDistanceCalculation . defaultRideInterpolationHandler,
-        getInterpolatedPoints = LocUpd.getInterpolatedPoints . defaultRideInterpolationHandler,
-        clearInterpolatedPoints = LocUpd.clearInterpolatedPoints . defaultRideInterpolationHandler,
+        isDistanceCalculationFailed = LocUpd.isDistanceCalculationFailed defaultRideInterpolationHandler,
+        finalDistanceCalculation = LocUpd.finalDistanceCalculation defaultRideInterpolationHandler . (cast @DSR.SearchRequest @LocUpd.SearchRequest <$>),
+        getInterpolatedPoints = LocUpd.getInterpolatedPoints defaultRideInterpolationHandler,
+        clearInterpolatedPoints = LocUpd.clearInterpolatedPoints defaultRideInterpolationHandler,
         findConfig = QTConf.findByMerchantOpCityId merchantOpCityId,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock,
         getDistanceBetweenPoints = RideEndInt.getDistanceBetweenPoints merchantId merchantOpCityId,
@@ -331,7 +331,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
 
               ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
 
-              distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed booking.searchRequestId driverId
+              distanceCalculationFailed <- withTimeAPI "endRide" "isDistanceCalculationFailed" $ isDistanceCalculationFailed driverId
               when distanceCalculationFailed $ logWarning $ "Failed to calculate distance for this ride: " <> ride.id.getId
               (chargeableDistance, finalFare, mbUpdatedFareParams) <-
                 if distanceCalculationFailed
@@ -351,7 +351,7 @@ endRide handle@ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.g
               }
     -- we need to store fareParams only when they changed
     withTimeAPI "endRide" "endRideTransaction" $ endRideTransaction (cast @DP.Person @DP.Driver driverId) booking updRide mbUpdatedFareParams booking.riderId newFareParams thresholdConfig
-    withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints booking.searchRequestId driverId
+    withTimeAPI "endRide" "clearInterpolatedPoints" $ clearInterpolatedPoints driverId
 
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
       findPaymentMethodByIdAndMerchantId paymentMethodId booking.merchantOperatingCityId
@@ -476,7 +476,7 @@ calculateFinalValuesForFailedDistanceCalculations handle@ServiceHandle {..} book
   let tripStartPoint = case ride.tripStartPos of
         Nothing -> getCoordinates booking.fromLocation
         Just tripStartPos -> tripStartPos
-  interpolatedPoints <- getInterpolatedPoints booking.searchRequestId ride.driverId
+  interpolatedPoints <- getInterpolatedPoints ride.driverId
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals
   if not pickupDropOutsideOfThreshold
     then recalculateFareForDistance handle booking ride estimatedDistance thresholdConfig -- TODO: Fix with rentals

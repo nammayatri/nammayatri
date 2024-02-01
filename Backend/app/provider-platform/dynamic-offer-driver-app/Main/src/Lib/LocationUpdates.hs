@@ -120,17 +120,17 @@ updateDeviation transportConfig safetyCheckEnabled (Just rideId) batchWaypoints 
           let alreadyDeviated = fromMaybe False rideDetails.driverDeviatedFromRoute
           return (alreadyDeviated, rideDetails.safetyAlertTriggered)
 
-buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (Maybe (Id DSR.SearchRequest) -> RideInterpolationHandler Person Flow)
+buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   transportConfig <- MTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transportConfig.timeDiffFromUtc
-  return $ \searchRequestId -> do
-    let snapToRoad' =
-          if transportConfig.useWithSnapToRoadFallback
-            then TMaps.snapToRoadWithFallback merchantId merchantOpCityId
-            else snapToRoadWithService searchRequestId
-        enableNightSafety = checkNightSafetyTimeConstraint transportConfig now
+  let snapToRoad' =
+        if transportConfig.useWithSnapToRoadFallback
+          then (\_searchRequestId -> TMaps.snapToRoadWithFallback merchantId merchantOpCityId)
+          else snapToRoadWithService
+      enableNightSafety = checkNightSafetyTimeConstraint transportConfig now
 
+  return $
     mkRideInterpolationHandler
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls))
@@ -140,7 +140,8 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       )
       snapToRoad'
   where
-    snapToRoadWithService searchRequestId req = do
+    snapToRoadWithService searchRequestId' req = do
+      let searchRequestId = cast @SearchRequest @DSR.SearchRequest <$> searchRequestId'
       resp <- TMaps.snapToRoad merchantId merchantOpCityId searchRequestId req
       return ([Google], Right resp)
 

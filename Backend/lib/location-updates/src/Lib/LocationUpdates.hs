@@ -21,6 +21,7 @@ module Lib.LocationUpdates
     addIntermediateRoutePoints,
     getInterpolatedPoints,
     clearInterpolatedPoints,
+    I.SearchRequest,
   )
 where
 
@@ -46,8 +47,8 @@ initializeDistanceCalculation ih rideId driverId pt = withRideIdLogTag rideId $ 
   ih.expireInterpolatedPoints driverId
   ih.addPoints driverId $ pt :| []
 
-finalDistanceCalculation :: (CacheFlow m r, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> NonEmpty LatLong -> Meters -> Bool -> m ()
-finalDistanceCalculation ih rideId driverId pts estDist pickupDropOutsideThreshold = withRideIdLogTag rideId $ I.processWaypoints ih driverId True estDist pickupDropOutsideThreshold pts
+finalDistanceCalculation :: (CacheFlow m r, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Maybe (Id I.SearchRequest) -> Id ride -> Id person -> NonEmpty LatLong -> Meters -> Bool -> m ()
+finalDistanceCalculation ih searchRequestId rideId driverId pts estDist pickupDropOutsideThreshold = withRideIdLogTag rideId $ I.processWaypoints ih searchRequestId driverId True estDist pickupDropOutsideThreshold pts
 
 getInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m [LatLong]
 getInterpolatedPoints ih = ih.getInterpolatedPoints
@@ -55,8 +56,8 @@ getInterpolatedPoints ih = ih.getInterpolatedPoints
 clearInterpolatedPoints :: I.RideInterpolationHandler person m -> Id person -> m ()
 clearInterpolatedPoints ih = ih.clearInterpolatedPoints
 
-addIntermediateRoutePoints :: (CacheFlow m r, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Id ride -> Id person -> NonEmpty LatLong -> m ()
-addIntermediateRoutePoints ih rideId driverId = withRideIdLogTag rideId . I.processWaypoints ih driverId False 0 False -- estimateDistace not required in case of add intermediatory points
+addIntermediateRoutePoints :: (CacheFlow m r, Log m, MonadThrow m) => I.RideInterpolationHandler person m -> Maybe (Id I.SearchRequest) -> Id ride -> Id person -> NonEmpty LatLong -> m ()
+addIntermediateRoutePoints ih searchRequestId rideId driverId = withRideIdLogTag rideId . I.processWaypoints ih searchRequestId driverId False 0 False -- estimateDistace not required in case of add intermediatory points
 
 isDistanceCalculationFailed :: I.RideInterpolationHandler person m -> Id person -> m Bool
 isDistanceCalculationFailed ih = ih.isDistanceCalculationFailed

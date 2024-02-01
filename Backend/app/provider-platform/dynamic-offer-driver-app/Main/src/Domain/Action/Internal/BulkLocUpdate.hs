@@ -17,6 +17,7 @@ module Domain.Action.Internal.BulkLocUpdate where
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SearchRequest as DSR
 import Environment
 import EulerHS.Prelude
 import Kernel.External.Maps.Types
@@ -43,5 +44,6 @@ bulkLocUpdate req = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   merchantId <- fromMaybeM (InternalError "Ride does not have a merchantId") $ ride.merchantId
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId False
-  _ <- addIntermediateRoutePoints (defaultRideInterpolationHandler ride.searchRequestId) rideId driverId loc
+  let searchRequestId = cast @DSR.SearchRequest @LocUpd.SearchRequest <$> ride.searchRequestId
+  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler searchRequestId rideId driverId loc
   pure Success
