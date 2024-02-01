@@ -58,7 +58,7 @@ driverDetailsView config uid =
   , margin $ Margin 16 (if config.searchType == QUOTES then 12 else 0) 16 0
   , background Color.white900
   , cornerRadius 8.0
-  , visibility if config.searchType == QUOTES then (if config.rideStarted then VISIBLE else GONE) else VISIBLE
+  , visibility $  boolToVisibility $ if config.searchType == QUOTES then config.rideStarted else true
   , gravity BOTTOM
   ][  linearLayout
       [ orientation VERTICAL

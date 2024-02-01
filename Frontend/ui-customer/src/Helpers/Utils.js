@@ -502,7 +502,7 @@ export const getMockFollowerName = function() {
   let currentMockName = "Test User"
   if (window.__payload && window.__payload.payload && window.__payload.payload.fullNotificationBody && window.__payload.payload.fullNotificationBody.msg) {
     const msg = window.__payload.payload.fullNotificationBody.msg;
-    currentMockName = msg.split("")[0];
+    currentMockName = msg.split(" ")[0];
   }
   return currentMockName;
 }

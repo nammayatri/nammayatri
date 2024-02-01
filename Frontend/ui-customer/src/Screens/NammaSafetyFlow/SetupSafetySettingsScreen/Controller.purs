@@ -89,7 +89,7 @@ eval (StepsHeaderModelAC StepsHeaderModelController.OnArrowClick) state = contin
 eval (ToggleSwitch stage) state = case stage of
   SetNightTimeSafetyAlert -> continue state { data { nightSafetyChecks = not state.data.nightSafetyChecks } }
   SetDefaultEmergencyContacts ->
-    if DA.length state.data.contactsList /= 0 then
+    if DA.length state.data.emergencyContactsList /= 0 then
       continue state { data { shareToEmergencyContacts = not state.data.shareToEmergencyContacts } }
     else
       continueWithCmd state [ pure AddContacts ]
@@ -108,11 +108,8 @@ eval (GoToNextStep PrimaryButtonController.OnClick) state = do
     _ -> continue state
 
 eval (PopUpModalAction PopUpModal.OnButton2Click) state = do
-  let
-    newContacts = DA.filter (\x -> x.number <> x.name /= state.data.removedContactDetail.number <> state.data.removedContactDetail.name) state.data.contactsList
-  contactsInString <- pure $ HU.toStringJSON newContacts
-  void $ pure $ setValueToLocalStore CONTACTS contactsInString
-  exit $ PostContacts state { data { contactsList = newContacts } }
+  let newContacts = DA.filter (\x -> x.number <> x.name /= state.data.removedContactDetail.number <> state.data.removedContactDetail.name) state.data.emergencyContactsList
+  exit $ PostContacts state { data { emergencyContactsList = newContacts } }
 
 eval (PopUpModalAction (PopUpModal.OnButton1Click)) state = continue state { props { showInfoPopUp = false } }
 
@@ -139,8 +136,8 @@ eval (ContactListAction (ContactList.ContactCardClicked index)) state = do
             else
               contact { priority = 1 }
         )
-        state.data.contactsList
-  continue state { data { contactsList = newContactsList } }
+        state.data.emergencyContactsList
+  continue state { data { emergencyContactsList = newContactsList } }
 
 eval (ContactListAction ContactList.AddContacts) state = do
   exit $ GoToEmergencyContactScreen state

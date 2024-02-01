@@ -74,7 +74,7 @@ eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafety
 eval PlaceCall state = do
   let
     _ = spy "NammaSafetyFlow.SosActiveScreen.Controller" state
-  let primaryContact = DA.filter (\item -> item.priority == 0) state.data.contactsList
+  let primaryContact = DA.filter (\item -> item.priority == 0) state.data.emergencyContactsList
   case primaryContact DA.!! 0, state.props.shouldCallAutomatically, state.data.shareToEmergencyContacts of
     Just contact, true, true -> void $ pure $ showDialer contact.number true
     _, _, _ -> pure unit
@@ -96,7 +96,7 @@ eval (BackPressed) state =
 eval DisableShimmer state = continue state { props { showShimmer = false } }
 
 eval (CallContact contactIndex) state = do
-  case state.data.contactsList DA.!! contactIndex of
+  case state.data.emergencyContactsList DA.!! contactIndex of
     Just item -> void $ pure $ showDialer item.number true
     Nothing -> pure unit
   continue state

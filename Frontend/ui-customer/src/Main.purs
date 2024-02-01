@@ -119,4 +119,4 @@ mockFollowRideEvent :: Event -> Effect Unit
 mockFollowRideEvent event = do
   void $ launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
     modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen{ data{ currentStage = MockFollowRide } })
-    Flow.followRideScreenFlow
+    Flow.followRideScreenFlow true

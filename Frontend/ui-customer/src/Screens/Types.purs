@@ -61,9 +61,7 @@ type NewContacts = {
 type NewContactsProp = {
   name :: PropValue,
   number :: PropValue,
-  isSelected :: PropValue,
   contactBackgroundColor :: PropValue,
-  isSelectImage :: PropValue,
   visibilitySelectedImage :: PropValue,
   visibilityUnSelectedImage :: PropValue
 }
@@ -1155,11 +1153,10 @@ type EmergencyContactsScreenState = {
 }
 
 type EmergencyContactsScreenData = {
-  contactInfoState :: Array Contacts,
-  contactsCount :: Int,
-  contactsList :: Array NewContacts,
-  contactsNewList :: Array NewContacts,
-  contactsUpdatedNewList :: Array NewContacts,
+  emergencyContactsList :: Array NewContacts,
+  storedContactsList :: Array NewContacts,
+  selectedContacts :: Array NewContacts,
+  searchResult :: Array NewContacts,
   prestoListArrayItems :: Array NewContactsProp,
   loadMoreDisabled :: Boolean,
   removedContactDetail :: NewContacts,
@@ -1999,7 +1996,7 @@ type NammaSafetyScreenData =  {
   hasCompletedMockSafetyDrill :: Boolean,
   shareTripWithEmergencyContacts :: Boolean,
   hasCompletedSafetySetup :: Boolean,
-  contactsList :: Array NewContacts,
+  emergencyContactsList :: Array NewContacts,
   sosId :: String,
   rideId :: String,
   videoPath :: String,
@@ -2082,7 +2079,7 @@ type FollowRideScreenProps = {
 , sheetState :: Maybe BottomSheetState
 , currentSheetState :: BottomSheetState
 , isNotificationExpanded :: Boolean
-, isOverlayDimissed :: Boolean
+, startMapAnimation :: Boolean
 }
 
 

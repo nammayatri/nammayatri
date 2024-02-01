@@ -24,8 +24,8 @@ genericHeaderConfig :: EmergencyContactsScreenState -> GenericHeader.Config
 genericHeaderConfig state =
   let
     config = GenericHeader.config
-    titleText = case null state.data.contactsList, state.props.showContactList of 
-                    _, true -> show (length state.data.contactsList) <> "/3 " <> (getString CONTACTS_SELECTED)
+    titleText = case null state.data.emergencyContactsList, state.props.showContactList of 
+                    _, true -> show (length state.data.selectedContacts) <> "/3 " <> (getString CONTACTS_SELECTED)
                     true, false -> getString EMERGENCY_CONTACTS
                     false, false -> getString EDIT_EMERGENCY_CONTACTS
     genericHeaderConfig' =
@@ -42,7 +42,7 @@ genericHeaderConfig state =
         , padding = (Padding 0 5 0 5)
         , textConfig
           { text = titleText
-          , accessibilityHint = if state.props.showContactList then (show (length state.data.contactsList) <> " Of 3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
+          , accessibilityHint = if state.props.showContactList then (show (length state.data.emergencyContactsList) <> " Of 3 " <> (getString CONTACTS_SELECTED)) else  (getString EMERGENCY_CONTACTS)
           , color = Color.darkCharcoal
           }
         , suffixImageConfig
@@ -61,8 +61,8 @@ primaryButtonConfig state =
     primaryButtonConfig' =
       config
         { textConfig
-          { text = if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString CONFIRM_EMERGENCY_CONTACTS)
-          , accessibilityHint = (if null state.data.contactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
+          { text = if null state.data.emergencyContactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString CONFIRM_EMERGENCY_CONTACTS)
+          , accessibilityHint = (if null state.data.emergencyContactsList then (getString ADD_EMERGENCY_CONTACTS) else (getString CONFIRM_EMERGENCY_CONTACTS)) <> " : Button"
           }
         , isClickable = true
         , width = if os == "IOS" then (V 360) else (MATCH_PARENT)

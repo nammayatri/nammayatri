@@ -110,7 +110,7 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
         , nightSafetyChecks = response.nightSafetyChecks
         , hasCompletedMockSafetyDrill = response.hasCompletedMockSafetyDrill
         , shareTripWithEmergencyContacts = response.shareTripWithEmergencyContacts
-        , contactsList = getDefaultPriorityList contacts
+        , emergencyContactsList = getDefaultPriorityList contacts
         }
       , props { enableLocalPoliceSupport = response.enablePoliceSupport, localPoliceNumber = fromMaybe "" response.localPoliceNumber }
       }
@@ -162,8 +162,8 @@ eval (ContactAction (ContactCircle.OnClick index)) state = do
             else
               contact { priority = 1 }
         )
-        state.data.contactsList
-  continue state { data { contactsList = newContacts } }
+        state.data.emergencyContactsList
+  continue state { data { emergencyContactsList = newContacts } }
 
 eval GoToTestDrill state = do
   _ <- pure $ clearTimerWithId state.props.timerId

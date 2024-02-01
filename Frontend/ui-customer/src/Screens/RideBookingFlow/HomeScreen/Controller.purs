@@ -1775,16 +1775,6 @@ eval (EmergencyHelpModalAC (EmergencyHelpController.CallContactPopUp item)) stat
 
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton1Click)) state = continue state{props{emergencyHelpModelState{showCallContactPopUp = false}}}
 
-eval (EmergencyHelpModalAC (EmergencyHelpController.StoreContacts)) state  = do
-  if ((getValueToLocalStore CONTACTS == "__failed") || (getValueToLocalStore CONTACTS == "(null)")) then do
-        exit $ FetchContacts state
-  else do
-    contacts <- pure $ getValueToLocalStore CONTACTS
-    contactsInJson <- pure $ parseNewContacts contacts
-    let newContacts = transformContactList contactsInJson
-        newState = state{props{emergencyHelpModelState{emergencyContactData = newContacts}}}
-    continue newState
-
 eval (EmergencyHelpModalAC (EmergencyHelpController.CallEmergencyContact PopUpModal.OnButton2Click)) state = do
     void <- pure $ showDialer state.props.emergencyHelpModelState.currentlySelectedContact.phoneNo false -- TODO: FIX_DIALER
     let newState = state{props{emergencyHelpModelState{showCallContactPopUp = false, waitingDialerCallback = true}}}

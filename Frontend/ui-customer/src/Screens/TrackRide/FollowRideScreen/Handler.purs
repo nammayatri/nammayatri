@@ -16,14 +16,11 @@ module Screens.FollowRideScreen.Handler where
 
 import Prelude
 import Control.Monad.Trans.Class (lift)
-import Data.Maybe
-import Engineering.Helpers.BackTrack (getState, liftFlowBT)
-import Prelude
-import PrestoDOM.Core.Types.Language.Flow (initUIWithNameSpace, runScreen)
+import Engineering.Helpers.BackTrack (getState)
+import PrestoDOM.Core.Types.Language.Flow (runScreen)
 import Screens.FollowRideScreen.View as FollowRideScreen
-import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
-import Screens.FollowRideScreen.Controller
-import Types.App
+import Screens.FollowRideScreen.Controller (ScreenOutput(..))
+import Types.App (FOLLOW_RIDE_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), ScreenType(..))
 import Control.Transformers.Back.Trans as App
 import ModifyScreenState (modifyScreenState)
 
