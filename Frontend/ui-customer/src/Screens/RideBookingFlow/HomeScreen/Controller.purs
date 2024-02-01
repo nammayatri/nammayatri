@@ -1011,7 +1011,7 @@ eval StopAutoScrollTimer state =  do
 eval (IsMockLocation isMock) state = do
   let val = isMock == "true"
       _ = unsafePerformEffect $ if val then  logEvent (state.data.logField) "ny_fakeGPS_enabled" else pure unit -- we are using unsafePerformEffect becasue without it we are not getting logs in firebase, since we are passing a parameter from state i.e. logField then the output will be inline and it will not be able to precompute so it's safe to use it here.
-  continue state{props{isMockLocation = val}}
+  continue state{props{isMockLocation = false}}
 
 eval (UpdateCurrentStage stage) state = do
   _ <- pure $ spy "updateCurrentStage" stage
