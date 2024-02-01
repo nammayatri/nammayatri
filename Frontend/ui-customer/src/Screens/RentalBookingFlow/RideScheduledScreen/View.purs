@@ -16,7 +16,7 @@ import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView)
 import Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig (primaryButtonConfig, sourceToDestinationConfig, genericHeaderConfig)
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (RideScheduledScreenState)
@@ -37,26 +37,33 @@ rideScheduledScreen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+  relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
     ]
-    [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-    , separatorView push state
-    , linearLayout
-      [ height MATCH_PARENT
+    [ linearLayout
+      [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , margin $ MarginTop 60
-      , gravity CENTER_HORIZONTAL
-      ]
-      [ scheduledDetailsView push state
-      , notificationView push state
-      , cancelBookingView push state
-      , primaryButtonView push state
-      ]
+      ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+        , separatorView push state ]
+    , scrollView
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      ][linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , margin $ MarginTop 60
+        , gravity CENTER_HORIZONTAL
+        ][ scheduledDetailsView push state
+          , notificationView push state
+          , cancelBookingView push state
+          , cancelBookingView push state]
+        ]
+    , primaryButtonView push state
     ]
 
 scheduledDetailsView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w

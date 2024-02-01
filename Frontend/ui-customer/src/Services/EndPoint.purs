@@ -199,3 +199,12 @@ updateIssue issueId language = (getBaseUrl "45") <> "/issue/" <> issueId <> "/up
 
 fetchIssueList :: String -> String
 fetchIssueList language = (getBaseUrl "46") <> "/issue/list?language=" <> language
+
+addStop :: String -> String
+addStop rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> "/addStop"
+
+editStop :: String -> String
+editStop rideBookingId = (getBaseUrl "48") <> "/rideBooking/" <> rideBookingId <> "/editStop"
+
+rentalSearch :: String -> String
+rentalSearch dummy = (getBaseUrl "49") <> "/rental/search"

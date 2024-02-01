@@ -278,4 +278,4 @@ data ScreenType =
   | ReportIssueChatScreenStateType (ReportIssueChatScreenState -> ReportIssueChatScreenState)
   | SearchLocationScreenStateType (SearchLocationScreenState -> SearchLocationScreenState)
   | GlobalPropsType (GlobalProps -> GlobalProps) 
-  | RentalScreenType (RentalScreenState -> RentalScreenState)
+  | RentalScreenStateType (RentalScreenState -> RentalScreenState)

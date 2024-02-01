@@ -32,9 +32,9 @@ locationTagBarConfig state globalProps =
     homeExists = MB.isJust $ HU.getSavedLocationByTag globalProps.savedLocations ST.HOME_TAG 
     workExists = MB.isJust $ HU.getSavedLocationByTag globalProps.savedLocations ST.WORK_TAG
     home = if homeExists then { image : "ny_ic_home_blue", text : "Home", id : "HOME" }
-            else { image : "ny_ic_add_address", text : "Add Home", id : "ADD_HOME" }
+            else { image : "ny_ic_add_address", text : "Home", id : "ADD_HOME" }
     work = if workExists then { image : "ny_ic_work_blue", text : "Work", id : "WORK" } 
-            else { image : "ny_ic_add_address", text : "Add Work", id : "ADD_WORK" }
+            else { image : "ny_ic_add_address", text : "Work", id : "ADD_WORK" }
 
     locTagList =
       map 
@@ -107,7 +107,7 @@ confirmLocBtnConfig state =
     confirmLocBtnConfig' = 
       config
         { textConfig
-          { text = "Confirm Location"
+          { text = getString CONFIRM_LOCATION
           , color = state.appConfig.primaryTextColor
           }
         , cornerRadius = state.appConfig.primaryButtonCornerRadius
@@ -124,7 +124,7 @@ mapInputViewConfig state isEditable = let
     backIconPadding = if headerVisibility then PaddingTop 16 else PaddingTop 8
     config = InputView.config 
     inputViewConfig' = config
-      { headerText = MB.maybe ("Trip Details") ( \ currTextField -> if currTextField == ST.SearchLocPickup then "Edit Pickup" else "Add Stop") state.props.focussedTextField,
+      { headerText = MB.maybe (getString TRIP_DETAILS_) ( \ currTextField -> if currTextField == ST.SearchLocPickup then (getString EDIT_PICKUP) else (getString ADD_STOP)) state.props.focussedTextField,
         suffixButtonVisibility = GONE,
         headerVisibility = headerVisibility ,
         imageLayoutMargin = imageLayoutMargin ,
@@ -178,7 +178,7 @@ inputViewArray state =
       , isFocussed : pickUpFocussed
       , prefixImageName : "ny_ic_green_circle"
       , margin : MarginTop 8
-      , placeHolder : if state.props.actionType == ST.SearchLocationAction then "Start" else "Enter Pickup Location"
+      , placeHolder : if state.props.actionType == ST.SearchLocationAction then (getString START_) else (getString ENTER_PICKUP_LOC)
       , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
       , id : ST.SearchLocPickup
       , isEditable : not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
@@ -187,7 +187,7 @@ inputViewArray state =
       , isFocussed : dropLocFocussed
       , prefixImageName : if state.props.actionType == ST.SearchLocationAction then "ny_ic_red_circle" else "ny_ic_blue_circle"
       , margin : MarginTop 8
-      , placeHolder : if state.props.actionType == ST.SearchLocationAction then "Where To?" else "Add Stop"
+      , placeHolder : if state.props.actionType == ST.SearchLocationAction then (getString WHERE_TO) else (getString ADD_STOP)
       , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
       , id : ST.SearchLocDrop
       , isEditable : true

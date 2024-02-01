@@ -374,6 +374,7 @@ view push state =
               else emptyTextView state
             , if state.props.currentStage == ChatWithDriver then messagingView push state else emptyTextView state
             , if state.props.currentStage /= RideRating && state.props.isMockLocation && (getMerchant FunctionCall == NAMMAYATRI) && state.props.currentStage == HomeScreen then (sourceUnserviceableView push state) else emptyTextView state
+            , bottomNavBarView push state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
             , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain ]) then (quoteListModelView push state) else emptyTextView state
@@ -406,7 +407,6 @@ view push state =
                     , clickable $ not DS.null state.props.repeatRideTimerId 
                     ][]
               else emptyTextView state
-            , bottomNavBarView push state
             ]  <> if state.props.showEducationalCarousel then 
                     [ linearLayout
                       [ height MATCH_PARENT
@@ -3022,34 +3022,25 @@ driverLocationTracking push action driverArrivedAction updateState duration trac
               if (getValueToLocalStore TRACKING_ENABLED) == "False" then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
                 _ <- pure $ removeAllPolylines ""
-                _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" specialLocationTag (getNewIDWithTag "CustomerHomeScreen")
+                _ <- liftFlow $ drawRoute (walkCoordinate srcLat srcLon dstLat dstLon) {points : []} "DOT" "#323643" false markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" "" specialLocationTag (getNewIDWithTag "CustomerHomeScreen")
                 void $ delay $ Milliseconds duration
                 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState
                 pure unit
               else if ((getValueToLocalStore TRACKING_DRIVER) == "False" || not (isJust state.data.route)) then do
                 _ <- pure $ setValueToLocalStore TRACKING_DRIVER "True"
-                routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
-                case routeResponse of
-                  Right (GetRouteResp routeResp) -> do
-                    case ((routeResp) !! 0) of
-                      Just (Route routes) -> do
-                        _ <- pure $ removeAllPolylines ""
-                        let (Snapped routePoints) = routes.points
-                            newPoints = if length routePoints > 1 then
-                                          getExtendedPath (walkCoordinates routes.points)
-                                        else
-                                          walkCoordinate srcLat srcLon dstLat dstLon
-                            newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
-                        liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm routes.distance state) specialLocationTag (getNewIDWithTag "CustomerHomeScreen")
-                        _ <- doAff do liftEffect $ push $ updateState routes.duration routes.distance
-                        void $ delay $ Milliseconds duration
-                        driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = Just (Route newRoute), speed = routes.distance / routes.duration } } routeState
-                      Nothing -> do
-                        _ <- pure $ spy "Nothing" "1"
-                        pure unit
-                  Left err -> do
-                    _ <- pure $ spy "Nothing" "2"
-                    pure unit
+                
+                {points, route, routeDistance, routeDuration} <- createRouteHelper routeState dstLat dstLon state.data.driverInfoCardState.destinationLat state.data.driverInfoCardState.destinationLng
+                let rentalPoints = points
+                    rentalRoute = route 
+                    rentalDistance = routeDistance
+                    rentalDuration = routeDuration
+                {points, route, routeDistance, routeDuration} <- createRouteHelper routeState srcLat srcLon dstLat dstLon
+                void $ pure $ removeAllPolylines ""
+                liftFlow $ drawRoute (fromMaybe {points : []} points) (fromMaybe {points : []} rentalPoints) "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" (metersToKm (fromMaybe 0 routeDistance) state) specialLocationTag (getNewIDWithTag "CustomerHomeScreen")
+                _ <- doAff do liftEffect $ push $ updateState (fromMaybe 1 routeDuration) $ fromMaybe 1 routeDistance
+                void $ delay $ Milliseconds duration
+                driverLocationTracking push action driverArrivedAction updateState duration trackingId state { data { route = route, speed = (fromMaybe 0 routeDistance) / (fromMaybe 1 routeDuration) } } routeState
+
               else do
                 case state.data.route of
                   Just (Route route) -> do
@@ -3788,12 +3779,18 @@ mapView push state idTag isVisible =
             ( \action -> do
                 _ <- push action
                 _ <- getCurrentPosition push CurrentLocation
+                let _ = spy "inside mapView " "rideSearchFlow"
+                let _ = spy "Current Stage" state.props.currentStage
+                
+              --   push $ RideSearchAction 
+              --   pure unit
                 _ <- showMap (getNewIDWithTag idTag) isCurrentLocationEnabled "satellite" zoomLevel push MAPREADY
                 if state.props.openChatScreen && state.props.currentStage == RideAccepted then push OpenChatScreen
                 else pure unit
                 case state.props.currentStage of
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
                   _ -> pure unit
+                -- if state.props.currentStage == RideSearch then push $ RideSearchAction else pure unit
             )
             (const MapReadyAction)
     ][ linearLayout
@@ -4346,3 +4343,1758 @@ endOTPView push state =
       ] <> FontStyle.body22 TypoGraphy
     ]
   ]
+
+createRouteHelper routeState startLat startLon endLat endLon = do
+  routeResp <- getRoute routeState $ makeGetRouteReq startLat startLon endLat endLon
+  case routeResp of 
+    Right (GetRouteResp resp) -> do 
+      case (head resp) of 
+        Just (Route route) -> do 
+          -- void $ pure $ removeAllPolylines ""
+          let (Snapped routePts) = route.points 
+              newPts = if length routePts > 1 then 
+                          getExtendedPath $ walkCoordinates (route.points)
+                          else 
+                            walkCoordinate startLat startLon endLat endLon
+              newRoute = route {points = Snapped (map (\item -> LatLong { lat : item.lat, lon : item.lng}) newPts.points)}
+          pure $ {points : Just newPts, route : Just (Route newRoute), routeDuration : Just $ route.duration, routeDistance : Just $ route.distance}
+        Nothing -> pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
+    Left err -> do 
+      let _ = spy "Error in getRoute API Call" err
+      pure $ {points : Nothing, route : Nothing, routeDuration : Nothing, routeDistance : Nothing}
+
+
+routeABCD = [Route {
+      "boundingBox": Just ([
+          12.9425845,
+          77.62419270000001,
+          12.9329616,
+          77.61101959999999
+      ]),
+      "distance": 3071,
+      "duration": 746,
+      "points": Snapped[
+            LatLong{
+                "lat": 12.97933,
+                "lon": 77.59471
+            },
+            LatLong{
+                "lat": 12.97937,
+                "lon": 77.59478
+            },
+            LatLong{
+                "lat": 12.979579999999999,
+                "lon": 77.59506
+            },
+            LatLong{
+                "lat": 12.979649999999998,
+                "lon": 77.59513
+            },
+            LatLong{
+                "lat": 12.979939999999997,
+                "lon": 77.59549
+            },
+            LatLong{
+                "lat": 12.97994,
+                "lon": 77.59549
+            },
+            LatLong{
+                "lat": 12.980089999999999,
+                "lon": 77.59527
+            },
+            LatLong{
+                "lat": 12.980099999999998,
+                "lon": 77.59524
+            },
+            LatLong{
+                "lat": 12.980109999999998,
+                "lon": 77.5952
+            },
+            LatLong{
+                "lat": 12.980189999999999,
+                "lon": 77.59491
+            },
+            LatLong{
+                "lat": 12.980199999999998,
+                "lon": 77.5949
+            },
+            LatLong{
+                "lat": 12.980209999999998,
+                "lon": 77.59488999999999
+            },
+            LatLong{
+                "lat": 12.980219999999997,
+                "lon": 77.59487999999999
+            },
+            LatLong{
+                "lat": 12.980229999999997,
+                "lon": 77.59486999999999
+            },
+            LatLong{
+                "lat": 12.980239999999997,
+                "lon": 77.59484999999998
+            },
+            LatLong{
+                "lat": 12.980249999999996,
+                "lon": 77.59483999999998
+            },
+            LatLong{
+                "lat": 12.980259999999996,
+                "lon": 77.59481999999997
+            },
+            LatLong{
+                "lat": 12.980259999999996,
+                "lon": 77.59480999999997
+            },
+            LatLong{
+                "lat": 12.980269999999996,
+                "lon": 77.59478999999996
+            },
+            LatLong{
+                "lat": 12.980279999999995,
+                "lon": 77.59476999999995
+            },
+            LatLong{
+                "lat": 12.980289999999995,
+                "lon": 77.59473999999996
+            },
+            LatLong{
+                "lat": 12.980289999999995,
+                "lon": 77.59472999999996
+            },
+            LatLong{
+                "lat": 12.980299999999994,
+                "lon": 77.59469999999996
+            },
+            LatLong{
+                "lat": 12.980299999999994,
+                "lon": 77.59467999999995
+            },
+            LatLong{
+                "lat": 12.980309999999994,
+                "lon": 77.59464999999996
+            },
+            LatLong{
+                "lat": 12.980309999999994,
+                "lon": 77.59462999999995
+            },
+            LatLong{
+                "lat": 12.980309999999994,
+                "lon": 77.59458999999995
+            },
+            LatLong{
+                "lat": 12.980299999999994,
+                "lon": 77.59455999999996
+            },
+            LatLong{
+                "lat": 12.980299999999994,
+                "lon": 77.59451999999996
+            },
+            LatLong{
+                "lat": 12.980289999999995,
+                "lon": 77.59448999999996
+            },
+            LatLong{
+                "lat": 12.980279999999995,
+                "lon": 77.59445999999997
+            },
+            LatLong{
+                "lat": 12.980269999999996,
+                "lon": 77.59442999999997
+            },
+            LatLong{
+                "lat": 12.980259999999996,
+                "lon": 77.59440999999997
+            },
+            LatLong{
+                "lat": 12.980239999999997,
+                "lon": 77.59438999999996
+            },
+            LatLong{
+                "lat": 12.980229999999997,
+                "lon": 77.59436999999996
+            },
+            LatLong{
+                "lat": 12.98023,
+                "lon": 77.59437
+            },
+            LatLong{
+                "lat": 12.98084,
+                "lon": 77.59382
+            },
+            LatLong{
+                "lat": 12.98084,
+                "lon": 77.59382
+            },
+            LatLong{
+                "lat": 12.980920000000001,
+                "lon": 77.5937
+            },
+            LatLong{
+                "lat": 12.98154,
+                "lon": 77.5943
+            },
+            LatLong{
+                "lat": 12.981660000000002,
+                "lon": 77.59440000000001
+            },
+            LatLong{
+                "lat": 12.981890000000002,
+                "lon": 77.59460000000001
+            },
+            LatLong{
+                "lat": 12.98189,
+                "lon": 77.5946
+            },
+            LatLong{
+                "lat": 12.98204,
+                "lon": 77.59416
+            },
+            LatLong{
+                "lat": 12.98209,
+                "lon": 77.59401
+            },
+            LatLong{
+                "lat": 12.98209,
+                "lon": 77.59398
+            },
+            LatLong{
+                "lat": 12.982099999999999,
+                "lon": 77.5939
+            },
+            LatLong{
+                "lat": 12.982199999999999,
+                "lon": 77.59355000000001
+            },
+            LatLong{
+                "lat": 12.982339999999999,
+                "lon": 77.59316000000001
+            },
+            LatLong{
+                "lat": 12.982439999999999,
+                "lon": 77.59288000000001
+            },
+            LatLong{
+                "lat": 12.982489999999999,
+                "lon": 77.59275000000001
+            },
+            LatLong{
+                "lat": 12.98252,
+                "lon": 77.59267000000001
+            },
+            LatLong{
+                "lat": 12.98255,
+                "lon": 77.59260000000002
+            },
+            LatLong{
+                "lat": 12.98259,
+                "lon": 77.59252000000002
+            },
+            LatLong{
+                "lat": 12.98262,
+                "lon": 77.59247000000002
+            },
+            LatLong{
+                "lat": 12.982660000000001,
+                "lon": 77.59242000000002
+            },
+            LatLong{
+                "lat": 12.982740000000002,
+                "lon": 77.59236000000001
+            },
+            LatLong{
+                "lat": 12.982830000000002,
+                "lon": 77.59233000000002
+            },
+            LatLong{
+                "lat": 12.982980000000001,
+                "lon": 77.59230000000002
+            },
+            LatLong{
+                "lat": 12.98298,
+                "lon": 77.5923
+            },
+            LatLong{
+                "lat": 12.98324,
+                "lon": 77.59163
+            },
+            LatLong{
+                "lat": 12.98382,
+                "lon": 77.59033
+            },
+            LatLong{
+                "lat": 12.98442,
+                "lon": 77.58899
+            },
+            LatLong{
+                "lat": 12.98445,
+                "lon": 77.58892
+            },
+            LatLong{
+                "lat": 12.9846,
+                "lon": 77.58853
+            },
+            LatLong{
+                "lat": 12.98466,
+                "lon": 77.58843
+            },
+            LatLong{
+                "lat": 12.984729999999999,
+                "lon": 77.58836000000001
+            },
+            LatLong{
+                "lat": 12.984869999999999,
+                "lon": 77.58822
+            },
+            LatLong{
+                "lat": 12.98487,
+                "lon": 77.58822
+            },
+            LatLong{
+                "lat": 12.985130000000002,
+                "lon": 77.58837000000001
+            },
+            LatLong{
+                "lat": 12.985230000000001,
+                "lon": 77.58841000000001
+            },
+            LatLong{
+                "lat": 12.985700000000001,
+                "lon": 77.58859000000001
+            },
+            LatLong{
+                "lat": 12.985880000000002,
+                "lon": 77.58866
+            },
+            LatLong{
+                "lat": 12.985930000000002,
+                "lon": 77.58868000000001
+            },
+            LatLong{
+                "lat": 12.986150000000002,
+                "lon": 77.58877000000001
+            },
+            LatLong{
+                "lat": 12.986270000000003,
+                "lon": 77.5888
+            },
+            LatLong{
+                "lat": 12.986330000000002,
+                "lon": 77.58881000000001
+            },
+            LatLong{
+                "lat": 12.986360000000003,
+                "lon": 77.58881000000001
+            },
+            LatLong{
+                "lat": 12.986570000000002,
+                "lon": 77.5888
+            },
+            LatLong{
+                "lat": 12.98657,
+                "lon": 77.5888
+            },
+            LatLong{
+                "lat": 12.98658,
+                "lon": 77.58879
+            },
+            LatLong{
+                "lat": 12.98659,
+                "lon": 77.58878
+            },
+            LatLong{
+                "lat": 12.98659,
+                "lon": 77.58877
+            },
+            LatLong{
+                "lat": 12.9866,
+                "lon": 77.58876
+            },
+            LatLong{
+                "lat": 12.986609999999999,
+                "lon": 77.58874999999999
+            },
+            LatLong{
+                "lat": 12.986619999999998,
+                "lon": 77.58873999999999
+            },
+            LatLong{
+                "lat": 12.986629999999998,
+                "lon": 77.58872999999998
+            },
+            LatLong{
+                "lat": 12.986639999999998,
+                "lon": 77.58872999999998
+            },
+            LatLong{
+                "lat": 12.986649999999997,
+                "lon": 77.58871999999998
+            },
+            LatLong{
+                "lat": 12.986659999999997,
+                "lon": 77.58871999999998
+            },
+            LatLong{
+                "lat": 12.986669999999997,
+                "lon": 77.58870999999998
+            },
+            LatLong{
+                "lat": 12.986679999999996,
+                "lon": 77.58870999999998
+            },
+            LatLong{
+                "lat": 12.986689999999996,
+                "lon": 77.58870999999998
+            },
+            LatLong{
+                "lat": 12.986709999999995,
+                "lon": 77.58869999999997
+            },
+            LatLong{
+                "lat": 12.986719999999995,
+                "lon": 77.58869999999997
+            },
+            LatLong{
+                "lat": 12.986729999999994,
+                "lon": 77.58869999999997
+            },
+            LatLong{
+                "lat": 12.986739999999994,
+                "lon": 77.58870999999998
+            },
+            LatLong{
+                "lat": 12.986759999999993,
+                "lon": 77.58870999999998
+            },
+            LatLong{
+                "lat": 12.986769999999993,
+                "lon": 77.58870999999998
+            },
+            LatLong{
+                "lat": 12.986779999999992,
+                "lon": 77.58871999999998
+            },
+            LatLong{
+                "lat": 12.986789999999992,
+                "lon": 77.58871999999998
+            },
+            LatLong{
+                "lat": 12.986799999999992,
+                "lon": 77.58872999999998
+            },
+            LatLong{
+                "lat": 12.986809999999991,
+                "lon": 77.58872999999998
+            },
+            LatLong{
+                "lat": 12.986819999999991,
+                "lon": 77.58873999999999
+            },
+            LatLong{
+                "lat": 12.98682999999999,
+                "lon": 77.58874999999999
+            },
+            LatLong{
+                "lat": 12.98683999999999,
+                "lon": 77.58874999999999
+            },
+            LatLong{
+                "lat": 12.98684999999999,
+                "lon": 77.58877
+            },
+            LatLong{
+                "lat": 12.98684999999999,
+                "lon": 77.58878
+            },
+            LatLong{
+                "lat": 12.98685999999999,
+                "lon": 77.58879
+            },
+            LatLong{
+                "lat": 12.98685999999999,
+                "lon": 77.5888
+            },
+            LatLong{
+                "lat": 12.986869999999989,
+                "lon": 77.58881000000001
+            },
+            LatLong{
+                "lat": 12.986869999999989,
+                "lon": 77.58882000000001
+            },
+            LatLong{
+                "lat": 12.986869999999989,
+                "lon": 77.58884000000002
+            },
+            LatLong{
+                "lat": 12.986869999999989,
+                "lon": 77.58885000000002
+            },
+            LatLong{
+                "lat": 12.986869999999989,
+                "lon": 77.58887000000003
+            },
+            LatLong{
+                "lat": 12.986979999999988,
+                "lon": 77.58887000000003
+            },
+            LatLong{
+                "lat": 12.987049999999988,
+                "lon": 77.58887000000003
+            },
+            LatLong{
+                "lat": 12.987109999999987,
+                "lon": 77.58887000000003
+            },
+            LatLong{
+                "lat": 12.987139999999988,
+                "lon": 77.58887000000003
+            },
+            LatLong{
+                "lat": 12.987159999999987,
+                "lon": 77.58887000000003
+            },
+            LatLong{
+                "lat": 12.987189999999988,
+                "lon": 77.58887000000003
+            },
+            LatLong{
+                "lat": 12.987239999999987,
+                "lon": 77.58887000000003
+            },
+            LatLong{
+                "lat": 12.987319999999988,
+                "lon": 77.58886000000003
+            },
+            LatLong{
+                "lat": 12.987449999999988,
+                "lon": 77.58885000000002
+            },
+            LatLong{
+                "lat": 12.987639999999988,
+                "lon": 77.58882000000003
+            },
+            LatLong{
+                "lat": 12.988269999999988,
+                "lon": 77.58879000000003
+            },
+            LatLong{
+                "lat": 12.988359999999988,
+                "lon": 77.58878000000003
+            },
+            LatLong{
+                "lat": 12.988899999999989,
+                "lon": 77.58874000000003
+            },
+            LatLong{
+                "lat": 12.989079999999989,
+                "lon": 77.58873000000003
+            },
+            LatLong{
+                "lat": 12.98925999999999,
+                "lon": 77.58871000000002
+            },
+            LatLong{
+                "lat": 12.98999999999999,
+                "lon": 77.58864000000003
+            },
+            LatLong{
+                "lat": 12.990199999999989,
+                "lon": 77.58862000000002
+            },
+            LatLong{
+                "lat": 12.99046999999999,
+                "lon": 77.58860000000001
+            },
+            LatLong{
+                "lat": 12.99068999999999,
+                "lon": 77.58857000000002
+            },
+            LatLong{
+                "lat": 12.99089999999999,
+                "lon": 77.58854000000002
+            },
+            LatLong{
+                "lat": 12.991139999999989,
+                "lon": 77.58851000000003
+            },
+            LatLong{
+                "lat": 12.99116999999999,
+                "lon": 77.58851000000003
+            },
+            LatLong{
+                "lat": 12.99119999999999,
+                "lon": 77.58851000000003
+            },
+            LatLong{
+                "lat": 12.99127999999999,
+                "lon": 77.58850000000002
+            },
+            LatLong{
+                "lat": 12.99137999999999,
+                "lon": 77.58850000000002
+            },
+            LatLong{
+                "lat": 12.99165999999999,
+                "lon": 77.58851000000003
+            },
+            LatLong{
+                "lat": 12.99181999999999,
+                "lon": 77.58853000000003
+            },
+            LatLong{
+                "lat": 12.99208999999999,
+                "lon": 77.58856000000003
+            },
+            LatLong{
+                "lat": 12.99222999999999,
+                "lon": 77.58859000000002
+            },
+            LatLong{
+                "lat": 12.99236999999999,
+                "lon": 77.58863000000002
+            },
+            LatLong{
+                "lat": 12.992489999999991,
+                "lon": 77.58865000000003
+            },
+            LatLong{
+                "lat": 12.99249999999999,
+                "lon": 77.58866000000003
+            },
+            LatLong{
+                "lat": 12.993149999999991,
+                "lon": 77.58887000000003
+            },
+            LatLong{
+                "lat": 12.993189999999991,
+                "lon": 77.58889000000003
+            },
+            LatLong{
+                "lat": 12.993289999999991,
+                "lon": 77.58888000000003
+            },
+            LatLong{
+                "lat": 12.993949999999991,
+                "lon": 77.58916000000004
+            },
+            LatLong{
+                "lat": 12.994449999999992,
+                "lon": 77.58940000000004
+            },
+            LatLong{
+                "lat": 12.994819999999992,
+                "lon": 77.58957000000004
+            },
+            LatLong{
+                "lat": 12.995129999999993,
+                "lon": 77.58970000000004
+            },
+            LatLong{
+                "lat": 12.995189999999992,
+                "lon": 77.58968000000003
+            },
+            LatLong{
+                "lat": 12.995279999999992,
+                "lon": 77.58964000000003
+            },
+            LatLong{
+                "lat": 12.995299999999991,
+                "lon": 77.58963000000003
+            },
+            LatLong{
+                "lat": 12.995429999999992,
+                "lon": 77.58958000000003
+            },
+            LatLong{
+                "lat": 12.995489999999991,
+                "lon": 77.58955000000003
+            },
+            LatLong{
+                "lat": 12.99549,
+                "lon": 77.58955
+            },
+            LatLong{
+                "lat": 12.99557,
+                "lon": 77.58964
+            },
+            LatLong{
+                "lat": 12.99564,
+                "lon": 77.5898
+            }
+        ],
+      "pointsForRentals" : Just (Snapped ([
+      LatLong{
+        "lat": 12.97926,
+        "lon": 77.59462
+    },
+      LatLong{
+        "lat": 12.97932,
+        "lon": 77.5947
+    },
+      LatLong{
+        "lat": 12.97937,
+        "lon": 77.59478
+    },
+      LatLong{
+        "lat": 12.979579999999999,
+        "lon": 77.59506
+    },
+      LatLong{
+        "lat": 12.979649999999998,
+        "lon": 77.59513
+    },
+      LatLong{
+        "lat": 12.979939999999997,
+        "lon": 77.59549
+    },
+      LatLong{
+        "lat": 12.97994,
+        "lon": 77.59549
+    },
+      LatLong{
+        "lat": 12.980089999999999,
+        "lon": 77.59527
+    },
+      LatLong{
+        "lat": 12.980099999999998,
+        "lon": 77.59524
+    },
+      LatLong{
+        "lat": 12.980109999999998,
+        "lon": 77.5952
+    },
+      LatLong{
+        "lat": 12.980189999999999,
+        "lon": 77.59491
+    },
+      LatLong{
+        "lat": 12.980199999999998,
+        "lon": 77.5949
+    },
+      LatLong{
+        "lat": 12.980209999999998,
+        "lon": 77.59488999999999
+    },
+      LatLong{
+        "lat": 12.980219999999997,
+        "lon": 77.59487999999999
+    },
+      LatLong{
+        "lat": 12.980229999999997,
+        "lon": 77.59486999999999
+    },
+      LatLong{
+        "lat": 12.980239999999997,
+        "lon": 77.59484999999998
+    },
+      LatLong{
+        "lat": 12.980249999999996,
+        "lon": 77.59483999999998
+    },
+      LatLong{
+        "lat": 12.980259999999996,
+        "lon": 77.59481999999997
+    },
+      LatLong{
+        "lat": 12.980259999999996,
+        "lon": 77.59480999999997
+    },
+      LatLong{
+        "lat": 12.980269999999996,
+        "lon": 77.59478999999996
+    },
+      LatLong{
+        "lat": 12.980279999999995,
+        "lon": 77.59476999999995
+    },
+      LatLong{
+        "lat": 12.980289999999995,
+        "lon": 77.59473999999996
+    },
+      LatLong{
+        "lat": 12.980289999999995,
+        "lon": 77.59472999999996
+    },
+      LatLong{
+        "lat": 12.980299999999994,
+        "lon": 77.59469999999996
+    },
+      LatLong{
+        "lat": 12.980299999999994,
+        "lon": 77.59467999999995
+    },
+      LatLong{
+        "lat": 12.980309999999994,
+        "lon": 77.59464999999996
+    },
+      LatLong{
+        "lat": 12.980309999999994,
+        "lon": 77.59462999999995
+    },
+      LatLong{
+        "lat": 12.980309999999994,
+        "lon": 77.59458999999995
+    },
+      LatLong{
+        "lat": 12.980299999999994,
+        "lon": 77.59455999999996
+    },
+      LatLong{
+        "lat": 12.980299999999994,
+        "lon": 77.59451999999996
+    },
+      LatLong{
+        "lat": 12.980289999999995,
+        "lon": 77.59448999999996
+    },
+      LatLong{
+        "lat": 12.980279999999995,
+        "lon": 77.59445999999997
+    },
+      LatLong{
+        "lat": 12.980269999999996,
+        "lon": 77.59442999999997
+    },
+      LatLong{
+        "lat": 12.980259999999996,
+        "lon": 77.59440999999997
+    },
+      LatLong{
+        "lat": 12.980239999999997,
+        "lon": 77.59438999999996
+    },
+      LatLong{
+        "lat": 12.980229999999997,
+        "lon": 77.59436999999996
+    },
+      LatLong{
+        "lat": 12.98023,
+        "lon": 77.59437
+    },
+      LatLong{
+        "lat": 12.98084,
+        "lon": 77.59382
+    },
+      LatLong{
+        "lat": 12.98084,
+        "lon": 77.59382
+    },
+      LatLong{
+        "lat": 12.980920000000001,
+        "lon": 77.5937
+    },
+      LatLong{
+        "lat": 12.98154,
+        "lon": 77.5943
+    },
+      LatLong{
+        "lat": 12.981660000000002,
+        "lon": 77.59440000000001
+    },
+      LatLong{
+        "lat": 12.981890000000002,
+        "lon": 77.59460000000001
+    },
+      LatLong{
+        "lat": 12.98189,
+        "lon": 77.5946
+    },
+      LatLong{
+        "lat": 12.98204,
+        "lon": 77.59416
+    },
+      LatLong{
+        "lat": 12.98209,
+        "lon": 77.59401
+    },
+      LatLong{
+        "lat": 12.98209,
+        "lon": 77.59398
+    },
+      LatLong{
+        "lat": 12.982099999999999,
+        "lon": 77.5939
+    },
+      LatLong{
+        "lat": 12.982199999999999,
+        "lon": 77.59355000000001
+    },
+      LatLong{
+        "lat": 12.982339999999999,
+        "lon": 77.59316000000001
+    },
+      LatLong{
+        "lat": 12.982439999999999,
+        "lon": 77.59288000000001
+    },
+      LatLong{
+        "lat": 12.982489999999999,
+        "lon": 77.59275000000001
+    },
+      LatLong{
+        "lat": 12.98252,
+        "lon": 77.59267000000001
+    },
+      LatLong{
+        "lat": 12.98255,
+        "lon": 77.59260000000002
+    },
+      LatLong{
+        "lat": 12.98259,
+        "lon": 77.59252000000002
+    },
+      LatLong{
+        "lat": 12.98262,
+        "lon": 77.59247000000002
+    },
+      LatLong{
+        "lat": 12.982660000000001,
+        "lon": 77.59242000000002
+    },
+      LatLong{
+        "lat": 12.982740000000002,
+        "lon": 77.59236000000001
+    },
+      LatLong{
+        "lat": 12.982830000000002,
+        "lon": 77.59233000000002
+    },
+      LatLong{
+        "lat": 12.982980000000001,
+        "lon": 77.59230000000002
+    },
+      LatLong{
+        "lat": 12.98298,
+        "lon": 77.5923
+    },
+      LatLong{
+        "lat": 12.98324,
+        "lon": 77.59163
+    },
+      LatLong{
+        "lat": 12.98382,
+        "lon": 77.59033
+    },
+      LatLong{
+        "lat": 12.98442,
+        "lon": 77.58899
+    },
+      LatLong{
+        "lat": 12.98445,
+        "lon": 77.58892
+    },
+      LatLong{
+        "lat": 12.9846,
+        "lon": 77.58853
+    },
+      LatLong{
+        "lat": 12.98466,
+        "lon": 77.58843
+    },
+      LatLong{
+        "lat": 12.984729999999999,
+        "lon": 77.58836000000001
+    },
+      LatLong{
+        "lat": 12.984869999999999,
+        "lon": 77.58822
+    },
+      LatLong{
+        "lat": 12.98487,
+        "lon": 77.58822
+    },
+      LatLong{
+        "lat": 12.985130000000002,
+        "lon": 77.58837000000001
+    },
+      LatLong{
+        "lat": 12.985230000000001,
+        "lon": 77.58841000000001
+    },
+      LatLong{
+        "lat": 12.985700000000001,
+        "lon": 77.58859000000001
+    },
+      LatLong{
+        "lat": 12.985880000000002,
+        "lon": 77.58866
+    },
+      LatLong{
+        "lat": 12.985930000000002,
+        "lon": 77.58868000000001
+    },
+      LatLong{
+        "lat": 12.986150000000002,
+        "lon": 77.58877000000001
+    },
+      LatLong{
+        "lat": 12.986270000000003,
+        "lon": 77.5888
+    },
+      LatLong{
+        "lat": 12.986330000000002,
+        "lon": 77.58881000000001
+    },
+      LatLong{
+        "lat": 12.986360000000003,
+        "lon": 77.58881000000001
+    },
+      LatLong{
+        "lat": 12.986570000000002,
+        "lon": 77.5888
+    },
+      LatLong{
+        "lat": 12.98657,
+        "lon": 77.5888
+    },
+      LatLong{
+        "lat": 12.98658,
+        "lon": 77.58879
+    },
+      LatLong{
+        "lat": 12.98659,
+        "lon": 77.58878
+    },
+      LatLong{
+        "lat": 12.98659,
+        "lon": 77.58877
+    },
+      LatLong{
+        "lat": 12.9866,
+        "lon": 77.58876
+    },
+      LatLong{
+        "lat": 12.986609999999999,
+        "lon": 77.58874999999999
+    },
+      LatLong{
+        "lat": 12.986619999999998,
+        "lon": 77.58873999999999
+    },
+      LatLong{
+        "lat": 12.986629999999998,
+        "lon": 77.58872999999998
+    },
+      LatLong{
+        "lat": 12.986639999999998,
+        "lon": 77.58872999999998
+    },
+      LatLong{
+        "lat": 12.986649999999997,
+        "lon": 77.58871999999998
+    },
+      LatLong{
+        "lat": 12.986659999999997,
+        "lon": 77.58871999999998
+    },
+      LatLong{
+        "lat": 12.986669999999997,
+        "lon": 77.58870999999998
+    },
+      LatLong{
+        "lat": 12.986679999999996,
+        "lon": 77.58870999999998
+    },
+      LatLong{
+        "lat": 12.986689999999996,
+        "lon": 77.58870999999998
+    },
+      LatLong{
+        "lat": 12.986709999999995,
+        "lon": 77.58869999999997
+    },
+      LatLong{
+        "lat": 12.987049999999995,
+        "lon": 77.58827999999997
+    },
+      LatLong{
+        "lat": 12.987419999999995,
+        "lon": 77.58786999999997
+    },
+      LatLong{
+        "lat": 12.988069999999995,
+        "lon": 77.58703999999997
+    },
+      LatLong{
+        "lat": 12.988509999999994,
+        "lon": 77.58650999999998
+    },
+      LatLong{
+        "lat": 12.988689999999995,
+        "lon": 77.58630999999997
+    },
+      LatLong{
+        "lat": 12.988759999999994,
+        "lon": 77.58622999999997
+    },
+      LatLong{
+        "lat": 12.988929999999995,
+        "lon": 77.58603999999997
+    },
+      LatLong{
+        "lat": 12.989069999999995,
+        "lon": 77.58593999999997
+    },
+      LatLong{
+        "lat": 12.989179999999994,
+        "lon": 77.58587999999996
+    },
+      LatLong{
+        "lat": 12.989359999999994,
+        "lon": 77.58581999999996
+    },
+      LatLong{
+        "lat": 12.989479999999995,
+        "lon": 77.58579999999995
+    },
+      LatLong{
+        "lat": 12.989769999999995,
+        "lon": 77.58574999999995
+    },
+      LatLong{
+        "lat": 12.990159999999994,
+        "lon": 77.58567999999995
+    },
+      LatLong{
+        "lat": 12.990499999999994,
+        "lon": 77.58562999999995
+    },
+      LatLong{
+        "lat": 12.990919999999994,
+        "lon": 77.58558999999995
+    },
+      LatLong{
+        "lat": 12.991079999999993,
+        "lon": 77.58556999999995
+    },
+      LatLong{
+        "lat": 12.991129999999993,
+        "lon": 77.58556999999995
+    },
+      LatLong{
+        "lat": 12.991139999999993,
+        "lon": 77.58555999999994
+    },
+      LatLong{
+        "lat": 12.991649999999993,
+        "lon": 77.58548999999995
+    },
+      LatLong{
+        "lat": 12.991679999999993,
+        "lon": 77.58548999999995
+    },
+      LatLong{
+        "lat": 12.992739999999994,
+        "lon": 77.58530999999995
+    },
+      LatLong{
+        "lat": 12.992779999999994,
+        "lon": 77.58529999999995
+    },
+      LatLong{
+        "lat": 12.992909999999995,
+        "lon": 77.58525999999995
+    },
+      LatLong{
+        "lat": 12.992959999999995,
+        "lon": 77.58523999999994
+    },
+      LatLong{
+        "lat": 12.993009999999995,
+        "lon": 77.58521999999994
+    },
+      LatLong{
+        "lat": 12.993059999999995,
+        "lon": 77.58518999999994
+    },
+      LatLong{
+        "lat": 12.993199999999995,
+        "lon": 77.58508999999994
+    },
+      LatLong{
+        "lat": 12.993249999999994,
+        "lon": 77.58505999999994
+    },
+      LatLong{
+        "lat": 12.993289999999995,
+        "lon": 77.58504999999994
+    },
+      LatLong{
+        "lat": 12.993329999999995,
+        "lon": 77.58502999999993
+    },
+      LatLong{
+        "lat": 12.993369999999995,
+        "lon": 77.58501999999993
+    },
+      LatLong{
+        "lat": 12.993569999999995,
+        "lon": 77.58500999999993
+    },
+      LatLong{
+        "lat": 12.993629999999994,
+        "lon": 77.58498999999992
+    },
+      LatLong{
+        "lat": 12.993689999999994,
+        "lon": 77.58498999999992
+    },
+      LatLong{
+        "lat": 12.993729999999994,
+        "lon": 77.58498999999992
+    },
+      LatLong{
+        "lat": 12.993789999999994,
+        "lon": 77.58500999999993
+    },
+      LatLong{
+        "lat": 12.993829999999994,
+        "lon": 77.58502999999993
+    },
+      LatLong{
+        "lat": 12.993909999999994,
+        "lon": 77.58506999999993
+    },
+      LatLong{
+        "lat": 12.993929999999994,
+        "lon": 77.58507999999993
+    },
+      LatLong{
+        "lat": 12.993939999999993,
+        "lon": 77.58508999999994
+    },
+      LatLong{
+        "lat": 12.993959999999992,
+        "lon": 77.58510999999994
+    },
+      LatLong{
+        "lat": 12.993979999999992,
+        "lon": 77.58511999999995
+    },
+      LatLong{
+        "lat": 12.993999999999991,
+        "lon": 77.58511999999995
+    },
+      LatLong{
+        "lat": 12.994029999999992,
+        "lon": 77.58511999999995
+    },
+      LatLong{
+        "lat": 12.994089999999991,
+        "lon": 77.58511999999995
+    },
+      LatLong{
+        "lat": 12.994639999999992,
+        "lon": 77.58500999999994
+    },
+      LatLong{
+        "lat": 12.995359999999991,
+        "lon": 77.58484999999995
+    },
+      LatLong{
+        "lat": 12.99555999999999,
+        "lon": 77.58479999999994
+    },
+      LatLong{
+        "lat": 12.995589999999991,
+        "lon": 77.58479999999994
+    },
+      LatLong{
+        "lat": 12.99573999999999,
+        "lon": 77.58476999999995
+    },
+      LatLong{
+        "lat": 12.99589999999999,
+        "lon": 77.58472999999995
+    },
+      LatLong{
+        "lat": 12.99625999999999,
+        "lon": 77.58464999999995
+    },
+      LatLong{
+        "lat": 12.99693999999999,
+        "lon": 77.58446999999995
+    },
+      LatLong{
+        "lat": 12.99703999999999,
+        "lon": 77.58445999999995
+    },
+      LatLong{
+        "lat": 12.99735999999999,
+        "lon": 77.58441999999995
+    },
+      LatLong{
+        "lat": 12.997569999999989,
+        "lon": 77.58439999999995
+    },
+      LatLong{
+        "lat": 12.99773999999999,
+        "lon": 77.58435999999995
+    },
+      LatLong{
+        "lat": 12.99773999999999,
+        "lon": 77.58434999999994
+    },
+      LatLong{
+        "lat": 12.99790999999999,
+        "lon": 77.58430999999995
+    },
+      LatLong{
+        "lat": 12.99828999999999,
+        "lon": 77.58423999999995
+    },
+      LatLong{
+        "lat": 12.99864999999999,
+        "lon": 77.58418999999995
+    },
+      LatLong{
+        "lat": 12.998689999999991,
+        "lon": 77.58417999999995
+    },
+      LatLong{
+        "lat": 12.999709999999991,
+        "lon": 77.58409999999995
+    },
+      LatLong{
+        "lat": 12.99995999999999,
+        "lon": 77.58407999999994
+    },
+      LatLong{
+        "lat": 13.000409999999992,
+        "lon": 77.58404999999995
+    },
+      LatLong{
+        "lat": 13.000579999999992,
+        "lon": 77.58408999999995
+    },
+      LatLong{
+        "lat": 13.000649999999991,
+        "lon": 77.58409999999995
+    },
+      LatLong{
+        "lat": 13.000689999999992,
+        "lon": 77.58410999999995
+    },
+      LatLong{
+        "lat": 13.000739999999992,
+        "lon": 77.58410999999995
+    },
+      LatLong{
+        "lat": 13.000869999999992,
+        "lon": 77.58410999999995
+    },
+      LatLong{
+        "lat": 13.001139999999992,
+        "lon": 77.58410999999995
+    },
+      LatLong{
+        "lat": 13.001769999999992,
+        "lon": 77.58410999999995
+    },
+      LatLong{
+        "lat": 13.00183999999999,
+        "lon": 77.58410999999995
+    },
+      LatLong{
+        "lat": 13.00202999999999,
+        "lon": 77.58410999999995
+    },
+      LatLong{
+        "lat": 13.00218999999999,
+        "lon": 77.58410999999995
+    },
+      LatLong{
+        "lat": 13.00227999999999,
+        "lon": 77.58410999999995
+    },
+      LatLong{
+        "lat": 13.00238999999999,
+        "lon": 77.58410999999995
+    },
+      LatLong{
+        "lat": 13.002549999999989,
+        "lon": 77.58408999999995
+    },
+      LatLong{
+        "lat": 13.00271999999999,
+        "lon": 77.58407999999994
+    },
+      LatLong{
+        "lat": 13.002829999999989,
+        "lon": 77.58406999999994
+    },
+      LatLong{
+        "lat": 13.00290999999999,
+        "lon": 77.58407999999994
+    },
+      LatLong{
+        "lat": 13.003019999999989,
+        "lon": 77.58409999999995
+    },
+      LatLong{
+        "lat": 13.00355999999999,
+        "lon": 77.58411999999996
+    },
+      LatLong{
+        "lat": 13.00356,
+        "lon": 77.58412
+    },
+      LatLong{
+        "lat": 13.0036,
+        "lon": 77.58412
+    },
+      LatLong{
+        "lat": 13.00369,
+        "lon": 77.58413
+    },
+      LatLong{
+        "lat": 13.00416,
+        "lon": 77.58413
+    },
+      LatLong{
+        "lat": 13.004890000000001,
+        "lon": 77.5841
+    },
+      LatLong{
+        "lat": 13.005390000000002,
+        "lon": 77.58407000000001
+    },
+      LatLong{
+        "lat": 13.006020000000001,
+        "lon": 77.58403000000001
+    },
+      LatLong{
+        "lat": 13.006780000000001,
+        "lon": 77.58398000000001
+    },
+      LatLong{
+        "lat": 13.00708,
+        "lon": 77.58396
+    },
+      LatLong{
+        "lat": 13.0073,
+        "lon": 77.58394
+    },
+      LatLong{
+        "lat": 13.007430000000001,
+        "lon": 77.58393
+    },
+      LatLong{
+        "lat": 13.007480000000001,
+        "lon": 77.58393
+    },
+      LatLong{
+        "lat": 13.007530000000001,
+        "lon": 77.58393
+    },
+      LatLong{
+        "lat": 13.00796,
+        "lon": 77.5839
+    },
+      LatLong{
+        "lat": 13.00905,
+        "lon": 77.58385
+    },
+      LatLong{
+        "lat": 13.0094,
+        "lon": 77.58384
+    },
+      LatLong{
+        "lat": 13.01011,
+        "lon": 77.58382999999999
+    },
+      LatLong{
+        "lat": 13.01058,
+        "lon": 77.58380999999999
+    },
+      LatLong{
+        "lat": 13.011109999999999,
+        "lon": 77.58380999999999
+    },
+      LatLong{
+        "lat": 13.01111,
+        "lon": 77.58381
+    },
+      LatLong{
+        "lat": 13.01117,
+        "lon": 77.58376
+    },
+      LatLong{
+        "lat": 13.01121,
+        "lon": 77.58373999999999
+    },
+      LatLong{
+        "lat": 13.01128,
+        "lon": 77.58372999999999
+    },
+      LatLong{
+        "lat": 13.01234,
+        "lon": 77.58377999999999
+    },
+      LatLong{
+        "lat": 13.01285,
+        "lon": 77.5838
+    },
+      LatLong{
+        "lat": 13.01323,
+        "lon": 77.58381
+    },
+      LatLong{
+        "lat": 13.01345,
+        "lon": 77.58382
+    },
+      LatLong{
+        "lat": 13.01417,
+        "lon": 77.58382
+    },
+      LatLong{
+        "lat": 13.01445,
+        "lon": 77.58379000000001
+    },
+      LatLong{
+        "lat": 13.01445,
+        "lon": 77.58379
+    },
+      LatLong{
+        "lat": 13.01456,
+        "lon": 77.5838
+    },
+      LatLong{
+        "lat": 13.01455,
+        "lon": 77.58395999999999
+    },
+      LatLong{
+        "lat": 13.01455,
+        "lon": 77.58411999999998
+    },
+      LatLong{
+        "lat": 13.01446,
+        "lon": 77.58411999999998
+    },
+      LatLong{
+        "lat": 13.01416,
+        "lon": 77.58414999999998
+    },
+      LatLong{
+        "lat": 13.013110000000001,
+        "lon": 77.58411999999998
+    },
+      LatLong{
+        "lat": 13.012760000000002,
+        "lon": 77.58410999999998
+    },
+      LatLong{
+        "lat": 13.012230000000002,
+        "lon": 77.58408999999997
+    },
+      LatLong{
+        "lat": 13.011710000000003,
+        "lon": 77.58406999999997
+    },
+      LatLong{
+        "lat": 13.011700000000003,
+        "lon": 77.58406999999997
+    },
+      LatLong{
+        "lat": 13.011540000000004,
+        "lon": 77.58405999999997
+    },
+      LatLong{
+        "lat": 13.011350000000004,
+        "lon": 77.58404999999996
+    },
+      LatLong{
+        "lat": 13.011290000000004,
+        "lon": 77.58403999999996
+    },
+      LatLong{
+        "lat": 13.011250000000004,
+        "lon": 77.58402999999996
+    },
+      LatLong{
+        "lat": 13.011190000000004,
+        "lon": 77.58401999999995
+    },
+      LatLong{
+        "lat": 13.011150000000004,
+        "lon": 77.58398999999996
+    },
+      LatLong{
+        "lat": 13.011120000000004,
+        "lon": 77.58396999999995
+    },
+      LatLong{
+        "lat": 13.01112,
+        "lon": 77.58397
+    },
+      LatLong{
+        "lat": 13.01099,
+        "lon": 77.58395999999999
+    },
+      LatLong{
+        "lat": 13.01057,
+        "lon": 77.58395999999999
+    },
+      LatLong{
+        "lat": 13.010209999999999,
+        "lon": 77.58395999999999
+    },
+      LatLong{
+        "lat": 13.009979999999999,
+        "lon": 77.58395999999999
+    },
+      LatLong{
+        "lat": 13.00977,
+        "lon": 77.58395999999999
+    },
+      LatLong{
+        "lat": 13.009039999999999,
+        "lon": 77.58395999999999
+    },
+      LatLong{
+        "lat": 13.008049999999999,
+        "lon": 77.58399999999999
+    },
+      LatLong{
+        "lat": 13.007349999999999,
+        "lon": 77.58403999999999
+    },
+      LatLong{
+        "lat": 13.00678,
+        "lon": 77.58406999999998
+    },
+      LatLong{
+        "lat": 13.00662,
+        "lon": 77.58407999999999
+    },
+      LatLong{
+        "lat": 13.00495,
+        "lon": 77.58418999999999
+    },
+      LatLong{
+        "lat": 13.004629999999999,
+        "lon": 77.5842
+    },
+      LatLong{
+        "lat": 13.00463,
+        "lon": 77.5842
+    },
+      LatLong{
+        "lat": 13.00453,
+        "lon": 77.58435999999999
+    },
+      LatLong{
+        "lat": 13.00449,
+        "lon": 77.58442999999998
+    },
+      LatLong{
+        "lat": 13.00446,
+        "lon": 77.58446999999998
+    },
+      LatLong{
+        "lat": 13.00445,
+        "lon": 77.58449999999998
+    },
+      LatLong{
+        "lat": 13.00444,
+        "lon": 77.58452999999997
+    },
+      LatLong{
+        "lat": 13.004420000000001,
+        "lon": 77.58458999999998
+    },
+      LatLong{
+        "lat": 13.00444,
+        "lon": 77.58502999999997
+    },
+      LatLong{
+        "lat": 13.004420000000001,
+        "lon": 77.58574999999998
+    },
+      LatLong{
+        "lat": 13.004430000000001,
+        "lon": 77.58584999999998
+    },
+      LatLong{
+        "lat": 13.004410000000002,
+        "lon": 77.58600999999997
+    },
+      LatLong{
+        "lat": 13.004380000000001,
+        "lon": 77.58606999999998
+    },
+      LatLong{
+        "lat": 13.004340000000001,
+        "lon": 77.58630999999998
+    },
+      LatLong{
+        "lat": 13.004340000000001,
+        "lon": 77.58647999999998
+    },
+      LatLong{
+        "lat": 13.0044,
+        "lon": 77.58677999999998
+    },
+      LatLong{
+        "lat": 13.00446,
+        "lon": 77.58699999999997
+    },
+      LatLong{
+        "lat": 13.0045,
+        "lon": 77.58708999999998
+    },
+      LatLong{
+        "lat": 13.00451,
+        "lon": 77.58712999999997
+    },
+      LatLong{
+        "lat": 13.00474,
+        "lon": 77.58751999999997
+    },
+      LatLong{
+        "lat": 13.00483,
+        "lon": 77.58767999999996
+    },
+      LatLong{
+        "lat": 13.00502,
+        "lon": 77.58791999999997
+    },
+      LatLong{
+        "lat": 13.00521,
+        "lon": 77.58816999999996
+    },
+      LatLong{
+        "lat": 13.00527,
+        "lon": 77.58826999999997
+    },
+      LatLong{
+        "lat": 13.00531,
+        "lon": 77.58838999999996
+    },
+      LatLong{
+        "lat": 13.00532,
+        "lon": 77.58857999999996
+    },
+      LatLong{
+        "lat": 13.005279999999999,
+        "lon": 77.58879999999996
+    },
+      LatLong{
+        "lat": 13.005279999999999,
+        "lon": 77.58880999999997
+    },
+      LatLong{
+        "lat": 13.00523,
+        "lon": 77.58899999999997
+    },
+      LatLong{
+        "lat": 13.005109999999998,
+        "lon": 77.58924999999996
+    }
+])),
+    "snappedWaypoints" : Snapped []
+  }]
+
+
+

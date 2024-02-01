@@ -16,6 +16,8 @@ import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
+import static android.graphics.Color.GREEN;
+import static android.graphics.Color.green;
 import static android.graphics.Color.rgb;
 
 import static in.juspay.mobility.app.Utils.captureImage;
@@ -214,6 +216,7 @@ public class MobilityCommonBridge extends HyperBridge {
     protected Marker userPositionMarker;
     private final FusedLocationProviderClient client;
     protected Polyline polyline = null;
+    protected Polyline rentalPolyline = null;
     protected HashMap<String, JSONObject> markersElement = new HashMap<>();
     protected HashMap<String, GoogleMap> googleMapInstance = new HashMap<>();
     //Location
@@ -1142,10 +1145,18 @@ public class MobilityCommonBridge extends HyperBridge {
             }
         });
     }
+    private void drawRentalsPolyline(final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject, GoogleMap gMap){
+        try{
+            System.out.println("Inside drawRentals POlyline");
+            rentalPolyline = setRouteCustomTheme(polylineOptions, staticColor, style, polylineWidth, gMap);
+            return ;
+        }catch(Exception e){
+
+        }}
 
     private void checkAndAnimatePolyline(final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject, final GoogleMap gMap){
         try{
-            isAnimationNeeded = mapRouteConfigObject != null && mapRouteConfigObject.optBoolean("isAnimation", false);
+            isAnimationNeeded = false ; //mapRouteConfigObject != null && mapRouteConfigObject.optBoolean("isAnimation", false);
             if(!isAnimationNeeded){
                 if (polylineAnimatorSet != null) {
                     polylineAnimatorSet.cancel();
@@ -1230,18 +1241,23 @@ public class MobilityCommonBridge extends HyperBridge {
     public void drawRouteV2 (final String drawRouteConfig) {
         ExecutorManager.runOnMainThread(() -> {
             try{
-                System.out.println("Inside DrawrouteV2");
+                System.out.println("Inside DrawrouteV2" );
                 JSONObject drawRouteConfigObject = new JSONObject(drawRouteConfig);
                 String purescriptId = drawRouteConfigObject.optString("pureScriptID","");
                 JSONObject routes = drawRouteConfigObject.optJSONObject("routes");
                 JSONObject normalRoute = routes.optJSONObject("normalRoute");
+                JSONObject rentalRoute = routes.optJSONObject("rentalRoute");
                 JSONObject locations = normalRoute.optJSONObject("locations");
+                JSONObject rentalLocations = rentalRoute.optJSONObject("locations");
+                JSONArray rentalCoordinates = rentalLocations.optJSONArray("points");
                 JSONArray coordinates = locations.optJSONArray("points");
                 String style = normalRoute.optString("style", "LineString");
+                System.out.println("rentalsLocations" + rentalLocations);
                 String trackColor = normalRoute.optString("routeColor", "#000000");
                 Boolean isActual = normalRoute.optBoolean("isActual", true);
-                String sourceMarker = normalRoute.optString("startMarker", "");
+                String sourceMarker = normalRoute.optString("startMarker", "ny_ic_src_marker");
                 String destMarker = normalRoute.optString("endMarker", "");
+                String stopMarker = rentalRoute.optString("endMarker", "");
                 int polylineWidth = normalRoute.optInt("routeWidth", 8);
                 String type = normalRoute.optString("routeType", "DRIVER_LOCATION_UPDATE");
                 String sourceName = normalRoute.optString("startMarkerLabel", "");
@@ -1252,6 +1268,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 System.out.println("INside drawRouteV2" + gMap);
                 if (gMap != null) {
                 PolylineOptions polylineOptions = new PolylineOptions();
+                PolylineOptions rentalPolylineOption = new PolylineOptions();
                 int color = Color.parseColor(trackColor);
                 try {
                     if (coordinates.length() <= 1) {
@@ -1265,13 +1282,23 @@ public class MobilityCommonBridge extends HyperBridge {
                     }
                     JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
                     JSONObject destCoordinates = (JSONObject) coordinates.get(coordinates.length() - 1);
+
                     double sourceLat = sourceCoordinates.getDouble("lat");
                     double sourceLong = sourceCoordinates.getDouble("lng");
                     double destLat = destCoordinates.getDouble("lat");
                     double destLong = destCoordinates.getDouble("lng");
-                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {
-                        moveCameraV2(sourceLat, sourceLong, destLat, destLong, coordinates, purescriptId);
+                    JSONObject rentalEndCoordinates = null;
+                    double rentalDestLat = 0.0;
+                    double rentalDestLong = 0.0;
+                    if (rentalCoordinates.length() >= 1){
+                    rentalEndCoordinates = (JSONObject) rentalCoordinates.get(rentalCoordinates.length() - 1);
+                    rentalDestLat = rentalEndCoordinates.getDouble("lat");
+                    rentalDestLong = rentalEndCoordinates.getDouble("lng");
                     }
+
+                    JSONArray abc = coordinates;
+
+
                     if (isActual) {
                         for (int i = coordinates.length() - 1; i >= 0; i--) {
                             JSONObject coordinate = (JSONObject) coordinates.get(i);
@@ -1279,16 +1306,31 @@ public class MobilityCommonBridge extends HyperBridge {
                             double lat = coordinate.getDouble("lat");
                             polylineOptions.add(new LatLng(lat, lng));
                         }
+                        for (int i = rentalCoordinates.length() - 1; i >= 0; i--) {
+                            JSONObject coordinate = (JSONObject) rentalCoordinates.get(i);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            abc.put(rentalCoordinates.get(i));
+                            rentalPolylineOption.add(new LatLng(lat, lng));
+                        }
                     } else {
                         LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
                         LatLng toPointObj = new LatLng(destLat, destLong);
                         polylineOptions.add(toPointObj);
                         polylineOptions.add(fromPointObj);
                     }
+
+                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {
+                        double destinationLat = rentalDestLat == 0.0 ? destLat : rentalDestLat;
+                        double destinationLong = rentalDestLong == 0.0 ? destLong : rentalDestLong;
+                        moveCameraV2(sourceLat, sourceLong, destinationLat ,destinationLong , abc, purescriptId);
+                    }
                     String sourceSpecialTagIcon = mapRouteConfigObject.getString("sourceSpecialTagIcon");
                     String destinationSpecialTagIcon = mapRouteConfigObject.getString("destSpecialTagIcon");
 
                     checkAndAnimatePolyline(color, style, polylineWidth, polylineOptions, mapRouteConfigObject, gMap);
+                    if (rentalPolylineOption.getPoints().size() > 1)
+                      drawRentalsPolyline(color, "DASH", polylineWidth, rentalPolylineOption, mapRouteConfigObject, gMap);
 
                     if (destMarker != null && !destMarker.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
@@ -1300,6 +1342,14 @@ public class MobilityCommonBridge extends HyperBridge {
 
                         Marker tempmarker = gMap.addMarker(markerObj);
                         markers.put(destMarker, tempmarker);
+
+                    }
+                    if (rentalPolylineOption != null && rentalPolylineOption.getPoints().size() > 1 &&stopMarker != null && !stopMarker.equals("")) {
+                        List<LatLng> points = rentalPolylineOption.getPoints();
+                        LatLng source = points.get(0);
+                        upsertMarkerV2(sourceMarker,String.valueOf(source.latitude),String.valueOf(source.longitude), 90, 0.5f, 0.5f,purescriptId);
+                        Marker currMarker = (Marker) markers.get(sourceMarker);
+                        markers.put(stopMarker, currMarker);
 
                     }
                     if ((sourceMarker != null && !sourceMarker.equals(""))) {
@@ -1337,15 +1387,20 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @JavascriptInterface
-    public void drawRoute(final String json, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName, final String mapRouteConfig) {
+    public void drawRoute(final String json,  final String rentalsData, final String style, final String trackColor, final boolean isActual, final String sourceMarker, final String destMarker, final int polylineWidth, String type, String sourceName, String destinationName, final String mapRouteConfig) {
         ExecutorManager.runOnMainThread(() -> {
             System.out.println("INside drawRoute" + googleMap);
             if (googleMap != null) {
                 PolylineOptions polylineOptions = new PolylineOptions();
+                PolylineOptions rentalPolylineOption = new PolylineOptions();
                 int color = Color.parseColor(trackColor);
                 try {
                     JSONObject jsonObject = new JSONObject(json);
                     JSONArray coordinates = jsonObject.getJSONArray("points");
+                    JSONObject rentalsJsonObject = new JSONObject(rentalsData);
+                    JSONArray rentalCoordinates = rentalsJsonObject.getJSONArray("points");
+                    System.out.println("Coordinates : " + coordinates);
+                    System.out.println("Rental Coordinates" + rentalCoordinates);
                     JSONObject mapRouteConfigObject = new JSONObject(mapRouteConfig);
                     if (coordinates.length() <= 1) {
                         JSONObject coordinate = (JSONObject) coordinates.get(0);
@@ -1372,6 +1427,12 @@ public class MobilityCommonBridge extends HyperBridge {
                             double lat = coordinate.getDouble("lat");
                             polylineOptions.add(new LatLng(lat, lng));
                         }
+                        for (int i = rentalCoordinates.length() - 1 ; i>=0 ; i--){
+                            JSONObject coordinate = (JSONObject) coordinates.get(i);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            rentalPolylineOption.add(new LatLng(lat, lng));
+                        }
                     } else {
                         LatLng fromPointObj = new LatLng(sourceLat, sourceLong);
                         LatLng toPointObj = new LatLng(destLat, destLong);
@@ -1382,7 +1443,7 @@ public class MobilityCommonBridge extends HyperBridge {
                     String destinationSpecialTagIcon = mapRouteConfigObject.getString("destSpecialTagIcon");
 
                     checkAndAnimatePolyline(color, style, polylineWidth, polylineOptions, mapRouteConfigObject, googleMap);
-
+                    drawRentalsPolyline(GREEN, "DOT", polylineWidth, rentalPolylineOption, mapRouteConfigObject, googleMap);
                     if (destMarker != null && !destMarker.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
                         LatLng dest = points.get(0);
@@ -1435,7 +1496,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     String destinationName = jsonObject.getString("destName");
                     String sourceMarker = jsonObject.getString("sourceIcon");
                     String destinationMarker = jsonObject.getString("destIcon");
-                    JSONObject specialLocationObject = jsonObject.getJSONObject("specialLocation");
+                    System.out.println("Insisde updateRouteMarker" + jsonObject);
+                    JSONObject specialLocationObject =  jsonObject.getJSONObject("mapRouteConfig");
                     String sourceTag = specialLocationObject.getString("sourceSpecialTagIcon");
                     String destinationTag = specialLocationObject.getString("destSpecialTagIcon");
                     if (coordinates.length() > 0) {
@@ -1649,7 +1711,7 @@ public class MobilityCommonBridge extends HyperBridge {
         PatternItem DASH = new Dash(20);
         options.width(width);
         List<PatternItem> PATTERN_POLYLINE_DOTTED = Arrays.asList(GAP, DOT);
-        List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Collections.singletonList(DASH);
+        List<PatternItem> PATTERN_POLYLINE_DOTTED_DASHED = Arrays.asList(GAP, DASH);
         options.color(color);
         switch (style) {
             case "DASH":
@@ -1662,6 +1724,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 break;
         }
         if ( gMap!= null){
+            System.out.println("inside gMap");
             return gMap.addPolyline(options);}
         return googleMap.addPolyline(options);
     }

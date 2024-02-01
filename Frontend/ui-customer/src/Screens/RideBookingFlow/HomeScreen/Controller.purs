@@ -1176,24 +1176,24 @@ eval (SendQuickMessage chatSuggestion) state = do
     continue state {props {unReadMessages = false}}
   else continue state
 
-eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = 
-  exit $ Add_Stop state
--- do
-  -- if state.data.config.feature.enableChat then do
-  --   if not state.props.chatcallbackInitiated || state.props.emergencyHelpModal || state.data.waitTimeInfo then continue state else do
-  --     _ <- pure $ performHapticFeedback unit
-  --     _ <- pure $ updateLocalStage ChatWithDriver
-  --     _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
-  --     let allMessages = getChatMessages FunctionCall
-  --     continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = COLLAPSED}} 
-  --     -- [ do
-  --     --   pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
-  --     -- ]
-  -- else continueWithCmd state[ do
-  --       pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
-  --     ]
+eval (DriverInfoCardActionController (DriverInfoCardController.MessageDriver)) state = do
+  if state.data.config.feature.enableChat then do
+    if not state.props.chatcallbackInitiated || state.props.emergencyHelpModal || state.data.waitTimeInfo then continue state else do
+      _ <- pure $ performHapticFeedback unit
+      _ <- pure $ updateLocalStage ChatWithDriver
+      _ <- pure $ setValueToLocalNativeStore READ_MESSAGES (show (length state.data.messages))
+      let allMessages = getChatMessages FunctionCall
+      continue state {data{messages = allMessages}, props {currentStage = ChatWithDriver, sendMessageActive = false, unReadMessages = false, showChatNotification = false, isChatNotificationDismissed = false,sheetState = COLLAPSED}} 
+      -- [ do
+      --   pure $ (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet))
+      -- ]
+  else continueWithCmd state[ do
+        pure $ DriverInfoCardActionController (DriverInfoCardController.CallDriver) 
+      ]
 
 eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = COLLAPSED}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.AddStop)) state = exit $ Add_Stop state
 
 eval RemoveNotification state = do
   continue state {props { showChatNotification = false, isChatNotificationDismissed = true}}
@@ -1248,7 +1248,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.CallDriver)) stat
   else callDriver state $ fromMaybe "ANONYMOUS" $ state.data.config.callOptions !! 0
 
 eval DirectSearch state = do
-  let newState = state{props{currentStage = SearchLocationModel}}
+  let newState = state{props{currentStage = HomeScreen}}
   exit $ Go_To_Search_Location_Flow newState true
 
 eval BackPressed state = do
@@ -1280,20 +1280,20 @@ eval BackPressed state = do
       else if updatedState.props.showMultipleRideInfo then 
         continue updatedState{props{showMultipleRideInfo=false}}
       else do
-        _ <- pure $ updateLocalStage SearchLocationModel
-        let newState = updatedState{data{rideHistoryTrip = Nothing},props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
+        _ <- pure $ updateLocalStage HomeScreen
+        let newState = updatedState{data{rideHistoryTrip = Nothing},props{rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSource = Just false,isSearchLocation = SearchLocation, isRepeatRide = false}}
         exit $ Go_To_Search_Location_Flow newState true
     ConfirmingLocation -> do
                       _ <- pure $ performHapticFeedback unit
                       _ <- pure $ exitLocateOnMap ""
                       _ <- pure $ removeAllPolylines ""
-                      _ <- pure $ updateLocalStage SearchLocationModel
-                      let newState = state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
+                      _ <- pure $ updateLocalStage HomeScreen
+                      let newState = state{props{defaultPickUpPoint = "", rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSource = Just false,isSearchLocation = SearchLocation},data{polygonCoordinates = "", nearByPickUpPoints = []}}
                       exit $ Go_To_Search_Location_Flow newState true
     FindingEstimate -> do
                       _ <- pure $ performHapticFeedback unit
-                      _ <- pure $ updateLocalStage SearchLocationModel
-                      let newState = state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
+                      _ <- pure $ updateLocalStage HomeScreen
+                      let newState = state{props{rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSource = Just false,isSearchLocation = SearchLocation}}
                       exit $ Go_To_Search_Location_Flow newState true
     QuoteList       -> do
                       _ <- pure $ performHapticFeedback unit
@@ -1303,13 +1303,13 @@ eval BackPressed state = do
                       continue state { props { currentStage = SettingPrice}}
     DistanceOutsideLimits -> do
                       _ <- pure $ performHapticFeedback unit
-                      _ <- pure $ updateLocalStage SearchLocationModel
-                      let newState =  state{props{rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSource = Just false,isSearchLocation = SearchLocation }}
+                      _ <- pure $ updateLocalStage HomeScreen
+                      let newState =  state{props{rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSource = Just false,isSearchLocation = SearchLocation }}
                       exit $ Go_To_Search_Location_Flow newState true
     ShortDistance -> do
                       _ <- pure $ performHapticFeedback unit
-                      _ <- pure $ updateLocalStage SearchLocationModel
-                      let newState = state{props{isSource = Just false,isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
+                      _ <- pure $ updateLocalStage HomeScreen
+                      let newState = state{props{isSource = Just false,isPopUp = NoPopUp, rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSearchLocation = SearchLocation}}
                       exit $ Go_To_Search_Location_Flow newState true
     FindingQuotes ->  do
                       _ <- pure $ performHapticFeedback unit
@@ -1538,7 +1538,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
       HomeScreen   -> do
         _ <- pure $ performHapticFeedback unit
         let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-        let newState =  state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source=(getString CURRENT_LOCATION)}}
+        let newState =  state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = HomeScreen, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source=(getString CURRENT_LOCATION)}}
         exit $ Go_To_Search_Location_Flow newState false
       ConfirmingLocation -> do
         _ <- pure $ performHapticFeedback unit
@@ -1557,7 +1557,7 @@ eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = d
 eval WhereToClick state = do
   _ <- pure $ performHapticFeedback unit
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_where_to_btn"
-      updateState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source=(getString CURRENT_LOCATION)}}
+      updateState = state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = HomeScreen, searchLocationModelProps{crossBtnSrcVisibility = false, findPlaceIllustration = null state.data.locationList }}, data{source=(getString CURRENT_LOCATION)}}
   exit $ Go_To_Search_Location_Flow updateState false
   -- exit $ UpdateSavedLocation updateState 
 
@@ -1626,9 +1626,9 @@ eval (SearchExpireCountDown seconds status timerID) state = do
 eval CancelSearch state = case state.props.currentStage of
   FindingEstimate -> do
     _ <- pure $ performHapticFeedback unit
-    _ <- pure $ updateLocalStage SearchLocationModel
+    _ <- pure $ updateLocalStage HomeScreen
     let _ = unsafePerformEffect $ logEvent state.data.logField  "ny_user_estimate_cancel_search"
-    let newState = state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation } }
+    let newState = state { props { currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = SearchLocation } }
     exit $ Go_To_Search_Location_Flow newState true
   ConfirmingRide -> do
     _ <- pure $ performHapticFeedback unit
@@ -2112,8 +2112,8 @@ eval (PopUpModalAction (PopUpModal.DismissPopup)) state = do
 
 eval (DistanceOutsideLimitsActionController (PopUpModal.OnButton2Click)) state = do
   _ <- pure $ performHapticFeedback unit
-  _ <- pure $ updateLocalStage SearchLocationModel
-  let newState = state { props { isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation, isSource = Just false, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
+  _ <- pure $ updateLocalStage HomeScreen
+  let newState = state { props { isPopUp = NoPopUp, rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSearchLocation = SearchLocation, isSource = Just false, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
   exit $ Go_To_Search_Location_Flow newState true
 
 eval (ShortDistanceActionController (PopUpModal.OnButton2Click)) state = do
@@ -2123,8 +2123,8 @@ eval (ShortDistanceActionController (PopUpModal.OnButton2Click)) state = do
 
 eval (ShortDistanceActionController (PopUpModal.OnButton1Click)) state = do
   _ <- pure $ performHapticFeedback unit
-  _ <- pure $ updateLocalStage SearchLocationModel
-  let newState = state{props{isSource = Just false, isPopUp = NoPopUp, rideRequestFlow = false, currentStage = SearchLocationModel, searchId = "", isSearchLocation = SearchLocation}}
+  _ <- pure $ updateLocalStage HomeScreen
+  let newState = state{props{isSource = Just false, isPopUp = NoPopUp, rideRequestFlow = false, currentStage = HomeScreen, searchId = "", isSearchLocation = SearchLocation}}
   exit $ Go_To_Search_Location_Flow newState true
 
 eval (PickUpFarFromCurrentLocAC (PopUpModal.OnButton2Click)) state = do 
@@ -2187,7 +2187,7 @@ eval (EstimatesTryAgain (GetQuotesRes quotesRes)) state = do
         true -> do
           _ <- pure $ hideKeyboardOnNavigation true
           _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-          let newState = state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
+          let newState = state { props { currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
           exit $ Go_To_Search_Location_Flow newState true
         false -> do
           if (estimatedPrice > state.data.suggestedAmount) then
@@ -2790,9 +2790,9 @@ specialZoneFlow estimatedQuotes state = do
     continue state { data {specialZoneQuoteList = quoteList, currentSearchResultType = QUOTES, specialZoneSelectedQuote = Just defaultQuote.id, specialZoneSelectedVariant = Just defaultQuote.vehicleVariant}, props {currentStage = SettingPrice, specialZoneType = "OneWaySpecialZoneAPIDetails"}}
   else do
     _ <- pure $ hideKeyboardOnNavigation true
-    _ <- pure $ updateLocalStage SearchLocationModel
+    _ <- pure $ updateLocalStage HomeScreen
     _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-    let newState = state { props {currentStage = SearchLocationModel}, data{currentSearchResultType = QUOTES}}
+    let newState = state { props {currentStage = HomeScreen}, data{currentSearchResultType = QUOTES}}
     exit $ Go_To_Search_Location_Flow newState true
 
 estimatesListFlow :: Array EstimateAPIEntity -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -2828,9 +2828,9 @@ estimatesListFlow estimates state = do
       }
   else do
     _ <- pure $ hideKeyboardOnNavigation true
-    _ <- pure $ updateLocalStage SearchLocationModel
+    _ <- pure $ updateLocalStage HomeScreen
     _ <- pure $ toast (getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN)
-    let newState = state { props {currentStage = SearchLocationModel}, data{currentSearchResultType = ESTIMATES}}
+    let newState = state { props {currentStage = HomeScreen}, data{currentSearchResultType = ESTIMATES}}
     exit $ Go_To_Search_Location_Flow newState true
 
 estimatesListTryAgainFlow :: GetQuotesRes -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
@@ -2845,7 +2845,7 @@ estimatesListTryAgainFlow (GetQuotesRes quotesRes) state = do
     true -> do
       _ <- pure $ hideKeyboardOnNavigation true
       _ <- pure $ toast $ getString NO_DRIVER_AVAILABLE_AT_THE_MOMENT_PLEASE_TRY_AGAIN
-      let newState = state { props { currentStage = SearchLocationModel, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
+      let newState = state { props { currentStage = HomeScreen, rideRequestFlow = false, isSearchLocation = SearchLocation, isSrcServiceable = true, isDestServiceable = true, isRideServiceable = true } }
       exit $ Go_To_Search_Location_Flow newState true
     false -> do
       if (estimatedPrice >  state.data.selectedEstimatesObject.basePrice) then

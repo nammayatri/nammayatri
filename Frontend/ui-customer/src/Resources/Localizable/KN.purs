@@ -816,3 +816,6 @@ getKN stringKey =
         FARE_UPDATE -> "ಹಣ ಅಪ್ಡೇಟ್"
         NOW -> "ಈಗ"
         DATE_INVALID_MESSAGE -> "ದಿನಾಂಕ ಅಮಾನ್ಯವಾಗಿದೆ. ಬುಕ್ಕಿಂಗ್ ಮಾತ್ರ {} ದಿನಗಳ ಹಿಂದೆ ಲಭ್ಯವಿದೆ"
+        EDIT_PICKUP -> "ಪಿಕಪ್ ಸಂಪಾದಿಸಿp"
+        ADD_STOP ->  "ನಿಲ್ಲಿಸಿ ಸೇರಿಸಿ"
+        ENTER_PICKUP_LOC ->  "ಪಿಕಪ್ ಸ್ಥಳ ನಮೂದಿಸಿ"

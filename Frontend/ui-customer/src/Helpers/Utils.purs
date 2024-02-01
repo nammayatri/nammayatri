@@ -426,7 +426,7 @@ updateLocListWithDistance arr currLat currLon useThreshold threshold =
         item { actualDistance = Just distance, distance = Just $ getDistanceString distance 1 }
 
     withinThreshold item = 
-      maybe true (\actualDist -> (actualDist <= round (threshold * 1000.0) && useThreshold) || not useThreshold) item.actualDistance
+      maybe true (\actualDist -> (spy "ActualDistance :" actualDist <= round (threshold * 1000.0) && useThreshold) || not useThreshold) item.actualDistance
 
     sortByActualDistance = sortBy (comparing (\item -> item.actualDistance))
 

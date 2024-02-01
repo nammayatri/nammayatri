@@ -816,3 +816,6 @@ getHI stringKey =
         FARE_UPDATE -> "किराया अपडेट"
         NOW -> "अब"
         DATE_INVALID_MESSAGE -> "तारीख अवैध है। बुकिंग केवल {} दिन से पहले ही उपलब्ध है"
+        EDIT_PICKUP -> "पिकअप संपादित करें"
+        ADD_STOP ->  "स्थान जोड़ें"
+        ENTER_PICKUP_LOC ->  "पिकअप स्थान दर्ज करें"

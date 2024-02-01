@@ -816,3 +816,7 @@ getFR stringKey =
         FARE_UPDATE -> "Mise à jour du tarif"
         NOW -> "Maintenant"
         DATE_INVALID_MESSAGE -> "Date invalide. La réservation est disponible uniquement jusqu'à {} jours à l'avance"
+        EDIT_PICKUP -> "Modifier la prise en charge"
+        ADD_STOP -> "Ajouter un arrêt"
+        ENTER_PICKUP_LOC ->  "Entrer l'emplacement de prise en charge"
+        

@@ -816,4 +816,6 @@ getBN stringKey =
         FARE_UPDATE -> "ভাড়া আপডেট"
         NOW -> "এখন"
         DATE_INVALID_MESSAGE -> "তারিখ অবৈধ। বুকিং মুক্তি প্রাপ্ত হয় একক {} দিনের আগে মাত্র"
-
+        EDIT_PICKUP -> "পিকআপ সম্পাদনা করুন"
+        ADD_STOP ->  "স্টপ যোগ করুন"
+        ENTER_PICKUP_LOC ->  "পিকআপ স্থান লিখুন"

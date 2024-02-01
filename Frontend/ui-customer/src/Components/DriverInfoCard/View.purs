@@ -297,9 +297,9 @@ driverInfoView push state =
                   ][]
                   , contactView push state
                   , if state.props.currentStage == RideStarted then distanceView push state else dummyView push
-                  , driverDetailsView push state "DriverDetailsView"
                   , addStopView push state
                   , rentalDetailsView push state
+                  , driverDetailsView push state "DriverDetailsView"
                   , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
                 ]
               ]
@@ -1369,6 +1369,7 @@ addStopView push state =
       , textView $
         [ text $ if isDestinationTextGiven then getString EDIT else getString ADD_NOW
         , color Color.blue800
+        , onClick push $ const AddStop
         , padding $ Padding 16 2 8 2
         ] <> FontStyle.body1 TypoGraphy
       ]

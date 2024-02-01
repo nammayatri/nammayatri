@@ -591,7 +591,7 @@ export const parseAddress = function (json) {
   return JSON.parse(json);
 };
 
-const drawRoute = function (data, style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, mapRouteConfig) {
+const drawRoute = function (data, rentalsData,style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, mapRouteConfig) {
   console.log("I AM HERE ------------------ IN DRAW ROUTE");
   try {
     return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(mapRouteConfig));

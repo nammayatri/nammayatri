@@ -17,7 +17,7 @@ import Components.FavouriteLocationModel as FavouriteLocationModel
 import Components.SaveFavouriteCard as SaveFavouriteCard
 import Components.MenuButton as MenuButton
 import Components.PopUpModal as PopUpModal
-import Mobility.Prelude (boolToVisibility)
+import Mobility.Prelude (boolToVisibility, boolToInvisibility)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Common.Types.App (LazyCheck(..))
@@ -78,10 +78,10 @@ view globalProps push state =
           [ height MATCH_PARENT
           , width MATCH_PARENT
           , onBackPressed push $ const BackpressAction
-          ][  mapViewView push state globalProps
+          ][  mapViewLayout push state globalProps
             , markerView push state
             , if currentStageOn state PredictionsStage then searchLocationView push state globalProps else emptyTextView
-            , locateOnMapFooterView push state 
+            , if currentStageOn state PredictionsStage then locateOnMapFooterView push state else emptyTextView
             , popUpViews push state globalProps
             , if currentStageOn state LocateOnMapStage then locateOnMapView push state globalProps else emptyTextView
             , confirmLocationView push state
@@ -96,7 +96,7 @@ view globalProps push state =
                                   (DS.take (state.appConfig.mapConfig.labelTextSize - 3) state.data.defaultGate) <> "..."
                                else
                                   state.data.defaultGate
-      labelVisibility = boolToVisibility $ not $ DS.null labelText
+      labelVisibility = boolToInvisibility $ not $ DS.null labelText
       in
       linearLayout
         [ height MATCH_PARENT
@@ -112,6 +112,8 @@ view globalProps push state =
               , color Color.white900
               , cornerRadius 5.0
               , padding (Padding 5 5 5 5)
+              , height WRAP_CONTENT
+              , width WRAP_CONTENT
               , margin (MarginBottom 5)
               , visibility labelVisibility
               , id $ getNewIDWithTag "LocateOnMapSLSPin"
@@ -125,17 +127,24 @@ view globalProps push state =
             ]
           ]
 
-mapViewView push state globalProps = 
+mapViewLayout push state globalProps = 
   PrestoAnim.animationSet [fadeInWithDelay 250 true] $
   relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
+    , background Color.white900
     , onAnimationEnd (\action -> mapRenderAction action)
               $ const AfterRender
     ][  linearLayout
         [ height MATCH_PARENT
         , width MATCH_PARENT
+        , background Color.black700 -- add watermark to this view ... TODO
+        ][]
+      , linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
         , orientation VERTICAL
+        , visibility $ boolToVisibility $ currentStageOn state LocateOnMapStage || currentStageOn state ConfirmLocationStage
         , id (getNewIDWithTag "SearchLocationScreenMap")
         ][]
 
@@ -359,7 +368,7 @@ recenterButtonView push state =
 
 popUpViews :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState -> GlobalProps -> PrestoDOM (Effect Unit) w
 popUpViews push state globalProps = let 
-  ifAnyTrue = currentStageOn state AllFavouritesStage  || state.props.showSaveFavCard || state.props.locUnserviceable
+  ifAnyTrue = currentStageOn state AllFavouritesStage 
   bgColor = if ifAnyTrue then Color.white900 else Color.transparent
   in
   linearLayout
@@ -368,16 +377,16 @@ popUpViews push state globalProps = let
     , background bgColor
     , orientation VERTICAL
     ] [if currentStageOn state AllFavouritesStage 
-            then favouriteLocationModel state globalProps push
-            else if (state.props.showSaveFavCard)
-            then saveFavCardView push state globalProps
-            else if (state.props.locUnserviceable)
-            then locUnserviceaableView push state
-            else emptyTextView]
+        then favouriteLocationModel state globalProps push
+        else if (state.props.showSaveFavCard)
+        then saveFavCardView push state globalProps
+        else if (state.props.locUnserviceable)
+        then locUnserviceableView push state
+        else emptyTextView]
 
 
-locUnserviceaableView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
-locUnserviceaableView push state = 
+locUnserviceableView :: forall w. (Action -> Effect Unit) -> SearchLocationScreenState ->  PrestoDOM (Effect Unit) w
+locUnserviceableView push state = 
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -487,6 +496,7 @@ searchLocationView push state globalProps = let
       , headerText : getString LOCATION_UNSERVICEABLE
       , descText : getString $ CURRENTLY_WE_ARE_LIVE_IN_ "CURRENTLY_WE_ARE_LIVE_IN_"}
 
+
 locationTagsView :: forall w. SearchLocationScreenState -> (Action -> Effect Unit) -> GlobalProps -> PrestoDOM (Effect Unit) w
 locationTagsView state push globalProps = 
   linearLayout
@@ -526,6 +536,7 @@ predictionsView push state globalProps = let
         ]
       ]
   where
+
     footerView :: PrestoDOM (Effect Unit) w
     footerView = linearLayout
                   [ height $ V 80
@@ -583,10 +594,6 @@ searchLottieLoader push state =
         ) (const NoAction)
       ]
     ]
-
-currentStageOn :: SearchLocationScreenState ->  SearchLocationStage -> Boolean
-currentStageOn state stage  = 
-  stage == state.props.searchLocStage 
 
 
 favouriteLocationModel :: forall w. SearchLocationScreenState -> GlobalProps ->  (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -656,3 +663,6 @@ type InfoState = {
   descText :: String
 }
 
+currentStageOn :: SearchLocationScreenState ->  SearchLocationStage -> Boolean
+currentStageOn state stage  = 
+  stage == state.props.searchLocStage 

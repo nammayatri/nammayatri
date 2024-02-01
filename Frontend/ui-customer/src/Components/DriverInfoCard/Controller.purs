@@ -38,6 +38,7 @@ data Action = NoAction
             | ToggleBottomSheet
             | CollapseBottomSheet
             | RideDurationTimer String String Int
+            | AddStop 
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps

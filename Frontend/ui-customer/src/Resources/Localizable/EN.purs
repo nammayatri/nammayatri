@@ -816,3 +816,6 @@ getEN stringKey =
         FARE_UPDATE -> "Fare Update"
         NOW -> "Now"
         DATE_INVALID_MESSAGE -> "Date invalid. Booking available only up to {} days in advance"
+        EDIT_PICKUP -> "Edit pickup"
+        ADD_STOP ->  "Add stop"
+        ENTER_PICKUP_LOC ->  "Enter pickup location"

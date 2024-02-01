@@ -310,10 +310,11 @@ setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
 setMapPadding = runEffectFn4 setMapPaddingImpl
 
 
-drawRoute :: Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> String -> Effect Unit
-drawRoute locations style routeColor isActual startMarker endMarker routeWidth routeType startMarkerLabel endMarkerLabel mapRouteConfig pureScriptID = do
-  let routeConfig = mkRouteConfig locations startMarker endMarker routeType startMarkerLabel endMarkerLabel style isActual mapRouteConfig
-      drawRouteConfig = mkDrawRouteConfig routeConfig pureScriptID
+drawRoute :: Locations -> Locations -> String -> String -> Boolean -> String -> String -> Int -> String -> String -> String -> MapRouteConfig -> String -> Effect Unit
+drawRoute normalLocations rentalLocations style routeColor isActual startMarker endMarker routeWidth routeType startMarkerLabel endMarkerLabel mapRouteConfig pureScriptID = do
+  let normalRouteConfig = mkRouteConfig normalLocations startMarker endMarker routeType startMarkerLabel endMarkerLabel style isActual mapRouteConfig
+      rentalRouteConfig = mkRouteConfig rentalLocations "" "ny_ic_blue_circle" routeType "" "" "" true mapRouteConfig
+      drawRouteConfig = mkDrawRouteConfig normalRouteConfig rentalRouteConfig pureScriptID
   drawRouteV2 drawRouteConfig
 
 getCurrentPositionWithTimeout :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Int -> Boolean -> Effect Unit
@@ -627,7 +628,8 @@ displayBase64ImageConfig = {
 
 type DrawRouteConfig = {
   routes :: {
-    normalRoute :: RouteConfig
+    normalRoute :: RouteConfig,
+    rentalRoute :: RouteConfig
   },
   pureScriptID :: String
 }
@@ -660,10 +662,11 @@ mkRouteConfig normalRoute startMarker endMarker routeType startMarkerLabel endMa
     mapRouteConfig = mapRouteConfig
   }
 
-mkDrawRouteConfig :: RouteConfig -> String -> DrawRouteConfig
-mkDrawRouteConfig normalRouteConfig pureScriptID = 
+mkDrawRouteConfig :: RouteConfig -> RouteConfig -> String -> DrawRouteConfig
+mkDrawRouteConfig normalRouteConfig rentalRouteConfig pureScriptID = 
   { routes : {
-      normalRoute : normalRouteConfig
+      normalRoute : normalRouteConfig,
+      rentalRoute : rentalRouteConfig
     },
     pureScriptID : pureScriptID
   }

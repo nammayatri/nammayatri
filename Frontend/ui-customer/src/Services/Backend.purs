@@ -52,6 +52,8 @@ import Foreign.Object (empty)
 import Data.String as DS
 import ConfigProvider as CP
 import Locale.Utils
+import Helpers.API (callApiBT)
+import Debug(spy)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders val isGzipCompressionEnabled = do
@@ -258,7 +260,7 @@ searchLocationBT payload = do
   withAPIResultBT (EP.autoComplete "") identity errorHandler (lift $ lift $ callAPI headers payload)
   where
   errorHandler errorPayload  = do
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage  = SearchLocationModel}})
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage  = HomeScreen}})
                 BackT $ pure GoBack
 
 
@@ -323,8 +325,8 @@ rideSearchBT payload = do
             if errorPayload.code == 400 then
                 pure $ toast (getString RIDE_NOT_SERVICEABLE)
               else pure $ toast (getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN)
-            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = SearchLocationModel}})
-            _ <- pure $ setValueToLocalStore LOCAL_STAGE "SearchLocationModel"
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props{currentStage = HomeScreen}})
+            _ <- pure $ setValueToLocalStore LOCAL_STAGE "HomeScreen"
             BackT $ pure GoBack
 
 
@@ -698,6 +700,7 @@ sendIssueBT req = do
 ----------------------------------------------------------------------------------------------
 drawMapRoute :: Number -> Number -> Number -> Number -> Markers -> String -> String -> String -> Maybe Route -> String -> MapRouteConfig -> FlowBT String (Maybe Route)
 drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddress existingRoute routeAPIType specialLocation = do
+    let _ = spy "Inside drawMapRoute" "drawMapRoute"
     _ <- pure $ removeAllPolylines ""
     case existingRoute of
         Just (Route route) -> do
@@ -715,14 +718,14 @@ drawMapRoute srcLat srcLng destLat destLng markers routeType srcAddress destAddr
             callDrawRoute route
     where
         callDrawRoute :: Maybe Route -> FlowBT String (Maybe Route)
-        callDrawRoute route =
+        callDrawRoute route = do 
             case route of
                 Just (Route routes) ->
                     if (routes.distance <= 50000) then do
-                      lift $ lift $ liftFlow $ drawRoute (walkCoordinates routes.points) "LineString" "#323643" true markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation (getNewIDWithTag "CustomerHomeScreen")
+                      lift $ lift $ liftFlow $ drawRoute (walkCoordinates routes.points) {points : []} "LineString" "#323643" true markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation (getNewIDWithTag "CustomerHomeScreen")
                       pure route
                     else do
-                      lift $ lift $ liftFlow $ drawRoute (walkCoordinate srcLat srcLng destLat destLng) "DOT" "#323643" false markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation (getNewIDWithTag "CustomerHomeScreen")
+                      lift $ lift $ liftFlow $ drawRoute (walkCoordinate srcLat srcLng destLat destLng) {points : []} "DOT" "#323643" false markers.srcMarker markers.destMarker 8 routeType srcAddress destAddress specialLocation (getNewIDWithTag "CustomerHomeScreen")
                       pure route 
                 Nothing -> pure route
 
@@ -1075,3 +1078,30 @@ updateIssue language issueId req = do
           errorHandler _ = do
                 BackT $ pure GoBack
 
+addStop :: String -> AddStopReq -> FlowBT String AddStopRes
+addStop bookingId req = (callApiBT (AddStopRequest bookingId req))
+
+makeAddStopReq :: String -> Address -> AddStopReq
+makeAddStopReq bookingId stop  = AddStopReq{
+    "bookingId" : bookingId,
+    "stop" : Just (LocationAddress stop),
+    "isEdit" : false
+}
+
+makeEditStopReq :: String -> Address -> EditStopReq
+makeEditStopReq bookingId stop  = EditStopReq{
+    "bookingId" : bookingId,
+    "stop" : Just (LocationAddress stop),
+    "isEdit" : true
+}
+
+mkRentalSearchReq :: Address -> Maybe Address -> String -> String -> String -> RentalSearchReq
+mkRentalSearchReq origin maybeStop startTime estimatedRentalDistance estimatedRentalDuration =
+    RentalSearchReq {
+        origin : (LocationAddress origin),
+        stops : maybe Nothing (\stop -> Just [LocationAddress stop]) maybeStop,
+        startTime : startTime,
+        estimatedRentalDistance : estimatedRentalDistance,
+        estimatedRentalDuration : estimatedRentalDuration,
+        isSpecialLocation : Nothing
+    }

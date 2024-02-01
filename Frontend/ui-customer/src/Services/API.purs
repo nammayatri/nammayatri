@@ -1330,6 +1330,7 @@ newtype GetRouteResp = GetRouteResp (Array Route)
 newtype Route = Route
   {
     points :: Snapped
+  , pointsForRentals :: Maybe Snapped
   , boundingBox :: Maybe (Array Number)
   , snappedWaypoints :: Snapped
   , duration :: Int
@@ -2710,3 +2711,114 @@ instance standardEncodeUpdateIssueRes :: StandardEncode UpdateIssueRes where sta
 instance decodeUpdateIssueRes         :: Decode UpdateIssueRes where decode = defaultDecode
 instance encodeUpdateIssueRes         :: Encode UpdateIssueRes where encode = defaultEncode
 
+----------------------- ################### ADD OR EDIT STOP ####################### ----------------------------
+data AddStopRequest = AddStopRequest String AddStopReq
+
+data EditStopRequest = EditStopRequest String EditStopReq
+
+newtype AddStopReq = AddStopReq
+ {  bookingId :: String ,
+    stop :: Maybe LocationAddress ,
+    isEdit :: Boolean
+ }
+
+newtype EditStopReq = EditStopReq
+ {  bookingId :: String ,
+    stop :: Maybe LocationAddress ,
+    isEdit :: Boolean
+ }
+
+
+newtype AddStopRes = AddStopRes { 
+  result :: String 
+  }
+
+newtype EditStopRes = EditStopRes { 
+  result :: String 
+  }
+
+derive instance genericEditStopReq :: Generic EditStopReq _
+instance showEditStopReq        :: Show EditStopReq where show     = genericShow
+instance standardEncodeEditStopReq :: StandardEncode EditStopReq where standardEncode (EditStopReq res) = standardEncode res
+instance decodeEditStopReq         :: Decode EditStopReq where decode = defaultDecode
+instance encodeEditStopReq         :: Encode EditStopReq where encode = defaultEncode
+
+derive instance genericAddStopReq :: Generic AddStopReq _ 
+instance showAddStopReq :: Show AddStopReq where show = genericShow 
+instance standardEncodeAddStopReq :: StandardEncode AddStopReq where standardEncode (AddStopReq req) = standardEncode req
+instance decodeAddStopReq :: Decode  AddStopReq where decode = defaultDecode
+instance encodeAddStopReq :: Encode AddStopReq where encode = defaultEncode
+
+derive instance genericAddStopRequest :: Generic AddStopRequest _ 
+instance standardEncodeAddStopRequest :: StandardEncode AddStopRequest where standardEncode (AddStopRequest id req) = standardEncode req
+instance decodeAddStopRequest :: Decode  AddStopRequest where decode = defaultDecode
+instance encodeAddStopRequest :: Encode AddStopRequest where encode = defaultEncode
+
+
+derive instance genericEditStopRequest :: Generic EditStopRequest _ 
+instance standardEncodeEditStopRequest :: StandardEncode EditStopRequest where standardEncode (EditStopRequest id req) = standardEncode req
+instance decodeEditStopRequest :: Decode  EditStopRequest where decode = defaultDecode
+instance encodeEditStopRequest :: Encode EditStopRequest where encode = defaultEncode
+
+derive instance genericEditStopRes :: Generic EditStopRes _ 
+instance standardEncodeEditStopRes :: StandardEncode EditStopRes where standardEncode (EditStopRes req) = standardEncode req
+instance decodeEditStopRes :: Decode  EditStopRes where decode = defaultDecode
+instance encodeEditStopRes :: Encode EditStopRes where encode = defaultEncode
+
+derive instance genericAddStopRes :: Generic AddStopRes _ 
+instance standardEncodeAddStopRes :: StandardEncode AddStopRes where standardEncode (AddStopRes req) = standardEncode req
+instance decodeAddStopRes :: Decode  AddStopRes where decode = defaultDecode
+instance encodeAddStopRes :: Encode AddStopRes where encode = defaultEncode
+
+instance makeAddStopReq :: RestEndpoint AddStopRequest AddStopRes where
+  makeRequest reqBody@(AddStopRequest bookingId (AddStopReq rqBody)) headers = defaultMakeRequest GET (EP.addStop bookingId ) headers reqBody Nothing
+  decodeResponse    = decodeJSON
+  encodeRequest = standardEncode
+
+instance makeEditStopReq :: RestEndpoint EditStopRequest EditStopRes where 
+  makeRequest reqBody@(EditStopRequest bookingId (EditStopReq rqBody)) headers = defaultMakeRequest GET (EP.editStop bookingId ) headers reqBody Nothing
+  decodeResponse    = decodeJSON
+  encodeRequest = standardEncode  
+
+
+
+--------------------------------------------------- rentalSearch ----------------------------------------------------
+
+newtype RentalSearchReq = RentalSearchReq
+  { origin :: LocationAddress
+  , stops :: Maybe (Array LocationAddress)
+  , isSpecialLocation :: Maybe Boolean
+  , startTime :: String
+  , estimatedRentalDistance :: String
+  , estimatedRentalDuration :: String
+  }
+
+newtype RentalSearchRes = RentalSearchRes
+  { searchId :: String
+  , startTime :: String
+  , distance :: String
+  , duration :: String
+  , shortestRouteInfo :: String
+  , stops :: Array LocationAddress
+  , origin :: LocationAddress
+  , now :: String
+  }
+
+instance makeRentalSearchReq :: RestEndpoint RentalSearchReq RentalSearchRes where
+  makeRequest reqBody headers = defaultMakeRequest POST (EP.rentalSearch "") headers reqBody Nothing
+  decodeResponse = decodeJSON
+  encodeRequest req = standardEncode req
+
+derive instance genericRentalSearchReq :: Generic RentalSearchReq _
+derive instance newtypeRentalSearchReq :: Newtype RentalSearchReq _
+instance standardEncodeRentalSearchReq :: StandardEncode RentalSearchReq where standardEncode (RentalSearchReq reqBody) = standardEncode reqBody
+instance showRentalSearchReq :: Show RentalSearchReq where show = genericShow
+instance decodeRentalSearchReq :: Decode RentalSearchReq where decode = defaultDecode
+instance encodeRentalSearchReq :: Encode RentalSearchReq where encode = defaultEncode
+
+derive instance genericRentalSearchRes :: Generic RentalSearchRes _
+derive instance newtypeRentalSearchRes :: Newtype RentalSearchRes _
+instance standardEncodeRentalSearchRes :: StandardEncode RentalSearchRes where standardEncode (RentalSearchRes reqBody) = standardEncode reqBody
+instance showRentalSearchRes :: Show RentalSearchRes where show = genericShow
+instance decodeRentalSearchRes :: Decode RentalSearchRes where decode = defaultDecode
+instance encodeRentalSearchRes :: Encode RentalSearchRes where encode = defaultEncode
