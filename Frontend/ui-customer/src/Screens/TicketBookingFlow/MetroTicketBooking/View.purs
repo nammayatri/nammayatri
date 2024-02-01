@@ -164,6 +164,7 @@ infoSelectioView state push =
                               , textView $ 
                                 [ text " See Map"
                                 , color Color.blue900
+                                , rippleColor Color.rippleShade
                                 , onClick push $ const MetroRouteMapAction
                                 ] <> FontStyle.subHeading1 TypoGraphy
                             ]
@@ -269,6 +270,7 @@ headerView state push =
               , text "My Tickets"--(getString MY_TICKETS)
               , accessibilityHint $ "My Tickets : Button"
               , accessibility ENABLE
+              , rippleColor Color.rippleShade
               , color Color.blueTextColor
               , onClick push (const $ MyMetroTicketAction)
               ] <> FontStyle.subHeading1 LanguageStyle
@@ -312,6 +314,7 @@ incrementDecrementView push state =
               , text "-"
               , gravity CENTER
               , cornerRadius 4.0
+              , rippleColor Color.rippleShade
               , width WRAP_CONTENT
               , padding $ Padding 28 1 28 7
               , onClick push $ const (DecrementTicket)
@@ -335,6 +338,7 @@ incrementDecrementView push state =
               , width WRAP_CONTENT
               , height WRAP_CONTENT
               , gravity CENTER
+              , rippleColor Color.rippleShade
               , alpha $ if limitReached then 0.5 else 1.0
               , clickable $ if limitReached then false else true
               ] <> FontStyle.body10 TypoGraphy
@@ -404,6 +408,7 @@ textViewForLocation label actionId push state =
     , background Color.white900
     , cornerRadius 5.0
     , gravity CENTER_VERTICAL
+    , rippleColor Color.rippleShade
     , onClick push $ const (SelectLocation actionId)
     , stroke ("1," <> Color.borderColorLight)
     ][

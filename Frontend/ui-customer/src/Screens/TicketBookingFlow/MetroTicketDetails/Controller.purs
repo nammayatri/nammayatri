@@ -49,7 +49,7 @@ data Action = NoAction
             | NextTicketClick
             | TicketQRRendered String String
 
-data ScreenOutput = NoOutput | GoBack | BackToSearchMetroLocation
+data ScreenOutput = NoOutput | GoBack | BackToSearchMetroLocation | GoToHome
 
 
 eval :: Action -> MetroTicketDetailsScreenState -> Eval Action ScreenOutput MetroTicketDetailsScreenState
@@ -63,6 +63,7 @@ eval BackPressed state =
         }
       }
   else if state.props.previousScreenStage == SearchMetroLocationStage then exit BackToSearchMetroLocation
+  else if state.props.previousScreenStage == MetroTicketStatusStage then exit GoToHome
   else
   exit GoBack
 

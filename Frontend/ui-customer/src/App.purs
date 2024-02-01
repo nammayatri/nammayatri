@@ -277,6 +277,7 @@ data TICKETING_SCREEN_SCREEN_OUTPUT = EXIT_TO_HOME TicketingScreenState
 
 data METRO_TICKET_DETAILS_SCREEN_OUTPUT = METRO_TICKET_DETAILS_SCREEN_OUTPUT_NO_OUTPUT 
                                         | BACK_TO_SEARCH_METRO_LOCATION
+                                        | GO_BACK_TO_HOME_SCREEN
 
 data METRO_MY_TICKETS_SCREEN_OUTPUT = METRO_MY_TICKETS_SCREEN_OUTPUT_NO_OUTPUT
                                     | GO_TO_METRO_TICKET_DETAILS_FLOW MetroTicketBookingStatus
