@@ -27,12 +27,14 @@ import Data.Lens ((^.))
 import Screens.Types as ST
 import Data.Array as DA
 import JBridge as JB
+import Language.Strings
+import Language.Types
 
 
 refreshStatusButtonConfig :: ST.MetroTicketStatusScreenState -> PrimaryButton.Config
 refreshStatusButtonConfig state = PrimaryButton.config
     { textConfig 
-      { text = "Refresh Status"
+      { text = getString REFRESH_STATUS
       , textStyle = Tags
       , weight = Just 1.0
       , gravity = CENTER
