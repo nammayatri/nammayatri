@@ -47,6 +47,8 @@ import Data.Either (Either(..))
 import Effect.Class (liftEffect)
 import Data.Time.Duration (Milliseconds(..))
 import Components.RequestInfoCard as InfoCard
+import Language.Strings
+import Language.Types
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
@@ -147,8 +149,8 @@ infoSelectioView state push =
                             , stroke $ "1," <> Color.grey900
                             , cornerRadius 30.0
                             , gravity CENTER
-                            ][ selectionTab "One Way"  ST.ONE_WAY push state
-                            , selectionTab "Round Trip" ST.ROUND_TRIP push state
+                            ][ selectionTab (getString ONE_WAY_STR)  ST.ONE_WAY push state
+                            , selectionTab (getString ROUND_TRIP_STR) ST.ROUND_TRIP push state
                             ]
                         ]
                     , srcTextView push state
@@ -158,11 +160,11 @@ infoSelectioView state push =
                         , width MATCH_PARENT
                         , gravity BOTTOM
                             ][ textView $ 
-                                [ text "Uncertain about metro routes?"
+                                [ text $ getString UNCERTAIN_ABOUT_METRO_ROUTES
                                 , color Color.black800
                                 ] <> FontStyle.body1 TypoGraphy
                               , textView $ 
-                                [ text " See Map"
+                                [ text $ " " <> (getString SEE_MAP) 
                                 , color Color.blue900
                                 , rippleColor Color.rippleShade
                                 , onClick push $ const MetroRouteMapAction
@@ -184,11 +186,11 @@ infoSelectioView state push =
                               , imageWithFallback $ fetchImage FF_COMMON_ASSET (if state.props.termsAndConditionsSelected then "ny_ic_checked" else "ny_ic_unchecked")
                               ]
                             , textView $ 
-                              [ text "I agree to the"
+                              [ text $ getString I_AGREE_TO_THE
                               , color Color.black800
                               ] <> FontStyle.body1 TypoGraphy
                             , textView $ 
-                              [ text " Terms & Conditions"
+                              [ text $ " " <> (getString TERMS_AND_CONDITIONS)
                               , color Color.blue900
                               , onClick (\action -> do
                                       _<- push action
@@ -242,7 +244,7 @@ termsAndConditionsView termsAndConditions isMarginTop =
   ) termsAndConditions )
 
 getTermsAndConditions :: forall w . String -> Array String
-getTermsAndConditions _ = ["Cancellation of tickets is not applicable" ,"The tickets can be purchased between 4:30 AM to 10:30 PM on all days."]
+getTermsAndConditions _ = [getString METRO_TERM_1 ,getString METRO_TERM_2]
 
 headerView :: forall w. ST.MetroTicketBookingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push =
@@ -267,7 +269,7 @@ headerView state push =
           ][ textView $
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
-              , text "My Tickets"--(getString MY_TICKETS)
+              , text $ getString MY_TICKETS
               , accessibilityHint $ "My Tickets : Button"
               , accessibility ENABLE
               , rippleColor Color.rippleShade
@@ -297,7 +299,7 @@ incrementDecrementView push state =
       , orientation VERTICAL
       , margin $ Margin 16 20 16 20
       ][  textView $
-          [ text "No of Passengers"
+          [ text $ getString NO_OF_PASSENGERS
           , color Color.black800
           , margin $ MarginBottom 8
           ] <> FontStyle.subHeading1 TypoGraphy
@@ -357,7 +359,7 @@ incrementDecrementView push state =
                     , textView $
                       [ height WRAP_CONTENT
                       , width WRAP_CONTENT
-                      , text $ "Maximum "<> (show ticketLimit) <> " tickets are allowed per user."
+                      , text $ (getString MAXIMUM) <> " " <> (show ticketLimit) <> " " <> (getString TICKETS_ALLOWED_PER_USER)
                       , color Color.black600
                       , gravity LEFT
                       , singleLine true
@@ -416,9 +418,9 @@ textViewForLocation label actionId push state =
         [ height MATCH_PARENT
         , width WRAP_CONTENT
         , text $ if actionId == Src then 
-                    if state.data.srcLoc == "" then "Starting From?" else state.data.srcLoc
+                    if state.data.srcLoc == "" then (getString STARTING_FROM) <> "?" else state.data.srcLoc
                   else 
-                    if state.data.destLoc == "" then "Where to?" else state.data.destLoc
+                    if state.data.destLoc == "" then (getString WHERE_TO) else state.data.destLoc
         , color Color.black800
         , gravity CENTER_VERTICAL
         , singleLine true
@@ -432,7 +434,7 @@ textViewForLocation label actionId push state =
     ]
 
 srcTextView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
-srcTextView = textViewForLocation "From" Src
+srcTextView push state = textViewForLocation (getString FROM) Src push state
 
 destTextView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
-destTextView = textViewForLocation "To" Dest
+destTextView push state = textViewForLocation (getString TO) Dest push state
