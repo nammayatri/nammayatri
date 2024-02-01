@@ -6,7 +6,7 @@ if (typeof __VERSION__ !== "undefined") {
 window.version["configuration"]= version;
 window.getMerchantConfig = function () {
   return JSON.stringify({
-    "RC_VALIDATION_TEXT": "KA|AP|TS|DL|TN|PY",
+    "RC_VALIDATION_TEXT": "KA|AP|TS|DL|TN|PY|UP|HR",
     "DOCUMENT_LINK": "https://drive.google.com/file/d/1qYXbQUF4DVo2xNOawkHNTR_VVe46nggc",
     "APP_LINK": "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner",
     "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
@@ -324,6 +324,44 @@ window.getMerchantConfig = function () {
         "supportNumber" : "",
         "languageKey" : "KN_IN",
         "showDriverReferral" : false,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "registration" : {
+          "supportWAN" : "",
+          "callSupport" : true,
+          "whatsappSupport" : false
+      }
+      },
+      {
+        "cityName" : "Gurugram",
+        "mapImage" : "ny_ic_gurugram_map",
+        "cityCode" : "std:0124",
+        "showSubscriptions" : false,
+        "cityLat" : 28.457523,
+        "cityLong" : 77.026344,
+        "supportNumber" : "+918069724848",
+        "languageKey" : "HI_IN",
+        "showDriverReferral" : true,
+        "showCustomerReferral" : true,
+        "uploadRCandDL" : true,
+        "enableYatriCoins" : false,
+        "registration" : {
+          "supportWAN" : "",
+          "callSupport" : true,
+          "whatsappSupport" : false
+      }
+      },
+      {
+        "cityName" : "Noida",
+        "mapImage" : "ny_ic_noida_map",
+        "cityCode" : "std:01189",
+        "showSubscriptions" : false,
+        "cityLat" : 28.535517,
+        "cityLong" : 77.391029,
+        "supportNumber" : "+918069724848",
+        "languageKey" : "HI_IN",
+        "showDriverReferral" : true,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
