@@ -199,6 +199,7 @@ library
       Domain.Action.UI.Vehicle
       Domain.Action.UI.Whatsapp
       Domain.Types.BapMetadata
+      Domain.Types.BlackListOrg
       Domain.Types.Booking
       Domain.Types.Booking.BookingLocation
       Domain.Types.BookingCancellationReason
@@ -292,6 +293,7 @@ library
       Domain.Types.Vehicle
       Domain.Types.Vehicle.Variant
       Domain.Types.Volunteer
+      Domain.Types.WhiteListOrg
       Environment
       Lib.DriverCoins.Coins
       Lib.DriverCoins.Types
@@ -348,6 +350,7 @@ library
       SharedLogic.SyncRide
       Storage.Beam.BapMetadata
       Storage.Beam.BecknRequest
+      Storage.Beam.BlackListOrg
       Storage.Beam.Booking
       Storage.Beam.Booking.BookingLocation
       Storage.Beam.BookingCancellationReason
@@ -442,7 +445,9 @@ library
       Storage.Beam.Translations
       Storage.Beam.Vehicle
       Storage.Beam.Volunteer
+      Storage.Beam.WhiteListOrg
       Storage.CachedQueries.BapMetadata
+      Storage.CachedQueries.BlackListOrg
       Storage.CachedQueries.Driver.DriverImage
       Storage.CachedQueries.Driver.GoHomeRequest
       Storage.CachedQueries.DriverBlockReason
@@ -469,8 +474,10 @@ library
       Storage.CachedQueries.Plan
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.RegistryMapFallback
+      Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.DriverEdaKafka
       Storage.Queries.BapMetadata
+      Storage.Queries.BlackListOrg
       Storage.Queries.Booking
       Storage.Queries.Booking.BookingLocation
       Storage.Queries.Booking.Internal
@@ -572,6 +579,7 @@ library
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
       Storage.Queries.Volunteer
+      Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH

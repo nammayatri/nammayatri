@@ -49,7 +49,7 @@ import Kernel.Types.Id
 import Kernel.Types.Registry
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.App (getPodName, lookupDeploymentVersion)
-import Kernel.Utils.Common (CacheConfig, fromMaybeM, logDebug)
+import Kernel.Utils.Common (CacheConfig, fromMaybeM, throwError)
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import qualified Kernel.Utils.Registry as Registry
@@ -261,23 +261,23 @@ instance Registry Flow where
   registryLookup =
     Registry.withSubscriberCache $ \sub -> do
       fetchFromDB sub.merchant_id >>= \registryUrl -> do
-        -- x <- Registry.registryLookup registryUrl sub >>= Registry.whitelisting isWhiteListed
-        logDebug $ "Started Registry lookup for " <> " subId xyz "
         subId <- Registry.registryLookup registryUrl sub
-        logDebug $ "Registry lookup for " <> " subId xyz " <> show subId
-        x <- Registry.whitelisting isWhiteListed subId
-        if (isJust x)
+        checkBlacklist <- Registry.whitelisting isWhiteListed subId
+        if isJust checkBlacklist
           then do
-            logDebug $ "Registry lookup for " <> " returned xyz " <> show x
-            Registry.registryLookup registryUrl sub >>= Registry.validateWhitelisting validateWhiteListed
+            validateWhitelisting validateWhiteListed subId
           else do
-            pure x
+            pure checkBlacklist
     where
       fetchFromDB merchantId = do
         merchant <- CM.findById (Id merchantId) >>= fromMaybeM (MerchantDoesNotExist merchantId)
         pure $ merchant.registryUrl
       isWhiteListed subscriberId = QBlackList.findBySubscriberId (ShortId subscriberId) <&> isNothing
       validateWhiteListed subscriberId = QWhiteList.findBySubscriberId (ShortId subscriberId) <&> isNothing
+      validateWhitelisting p = maybe (pure Nothing) \sub -> do
+        whenM (p sub.subscriber_id) . throwError . InvalidRequest $
+          "Not Whitelisted subscriber " <> sub.subscriber_id
+        pure (Just sub)
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
