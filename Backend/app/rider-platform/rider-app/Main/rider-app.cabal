@@ -239,7 +239,6 @@ library
       Domain.Types.SpecialZoneQuote
       Domain.Types.TripTerms
       Domain.Types.VehicleVariant
-      Domain.Types.Webengage
       Domain.Types.WhiteListOrg
       Environment
       Lib.Mesh
@@ -310,7 +309,6 @@ library
       Storage.Beam.SpecialZoneQuote
       Storage.Beam.SystemConfigs
       Storage.Beam.TripTerms
-      Storage.Beam.Webengage
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg
@@ -379,7 +377,6 @@ library
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SpecialZoneQuote
       Storage.Queries.TripTerms
-      Storage.Queries.Webengage
       Storage.Queries.WhiteListOrg
       Tools.AadhaarVerification
       Tools.Auth
