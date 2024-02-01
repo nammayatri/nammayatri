@@ -105,7 +105,7 @@ buildSelectReqV2 subscriber req = do
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         pickupTime = now,
-        autoAssignEnabled = fromJust autoAssignEnabled,
+        autoAssignEnabled = fromMaybe False autoAssignEnabled,
         customerExtraFee = customerExtraFee,
         estimateId = Id estimateIdText
       }
@@ -125,8 +125,7 @@ getCustomerExtraFeeV2 tagGroups = do
 getAutoAssignEnabledV2 :: [Spec.TagGroup] -> Maybe Bool
 getAutoAssignEnabledV2 tagGroups = do
   tagValue <- getTagV2 "auto_assign_enabled" "auto_assign_enabled" tagGroups
-  autoAssignEnabledText <- readMaybe $ T.unpack tagValue :: Maybe Text
-  case autoAssignEnabledText of
+  case tagValue of
     "True" -> Just True
     "False" -> Just False
     _ -> Just False
