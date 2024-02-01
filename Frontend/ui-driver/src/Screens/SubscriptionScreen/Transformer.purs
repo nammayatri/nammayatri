@@ -21,7 +21,7 @@ module Screens.SubscriptionScreen.Transformer
 import Prelude
 
 import Common.Styles.Colors as Color
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), ReelModal(..))
 import Components.PaymentHistoryListItem (PaymentBreakUp)
 import Data.Array (cons, length, mapWithIndex, (!!))
 import Data.Array as DA
@@ -39,6 +39,8 @@ import Screens.Types (KeyValType, PlanCardConfig, PromoConfig, SubscriptionScree
 import Services.API (DriverDuesEntity(..), FeeType(..), GetCurrentPlanResp(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..))
 import Storage (getValueToLocalStore, KeyStore(..))
 import Locale.Utils
+import RemoteConfig as RC
+
 
 type PlanData = {
     title :: String,
@@ -267,4 +269,34 @@ introductoryPlanConfig config =  {
     priceBreakup : [PaymentBreakUp{amount: 25.0, component: "FINAL_FEE"}],
     showOffer : true
 } 
+
+transformReelsPurescriptDataToNativeData :: Array RC.ReelItem -> ReelModal
+transformReelsPurescriptDataToNativeData reelsData = do
+  let transformedData = map (\ eachItem ->
+    { id : eachItem.id
+    , thumbnailImageUrl : eachItem.thumbnailImageUrl
+    , videoUrl : eachItem.videoUrl
+    , title : eachItem.title
+    , description : eachItem.description
+    , shareLink : eachItem.shareLink
+    , carouselBigImageUrl : eachItem.carouselBigImageUrl
+    , carouselSmallImageUrl : eachItem.carouselSmallImageUrl
+    , carouselTextString : eachItem.carouselTextString
+    , carouselTextColor : eachItem.carouselTextColor
+    , bottomButtonConfig : eachItem.bottomButtonConfig
+    , sideButtonConfig : eachItem.sideButtonConfig
+    } ) reelsData
+
+  { reelData : transformedData
+  , titleConfig : {
+      size : 18,
+      color : Color.white900,
+      maxLines : 2
+    }
+  , descriptionConfig : {
+      size : 14,
+      color : Color.white900,
+      maxLines : 2
+    }
+  }
 

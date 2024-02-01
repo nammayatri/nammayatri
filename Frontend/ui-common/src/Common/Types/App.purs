@@ -387,6 +387,54 @@ type MarginConfig = {
   left :: Int
 }
 
+type ReelModal = {
+  reelData :: Array ReelItem,
+  titleConfig :: ReelTextConfig,
+  descriptionConfig :: ReelTextConfig
+}
+
+type ReelButtonConfig = {
+    prefixImage :: String,
+    suffixImage :: String,
+    actions :: Array String,
+    buttonColor :: String,
+    cornerRadius :: Int,
+    text :: String,
+    textSize :: Int,
+    textColor :: String,
+    prefixImageHeight :: Int,
+    prefixImageWidth :: Int,
+    suffixImageHeight :: Int,
+    suffixImageWidth :: Int,
+    activeIndex :: String,
+    inActiveIndex :: String,
+    activeIndexWidth :: Int,
+    activeIndexHeight :: Int,
+    inActiveIndexWidth :: Int,
+    inActiveIndexHeight :: Int
+}
+
+type ReelItem = {
+  title :: String,
+  description :: String,
+  id :: String,
+  shareLink :: String,
+  thumbnailImageUrl :: String,
+  videoUrl :: String,
+  carouselBigImageUrl :: String,
+  carouselSmallImageUrl :: String,
+  carouselTextString :: String,
+  carouselTextColor :: String,
+  bottomButtonConfig :: Array (Array ReelButtonConfig),
+  sideButtonConfig :: Array (Array ReelButtonConfig)
+}
+
+type ReelTextConfig = {
+  size :: Int,
+  color :: String,
+  maxLines :: Int
+}
+
 type CarouselHolderData = {
   id :: Int
 , shouldPush :: Boolean

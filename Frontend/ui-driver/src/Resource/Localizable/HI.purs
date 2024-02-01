@@ -1209,6 +1209,8 @@ getHI stringKey =
         MAX -> "अधिकतम"
         COINS -> "सिक्के"
         COINS_ADDED -> "सिक्के जोड़े गए"
+        WATCH_NOW -> "अब देखिए"
+        CHOOSE_A_PLAN -> "योजना चुनें"
         REFERRAL -> "रेफरल"
         BENEFITS -> "लाभ"
         YOUR_DAILY_RANK -> "आपका दैनिक रैंक"

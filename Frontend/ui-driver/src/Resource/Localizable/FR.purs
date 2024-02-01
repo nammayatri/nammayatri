@@ -920,6 +920,8 @@ getFR stringKey =
         MAX -> "Max"
         COINS -> "Pièces"
         COINS_ADDED -> "Pièces ajoutées"
+        WATCH_NOW -> "regarde maintenant"
+        CHOOSE_A_PLAN -> "Choisissez un forfait"
         REFERRAL -> "Référence"
         BENEFITS -> "Avantages"
         YOUR_DAILY_RANK -> "Votre rang quotidien"
@@ -946,3 +948,4 @@ getFR stringKey =
         ABOUT_TEXT -> " est une plateforme ouverte pour mettre en relation chauffeurs et passagers. L'application permet aux conducteurs de trouver facilement des passagers avec les tarifs souhaités proposés. Pas de commission basée sur le trajet, payez simplement un petit montant sous forme d'abonnement mensuel"
         WELCOME_TEXT -> "Bienvenue chez le partenaire {}"
         _ -> ""
+

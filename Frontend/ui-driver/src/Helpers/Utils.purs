@@ -202,18 +202,18 @@ otpRule =
   group : Nothing
 }
 
-startOtpReciever :: forall action. (String -> action) -> (action -> Effect Unit) -> Effect (Effect Unit)
-startOtpReciever action push = do
-  fiber <- launchAff $ do
-    otpListener <- traverse Readers.getOtpListener $ fromArray [ Readers.smsRetriever ]
-    _ <- traverse identity $ (otpListener <#> _.setOtpRules) <*> Just [otpRule]
-    message <- traverse identity $ (otpListener <#> _.getNextOtp)
-    case message of
-      Just (Readers.Otp val _ _) -> liftEffect $ push $ action val
-      _ -> pure unit
-    void $ initiateSMSRetriever
-    liftEffect $ startOtpReciever action push
-  pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
+-- startOtpReciever :: forall action. (String -> action) -> (action -> Effect Unit) -> Effect (Effect Unit)
+-- startOtpReciever action push = do
+--   fiber <- launchAff $ do
+--     otpListener <- traverse Readers.getOtpListener $ fromArray [ Readers.smsRetriever ]
+--     _ <- traverse identity $ (otpListener <#> _.setOtpRules) <*> Just [otpRule]
+--     message <- traverse identity $ (otpListener <#> _.getNextOtp)
+--     case message of
+--       Just (Readers.Otp val _ _) -> liftEffect $ push $ action val
+--       _ -> pure unit
+--     void $ initiateSMSRetriever
+--     liftEffect $ startOtpReciever action push
+--   pure $ launchAff_ $ killFiber (error "Failed to Cancel") fiber
 
 -- -- type Locations = {
 -- --     paths :: Array Paths

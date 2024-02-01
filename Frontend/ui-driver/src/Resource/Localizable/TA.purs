@@ -1209,6 +1209,8 @@ getTA stringKey =
         MAX -> "அதிகமாக"
         COINS -> "நாணயங்கள்"
         COINS_ADDED -> "நாணயங்கள் சேர்க்கப்பட்டன"
+        WATCH_NOW -> "இப்பொழுது பார்"
+        CHOOSE_A_PLAN -> "ஒரு திட்டத்தை தேர்வு செய்யவும்"
         REFERRAL -> "பரிந்துரை"
         BENEFITS -> "நன்மை"
         YOUR_DAILY_RANK -> "உங்கள் தினசரி தரவரிசை"

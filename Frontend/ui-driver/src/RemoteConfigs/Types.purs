@@ -13,9 +13,13 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module RemoteConfig.Types where
+module RemoteConfig.Types (
+    module RemoteConfig.Types
+  , module Reexport
+  ) where
 
 import Prelude
+import Common.Types.App(ReelButtonConfig(..), ReelItem(..)) as Reexport
 
 type RCSubscription = {
     max_dues_limit :: Number,

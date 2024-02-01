@@ -2292,6 +2292,18 @@ export const addCarouselWithVideoExists = function () {
   return JBridge.addCarouselWithVideo;
 }
 
+export const addReels = function (reelsData, index, id, cb, action) {
+  const reelsJson = JSON.stringify(reelsData);
+  if(JBridge.addReels){
+    const callback = callbackMapper.map(function(resp, currentReelInfo){
+      cb(action(resp)(currentReelInfo))();
+    });
+    return JBridge.addReels(reelsJson, index, id, callback);
+  } else {
+    console.log("Failed to add reels")
+  }
+}
+
 export const addCarouselImpl = function (carouselModalJson, id) {
   const carouselJson = JSON.stringify(carouselModalJson);
   const data = JSON.parse(carouselJson);

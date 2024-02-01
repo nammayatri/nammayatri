@@ -21,12 +21,12 @@ import Data.Number.Format (fixed, toStringWith)
 import Data.String (toLower)
 import Effect (Effect)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
+import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC, liftFlow, getNewIDWithTag)
 import Engineering.Helpers.Utils (saveObject)
 import Foreign (unsafeToForeign)
 import Foreign.Generic (decodeJSON)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getDistanceBwCordinates, getFixedTwoDecimals)
-import JBridge (cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
+import JBridge (shareTextMessage, addReels, cleverTapCustomEvent, firebaseLogEvent, minimizeApp, setCleverTapUserProp, openUrlInApp, showDialer, openWhatsAppSupport, metaLogEvent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppScreenRender)
@@ -37,11 +37,14 @@ import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants as Const
 import Screens (getScreen, ScreenName(..))
-import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, introductoryPlanConfig, myPlanListTransformer, planListTransformer)
+import Screens.SubscriptionScreen.Transformer (transformReelsPurescriptDataToNativeData, alternatePlansTransformer, constructDues, getAutoPayDetailsList, getSelectedId, getSelectedPlan, introductoryPlanConfig, myPlanListTransformer, planListTransformer)
 import Screens.Types (AutoPayStatus(..), KioskLocation(..), OptionsMenuState(..), PlanCardConfig, SubscribePopupType(..), SubscriptionScreenState, SubscriptionSubview(..))
 import Services.API (BankError(..), FeeType, GetCurrentPlanResp(..), KioskLocationRes(..), MandateData(..), OfferEntity(..), PaymentBreakUp(..), PlanEntity(..), UiPlansResp(..), LastPaymentType(..))
 import Services.Backend (getCorrespondingErrorMessage)
 import Storage (KeyStore(..), setValueToLocalNativeStore, setValueToLocalStore, getValueToLocalStore)
+import PrestoDOM.Core (getPushFn)
+import Effect.Uncurried (runEffectFn5, runEffectFn1)
+import RemoteConfig (ReelItem(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -93,6 +96,8 @@ data Action = BackPressed
             | OfferCardBanner Banner.Action
             | TogglePlanDescription PlanCardConfig
             | EnableIntroductoryView
+            | OpenReelsView Int
+            | GetCurrentPosition String String
 
 data ScreenOutput = HomeScreen SubscriptionScreenState
                     | RideHistory SubscriptionScreenState
@@ -115,7 +120,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | EarningsScreen SubscriptionScreenState 
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
-eval BackPressed state = 
+eval BackPressed state =
   if state.props.popUpState == Mb.Just SupportPopup then updateAndExit state{props{popUpState = Mb.Nothing}} $ HomeScreen state{props{popUpState = Mb.Nothing}}
   else if ( not Mb.isNothing state.props.popUpState && not (state.props.popUpState == Mb.Just SuccessPopup)) then continue state{props { popUpState = Mb.Nothing}}
   else if state.props.optionsMenuState /= ALL_COLLAPSED then continue state{props{optionsMenuState = ALL_COLLAPSED}}
@@ -385,6 +390,23 @@ eval (DueDetailsListAction (DueDetailsListController.SelectDue dueItem)) state =
 -- eval (TogglePlanDescription _) state = continue state{data{myPlanData{planEntity{isSelected = not state.data.myPlanData.planEntity.isSelected}}}} --Always expended
 
 eval EnableIntroductoryView state = continue state{props{subView = JoinPlan, showShimmer = false, joinPlanProps{isIntroductory = true}}, data{joinPlanData {allPlans = [introductoryPlanConfig state.data.config.subscriptionConfig]}}}
+
+eval (OpenReelsView index) state = do
+  continueWithCmd state [ do
+    push <-  getPushFn Mb.Nothing "SubscriptionScreen"
+    _ <- runEffectFn5 addReels (transformReelsPurescriptDataToNativeData state.data.reelsData) index (getNewIDWithTag "ReelsView") push $ GetCurrentPosition
+    pure NoAction
+  ]
+
+eval (GetCurrentPosition label stringData) state = case label of
+  "CURRENT_POSITION" -> continue state
+  "ACTION" -> case stringData of
+                "CHOOSE_A_PLAN" -> continue state
+                "SHARE" -> do 
+                  _ <- pure $ shareTextMessage "share message title" "This is sharing of the message"
+                  continue state
+                _ -> continue state
+  _ -> continue state
 
 eval _ state = continue state
 

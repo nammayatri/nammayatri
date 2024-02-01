@@ -1219,6 +1219,8 @@ data STR = LETS_GET_STARTED
         | MAX
         | COINS
         | COINS_ADDED
+        | WATCH_NOW
+        | CHOOSE_A_PLAN
         | REFERRAL
         | BENEFITS
         | YOUR_DAILY_RANK
