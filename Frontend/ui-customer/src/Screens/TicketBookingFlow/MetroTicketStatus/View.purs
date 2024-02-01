@@ -74,6 +74,8 @@ import Effect.Uncurried
 import Data.Function.Uncurried
 import Timers (startTimer)
 import Engineering.Helpers.Commons (screenHeight)
+import Language.Strings
+import Language.Types
 
 screen :: ST.MetroTicketStatusScreenState -> Screen Action ST.MetroTicketStatusScreenState ScreenOutput
 screen initialState =
@@ -214,7 +216,7 @@ copyTransactionIdView state push  =
     textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text "TransactionID"
+      , text $ getString TRANSACTION_ID
       , color Color.black700
       , gravity CENTER
       ] <> (FontStyle.body3 TypoGraphy)
@@ -285,9 +287,9 @@ bookingStatusBody state push paymentStatus =
 bookingConfirmationActions :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
 bookingConfirmationActions state push paymentStatus = 
   let 
-    topBtnText = case paymentStatus of 
-      Common.Success -> "View Ticket"
-      Common.Failed  -> "Try Again"
+    topBtnText =  case paymentStatus of 
+      Common.Success ->getString  VIEW_TICKET
+      Common.Failed  ->getString  TRY_AGAIN
       _ -> ""
     topBtnVisibility = case paymentStatus of 
       Common.Success -> VISIBLE
@@ -316,7 +318,7 @@ bookingConfirmationActions state push paymentStatus =
         textView $ [ 
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text "Go Back"
+        , text $ getString GO_BACK_
         , color Color.black900
         , gravity CENTER
         , margin $ MarginTop 5
@@ -446,9 +448,9 @@ keyValueView push state key value index =
 getTransactionConfig :: Common.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
 getTransactionConfig status = 
   case status of
-    Common.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : "Please wait while we generate your ticket", title : "Payment Received!"}
-    Common.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : "Please check back in a few minutes.", title : "Your booking is Pending!"}
-    Common.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : "Please retry booking.", title : "Booking Failed!"}
+    Common.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : getString PLEASE_WHILE_GEN_TICKET, title : getString PAYMENT_RECEIVED }
+    Common.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : getString PLEASE_CHECK_BACK_FEW_MIN, title : getString YOUR_BOOKING_PENDING }
+    Common.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : getString PLEASE_RETRY_BOOKING, title : getString BOOKING_FAILED }
     Common.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}
 
 
@@ -474,7 +476,7 @@ refundInfoTextView =
       width WRAP_CONTENT
     , height WRAP_CONTENT
     , margin $ MarginLeft 8
-    , text "Incase of failure, any money debited will be refunded within 5 - 7 working days."
+    , text $ getString INCASE_OF_FAIL 
     , color Color.black700
     ] <> FontStyle.body3 TypoGraphy
   ]

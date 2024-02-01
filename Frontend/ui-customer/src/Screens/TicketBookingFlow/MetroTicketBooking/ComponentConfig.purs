@@ -33,6 +33,7 @@ import Language.Strings
 import Resources.Localizable.EN
 import Language.Types
 
+
 metroTicketBookingHeaderConfig :: ST.MetroTicketBookingScreenState -> GenericHeader.Config
 metroTicketBookingHeaderConfig state = let
     config = GenericHeader.config
@@ -49,7 +50,7 @@ metroTicketBookingHeaderConfig state = let
           } 
         , padding = PaddingVertical 5 5
         , textConfig {
-            text = "Buy Metro Tickets"
+            text = getString BUY_METRO_TICKETS
           , color = Color.darkCharcoal
           }
         , suffixImageConfig {
@@ -63,7 +64,7 @@ updateButtonConfig state = let
     config = PrimaryButton.config
     updateButtonConfig' = config 
         { 
-         textConfig{ text = if state.props.currentStage /= ST.MetroTicketSelection then ("Pay " <> " ₹" <> (show (state.data.ticketPrice * state.data.ticketCount )) )  else "Get Fare"}
+         textConfig{ text = if state.props.currentStage /= ST.MetroTicketSelection then ((getString PAY)<>" " <> " ₹" <> (show (state.data.ticketPrice * state.data.ticketCount )) )  else (getString GET_FARE)}
         , height = (V 48)
         , cornerRadius = 8.0
         , margin = (Margin 16 0 16 0)
@@ -80,18 +81,18 @@ metroTimeErrorPopupConfig :: ST.MetroTicketBookingScreenState -> InfoCard.Config
 metroTimeErrorPopupConfig state = let
   requestInfoCardConfig' =  InfoCard.config{
     title {
-      text = "Metro Booking Timings",
+      text = getString METRO_BOOKING_TIMINGS,
       accessibilityHint = "Metro Booking Timings"
     }
   , primaryText {
-      text = "Chennai Metro allows QR ticket purchase from 4:30 AM to 10:30 PM on all days. ",
+      text = getString CHENNAI_METRO_TIME ,
       padding = Padding 16 16 0 0,
       textStyle = FontStyle.ParagraphText,
       color = Color.black700,
       accessibilityHint = "Chennai Metro allows QR ticket purchase from 4:30am to 22:30 PM on all days."
     }
   , secondaryText {
-      text = "Please come back later during the eligible time to purchase tickets.",
+      text = getString PLEASE_COME_BACK_LATER_METRO,
       visibility = VISIBLE,
       padding = PaddingLeft 16,
       color = Color.black700,
