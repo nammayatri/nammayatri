@@ -147,8 +147,8 @@ sosDescriptionView state push =
         <> FontStyle.body1 TypoGraphy
     , imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_emergency_sent"
-        , width $ V if not $ null state.data.contactsList then 200 else 250
-        , height $ V if not $ null state.data.contactsList then 180 else 250
+        , width $ V if not $ null state.data.emergencyContactsList then 200 else 250
+        , height $ V if not $ null state.data.emergencyContactsList then 180 else 250
         , margin $ MarginTop 20
         ]
     ]
@@ -159,7 +159,7 @@ sosDescriptionView state push =
     getString
       $ if state.props.showTestDrill then
           TEST_SOS_TRIGGERED_DESC
-        else if null state.data.contactsList then
+        else if null state.data.emergencyContactsList then
           PLEASE_STAY_CALM_TEAM_ALERTED
         else
           SOS_TRIGGERED_DESC
@@ -182,7 +182,7 @@ sosActionsView state push =
         [ textView
             $ [ text $ getString TRY_ANOTHER_CONTACT
               , color Color.white900
-              , visibility $ boolToVisibility $ not $ null state.data.contactsList
+              , visibility $ boolToVisibility $ not $ null state.data.emergencyContactsList
               ]
             <> FontStyle.paragraphText TypoGraphy
         , emergencyContactsView state push
@@ -200,7 +200,7 @@ emergencyContactsView state push =
     , margin $ MarginTop 8
     , padding $ Padding 16 14 16 14
     , cornerRadius 12.0
-    , visibility $ boolToVisibility $ not $ null state.data.contactsList
+    , visibility $ boolToVisibility $ not $ null state.data.emergencyContactsList
     ]
     [ linearLayout
         [ height WRAP_CONTENT
@@ -239,7 +239,7 @@ emergencyContactsView state push =
                       ]
                   ]
             )
-            state.data.contactsList
+            state.data.emergencyContactsList
         )
     ]
 

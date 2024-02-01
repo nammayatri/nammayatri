@@ -14,5 +14,5 @@ getContact contact = {
   , name : contact.name
   , number : contact.number
   , enableForFollowing: false
-  , priority : 1
+  , priority : 0
 }

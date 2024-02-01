@@ -10,7 +10,7 @@ import Font.Style as FontStyle
 import JBridge (openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&),(-), (>), show)
+import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&),(-), (>), show, void, not)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..),scrollView, swipeRefreshLayout, hint, onScroll, scrollBarY, onScrollStateChange, alignParentBottom, pattern, onChange, id, editText, background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback, onRefresh, accessibility, accessibilityHint)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
@@ -19,7 +19,7 @@ import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Styles.Colors as Color
 import Common.Types.App
 import Helpers.Utils (storeCallBackContacts, contactPermission)
-import Data.Array (take, (!!), mapWithIndex, null, length)
+import Data.Array (take, (!!), mapWithIndex, null, length, difference )
 import Data.String as DS
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (split, Pattern(..))
@@ -37,6 +37,8 @@ import Halogen.VDom.DOM.Prop (PropValue)
 import Helpers.Utils (fetchImage, FetchImageFrom(..), setRefreshing)
 import Screens.NammaSafetyFlow.Components.ContactsList as ContactsList
 import Screens.NammaSafetyFlow.Components.HelperViews as HelperViews
+import Debug
+import Engineering.Helpers.Utils (terminateLoader)
 
 screen :: EmergencyContactsScreenState -> PrestoList.ListItem -> Screen Action EmergencyContactsScreenState ScreenOutput
 screen initialState listItemm =
@@ -45,11 +47,15 @@ screen initialState listItemm =
   , name: "EmergencyContactsScreen"
   , globalEvents: [ globalOnScroll "EmergencyContactsScreen",
                     ( \push -> do
-                        _ <- pure $ setRefreshing (getNewIDWithTag "EmergencyContactTag") false
+                        void $ storeCallBackContacts push ContactsCallback
                         pure (pure unit)
                     )
                   ]
-  , eval
+  , eval:
+      \action state -> do
+        let _ = spy "EmergencyContactsScreen action " action
+        let _ = spy "EmergencyContactsScreen state " state
+        eval action state
   }
 
 view :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
@@ -63,14 +69,7 @@ view listItemm push state =
         , background Color.white900
         , padding if os == "IOS" then (Padding 0 safeMarginTop 0 (if safeMarginBottom == 0 && os == "IOS" then 16 else safeMarginBottom)) else (Padding 0 0 0 0)
         , gravity CENTER
-        , afterRender
-            ( \action -> do
-                _ <- push action
-                _ <- storeCallBackContacts push ContactsCallback
-                _ <- push FetchContacts
-                pure unit
-            )
-            (const NoAction)
+        , afterRender push $ const NoAction
         ]
         ( [ linearLayout
               [ height MATCH_PARENT
@@ -178,20 +177,23 @@ contactListView listItemm push state =
             , gravity BOTTOM
             , alignParentBottom "true,-1"
             ]
-            [ PrimaryButton.view (push <<< ContactListPrimaryButtonActionController) (contactListPrimaryButtonConfig state.data.contactsCount)
+            [ PrimaryButton.view getPushFn $ contactListPrimaryButtonConfig state
             ]
         ]
     ]
+  where 
+    getPushFn = (\action -> do 
+                  void $ terminateLoader ""
+                  push $ PrimaryButtonAC action)
+
 
 showEmergencyContact :: forall w. PrestoList.ListItem -> (Action -> Effect Unit) -> EmergencyContactsScreenState -> PrestoDOM (Effect Unit) w
 showEmergencyContact listitemm push config =
-  swipeRefreshLayout
-    ([ width MATCH_PARENT
-    , height MATCH_PARENT
+    linearLayout
+    [ width MATCH_PARENT
     , background Color.blue600
     , weight 1.0
-    , onRefresh push (const RefreshScreen)
-    ] <> if os == "IOS" then [] else [id $ getNewIDWithTag "EmergencyContactTag"] )
+    ]
     [ showEmergencyContactData listitemm push config
     ]
 
@@ -205,10 +207,8 @@ showEmergencyContactData listItemm push state =
   [ Tuple "contacts"
     $ PrestoList.list
     [ height MATCH_PARENT
-    -- , scrollBarY false
+    , scrollBarY false
     , width MATCH_PARENT
-    , onScroll "contacts" "EmergencyContactsScreen" push (ContactListScroll)
-    , onScrollStateChange push (ContactListScrollStateChanged)
     , PrestoList.listItem listItemm
     , background Color.white900
     , PrestoList.listDataV2  $ state.data.prestoListArrayItems
@@ -218,20 +218,22 @@ showEmergencyContactData listItemm push state =
 startsWith :: String -> String -> Boolean
 startsWith prefix str = DS.take (DS.length prefix) str == prefix
 
-contactListPrimaryButtonConfig :: Int -> PrimaryButtonConfig.Config
-contactListPrimaryButtonConfig count =
+contactListPrimaryButtonConfig :: EmergencyContactsScreenState -> PrimaryButtonConfig.Config
+contactListPrimaryButtonConfig state =
   let
     config' = PrimaryButtonConfig.config
-
+    uniqueContacts = length $ difference state.data.selectedContacts state.data.emergencyContactsList
+    enableBtn = if (uniqueContacts == 0) && null state.data.selectedContacts && not (null state.data.emergencyContactsList) then true else uniqueContacts > 0
     primaryButtonConfig' =
       config'
         { textConfig
-          { text = if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)
-          , accessibilityHint = (if (count > 0) then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)) <> " : Button"
-          , color = if (count > 0) then Color.yellow900 else Color.yellow800
+          { text = if enableBtn then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)
+          , accessibilityHint = (if enableBtn then (getString CONFIRM_EMERGENCY_CONTACTS) else (getString SELECT_CONTACTS)) <> " : Button"
+          , color = if enableBtn then Color.yellow900 else Color.yellow800
           }
-        , background = if (count > 0) then Color.black900 else Color.black600
-        , isClickable = if (count > 0) then true else false
+        , background = if enableBtn then Color.black900 else Color.black600
+        , isClickable = if enableBtn then true else false
+        , id = "ContactListPrimaryButton"
         }
   in
     primaryButtonConfig'
@@ -265,7 +267,7 @@ emptyContactsView push state =
     , width $ MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
-    , visibility if (null state.data.contactsList) then VISIBLE else GONE
+    , visibility if (null state.data.emergencyContactsList) then VISIBLE else GONE
     , weight 1.0
     ]
     [ imageView
@@ -300,7 +302,7 @@ emergencyContactsListView push state =
     , width $ MATCH_PARENT
     , orientation VERTICAL
     , padding $ PaddingVertical 12 10
-    , visibility if null state.data.contactsList then GONE else VISIBLE
+    , visibility if null state.data.emergencyContactsList then GONE else VISIBLE
     , weight 1.0
     ]
     [ textView
@@ -311,11 +313,10 @@ emergencyContactsListView push state =
           , padding $ PaddingVertical 10 10
           ]
         <> FontStyle.paragraphText LanguageStyle
-    , ContactsList.view (push <<< ContactListAction) state.data.contactsList
+    , ContactsList.view (push <<< ContactListAction) state.data.emergencyContactsList
     ]
 
 --------------------------------------------------- emergencyContactsListView -----------------------------------------------------
-
 
 getNameInitials :: String -> (Array String)
 getNameInitials fullName = (take 2 (split (Pattern " ") (fullName)))

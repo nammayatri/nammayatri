@@ -32,7 +32,7 @@ initData =
       , rideId: ""
       , updateActionType: ""
       , videoPath: ""
-      , contactsList: []
+      , emergencyContactsList: []
       , removedContactDetail:
           { isSelected: false
           , name: ""

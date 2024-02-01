@@ -295,7 +295,7 @@ emergencyContactsView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , visibility $ boolToVisibility $ null state.data.contactsList
+        , visibility $ boolToVisibility $ null state.data.emergencyContactsList
         , gravity CENTER
         ]
         [ imageWithTextView configDescThree
@@ -310,7 +310,7 @@ emergencyContactsView state push =
     , textView
         $ [ text $ getString EMERGENCY_CONTACTS_CAN_TAKE_ACTION
           , color Color.white900
-          , visibility $ boolToVisibility $ state.props.showTestDrill && not (null state.data.contactsList)
+          , visibility $ boolToVisibility $ state.props.showTestDrill && not (null state.data.emergencyContactsList)
           , gravity CENTER
           ]
         <> FontStyle.tags TypoGraphy
@@ -322,7 +322,7 @@ emergencyContactsView state push =
         , background Color.black900
         , margin $ MarginTop 16
         , cornerRadius 12.0
-        , visibility $ boolToVisibility $ not $ null state.data.contactsList
+        , visibility $ boolToVisibility $ not $ null state.data.emergencyContactsList
         ]
         [ textView
             $ [ text $ getString SELECT_CONTACT_TO_CALL
@@ -344,7 +344,7 @@ emergencyContactsView state push =
                     ( \index item ->
                         ContactCircle.view (ContactCircle.getContactConfig item index true) (push <<< ContactAction)
                     )
-                    state.data.contactsList
+                    state.data.emergencyContactsList
                 )
             , layoutWithWeight
             , textView
@@ -367,7 +367,7 @@ emergencyContactsView state push =
   where
   configDescOne =
     { text': getString SAFETY_TEAM_WILL_BE_ALERTED
-    , isActive: not $ null state.data.contactsList
+    , isActive: not $ null state.data.emergencyContactsList
     , textColor: Color.white900
     , useMargin: false
     , useFullWidth: true
@@ -384,7 +384,7 @@ emergencyContactsView state push =
     , useFullWidth: true
     , usePadding: false
     , image: Nothing
-    , visibility: not $ null state.data.contactsList
+    , visibility: not $ null state.data.emergencyContactsList
     }
 
   configDescThree =

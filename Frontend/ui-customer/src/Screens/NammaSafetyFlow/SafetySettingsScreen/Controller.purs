@@ -110,7 +110,7 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
         , nightSafetyChecks = response.nightSafetyChecks
         , hasCompletedMockSafetyDrill = response.hasCompletedMockSafetyDrill
         , shareTripWithEmergencyContacts = response.shareTripWithEmergencyContacts
-        , contactsList = getDefaultPriorityList contacts
+        , emergencyContactsList = getDefaultPriorityList contacts
         }
       , props { enableLocalPoliceSupport = response.enablePoliceSupport, localPoliceNumber = fromMaybe "" response.localPoliceNumber }
       }
@@ -123,7 +123,7 @@ eval (ToggleSwitch stage) state = case stage of
   SetNightTimeSafetyAlert -> exit $ PostEmergencySettings state { data { nightSafetyChecks = not state.data.nightSafetyChecks } }
   SetShareTripWithContacts -> exit $ PostEmergencySettings state { data { shareTripWithEmergencyContacts = not state.data.shareTripWithEmergencyContacts } }
   SetDefaultEmergencyContacts ->
-    if DA.length state.data.contactsList /= 0 then
+    if DA.length state.data.emergencyContactsList /= 0 then
       exit $ PostEmergencySettings state { data { shareToEmergencyContacts = not state.data.shareToEmergencyContacts } }
     else
       continueWithCmd state [ pure AddContacts ]
@@ -147,9 +147,9 @@ eval (ChangeFollowing contactIndex) state = do
             true -> item { enableForFollowing = not item.enableForFollowing }
             false -> item
         )
-        state.data.contactsList
+        state.data.emergencyContactsList
 
-    newState = state { data { contactsList = newContacts } }
+    newState = state { data { emergencyContactsList = newContacts } }
   updateAndExit newState $ PostContacts newState
 
 eval GoToEducationView state = exit $ GoToEducationScreen state

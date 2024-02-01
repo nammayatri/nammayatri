@@ -1944,14 +1944,14 @@ emergencyScreenFlow = do
   case flow of
     GO_TO_HOME_FROM_EMERGENCY_CONTACTS state -> homeScreenFlow --nammaSafetyFlow
     POST_CONTACTS state shouldGoToSafetyScreen -> do
-      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.contactsList)
+      _ <- Remote.emergencyContactsBT $ Remote.postContactsReq state.data.selectedContacts
       when (not shouldGoToSafetyScreen)
         $ if state.props.showInfoPopUp then
             pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
           else
             pure $ toast $ getString STR.EMERGENCY_CONTACS_ADDED_SUCCESSFULLY
-      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> state { props { showInfoPopUp = false } })
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { contactsList = state.data.contactsList }, props{setupStage = ST.SetDefaultEmergencyContacts} })
+      modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data{emergencyContactsList = state.data.selectedContacts}, props { showInfoPopUp = false} })
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props{setupStage = ST.SetDefaultEmergencyContacts} })
       (GlobalState globalState) <- getState
       case globalState.nammaSafetyScreen.data.hasCompletedSafetySetup, shouldGoToSafetyScreen, state.props.fromSosFlow of 
         _, _, true -> activateSafetyScreenFlow
@@ -1970,7 +1970,7 @@ emergencyScreenFlow = do
         }) res.defaultEmergencyNumbers
       contactsInString <- pure $ toStringJSON contacts
       setValueToLocalStore CONTACTS (contactsInString)
-      modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state{data{contactsList = contacts}})
+      modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state{data{emergencyContactsList = contacts}})
       emergencyScreenFlow
     REFRESH_EMERGECY_CONTACTS_SCREEN state -> do
       modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state)
@@ -3121,14 +3121,14 @@ safetySettingsFlow = do
       updateEmergencySettings state
       safetySettingsFlow
     SafetySettingsScreen.GoToEmergencyContactScreen updatedState -> do
-      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = false}})
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = false}, data{emergencyContactsList = updatedState.data.emergencyContactsList}})
       emergencyScreenFlow
     SafetySettingsScreen.GoToEducationScreen updatedState -> safetyEducationFlow
     SafetySettingsScreen.GoToSetupScreen updatedState -> setupSafetySettingsFlow
     SafetySettingsScreen.GoToActivateSosScreen state -> activateSafetyScreenFlow
     SafetySettingsScreen.PostContacts state -> do
-      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.contactsList)
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { contactsList = state.data.contactsList } })
+      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.emergencyContactsList)
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.emergencyContactsList } })
       safetySettingsFlow
 
 
@@ -3138,7 +3138,7 @@ setupSafetySettingsFlow = do
   case flow of 
     SetupSafetySettingsScreen.GoBack state -> safetySettingsFlow
     SetupSafetySettingsScreen.PostContacts state  -> do
-      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.contactsList)
+      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.emergencyContactsList)
       if state.props.showInfoPopUp 
         then pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
         else pure $ toast $ getString STR.EMERGENCY_CONTACS_ADDED_SUCCESSFULLY

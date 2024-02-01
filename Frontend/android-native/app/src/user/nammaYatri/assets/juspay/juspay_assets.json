@@ -402,6 +402,7 @@
       "ny_ic_tick" : true,
       "ny_ic_tick_black_white" : true,
       "ny_ic_tick_green" : true,
+      "ny_ic_tick_selected_blue" : true,
       "ny_ic_tick_white" : true,
       "ny_ic_tip_icon" : true,
       "ny_ic_track_google_map" : true,

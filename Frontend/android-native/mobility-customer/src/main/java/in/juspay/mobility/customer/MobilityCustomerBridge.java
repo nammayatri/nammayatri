@@ -140,23 +140,27 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     //region Store and Trigger CallBack
     @JavascriptInterface
     public void contactPermission() {
-        try {
-            if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-                if (bridgeComponents.getActivity() != null) {
-                    ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.READ_CONTACTS}, REQUEST_CONTACTS);
-                }
-            } else {
-                contactsStoreCall(getPhoneContacts());
+        if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            if (bridgeComponents.getActivity() != null) {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.READ_CONTACTS}, REQUEST_CONTACTS);
             }
-        } catch (Exception e) {
-            Log.e(UTILS, "Exception in Contact Permission" + e);
+        } else {
+            ExecutorManager.runOnBackgroundThread(() -> {
+                try {
+                    contactsStoreCall(getPhoneContacts());
+                } catch (Exception e) {
+                    Log.e(UTILS, "Exception in Contact Permission" + e);
+                }
+            });
         }
     }
 
     public void contactsStoreCall(String contacts) {
         if (storeContactsCallBack != null) {
+            String removedDoubleQuotes = contacts.replace("\\\"", "\\\\\"");
+            String removedSingleQuote = removedDoubleQuotes.replace("'", "");
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                    storeContactsCallBack, contacts);
+                    storeContactsCallBack, removedSingleQuote);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
@@ -805,29 +809,32 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     public String getPhoneContacts() throws JSONException {
         ContentResolver contentResolver = bridgeComponents.getContext().getContentResolver();
         Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-        JSONArray contacts;
-        try (Cursor cursor = contentResolver.query(uri, null, null, null, null)) {
-            contacts = new JSONArray();
-
+        JSONArray contacts = new JSONArray();
+        String[] projection =
+                {
+                        ContactsContract.CommonDataKinds.Phone.NUMBER,
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+                };
+        String selection = ContactsContract.Contacts.IN_VISIBLE_GROUP + " = '"
+                + ("1") + "'";
+        String sortOrder = ContactsContract.Contacts.DISPLAY_NAME
+                + " COLLATE LOCALIZED ASC";
+        try (Cursor cursor = contentResolver.query(uri, projection, selection, null, sortOrder)) {
             if (cursor.getCount() > 0) {
                 while (cursor.moveToNext()) {
                     String contactNameStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
                     String contactStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                    String contactNumber = contactStr.replaceAll("\\D", "");
-                    String contactName = contactNameStr.replaceAll("'", "");
                     JSONObject tempPoints = new JSONObject();
-                    tempPoints.put("name", contactName);
-                    tempPoints.put("number", contactNumber);
+                    tempPoints.put("name", contactNameStr);
+                    tempPoints.put("number", contactStr);
                     contacts.put(tempPoints);
                 }
             }
         }
-
         JSONObject flagObject = new JSONObject();
         flagObject.put("name", "beckn_contacts_flag");
         flagObject.put("number", "true");
         contacts.put(flagObject);
-        System.out.print("Contacts " + contacts);
         return contacts.toString();
     }
 

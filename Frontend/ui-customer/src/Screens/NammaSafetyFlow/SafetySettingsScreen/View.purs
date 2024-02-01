@@ -288,16 +288,16 @@ userSettingsView state push visibility' =
                       , color Color.black700
                       , margin $ MarginRight 8
                       , gravity CENTER
-                      , visibility $ boolToVisibility $ not $ null state.data.contactsList
+                      , visibility $ boolToVisibility $ not $ null state.data.emergencyContactsList
                       ]
                     <> FontStyle.body3 TypoGraphy
                 , linearLayout
                     [ height WRAP_CONTENT
                     , width WRAP_CONTENT
                     ]
-                    (mapWithIndex (\index item -> ContactCircle.view (ContactCircle.getContactConfig item index false) (push <<< ContactAction)) state.data.contactsList)
+                    (mapWithIndex (\index item -> ContactCircle.view (ContactCircle.getContactConfig item index false) (push <<< ContactAction)) state.data.emergencyContactsList)
                 , textView
-                    $ [ text $ getString if null state.data.contactsList then ADD_CONTACTS else EDIT
+                    $ [ text $ getString if null state.data.emergencyContactsList then ADD_CONTACTS else EDIT
                       , color Color.blue900
                       , margin $ MarginLeft 8
                       , gravity CENTER
@@ -313,7 +313,7 @@ userSettingsView state push visibility' =
                 $ [ text $ getString $ WHO_CAN_TRACK_YOUR_RIDE "WHO_CAN_TRACK_YOUR_RIDE"
                   , color Color.black700
                   , margin $ Margin 16 16 16 16
-                  , visibility $ boolToVisibility $ not $ null state.data.contactsList
+                  , visibility $ boolToVisibility $ not $ null state.data.emergencyContactsList
                   ]
                 <> FontStyle.body1 TypoGraphy
             , linearLayout
@@ -333,7 +333,7 @@ userSettingsView state push visibility' =
                           , toggleSwitchViewLayout (ChangeFollowing index) item.enableForFollowing item.name push true 12
                           ]
                     )
-                    state.data.contactsList
+                    state.data.emergencyContactsList
                 )
             ]
         , linearLayout
