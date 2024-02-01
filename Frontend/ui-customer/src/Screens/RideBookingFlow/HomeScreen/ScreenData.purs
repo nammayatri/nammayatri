@@ -363,16 +363,16 @@ dummyPreviousRiderating = {
 dummyDriverInfo :: DriverInfoCard
 dummyDriverInfo =
   { otp : ""
-  , driverName : "Test Driver"
+  , driverName : ""
   , eta : Nothing
   , vehicleDetails : ""
   , currentSearchResultType : ESTIMATES
-  , registrationNumber : "XXXXXXXXXX"
-  , rating : 5.0
+  , registrationNumber : ""
+  , rating : 0.0
   , startedAt : ""
   , endedAt : ""
-  , source : "NA"
-  , destination : "NA"
+  , source : ""
+  , destination : ""
   , rideId : ""
   , price : 0
   , sourceLat : 0.0

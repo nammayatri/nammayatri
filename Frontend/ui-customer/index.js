@@ -211,7 +211,6 @@ window.onResumeListeners = [];
 
 window.onPause = function () {
   console.error("onEvent onPause");
-  // JBridge.pauseAudioPlayer();
 }
 
 window.onResume = function () {

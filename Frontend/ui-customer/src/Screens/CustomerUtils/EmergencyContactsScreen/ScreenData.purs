@@ -8,11 +8,10 @@ import Screens.Types (EmergencyContactsScreenState(..))
 initData :: EmergencyContactsScreenState
 initData = {
     data: {
-      contactInfoState : []
-    , contactsCount : 0
-    , contactsList : []
-    , contactsNewList : []
-    , contactsUpdatedNewList: []
+      emergencyContactsList : []
+    , storedContactsList : []
+    , selectedContacts : []
+    , searchResult: []
     , prestoListArrayItems: []
     , loadMoreDisabled: true
     , offsetForEmergencyContacts : 0

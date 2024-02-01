@@ -14,21 +14,20 @@
 -}
 module Screens.FollowRideScreen.Controller where
 
-import Data.Array
-import Data.Function.Uncurried
-import Data.Int
-import Data.Maybe
-import Effect.Unsafe
-import Engineering.Helpers.Commons
-import Engineering.Helpers.Suggestions
-import JBridge
+import Data.Array (elem, last, length)
+import Data.Function.Uncurried (runFn3)
+import Data.Int (fromString)
+import Data.Maybe (Maybe(..), fromMaybe, isNothing)
+import Effect.Unsafe (unsafePerformEffect)
+import Engineering.Helpers.Commons (getNewIDWithTag, setText, updateIdMap)
+import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
+import JBridge (clearAudioPlayer, getChatMessages, hideKeyboardOnNavigation, scrollToEnd, sendMessage, showDialer, startAudioPlayer, stopChatListenerService)
 import Prelude
-import PrestoDOM
-import Screens.HomeScreen.Transformer
-import Screens.Types
-import Services.API
-import Services.Backend
-import Storage
+import PrestoDOM (BottomSheetState(..), Eval, continue, continueWithCmd, defaultPerformLog, exit, updateAndExit)
+import Screens.HomeScreen.Transformer (getDriverInfo, getSpecialTag)
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState)
+import Services.API (RideBookingRes(..), Route)
+import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Common.Types.App (LazyCheck(..), SosStatus(..))
 import Components.DriverInfoCard as DriverInfoCard
 import Components.GenericHeader as GenericHeader
@@ -39,10 +38,10 @@ import Helpers.Utils (performHapticFeedback)
 import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens.Types as ST
-import SessionCache
-import Screens.FollowRideScreen.ScreenData
+import SessionCache (getSosAlarmStatus, removeSOSAlarmStatus, setSosAlarmStatus, sosAlarmStatus)
+import Screens.FollowRideScreen.ScreenData (dummyFollower, mockFollower)
 import Components.PrimaryButton as PrimaryButton
-import Effect.Uncurried
+import Effect.Uncurried (runEffectFn1)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -96,7 +95,11 @@ eval :: Action -> FollowRideScreenState -> Eval Action ScreenOutput FollowRideSc
 eval action state = case action of
   BackPressed -> do 
     _ <- pure $ clearAudioPlayer ""
-    exit $ Exit state { data { emergencyAudioStatus = COMPLETED } }
+    if state.data.currentStage == MockFollowRide 
+      then void $ pure $ removeSOSAlarmStatus "mock_drill"
+      else pure unit
+    let newState = state { data { emergencyAudioStatus = COMPLETED },props{ startMapAnimation = false} }
+    updateAndExit newState $ Exit newState
   UpdatePeekHeight -> continue state { data { counter = state.data.counter + 1 } }
   UpdateCurrentStage stage -> continue state{data{currentStage = stage}}
   NotificationListener notification -> 
@@ -114,7 +117,6 @@ eval action state = case action of
     if ((fromMaybe NotResolved state.data.sosStatus) == Pending) && (state.data.emergencyAudioStatus /= COMPLETED)
       then startAudioPlayerCmd state { data { emergencyAudioStatus = RESTARTED } }
       else continueWithCmd state [ pure StopAudioPlayer]
-  DismissOverlay -> continue state { props { isOverlayDimissed = true } }
   UpdateRoute route -> continue state { data { route = Just route } }
   CallPolice -> do
     void $ pure $ performHapticFeedback unit
@@ -178,7 +180,7 @@ eval action state = case action of
       allMessages = [] --getChatMessages FunctionCall
     case (last allMessages) of
       Just value ->
-        if value.message == "" then
+        if STR.null value.message then
           continue state { data { messagesSize = show (fromMaybe 0 (fromString state.data.messagesSize) + 1) }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
         else if value.sentBy == "Customer" then
           updateMessagesWithCmd state { data { messages = allMessages, chatSuggestionsList = [], lastMessage = value, lastSentMessage = value }, props { canSendSuggestion = true, isChatNotificationDismissed = false } }
@@ -212,7 +214,7 @@ eval action state = case action of
             pure MessageEmergencyContact
         ]
   MessageEmergencyContact -> do
-    -- if state.data.config.feature.enableChat then do
+    -- if state.data.config.feature.enableChat then do -- Need this when we enable chat
     --   if not state.props.chatCallbackInitiated then continue state else do
     --     _ <- pure $ performHapticFeedback unit
     --     _ <- pure $ setValueToLocalStore READ_MESSAGES (show (length state.data.messages))
@@ -318,7 +320,8 @@ startAudioPlayerCmd state = do
         ]
 canStartAudioPlayer :: FollowRideScreenState -> Boolean
 canStartAudioPlayer state = 
-  let currentFollower = fromMaybe dummyFollower state.data.currentFollower
+  let defaultFollower = if state.data.currentStage == MockFollowRide then mockFollower else dummyFollower
+      currentFollower = fromMaybe defaultFollower state.data.currentFollower
       status = state.data.emergencyAudioStatus
   in (status == STOPPED && checkCurrentFollower currentFollower) || (status == RESTARTED)
 

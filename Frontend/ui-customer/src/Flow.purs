@@ -930,7 +930,7 @@ homeScreenFlow = do
                                       currentFlowStatus
             "SOS_MOCK_DRILL"         -> do
                                       modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen{ data{ currentStage = MockFollowRide }})
-                                      followRideScreenFlow
+                                      followRideScreenFlow false 
             _                     -> homeScreenFlow
 
     LOGOUT -> do
@@ -1323,12 +1323,11 @@ homeScreenFlow = do
       let contacts = map (\(ContactDetails item) -> {
           number: item.mobileNumber,
           name: item.name,
-          isSelected: true
+          isSelected: true,
+          priority :fromMaybe 1 item.priority,
+          enableForFollowing : fromMaybe false item.enableForFollowing
         }) res.defaultEmergencyNumbers
-      contactsInString <- pure $ toStringJSON contacts
-      setValueToLocalStore CONTACTS (contactsInString)
-      contactsInJson <- pure $ parseNewContacts contactsInString
-      let newContacts = transformContactList contactsInJson
+      let newContacts = transformContactList contacts
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{props{emergencyHelpModelState{emergencyContactData = newContacts}}})
       homeScreenFlow
     SAVE_FAVOURITE state -> do
@@ -1439,11 +1438,9 @@ homeScreenFlow = do
           number: item.mobileNumber,
           name: item.name,
           isSelected: true,
-          enableForFollowing: false,
+          enableForFollowing: fromMaybe false item.enableForFollowing,
           priority: fromMaybe 1 item.priority
         }) res.defaultEmergencyNumbers
-      contactsInString <- pure $ toStringJSON contacts
-      setValueToLocalStore CONTACTS (contactsInString)
       modifyScreenState $ HomeScreenStateType (\homeScreen -> state{data{contactList = contacts}, props{showShareRide = true}})
       homeScreenFlow
     GO_TO_NOTIFY_RIDE_SHARE state -> do
@@ -1460,16 +1457,18 @@ homeScreenFlow = do
       setValueToLocalStore TRACKING_DRIVER "False"
       setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
       modifyScreenState $ FollowRideScreenStateType (\followRideScreen -> followRideScreen{data{followers = followers, currentFollower = if noOfFollowers == 1 then Arr.head followers else followRideScreen.data.currentFollower, currentStage = if noOfFollowers > 1 then PersonList else FollowingRide}, props {city = allState.homeScreen.props.city}})
-      followRideScreenFlow
+      followRideScreenFlow false
     _ -> homeScreenFlow
 
-followRideScreenFlow :: FlowBT String Unit
-followRideScreenFlow = do
+followRideScreenFlow :: Boolean -> FlowBT String Unit
+followRideScreenFlow callInitUI = do
+  hideLoaderFlow
+  when callInitUI $ lift $ lift $ initUI
   flow <- UI.followRideScreen
   case flow of
     RESTART_TRACKING -> do
       void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
-      followRideScreenFlow
+      followRideScreenFlow false
     GO_TO_HS_FROM_FOLLOW_RIDE -> do
       void $ liftFlowBT $ runEffectFn1 EHC.updateIdMap "FollowsRide"
       void $ liftFlowBT $ runEffectFn1 clearMap ""
@@ -1478,15 +1477,15 @@ followRideScreenFlow = do
       currentFlowStatus
     OPEN_GOOGLE_MAPS_FOLLOW_RIDE state -> do
       case state.data.driverInfoCardState of
-        Nothing -> followRideScreenFlow
+        Nothing -> followRideScreenFlow false
         Just ride -> do
           (GetDriverLocationResp resp) <- Remote.getDriverLocationBT ride.rideId
           let sourceLat = (resp^._lat)
               sourceLng = (resp^._lon)
               destLat =  ride.destinationLat
               destLng =  ride.destinationLng
-          liftFlowBT $ openNavigation 0.0 0.0 sourceLat sourceLng "DRIVE"
-          followRideScreenFlow
+          void $ pure $ openNavigation 0.0 0.0 sourceLat sourceLng "DRIVE"
+          followRideScreenFlow false
 
 
 getDistanceDiff :: HomeScreenState -> Number -> Number -> FlowBT String Unit
@@ -1964,14 +1963,14 @@ emergencyScreenFlow = do
   case flow of
     GO_TO_HOME_FROM_EMERGENCY_CONTACTS state -> homeScreenFlow --nammaSafetyFlow
     POST_CONTACTS state shouldGoToSafetyScreen -> do
-      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.contactsList)
+      _ <- Remote.emergencyContactsBT $ Remote.postContactsReq state.data.selectedContacts
       when (not shouldGoToSafetyScreen)
         $ if state.props.showInfoPopUp then
             pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
           else
             pure $ toast $ getString STR.EMERGENCY_CONTACS_ADDED_SUCCESSFULLY
-      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactsScreen -> state { props { showInfoPopUp = false } })
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { contactsList = state.data.contactsList }, props{setupStage = ST.SetDefaultEmergencyContacts} })
+      modifyScreenState $ EmergencyContactsScreenStateType (\_ -> state { data{emergencyContactsList = state.data.selectedContacts}, props { showInfoPopUp = false} })
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.selectedContacts }, props{setupStage = ST.SetDefaultEmergencyContacts} })
       (GlobalState globalState) <- getState
       case globalState.nammaSafetyScreen.data.hasCompletedSafetySetup, shouldGoToSafetyScreen, state.props.fromSosFlow of 
         _, _, true -> activateSafetyScreenFlow
@@ -1985,12 +1984,10 @@ emergencyScreenFlow = do
           number: item.mobileNumber,
           name: item.name,
           isSelected: true,
-          enableForFollowing: false,
+          enableForFollowing: fromMaybe false item.enableForFollowing,
           priority: fromMaybe 1 item.priority
         }) res.defaultEmergencyNumbers
-      contactsInString <- pure $ toStringJSON contacts
-      setValueToLocalStore CONTACTS (contactsInString)
-      modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state{data{contactsList = contacts}})
+      modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state{data{emergencyContactsList = contacts}})
       emergencyScreenFlow
     REFRESH_EMERGECY_CONTACTS_SCREEN state -> do
       modifyScreenState $  EmergencyContactsScreenStateType (\emergencyContactsScreen -> state)
@@ -3437,7 +3434,7 @@ activateSafetyScreenFlow = do
   case flow of
     ActivateSafetyScreen.GoBack state -> homeScreenFlow
     ActivateSafetyScreen.GoToEmergencyContactScreen state -> do
-      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = true}})
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = true}, data {emergencyContactsList = state.data.emergencyContactsList}})
       emergencyScreenFlow
     ActivateSafetyScreen.CreateSos state isPoliceFlow -> do
       (GlobalState currentState) <- getState
@@ -3483,14 +3480,14 @@ safetySettingsFlow = do
       updateEmergencySettings state
       safetySettingsFlow
     SafetySettingsScreen.GoToEmergencyContactScreen updatedState -> do
-      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = false}})
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = false}, data{emergencyContactsList = updatedState.data.emergencyContactsList}})
       emergencyScreenFlow
     SafetySettingsScreen.GoToEducationScreen updatedState -> safetyEducationFlow
     SafetySettingsScreen.GoToSetupScreen updatedState -> setupSafetySettingsFlow
     SafetySettingsScreen.GoToActivateSosScreen state -> activateSafetyScreenFlow
     SafetySettingsScreen.PostContacts state -> do
-      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.contactsList)
-      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { contactsList = state.data.contactsList } })
+      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.emergencyContactsList)
+      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen { data { emergencyContactsList = state.data.emergencyContactsList } })
       safetySettingsFlow
 
 
@@ -3500,7 +3497,7 @@ setupSafetySettingsFlow = do
   case flow of 
     SetupSafetySettingsScreen.GoBack state -> safetySettingsFlow
     SetupSafetySettingsScreen.PostContacts state  -> do
-      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.contactsList)
+      _ <- Remote.emergencyContactsBT (Remote.postContactsReq $ getDefaultPriorityList state.data.emergencyContactsList)
       if state.props.showInfoPopUp 
         then pure $ toast $ getString STR.CONTACT_REMOVED_SUCCESSFULLY
         else pure $ toast $ getString STR.EMERGENCY_CONTACS_ADDED_SUCCESSFULLY
@@ -3512,7 +3509,7 @@ setupSafetySettingsFlow = do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{showSosBanner = false}, data{settingSideBar {hasCompletedSafetySetup = true}}})
         safetySettingsFlow
     SetupSafetySettingsScreen.GoToEmergencyContactScreen state  -> do
-      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = false}})
+      modifyScreenState $ EmergencyContactsScreenStateType (\emergencyContactScreen -> emergencyContactScreen{props{fromSosFlow = false},data {emergencyContactsList = state.data.emergencyContactsList}})
       emergencyScreenFlow
 
 sosActiveFlow :: FlowBT String Unit

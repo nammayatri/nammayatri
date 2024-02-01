@@ -901,7 +901,7 @@ sosView push state =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER
-    , visibility $ boolToVisibility $ (any (_ == state.props.currentStage)) [ RideAccepted, RideStarted, ChatWithDriver ]
+    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [RideAccepted, RideStarted, ChatWithDriver]
     ]
     [ textView
         $ [ text $ getString NEW <> "✨"
@@ -1374,8 +1374,9 @@ rideRequestFlowView push state =
       isCityInList :: City -> Array City -> Boolean
       isCityInList city = any (_ == city)
 
-      isStageInList :: Stage -> Array Stage -> Boolean
-      isStageInList stage = any (_ == stage)
+
+isStageInList :: Stage -> Array Stage -> Boolean
+isStageInList stage = any (_ == stage)
 
 
 -------------- rideRatingCardView -------------
@@ -1406,13 +1407,16 @@ commonTextView state push text' color' fontStyle marginTop =
 ----------- topLeftIconView -------------
 topLeftIconView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 topLeftIconView state push =
+  let image = if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then fetchImage FF_COMMON_ASSET "ny_ic_chevron_left" else if state.data.config.dashboard.enable && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ic_menu_notify" else fetchImage FF_ASSET "ny_ic_hamburger"
+      onClickAction = if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
+      isBackPress = (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) 
+  in 
   linearLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
     , visibility $ boolToVisibility  state.data.config.showHamMenu
     , margin $ MarginTop safeMarginTop
-    , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
     ]
     $ []
     <> ( case state.data.followers of
@@ -1423,7 +1427,7 @@ topLeftIconView state push =
             [ width MATCH_PARENT
             , height WRAP_CONTENT
             , orientation HORIZONTAL
-            , visibility if state.data.config.showHamMenu then VISIBLE else GONE
+            , visibility $ boolToVisibility  state.data.config.showHamMenu
             , margin $ Margin 16 20 0 0
             , accessibility if state.data.settingSideBar.opened /= SettingSideBar.CLOSED || state.props.currentStage == ChatWithDriver || state.props.isCancelRide || state.props.isLocationTracking || state.props.callSupportPopUp || state.props.cancelSearchCallDriver || state.props.showCallPopUp || state.props.emergencyHelpModal || state.props.showRateCard || state.data.waitTimeInfo then DISABLE_DESCENDANT else DISABLE
             ]
@@ -1436,17 +1440,17 @@ topLeftIconView state push =
                 , cornerRadius 24.0
                 , visibility $ boolToVisibility $ not (any (_ == state.props.currentStage) [ FindingEstimate, ConfirmingRide, FindingQuotes, TryAgain, RideCompleted, RideRating, ReAllocated ])
                 , clickable true
-                , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
-                , accessibilityHint if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then "Back : Button" else "Menu : Button"
+                , onClick push $ if isBackPress then const BackPressed else const OpenSettings
+                , accessibilityHint if isBackPress then "Back : Button" else "Menu : Button"
                 , accessibility ENABLE
                 , rippleColor Color.rippleShade
                 ]
                 [ imageView
-                    [ imageWithFallback if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then fetchImage FF_COMMON_ASSET "ny_ic_chevron_left" else if state.data.config.dashboard.enable && (checkVersion "LazyCheck") then fetchImage FF_ASSET "ic_menu_notify" else fetchImage FF_ASSET "ny_ic_hamburger"
+                    [ imageWithFallback image
                     , height $ V 25
                     , accessibility DISABLE
                     , clickable true
-                    , onClick push $ if (any (_ == state.props.currentStage) [ SettingPrice, ConfirmingLocation, PricingTutorial, DistanceOutsideLimits ]) then const BackPressed else const OpenSettings
+                    , onClick push $ onClickAction
                     , width $ V 25
                     ]
                 ]

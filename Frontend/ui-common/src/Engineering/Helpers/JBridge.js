@@ -1184,6 +1184,9 @@ export const openNavigation = function (slat) {
               const packageName = platformConfig.packageName;
               return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
             }
+          } else {
+            // deprecated 
+            return window.JBridge.openNavigation(slat, slong, dlat, dlong);
           }
         };
       };

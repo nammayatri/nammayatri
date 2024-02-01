@@ -202,7 +202,7 @@ settingUpContentView config state push =
                 , visibility $ boolToVisibility $ state.props.setupStage == SetDefaultEmergencyContacts
                 , orientation VERTICAL
                 ]
-                [ ContactsList.view (push <<< ContactListAction) state.data.contactsList
+                [ ContactsList.view (push <<< ContactListAction) state.data.emergencyContactsList
                 ]
             ]
         ]
@@ -251,13 +251,13 @@ settingUpContentViewData state = case state.props.setupStage of
     { title: getString SHARE_INFO_WITH_EMERGENCY_CONTACTS_TITLE
     , desc:
         getString
-          if null state.data.contactsList then
+          if null state.data.emergencyContactsList then
             CHOOSE_RESPONSIVE_CONTACTS
           else
             SHARE_INFO_WITH_EMERGENCY_CONTACTS_DESC
     , image: "ny_ic_share"
     , step: 0
-    , isActive: state.data.shareToEmergencyContacts && length state.data.contactsList /= 0
+    , isActive: state.data.shareToEmergencyContacts && length state.data.emergencyContactsList /= 0
     }
   SetNightTimeSafetyAlert ->
     { title: getString ENABLE_NIGHT_TIME_SAFETY_ALERTS_TITLE

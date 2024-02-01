@@ -71,7 +71,10 @@ toggleLoader =
     _ <- liftFlow $ launchAff $ flowRunner state UI.loaderScreen
     pure unit
   else do
-    doAff $ liftEffect $ terminateUI $ Just "LoaderOverlay"
+    doAff $ liftEffect $ terminateLoader ""
+
+terminateLoader :: String -> Effect Unit
+terminateLoader _ = terminateUI $ Just "LoaderOverlay"
 
 loaderText :: String -> String -> Flow GlobalState Unit
 loaderText mainTxt subTxt = void $ modifyState (\(GlobalState state) -> GlobalState state { loaderOverlay { data { title = mainTxt, subTitle = subTxt } } })
