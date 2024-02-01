@@ -55,9 +55,7 @@ mkFulfillment ::
   Bool ->
   m RideFulfillment.FulfillmentInfo
 mkFulfillment mbDriver ride booking mbVehicle mbImage tags personTags isDriverBirthDay isFreeRide = do
-  let rideOtp = case ride.status of
-        DRide.INPROGRESS -> fromMaybe ride.otp ride.endOtp
-        _ -> ride.otp
+  let rideOtp = fromMaybe ride.otp ride.endOtp
   agent <-
     forM mbDriver $ \driver -> do
       let agentTags =
