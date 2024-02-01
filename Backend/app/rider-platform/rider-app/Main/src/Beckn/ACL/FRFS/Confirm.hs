@@ -83,7 +83,7 @@ tfBilling (mRiderName, mRiderNumber) =
   Just $
     Spec.Billing
       { billingEmail = Nothing,
-        billingName = mRiderName,
+        billingName = Just (fromMaybe "NY User" mRiderName),
         billingPhone = mRiderNumber
       }
 
