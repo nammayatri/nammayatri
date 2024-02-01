@@ -118,7 +118,7 @@ eval (ChooseVehicleAC (ChooseVehicleController.ShowRateCard _)) state =
   continue state { props { showRateCard = true }}
 
 eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
-  if DA.all (_ /= "SELECTED") [dateResp, timeResp] then continue state 
+  if DA.any (_ /= "SELECTED") [dateResp, timeResp] then continue state 
   else
     let selectedDateString = (show year) <> "-" <> (if (month + 1 < 10) then "0" else "") <> (show (month+1)) <> "-" <> (if day < 10 then "0"  else "") <> (show day)
         validDate = (unsafePerformEffect $ runEffectFn2 compareDate (getDateAfterNDaysv2 (state.props.maxDateBooking)) selectedDateString)
@@ -138,7 +138,12 @@ eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFoc
   case state.data.currentStage of
     RENTAL_SELECT_PACKAGE -> exit $ SearchLocationForRentals state id
     RENTAL_SELECT_VARIANT -> 
-      if (id == "DateAndTime") then openDateTimePicker state
+      if (id == "DateAndTime") then continueWithCmd state{data{currentStage = RENTAL_SELECT_PACKAGE}} 
+        [ do 
+          push <- getPushFn Nothing "RentalScreen"
+          _ <- launchAff $ showDateTimePicker push DateTimePickerAction
+          pure NoAction
+        ]
       else genericBackPressed state
     _ -> continue state
 

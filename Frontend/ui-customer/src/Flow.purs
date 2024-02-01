@@ -1314,7 +1314,6 @@ homeScreenFlow = do
       placeListFlow
     GO_TO_HELP_AND_SUPPORT -> helpAndSupportScreenFlow
     GO_TO_RENTALS_FLOW state -> do 
-      let _ = spy "Inside go to rentals from homeScreen" state
       modifyScreenState $ RentalScreenStateType (\_ -> RentalScreenData.initData{data{pickUpLoc {address = (getString STR.CURRENT_LOCATION), city = Just state.props.city , lat = Just state.props.currentLocation.lat , lon = Just state.props.currentLocation.lng, placeId = Nothing}}})
       rentalScreenFlow
     GO_TO_SCHEDULED_RIDES -> rideScheduledFlow
