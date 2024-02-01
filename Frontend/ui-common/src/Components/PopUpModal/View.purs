@@ -36,7 +36,7 @@ import Control.Monad.Trans.Class (lift)
 import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer)
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn5)
 import PrestoDOM.Animation as PrestoAnim
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Timers
@@ -155,8 +155,8 @@ view push state =
                                 url = state.coverVideoConfig.mediaUrl
                             if (supportsInbuildYoutubePlayer unit) then 
                                 case mediaType of
-                                    "VideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
-                                    "PortraitVideoLink" -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0) id (show PLAY)
+                                    "VideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 false true false) id (show PLAY) push YoutubeVideoStatus
+                                    "PortraitVideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0 false true false) id (show PLAY) push YoutubeVideoStatus
                                     _ -> pure unit
                                 else pure unit
                         )(const NoAction)

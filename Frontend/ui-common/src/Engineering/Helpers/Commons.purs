@@ -281,16 +281,18 @@ getMapsLanguageFormat key =
     "TE_IN" -> "TELUGU"
     _       -> "ENGLISH"
 
-getYoutubeData :: String -> String -> Int -> YoutubeData
-getYoutubeData videoId videoType videoHeight = {
+getYoutubeData :: String -> String -> Int -> Boolean -> Boolean -> Boolean -> YoutubeData
+getYoutubeData videoId videoType videoHeight showFullScreen showSeekBar hideFullScreenButton = {
   videoTitle : "title",
   setVideoTitle : false,
   showMenuButton : false,
   showDuration : true,
-  showSeekBar : true,
+  showSeekBar : showSeekBar,
   videoId : videoId,
   videoType : videoType,
-  videoHeight : videoHeight
+  videoHeight : videoHeight,
+  showFullScreen : showFullScreen,
+  hideFullScreenButton : hideFullScreenButton
 }
 
 isInvalidUrl :: String -> Boolean

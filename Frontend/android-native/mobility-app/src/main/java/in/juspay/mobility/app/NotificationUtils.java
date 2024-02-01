@@ -88,6 +88,7 @@ public class NotificationUtils {
     public static String DRIVER_REACHED = "DRIVER_REACHED";
     public static String RIDE_STARTED = "RIDE_STARTED";
     public static String NO_VARIANT = "NO_VARIANT";
+    public static String SAFETY_ALERT = "SAFETY_ALERT";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();
@@ -318,6 +319,10 @@ public class NotificationUtils {
         System.out.println("imageUrl" + imageUrl);
         System.out.println("smallIcon" + smallIcon);
         intent.putExtra("NOTIFICATION_DATA", data.toString());
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("title",title)
+                  .put("msg",msg);
+        intent.putExtra("fullNotificationBody",jsonObject.toString());
         //            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         intent.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, notificationId, intent, PendingIntent.FLAG_IMMUTABLE);
@@ -329,7 +334,7 @@ public class NotificationUtils {
         System.out.println("showNotification:- " + notificationType);
         if (TRIP_STARTED.equals(notificationType)) {
             channelId = RIDE_STARTED;
-        } else if (CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType)) {
+        } else if (CANCELLED_PRODUCT.equals(notificationType) || DRIVER_HAS_REACHED.equals(notificationType) || notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED) || notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED)) {
             channelId = notificationType;
         } else if (TRIP_FINISHED.equals(notificationType) && disabilityName.equals("BLIND_LOW_VISION")){
             channelId = TRIP_FINISHED;
@@ -337,7 +342,6 @@ public class NotificationUtils {
         else {
             channelId = FLOATING_NOTIFICATION;
         }
-
         NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(context, channelId);
         if (imageUrl != null) {
             mBuilder.setLargeIcon(bitmap)
@@ -371,16 +375,18 @@ public class NotificationUtils {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.allocation_request);
             } else if (notificationType.equals(TRIP_STARTED)) {
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_started);
-                mBuilder.setSound(notificationSound);
             } else if (notificationType.equals(CANCELLED_PRODUCT) || notificationType.equals(REALLOCATE_PRODUCT)){
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.cancel_notification_sound);
-                mBuilder.setSound(notificationSound);
              } else if (notificationType.equals(TRIP_FINISHED) && disabilityName.equals("BLIND_LOW_VISION")){
                 notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_completed_talkback);
-                mBuilder.setSound(notificationSound);
-            }else {
+            } else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED)){
+                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ny_ic_sos_danger);
+            } else if (notificationType.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED)){
+                notificationSound = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ny_ic_sos_safe);
+            } else {
                 notificationSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
             }
+            mBuilder.setSound(notificationSound);
             System.out.println("Default sound" + notificationSound);
        }
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
@@ -451,20 +457,16 @@ public class NotificationUtils {
             startMediaPlayer(context, audio, !key.equals("USER"));
         }
         notificationId++;
-        if (DRIVER_ASSIGNMENT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || DRIVER_REACHED.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType)) {
-            for (int i = 0; i < callBack.size(); i++) {
-                callBack.get(i).driverCallBack(notificationType);
-            }
-        }
-        if ((TRIP_FINISHED.equals(notificationType) || DRIVER_ASSIGNMENT.equals(notificationType) || REALLOCATE_PRODUCT.equals(notificationType) || CANCELLED_PRODUCT.equals(notificationType) || TRIP_STARTED.equals(notificationType)) && (key.equals("USER"))) {
-            for (int i = 0; i < callBack.size(); i++) {
-                callBack.get(i).customerCallBack(notificationType);
-            }
-        }
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             Log.e(LOG_TAG, "no notification permission");
         } else {
             notificationManager.notify(notificationId, mBuilder.build());
+        }
+    }
+
+    public static void triggerUICallbacks (String notificationType) {
+        for (int i = 0; i < callBack.size(); i++) {
+            callBack.get(i).customerCallBack(notificationType);
         }
     }
 
@@ -507,6 +509,10 @@ public class NotificationUtils {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.driver_arrived);
                 } else if (channel_Id.equals(TRIP_FINISHED)) {
                     soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ride_completed_talkback);
+                }  else if (channel_Id.equals(MyFirebaseMessagingService.NotificationTypes.SOS_TRIGGERED)){
+                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ny_ic_sos_danger);
+                } else if (channel_Id.equals(MyFirebaseMessagingService.NotificationTypes.SOS_RESOLVED)){
+                    soundUri = Uri.parse("android.resource://" + context.getPackageName() + "/" + R.raw.ny_ic_sos_safe);
                 } else {
                     soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
                 }

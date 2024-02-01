@@ -122,6 +122,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OptionWithHtmlClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "options_with_html"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "youtube_video_status"
     ValidateDocumentModalAction act -> case act of
       ValidateDocumentModal.BackPressed  -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "validate_document_modal" "backpressed"
       ValidateDocumentModal.AfterRender ->  trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "validate_document_modal" "afterrender"
@@ -135,6 +136,7 @@ instance loggableAction :: Loggable Action where
       PopUpModal.OnSecondaryTextClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "secondary_text"
       PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "image"
       PopUpModal.OptionWithHtmlClick -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "options_with_html"      
+      PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "youtube_video_status"
       PopUpModal.ETextController act -> trackAppTextInput appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "primary_edit_text"
       PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "popup_modal_action" "countdown_updated"
     RenderProfileImage image id -> trackAppActionClick appId (getScreen ADD_VEHICLE_DETAILS_SCREEN) "renderImage" "afterrender"

@@ -4,12 +4,18 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:id="@+id/map_xml">
-    <LinearLayout android:id="@+id/zone_image_and_text"
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:padding="8dp"
+        android:id="@+id/main_label_layout"
         android:background="@drawable/ic_grey_border">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/zone_image_and_text"
+            android:orientation="horizontal">
         <ImageView
             android:layout_width="25dp"
             android:layout_height="25dp"
@@ -29,6 +35,18 @@
             android:textFontWeight="400"
             android:gravity="center"
             android:id="@+id/marker_text"/>
+    </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <ImageView
+                android:layout_width="68dp"
+                android:layout_height="15dp"
+                android:id="@+id/marker_action_image"
+                android:src="@drawable/ny_ic_navigate"
+                android:visibility="gone"/>
+        </LinearLayout>
     </LinearLayout>
     <LinearLayout android:id="@+id/ll_marker_right"
         android:layout_width="match_parent"

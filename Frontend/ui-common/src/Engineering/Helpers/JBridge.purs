@@ -22,7 +22,7 @@ import Effect (Effect)
 import Presto.Core.Flow (Flow)
 import Engineering.Helpers.Commons (liftFlow)
 import Data.Maybe (Maybe(..))
-import Common.Types.App (EventPayload(..),ChatComponent(..), LazyCheck(..), DateObj, LayoutBound, ClevertapEventParams, ShareImageConfig, YoutubeData, CarouselModal, PolylineAnimationConfig, DisplayBase64ImageConig)
+import Common.Types.App
 -- import Types.APIv2 (Address)
 import Foreign (Foreign)
 import Control.Monad.Except (runExcept)
@@ -41,14 +41,14 @@ import Data.Maybe (Maybe(..))
 -- import Effect.Class (liftEffect)
 -- import PrestoDOM.Core(terminateUI)
 import Presto.Core.Types.Language.Flow
-import Engineering.Helpers.Commons (screenHeight, screenWidth, os)
+import Engineering.Helpers.Commons (screenHeight, screenWidth, os, callbackMapper)
 import Data.Int (toNumber)
 import Data.Function.Uncurried (Fn2(..))
 import Presto.Core.Flow (doAff)
 import Effect.Aff.Compat (EffectFnAff, fromEffectFnAff)
 import Foreign.Generic (encodeJSON)
 import Data.Either (Either(..), hush)
-import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2)
+import Data.Function.Uncurried (Fn3, runFn3, Fn1,Fn4, runFn2,Fn5)
 import Foreign.Class (encode)
 import Effect.Aff (makeAff, nonCanceler, Fiber,  launchAff)
 import Prelude((<<<))
@@ -172,7 +172,7 @@ foreign import getAAID :: String -> String
 foreign import removeAllPolylinesAndMarkers :: Fn2 (Array String) Unit Unit
 -- foreign import removeAllPolylines :: String -> Unit
 foreign import currentPosition  :: String -> Unit
-foreign import openNavigation  :: Number -> Number -> Number -> Number -> String -> Effect Unit
+foreign import openNavigation  :: Number -> Number -> Number -> Number -> String -> Unit
 foreign import stopLocationPollingAPI :: Effect Unit
 foreign import startLocationPollingAPI :: Effect Unit
 foreign import startChatListenerService :: Effect Unit
@@ -185,7 +185,7 @@ foreign import storeCallBackOpenChatScreen :: forall action. (action -> Effect U
 foreign import sendMessage :: String -> Unit
 foreign import getSuggestionsfromLocal :: String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String
-foreign import setYoutubePlayer :: Fn3 YoutubeData String String Unit
+foreign import setYoutubePlayer :: forall action. Fn5 YoutubeData String String (action -> Effect Unit) (String -> action) Unit
 foreign import addCarouselImpl :: EffectFn2 CarouselModal String Unit
 foreign import scrollToEnd :: String -> Boolean -> Effect Unit
 foreign import metaLogEvent :: String -> Unit

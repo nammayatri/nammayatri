@@ -28,11 +28,12 @@ import Components.PrimaryEditText as PrimaryEditText
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array ((!!), union, length, unionBy, any, filter) as Array
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn5)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Data.String (Pattern(..), split, length, take, drop, joinWith, trim)
 import Data.String.CodeUnits (charAt)
+import PrestoDOM.Core (getPushFn)
 import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
@@ -86,6 +87,7 @@ data Action
   | NoAction
   | LoadMore
   | BottomNavBarAction BottomNavBar.Action
+  | YoutubeVideoStatus String
 
 eval :: Action -> NotificationsScreenState -> Eval Action ScreenOutput NotificationsScreenState
 eval Refresh state = exit $ RefreshScreen state
@@ -94,7 +96,8 @@ eval BackPressed state = do
   if state.notifsDetailModelVisibility == VISIBLE && state.notificationDetailModelState.addCommentModelVisibility == GONE then
     continueWithCmd state { notifsDetailModelVisibility = GONE }
       [ do
-          _ <- pure $ runFn3 setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") $ show PAUSE
+          push <- getPushFn Nothing "NotificationDetailModel"
+          _ <- pure $ runFn5 setYoutubePlayer youtubeData (getNewIDWithTag "youtubeView") (show PAUSE) push YoutubeVideoStatus
           void $ runEffectFn1 removeMediaPlayer ""
           _ <- pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
           pure NoAction
@@ -389,6 +392,8 @@ youtubeData =
   , videoId: ""
   , videoType: ""
   , videoHeight : 0
+  , showFullScreen : false
+  , hideFullScreenButton : false
   }
 
 splitUrlsAndText :: String -> Array String

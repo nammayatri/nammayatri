@@ -1174,12 +1174,14 @@ export const openNavigation = function (slat) {
       return function (dlong) {
         return function (mode) {
           if (window.appConfig && window.appConfig.navigationAppConfig && window.JBridge.openNavigationWithQuery) {
-            if (window.__OS == "IOS") {
-              const query = mode == "WALK" ? window.appConfig.navigationAppConfig.ios.walkQuery : window.appConfig.navigationAppConfig.ios.query;
+            const config = window.appConfig.navigationAppConfig;
+            const isIOS = window.__OS === "IOS";
+            const platformConfig = isIOS ? config.ios : config.android;
+            const query = mode == "WALK" ? platformConfig.walkQuery : platformConfig.query;
+            if (isIOS) {
               return window.JBridge.openNavigationWithQuery(dlat, dlong, query);
             } else {
-              const query = mode == "WALK" ? window.appConfig.navigationAppConfig.android.walkQuery : window.appConfig.navigationAppConfig.android.query;
-              const packageName = window.appConfig.navigationAppConfig.android.packageName;
+              const packageName = platformConfig.packageName;
               return window.JBridge.openNavigationWithQuery(dlat, dlong, query, packageName);
             }
           } else {
@@ -2206,12 +2208,16 @@ export const scrollViewFocus = function (parentID) {
   }
 }
 
-export const setYoutubePlayer = function (json, viewId, videoStatus) {
+export const setYoutubePlayer = function (json, viewId, videoStatus, cb, action) {
   if (JBridge.setYoutubePlayer) {
     try {
+      const callback = callbackMapper.map(function (id) {
+        cb(action(id))();
+      });
       console.log("Inside setYoutubePlayer ------------");
-      return JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus);
+      JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus, callback);
     } catch (err) {
+      JBridge.setYoutubePlayer(JSON.stringify(json), viewId, videoStatus);
       console.log("error in setYoutubePlayer");
     }
   }

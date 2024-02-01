@@ -209,7 +209,15 @@ ext {
     jpSDKversion = '2.1.20-nammayatri.13'
 }
 
+def cameraxVersion = "1.1.0-alpha05"
+
 dependencies {
+    implementation 'androidx.camera:camera-view:1.0.0-alpha25'
+    implementation 'androidx.appcompat:appcompat:1.4.1'
+    implementation 'com.google.android.material:material:1.6.0'
+    implementation "androidx.camera:camera-core:${cameraxVersion}"
+    implementation "androidx.camera:camera-camera2:${cameraxVersion}"
+    implementation "androidx.camera:camera-lifecycle:${cameraxVersion}"
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     implementation "in.juspay:hypersdk:$jpSDKversion"
     implementation "in.juspay:hyperqr:$jpSDKversion"

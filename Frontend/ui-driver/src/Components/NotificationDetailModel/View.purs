@@ -43,7 +43,7 @@ import Services.API (MediaType(..))
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Styles.Types (FontStyle)
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn5)
 
 view :: forall w. (Action -> Effect Unit) -> NotificationDetailModelState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -106,8 +106,8 @@ view push state =
 
                                             url = state.mediaUrl
                                           case mediaType of
-                                            VideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 ) id (show PLAY)
-                                            PortraitVideoLink -> pure $ runFn3 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0 ) id (show PLAY)
+                                            VideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 false true false) id (show PLAY) push YoutubeVideoStatus
+                                            PortraitVideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0 false true false) id (show PLAY) push YoutubeVideoStatus
                                             Image -> renderBase64Image state.mediaUrl (getNewIDWithTag "illustrationView") true "FIT_CENTER"
                                             Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
                                             AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
