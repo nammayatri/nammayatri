@@ -45,7 +45,7 @@ type InputView =
   , id :: String 
   , placeHolder :: String 
   , canClearText :: Boolean 
-  , isEditable :: Boolean 
+  , isEditable :: Boolean  
   , isClickable :: Boolean
   , prefixImage :: ImageConfig
   , stroke :: String

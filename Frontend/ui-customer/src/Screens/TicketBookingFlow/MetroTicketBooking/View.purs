@@ -61,8 +61,8 @@ screen initialState =
   }
   where
     getQuotes push = do
-      let withinTimeRange = JB.withinTimeRange "04:30:00" "22:30:00" $ EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
-      push $ ShowMetroBookingTimeError withinTimeRange
+      -- let withinTimeRange = JB.withinTimeRange "04:30:00" "22:30:00" $ EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
+      -- push $ ShowMetroBookingTimeError withinTimeRange
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ getQuotesPolling initialState.data.searchId 5 3000.0 initialState push GetMetroQuotesAction
       pure $ pure unit
 
@@ -278,7 +278,7 @@ headerView state push =
 
 incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 incrementDecrementView push state =
-  let ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then 1 else 6
+  let ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then 6 else 6
       limitReached = (state.data.ticketType == ST.ROUND_TRIP && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY && state.data.ticketCount >= ticketLimit)
   in 
   linearLayout
