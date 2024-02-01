@@ -16,6 +16,16 @@ This tutorial provides a comprehensive guide to understanding and working with t
     ```
     This command generates Haskell Beam, query, and domain files in the `src-read-only` directory, as well as the SQL queries.
 
+    **Important Note**:
+     This command will only generate those spec files which are new or changed. This is done by getting the current hash of the spec file and comparing with the   file hash of the HEAD commit
+
+     ```
+     , run-generator --all
+     ```
+     use "--all" args to generate all the spec files
+
+
+
 3. **Compilation**: Compile the code using:
     ```
     cabal build all

@@ -5,6 +5,7 @@ import qualified Data.Yaml as Yaml
 import Kernel.Prelude
 import qualified NammaDSL.App as NammaDSL
 import System.Directory
+import System.Environment (getArgs)
 import System.FilePath
 
 findGitRoot :: FilePath -> IO (Maybe FilePath)
@@ -66,12 +67,13 @@ getFilePathsForConfiguredApps rootDir = do
 main :: IO ()
 main = do
   putStrLn ("Version " ++ NammaDSL.version)
+  generateAllSpecs <- ("--all" `elem`) <$> getArgs
   currentDir <- getCurrentDirectory
   maybeGitRoot <- findGitRoot currentDir
   let rootDir = fromMaybe (error "Could not find git root") maybeGitRoot
 
-  processApp riderAppDatabaseName rootDir riderAppPath rideAppName
-  processApp driverAppDatabaseName rootDir driverAppPath driverAppName
+  processApp generateAllSpecs riderAppDatabaseName rootDir riderAppPath rideAppName
+  processApp generateAllSpecs driverAppDatabaseName rootDir driverAppPath driverAppName
   paths <- getFilePathsForConfiguredApps rootDir
   mapM_
     ( \libPaths ->
@@ -81,32 +83,38 @@ main = do
                     case lib of
                       DriverApp -> (driverAppDatabaseName, driverAppName)
                       RiderApp -> (riderAppDatabaseName, riderAppDatabaseName)
-              processApp databaseName rootDir libPaths.libPath appName
+              processApp generateAllSpecs databaseName rootDir libPaths.libPath appName
           )
           libPaths.usedIn
     )
     paths
   where
-    processApp :: String -> FilePath -> FilePath -> FilePath -> IO ()
-    processApp dbName rootDir appPath appName = do
-      applyDirectory (rootDir </> appPath </> "spec" </> "Storage") (processStorageDSL dbName rootDir appPath appName)
-      applyDirectory (rootDir </> appPath </> "spec" </> "API") (processAPIDSL rootDir appPath)
+    processApp :: Bool -> String -> FilePath -> FilePath -> FilePath -> IO ()
+    processApp isGenAll dbName rootDir appPath appName = do
+      applyDirectory (rootDir </> appPath </> "spec" </> "Storage") (processStorageDSL isGenAll dbName rootDir appPath appName)
+      applyDirectory (rootDir </> appPath </> "spec" </> "API") (processAPIDSL isGenAll rootDir appPath)
 
-    processStorageDSL dbName' rootDir appPath appName inputFile = do
-      let readOnlySrc = rootDir </> appPath </> "src-read-only/"
-      let src = rootDir </> appPath </> "src"
-      let readOnlyMigration = rootDir </> sqlOutputPathPrefix </> appName
+    processStorageDSL isGenAll dbName' rootDir appPath appName inputFile = do
+      fileState <- NammaDSL.getFileState inputFile
+      putStrLn $ show fileState ++ " " ++ inputFile
+      when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $ do
+        let readOnlySrc = rootDir </> appPath </> "src-read-only/"
+        let src = rootDir </> appPath </> "src"
+        let readOnlyMigration = rootDir </> sqlOutputPathPrefix </> appName
 
-      NammaDSL.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
-      NammaDSL.mkBeamQueries (readOnlySrc </> "Storage/Queries") (Just (src </> "Storage/Queries")) inputFile
-      NammaDSL.mkDomainType (readOnlySrc </> "Domain/Types") inputFile
-      NammaDSL.mkSQLFile (Just dbName') readOnlyMigration inputFile
+        NammaDSL.mkBeamTable (readOnlySrc </> "Storage/Beam") inputFile
+        NammaDSL.mkBeamQueries (readOnlySrc </> "Storage/Queries") (Just (src </> "Storage/Queries")) inputFile
+        NammaDSL.mkDomainType (readOnlySrc </> "Domain/Types") inputFile
+        NammaDSL.mkSQLFile (Just dbName') readOnlyMigration inputFile
 
-    processAPIDSL rootDir appPath inputFile = do
-      let readOnlySrc = rootDir </> appPath </> "src-read-only/"
-      let src = rootDir </> appPath </> "src"
+    processAPIDSL isGenAll rootDir appPath inputFile = do
+      fileState <- NammaDSL.getFileState inputFile
+      putStrLn $ show fileState ++ " " ++ inputFile
+      when (isGenAll || fileState == NammaDSL.NEW || fileState == NammaDSL.CHANGED) $ do
+        let readOnlySrc = rootDir </> appPath </> "src-read-only/"
+        let src = rootDir </> appPath </> "src"
 
-      -- NammaDSL.mkFrontendAPIIntegration (readOnlySrc </> "Domain/Action") inputFile
-      NammaDSL.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
-      NammaDSL.mkApiTypes (readOnlySrc </> "API/Types/UI") inputFile
-      NammaDSL.mkDomainHandler (src </> "Domain/Action/UI") inputFile
+        -- NammaDSL.mkFrontendAPIIntegration (readOnlySrc </> "Domain/Action") inputFile
+        NammaDSL.mkServantAPI (readOnlySrc </> "API/Action/UI") inputFile
+        NammaDSL.mkApiTypes (readOnlySrc </> "API/Types/UI") inputFile
+        NammaDSL.mkDomainHandler (src </> "Domain/Action/UI") inputFile

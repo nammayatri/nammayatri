@@ -44,7 +44,7 @@ _:
         exec = ''
           set -x
           cd ./Backend  # These processes expect $PWD to be backend, for reading dhall configs
-          cabal run alchemist-generator-exe
+          cabal run alchemist-generator-exe -- "$@"
           cd ..
           treefmt
           hpack
