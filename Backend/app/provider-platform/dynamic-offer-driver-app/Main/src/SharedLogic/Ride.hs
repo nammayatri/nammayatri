@@ -149,6 +149,7 @@ buildRide driverId booking ghrId otp = do
         shortId = shortId,
         merchantId = Just booking.providerId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
+        searchRequestId = booking.searchRequestId,
         status = DRide.NEW,
         driverId = cast driverId,
         otp = otp,

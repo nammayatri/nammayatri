@@ -26,6 +26,7 @@ import Domain.Types.Merchant.TransporterConfig
 import Domain.Types.Person
 import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
+import qualified Domain.Types.SearchRequest as DSR
 import Environment
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps
@@ -119,16 +120,17 @@ updateDeviation transportConfig safetyCheckEnabled (Just rideId) batchWaypoints 
           let alreadyDeviated = fromMaybe False rideDetails.driverDeviatedFromRoute
           return (alreadyDeviated, rideDetails.safetyAlertTriggered)
 
-buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (RideInterpolationHandler Person Flow)
+buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Flow (Maybe (Id DSR.SearchRequest) -> RideInterpolationHandler Person Flow)
 buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
   transportConfig <- MTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   now <- getLocalCurrentTime transportConfig.timeDiffFromUtc
-  let snapToRoad' =
-        if transportConfig.useWithSnapToRoadFallback
-          then TMaps.snapToRoadWithFallback merchantId merchantOpCityId
-          else snapToRoadWithService
-      enableNightSafety = checkNightSafetyTimeConstraint transportConfig now
-  return $
+  return $ \searchRequestId -> do
+    let snapToRoad' =
+          if transportConfig.useWithSnapToRoadFallback
+            then TMaps.snapToRoadWithFallback merchantId merchantOpCityId
+            else snapToRoadWithService searchRequestId
+        enableNightSafety = checkNightSafetyTimeConstraint transportConfig now
+
     mkRideInterpolationHandler
       isEndRide
       (\driverId dist googleSnapCalls osrmSnapCalls -> void (QRide.updateDistance driverId dist googleSnapCalls osrmSnapCalls))
@@ -138,8 +140,8 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       )
       snapToRoad'
   where
-    snapToRoadWithService req = do
-      resp <- TMaps.snapToRoad merchantId merchantOpCityId Nothing req -- FIXME (Just searchRequestId)
+    snapToRoadWithService searchRequestId req = do
+      resp <- TMaps.snapToRoad merchantId merchantOpCityId searchRequestId req
       return ([Google], Right resp)
 
     checkNightSafetyTimeConstraint config now = do

@@ -31,6 +31,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SearchRequest as DSR
 import Environment (Flow)
 import EulerHS.Prelude
 import Kernel.External.Maps.HasCoordinates
@@ -75,7 +76,7 @@ data ServiceHandle m = ServiceHandle
     startRideAndUpdateLocation :: Id DP.Person -> DRide.Ride -> Id SRB.Booking -> LatLong -> Id DM.Merchant -> Maybe DRide.OdometerReading -> m (),
     notifyBAPRideStarted :: SRB.Booking -> DRide.Ride -> Maybe LatLong -> m (),
     rateLimitStartRide :: Id DP.Person -> Id DRide.Ride -> m (),
-    initializeDistanceCalculation :: Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
+    initializeDistanceCalculation :: Maybe (Id DSR.SearchRequest) -> Id DRide.Ride -> Id DP.Person -> LatLong -> m (),
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
@@ -89,7 +90,7 @@ buildStartRideHandle merchantId merchantOpCityId = do
         startRideAndUpdateLocation = SInternal.startRideTransaction,
         notifyBAPRideStarted = sendRideStartedUpdateToBAP,
         rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
-        initializeDistanceCalculation = LocUpd.initializeDistanceCalculation defaultRideInterpolationHandler,
+        initializeDistanceCalculation = LocUpd.initializeDistanceCalculation . defaultRideInterpolationHandler,
         whenWithLocationUpdatesLock = LocUpd.whenWithLocationUpdatesLock
       }
 
@@ -178,7 +179,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
   whenWithLocationUpdatesLock driverId $ do
     withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
-    withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
+    withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation booking.searchRequestId updatedRide.id driverId point
     withTimeAPI "startRide" "notifyBAPRideStarted" $ notifyBAPRideStarted booking updatedRide (Just point)
 
   pure APISuccess.Success

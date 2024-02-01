@@ -28,6 +28,7 @@ data RideT f = RideT
     shortId :: B.C f Text,
     merchantId :: B.C f (Maybe Text),
     merchantOperatingCityId :: B.C f (Maybe Text),
+    searchRequestId :: B.C f (Maybe Text),
     status :: B.C f Domain.RideStatus,
     driverId :: B.C f Text,
     otp :: B.C f Text,

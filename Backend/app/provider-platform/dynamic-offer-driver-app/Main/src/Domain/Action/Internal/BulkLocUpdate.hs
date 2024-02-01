@@ -43,5 +43,5 @@ bulkLocUpdate req = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   merchantId <- fromMaybeM (InternalError "Ride does not have a merchantId") $ ride.merchantId
   defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId False
-  _ <- addIntermediateRoutePoints defaultRideInterpolationHandler rideId driverId loc
+  _ <- addIntermediateRoutePoints (defaultRideInterpolationHandler ride.searchRequestId) rideId driverId loc
   pure Success

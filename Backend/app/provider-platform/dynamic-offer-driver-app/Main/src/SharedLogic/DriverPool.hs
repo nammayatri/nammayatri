@@ -526,7 +526,7 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId sea
       mapM
         ( \(ghReq, driver, driverGoHomePoolWithActualDistance) -> do
             routes <-
-              DRoute.getTripRoutes (driver.driverId, merchantId, merchantOpCityId) $
+              DRoute.getTripRoutes (driver.driverId, merchantId, merchantOpCityId) (Just searchRequestId) $
                 Maps.GetRoutesReq
                   { waypoints = getCoordinates driver :| [getCoordinates ghReq],
                     mode = Just Maps.CAR,

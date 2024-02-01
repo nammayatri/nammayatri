@@ -53,10 +53,10 @@ handler :: FlowServer API
 handler = getRoute :<|> getPickupRoute :<|> getTripRoute
 
 getRoute :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getRoute (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getRoutes (personId, merchantId, merchantOpCityId)
+getRoute (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getRoutes (personId, merchantId, merchantOpCityId) Nothing
 
 getPickupRoute :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getPickupRoute (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getPickupRoutes (personId, merchantId, merchantOpCityId)
+getPickupRoute (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getPickupRoutes (personId, merchantId, merchantOpCityId) Nothing
 
 getTripRoute :: (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getTripRoute (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getTripRoutes (personId, merchantId, merchantOpCityId)
+getTripRoute (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getTripRoutes (personId, merchantId, merchantOpCityId) Nothing

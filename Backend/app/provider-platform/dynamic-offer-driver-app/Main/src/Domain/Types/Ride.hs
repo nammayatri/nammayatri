@@ -24,6 +24,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPers
+import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Domain.Types.MediaFile (MediaFile)
 import Kernel.External.Maps.Types
@@ -56,6 +57,7 @@ data Ride = Ride
     shortId :: ShortId Ride,
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    searchRequestId :: Maybe (Id DSR.SearchRequest), -- Nothing for old rides
     status :: RideStatus,
     driverId :: Id DPers.Person,
     otp :: Text,
