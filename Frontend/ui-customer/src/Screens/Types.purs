@@ -1961,6 +1961,7 @@ type MetroTicketDetailsScreenProps = {
 data PreviousMetroTicketDetailsStage = MetroMyTicketsStage 
                                      | SearchMetroLocationStage 
                                      | MetroTicketSelectionStage
+                                     | MetroTicketStatusStage
 
 derive instance genericPreviousMetroTicketDetailsStage :: Generic PreviousMetroTicketDetailsStage _                                  
 instance showPreviousMetroTicketDetailsStage :: Show PreviousMetroTicketDetailsStage where show = genericShow

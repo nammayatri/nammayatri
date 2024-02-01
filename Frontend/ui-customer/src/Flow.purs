@@ -16,23 +16,9 @@
 module Flow where
 
 import Accessor
-import ConfigProvider
-import Constants.Configs
 import Engineering.Helpers.LogEvent
-import Helpers.Auth
-import Helpers.Firebase
-import Helpers.Logs
-import Helpers.Ride
-import Helpers.Storage.Flow.BaseApp
-import Helpers.Storage.Flow.SearchStatus
-import Helpers.Version
-import Locale.Utils
-import PaymentPage
 import Screens.TicketBookingFlow.TicketBooking.Transformer
 import Services.API
-import SuggestionUtils
-import Timers
-
 import Common.Resources.Constants (zoomLevel)
 import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate)
 import Common.Types.App as Common
@@ -139,6 +125,7 @@ import Services.Config (getBaseUrl, getSupportNumber)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, setValueToLocalNativeStore, setValueToLocalStore, updateLocalStage)
 import Effect.Aff (Milliseconds(..), makeAff, nonCanceler, launchAff)
 import Types.App
+import Types.App (ABOUT_US_SCREEN_OUTPUT(..), ACCOUNT_SET_UP_SCREEN_OUTPUT(..), ADD_NEW_ADDRESS_SCREEN_OUTPUT(..), GlobalState(..), CONTACT_US_SCREEN_OUTPUT(..), FlowBT, HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREEN_OUTPUT(..), MY_PROFILE_SCREEN_OUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), PERMISSION_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUPUT(..), SAVED_LOCATION_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), EMERGECY_CONTACTS_SCREEN_OUTPUT(..), TICKET_BOOKING_SCREEN_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), APP_UPDATE_POPUP(..), TICKET_BOOKING_SCREEN_OUTPUT(..),TICKET_INFO_SCREEN_OUTPUT(..),defaultGlobalState, RIDE_SELECTION_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..),  TICKETING_SCREEN_SCREEN_OUTPUT(..),METRO_TICKET_SCREEN_OUTPUT(..),TICKET_STATUS_SCREEN_OUTPUT(..),METRO_TICKET_DETAILS_SCREEN_OUTPUT(..),METRO_MY_TICKETS_SCREEN_OUTPUT(..),METRO_MY_TICKETS_SCREEN_OUTPUT(..),METRO_TICKET_STATUS_SCREEN_OUTPUT(..))
 import Control.Monad.Except (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Screens.AccountSetUpScreen.Transformer (getDisabilityList)
@@ -186,9 +173,7 @@ import RemoteConfig as RC
 import Engineering.Helpers.RippleCircles (clearMap)
 import Types.App
 import Screens.TicketBookingFlow.TicketStatus.ScreenData as TicketStatusScreenData
-import Screens.Types
 import Screens.TicketBookingFlow.TicketStatus.Transformer as TicketStatusTransformer
-import Screens as Screen
 import Screens.TicketBookingFlow.MetroTicketStatus.Transformer
 import Screens.TicketBookingFlow.MetroTicketDetails.Transformer
 import Screens.TicketBookingFlow.MetroMyTickets.Transformer
@@ -3116,39 +3101,7 @@ metroTicketPaymentFlow bookingId = do
                 metroTicketStatusFlow
              Nothing -> metroTicketBookingFlow
         Nothing -> metroTicketBookingFlow
-    Nothing -> pure unit
-
-sdkPayload :: PaymentPagePayload
-sdkPayload = PaymentPagePayload {
-  service : Just "in.juspay.hyperpay",
-  requestId : Just "29b40641b1dc4d049241c59616a26b54",
-  payload : PayPayload {
-        returnUrl : Just "https://api.juspay.in/end",
-        orderId : Just "yECo8nctlJ",
-        options_getUpiDeepLinks : Nothing,
-        "options.createMandate" : Nothing,
-        merchantId : Just "nammayatri",
-        "mandate.startDate" : Nothing,
-        "mandate.maxAmount" : Nothing,
-        "mandate.endDate" : Nothing,
-        lastName : Nothing,
-        language : Just "english",
-        -- issuingPsp : Just "YES_BIZ",
-        firstName : Just "Driverds",
-        environment : Just "production",
-        description : Just "Complete your payment",
-        customerPhone : Nothing, -- This should be same as sim operator or null
-        customerId : Just "9c6f7363-c313-4455-bd2b-7a613017444a",
-        -- customer_id  : Just "107006461",
-        customerEmail : Just"test@juspay.in",
-        currency : "INR",
-        clientId : Just "nammayatri",
-        clientAuthTokenExpiry : "2024-01-25T21:16:45Z",
-        clientAuthToken : "tkn_8bacdade745a46c28cf9dcb362cb2602",
-        amount : "1.0",
-        action : Just "paymentPage"
-  }
-}
+    Nothing -> metroTicketBookingFlow
 
 ticketListFlow :: FlowBT String Unit
 ticketListFlow = do
@@ -3377,6 +3330,7 @@ metroTicketDetailsFlow = do
   flow <- UI.metroTicketDetailsScreen 
   case flow of 
     BACK_TO_SEARCH_METRO_LOCATION -> metroTicketBookingFlow
+    GO_BACK_TO_HOME_SCREEN -> homeScreenFlow
     _ -> metroTicketDetailsFlow
 
 metroMyTicketsFlow :: FlowBT String Unit
@@ -3386,6 +3340,7 @@ metroMyTicketsFlow = do
   case flow of 
     GO_TO_METRO_TICKET_DETAILS_FLOW bookingStatusResp -> do
       modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer bookingStatusResp metroTicketDetailsState)
+      -- modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{props{previousScreenStage = ST.MetroTicketStatusStage}})
       metroTicketDetailsFlow
     GO_TO_METRO_TICKET_STAUS_FLOW bookingStatusResp -> do
       modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer bookingStatusResp "" metroTicketStatusScreen)

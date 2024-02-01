@@ -23,7 +23,7 @@ import Effect (Effect)
 import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationListItemState, GlobalProps, Station)
 import Styles.Colors as Color
 import PrestoDOM.Properties (cornerRadii)
-import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed)
+import PrestoDOM (Screen, PrestoDOM, Orientation(..), Length(..), Visibility(..), Padding(..), Gravity(..), Margin(..), AlignItems(..), linearLayout, relativeLayout, afterRender, height, width, orientation, background, id, visibility, editText, weight, text, color, fontSize, padding, hint, inputTypeI, gravity, pattern, hintColor, onChange, cornerRadius, margin, cursorColor, onFocus, imageWithFallback, imageView, scrollView, scrollBarY, textView, text, stroke, clickable, alignParentBottom, alignItems, ellipsize, layoutGravity, onClick, selectAllOnFocus, lottieAnimationView, disableClickFeedback, alpha, maxLines, singleLine, textSize, onBackPressed, rippleColor)
 import JBridge (showMap, debounceFunction, startLottieProcess, lottieAnimationConfig, storeCallBackLocateOnMap)
 import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner, os)
 import Components.SeparatorView.View as SeparatorView
@@ -237,6 +237,7 @@ backIconView push state = let
     , stroke $ "1," <> Color.grey900
     , gravity CENTER
     , onClick push $ const BackpressAction
+    , rippleColor Color.rippleShade
     , margin $ Margin 16 48 0 0
     ][  imageView
           [ height $ V 24 

@@ -73,6 +73,7 @@ import Mobility.Prelude
 import Effect.Uncurried
 import Data.Function.Uncurried
 import Timers (startTimer)
+import Engineering.Helpers.Commons (screenHeight)
 
 screen :: ST.MetroTicketStatusScreenState -> Screen Action ST.MetroTicketStatusScreenState ScreenOutput
 screen initialState =
@@ -92,7 +93,7 @@ screen initialState =
     void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
     if initialState.props.paymentStatus == Common.Success then do
       void $ pure $ spy "getMetroStatusEvent" ""
-      startTimer 3 "success" "1" push CountDown
+      startTimer 4 "success" "1" push CountDown
     else pure unit
     pure $ pure unit
 --------------------------------------------------------------------------------------------
@@ -369,7 +370,26 @@ paymentStatusHeader state push paymentStatus =
       , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
       , copyTransactionView
       , refreshStatusBtn
-
+      , paymentLottieLoader push state
+    ]
+paymentLottieLoader push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , gravity CENTER_HORIZONTAL
+  ][  lottieAnimationView
+      [ height $ if EHC.os == "IOS" then V 170 else V 130
+      , width $ V 130
+      , padding $ PaddingBottom 80
+      , margin (MarginTop ((screenHeight unit)/ 7 - (if EHC.os == "IOS" then 140 else 90)))
+      , gravity CENTER
+      , id (getNewIDWithTag "paymentLoader")
+      , visibility if state.props.paymentStatus == Common.Success  then VISIBLE else GONE
+      , afterRender (\action -> do
+        void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/payment_lottie_loader.json", lottieId = (getNewIDWithTag "paymentLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
+        push action
+        ) (const NoAction)
+      ]
     ]
 
 commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> Action -> PrestoDOM (Effect Unit) w
