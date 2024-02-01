@@ -814,3 +814,5 @@ getKN stringKey =
         EXTRA_TIME_PRICE -> "ಅತಿರಿಕ್ತ ಸಮಯ ಬೆಲೆ"
         TOTAL_FARE -> "ಒಟ್ಟು ಹಣ"
         FARE_UPDATE -> "ಹಣ ಅಪ್ಡೇಟ್"
+        NOW -> "ಈಗ"
+        DATE_INVALID_MESSAGE -> "ದಿನಾಂಕ ಅಮಾನ್ಯವಾಗಿದೆ. ಬುಕ್ಕಿಂಗ್ ಮಾತ್ರ {} ದಿನಗಳ ಹಿಂದೆ ಲಭ್ಯವಿದೆ"

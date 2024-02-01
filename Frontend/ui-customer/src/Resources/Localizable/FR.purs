@@ -814,3 +814,5 @@ getFR stringKey =
         EXTRA_TIME_PRICE -> "Prix du temps supplémentaire"
         TOTAL_FARE -> "Tarif total"
         FARE_UPDATE -> "Mise à jour du tarif"
+        NOW -> "Maintenant"
+        DATE_INVALID_MESSAGE -> "Date invalide. La réservation est disponible uniquement jusqu'à {} jours à l'avance"

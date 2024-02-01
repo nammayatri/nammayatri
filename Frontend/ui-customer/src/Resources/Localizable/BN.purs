@@ -814,3 +814,6 @@ getBN stringKey =
         EXTRA_TIME_PRICE -> "অতিরিক্ত সময় মূল্য"
         TOTAL_FARE -> "মোট ভাড়া"
         FARE_UPDATE -> "ভাড়া আপডেট"
+        NOW -> "এখন"
+        DATE_INVALID_MESSAGE -> "তারিখ অবৈধ। বুকিং মুক্তি প্রাপ্ত হয় একক {} দিনের আগে মাত্র"
+

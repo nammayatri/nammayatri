@@ -814,3 +814,5 @@ getEN stringKey =
         EXTRA_TIME_PRICE -> "Extra Time Price"
         TOTAL_FARE -> "Total Fare"
         FARE_UPDATE -> "Fare Update"
+        NOW -> "Now"
+        DATE_INVALID_MESSAGE -> "Date invalid. Booking available only up to {} days in advance"

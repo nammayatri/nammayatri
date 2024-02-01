@@ -37,9 +37,11 @@ import Effect.Uncurried (runEffectFn2, runEffectFn6)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils (getDateAfterNDaysv2, compareDate, getCurrentDatev2)
-import JBridge (showDateTimePicker)
+import JBridge (showDateTimePicker, toast)
+import Language.Strings (getVarString)
+import Language.Types (STR(..)) as STR
 import Log (trackAppActionClick)
-import Prelude (class Eq, class Show, bind, map, negate, pure, show, unit, ($), (&&), (*), (+), (<), (<>), (==), (>), (/=))
+import Prelude (class Eq, class Show, bind, map, negate, pure, show, unit, ($), (&&), (*), (+), (<), (<>), (==), (>), (/=), discard, void)
 import PrestoDOM (class Loggable, Eval, continue, continueWithCmd, exit)
 import PrestoDOM.Core (getPushFn)
 import Screens (getScreen, ScreenName(..))
@@ -124,7 +126,9 @@ eval (DateTimePickerAction dateResp year month day timeResp hour minute) state =
         updatedDateTime = state.data.selectedDateTimeConfig { year = year, month = month, day = day, hour = hour, minute = minute }
         selectedUTC = unsafePerformEffect $ EHC.convertDateTimeConfigToUTC year (month + 1) day hour minute 0
         newState = if validDate then state { data { selectedDateTimeConfig = updatedDateTime, startTimeUTC = selectedUTC}} else state
-    in continue newState
+    in if validDate then continue newState else do 
+      void $ pure $ toast $ getVarString STR.DATE_INVALID_MESSAGE $ DA.singleton $ show state.props.maxDateBooking
+      continue state
 
 eval (InputViewAC (InputViewController.BackPressed)) state = genericBackPressed state
 

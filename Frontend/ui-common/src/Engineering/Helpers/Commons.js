@@ -533,6 +533,6 @@ export const isTrue = function (a) {
 }
 
 export const convertDateTimeConfigToUTCImpl = function (year, month, day, hour, minute, second) {
-  const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-  return date.toISOString();
+  const dateIST = new Date(year, month - 1, day, hour, minute, second);
+  return new Date(dateIST).toISOString();
 };

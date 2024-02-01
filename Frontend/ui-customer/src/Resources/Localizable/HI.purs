@@ -768,7 +768,6 @@ getHI stringKey =
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "पहले से ही एक सक्रिय सवारी है"
         CONFIRM_STOP_LOCATION -> "Confirm stop location"
         CONFIRM_DROP -> "Confirm Drop"
-
         SELECT_VEHICLE -> "वाहन चुनें"
         BOOK_RENTAL -> "रेंटल बुक करें"
         CONFIRM_RENTAL -> "रेंटल की पुष्टि करें"
@@ -815,3 +814,5 @@ getHI stringKey =
         EXTRA_TIME_PRICE -> "अतिरिक्त समय कीमत"
         TOTAL_FARE -> "कुल किराया"
         FARE_UPDATE -> "किराया अपडेट"
+        NOW -> "अब"
+        DATE_INVALID_MESSAGE -> "तारीख अवैध है। बुकिंग केवल {} दिन से पहले ही उपलब्ध है"

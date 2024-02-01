@@ -28,7 +28,7 @@ import Components.RateCard as RateCard
 import Data.Array (singleton)
 import Debug (spy)
 import Effect (Effect)
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
 import Helpers.CommonView (emptyTextView)
 import JBridge (renderSlider, sliderConfig)
@@ -136,17 +136,17 @@ sliderView push state =
           linearLayout
             [ height WRAP_CONTENT
             , weight 1.0 
-            , id $ getNewIDWithTag "DurationSliderView"
+            , id $ EHC.getNewIDWithTag "DurationSliderView"
             , background Color.squidInkBlue
             , onAnimationEnd 
                 (\ action -> 
                   void $ renderSlider push SliderCallback 
                     sliderConfig
-                    { id = (getNewIDWithTag "DurationSliderView")
+                    { id = (EHC.getNewIDWithTag "DurationSliderView")
                     , sliderMinValue = state.props.minDuration
                     , sliderMaxValue = state.props.maxDuration
                     , sliderDefaultValue = state.data.rentalBookingData.baseDuration
-                    , toolTipId = getNewIDWithTag "DurationSliderViewToolTip"
+                    , toolTipId = EHC.getNewIDWithTag "DurationSliderViewToolTip"
                     , progressColor = Color.white900 
                     , thumbColor = Color.blue800
                     , bgColor = Color.white900
@@ -267,7 +267,7 @@ descriptionView push state description =
     getTitleFromDescription description toShowTitle = 
       let baseDuration = show state.data.rentalBookingData.baseDuration
       in case description of
-          BookingTime -> if toShowTitle then getString BOOKING_ON <> state.data.rentalBookingData.selectedDate <> ", " <> state.data.rentalBookingData.selectedTime <> " (" <> baseDuration <> "hrs)" else getString FINAL_FARE_DESCRIPTION
+          BookingTime -> if toShowTitle then getString BOOKING_ON <> " " <> EHC.convertUTCtoISC state.data.startTimeUTC "Do" <> " " <> EHC.convertUTCtoISC state.data.startTimeUTC "MMM" <> ", " <> EHC.convertUTCtoISC state.data.startTimeUTC "hh" <> ":" <> EHC.convertUTCtoISC state.data.startTimeUTC "mm" <> " " <> EHC.convertUTCtoISC state.data.startTimeUTC "a" <> " (" <> baseDuration <> "hrs)" else getString FINAL_FARE_DESCRIPTION
           BookingDistance -> if toShowTitle then getString INCLUDED_KMS <> baseDuration else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> state.props.farePerKm <> "/km."
           BaseFare -> if toShowTitle then getString BASE_FARE else getString ADDITIONAL_CHARGES_DESCRIPTION
           TollFee -> if toShowTitle then getString TOLLS_AND_PARKING_FEES else getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED

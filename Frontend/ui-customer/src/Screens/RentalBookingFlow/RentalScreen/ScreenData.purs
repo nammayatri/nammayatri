@@ -59,7 +59,7 @@ initData =
     , minDistance : 20
     , maxDistance : 30
     , farePerKm : ""
-    , maxDateBooking : 15
+    , maxDateBooking : 5
     , showRateCard : false
     }
   }
