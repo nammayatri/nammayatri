@@ -74,8 +74,8 @@ import Foreign (MultipleErrors, unsafeToForeign)
 import Foreign.Class (class Encode)
 import Foreign.Class (class Encode, encode)
 import Foreign.Generic (decodeJSON, encodeJSON)
-import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent, updateLocListWithDistance)
-import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, showKeyboard)
+import JBridge (getCurrentLatLong, addMarker, cleverTapSetLocation, currentPosition, drawRoute, emitJOSEvent, enableMyLocation, factoryResetApp, firebaseLogEvent, firebaseLogEventWithParams, firebaseLogEventWithTwoParams, firebaseUserID, generateSessionId, getLocationPermissionStatus, getVersionCode, getVersionName, hideKeyboardOnNavigation, hideLoader, initiateLocationServiceClient, isCoordOnPath, isInternetAvailable, isLocationEnabled, isLocationPermissionEnabled, launchInAppRatingPopup, locateOnMap, locateOnMapConfig, metaLogEvent, openNavigation, reallocateMapFragment, removeAllPolylines, saveSuggestionDefs, saveSuggestions, setCleverTapUserData, setCleverTapUserProp, stopChatListenerService, toast, toggleBtnLoader, updateRoute, updateRouteMarker, extractReferrerUrl, getLocationNameV2, getLatLonFromAddress, showDialer, cleverTapCustomEventWithParams, cleverTapCustomEvent)
+import Helpers.Utils (convertUTCToISTAnd12HourFormat, decodeError, addToPrevCurrLoc, addToRecentSearches, adjustViewWithKeyboard, checkPrediction, differenceOfLocationLists, drawPolygon, filterRecentSearches, fetchImage, FetchImageFrom(..), getCurrentDate, getNextDateV2, getCurrentLocationMarker, getCurrentLocationsObjFromLocal, getDistanceBwCordinates, getGlobalPayload, getMobileNumber, getNewTrackingId, getObjFromLocal, getPrediction, getRecentSearches, getScreenFromStage, getSearchType, parseFloat, parseNewContacts, removeLabelFromMarker, requestKeyboardShow, saveCurrentLocations, seperateByWhiteSpaces, setText, showCarouselScreen, sortPredictionByDistance, toStringJSON, triggerRideStatusEvent, withinTimeRange, fetchDefaultPickupPoint, updateLocListWithDistance, getCityCodeFromCity, getCityNameFromCode, getDistInfo, getExistingTags, showKeyboard, getMetroStationsObjFromLocal, updateLocListWithDistance)
 import Language.Strings (getString)
 import Language.Types (STR(..)) as STR
 import Log (printLog)
@@ -113,7 +113,7 @@ import Screens.InvoiceScreen.Controller (ScreenOutput(..)) as InvoiceScreenOutpu
 import Screens.MyProfileScreen.ScreenData as MyProfileScreenData
 import Screens.ReferralScreen.ScreenData as ReferralScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
-import Screens.Types (TicketBookingScreenStage(..), CardType(..), AddNewAddressScreenState(..), SearchResultType(..), CurrentLocationDetails(..), CurrentLocationDetailsWithDistance(..), DeleteStatus(..), HomeScreenState, LocItemType(..), PopupType(..), SearchLocationModelType(..), Stage(..), LocationListItemState, LocationItemType(..), NewContacts, NotifyFlowEventType(..), FlowStatusData(..), ErrorType(..), ZoneType(..), TipViewData(..),TripDetailsGoBackType(..), Location, DisabilityT(..), UpdatePopupType(..) , PermissionScreenStage(..), TicketBookingItem(..), TicketBookings(..), TicketBookingScreenData(..),TicketInfoScreenData(..),IndividualBookingItem(..), SuggestionsMap(..), Suggestions(..), Address(..), LocationDetails(..), City(..), TipViewStage(..), Trip(..), SearchLocationTextField(..), SearchLocationScreenState, SearchLocationActionType(..), SearchLocationStage(..), LocationInfo, BottomNavBarIcon(..), FollowRideScreenStage(..))
+import Screens.RentalBookingFlow.RideScheduledScreen.Controller (ScreenOutput(..)) as RideScheduledScreenOutput
 import Screens.ReportIssueChatScreen.ScreenData as ReportIssueChatScreenData
 import Screens.RideBookingFlow.HomeScreen.Config (specialLocationIcons, specialLocationConfig, updateRouteMarkerConfig, getTipViewData, setTipViewData)
 import Screens.RideSelectionScreen.Controller (getTitle)
@@ -217,8 +217,8 @@ baseAppFlow gPayload callInitUI = do
           when validationStatus $ handleDeepLinks (Just gPayload) false
         Nothing -> 
           if showCarouselScreen FunctionCall
-            then metroTicketBookingFlow
-            else metroTicketBookingFlow
+            then welcomeScreenFlow
+            else enterMobileNumberScreenFlow
 
 handleDeepLinks :: Maybe GlobalPayload -> Boolean -> FlowBT String Unit
 handleDeepLinks mBGlobalPayload skipDefaultCase = do
@@ -3482,11 +3482,11 @@ searchLocationFlow = do
           isSpecialZone = (geoJson /= "") && (geoJson /= state.data.specialZoneCoordinates) &&
                           pickUpPoints /= state.data.nearByGates
           dummyLocInfo = {  lat : Nothing,  lon : Nothing,  placeId : Nothing,  address : "", addressComponents : dummyAddress, city : Nothing}
-          locOnMap = state.data.mapLoc
+          locOnMap = state.data.latLonOnMap
           updatedState = { lat : fromString lat, lon : fromString lon, placeId : locOnMap.placeId, address : locOnMap.address, addressComponents : locOnMap.addressComponents , city : Just cityName , metroInfo : Nothing, stationCode : ""} 
       modifyScreenState 
         $ SearchLocationScreenStateType 
-            (\slsState -> slsState{data{ mapLoc = updatedState}})
+            (\slsState -> slsState{data{ latLonOnMap = updatedState}})
       if isSpecialZone then 
         specialLocFlow geoJson pickUpPoints specialLocCategory latNum lonNum
         else 
@@ -3494,8 +3494,8 @@ searchLocationFlow = do
 
     updateLocDetailsFlow :: SearchLocationScreenState -> Number -> Number  -> Array Location -> City -> FlowBT String Unit
     updateLocDetailsFlow state lat lon pickUpPoints cityName = do
-      let mapLoc = state.data.mapLoc
-      let {mapLat , mapLon} = {mapLat : fromMaybe 0.0 mapLoc.lat, mapLon : fromMaybe 0.0 mapLoc.lon}
+      let latLonOnMap = state.data.latLonOnMap
+      let {mapLat , mapLon} = {mapLat : fromMaybe 0.0 latLonOnMap.lat, mapLon : fromMaybe 0.0 latLonOnMap.lon}
           distanceBwLatLon = getDistanceBwCordinates lat lon mapLat mapLon 
           isDistMoreThanThreshold = distanceBwLatLon > (state.appConfig.mapConfig.locateOnMapConfig.apiTriggerRadius/1000.0)
           pickUpPoint = filter ( \item -> (item.place == state.data.defaultGate)) pickUpPoints
@@ -3505,7 +3505,7 @@ searchLocationFlow = do
         let updatedAddress = {address : address.formattedAddress, lat : Just lat , lon : Just lon, placeId : Nothing, city : Just cityName ,addressComponents : encodeAddress address.formattedAddress [] Nothing, metroInfo : Nothing, stationCode : ""}
         modifyScreenState 
           $ SearchLocationScreenStateType 
-              (\ slsState -> slsState { data  {mapLoc = updatedAddress, confirmLocCategory = ""} }) 
+              (\ slsState -> slsState { data  {latLonOnMap = updatedAddress, confirmLocCategory = ""} }) 
       searchLocationFlow
 
     specialLocFlow :: String -> Array Location -> String -> Number -> Number -> FlowBT String Unit
@@ -3691,7 +3691,7 @@ predictionClickedFlow prediction state = do
         modifyScreenState 
           $ SearchLocationScreenStateType 
               (\slsScreen -> slsScreen{ props {searchLocStage = ConfirmLocationStage}
-                              , data { srcLoc = sourceLoc, destLoc = destinationLoc, mapLoc = updatedState, confirmLocCategory = specialLocCategory }
+                              , data { srcLoc = sourceLoc, destLoc = destinationLoc, latLonOnMap = updatedState, confirmLocCategory = specialLocCategory }
                               })
         void $ lift $ lift $ toggleLoader false
         updateCachedLocation prediction placeLat placeLon state locServiceable

@@ -1921,6 +1921,8 @@ type MetroTicketDetailsScreenData = {
   dummyData :: String
 , metroRoute :: Array MetroRoute
 , ticketsInfo :: Array MetroTicketInfo
+, ticketType :: String
+, noOfTickets :: Int
 }
 
 type MetroTicketInfo = {
@@ -2064,7 +2066,7 @@ type SearchLocationScreenData =
     locationList :: Array LocationListItemState,
     fromScreen :: String,
     saveFavouriteCard :: SaveFavouriteCardState,
-    mapLoc :: LocationInfo,
+    latLonOnMap :: LocationInfo,
     defaultGate :: String,
     nearByGates :: Array Location,
     specialZoneCoordinates :: String,
