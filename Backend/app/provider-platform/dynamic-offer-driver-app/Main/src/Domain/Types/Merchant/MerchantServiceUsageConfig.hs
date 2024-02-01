@@ -19,7 +19,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Kernel.External.AadhaarVerification.Types (AadhaarVerificationService)
 import Kernel.External.Call (CallService)
-import Kernel.External.Maps.Types (MapsService)
+import Kernel.External.Maps.Types (MapsService, MapsServiceUsage)
 import Kernel.External.Notification.Types (NotificationService)
 import Kernel.External.SMS.Types
 import Kernel.External.Ticket.Types (IssueTicketService)
@@ -32,16 +32,16 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
   { merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     initiateCall :: CallService,
-    getDistances :: MapsService,
-    getEstimatedPickupDistances :: MapsService,
-    getRoutes :: MapsService,
-    getPickupRoutes :: MapsService,
-    getTripRoutes :: MapsService,
-    snapToRoad :: MapsService,
-    getPlaceName :: MapsService,
-    getPlaceDetails :: MapsService,
-    autoComplete :: MapsService,
-    getDistancesForCancelRide :: MapsService,
+    getDistances :: MapsServiceUsage,
+    getEstimatedPickupDistances :: MapsServiceUsage,
+    getRoutes :: MapsServiceUsage,
+    getPickupRoutes :: MapsServiceUsage,
+    getTripRoutes :: MapsServiceUsage,
+    snapToRoad :: MapsServiceUsage,
+    getPlaceName :: MapsServiceUsage,
+    getPlaceDetails :: MapsServiceUsage,
+    autoComplete :: MapsServiceUsage,
+    getDistancesForCancelRide :: MapsServiceUsage,
     smsProvidersPriorityList :: [SmsService],
     snapToRoadProvidersList :: [MapsService],
     whatsappProvidersPriorityList :: [WhatsappService],

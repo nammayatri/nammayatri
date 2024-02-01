@@ -1,0 +1,25 @@
+imports:
+  City: Kernel.Types.Beckn.Context
+  MapsService: Kernel.External.Maps.Types
+  MerchantOperatingCity: Domain.Types.Merchant.MerchantOperatingCity
+
+PickedServices:
+  tableName: picked_services
+
+  fields:
+    searchRequestId: Id PickedServices
+    merchantOperatingCityId: Id MerchantOperatingCity
+    getDistances: Maybe MapsService
+    getDistancesForCancelRide: Maybe MapsService
+    getEstimatedPickupDistances: Maybe MapsService
+    getRoutes: Maybe MapsService
+    getPickupRoutes: Maybe MapsService
+    getTripRoutes: Maybe MapsService
+    snapToRoad: Maybe MapsService
+    autoComplete: Maybe MapsService
+    getPlaceName: Maybe MapsService
+
+  excludedFields: [city, merchantId]
+
+  constraints:
+    searchRequestId: PrimaryKey

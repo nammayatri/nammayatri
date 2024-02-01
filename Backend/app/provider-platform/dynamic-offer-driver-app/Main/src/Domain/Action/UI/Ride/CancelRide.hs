@@ -33,6 +33,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.SearchRequest as DSR
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps
@@ -58,7 +59,7 @@ data ServiceHandle m = ServiceHandle
     findById :: Id DP.Person -> m (Maybe DP.Person),
     cancelRide :: Id DRide.Ride -> DBCR.BookingCancellationReason -> m (),
     findBookingByIdInReplica :: Id SRB.Booking -> m (Maybe SRB.Booking),
-    pickUpDistance :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> LatLong -> LatLong -> m Meters
+    pickUpDistance :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> LatLong -> LatLong -> m Meters
   }
 
 cancelRideHandle :: ServiceHandle Flow
@@ -167,7 +168,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req = do
             driverLocations <- LF.driversLocation [driverId]
             return $ listToMaybe driverLocations
           disToPickup <- forM mbLocation $ \location -> do
-            pickUpDistance booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
+            pickUpDistance booking.providerId booking.merchantOperatingCityId booking.searchRequestId (getCoordinates location) (getCoordinates booking.fromLocation)
           let currentDriverLocation = getCoordinates <$> mbLocation
           logDebug "RideCancelled Coin Event by driver"
           fork "DriverRideCancelledCoin Event : " $ DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
@@ -206,12 +207,13 @@ driverDistanceToPickup ::
   ) =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe (Id DSR.SearchRequest) ->
   tripStartPos ->
   tripEndPos ->
   m Meters
-driverDistanceToPickup merchantId merchantOpCityId tripStartPos tripEndPos = do
+driverDistanceToPickup merchantId merchantOpCityId searchRequestId tripStartPos tripEndPos = do
   distRes <-
-    Maps.getDistanceForCancelRide merchantId merchantOpCityId $
+    Maps.getDistanceForCancelRide merchantId merchantOpCityId searchRequestId $
       Maps.GetDistanceReq
         { origin = tripStartPos,
           destination = tripEndPos,

@@ -27,6 +27,7 @@ import Data.Text (pack)
 import Domain.Types.Maps.PlaceNameCache as DTM
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.External.Types (ServiceFlow)
@@ -50,8 +51,8 @@ data AutoCompleteReq = AutoCompleteReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-getPlaceName :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
-getPlaceName merchantId merchantOpCityId req = do
+getPlaceName :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> Maps.GetPlaceNameReq -> m Maps.GetPlaceNameResp
+getPlaceName merchantId merchantOpCityId searchRequestId req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   case req.getBy of
     MIT.ByLatLong (Maps.LatLong lat lon) -> do
@@ -60,18 +61,18 @@ getPlaceName merchantId merchantOpCityId req = do
         Just geoHash -> do
           placeNameCache <- CM.findPlaceByGeoHash (pack geoHash)
           if null placeNameCache
-            then callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue
+            then callMapsApi merchantId merchantOpCityId searchRequestId req merchant.geoHashPrecisionValue
             else pure $ map convertToGetPlaceNameResp placeNameCache
-        Nothing -> callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue
+        Nothing -> callMapsApi merchantId merchantOpCityId searchRequestId req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
       placeNameCache <- CM.findPlaceByPlaceId placeId
       if null placeNameCache
-        then callMapsApi merchantId merchantOpCityId req merchant.geoHashPrecisionValue
+        then callMapsApi merchantId merchantOpCityId searchRequestId req merchant.geoHashPrecisionValue
         else pure $ map convertToGetPlaceNameResp placeNameCache
 
-callMapsApi :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
-callMapsApi merchantId merchantOpCityId req geoHashPrecisionValue = do
-  res <- Maps.getPlaceName merchantId merchantOpCityId req
+callMapsApi :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> Maps.GetPlaceNameReq -> Int -> m Maps.GetPlaceNameResp
+callMapsApi merchantId merchantOpCityId searchRequestId req geoHashPrecisionValue = do
+  res <- Maps.getPlaceName merchantId merchantOpCityId searchRequestId req
   let firstElement = listToMaybe res
   case firstElement of
     Just element -> do
@@ -120,12 +121,13 @@ convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisi
           }
   return res
 
-autoComplete :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> AutoCompleteReq -> m Maps.AutoCompleteResp
-autoComplete merchantId merchantOpCityId AutoCompleteReq {..} = do
+autoComplete :: ServiceFlow m r => Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> AutoCompleteReq -> m Maps.AutoCompleteResp
+autoComplete merchantId merchantOpCityId searchRequestId AutoCompleteReq {..} = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   Maps.autoComplete
     merchantId
     merchantOpCityId
+    searchRequestId
     Maps.AutoCompleteReq
       { country = toInterfaceCountry merchant.country,
         ..

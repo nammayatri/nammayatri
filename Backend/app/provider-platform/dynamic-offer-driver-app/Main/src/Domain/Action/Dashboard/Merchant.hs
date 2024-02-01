@@ -600,6 +600,7 @@ mkServiceUsageConfigRes DMSUC.MerchantServiceUsageConfig {..} =
     { getEstimatedPickupDistances = Just getEstimatedPickupDistances,
       getPickupRoutes = Just getPickupRoutes,
       getTripRoutes = Just getTripRoutes,
+      getDistancesForCancelRide = Just getDistancesForCancelRide,
       ..
     }
 

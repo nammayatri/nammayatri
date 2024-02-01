@@ -19,12 +19,12 @@ import qualified Domain.Types.FareProduct as FareProductD
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.GenericPretty
-import qualified Tools.Maps as Maps
 
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,

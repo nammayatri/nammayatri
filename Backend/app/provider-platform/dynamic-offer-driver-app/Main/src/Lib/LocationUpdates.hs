@@ -139,7 +139,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide = do
       snapToRoad'
   where
     snapToRoadWithService req = do
-      resp <- TMaps.snapToRoad merchantId merchantOpCityId req
+      resp <- TMaps.snapToRoad merchantId merchantOpCityId Nothing req -- FIXME (Just searchRequestId)
       return ([Google], Right resp)
 
     checkNightSafetyTimeConstraint config now = do

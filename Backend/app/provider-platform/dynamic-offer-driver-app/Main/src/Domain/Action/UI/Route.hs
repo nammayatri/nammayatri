@@ -25,17 +25,18 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.External.Types (ServiceFlow)
+import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Tools.Maps as Maps
 
 getRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getRoutes (_, merchantId, merchantOpCityId) req = do
-  Maps.getRoutes merchantId merchantOpCityId req
+  Maps.getRoutes merchantId merchantOpCityId Nothing req
 
 getPickupRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getPickupRoutes (_, merchantId, merchantOpCityId) req = do
-  Maps.getPickupRoutes merchantId merchantOpCityId req
+  Maps.getPickupRoutes merchantId merchantOpCityId Nothing req
 
 getTripRoutes :: ServiceFlow m r => (Id DP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maps.GetRoutesReq -> m Maps.GetRoutesResp
 getTripRoutes (_, merchantId, merchantOpCityId) req = do
-  Maps.getTripRoutes merchantId merchantOpCityId req
+  Maps.getTripRoutes merchantId merchantOpCityId Nothing req

@@ -26,6 +26,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -58,6 +59,7 @@ data Booking = Booking
     area :: Maybe FareProductD.Area,
     providerId :: Id DM.Merchant, -- FIXME merchantId
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    searchRequestId :: Maybe (Id DSR.SearchRequest), -- Nothing for old bookings
     primaryExophone :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,

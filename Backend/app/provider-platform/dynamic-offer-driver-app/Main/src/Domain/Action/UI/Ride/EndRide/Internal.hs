@@ -52,6 +52,7 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RiderDetails as RD
+import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude hiding (foldr, id, length, null)
 import GHC.Float (double2Int)
 import Kernel.External.Maps
@@ -286,16 +287,17 @@ getDistanceBetweenPoints ::
   ) =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe (Id DSR.SearchRequest) ->
   LatLong ->
   LatLong ->
   [LatLong] ->
   m Meters
-getDistanceBetweenPoints merchantId merchantOpCityId origin destination interpolatedPoints = do
+getDistanceBetweenPoints merchantId merchantOpCityId searchRequestId origin destination interpolatedPoints = do
   -- somehow interpolated points pushed to redis in reversed order, so we need to reverse it back
   let pickedWaypoints = origin :| (pickWaypoints interpolatedPoints <> [destination])
   logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
   routeResponse <-
-    Maps.getRoutes merchantId merchantOpCityId $
+    Maps.getRoutes merchantId merchantOpCityId searchRequestId $
       Maps.GetRoutesReq
         { waypoints = pickedWaypoints,
           mode = Just Maps.CAR,

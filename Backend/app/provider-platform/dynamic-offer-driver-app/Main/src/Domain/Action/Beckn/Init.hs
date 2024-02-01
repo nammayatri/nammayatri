@@ -146,6 +146,7 @@ handler merchantId req validatedReq = do
             status = DRB.NEW,
             providerId = merchantId,
             merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+            searchRequestId = Just searchRequest.id,
             primaryExophone = exophone.primaryPhone,
             bapId = req.bapId,
             bapUri = req.bapUri,

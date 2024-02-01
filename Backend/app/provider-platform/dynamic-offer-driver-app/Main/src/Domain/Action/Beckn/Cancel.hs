@@ -112,7 +112,7 @@ cancel req merchant booking = do
             return Nothing
           Right locations -> return $ listToMaybe locations
       disToPickup <- forM mbLocation $ \location -> do
-        driverDistanceToPickup booking.providerId booking.merchantOperatingCityId (getCoordinates location) (getCoordinates booking.fromLocation)
+        driverDistanceToPickup booking.providerId booking.merchantOperatingCityId booking.searchRequestId (getCoordinates location) (getCoordinates booking.fromLocation)
       logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
       logDebug "RideCancelled Coin Event by customer"
       DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)

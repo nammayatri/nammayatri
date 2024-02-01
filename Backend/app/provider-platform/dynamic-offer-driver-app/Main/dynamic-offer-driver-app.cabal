@@ -592,8 +592,11 @@ library
       Tools.Verification
       Tools.Whatsapp
       Domain.Types.DriverPoolConfig
+      Domain.Types.PickedServices
       Storage.Beam.DriverPoolConfig
+      Storage.Beam.PickedServices
       Storage.Queries.DriverPoolConfig
+      Storage.Queries.PickedServices
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:
