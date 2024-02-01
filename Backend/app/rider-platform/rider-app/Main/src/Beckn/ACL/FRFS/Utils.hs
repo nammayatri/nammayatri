@@ -287,17 +287,6 @@ mkSettlementTagGroup mAmount mSettlementType =
               { tagDescriptor =
                   Just $
                     Spec.Descriptor
-                      { descriptorCode = Just "COURT_JURISDICTION",
-                        descriptorImages = Nothing,
-                        descriptorName = Nothing
-                      },
-                tagValue = Just "Chennai" -- TODO: make it dynamic
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
                       { descriptorCode = Just "STATIC_TERMS",
                         descriptorImages = Nothing,
                         descriptorName = Nothing
