@@ -148,10 +148,10 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         storeDriverCallBack = callback;
     }
 
-    public void callDriverNotificationCallBack(String notificationType) {
+    public void callDriverNotificationCallBack(String notificationType, String notificationData) {
         if (storeDriverCallBack != null) {
-            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                    storeDriverCallBack, notificationType);
+            String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                    storeDriverCallBack, notificationType, notificationData.replace("'",""));
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
@@ -206,13 +206,13 @@ public class MobilityDriverBridge extends MobilityCommonBridge {
         if (isClassAvailable("in.juspay.mobility.app.callbacks.CallBack")) {
             callBack = new CallBack() {
                 @Override
-                public void customerCallBack(String notificationType) {
+                public void customerCallBack(String notificationType, String notificationData) {
                     Log.i(OTHERS, "No Customer CallBack Required");
                 }
 
                 @Override
-                public void driverCallBack(String notificationType) {
-                    callDriverNotificationCallBack(notificationType);
+                public void driverCallBack(String notificationType, String notificationData) {
+                    callDriverNotificationCallBack(notificationType,notificationData);
                 }
 
                 @Override

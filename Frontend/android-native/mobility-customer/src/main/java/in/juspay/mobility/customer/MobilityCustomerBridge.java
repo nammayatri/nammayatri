@@ -102,12 +102,12 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         if (isClassAvailable("in.juspay.mobility.app.callbacks.CallBack")) {
             CallBack callBack = new CallBack() {
                 @Override
-                public void customerCallBack(String notificationType) {
-                    callingStoreCallCustomer(notificationType);
+                public void customerCallBack(String notificationType, String notificationData) {
+                    callingStoreCallCustomer(notificationType, notificationData);
                 }
 
                 @Override
-                public void driverCallBack(String notificationType) {
+                public void driverCallBack(String notificationType, String notificationData) {
                     Log.i(CALLBACK, "No Required");
                 }
 
@@ -176,9 +176,9 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         storeCustomerCallBack = callback;
     }
 
-    public void callingStoreCallCustomer(String notificationType) {
-        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                storeCustomerCallBack, notificationType);
+    public void callingStoreCallCustomer(String notificationType, String notificationData) {
+        String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s','%s');",
+                storeCustomerCallBack, notificationType, notificationData.replace("'",""));
         bridgeComponents.getJsCallback().addJsToWebView(javascript);
     }
 

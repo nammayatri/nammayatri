@@ -396,7 +396,7 @@ public class NotificationUtils {
             System.out.println("In clean notification if");
         }
 
-                
+
         if (TRIP_STARTED.equals(notificationType)) {
             if (key.equals("USER")) {
                 Utils.logEvent ("ny_user_ride_started", context);
@@ -464,9 +464,10 @@ public class NotificationUtils {
         }
     }
 
-    public static void triggerUICallbacks (String notificationType) {
+    public static void triggerUICallbacks (String notificationType, String notificationData) {
         for (int i = 0; i < callBack.size(); i++) {
-            callBack.get(i).customerCallBack(notificationType);
+            callBack.get(i).customerCallBack(notificationType,notificationData);
+            callBack.get(i).driverCallBack(notificationType, notificationData);
         }
     }
 
