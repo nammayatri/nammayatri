@@ -69,6 +69,17 @@ updateBPPOrderIdAndStatusById bppOrderId status (Kernel.Types.Id.Id id) = do
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
+updateBppBankDetailsById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
+updateBppBankDetailsById bppBankAccountNumber bppBankCode (Kernel.Types.Id.Id id) = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.bppBankAccountNumber $ bppBankAccountNumber,
+      Se.Set Beam.bppBankCode $ bppBankCode,
+      Se.Set Beam.updatedAt $ now
+    ]
+    [ Se.Is Beam.id $ Se.Eq id
+    ]
+
 updatePriceById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
 updatePriceById price (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
@@ -89,12 +100,13 @@ updateStatusById status (Kernel.Types.Id.Id id) = do
     [ Se.Is Beam.id $ Se.Eq id
     ]
 
-updateValidTillAndStatusById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
-updateValidTillAndStatusById status validTill (Kernel.Types.Id.Id id) = do
+updateStatusValidTillAndPaymentTxnById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ()
+updateStatusValidTillAndPaymentTxnById status validTill paymentTxnId (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.status $ status,
       Se.Set Beam.validTill $ validTill,
+      Se.Set Beam.paymentTxnId $ paymentTxnId,
       Se.Set Beam.updatedAt $ now
     ]
     [ Se.Is Beam.id $ Se.Eq id
@@ -123,11 +135,14 @@ updateByPrimaryKey Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..} = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam._type $ _type,
+      Se.Set Beam.bppBankAccountNumber $ bppBankAccountNumber,
+      Se.Set Beam.bppBankCode $ bppBankCode,
       Se.Set Beam.bppItemId $ bppItemId,
       Se.Set Beam.bppOrderId $ bppOrderId,
       Se.Set Beam.bppSubscriberId $ bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl $ bppSubscriberUrl,
       Se.Set Beam.fromStationId $ (Kernel.Types.Id.getId fromStationId),
+      Se.Set Beam.paymentTxnId $ paymentTxnId,
       Se.Set Beam.price $ price,
       Se.Set Beam.providerDescription $ providerDescription,
       Se.Set Beam.providerId $ providerId,
@@ -157,12 +172,15 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
           { _type = _type,
+            bppBankAccountNumber = bppBankAccountNumber,
+            bppBankCode = bppBankCode,
             bppItemId = bppItemId,
             bppOrderId = bppOrderId,
             bppSubscriberId = bppSubscriberId,
             bppSubscriberUrl = bppSubscriberUrl,
             fromStationId = Kernel.Types.Id.Id fromStationId,
             id = Kernel.Types.Id.Id id,
+            paymentTxnId = paymentTxnId,
             price = price,
             providerDescription = providerDescription,
             providerId = providerId,
@@ -186,12 +204,15 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
   toTType' Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..} = do
     Beam.FRFSTicketBookingT
       { Beam._type = _type,
+        Beam.bppBankAccountNumber = bppBankAccountNumber,
+        Beam.bppBankCode = bppBankCode,
         Beam.bppItemId = bppItemId,
         Beam.bppOrderId = bppOrderId,
         Beam.bppSubscriberId = bppSubscriberId,
         Beam.bppSubscriberUrl = bppSubscriberUrl,
         Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.paymentTxnId = paymentTxnId,
         Beam.price = price,
         Beam.providerDescription = providerDescription,
         Beam.providerId = providerId,

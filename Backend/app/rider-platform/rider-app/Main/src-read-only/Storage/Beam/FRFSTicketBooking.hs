@@ -22,12 +22,15 @@ import Tools.Beam.UtilsTH
 
 data FRFSTicketBookingT f = FRFSTicketBookingT
   { _type :: B.C f Domain.Types.FRFSQuote.FRFSQuoteType,
+    bppBankAccountNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bppBankCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppItemId :: B.C f Kernel.Prelude.Text,
     bppOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppSubscriberId :: B.C f Kernel.Prelude.Text,
     bppSubscriberUrl :: B.C f Kernel.Prelude.Text,
     fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    paymentTxnId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     price :: B.C f Kernel.Types.Common.HighPrecMoney,
     providerDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     providerId :: B.C f Kernel.Prelude.Text,

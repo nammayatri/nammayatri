@@ -45,7 +45,9 @@ data DOnInit = DOnInit
     bppItemId :: Text,
     validTill :: Maybe UTCTime,
     transactionId :: Text,
-    messageId :: Text
+    messageId :: Text,
+    bankAccNum :: Text,
+    bankCode :: Text
   }
 
 validateRequest :: DOnInit -> Flow (Merchant, FTBooking.FRFSTicketBooking)
@@ -68,6 +70,7 @@ onInit onInitReq merchant booking_ = do
 
   whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity booking_.id)
   void $ QFRFSTicketBooking.updatePriceById onInitReq.totalPrice booking_.id
+  void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) booking_.id
   let booking = booking_ {FTBooking.price = onInitReq.totalPrice}
 
   orderShortId <- generateShortId

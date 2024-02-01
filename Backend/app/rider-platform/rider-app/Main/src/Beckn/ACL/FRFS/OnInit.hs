@@ -45,6 +45,12 @@ buildOnInitReq onInitReq = do
   bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
 
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
+
+  orderPayment <- order.orderPayments >>= listToMaybe & fromMaybeM (InvalidRequest "OrderPayment not found")
+  orderPaymentParams <- orderPayment.paymentParams & fromMaybeM (InvalidRequest "PaymentParams not found")
+  bankAccNum <- orderPaymentParams.paymentParamsBankAccountNumber & fromMaybeM (InvalidRequest "PaymentParamsBankAccountNumber not found")
+  bankCode <- orderPaymentParams.paymentParamsBankCode & fromMaybeM (InvalidRequest "PaymentParamsBankCode not found")
+
   quoteBreakup <- quotation.quotationBreakup & fromMaybeM (InvalidRequest "QuotationBreakup not found")
   totalPrice <- quotation.quotationPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Invalid quotationPrice")
 
@@ -58,5 +64,7 @@ buildOnInitReq onInitReq = do
         bppItemId,
         transactionId,
         messageId,
-        validTill = ttl
+        validTill = ttl,
+        bankAccNum,
+        bankCode
       }

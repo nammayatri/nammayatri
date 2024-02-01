@@ -157,6 +157,9 @@ FRFSTicketBooking:
     providerDescription: Maybe Text
     price: HighPrecMoney
     validTill: UTCTime
+    paymentTxnId : Maybe Text
+    bppBankAccountNumber: Maybe Text
+    bppBankCode : Maybe Text
 
   types:
     FRFSTicketBookingStatus:
@@ -186,9 +189,9 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [validTill, updatedAt]
       where: id
-    updateValidTillAndStatusById:
+    updateStatusValidTillAndPaymentTxnById:
       kvFunction: updateWithKV
-      params: [status, validTill, updatedAt]
+      params: [status, validTill, paymentTxnId , updatedAt]
       where: id
     updateBPPOrderIdAndStatusById:
       kvFunction: updateWithKV
@@ -197,6 +200,10 @@ FRFSTicketBooking:
     updatePriceById:
       kvFunction: updateWithKV
       params: [price, updatedAt]
+      where: id
+    updateBppBankDetailsById:
+      kvFunction: updateWithKV
+      params: [bppBankAccountNumber, bppBankCode, updatedAt]
       where: id
 # Make use of FareBreakup to store the fare breakup of a ticket
 

@@ -1,5 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Domain.Types.FRFSTicketBooking where
 
@@ -16,12 +17,15 @@ import Tools.Beam.UtilsTH
 
 data FRFSTicketBooking = FRFSTicketBooking
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
+    bppBankAccountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bppBankCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppItemId :: Kernel.Prelude.Text,
     bppOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,
     fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
+    paymentTxnId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     price :: Kernel.Types.Common.HighPrecMoney,
     providerDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     providerId :: Kernel.Prelude.Text,

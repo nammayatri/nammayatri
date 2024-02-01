@@ -179,6 +179,9 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
                 updatedAt = now,
                 merchantId = Just merchantId_,
                 price = HighPrecMoney $ (quote.price.getHighPrecMoney) * (toRational quote.quantity),
+                paymentTxnId = Nothing,
+                bppBankAccountNumber = Nothing,
+                bppBankCode = Nothing,
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -263,10 +266,10 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
             then do
               -- Add default TTL of 1 min or the value provided in the config
               let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
-              void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
-              void $ QFRFSTicketBooking.updateValidTillAndStatusById DFRFSTicketBooking.CONFIRMING updatedTTL booking.id
               transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
               txnId <- getSuccessTransactionId transactions
+              void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
+              void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
               let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL)
               fork "FRFS Confirm Req" $ do
                 providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
