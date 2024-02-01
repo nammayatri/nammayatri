@@ -231,7 +231,7 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
+        "enableYatriCoins" : true,
         "registration" : {
             "supportWAN" : "",
             "callSupport" : true,
@@ -326,7 +326,7 @@ window.getMerchantConfig = function () {
         "showDriverReferral" : false,
         "showCustomerReferral" : true,
         "uploadRCandDL" : true,
-        "enableYatriCoins" : false,
+        "enableYatriCoins" : true,
         "registration" : {
           "supportWAN" : "",
           "callSupport" : true,
