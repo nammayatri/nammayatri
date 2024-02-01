@@ -1014,6 +1014,7 @@ buildVehicle merchantId personId req = do
         energyType = req.energyType,
         registrationCategory = Nothing,
         vehicleClass = req.vehicleClass,
+        wheelClassification = req.wheelClassification,
         createdAt = now,
         updatedAt = now
       }

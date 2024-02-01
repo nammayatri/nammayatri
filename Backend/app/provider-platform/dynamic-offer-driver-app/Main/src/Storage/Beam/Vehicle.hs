@@ -37,6 +37,7 @@ data VehicleT f = VehicleT
     energyType :: B.C f (Maybe Text),
     registrationCategory :: B.C f (Maybe Domain.RegistrationCategory),
     vehicleClass :: B.C f Text,
+    wheelClassification :: B.C f (Maybe Int),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

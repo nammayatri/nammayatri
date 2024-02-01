@@ -111,6 +111,7 @@ makeVehicleFromRC now driverId merchantId certificateNumber rc =
       registrationCategory = Nothing,
       vehicleClass = fromMaybe "Unkown" rc.vehicleClass,
       vehicleName = Nothing,
+      wheelClassification = Nothing,
       createdAt = now,
       updatedAt = now
     }

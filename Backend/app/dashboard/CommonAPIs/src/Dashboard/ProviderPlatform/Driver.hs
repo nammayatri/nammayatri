@@ -680,7 +680,8 @@ data AddVehicleReq = AddVehicleReq
     energyType :: Maybe Text,
     model :: Text,
     make :: Maybe Text,
-    driverName :: Text
+    driverName :: Text,
+    wheelClassification :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

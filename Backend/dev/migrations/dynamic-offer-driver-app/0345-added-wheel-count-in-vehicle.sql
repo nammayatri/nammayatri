@@ -1,0 +1,2 @@
+ALTER TABLE atlas_driver_offer_bpp.vehicle
+ADD COLUMN wheel_classification Int;

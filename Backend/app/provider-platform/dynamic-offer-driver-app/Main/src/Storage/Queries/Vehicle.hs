@@ -146,6 +146,7 @@ instance FromTType' BeamV.Vehicle Vehicle where
             energyType = energyType,
             registrationCategory = registrationCategory,
             vehicleClass = vehicleClass,
+            wheelClassification = wheelClassification,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -167,6 +168,7 @@ instance ToTType' BeamV.Vehicle Vehicle where
         BeamV.energyType = energyType,
         BeamV.registrationCategory = registrationCategory,
         BeamV.vehicleClass = vehicleClass,
+        BeamV.wheelClassification = wheelClassification,
         BeamV.createdAt = createdAt,
         BeamV.updatedAt = updatedAt
       }
