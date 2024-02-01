@@ -134,6 +134,7 @@ findStuckBookings merchant moCity bookingIds now = do
             Se.Is BeamB.id (Se.In (getId <$> bookingIds)),
             Se.Is BeamB.status (Se.In [NEW, TRIP_ASSIGNED]),
             Se.Is BeamB.createdAt (Se.LessThanOrEq updatedTimestamp),
+            Se.Is BeamB.tripCategory $ Se.In [Nothing, Just (DTC.OneWay DTC.OneWayOnDemandDynamicOffer), Just (DTC.OneWay DTC.OneWayOnDemandStaticOffer), Just (DTC.OneWay DTC.OneWayRideOtp)],
             Se.Or
               ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq $ Just (getId moCity.id)]
                   <> [Se.Is BeamB.merchantOperatingCityId $ Se.Eq Nothing | moCity.city == merchant.city]

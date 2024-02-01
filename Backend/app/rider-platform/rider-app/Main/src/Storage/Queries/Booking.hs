@@ -23,7 +23,6 @@ import Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Booking.Type as DRB
 import Domain.Types.Estimate (Estimate)
 import Domain.Types.FarePolicy.FareProductType as DFF
-import qualified Domain.Types.FarePolicy.FareProductType as DFP
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -227,7 +226,7 @@ findStuckBookings merchant moCity bookingIds now =
           [ Se.Is BeamB.merchantId $ Se.Eq merchant.id.getId,
             Se.Is BeamB.id (Se.In $ getId <$> bookingIds),
             Se.Is BeamB.status $ Se.In [NEW, CONFIRMED, TRIP_ASSIGNED],
-            Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DFP.RENTAL,
+            Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DQuote.RENTAL,
             Se.Is BeamB.createdAt $ Se.LessThanOrEq updatedTimestamp,
             Se.Or
               ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq $ Just (getId moCity.id)]

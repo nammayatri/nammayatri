@@ -22,6 +22,7 @@ import Database.Beam.Backend (autoSqlValueSyntax)
 import qualified Database.Beam.Backend as BeamBackend
 import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -161,6 +162,7 @@ findStuckRideItems merchant moCity bookingIds now = do
       [ Se.And
           [ Se.Is BeamB.providerId $ Se.Eq merchant.id.getId,
             Se.Is BeamB.id $ Se.In $ getId <$> bookingIds,
+            Se.Is BeamB.fareProductType $ Se.Not $ Se.Eq DQuote.RENTAL,
             Se.Or
               ( [Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just $ getId moCity.id)]
                   <> [Se.Is BeamB.merchantOperatingCityId $ Se.Eq Nothing | merchant.defaultCity == moCity.city]
