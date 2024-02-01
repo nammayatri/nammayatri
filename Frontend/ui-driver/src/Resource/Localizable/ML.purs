@@ -647,7 +647,7 @@ getML stringKey =
         ZERO_COMMISION ->  "ZERO കമ്മീഷൻ"
         EARN_TODAY_PAY_TOMORROW ->  "ഇന്ന് സമ്പാദിക്കുക, നാളെ പണമടയ്ക്കുക"
         PAY_ONLY_IF_YOU_TAKE_RIDES ->  "നിങ്ങൾ സവാരി നടത്തിയാൽ മാത്രം പണം നൽകുക"
-        PLANS ->  "ചേരുക"
+        PLANS ->  "പ്ലാൻസ്"
         PLAN ->  "പ്ലാൻ ചെയ്യുക"
         DAY ->  "ദിവസം"
         MANAGE_PLAN ->  "പ്ലാൻ നിയന്ത്രിക്കുക"

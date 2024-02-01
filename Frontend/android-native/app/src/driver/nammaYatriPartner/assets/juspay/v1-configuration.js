@@ -83,8 +83,8 @@ window.getMerchantConfig = function () {
       "WHAT_IS_NAMMA_YATRI_BONUS" : "நம்ம யாத்ரி போனஸ் என்றால் என்ன?",
       "EARNED_ON_APP" : "NY இல் பெறப்பட்ட விலை",
       "TRAVELLED_ON_APP" : "நம்ம யாத்ரியில் நடந்த தூரம்",
-      "GUARANTEED_FIXED_PRICE" : "2025 ஆம் ஆண்டு ஏப்ரல் 1 வரை உறுதியான விலை",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "நம்ம யாத்ரி திட்டங்களுக்கு தயாராக இருங்கள்!"
+      "GUARANTEED_FIXED_PRICE" : "ஏப்ரல் 1, 2025 வரை உத்தரவாதமான நிலையான விலை",
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "நம்ம யாத்ரி திட்டங்களுக்கு தயாராகுங்கள்!"
     },
     "teluguStrings": {
       "WELCOME_TEXT": "నమ్మ యాత్రి డ్రైవర్‌కు స్వాగతం",
