@@ -2961,6 +2961,15 @@ updateBannerAndPopupFlags = do
         && getValueToLocalNativeStore IS_RIDE_ACTIVE == "false"
         && pendingTotalManualDues >= subscriptionRemoteConfig.high_due_warning_limit
         && getDriverInfoResp.mode /= Just "OFFLINE"
+    
+    isCoinPopupNotShownToday = (isYesterday $ getValueToLocalStore COINS_POPUP_SHOWN_DATE) || (getValueToLocalStore COINS_POPUP_SHOWN_DATE == "__failed")
+    showCoinPopup = fromMaybe 0 (fromString $ getValueToLocalStore VISITED_DRIVER_COINS_PAGE) == 0
+        && appConfig.feature.enableYatriCoins
+        && cityConfig.enableYatriCoins
+        && toBool (getValueToLocalNativeStore IS_RIDE_ACTIVE)  == false 
+        && (fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) /= 7)
+        && isCoinPopupNotShownToday
+
   when moveDriverToOffline $ do
       setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE (getCurrentUTC "")
       changeDriverStatus Offline
@@ -2985,7 +2994,7 @@ updateBannerAndPopupFlags = do
                 { autoPayBanner = autopayBannerType
                 , subscriptionPopupType = subscriptionPopupType
                 , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
-                , showCoinsPopup = fromMaybe 0 (fromString $ getValueToLocalStore VISITED_DRIVER_COINS_PAGE) == 0 && appConfig.feature.enableYatriCoins && cityConfig.enableYatriCoins && toBool (getValueToLocalNativeStore IS_RIDE_ACTIVE) == false
+                , showCoinsPopup = showCoinPopup
                 }
               }
         )

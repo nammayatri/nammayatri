@@ -1046,7 +1046,9 @@ eval (RCDeactivatedAC PopUpModal.OnButton2Click) state = continue state {props {
 
 eval (CoinsPopupAC PopUpModal.OnButton1Click) state = exit $ EarningsScreen state true
 
-eval (CoinsPopupAC PopUpModal.OptionWithHtmlClick) state = continue state {props {showCoinsPopup = false}}
+eval (CoinsPopupAC PopUpModal.OptionWithHtmlClick) state = do
+  void $ pure $ setValueToLocalNativeStore COINS_POPUP_SHOWN_DATE (getCurrentUTC "")
+  continue state {props {showCoinsPopup = false}}
 
 eval (AccessibilityBannerAction (Banner.OnClick)) state = continue state{props{showGenericAccessibilityPopUp = true}}
 

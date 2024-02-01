@@ -122,6 +122,7 @@ data KeyStore = USER_NAME
                 | TIMES_OPENED_NEW_BENEFITS
                 | ENTERED_RC
                 | ENTERED_DL
+                | COINS_POPUP_SHOWN_DATE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
