@@ -1578,7 +1578,7 @@ getCarouselData :: ST.HomeScreenState -> Array CarouselData
 getCarouselData state =
   map (\item -> 
     { imageConfig : { image : item.image , height : item.imageHeight , width : 200, bgColor : item.imageBgColor, cornerRadius : 8.0 },
-      youtubeConfig : (EHC.getYoutubeData item.videoLink "PORTRAIT_VIDEO" item.videoHeight),
+      youtubeConfig : (EHC.getYoutubeData item.videoLink "PORTRAIT_VIDEO" item.videoHeight false true false),
       contentType : if item.videoLink == "" then "IMAGE" else "VIDEO" ,
       gravity : item.gravity ,
       backgroundColor : item.carouselBgColor,

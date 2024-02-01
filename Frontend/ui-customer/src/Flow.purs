@@ -1177,7 +1177,7 @@ homeScreenFlow = do
           sourceLng = (resp^._lon)
           destLat = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLat else state.data.driverInfoCardState.destinationLat
           destLng = if state.props.currentStage == RideAccepted then state.data.driverInfoCardState.sourceLng else state.data.driverInfoCardState.destinationLng
-      _ <- lift $ lift $ fork $ liftFlow $ openNavigation sourceLat sourceLng destLat destLng "DRIVE"
+      _ <- pure $ openNavigation sourceLat sourceLng destLat destLng "DRIVE"
       homeScreenFlow
     IN_APP_TRACK_STATUS state -> do
       case state.props.currentStage of
@@ -2735,7 +2735,7 @@ placeDetailsFlow = do
       (App.BackT $ App.NoBack <$> pure unit) >>= (\_ -> if updatedState.props.navigateToHome then homeScreenFlow else placeListFlow)
   where
     openGoogleMaps lat long = do
-      void $ lift $ lift $ fork $ liftFlow $ openNavigation 0.0 0.0 lat long "DRIVE"
+      void $ pure $ openNavigation 0.0 0.0 lat long "DRIVE"
       placeDetailsFlow
  
 ticketStatusFlow :: FlowBT String Unit
@@ -2775,7 +2775,7 @@ ticketListFlow = do
   case flow of
     GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
     GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW dstLat1 dstLon2  -> do
-      _ <- lift $ lift $ fork $ liftFlow $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
+      _ <- pure $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
       ticketListFlow
     GET_BOOKING_INFO_SCREEN state bookingStatus -> do
       (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId
@@ -2814,7 +2814,7 @@ ticketListFlow = do
 --   case flow of
 --     GO_TO_TICKET_PAYMENT state -> ticketPaymentFlow state.data
 --     GO_TO_OPEN_GOOGLE_MAPS_FROM_ZOO_FLOW dstLat1 dstLon2  -> do
---       _ <- lift $ lift $ fork $ liftFlow $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
+--       _ <- pure $ openNavigation 0.0 0.0 dstLat1 dstLon2 "DRIVE"
 --       zooTicketBookingFlow
 --     GET_BOOKING_INFO_SCREEN state bookingStatus -> do
 --       (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId

@@ -97,6 +97,7 @@ instance loggableAction :: Loggable Action where
     RemoveLottie -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "remove_lottie" "remove_lottie"
     (OpenTripDetails _) -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "open_trip_details" "open_trip_details"
     LoadMore -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "load_more" "load_more"
+    YoutubeVideoStatus _ -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "youtube_video_status" "youtube_video_status"
 
 data ScreenOutput
   = GoBack
@@ -144,6 +145,7 @@ data Action
   | RemoveLottie
   | OpenTripDetails Int
   | LoadMore
+  | YoutubeVideoStatus String
 
 eval :: Action -> DriverEarningsScreenState -> Eval Action ScreenOutput DriverEarningsScreenState
 eval BackPressed state = 

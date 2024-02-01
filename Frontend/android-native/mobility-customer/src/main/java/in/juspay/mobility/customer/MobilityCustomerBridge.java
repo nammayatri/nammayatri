@@ -140,23 +140,27 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     //region Store and Trigger CallBack
     @JavascriptInterface
     public void contactPermission() {
-        try {
-            if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
-                if (bridgeComponents.getActivity() != null) {
-                    ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.READ_CONTACTS}, REQUEST_CONTACTS);
-                }
-            } else {
-                contactsStoreCall(getPhoneContacts());
+        if (ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            if (bridgeComponents.getActivity() != null) {
+                ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.READ_CONTACTS}, REQUEST_CONTACTS);
             }
-        } catch (Exception e) {
-            Log.e(UTILS, "Exception in Contact Permission" + e);
+        } else {
+            ExecutorManager.runOnBackgroundThread(() -> {
+                try {
+                    contactsStoreCall(getPhoneContacts());
+                } catch (Exception e) {
+                    Log.e(UTILS, "Exception in Contact Permission" + e);
+                }
+            });
         }
     }
 
     public void contactsStoreCall(String contacts) {
         if (storeContactsCallBack != null) {
+            String removedDoubleQuotes = contacts.replace("\\\"", "\\\\\"");
+            String removedSingleQuote = removedDoubleQuotes.replace("'", "");
             String javascript = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
-                    storeContactsCallBack, contacts);
+                    storeContactsCallBack, removedSingleQuote);
             bridgeComponents.getJsCallback().addJsToWebView(javascript);
         }
     }
@@ -260,6 +264,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     String src = payload.optString("srcMarker", "");
                     String specialLocation = payload.optString("specialLocation", "");
                     float zoomLevel = (float)payload.optDouble("zoomLevel", 17.0);
+                    boolean autoZoom = payload.optBoolean("autoZoom", true);
                     ArrayList<LatLng> path = new ArrayList<>();
                     JSONObject jsonObject = new JSONObject(json);
                     JSONArray coordinates = jsonObject.getJSONArray("points");
@@ -272,11 +277,11 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     }
                     Marker currMarker = (Marker) markers.get(src);
                     currMarker.setTitle("Vehicle Icon On Map");
-                    Marker destMarker = (Marker) markers.get(dest);   
+                    Marker destMarker = (Marker) markers.get(dest);
                     JSONObject specialLocationObject = new JSONObject(specialLocation);
                     String destinationSpecialTagIcon = specialLocationObject.getString("destSpecialTagIcon");
 
-                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER))));
+                    destMarker.setIcon((BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(eta, dest, false,null, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER))));
                     destMarker.setTitle("Driver is " + eta);
                     if (polyline != null) {
                         polyline.setEndCap(new ButtCap());
@@ -306,8 +311,10 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                             if (debounceAnimateCameraCounter != 0) {
                                 debounceAnimateCameraCounter--;
                             } else {
-                                moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
-                                debounceAnimateCameraCounter = 10;
+                                if (autoZoom) {
+                                    moveCamera(sourceLat, sourceLong, destinationLat, destinationLon, coordinates);
+                                    debounceAnimateCameraCounter = 10;
+                                }
                             }
                         }
                     }
@@ -392,7 +399,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         .title("")
                         .position(new LatLng(lat, lng))
                         .anchor(0.5f, 0.5f)
-                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", icon,null, MarkerType.SPECIAL_ZONE_MARKER)));
+                        .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", icon, false,null,null, MarkerType.SPECIAL_ZONE_MARKER)));
                 Marker m = googleMap.addMarker(markerOptionsObj);
                 if (m != null) {
                     m.hideInfoWindow();
@@ -423,7 +430,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                         if (userPositionMarker == null) {
                             upsertMarker(CURRENT_LOCATION, String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), String.valueOf(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")), 160, 0.5f, 0.9f); //TODO this function will be removed
                         } else {
-                            userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, null, MarkerType.NORMAL_MARKER)));
+                            userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(locationName, CURRENT_LOCATION, false,null,null, MarkerType.NORMAL_MARKER)));
                             userPositionMarker.setTitle("");
                             LatLng latLng = new LatLng(Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LAT")), Double.parseDouble(getKeyInNativeSharedPrefKeys("LAST_KNOWN_LON")));
                         }
@@ -445,7 +452,7 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
                     layer.removeLayerFromMap();
                 }
                 if (userPositionMarker != null) {
-                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", CURRENT_LOCATION, null, MarkerType.NORMAL_MARKER)));
+                    userPositionMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView("", CURRENT_LOCATION, false,null,null, MarkerType.NORMAL_MARKER)));
                     userPositionMarker.setTitle("");
                 }
             } catch (Exception e) {
@@ -802,29 +809,32 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
     public String getPhoneContacts() throws JSONException {
         ContentResolver contentResolver = bridgeComponents.getContext().getContentResolver();
         Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI;
-        JSONArray contacts;
-        try (Cursor cursor = contentResolver.query(uri, null, null, null, null)) {
-            contacts = new JSONArray();
-
+        JSONArray contacts = new JSONArray();
+        String[] projection =
+                {
+                        ContactsContract.CommonDataKinds.Phone.NUMBER,
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+                };
+        String selection = ContactsContract.Contacts.IN_VISIBLE_GROUP + " = '"
+                + ("1") + "'";
+        String sortOrder = ContactsContract.Contacts.DISPLAY_NAME
+                + " COLLATE LOCALIZED ASC";
+        try (Cursor cursor = contentResolver.query(uri, projection, selection, null, sortOrder)) {
             if (cursor.getCount() > 0) {
                 while (cursor.moveToNext()) {
                     String contactNameStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
                     String contactStr = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
-                    String contactNumber = contactStr.replaceAll("\\D", "");
-                    String contactName = contactNameStr.replaceAll("'", "");
                     JSONObject tempPoints = new JSONObject();
-                    tempPoints.put("name", contactName);
-                    tempPoints.put("number", contactNumber);
+                    tempPoints.put("name", contactNameStr);
+                    tempPoints.put("number", contactStr);
                     contacts.put(tempPoints);
                 }
             }
         }
-
         JSONObject flagObject = new JSONObject();
         flagObject.put("name", "beckn_contacts_flag");
         flagObject.put("number", "true");
         contacts.put(flagObject);
-        System.out.print("Contacts " + contacts);
         return contacts.toString();
     }
 
@@ -1001,8 +1011,9 @@ public class MobilityCustomerBridge extends MobilityCommonBridge {
         switch (requestCode) {
             case REQUEST_CALL:
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    showDialer(phoneNumber, false);
+                    showDialer(phoneNumber, true);
                 } else {
+                    showDialer(phoneNumber, false);
                     toast("Permission Denied");
                 }
                 break;

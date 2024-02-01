@@ -36,6 +36,7 @@ data Action = OnButton1Click
             | DismissPopup
             | OptionWithHtmlClick
             | OnSecondaryTextClick
+            | YoutubeVideoStatus String
 
 type Config = {
     primaryText :: TextConfig,

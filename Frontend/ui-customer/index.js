@@ -75,8 +75,7 @@ window.isObject = function (object) {
   return (typeof object == "object");
 }
 window.manualEventsName = ["onBackPressedEvent", "onNetworkChange", "onResume", "onPause", "onKeyboardHeightChange", "onKeyboardClose", "onKeyboardOpen"];
-window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED"];
-
+window.whitelistedNotification = ["DRIVER_ASSIGNMENT", "CANCELLED_PRODUCT", "TRIP_FINISHED", "TRIP_STARTED", "REALLOCATE_PRODUCT", "FOLLOW_RIDE", "SOS_TRIGGERED", "SOS_RESOLVED", "SOS_MOCK_DRILL"];
 // setInterval(function () { JBridge.submitAllLogs(); }, 10000);
 
 const isUndefined = function (val) {
@@ -144,9 +143,9 @@ function callInitiateResult () {
   JBridge.runInJuspayBrowser("onEvent", JSON.stringify(payload), null)
 }
 
-window.onMerchantEvent = function (_event, GlobalPayload) {
-  console.log(GlobalPayload);
-  const clientPaylod = JSON.parse(GlobalPayload).payload;
+window.onMerchantEvent = function (_event, globalPayload) {
+  console.log(globalPayload);
+  const clientPaylod = JSON.parse(globalPayload).payload;
   if (_event == "initiate") {
     let clientId = clientPaylod.clientId;
     if (clientId.includes("_ios"))
@@ -170,9 +169,7 @@ window.onMerchantEvent = function (_event, GlobalPayload) {
     window.__payload.sdkVersion = "2.0.1"
     if (clientPaylod.action == "notification") {
       if (clientPaylod.notification_content && clientPaylod.notification_content.type) {
-        if (window.whitelistedNotification.includes(clientPaylod.notification_content.type)){
-          window.callNotificationCallBack(clientPaylod.notification_content.type);
-        }
+        window.callNotificationCallBack(clientPaylod.notification_content.type);
       }
     } else if (clientPaylod.action == "OpenChatScreen") { 
       if (window.openChatScreen) {
@@ -182,12 +179,18 @@ window.onMerchantEvent = function (_event, GlobalPayload) {
     else {
       eventObject["type"] = "";
       eventObject["data"] = "";
-      if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type == "CHAT_MESSAGE"){
-        eventObject["type"] = "CHAT_MESSAGE";
+      if(clientPaylod.notificationData && clientPaylod.notificationData.notification_type){
+        eventObject["type"] = clientPaylod.notificationData.notification_type;
+      } else if (clientPaylod.notification_type) {
+        eventObject["type"] = clientPaylod.notification_type;
       }
-      window.__payload = JSON.parse(GlobalPayload);
+      window.__payload = JSON.parse(globalPayload);
       console.log("window Payload: ", window.__payload);
-      purescript.main(eventObject)();
+      if (eventObject.type != "" && eventObject.type == "SOS_MOCK_DRILL") {
+        purescript.mockFollowRideEvent(eventObject)();
+      } else if (!clientPaylod.onNewIntent) {
+        purescript.main(eventObject)();
+      }
     }
   }
 }

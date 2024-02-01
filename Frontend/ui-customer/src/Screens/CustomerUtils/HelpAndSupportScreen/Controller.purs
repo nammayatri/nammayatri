@@ -109,6 +109,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "primary_edit_text"
         PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "countdown_updated"
         PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "secondary_text_clicked"
+        PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "youtube_video_status"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "tip_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "popup_dismissed"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
@@ -138,6 +139,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "primary_edit_text"
         PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "secondary_text_clicked"
         PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "countdown_updated"
+        PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "youtube_video_status"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "tip_clicked"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
         PopUpModal.DismissPopup -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "show_delete_popup_modal_action" "popup_dismissed"
@@ -150,6 +152,7 @@ instance loggableAction :: Loggable Action where
         PopUpModal.OnImageClick -> trackAppActionClick appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "image"
         PopUpModal.ETextController act -> trackAppTextInput appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "primary_edit_text"
         PopUpModal.OnSecondaryTextClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "secondary_text_clicked"
+        PopUpModal.YoutubeVideoStatus _ -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "youtube_video_status"
         PopUpModal.CountDown arg1 arg2 arg3 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "countdown_updated"
         PopUpModal.Tipbtnclick arg1 arg2 -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "delete_account_popup_modal_action" "tip_clicked"
         PopUpModal.OptionWithHtmlClick -> trackAppScreenEvent appId (getScreen HELP_AND_SUPPORT_SCREEN) "popup_modal_action" "option_with_html_clicked"
@@ -268,7 +271,7 @@ eval (PopupModelActionController (PopUpModal.OnButton1Click)) state = continue s
 
 eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_performed"
-  void $ pure $ showDialer (getSupportNumber "") false -- TODO: FIX_DIALER
+  void $ pure $ showDialer (getSupportNumber "") true
   continue state{props{isCallConfirmation = false}}
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ GoBack state

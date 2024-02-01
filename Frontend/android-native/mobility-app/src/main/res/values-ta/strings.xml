@@ -55,4 +55,7 @@
     <string name="accept_goto">ஏற்றுக்கொள்ளுங்கள் “கோ-டூ”</string>
     <string name="take_a_clear_selfie">குறிக்கப்பட்ட பகுதிக்குள் உங்கள் ஓட்டுநர் \n உரிமத்துடன் தெளிவான புகைப்படம் எடுக்கவும்</string>
     <string name="need_help">உதவி தேவையா?</string>
+    <string name="safety_deviation_alert">நாங்கள் உங்கள் சவாரி வேக வழியில் இருக்கிறோம் என்று குறித்துக் குறிப்பிட்டோம். நீங்கள் உங்கள் பயணத்தை பாதுகாக்காதிருக்கிறீர்களா?</string>
+    <string name="everything_okay">எல்லாம் சரியாக இருக்கின்றதா?</string>
+    <string name="we_noticed_your_driver_hasn_t_moved_for_a_while_are_you_feeling_safe_on_your_trip">எங்களுக்கு உங்கள் ட்ரைவர் சிற்றுண்டி இருக்கவில்லை. உங்கள் பயணத்தில் நீங்கள் பாராட்டப்படுகிறீர்களா?</string>
 </resources>

@@ -23,7 +23,7 @@ import Animation as Anim
 import Animation.Config (Direction(..), animConfig)
 import Components.BottomNavBar as BottomNavBar
 import Components.BottomNavBar.Controller (navData)
-import Data.Function.Uncurried (runFn1, runFn2, runFn3)
+import Data.Function.Uncurried (runFn1, runFn2, runFn5)
 import Components.Calendar.View as Calendar
 import Components.ErrorModal as ErrorModal
 import Components.GenericHeader.Controller as GenericHeaderConfig
@@ -996,7 +996,7 @@ faqVideoView push state =
           ( \action -> do
               let
                 id = getNewIDWithTag "faqVideo"
-              pure $ runFn3 setYoutubePlayer (youtubeData state "VIDEO") id (show ST.PLAY)
+              pure $ runFn5 setYoutubePlayer (youtubeData state "VIDEO") id (show ST.PLAY) push YoutubeVideoStatus
           )
           (const NoAction)
       ]
@@ -1014,6 +1014,8 @@ youtubeData state mediaType =
   , videoId: maybe "" (\x -> getVideoID x) state.props.individualQuestion.videoLink
   , videoType: "VIDEO"
   , videoHeight: 200
+  , showFullScreen: false
+  , hideFullScreenButton : false
   }
 
 answersListView :: forall w. (Action -> Effect Unit) -> Array String -> ST.DriverEarningsScreenState -> PrestoDOM (Effect Unit) w

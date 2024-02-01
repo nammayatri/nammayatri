@@ -27,6 +27,7 @@ data Action
   | LikeMessage
   | IncreaseViewCount
   | NoAction
+  | YoutubeVideoStatus String
 
 
 fetchTitleAndUrl :: Int -> String -> Array String

@@ -53,4 +53,6 @@ dummyYoutubeData = { videoTitle: ""
   , videoId: ""
   , videoType: ""
   , videoHeight : 0
+  , showFullScreen : false
+  , hideFullScreenButton : false
   }

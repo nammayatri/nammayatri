@@ -16,7 +16,8 @@ import static android.Manifest.permission.READ_EXTERNAL_STORAGE;
 import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 import static android.app.Activity.RESULT_OK;
 import static android.content.Context.MODE_PRIVATE;
-import static android.graphics.Color.rgb;
+import static in.juspay.mobility.common.Utils.drawableToBitmap;
+import static in.juspay.mobility.common.Utils.getCircleOptionsFromJSON;
 
 import static in.juspay.mobility.app.Utils.captureImage;
 import static in.juspay.mobility.app.Utils.encodeImageToBase64;
@@ -63,6 +64,8 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationManager;
 import android.media.AudioAttributes;
+import android.media.AudioManager;
+import android.media.Image;
 import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -71,6 +74,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
@@ -135,6 +139,8 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.Dash;
 import com.google.android.gms.maps.model.Dot;
 import com.google.android.gms.maps.model.Gap;
+import com.google.android.gms.maps.model.GroundOverlay;
+import com.google.android.gms.maps.model.GroundOverlayOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MapStyleOptions;
@@ -153,10 +159,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -164,17 +173,22 @@ import java.io.Reader;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.Objects;
 import java.util.TimeZone;
 
 import in.juspay.hyper.bridge.HyperBridge;
@@ -185,6 +199,7 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.hyper.core.JsCallback;
 import in.juspay.hyper.core.JuspayLogger;
 import in.juspay.hypersdk.data.KeyValueStore;
+import in.juspay.mobility.app.services.MobilityAPIResponse;
 import in.juspay.mobility.app.services.MobilityCallAPI;
 
 public class MobilityCommonBridge extends HyperBridge {
@@ -194,6 +209,8 @@ public class MobilityCommonBridge extends HyperBridge {
     public static final int REQUEST_CALL = 8;
     protected static final int STORAGE_PERMISSION = 67;
     //Constants
+    private static final int IMAGE_CAPTURE_REQ_CODE = 101;
+    private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private static final String LOCATE_ON_MAP = "LocateOnMap";
     protected static final String CURRENT_LOCATION = "ny_ic_customer_current_location";
     private static final String CURRENT_LOCATION_LATLON = "Current Location";
@@ -203,7 +220,7 @@ public class MobilityCommonBridge extends HyperBridge {
     //Maps
     protected JSONObject markers = new JSONObject();
     protected GoogleMap googleMap;
-    protected HashMap <String, Marker> zoneMarkers = new HashMap <String, Marker>();
+    protected HashMap <String, Marker> zoneMarkers = new HashMap <>();
     protected GeoJsonLayer layer;
     protected String regToken, baseUrl;
     protected String zoneName = "";
@@ -251,11 +268,13 @@ public class MobilityCommonBridge extends HyperBridge {
     protected String downloadLayout;
     protected int labelTextSize = 30;
 
-    private static final int IMAGE_CAPTURE_REQ_CODE = 101;
+    protected HashMap<String,CircleRippleEffect> circleRipples = new HashMap<>();
+    protected HashMap<String, GroundOverlay> groundOverlays = new HashMap<>();
+
 
     private static final int CREDENTIAL_PICKER_REQUEST = 74;
-    private static final int IMAGE_PERMISSION_REQ_CODE = 4997;
     private  MediaPlayer mediaPlayer = null;
+    private android.media.MediaPlayer audioPlayer;
 
     public MobilityCommonBridge(BridgeComponents bridgeComponents) {
         super(bridgeComponents);
@@ -294,7 +313,7 @@ public class MobilityCommonBridge extends HyperBridge {
         zoneMarkers = new HashMap<>();
         layer = null;
         if(mediaPlayer != null) mediaPlayer.audioRecorder = null;
-
+        clearAudioPlayer();
         if(onGlobalLayoutListener != null && bridgeComponents.getActivity() != null) {
             View parentView = bridgeComponents.getActivity().findViewById(android.R.id.content);
             if(parentView != null) {
@@ -785,6 +804,55 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @SuppressLint("PotentialBehaviorOverride")
+    @JavascriptInterface
+    public void upsertMarkerLabel(String configString) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject config = new JSONObject(configString);
+                String title = config.optString("title");
+                String id = config.optString("id");
+                String markerImage = config.optString("markerImage");
+                String actionImage = config.optString("actionImage");
+                String actionCallBack = config.optString("actionCallBack");
+                JSONObject point = config.optJSONObject("position");
+                LatLng position = null;
+                if (point != null) {
+                    double lat = point.optDouble("lat", lastLatitudeValue);
+                    double lon = point.optDouble("lng", lastLongitudeValue);
+                    position = new LatLng(lat, lon);
+                }
+                if (markers.has(id)) {
+                    Marker existingMarker = (Marker)markers.get(id);
+                    if (position != null) existingMarker.setPosition(position);
+                    existingMarker.setVisible(true);
+                    existingMarker.setIcon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(title, null, markerImage.equals(""), actionImage, null, MarkerType.NORMAL_MARKER)));
+                } else {
+                    MarkerOptions markerObj = new MarkerOptions();
+                    if (position != null) markerObj.position(position);
+                    markerObj.title("")
+                            .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(title, null, markerImage.equals(""), actionImage, null, MarkerType.NORMAL_MARKER)));
+                    Marker marker = googleMap.addMarker(markerObj);
+                    if (!actionCallBack.equals("")) {
+                        if (marker != null) {
+                            marker.setTag(actionCallBack);
+                        }
+                    }
+                    googleMap.setOnMarkerClickListener(currMarker -> {
+                        if (currMarker.getTag() != null) {
+                            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s');", currMarker.getTag());
+                            bridgeComponents.getJsCallback().addJsToWebView(js);
+                        }
+                        return false;
+                    });
+                    markers.put(id, marker);
+                }
+            } catch (Exception e) {
+                Log.e(MAPS, "Marker config parse error for " + configString, e);
+            }
+        });
+    }
+
     @JavascriptInterface
     public void upsertMarker(final String title, final String lat, final String lng, final int markerSize, final float anchorV, final float anchorV1) {
         ExecutorManager.runOnMainThread(() -> {
@@ -801,6 +869,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         markerObject.setFlat(true);
                         markerObject.setVisible(true);
                         markerObject.hideInfoWindow();
+                        markerObject.getPosition();
                         Log.i(MAPS, "Marker position updated for " + title);
                     } else {
                         MarkerOptions markerOptionsObj = makeMarkerObject(title, latitude, longitude, markerSize, anchorV, anchorV1);
@@ -1075,6 +1144,203 @@ public class MobilityCommonBridge extends HyperBridge {
         });
     }
 
+    @JavascriptInterface
+    public void addRippleCircle(String config) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            int count = 1;
+            String prefix = "ripples";
+            CircleRippleEffectOptions options = new CircleRippleEffectOptions();
+            LatLng point = new LatLng(lastLatitudeValue,lastLongitudeValue);
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                count = jsonConfig.optInt("count", 1);
+                prefix = jsonConfig.optString("prefix", "ripples");
+                JSONObject center = jsonConfig.optJSONObject("center");
+                if (center != null) {
+                    double lat = center.optDouble("lat",lastLatitudeValue);
+                    double lon = center.optDouble("lng",lastLongitudeValue);
+                    point = new LatLng(lat,lon);
+                }
+                getCircleOptionsFromJSON(jsonConfig, options);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+            for (int i = 1; i <= count; i++) {
+                CircleRippleEffect circleRippleEffect = new CircleRippleEffect(i,
+                        options.clone()
+                                .factor(i)
+                                .radius((i) * options.getRadius()));
+                circleRippleEffect.draw(googleMap, point);
+                circleRipples.put(prefix + "_" + i, circleRippleEffect);
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void animateRippleCircle(String config) {
+//        HandlerThread handler = new HandlerThread("CircleAnimation");
+//        handler.start();
+//        new Handler(handler.getLooper()).post(() -> TODO: Need to verify why animation is lagging if we run in Handler Thread.
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                int count = jsonConfig.optInt("count", 1);
+                String prefix = jsonConfig.optString("prefix", "ripples");
+                for (int i = 1; i <= count; i++) {
+                    CircleRippleEffect circle = circleRipples.get(prefix + "_" + i);
+                    if (circle != null) {
+                        circle.startAnimation();
+                    }
+                }
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void removeRippleCircle(String config) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                int count = jsonConfig.optInt("count", 1);
+                String prefix = jsonConfig.optString("prefix", "ripples");
+                for (int i = 1; i <= count; i++) {
+                    String id = prefix + "_" + i;
+                    CircleRippleEffect circle = circleRipples.get(id);
+                    if (circle != null) {
+                        circle.remove();
+                    }
+                    circleRipples.remove(id);
+                }
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void updateRippleCirclePosition(String config) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                int count = jsonConfig.optInt("count", 1);
+                String prefix = jsonConfig.optString("prefix", "ripples");
+                JSONObject center = jsonConfig.optJSONObject("center");
+                LatLng point = new LatLng(lastLatitudeValue,lastLongitudeValue);
+                if (center != null) {
+                    double lat = center.optDouble("lat",lastLatitudeValue);
+                    double lon = center.optDouble("lng",lastLongitudeValue);
+                    point = new LatLng(lat,lon);
+                }
+                for (int i = 1; i <= count; i++) {
+                    CircleRippleEffect circle = circleRipples.get(prefix + "_" + i);
+                    if (circle != null) {
+                        circle.updatePosition(point);
+                    }
+                }
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void addGroundOverlay(String config) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                Context context = bridgeComponents.getContext();
+                String id = jsonConfig.optString("id", "ground_overlay");
+                int height = jsonConfig.optInt("height", 50);
+                int width = jsonConfig.optInt("width", 50);
+                String imageName = jsonConfig.optString("imageUrl", "");
+                boolean fetchFromView = jsonConfig.optBoolean("fetchFromView", false);
+                String viewID = jsonConfig.optString("viewID", "");
+                JSONObject center = jsonConfig.optJSONObject("center");
+                LatLng point = new LatLng(lastLatitudeValue,lastLongitudeValue);
+                if (center != null) {
+                    double lat = center.optDouble("lat",lastLatitudeValue);
+                    double lon = center.optDouble("lng",lastLongitudeValue);
+                    point = new LatLng(lat,lon);
+                }
+                Drawable drawable = null;
+                if (bridgeComponents.getActivity() != null && fetchFromView) {
+                    ImageView view = bridgeComponents.getActivity().findViewById(Integer.parseInt(viewID));
+                    drawable = view.getDrawable();
+                }
+                GroundOverlayOptions options = new GroundOverlayOptions().position(point,width,height);
+                if (drawable != null) {
+                    options.image(BitmapDescriptorFactory.fromBitmap(drawableToBitmap(drawable)));
+                } else {
+                    options.image(BitmapDescriptorFactory.fromResource(context.getResources().getIdentifier(imageName, "drawable", context.getPackageName())));
+                }
+                ExecutorManager.runOnMainThread(() -> groundOverlays.put(id, googleMap.addGroundOverlay(options)));
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public boolean isOverlayPresent (String id) {
+        return groundOverlays.containsKey(id);
+    }
+
+    @JavascriptInterface
+    public boolean isCirclePresent (String id) {
+        return circleRipples.containsKey(id);
+    }
+
+    @JavascriptInterface
+    public void removeGroundOverlay(String config) {
+        ExecutorManager.runOnMainThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                String id = jsonConfig.optString("id", "ground_overlay");
+                GroundOverlay overlay = groundOverlays.get(id);
+                if (overlay != null) {
+                    overlay.remove();
+                }
+                groundOverlays.remove(id);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ground Overlay config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void updateGroundOverlay(String config) {
+        ExecutorManager.runOnBackgroundThread(() -> {
+            try {
+                JSONObject jsonConfig = new JSONObject(config);
+                String id = jsonConfig.optString("id", "ground_overlay");
+                GroundOverlay overlay = groundOverlays.get(id);
+                JSONObject center = jsonConfig.optJSONObject("center");
+                LatLng point = new LatLng(lastLatitudeValue,lastLongitudeValue);
+                if (center != null) {
+                    double lat = center.optDouble("lat",lastLatitudeValue);
+                    double lon = center.optDouble("lng",lastLongitudeValue);
+                    point = new LatLng(lat,lon);
+                }
+
+                if (overlay != null) {
+                    LatLng finalPoint = point;
+                    ExecutorManager.runOnMainThread(() -> overlay.setPosition(finalPoint));
+                }
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, "Error parsing ripple config");
+            }
+        });
+    }
+
+    @JavascriptInterface
+    public void clearMap () {
+        ExecutorManager.runOnMainThread(() -> googleMap.clear());
+        circleRipples.clear();
+        groundOverlays.clear();
+    }
+
     private void checkAndAnimatePolyline(final int staticColor, final String style, final int polylineWidth, PolylineOptions polylineOptions, JSONObject mapRouteConfigObject){
         try{
             isAnimationNeeded = mapRouteConfigObject != null && mapRouteConfigObject.optBoolean("isAnimation", false);
@@ -1182,7 +1448,8 @@ public class MobilityCommonBridge extends HyperBridge {
                     double sourceLong = sourceCoordinates.getDouble("lng");
                     double destLat = destCoordinates.getDouble("lat");
                     double destLong = destCoordinates.getDouble("lng");
-                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0) {
+                    boolean moveCamera = mapRouteConfigObject.optBoolean("autoZoom",true);
+                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0 && moveCamera) {
                         moveCamera(sourceLat, sourceLong, destLat, destLong, coordinates);
                     }
                     if (isActual) {
@@ -1209,7 +1476,7 @@ public class MobilityCommonBridge extends HyperBridge {
                         MarkerOptions markerObj = new MarkerOptions()
                                 .title("")
                                 .position(dest)
-                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER)));
+                                .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destMarker, false,null, destinationSpecialTagIcon.equals("") ? null : destinationSpecialTagIcon, MarkerType.NORMAL_MARKER)));
 
                         Marker tempmarker = googleMap.addMarker(markerObj);
                         markers.put(destMarker, tempmarker);
@@ -1231,7 +1498,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(source)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceSpecialTagIcon.equals("") ? null : sourceSpecialTagIcon, MarkerType.NORMAL_MARKER)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, false,null, sourceSpecialTagIcon.equals("") ? null : sourceSpecialTagIcon, MarkerType.NORMAL_MARKER)));
                             Marker tempmarker = googleMap.addMarker(markerObj);
                             markers.put(sourceMarker, tempmarker);
                         }
@@ -1267,7 +1534,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(sourceLatLng)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, sourceTag.equals("") ? null : sourceTag, MarkerType.NORMAL_MARKER)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(sourceName, sourceMarker, false,null, sourceTag.equals("") ? null : sourceTag, MarkerType.NORMAL_MARKER)));
                             Marker marker = googleMap.addMarker(markerObj);
                             markers.put(sourceMarker, marker);
                         }
@@ -1277,7 +1544,7 @@ public class MobilityCommonBridge extends HyperBridge {
                             MarkerOptions markerObj = new MarkerOptions()
                                     .title("")
                                     .position(destinationLatLng)
-                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destinationMarker, destinationTag.equals("") ? null : destinationTag, MarkerType.NORMAL_MARKER)));
+                                    .icon(BitmapDescriptorFactory.fromBitmap(getMarkerBitmapFromView(destinationName, destinationMarker, false,null, destinationTag.equals("") ? null : destinationTag, MarkerType.NORMAL_MARKER)));
                             Marker marker = googleMap.addMarker(markerObj);
                             markers.put(destinationMarker, marker);
                         }
@@ -1290,7 +1557,7 @@ public class MobilityCommonBridge extends HyperBridge {
     }
 
     @SuppressLint({"UseCompatLoadingForDrawables", "SetTextI18n", "LongLogTag"})
-    protected Bitmap getMarkerBitmapFromView(String locationName, String imageName, String specialLocationTagIcon, MarkerType markerType) {
+    protected Bitmap getMarkerBitmapFromView(String locationName, String imageName, boolean isInvisiblePointer, String actionImage, String specialLocationTagIcon, MarkerType markerType) {
         Context context = bridgeComponents.getContext();
         @SuppressLint("InflateParams")
         String layoutName = markerType.equals(MarkerType.SPECIAL_ZONE_MARKER) ? "zone_label_layout" : "marker_label_layout";
@@ -1318,14 +1585,17 @@ public class MobilityCommonBridge extends HyperBridge {
         }
         ImageView pointer = customMarkerView.findViewById(R.id.pointer_img);
         try {
-            pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(imageName, "drawable", context.getPackageName())));
+            if (imageName != null)
+                pointer.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(imageName, "drawable", context.getPackageName())));
+            if (isInvisiblePointer)
+                pointer.setVisibility(View.INVISIBLE);
             if (markerType.equals(MarkerType.SPECIAL_ZONE_MARKER)) {
                 ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
                 layoutParams.height = 45;
                 layoutParams.width = 45;
                 pointer.setLayoutParams(layoutParams);
             } else {
-                if (imageName.equals("ny_ic_customer_current_location")) {
+                if (imageName != null && imageName.equals("ny_ic_customer_current_location")) {
                     ViewGroup.LayoutParams layoutParams = pointer.getLayoutParams();
                     layoutParams.height = 160;
                     layoutParams.width = 160;
@@ -1334,6 +1604,15 @@ public class MobilityCommonBridge extends HyperBridge {
                         pointer.setAccessibilityHeading(false);
                     pointer.setLayoutParams(layoutParams);
                 }
+            }
+            if (actionImage != null) {
+                ImageView markerActionImage = customMarkerView.findViewById(R.id.marker_action_image);
+                markerActionImage.setVisibility(View.VISIBLE);
+                markerActionImage.setImageDrawable(context.getResources().getDrawable(context.getResources().getIdentifier(actionImage, "drawable", context.getPackageName())));
+            }
+            if (actionImage == null && locationName.equals("")){
+                View mainLableLayout = customMarkerView.findViewById(R.id.main_label_layout);
+                mainLableLayout.setVisibility(View.GONE);
             }
         } catch (Exception e) {
             Log.e("getMarkerBitmapFromView", "Exception in rendering Image" + e);
@@ -1900,6 +2179,7 @@ public class MobilityCommonBridge extends HyperBridge {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.setData(Uri.parse("tel:" + phoneNum));
         if (call && ContextCompat.checkSelfPermission(bridgeComponents.getContext(), Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+            phoneNumber = phoneNum;
             ActivityCompat.requestPermissions(bridgeComponents.getActivity(), new String[]{Manifest.permission.CALL_PHONE}, REQUEST_CALL);
         } else {
             bridgeComponents.getContext().startActivity(intent);
@@ -2793,6 +3073,52 @@ public class MobilityCommonBridge extends HyperBridge {
         mediaPlayer.uploadFile();
     }
 
+    @JavascriptInterface
+    public void startAudioPlayer(String file, String callback) {
+        int id = bridgeComponents.getContext().getResources().getIdentifier(file,"raw",bridgeComponents.getContext().getPackageName());
+        if(audioPlayer != null) {
+            audioPlayer.stop();
+            audioPlayer = null;
+        }
+        try {
+        if (id != 0) {
+            Uri audioUri = Uri.parse("android.resource://" + bridgeComponents.getContext().getPackageName() + "/" + id);
+            audioPlayer = android.media.MediaPlayer.create(bridgeComponents.getContext(), audioUri);
+        } else {
+            audioPlayer = new android.media.MediaPlayer();
+            audioPlayer.setDataSource(file);
+            audioPlayer.prepare();
+        }
+        audioPlayer.setOnPreparedListener((mediaPlayer) -> {
+            System.out.println("setOnPreparedListener");
+            mediaPlayer.start();
+        });
+        audioPlayer.setOnCompletionListener((mediaPlayer) -> {
+            System.out.println("setOnCompletionListener");
+            String js = String.format(Locale.ENGLISH, "window.callUICallback('%s','%s');",
+                    callback, "COMPLETED");
+            bridgeComponents.getJsCallback().addJsToWebView(js);
+        });
+        } catch (Exception e) {
+            Log.e(OTHERS, "Error in  startAudioPlayer : " + e);
+            e.printStackTrace();
+        }
+    }
+
+    @JavascriptInterface
+    public void pauseAudioPlayer() {
+        if (audioPlayer != null) {
+            audioPlayer.pause();
+        };
+    }
+
+    @JavascriptInterface
+    public void clearAudioPlayer() {
+        if (audioPlayer != null) {
+            audioPlayer.stop();
+            audioPlayer = null;
+        };
+    }
     
 
     @Override
