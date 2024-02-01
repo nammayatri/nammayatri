@@ -81,11 +81,14 @@ cancelRideImpl rideId bookingCReason = do
         let searchRepeatLimit = transpConf.searchRepeatLimit
         now <- getCurrentTime
         let isSearchTryValid = searchTry.validTill > now
+        driverReachedDistance <- highPrecMetersToMeters <$> asks (.driverReachedDistance)
+        let driverHasNotArrived = isNothing ride.driverArrivalTime || maybe True (> driverReachedDistance) bookingCReason.driverDistToPickup
         let isRepeatSearch =
               searchTry.searchRepeatCounter < searchRepeatLimit
                 && bookingCReason.source == SBCR.ByDriver
                 && isSearchTryValid
                 && fromMaybe False searchReq.isReallocationEnabled
+                && driverHasNotArrived
         if isRepeatSearch
           then do
             void $ addDriverToSearchCancelledList searchReq.id ride
