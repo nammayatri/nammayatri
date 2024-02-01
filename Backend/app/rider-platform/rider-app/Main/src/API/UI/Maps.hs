@@ -62,10 +62,10 @@ handler =
     :<|> getPlaceName
 
 autoComplete :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.AutoCompleteReq -> FlowHandler DMaps.AutoCompleteResp
-autoComplete (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.autoComplete (personId, merchantId)
+autoComplete (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.autoComplete (personId, merchantId) Nothing
 
 getPlaceDetails :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceDetailsReq -> FlowHandler DMaps.GetPlaceDetailsResp
-getPlaceDetails (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceDetails (personId, merchantId)
+getPlaceDetails (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceDetails (personId, merchantId) Nothing
 
 getPlaceName :: (Id Person.Person, Id Merchant.Merchant) -> DMaps.GetPlaceNameReq -> FlowHandler DMaps.GetPlaceNameResp
-getPlaceName (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName (personId, merchantId)
+getPlaceName (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DMaps.getPlaceName (personId, merchantId) Nothing

@@ -52,10 +52,10 @@ handler :: FlowServer API
 handler = getRoute :<|> getPickupRoute :<|> getTripRoute
 
 getRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getRoutes (personId, merchantId)
+getRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getRoutes (personId, merchantId) Nothing
 
 getPickupRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getPickupRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getPickupRoutes (personId, merchantId)
+getPickupRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getPickupRoutes (personId, merchantId) Nothing
 
 getTripRoute :: (Id Person.Person, Id Merchant.Merchant) -> Maps.GetRoutesReq -> FlowHandler Maps.GetRoutesResp
-getTripRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getTripRoutes (personId, merchantId)
+getTripRoute (personId, merchantId) = withFlowHandlerAPI . withPersonIdLogTag personId . DRoute.getTripRoutes (personId, merchantId) Nothing
