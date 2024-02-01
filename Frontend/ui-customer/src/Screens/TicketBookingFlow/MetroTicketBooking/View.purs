@@ -63,8 +63,8 @@ screen initialState =
   }
   where
     getQuotes push = do
-      -- let withinTimeRange = JB.withinTimeRange "04:30:00" "22:30:00" $ EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
-      -- push $ ShowMetroBookingTimeError withinTimeRange
+      let withinTimeRange = JB.withinTimeRange "04:30:00" "22:30:00" $ EHC.convertUTCtoISC (EHC.getCurrentUTC "") "HH:mm:ss"
+      push $ ShowMetroBookingTimeError withinTimeRange
       void $ launchAff $ EHC.flowRunner defaultGlobalState $ getQuotesPolling initialState.data.searchId 5 3000.0 initialState push GetMetroQuotesAction
       pure $ pure unit
 
