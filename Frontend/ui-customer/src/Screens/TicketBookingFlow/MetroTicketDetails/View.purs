@@ -160,6 +160,23 @@ metroTicketDetailsView push state =
 
 ticketDetailsView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 ticketDetailsView push state = 
+   let 
+    currentTicket = state.data.ticketsInfo !! state.props.currentTicketIndex
+    ticketStatus = case currentTicket of 
+                    Just ticket -> case ticket.status of
+                                     "ACTIVE" -> "Active"
+                                     "EXPIRED" -> "Expired"
+                                     "USED" -> "Used"   
+                                     _ -> ticket.status
+                    Nothing -> ""
+    ticketStatusPillColor = case currentTicket of 
+                    Just ticket -> case ticket.status of
+                                     "ACTIVE" -> Color.green900
+                                     "EXPIRED" -> Color.red900
+                                     "USED" -> Color.grey900 
+                                     _ -> Color.grey900
+                    Nothing -> ""
+  in
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -244,7 +261,7 @@ metroHeaderView push state =
         textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text "Onward Journey"
+        , text $ if state.data.ticketType == "SingleJourney" then "Onward Journey" else "Round trip"
         , color Color.black800
         ] <> FontStyle.tags TypoGraphy
       , linearLayout [
@@ -258,7 +275,7 @@ metroHeaderView push state =
       , textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ (show $ state.props.currentTicketIndex + 1) <> " tickets"
+        , text $ (show $ state.data.noOfTickets) <> if state.data.noOfTickets > 1 then " tickets" else " ticket"
         , color Color.black800
         ] <> FontStyle.tags TypoGraphy
       ]
@@ -272,6 +289,7 @@ qrCodeView push state =
     qrString = case currentTicket of 
                 Just ticket -> ticket.qrString
                 Nothing -> ""
+    ticketStr = if state.data.noOfTickets > 1 then " Tickets" else " Ticket"
   in 
     linearLayout [
       width MATCH_PARENT
@@ -284,7 +302,7 @@ qrCodeView push state =
       textView $ [
         width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ (show $ state.props.currentTicketIndex + 1) <> "/" <> (show $ length state.data.ticketsInfo) <>" Tickets"
+      , text $ (show $ state.props.currentTicketIndex + 1) <> "/" <> (show $ length state.data.ticketsInfo) <> ticketStr
       , color Color.black800
       , gravity CENTER
       ] <> FontStyle.subHeading1 TypoGraphy
@@ -299,6 +317,7 @@ qrCodeView push state =
         , height $ V 32
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_left_grey"
         , onClick push $ const PrevTicketClick
+        , visibility $ boolToVisibility $ state.data.noOfTickets > 0
         ]
       , linearLayout [
           height WRAP_CONTENT
@@ -317,6 +336,7 @@ qrCodeView push state =
       , imageView [
           width $ V 32
         , height $ V 32
+        , visibility $ boolToVisibility $ state.data.noOfTickets > 0
         , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
         , onClick push $ const NextTicketClick
         ]

@@ -25,7 +25,9 @@ initData = {
   data : {
     dummyData : ""
   , metroRoute : dummyMetroRoute
-  , ticketsInfo : dummyTicketInfo
+  , ticketsInfo : []-- dummyTicketInfo
+  , ticketType : ""
+  , noOfTickets : 1
   }
 , props :  {
     dummyProps : ""
@@ -36,13 +38,13 @@ initData = {
 }
 
 
-dummyTicketInfo :: Array MetroTicketInfo
-dummyTicketInfo = 
-  [
-    {qrString : "Hello", ticketNumber: "12345", validUntil : "12:00 PM 5 May23", status : "ACTIVE" }
-  , {qrString : "world", ticketNumber: "12dasf5", validUntil : "12:00 PM 4 Jan 24", status : "ACTIVE" }
-  , {qrString : "fasd", ticketNumber: "adsfasd", validUntil : "3:15 PM 16 Dec 23", status : "ACTIVE" }
-  ]
+-- dummyTicketInfo :: Array MetroTicketInfo
+-- dummyTicketInfo = 
+--   [
+--     {qrString : "Hello", ticketNumber: "12345", validUntil : "12:00 PM 5 May23", status : "ACTIVE" }
+--   , {qrString : "world", ticketNumber: "12dasf5", validUntil : "12:00 PM 4 Jan 24", status : "ACTIVE" }
+--   , {qrString : "fasd", ticketNumber: "adsfasd", validUntil : "3:15 PM 16 Dec 23", status : "ACTIVE" }
+--   ]
 
 
 dummyMetroRoute :: Array MetroRoute

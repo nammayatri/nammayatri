@@ -27,8 +27,8 @@ import Engineering.Helpers.Commons
 metroTicketListApiToMyTicketsTransformer ::  (Array MetroTicketBookingStatus) -> MetroMyTicketsScreenState -> MetroMyTicketsScreenState 
 metroTicketListApiToMyTicketsTransformer ticketList state = 
   let 
-    activeTickets' = metroTicketCardTransformer $ filter (\ (MetroTicketBookingStatus ticket) -> (ticket.status == "CONFIRMED")) ticketList
-    pastTickets' = metroTicketCardTransformer $ filter (\ (MetroTicketBookingStatus ticket) -> (ticket.status /= "CONFIRMED")) ticketList
+    activeTickets' = metroTicketCardTransformer $ filter (\ (MetroTicketBookingStatus ticket) -> (any (_ == ticket.status) ["CONFIRMED"])) ticketList
+    pastTickets' = metroTicketCardTransformer $ filter (\ (MetroTicketBookingStatus ticket) -> (any (_ == ticket.status) ["PAYMENT_PENDING", "FAILED"])) ticketList
   in
     state {
       data {
@@ -48,8 +48,8 @@ ticketItemTransformer (MetroTicketBookingStatus bookingItem) =
     
     sourceName' = getStationName sourceStationEnum
     destinationName' = getStationName destinationStationEnum
-    noOfTickets' = length bookingItem.tickets
-    createdAt' = ""
+    noOfTickets' = bookingItem.quantity
+    createdAt' = (convertUTCtoISC bookingItem.createdAt "Do MMM YYYY")
     metroTicketStatusApiResp' = (MetroTicketBookingStatus bookingItem)
     status' = bookingItem.status
     validUntill' = (convertUTCtoISC bookingItem.validTill "hh:mm A") <> ", " <> (convertUTCtoISC bookingItem.validTill "Do MMM YYYY") 
