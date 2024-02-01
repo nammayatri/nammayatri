@@ -19,7 +19,11 @@ import Screens.Types (PlanCardConfig)
 import Services.API (UiPlansResp(..))
 import Storage (KeyStore(..), setValueToLocalStore)
 import Components.PopUpModal as PopUpModal
-
+import PrestoDOM.Core (getPushFn)
+import Effect.Uncurried (runEffectFn5, runEffectFn1)
+import Screens.OnBoardingSubscriptionScreen.Transformer (transformReelsPurescriptDataToNativeData)
+import Engineering.Helpers.Commons(getNewIDWithTag)
+import RemoteConfig (ReelItem(..))
 
 instance showAction :: Show Action where
     show _ = ""
@@ -47,6 +51,8 @@ data Action = BackPressed
             | JoinPlanAC PrimaryButton.Action
             | CallSupport
             | PopUpModalAC PopUpModal.Action
+            | OpenReelsView Int
+            | GetCurrentPosition String String
 
 eval :: Action -> OnBoardingSubscriptionScreenState -> Eval Action ScreenOutput OnBoardingSubscriptionScreenState
 eval BackPressed state = 
@@ -70,4 +76,25 @@ eval (PopUpModalAC PopUpModal.OnButton1Click) state = do
     void $ pure $ JB.showDialer state.data.subscriptionConfig.supportNumber false
     continue state { props { supportPopup = false }}
 eval (PopUpModalAC (PopUpModal.OnButton2Click)) _ = exit GoBack
+
+eval (OpenReelsView index) state = do
+  continueWithCmd state [ do
+    push <-  getPushFn Nothing "OnBoardingSubscriptionScreen"
+    _ <- runEffectFn5 JB.addReels (transformReelsPurescriptDataToNativeData state.data.reelsData) index (getNewIDWithTag "ReelsViewOnBoarding") push $ GetCurrentPosition
+    pure NoAction
+  ]
+
+eval (GetCurrentPosition label stringData) state = do
+  case label of
+    "ACTION" -> 
+      case stringData of
+        "CHOOSE_A_PLAN" -> continueWithCmd state [ do
+                            _ <- JB.scrollToEnd (getNewIDWithTag "OnBoardingSubscriptionScreenScrollView") true
+                            pure NoAction
+                          ]
+        _ -> continue state
+    "CURRENT_POSITION" -> let hello = spy "Current position" stringData
+                          in continue state
+    _ -> continue state
+
 eval _ state = continue state

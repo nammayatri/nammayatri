@@ -189,6 +189,7 @@ foreign import setYoutubePlayer :: forall action. Fn5 YoutubeData String String 
 foreign import addMediaPlayer :: String -> String -> Boolean -> Effect Unit
 foreign import switchYoutubeVideo :: String -> Unit
 foreign import addCarouselImpl :: EffectFn2 CarouselModal String Unit
+foreign import addReels :: forall action. EffectFn5 ReelModal Int String (action -> Effect Unit) (String -> String -> action) Unit
 foreign import scrollToEnd :: String -> Boolean -> Effect Unit
 foreign import metaLogEvent :: String -> Unit
 foreign import metaLogEventWithParams :: String -> String -> String -> Effect Unit

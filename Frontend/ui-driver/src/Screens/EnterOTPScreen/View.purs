@@ -48,7 +48,7 @@ screen initialState =
   , globalEvents : [ (\push -> do
                       _ <- pure $ HU.clearTimer ""
                       _ <- HU.startTimer 10 true push TIMERACTION
-                      pure (pure unit)) ] <> if (DS.length initialState.data.otp) > 0 then [] else [ HU.startOtpReciever AutoFill ]
+                      pure (pure unit)) ] <> if (DS.length initialState.data.otp) > 0 then [] else [] --[ HU.startOtpReciever AutoFill ]
   , eval
   }
 

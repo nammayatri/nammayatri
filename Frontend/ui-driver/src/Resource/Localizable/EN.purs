@@ -1209,6 +1209,8 @@ getEN stringKey =
         COINS -> "Coins"
         COINS_ADDED -> "Coins Added"
         CANT_FIND_OPTION -> "Can't find option"
+        WATCH_NOW -> "Watch Now"
+        CHOOSE_A_PLAN -> "Choose a plan"
         REFERRAL -> "Referral"
         BENEFITS -> "Benefits"
         YOUR_DAILY_RANK -> "Your Daily Rank"
