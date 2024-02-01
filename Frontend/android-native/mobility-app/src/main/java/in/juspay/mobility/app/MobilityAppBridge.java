@@ -140,12 +140,12 @@ public class MobilityAppBridge extends HyperBridge {
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     CallBack callBack = new CallBack() {
         @Override
-        public void customerCallBack(String notificationType) {
+        public void customerCallBack(String notificationType, String notificationData) {
             Log.i(CALLBACK, "Not required");
         }
 
         @Override
-        public void driverCallBack(String notificationType) {
+        public void driverCallBack(String notificationType, String notificationData) {
             Log.i(CALLBACK, "Not required");
         }
 

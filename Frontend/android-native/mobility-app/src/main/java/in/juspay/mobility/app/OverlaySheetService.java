@@ -282,7 +282,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                             holder.reqButton.setClickable(false);
                             updateSharedPreferences();
                             for (int i = 0; i < callBack.size(); i++) {
-                                callBack.get(i).driverCallBack("RIDE_REQUESTED");
+                                callBack.get(i).driverCallBack("RIDE_REQUESTED","");
                             }
                             String logEvent = sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") ? "silent_ride_accepted" : "ride_accepted";
                             firebaseLogEvent(logEvent);

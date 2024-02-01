@@ -188,7 +188,10 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                     stopChatService(notificationType, sharedPref);
                     String key = getString(R.string.service);
                     String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider") ? "DRIVER" : "USER";
-                    NotificationUtils.triggerUICallbacks(notificationType);
+                    JSONObject notificationData = new JSONObject();
+                    notificationData.put("title", title)
+                                    .put("msg",body);
+                    NotificationUtils.triggerUICallbacks(notificationType, notificationData.toString());
                     switch (notificationType) {
                         case NotificationTypes.DRIVER_NOTIFY:
                             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
