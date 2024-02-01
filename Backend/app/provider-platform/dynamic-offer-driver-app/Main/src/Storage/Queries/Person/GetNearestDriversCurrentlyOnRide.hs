@@ -51,11 +51,12 @@ getNearestDriversCurrentlyOnRide ::
   Id Merchant ->
   Maybe Seconds ->
   Meters ->
+  Bool ->
   m [NearestDriversResultCurrentlyOnRide]
-getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue = do
+getNearestDriversCurrentlyOnRide mbVariant fromLocLatLong radiusMeters merchantId mbDriverPositionInfoExpiry reduceRadiusValue isRental = do
   let onRideRadius = radiusMeters - reduceRadiusValue
   driverLocs <- Int.getDriverLocsWithCond merchantId mbDriverPositionInfoExpiry fromLocLatLong onRideRadius
-  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True
+  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles
   driverQuote <- Int.getDriverQuote $ map ((.getId) . (.id)) drivers

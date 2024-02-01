@@ -48,6 +48,7 @@ import Data.Fixed
 import Data.List (partition)
 import Data.List.Extra (notNull)
 import qualified Data.List.NonEmpty as NE
+import Data.Text (splitOn)
 import Data.Tuple.Extra (snd3)
 import Domain.Action.UI.Route as DRoute
 import qualified Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest as DDGR
@@ -463,7 +464,8 @@ calculateGoHomeDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = d
             nearestRadius = goHomeCfg.goHomeFromLocationRadius,
             homeRadius = goHomeCfg.goHomeWayPointRadius,
             merchantId,
-            driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry
+            driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
+            isRental = checkRental driverPoolCfg.tripCategory
           }
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
@@ -593,6 +595,7 @@ calculateDriverPool poolStage driverPoolCfg mbVariant pickup merchantId onlyNotO
         merchantId
         onlyNotOnRide
         driverPoolCfg.driverPositionInfoExpiry
+        (checkRental driverPoolCfg.tripCategory)
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -680,6 +683,7 @@ calculateDriverPoolCurrentlyOnRide poolStage driverPoolCfg mbVariant pickup merc
           merchantId
           driverPoolCfg.driverPositionInfoExpiry
           driverPoolCfg.radiusShrinkValueForDriversOnRide
+          (checkRental driverPoolCfg.tripCategory)
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection -> filterM (fmap (< driverPoolCfg.maxParallelSearchRequests) . getParallelSearchRequestCount now) approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
@@ -820,6 +824,12 @@ computeActualDistance orgId merchantOpCityId pickup driverPoolResults = do
           keepHiddenForSeconds = Seconds 0,
           goHomeReqId = Nothing
         }
+
+checkRental :: Text -> Bool
+checkRental tripCategory = do
+  case splitOn "_" tripCategory of
+    (category : _) -> category == "rental"
+    _ -> False
 
 refactorRoutesResp :: GoHomeConfig -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult) -> (QP.NearestGoHomeDriversResult, Maps.RouteInfo, Id DDGR.DriverGoHomeRequest, DriverPoolWithActualDistResult)
 refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWithActualDistance) = (nearestDriverRes, newRoute route, ghrId, driverGoHomePoolWithActualDistance)
