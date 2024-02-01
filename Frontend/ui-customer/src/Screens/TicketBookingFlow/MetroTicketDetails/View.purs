@@ -47,6 +47,8 @@ import Animation as Anim
 import Engineering.Helpers.Commons
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Language.Strings
+import Language.Types
 
 screen :: ST.MetroTicketDetailsScreenState -> Screen Action ST.MetroTicketDetailsScreenState ScreenOutput
 screen initialState =
@@ -90,10 +92,10 @@ view push state =
 headerView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketDetailsScreenState -> PrestoDOM (Effect Unit) w
 headerView push state = 
   let 
-    headerText = case state.props.stage of 
-                  ST.MetroTicketDetailsStage -> "Ticket Details"
-                  ST.MetroMapStage -> "Map"
-                  ST.MetroRouteDetailsStage -> "Route Details"
+    headerText = getString $ case state.props.stage of 
+                  ST.MetroTicketDetailsStage -> TICKET_DETAILS
+                  ST.MetroMapStage -> MAP_STR
+                  ST.MetroRouteDetailsStage -> ROUTE_DETAILS
     shareButtonVisibility =  boolToVisibility $ state.props.stage == ST.MetroTicketDetailsStage
   in 
     linearLayout[
@@ -163,10 +165,10 @@ ticketDetailsView push state =
    let 
     currentTicket = state.data.ticketsInfo !! state.props.currentTicketIndex
     ticketStatus = case currentTicket of 
-                    Just ticket -> case ticket.status of
-                                     "ACTIVE" -> "Active"
-                                     "EXPIRED" -> "Expired"
-                                     "USED" -> "Used"   
+                    Just ticket ->  case ticket.status of
+                                     "ACTIVE" -> getString ACTIVE_STR
+                                     "EXPIRED" ->getString  EXPIRED_STR
+                                     "USED" -> getString USED_STR
                                      _ -> ticket.status
                     Nothing -> ""
     ticketStatusPillColor = case currentTicket of 
@@ -249,7 +251,7 @@ metroHeaderView push state =
       textView $ [
         width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text "Tickets for Chennai Metro"
+      , text $ getString TICKETS_FOR_CHENNAI_METRO
       , color Color.black800
       ] <> FontStyle.body20 TypoGraphy
     , linearLayout [
@@ -261,7 +263,7 @@ metroHeaderView push state =
         textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ if state.data.ticketType == "SingleJourney" then "Onward Journey" else "Round trip"
+        , text $ getString if state.data.ticketType == "SingleJourney" then ONWORD_JOURNEY else ROUND_TRIP_STR
         , color Color.black800
         ] <> FontStyle.tags TypoGraphy
       , linearLayout [
@@ -275,7 +277,7 @@ metroHeaderView push state =
       , textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ (show $ state.data.noOfTickets) <> if state.data.noOfTickets > 1 then " tickets" else " ticket"
+        , text $ (show $ state.data.noOfTickets) <> " " <> (getString $ if state.data.noOfTickets > 1 then TICKETS else TICKET)
         , color Color.black800
         ] <> FontStyle.tags TypoGraphy
       ]
@@ -289,7 +291,7 @@ qrCodeView push state =
     qrString = case currentTicket of 
                 Just ticket -> ticket.qrString
                 Nothing -> ""
-    ticketStr = if state.data.noOfTickets > 1 then " Tickets" else " Ticket"
+    ticketStr = " " <> (getString $ if state.data.noOfTickets > 1 then TICKETS else TICKET)
   in 
     linearLayout [
       width MATCH_PARENT
@@ -372,7 +374,7 @@ ticketNumberAndValidView push state =
         textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ "Ticket Number:" <> ticketNumber
+        , text $ (getString TICKET_NUMBER) <> ": " <> ticketNumber
         , color Color.black800
         ] <> FontStyle.body20 TypoGraphy
       ]
@@ -391,7 +393,7 @@ ticketNumberAndValidView push state =
       , textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ "Valid until " <> validUntil
+        , text $ (getString VALID_UNTIL) <> " " <> validUntil
         ] <> FontStyle.tags TypoGraphy
       ]
     ]
@@ -490,7 +492,7 @@ originAndDestinationView push state =
         , textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text "Destination"
+          , text $ getString DESTINATION
           , color Color.black700
           , margin $ MarginLeft 6
           ] <> FontStyle.body3 TypoGraphy
@@ -524,7 +526,7 @@ paymentInfoView push state =
     textView $ [
       width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text "View Route Information"
+    , text $ getString VIEW_ROUTE_INFO
     ] <> FontStyle.body1 TypoGraphy
   , linearLayout [
       height WRAP_CONTENT
@@ -541,9 +543,9 @@ linePillView :: forall w . ST.MetroLine -> PrestoDOM (Effect Unit) w
 linePillView line = 
   let 
     pillConfig = case line of 
-      ST.GreenLine -> {text : "Green Line", color : Color.green900, bg : Color.tealishGreen}
-      ST.BlueLine -> {text : "Blue Line", color : Color.blue900, bg : Color.blue600}
-      ST.RedLine -> {text : "Red Line", color : Color.red900, bg : Color.red600}
+      ST.GreenLine -> {text : getString GREEN_LINE, color : Color.green900, bg : Color.tealishGreen}
+      ST.BlueLine -> {text :  getString BLUE_LINE, color : Color.blue900, bg : Color.blue600}
+      ST.RedLine -> {text : getString RED_LINE, color : Color.red900, bg : Color.red600}
       _ -> {text : "", color : Color.black800, bg : Color.black600}
   in 
     linearLayout [
@@ -596,9 +598,9 @@ routeDetailsItemView push index routeDetails =
   let 
     noOfStops = length routeDetails.stops
     pillText = case routeDetails.line of 
-                ST.GreenLine -> "Green Line"
-                ST.BlueLine -> "Blue Line"
-                ST.RedLine -> "Red Line"
+                ST.GreenLine -> getString GREEN_LINE
+                ST.BlueLine -> getString BLUE_LINE
+                ST.RedLine -> getString RED_LINE
                 _ -> ""
   in
     linearLayout [
@@ -669,7 +671,7 @@ routeDetailsItemView push index routeDetails =
               textView $ [
                 width WRAP_CONTENT
               , height WRAP_CONTENT
-              , text $ (show noOfStops) <> " Stops"
+              , text $ (show noOfStops) <> " " <> (getString STOPS)
               , padding $ PaddingBottom 4
               , color metroPrimaryColor
               ] <> FontStyle.tags TypoGraphy
