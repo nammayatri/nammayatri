@@ -393,44 +393,6 @@ getSavedLocations savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
 
 }) savedLocation )
 
-
-
-savedLocTransformer :: (Array SavedReqLocationAPIEntity) -> Array LocationListItemState
-savedLocTransformer savedLocation =  (map (\ (SavedReqLocationAPIEntity item) ->
-  {
-  prefixImageUrl : fetchImage FF_ASSET $ case (toLower (item.tag) ) of 
-                "home" -> "ny_ic_home_blue"
-                "work" -> "ny_ic_work_blue"
-                _      -> "ny_ic_fav_red"
-, postfixImageUrl : ""
-, postfixImageVisibility : false
-, title : (fromMaybe "" (DA.head (split (Pattern ",") (decodeAddress(SavedLoc (SavedReqLocationAPIEntity item))))))
-, subTitle : (drop ((fromMaybe 0 (indexOf (Pattern ",") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))) + 2) (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))
-, lat : (Just item.lat)
-, lon : (Just item.lon)
-, description : (fromMaybe "" (DA.head (split (Pattern ":") (decodeAddress (SavedLoc (SavedReqLocationAPIEntity item))))))
-, placeId : item.placeId
-, tag : item.tag
-, tagType : Just (show LOC_LIST)
-, cardType : Nothing
-, address : ""
-, tagName : ""
-, isEditEnabled : true
-, savedLocation : ""
-, placeName : ""
-, isClickable : true
-, alpha : 1.0
-, fullAddress : getAddressFromSaved (SavedReqLocationAPIEntity item)
-, locationItemType : Just SAVED_LOCATION
-, distance : Nothing
-, showDistance : Just false
-, actualDistance : Nothing
-, frequencyCount : Nothing
-, recencyDate : Nothing
-, locationScore : Nothing
-
-}) savedLocation )
-
 getSavedTags :: (Array SavedReqLocationAPIEntity) -> Array String
 getSavedTags savedLocation = (map (\(SavedReqLocationAPIEntity item) -> toLower (item.tag) ) savedLocation)
 

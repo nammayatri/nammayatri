@@ -24,7 +24,7 @@ import Components.MenuButton as MenuButton
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types as ST
 import MerchantConfig.Types as MT
-import Prelude ((==), (<>), ($), (/=), (>), (||), (&&), show, map, not)
+import Prelude ((==), (<>), ($), (/=), (>), (||), map, not)
 import Styles.Colors as Color
 import Font.Style as FontStyle
 import Font.Size as FontSize
@@ -34,6 +34,7 @@ import Data.String (length) as DS
 import Prelude (show, (&&))
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Screens 
 
 locationTagBarConfig :: ST.SearchLocationScreenState -> ST.GlobalProps -> LTB.LocationTagBarConfig
 locationTagBarConfig state globalProps = 
@@ -90,7 +91,7 @@ primaryButtonConfig state =
   let
     buttonText = case state.props.searchLocStage of 
       ST.ConfirmLocationStage -> (getString CONFIRM_PICKUP_LOCATION)
-      ST.LocateOnMapStage -> MB.maybe "" (\currTextField -> if currTextField == ST.SearchLocPickup then (getString CONFIRM_PICKUP_LOCATION) else "Confirm Drop") state.props.focussedTextField
+      ST.LocateOnMapStage -> MB.maybe "" (\currTextField -> if currTextField == ST.SearchLocPickup then (getString CONFIRM_PICKUP_LOCATION) else (getString CONFIRM_DROP)) state.props.focussedTextField
       _ -> ""
     config = PrimaryButton.config
     primaryButtonConfig' = config
@@ -132,7 +133,7 @@ mapInputViewConfig state isEditable = let
     config = InputView.config 
     inputViewConfig' = config
       { headerText = MB.maybe ("Trip Details") ( \ currTextField -> if currTextField == ST.SearchLocPickup then "Edit Pickup" else "Add Stop") state.props.focussedTextField,
-        headerVisibility =  getInputView.headerVisibility,
+      headerVisibility =  getInputView.headerVisibility,
         imageLayoutMargin = getInputView.imageLayoutMargin,
         inputView = map 
           ( \item -> 
@@ -144,7 +145,8 @@ mapInputViewConfig state isEditable = let
             , id : show item.id
             , placeHolder : item.placeHolder 
             , canClearText : (item.canClearText  || state.props.canClearText ) && item.isFocussed
-            , isEditable : isEditable
+            , isEditable : isEditable && item.isEditable
+            , isClickable : item.isEditable
             , prefixImage : { 
                 imageName : item.prefixImageName,
                 height : V 15,
@@ -169,7 +171,7 @@ inputViewArray state =
   let 
     srcLoc = MB.maybe "" (_.address) state.data.srcLoc 
     destLoc = MB.maybe "" (_.address) state.data.destLoc
-    addressOnMap = state.data.mapLoc.address
+    addressOnMap = state.data.latLonOnMap.address
     pickUpFocussed = state.props.focussedTextField == MB.Just ST.SearchLocPickup 
     dropLocFocussed = state.props.focussedTextField == MB.Just ST.SearchLocDrop 
     getInputView = getInputViewConfigBasedOnActionType state.props.actionType
@@ -181,6 +183,7 @@ inputViewArray state =
       , placeHolder : getInputView.srcPlaceHolder
       , canClearText : DS.length (if addressOnMap /= "" && pickUpFocussed then addressOnMap else srcLoc) > 2
       , id : ST.SearchLocPickup
+      , isEditable : not $ (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
       } ,
       { textValue : if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc
       , isFocussed : dropLocFocussed
@@ -189,6 +192,7 @@ inputViewArray state =
       , placeHolder : getInputView.destPlaceHolder
       , canClearText : DS.length (if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc) > 2
       , id : ST.SearchLocDrop
+      , isEditable : true
       }
     ]
 

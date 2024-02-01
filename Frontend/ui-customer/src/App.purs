@@ -97,8 +97,6 @@ newtype GlobalState = GlobalState {
   , metroTicketDetailsScreen :: MetroTicketDetailsScreenState
   , metroMyTicketsScreen :: MetroMyTicketsScreenState
   , ticketStatusScreen  :: TicketStatusScreenState
-  , searchLocationScreen :: SearchLocationScreenState
-  , globalProps :: GlobalProps
   , metroTicketBookingScreen :: MetroTicketBookingScreenState
   , metroTicketStatusScreen :: MetroTicketStatusScreenState
   }
@@ -129,8 +127,6 @@ defaultGlobalState = GlobalState {
   , loaderOverlay : LoaderScreenScreenData.initData
   , ticketBookingScreen : TicketBookingScreenData.initData
   , ticketInfoScreen : TicketInfoScreenData.initData
-  , searchLocationScreen : SearchLocationScreenData.initData
-  , globalProps : defaultGlobalProps
   , appConfig : Nothing
   , rideScheduledScreen : RideScheduledScreenData.initData
   , rideSelectionScreen : RideSelectionScreenData.initData
@@ -317,11 +313,9 @@ data ScreenType =
   | TicketingScreenStateType (TicketingScreenState -> TicketingScreenState)
   | RideScheduledScreenStateType (RideScheduledScreenState -> RideScheduledScreenState)
   | GlobalPropsType (GlobalProps -> GlobalProps)
-  | SearchLocationScreenStateType (SearchLocationScreenState -> SearchLocationScreenState)
   | RideSelectionScreenStateType (RideSelectionScreenState -> RideSelectionScreenState)
   | ReportIssueChatScreenStateType (ReportIssueChatScreenState -> ReportIssueChatScreenState)
   | SearchLocationScreenStateType (SearchLocationScreenState -> SearchLocationScreenState)
-  | GlobalPropsType (GlobalProps -> GlobalProps) 
   | MetroTicketDetailsScreenStateType (MetroTicketDetailsScreenState -> MetroTicketDetailsScreenState)
   | MetroMyTicketsScreenStateType (MetroMyTicketsScreenState -> MetroMyTicketsScreenState)
   | TicketStatusScreenStateType (TicketStatusScreenState -> TicketStatusScreenState)

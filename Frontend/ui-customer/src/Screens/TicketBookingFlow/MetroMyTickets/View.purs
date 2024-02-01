@@ -323,6 +323,25 @@ pastTicketsListView push state =
 
 pastTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
 pastTicketView push ticketCard = 
+  let status = case ticketCard.status of
+        "PAYMENT_PENDING" -> "Pending"
+        "CONFIRMING" -> "Confirming"
+        "FAILED" -> "Failed"
+        "CONFIRMED" -> "Confirmed"
+        _ -> ""
+      statusColor = case ticketCard.status of
+        "PAYMENT_PENDING" -> Color.yellow900
+        "CONFIRMING" -> Color.yellow900
+        "FAILED" -> Color.red900
+        "CONFIRMED" -> Color.green900
+        _ -> Color.black900
+      statusIcon = case ticketCard.status of
+        "PAYMENT_PENDING" -> "ny_ic_yellow_clock"
+        "CONFIRMING" -> "ny_ic_yellow_clock"
+        "FAILED" -> "ny_ic_red_cross"
+        "CONFIRMED" -> "ny_ic_green_tick"
+        _ -> ""
+  in
   linearLayout [
     width MATCH_PARENT
   , height WRAP_CONTENT
@@ -394,8 +413,8 @@ pastTicketView push ticketCard =
       , textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ ticketCard.status
-        , color Color.green900
+        , text $ status
+        , color statusColor
         ] <> FontStyle.body3 TypoGraphy
       ]
     ]

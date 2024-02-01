@@ -217,7 +217,7 @@ window.getMerchantConfig = function () {
     , "feature" : {
       "enableSupport" : false
       , "enableSuggestions" : true
-      , "enableAdditionalServices" : true
+      , "enableAdditionalServices" : false
   , "enableZooTicketBookingFlow" : true
     }
     , "appData" : {
