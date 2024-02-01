@@ -306,6 +306,8 @@ cityCodeMap =
   , Tuple "std:020" "pune"
   , Tuple "std:0821" "mysore"
   , Tuple "std:0816" "tumakuru"
+  , Tuple "std:01189" "noida"
+  , Tuple "std:0124" "gurugram"
   ]
 
 getCityFromCode :: String -> String

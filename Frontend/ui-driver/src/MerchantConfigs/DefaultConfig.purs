@@ -224,6 +224,36 @@ config =
               uploadRCandDL : true,
               enableYatriCoins : false,
               registration : registrationConfig
+            },
+            {
+              cityName : "Gurugram",
+              mapImage : "ny_ic_gurugram_map",
+              cityCode : "std:0124",
+              showSubscriptions : false,
+              cityLat : 28.457523,
+              cityLong : 77.026344,
+              supportNumber : "",
+              languageKey : "HI_IN",
+              showDriverReferral : true,
+              showCustomerReferral : true,
+              uploadRCandDL : true,
+              enableYatriCoins : false,
+              registration : registrationConfig
+            },
+            {             
+              cityName : "Noida",
+              mapImage : "ny_ic_noida_map",
+              cityCode : "std:01189",
+              showSubscriptions : false,
+              cityLat : 28.535517,
+              cityLong : 77.391029,
+              supportNumber : "",
+              languageKey : "HI_IN",
+              showDriverReferral : true,
+              showCustomerReferral : true,
+              uploadRCandDL : true,
+              enableYatriCoins : false,
+              registration : registrationConfig
             }--, For future use
             -- {
             --   cityName : "Madurai",
