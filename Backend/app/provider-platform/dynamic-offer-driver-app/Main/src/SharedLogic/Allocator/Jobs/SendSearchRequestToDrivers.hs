@@ -16,6 +16,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
+import Domain.Types.Common as DTC
 import Domain.Types.DriverPoolConfig
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
@@ -31,12 +32,14 @@ import Lib.Scheduler
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
+import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.SearchTry as SST
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
@@ -124,5 +127,10 @@ sendSearchRequestToDrivers' driverPoolConfig searchReq searchTry merchant driver
           isSearchTryValid = I.isSearchTryValid searchTry.id,
           initiateDriverSearchBatch = SST.initiateDriverSearchBatch sendSearchRequestToDrivers' merchant searchReq searchTry.tripCategory searchTry.vehicleVariant searchTry.estimateId searchTry.customerExtraFee searchTry.messageId,
           isScheduledBooking = searchTry.isScheduled,
-          cancelSearchTry = I.cancelSearchTry searchTry.id
+          cancelSearchTry = I.cancelSearchTry searchTry.id,
+          cancelBookingIfApplies = do
+            when (not $ DTC.isDynamicOfferTrip searchTry.tripCategory) $ do
+              mbBooking <- QRB.findByQuoteId searchTry.estimateId
+              whenJust mbBooking $ \booking -> do
+                SBooking.cancelBooking booking Nothing merchant
         }

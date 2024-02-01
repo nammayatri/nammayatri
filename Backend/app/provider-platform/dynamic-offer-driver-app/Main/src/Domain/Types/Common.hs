@@ -112,3 +112,7 @@ isRentalTrip :: TripCategory -> Bool
 isRentalTrip tripCategory = case tripCategory of
   Rental _ -> True
   _ -> False
+
+isDynamicOfferTrip :: TripCategory -> Bool
+isDynamicOfferTrip (OneWay OneWayOnDemandDynamicOffer) = True
+isDynamicOfferTrip _ = False

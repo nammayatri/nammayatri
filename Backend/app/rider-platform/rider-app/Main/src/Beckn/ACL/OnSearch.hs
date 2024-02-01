@@ -255,8 +255,9 @@ buildEstimateBreakUpList :: (MonadThrow m, Log m) => OnSearch.Item -> m [DOnSear
 buildEstimateBreakUpList item = do
   (OnSearch.TG tagGroups) <- item.tags & fromMaybeM (InvalidRequest "Missing fare breakup item")
 
-  tagGroup <- find (\tagGroup -> tagGroup.code == "fare_breakup") tagGroups & fromMaybeM (InvalidRequest "Missing fare breakup")
-  mapM (buildEstimateBreakUpItem item.price.currency) tagGroup.list
+  tagGroup <- find (\tagGroup -> tagGroup.code == "fare_breakup") tagGroups & fromMaybeM (InvalidRequest "Missing fare breakup") -- kept it for backward compatibility
+  tagGroupRateCard <- find (\tagGroup_ -> tagGroup_.code == "rate_card") tagGroups & fromMaybeM (InvalidRequest "Missing rate card") -- consume this
+  mapM (buildEstimateBreakUpItem item.price.currency) (tagGroup.list <> tagGroupRateCard.list)
 
 buildNightShiftInfo ::
   OnSearch.TagGroups ->

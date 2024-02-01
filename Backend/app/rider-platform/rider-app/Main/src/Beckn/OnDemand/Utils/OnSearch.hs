@@ -113,9 +113,11 @@ buildEstimateBreakupList item = do
       >>= (.priceCurrency)
       & fromMaybeM (InvalidRequest "Missing Currency")
   tagGroups <- item.itemTags & fromMaybeM (InvalidRequest "Missing Tag Groups")
-  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just "fare_breakup") tagGroups & fromMaybeM (InvalidRequest "Missing fare breakup")
+  tagGroup <- find (\tagGroup -> descriptorCode tagGroup.tagGroupDescriptor == Just "fare_breakup") tagGroups & fromMaybeM (InvalidRequest "Missing fare breakup") -- kept it for backward compatibility
+  tagGroupRateCard <- find (\tagGroup_ -> descriptorCode tagGroup_.tagGroupDescriptor == Just "rate_card") tagGroups & fromMaybeM (InvalidRequest "Missing rate card") -- consume this from now on
   tagList <- tagGroup.tagGroupList & fromMaybeM (InvalidRequest "Missing Tag List")
-  mapM (buildEstimateBreakUpItem currency) tagList
+  tagListRateCard <- tagGroupRateCard.tagGroupList & fromMaybeM (InvalidRequest "Missing Tag List")
+  mapM (buildEstimateBreakUpItem currency) (tagList <> tagListRateCard)
   where
     descriptorCode :: Maybe Spec.Descriptor -> Maybe Text
     descriptorCode (Just desc) = desc.descriptorCode

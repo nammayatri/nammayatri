@@ -120,6 +120,7 @@ initiateDriverSearchBatch sendSearchRequestToDrivers merchant searchReq tripCate
         Just scheduleTime -> scheduleBatching searchTry driverExtraFeeBounds scheduleTime
         Nothing -> do
           booking <- QRB.findByQuoteId estOrQuoteId >>= fromMaybeM (BookingDoesNotExist estOrQuoteId)
+          QST.updateStatus searchTry.id DST.CANCELLED
           SBooking.cancelBooking booking Nothing merchant
   where
     scheduleBatching searchTry driverExtraFeeBounds inTime = do

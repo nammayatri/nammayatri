@@ -48,6 +48,7 @@ data Handle m = Handle
     isSearchTryValid :: m Bool,
     initiateDriverSearchBatch :: m (),
     cancelSearchTry :: m (),
+    cancelBookingIfApplies :: m (),
     isScheduledBooking :: Bool
   }
 
@@ -86,6 +87,7 @@ processRequestSending Handle {..} goHomeCfg = do
               metrics.incrementFailedTaskCounter
               logInfo "No driver accepted"
               cancelSearchTry
+              cancelBookingIfApplies
               return (Complete, False)
         else do
           driverPoolWithFlags <- getNextDriverPoolBatch goHomeCfg

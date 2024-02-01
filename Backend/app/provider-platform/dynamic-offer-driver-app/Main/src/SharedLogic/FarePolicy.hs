@@ -155,8 +155,8 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
     mkAdditionalProgressiveBreakups det = do
       let perExtraKmFareSections = NE.sortBy (comparing (.startDistance)) det.perExtraKmRateSections
           mkPerExtraKmFareItem section = do
-            let perExtraKmFareCaption = "EXTRA_PER_KM_FARE_{" `T.append` (T.pack $ show section.startDistance) `T.append` "}"
-            mkBreakupItem perExtraKmFareCaption (mkValue $ show section.perExtraKmRate)
+            let perExtraKmFareCaption = "EXTRA_PER_KM_FARE"
+            mkBreakupItem perExtraKmFareCaption (mkValue $ show (round section.perExtraKmRate :: Money))
 
           perExtraKmFareItems = mkPerExtraKmFareItem <$> (toList perExtraKmFareSections)
 
@@ -172,7 +172,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
     waitingChargeBreakups (Just waitingChargeInfo) = do
       let (mbWaitingChargePerMin, mbWaitingOrPickupCharges) =
             waitingChargeInfo.waitingCharge & \case
-              DPM.PerMinuteWaitingCharge hpm -> (Just $ show hpm, Nothing)
+              DPM.PerMinuteWaitingCharge hpm -> (Just $ show (round hpm :: Money), Nothing)
               DPM.ConstantWaitingCharge mo -> (Nothing, Just $ show mo)
 
           waitingOrPickupChargesCaption = "WAITING_OR_PICKUP_CHARGES"
@@ -184,7 +184,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance farePolicy = do
       catMaybes [mbWaitingOrPickupChargesItem, mbWaitingChargePerMinItem]
 
     nightShiftChargeBreakups nightShiftChargeInfo = do
-      let getNightShiftChargeValue (DPM.ProgressiveNightShiftCharge a) = show a
+      let getNightShiftChargeValue (DPM.ProgressiveNightShiftCharge a) = show (round a :: Money) -- fix from customer side first
           getNightShiftChargeValue (DPM.ConstantNightShiftCharge a) = show a
 
       let oldNightShiftCharge = getNightShiftChargeValue <$> nightShiftChargeInfo
