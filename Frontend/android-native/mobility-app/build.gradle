@@ -46,7 +46,7 @@ dependencies {
     implementation project(':mobility-common')
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.6.0'
-    implementation 'com.google.android.play:app-update:2.0.0'
+    implementation 'com.google.android.play:app-update:2.1.0'
     implementation 'androidx.work:work-runtime:2.7.1'
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
     implementation 'com.google.firebase:firebase-analytics'
@@ -77,6 +77,9 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.1'
     implementation("com.google.firebase:firebase-crashlytics-ndk")
     implementation 'com.google.firebase:firebase-perf'
+    implementation "androidx.media3:media3-exoplayer:1.2.0"
+    implementation "androidx.media3:media3-exoplayer-dash:1.2.0"
+    implementation "androidx.media3:media3-ui:1.2.0"
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     implementation 'androidx.camera:camera-view:1.0.0-alpha25'
     implementation 'androidx.appcompat:appcompat:1.4.1'

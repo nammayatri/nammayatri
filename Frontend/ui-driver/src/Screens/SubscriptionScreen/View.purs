@@ -60,7 +60,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, not, pure, show, unit, void, when, ($), (&&), (*), (+), (-), (/), (/=), (<), (<<<), (<>), (==), (>), (||), identity)
 import Presto.Core.Types.API (ErrorResponse)
 import Presto.Core.Types.Language.Flow (Flow, doAff, getState, delay)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (alignParentRight, alignParentLeft, Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, alpha, background, clickable, color, cornerRadius, ellipsize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, id, imageView, imageWithFallback, lineHeight, linearLayout, lottieAnimationView, margin, maxLines, onBackPressed, onClick, orientation, padding, relativeLayout, scrollBarX, scrollBarY, scrollView, shimmerFrameLayout, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Properties (cornerRadii)
@@ -76,6 +76,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore, 
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
 import Locale.Utils
+import RemoteConfig (ReelItem(..))
 
 screen :: SubscriptionScreenState -> GlobalState -> Screen Action SubscriptionScreenState ScreenOutput
 screen initialState globalState =
@@ -173,7 +174,7 @@ view push state =
   , onBackPressed push $ const BackPressed
   , afterRender push $ const AfterRender
   , background Color.white900
-  ][ relativeLayout
+  ][  relativeLayout
       [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
@@ -333,7 +334,7 @@ paymentPendingView push state = let isAutoPayPending = state.props.lastPaymentTy
   , background Color.yellow800
   , cornerRadii $ Corners 24.0 false false true true
   , padding $ Padding 16 12 16 12
-  , visibility if ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE) then VISIBLE else GONE -- Condition will be updated when dues are introduced to YS flow.
+  , visibility if isPaymentPending state then VISIBLE else GONE -- Condition will be updated when dues are introduced to YS flow.
   ][  commonTV push (getString if isAutoPayPending then AUTOPAY_SETUP_PENDING_STR else PAYMENT_PENDING) Color.black800 (FontStyle.h2 TypoGraphy) 0 LEFT true
     , commonTV push (getString AUTOPAY_PENDING_DESC_STR) Color.black800 (FontStyle.tags TypoGraphy) 0 LEFT true
     , linearLayout
@@ -526,9 +527,122 @@ myPlanView push state visibility' =
   , height MATCH_PARENT
   , orientation VERTICAL
   , visibility if visibility' then VISIBLE else GONE
-  , gradient (Linear 180.0 [Color.darkGradientBlue, Color.lightGradientBlue])
+  , background $ Color.transparent
   ][ paymentPendingView push state
    , myPlanBodyview push state
+  ]
+
+carouselView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w
+carouselView push state =
+  let paymentPending = isPaymentPending state
+  in
+  linearLayout
+  [ width $ WRAP_CONTENT
+  , height $ WRAP_CONTENT
+  , padding $ PaddingVertical 24 24
+  , background $ Color.white900
+  , visibility $ if DA.length state.data.reelsData > 0 then VISIBLE else GONE
+  ][ horizontalScrollView
+    [ height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , scrollBarX false
+    ][ linearLayout
+       [ width $ MATCH_PARENT
+       , height WRAP_CONTENT
+       , orientation HORIZONTAL
+       ](DA.mapWithIndex (\index item -> if paymentPending then carouselSmallCardView push state item index (index == 0) else carouselBigCardView push state item index (index == 0)) state.data.reelsData)
+    ]
+  ]
+
+carouselSmallCardView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> ReelItem -> Int -> Boolean -> PrestoDOM (Effect Unit) w
+carouselSmallCardView push state reelInfo index isFirst =
+  relativeLayout
+  [ width $ WRAP_CONTENT
+  , height $ WRAP_CONTENT
+  , cornerRadius 16.0
+  , onClick push $ const $ OpenReelsView index
+  , margin $ if isFirst then (MarginHorizontal 12 12) else (MarginRight 12)
+  , background $ Color.transparent
+  ][  imageView
+      [ width $ V 196
+      , height $ V 73
+      , imageWithFallback $ "," <> reelInfo.carouselSmallImageUrl
+      ]
+    , linearLayout
+      [ width $ V 196
+      , height $ V 73
+      , gravity CENTER_VERTICAL
+      ][  textView $ 
+          [ textFromHtml reelInfo.carouselTextString
+          , color reelInfo.carouselTextColor
+          , height $ WRAP_CONTENT
+          , width $ WRAP_CONTENT
+          , margin $ MarginLeft 12
+          ]
+        , linearLayout
+          [ weight 1.0
+          ][]
+        , imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_play_circle"
+          , width $ V 40
+          , height $ V 40
+          , alignParentLeft "true,-1"
+          , margin $ MarginRight 12
+          ]
+      ] 
+  ]  
+
+carouselBigCardView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> ReelItem -> Int -> Boolean -> PrestoDOM (Effect Unit) w
+carouselBigCardView push state reelInfo index isFirst =
+  relativeLayout
+  [ width $ WRAP_CONTENT
+  , height $ WRAP_CONTENT
+  , cornerRadius 16.0
+  , onClick push $ const $ OpenReelsView index
+  , margin $ if isFirst then (MarginHorizontal 12 12) else (MarginRight 12)
+  , background $ Color.black6000
+  ][  imageView
+      [ width $ V 196
+      , height $ V 196
+      , imageWithFallback $ "," <> reelInfo.carouselBigImageUrl
+      ]
+    , relativeLayout
+      [ width $ V 196
+      , height $ V 196
+      ][  textView $ 
+          [ textFromHtml reelInfo.carouselTextString
+          , color reelInfo.carouselTextColor
+          , height $ WRAP_CONTENT
+          , width $ WRAP_CONTENT
+          , margin $ Margin 12 20 12 12
+          ]
+        , linearLayout
+          [ width $ MATCH_PARENT
+          , height WRAP_CONTENT
+          , alignParentBottom "true,-1"
+          , gravity CENTER
+          , margin $ MarginBottom 16
+          ][ linearLayout
+             [ width $ WRAP_CONTENT
+             , height $ WRAP_CONTENT
+             , padding $ Padding 8 8 8 8
+             , background $ Color.white27
+             , gravity CENTER
+             , cornerRadius 4.0
+             ][ imageView
+                [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_white_transparent_play_circle"
+                , width $ V 20
+                , height $ V 20]
+              , textView $
+                [ text $ getString WATCH_NOW
+                , color Color.white900
+                , margin $ MarginLeft 10
+                , width WRAP_CONTENT
+                , height WRAP_CONTENT
+                ] <> FontStyle.body1 TypoGraphy
+            ]
+          ]
+      ] 
   ]
 
 headerView :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -> PrestoDOM (Effect Unit) w 
@@ -600,8 +714,8 @@ myPlanBodyview :: forall w. (Action -> Effect Unit) -> SubscriptionScreenState -
 myPlanBodyview push state =
   let isFreezed = ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE)
       paddingBottom = case state.data.myPlanData.autoPayStatus /= ACTIVE_AUTOPAY , state.data.myPlanData.manualDueAmount > 0.0 of
-                        true, true -> 270
-                        _, _ -> 250
+                        true, true -> 290
+                        _, _ -> 270
   in 
   scrollView
   [ height MATCH_PARENT
@@ -610,12 +724,14 @@ myPlanBodyview push state =
     [ height $ V 300 
     , width MATCH_PARENT
     , orientation VERTICAL
-    , padding $ PaddingVertical 24 paddingBottom
-    ][ linearLayout
+    , padding $ PaddingVertical 0 paddingBottom
+    , gradient (Linear 180.0 [Color.darkGradientBlue, Color.lightGradientBlue])
+    ][ carouselView push state
+    , linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER_VERTICAL
-      , margin $ Margin 16 0 16 16 
+      , margin $ Margin 16 10 16 16 
       ][ linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -1844,3 +1960,6 @@ lottieJsonAccordingToLang isOnFreeTrial isIntroductory =
     _       -> if isIntroductory then "lottie/ny_ic_subscription_info_03_2.json"
                else if isOnFreeTrial then "lottie/ny_ic_subscription_info_01.json" 
                else "lottie/ny_ic_subscription_info_02.json"
+
+isPaymentPending :: SubscriptionScreenState -> Boolean
+isPaymentPending state = ((state.data.config.subscriptionConfig.enableSubscriptionPopups && state.data.orderId /= Nothing) || state.props.lastPaymentType == Just AUTOPAY_REGISTRATION_TYPE)

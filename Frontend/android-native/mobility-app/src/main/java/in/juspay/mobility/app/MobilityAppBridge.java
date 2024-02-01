@@ -42,6 +42,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.content.ContextCompat;
+import androidx.media3.exoplayer.ExoPlayer;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.android.installreferrer.api.InstallReferrerClient;
@@ -82,9 +83,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.Serializable;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -99,6 +102,9 @@ import in.juspay.mobility.app.callbacks.CallBack;
 import in.juspay.mobility.app.carousel.VPAdapter;
 import in.juspay.mobility.app.carousel.ViewPagerItem;
 
+import in.juspay.mobility.app.reels.ExoplayerItem;
+import in.juspay.mobility.app.reels.ReelController;
+import in.juspay.mobility.app.reels.ReelViewPagerItem;
 
 public class MobilityAppBridge extends HyperBridge {
 
@@ -139,6 +145,7 @@ public class MobilityAppBridge extends HyperBridge {
     CameraUtils cameraUtils;
 
     protected HashMap<String, Trace> traceElements;
+    public static View reelControllerLayout = null;
 
     private static final ArrayList<SendMessageCallBack> sendMessageCallBacks = new ArrayList<>();
     private CallBack callBack;
@@ -525,7 +532,23 @@ public class MobilityAppBridge extends HyperBridge {
     }
     // endregion
 
-    
+    @JavascriptInterface
+    public void addReels(String stringifyArray, int index, String id, final String callback) {
+
+        Activity activity = bridgeComponents.getActivity();
+        Context context = bridgeComponents.getContext();
+
+        ReelController.initializeBridgeComponents(bridgeComponents);
+
+        Intent newIntent = new Intent (context, ReelsPlayerView.class);
+        newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        newIntent.putExtra("reelsJSONData", stringifyArray);
+        newIntent.putExtra("index", index);
+        newIntent.putExtra("callback", callback);
+        newIntent.putExtra("id", id);
+        context.startActivity(newIntent);
+
+    }
 
     @JavascriptInterface
     public void addCarouselWithVideo(String stringifyArray, String id) {
@@ -824,7 +847,8 @@ public class MobilityAppBridge extends HyperBridge {
         if(youtubePlayer != null)
             youtubePlayer.loadVideo(videoId, 0);
     }
-    
+
+
     private final VPAdapter vpAdapter = new VPAdapter(viewPagerItemArrayList, bridgeComponents.getContext(), new VPAdapter.VPAdapterListener(){
 
         @Override

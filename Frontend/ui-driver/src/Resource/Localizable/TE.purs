@@ -1209,6 +1209,8 @@ getTE stringKey =
         MAX -> "గరిష్ట"
         COINS -> "నాణేలు"
         COINS_ADDED -> "నాణేలు జోడించబడ్డాయి"
+        WATCH_NOW -> "ఇప్పుడు చూడు"
+        CHOOSE_A_PLAN -> "ఒక ప్రణాళికను ఎంచుకోండి"
         REFERRAL -> "రెఫరల్"
         BENEFITS -> "ప్రయోజనాలు"
         YOUR_DAILY_RANK -> "మీ రోజువారీ ర్యాంక్"

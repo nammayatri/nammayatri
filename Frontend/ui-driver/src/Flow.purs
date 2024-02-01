@@ -25,12 +25,12 @@ import Mobility.Prelude
 import Screens.SubscriptionScreen.Controller
 import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
-import Domain.Payments (APIPaymentStatus(..)) as PS
+import Domain.Payments ( APIPaymentStatus(..)) as PS
 import Domain.Payments (PaymentStatus(..))
 import Common.Types.App (Version(..), LazyCheck(..), Event, FCMBundleUpdate, CategoryListType)
 import Components.ChatView.Controller (makeChatComponent')
 import Constants as Constants
-import Control.Monad.Except (runExceptT)
+import Control.Monad.Except (runExceptT, runExcept)
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (any, concat, cons, elem, elemIndex, filter, find, foldl, head, last, length, mapWithIndex, null, snoc, sortBy, (!!))
@@ -1851,7 +1851,8 @@ checkDriverPaymentStatus (GetDriverInfoResp getDriverInfoResp) = when
 onBoardingSubscriptionScreenFlow :: Int -> FlowBT String Unit
 onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount = do
   setValueToLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT $ show (onBoardingSubscriptionViewCount + 1)
-  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}})
+  let res = RC.reelsData "reels_data_onboarding"
+  modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{data {reelsData = res }, props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN", screenCount = onBoardingSubscriptionViewCount+1}})
   action <- UI.onBoardingSubscriptionScreen
   case action of 
     REGISTERATION_ONBOARDING state -> do
@@ -2533,7 +2534,9 @@ ackScreenFlow = do
 subScriptionFlow :: FlowBT String Unit
 subScriptionFlow = do
   liftFlowBT $ runEffectFn1 initiatePP unit
-  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN"}})
+  let res = RC.reelsData "reels_data"
+      hello = spy "aa gaya data" res
+  modifyScreenState $ SubscriptionScreenStateType (\subscriptionScreen -> subscriptionScreen{data {reelsData = res }, props{isSelectedLangTamil = (getLanguageLocale languageKey) == "TA_IN"}})
   void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
   uiAction <- UI.subscriptionScreen
   case uiAction of

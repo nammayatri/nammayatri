@@ -1209,6 +1209,8 @@ getBN stringKey =
         COINS -> "কয়েন"
         COINS_ADDED -> "কয়েন যোগ করা হয়েছে"
         CANT_FIND_OPTION -> "বিকল্প খুঁজে পাচ্ছি না"
+        WATCH_NOW -> "এখন দেখো"
+        CHOOSE_A_PLAN -> "একটি পরিকল্পনা চয়ন করুন"
         REFERRAL -> "রেফারেল"
         BENEFITS -> "সুবিধা"
         YOUR_DAILY_RANK -> "আপনার দৈনিক র্যাঙ্ক"

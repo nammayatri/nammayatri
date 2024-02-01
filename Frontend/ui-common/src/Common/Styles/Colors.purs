@@ -61,6 +61,9 @@ red100 = "#FEF8F8"
 white900 :: Color
 white900 = "#FFFFFF"
 
+white27 ::Color
+white27 = "#45FCFCFC"
+
 white300 :: Color
 white300 = "#FDD56B"
 

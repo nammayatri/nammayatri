@@ -28,12 +28,12 @@ repositories {
 }
 
 android {
-    compileSdk 33
+    compileSdk 34
     namespace "in.juspay.mobility"
 
     defaultConfig {
         minSdkVersion 23
-        targetSdkVersion 33
+        targetSdkVersion 34
         versionCode 1
         versionName "1.0.0"
         multiDexEnabled true
@@ -220,7 +220,7 @@ android {
 }
 
 ext {
-    jpSDKversion = '2.1.20-nammayatri.13'
+    jpSDKversion = '2.1.20-nammayatri.14'
 }
 
 def cameraxVersion = "1.1.0-alpha05"

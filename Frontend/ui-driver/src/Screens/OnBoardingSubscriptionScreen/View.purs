@@ -41,7 +41,7 @@ import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import JBridge as JB
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.SubscriptionScreen.ScreenData (dummyPlanConfig)
-import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout)
+import PrestoDOM (Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), alignParentRight, id, afterRender, alpha, background, clickable, color, cornerRadius, fontSize, fontStyle, frameLayout, gradient, gravity, height, horizontalScrollView, imageUrl, imageView, imageWithFallback, layoutGravity, lineHeight, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollBarX, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout)
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.OnBoardingSubscriptionScreen.ComponentConfig (joinPlanButtonConfig, popupModalConfig)
@@ -59,6 +59,8 @@ import Components.PopUpModal as PopUpModal
 import PrestoDOM.Animation as PrestoAnim
 import Animation as Anim
 import Locale.Utils
+import RemoteConfig (ReelItem(..))
+
 
 screen :: ST.OnBoardingSubscriptionScreenState -> Screen Action ST.OnBoardingSubscriptionScreenState ScreenOutput
 screen initialState =
@@ -98,6 +100,7 @@ view push state =
       , width MATCH_PARENT
       , orientation VERTICAL
       , scrollBarY false
+      , id $ EHC.getNewIDWithTag "OnBoardingSubscriptionScreenScrollView"
       ][
         linearLayout
         [ height MATCH_PARENT
@@ -152,6 +155,32 @@ view push state =
     , if state.props.supportPopup then PrestoAnim.animationSet [ Anim.fadeIn state.props.supportPopup ] $ PopUpModal.view (push <<< PopUpModalAC) (popupModalConfig state)
       else linearLayout[visibility GONE][]
     ]
+
+youtubeView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> ReelItem -> PrestoDOM (Effect Unit) w
+youtubeView push state reelDataItem =
+  let imageSize = EHC.screenWidth unit - 32
+  in
+  relativeLayout
+  [ width WRAP_CONTENT
+  , height WRAP_CONTENT
+  , onClick push $ const $ OpenReelsView 0
+  , margin $ MarginTop 16
+  ][ imageView
+     [ width $ V imageSize
+     , height $ V imageSize
+     , imageWithFallback $ "," <> reelDataItem.carouselBigImageUrl
+     ]
+  ,  linearLayout
+     [ width $ V imageSize
+     , height $ V imageSize
+     , gravity CENTER
+     ][ imageView
+        [ width $ V 96
+        , height $ V 68
+        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_youtube_big_image"]
+     ]
+  ]
+  
 
 headerLayout :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
 headerLayout push state = 
@@ -227,7 +256,7 @@ headerLayout push state =
   ]
 
 infoView :: forall w. (Action -> Effect Unit) -> ST.OnBoardingSubscriptionScreenState -> PrestoDOM (Effect Unit) w
-infoView push state = 
+infoView push state =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -239,6 +268,9 @@ infoView push state =
   ][
     commonTV push (getString SEVEN_DAY_FREE_TRIAL_ACTIVATED) Color.black900 FontStyle.h2 CENTER 0 NoAction false
   , commonTV push (getString TAKE_UNLIMITED_RIDES_FOR_THE_NEXT_SEVEN_DAYS) Color.black700 FontStyle.subHeading2 CENTER 1 NoAction false
+  , case (state.data.reelsData DA.!! 0)  of 
+    Just reelData -> youtubeView push state reelData
+    Nothing -> linearLayout [][]
   , linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
