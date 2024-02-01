@@ -69,8 +69,8 @@ updateButtonConfig state = let
         , margin = (Margin 16 0 16 0)
         , id = "PrimaryButtonUpdate"
         , enableLoader = (JB.getBtnLoader "PrimaryButtonUpdate")
-        , isClickable = state.props.isButtonActive
-        , alpha = if state.props.isButtonActive then 1.0 else 0.5
+        , isClickable = state.props.termsAndConditionsSelected && state.props.isButtonActive
+        , alpha = if (state.props.termsAndConditionsSelected && state.props.isButtonActive) then 1.0 else 0.5
         }
     in updateButtonConfig'
 

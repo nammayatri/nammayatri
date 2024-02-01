@@ -58,7 +58,7 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
                   | MyMetroTicketScreen
                   | GoToMetroRouteMap
-                  | SelectSrcDest ST.LocationActionId
+                  | SelectSrcDest ST.LocationActionId ST.MetroTicketBookingScreenState
                   | Refresh ST.MetroTicketBookingScreenState
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
@@ -87,7 +87,7 @@ eval (ChangeTicketTab ticketType) state = do
   let ticketCount = if ticketType == ST.ONE_WAY then state.data.ticketCount else 1
   continue state { data {ticketType = ticketType, ticketCount = ticketCount }, props {currentStage  = ST.MetroTicketSelection}}
 
-eval (SelectLocation loc ) state = exit $ SelectSrcDest loc
+eval (SelectLocation loc ) state = updateAndExit state{props{currentStage  = ST.MetroTicketSelection}} $ SelectSrcDest loc state{props{currentStage  = ST.MetroTicketSelection}}
 
 eval (GetMetroQuotesAction resp) state = do 
   if null resp then do

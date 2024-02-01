@@ -141,9 +141,10 @@ scrollableView push state =
       width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
-    ] $ []
-      <> if not $ null state.data.activeTickets then [activeTicketsListView push state] else [linearLayout [visibility GONE] []]
-      <> if not $ null state.data.pastTickets then [pastTicketsListView push state] else [linearLayout [visibility GONE] []]
+    ] [
+        activeTicketsListView push state
+      , pastTicketsListView push state
+    ]
   ]
 
 activeTicketsListView :: forall w . (Action -> Effect Unit) -> ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
@@ -153,6 +154,7 @@ activeTicketsListView push state =
   , height WRAP_CONTENT
   , margin $ Margin 16 24 16 0
   , orientation VERTICAL
+  , visibility $ if not $ null state.data.activeTickets then VISIBLE else GONE
   ][
     textView $ [
       width WRAP_CONTENT
@@ -272,28 +274,28 @@ activeTicketView push ticketCard =
           , text $ "Valid until " <> ticketCard.validUntill
           ] <> FontStyle.tags TypoGraphy
         ]
-      , linearLayout [
-          height WRAP_CONTENT
-        , weight 1.0
-        ][]
-      , linearLayout [
-          width WRAP_CONTENT
-        , height MATCH_PARENT
-        , gravity CENTER_VERTICAL 
-        ][
-          imageView [
-            width $ V 16
-          , height $ V 16
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_share"
-          ]
-        , textView $ [
-            width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , text "Share"
-          , color Color.blue900
-          , margin $ MarginLeft 8
-          ] <> FontStyle.tags TypoGraphy
-        ]
+      -- , linearLayout [
+      --     height WRAP_CONTENT
+      --   , weight 1.0
+      --   ][]
+      -- , linearLayout [
+      --     width WRAP_CONTENT
+      --   , height MATCH_PARENT
+      --   , gravity CENTER_VERTICAL 
+      --   ][
+      --     imageView [
+      --       width $ V 16
+      --     , height $ V 16
+      --     , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_blue_share"
+      --     ]
+      --   , textView $ [
+      --       width WRAP_CONTENT
+      --     , height WRAP_CONTENT
+      --     , text "Share"
+      --     , color Color.blue900
+      --     , margin $ MarginLeft 8
+      --     ] <> FontStyle.tags TypoGraphy
+      --   ]
       ]
     ]
   ]
@@ -305,6 +307,7 @@ pastTicketsListView push state =
   , height WRAP_CONTENT
   , margin $ Margin 16 32 16 0
   , orientation VERTICAL
+  , visibility $ if not $ null state.data.pastTickets then VISIBLE else GONE
   ][
     textView $ [
       width WRAP_CONTENT
@@ -350,7 +353,7 @@ pastTicketView push ticketCard =
   , margin $ MarginBottom 16
   , background Color.grey900
   , gravity CENTER
-  , onClick push $ const $ PastTicketPressed ticketCard.metroTicketStatusApiResp
+  -- , onClick push $ const $ PastTicketPressed ticketCard.metroTicketStatusApiResp
   ][
     linearLayout [
       width MATCH_PARENT
