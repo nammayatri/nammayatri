@@ -38,6 +38,8 @@ import Mobility.Prelude
 import Debug
 import Helpers.Utils
 import Animation as Anim
+import Language.Strings
+import Language.Types
 
 screen :: ST.MetroMyTicketsScreenState -> Screen Action ST.MetroMyTicketsScreenState ScreenOutput
 screen initialState =
@@ -123,7 +125,7 @@ headerView push state =
     , textView $ [
         width WRAP_CONTENT
       , height WRAP_CONTENT
-      , text $ "My Tickets"
+      , text $ getString MY_TICKETS
       , color Color.black800
       , margin $ MarginLeft 8
       ] <> FontStyle.subHeading1 TypoGraphy 
@@ -159,7 +161,7 @@ activeTicketsListView push state =
     textView $ [
       width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text "Active Tickets"
+    , text $ getString ACTIVE_TICKETS
     , color Color.black900
     ] <> FontStyle.subHeading1 TypoGraphy
   , linearLayout [
@@ -241,7 +243,7 @@ activeTicketView push ticketCard =
           , textView $ [
               width WRAP_CONTENT
             , height WRAP_CONTENT
-            , text $ (show ticketCard.noOfTickets) <> " tickets"
+            , text $ (show ticketCard.noOfTickets) <> " " <> (getString TICKETS)
             , color Color.black700
             ] <> FontStyle.tags TypoGraphy
           ]
@@ -271,7 +273,7 @@ activeTicketView push ticketCard =
         , textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ "Valid until " <> ticketCard.validUntill
+          , text $ (getString VALID_UNTIL) <> " " <> ticketCard.validUntill
           ] <> FontStyle.tags TypoGraphy
         ]
       -- , linearLayout [
@@ -312,7 +314,7 @@ pastTicketsListView push state =
     textView $ [
       width WRAP_CONTENT
     , height WRAP_CONTENT
-    , text "Past Tickets"
+    , text $ getString PAST_TICKETS
     , color Color.black900
     ] <> FontStyle.subHeading1 TypoGraphy
   , linearLayout [
@@ -327,10 +329,10 @@ pastTicketsListView push state =
 pastTicketView :: forall w . (Action -> Effect Unit) -> ST.MetroTicketCardData -> PrestoDOM (Effect Unit) w
 pastTicketView push ticketCard = 
   let status = case ticketCard.status of
-        "PAYMENT_PENDING" -> "Pending"
-        "CONFIRMING" -> "Confirming"
-        "FAILED" -> "Failed"
-        "CONFIRMED" -> "Confirmed"
+        "PAYMENT_PENDING" -> getString PENDING_STR 
+        "CONFIRMING" -> getString CONFIRMING_STR 
+        "FAILED" -> getString FAILED_STR
+        "CONFIRMED" -> getString CONFIRMED_STR
         _ -> ""
       statusColor = case ticketCard.status of
         "PAYMENT_PENDING" -> Color.yellow900
@@ -409,7 +411,7 @@ pastTicketView push ticketCard =
         , textView $ [
             width WRAP_CONTENT
           , height WRAP_CONTENT
-          , text $ (show ticketCard.noOfTickets) <> " tickets"
+          , text $ (show ticketCard.noOfTickets) <> " " <> (getString TICKETS)
           , color Color.black700
           ] <> FontStyle.tags TypoGraphy
         ]

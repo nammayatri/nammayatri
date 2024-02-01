@@ -30,6 +30,8 @@ import Data.Maybe
 import Debug (spy)
 import JBridge (toast, toggleBtnLoader)
 import Components.RequestInfoCard as InfoCard
+import Language.Strings
+import Language.Types
 
 instance showAction :: Show Action where
   show _ = ""
@@ -91,7 +93,7 @@ eval (SelectLocation loc ) state = updateAndExit state{props{currentStage  = ST.
 
 eval (GetMetroQuotesAction resp) state = do 
   if null resp then do
-    _ <- pure $ toast "No quotes available"
+    _ <- pure $ toast $ getString NO_QOUTES_AVAILABLE
     _ <- pure $ toggleBtnLoader "" false
     continue state
   else do

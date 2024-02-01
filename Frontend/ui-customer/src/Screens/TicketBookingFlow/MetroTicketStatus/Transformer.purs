@@ -23,6 +23,9 @@ import Services.API
 import Common.Types.App as Common
 import Engineering.Helpers.Commons
 import Data.Maybe
+import Language.Strings
+import Language.Types
+
 
 metroTicketStatusTransformer :: MetroTicketBookingStatus -> String -> MetroTicketStatusScreenState -> MetroTicketStatusScreenState
 metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus) shortOrderId' state = 
@@ -33,7 +36,7 @@ metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus)
       "PAYMENT_PENDING" -> Common.Pending
       "CONFIRMING" -> Common.Pending
       _ -> Common.Failed
-    ticketName' = "Tickets for Chennai Metro"
+    ticketName' = getString TICKETS_FOR_CHENNAI_METRO
     validUntil' =  metroTicketBookingStatus.validTill
     paymentOrder = metroTicketBookingStatus.payment >>= (\(FRFSBookingPaymentAPI payment') ->  payment'.paymentOrder)
     transactionId = case paymentOrder of 
@@ -67,10 +70,10 @@ metroTicketDetailsKeyVals (MetroTicketBookingStatus metroTicketBookingStatus) =
       Nothing -> ""
     validUntill = (convertUTCtoISC metroTicketBookingStatus.validTill "hh:mm A") <> ", " <> (convertUTCtoISC metroTicketBookingStatus.validTill "Do MMM YYYY")
   in
-    [ {key : "Date", val : date}
-    , {key : "No of Tickets", val : noOfTickets }
-    , {key : "Total Paid", val : totalPaid}
+    [ {key : getString DATE, val : date}
+    , {key : getString NO_OF_TICKETS, val : noOfTickets }
+    , {key : getString TOTAL_PAID , val : totalPaid}
     , {key : "Booking ID", val : bookingId}
     , {key : "Transaction ID", val : transactionId}
-    , {key : "Valid until", val : validUntill}
+    , {key : getString VALID_UNTIL, val : validUntill}
     ]

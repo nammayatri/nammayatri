@@ -68,7 +68,7 @@ eval BackPressed state =
   exit GoBack
 
 eval ShareTicketClick state = do
-  _ <- pure $ shareImageMessage "Here is metro ticket!" (shareImageMessageConfig "")
+  _ <- pure $ shareImageMessage (getString HERE_IS_METRO_TICKET) (shareImageMessageConfig "")
   continue state
 
 eval ViewPaymentInfoClick state = 
