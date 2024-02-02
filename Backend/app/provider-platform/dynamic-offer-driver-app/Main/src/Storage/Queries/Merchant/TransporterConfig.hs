@@ -24,7 +24,7 @@ where
 import qualified Data.Aeson as A
 import Domain.Types.Location (dummyFromLocationData, dummyToLocationData)
 import Domain.Types.Merchant.MerchantOperatingCity
-import Domain.Types.Merchant.TransporterConfig
+import Domain.Types.Merchant.TransporterConfig hiding (valueToMaybe)
 import Kernel.Beam.Functions
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
