@@ -25,12 +25,12 @@ import Data.Array as Array
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.String (Pattern(..), split, length, take, drop, replaceAll, Replacement(..), contains, toLower)
 import Data.String.CodeUnits (fromCharArray, toCharArray)
-import Data.String as STR
+import Data.String (replaceAll, Pattern, Replacement)
 import Debug (spy)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth)
+import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, safeMarginBottom, screenWidth, getCurrentUTC, getUTCAfterNSeconds, convertUTCtoISC, getUTCAfterNHours)
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (fetchImage, FetchImageFrom(..), getAssetsBaseUrl, getPaymentMethod, secondsToHms, makeNumber, getVariantRideType, getTitleConfig, getCityNameFromCode)
@@ -38,9 +38,9 @@ import Language.Strings (getString)
 import Resources.Localizable.EN (getEN)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (Merchant(..), getMerchant)
-import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+))
+import Prelude (Unit, (<<<), ($), (/), (<>), (==), unit, show, const, map, (>), (<), (-), (*), bind, pure, discard, not, (&&), (||), (/=),(+), (+), void)
 import Presto.Core.Types.Language.Flow (doAff)
-import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, rippleColor)
+import PrestoDOM (BottomSheetState(..), Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, alignParentLeft, alignParentRight, alpha, background, clickable, color, cornerRadius, ellipsize, fontSize, fontStyle, frameLayout, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, letterSpacing, lineHeight, linearLayout, margin, maxLines, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollBarY, scrollView, singleLine, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, shimmerFrameLayout, rippleColor, layoutGravity)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
@@ -51,13 +51,18 @@ import Common.Styles.Colors as CommonColor
 import Storage (KeyStore(..))
 import Engineering.Helpers.Utils (showAndHideLoader)
 import Types.App (defaultGlobalState)
-import JBridge(fromMetersToKm)
+import JBridge(fromMetersToKm, differenceBetweenTwoUTC)
 import Engineering.Helpers.Suggestions (getMessageFromKey)
 import Helpers.Utils (parseFloat)
 import Data.Int(toNumber)
 import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
+import Common.Types.App (RideType(..)) as RideType
+import Timers (rideDurationTimer)
+import Data.Function.Uncurried (runFn2)
+import Data.Int (floor, toNumber)
+import Effect.Unsafe (unsafePerformEffect)
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -293,6 +298,8 @@ driverInfoView push state =
                   ][]
                   , contactView push state
                   , if state.props.currentStage == RideStarted then distanceView push state else dummyView push
+                  , addStopView push state
+                  , rentalDetailsView push state
                   , driverDetailsView push state "DriverDetailsView"
                   , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
                 ]
@@ -307,7 +314,7 @@ driverInfoView push state =
                 , brandingBannerView state.data.config.driverInfoConfig INVISIBLE Nothing
                 ]
             ]
-         ]
+        ]
       ]
   ]
 
@@ -327,13 +334,24 @@ distanceView push state =
     , accessibility ENABLE
     , accessibilityHint $ getEN ENJOY_THE_RIDE
     ][ textView $
-       [ text $ getString ENJOY_THE_RIDE
+       [ text $ getTitleText
        , color Color.black900
        , ellipsize true
-       , singleLine true
+       , maxLines 2
        ] <> FontStyle.body7 TypoGraphy
      ]
   ]
+  where 
+    getTitleText :: String
+    getTitleText = do
+      if state.props.rideType /= RideType.RENTAL_RIDE then (getString ENJOY_THE_RIDE)
+      else 
+        let startTime = state.data.rentalData.startTimeUTC
+            baseDuration = state.data.rentalData.baseDuration
+            endUTC = unsafePerformEffect $ getUTCAfterNHours startTime (baseDuration)
+            endTimeInHH = convertUTCtoISC endUTC "h" <> convertUTCtoISC endUTC "A"
+        in if state.data.destination /= "" then "You are on a rental ride until " <> endTimeInHH  -- TODO-codex :: Add Translation
+          else "Add Stop to continue ride" <> (if state.props.endOTPShown then " or share End-OTP to end ride" else "")
 
 brandingBannerView :: forall w. DriverInfoConfig -> Visibility -> Maybe String -> PrestoDOM (Effect Unit) w
 brandingBannerView driverInfoConfig isVisible uid = 
@@ -563,7 +581,7 @@ driverDetailsView push state uid =
               , width MATCH_PARENT
               , gravity BOTTOM
               , accessibility ENABLE
-              , accessibilityHint $ "Vehicle Number " <> (STR.replaceAll (STR.Pattern "") (STR.Replacement " ") state.data.registrationNumber)
+              , accessibilityHint $ "Vehicle Number " <> (replaceAll (Pattern "") (Replacement " ") state.data.registrationNumber)
               ][  linearLayout
                   [ height $ V 38
                   , width MATCH_PARENT
@@ -733,82 +751,87 @@ paymentMethodView push state title shouldShowIcon uid =
 
 sourceDestinationView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 sourceDestinationView push state =
-  PrestoAnim.animationSet [ scaleYAnimWithDelay (getAnimationDelay FunctionCall)] $ 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , margin $ Margin 16 0 16 (if os == "IOS" && state.props.currentStage == RideStarted then safeMarginBottom + 36 else 12)
-  , background Color.white900
-  , onAnimationEnd push $ const $ NoAction
-  , cornerRadius 8.0
-  , padding $ Padding 16 12 16 12
-  ][linearLayout
-    [ orientation VERTICAL
-    , height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity LEFT
-    , accessibility ENABLE
-    , accessibilityHint $ "Pickup : " <> state.data.source
+  let isNotRentalRide = state.props.rideType /= RideType.RENTAL_RIDE
+      bottomMargin = if os == "IOS" && state.props.currentStage == RideStarted then safeMarginBottom + 36 else 12
+  in 
+    PrestoAnim.animationSet [ scaleYAnimWithDelay (getAnimationDelay FunctionCall)] $ 
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , margin $ Margin 16 0 16 bottomMargin
+    , background Color.white900
+    , onAnimationEnd push $ const $ NoAction
+    , id $ getNewIDWithTag "SourceDestinationView"
+    , cornerRadius 8.0
+    , padding $ Padding 16 12 16 12
     ][linearLayout
-      [ orientation HORIZONTAL
-      , gravity CENTER
-      ][imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
-        , height $ V 8
-        , width $ V 8
-        ]
-        ,textView $
-         [ text $ getString PICKUP
-         , margin $ MarginLeft 6
-         , color Color.black700
-         ] <> FontStyle.body3 TypoGraphy
-        ]
-       , textView $
-         [ text state.data.source
-         , maxLines 1
-         , ellipsize true
-         , width $ V ((screenWidth unit) / 10 * 8)
-         , height MATCH_PARENT
-         , gravity LEFT
-         , color Color.black900
-         , margin $ MarginTop 3
-         ] <> FontStyle.body1 TypoGraphy
-      ]
-    , separator (MarginVertical 12 12) (V 1) Color.ghostWhite true
-    ,linearLayout
-    [ orientation VERTICAL
+      [ orientation VERTICAL
       , height WRAP_CONTENT
       , width WRAP_CONTENT
       , gravity LEFT
       , accessibility ENABLE
-      , accessibilityHint $ "Drop : " <> state.data.destination
-    ][linearLayout
-      [ orientation HORIZONTAL
-      , gravity CENTER
-      ][imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
-        , height $ V 8
-        , width $ V 8
+      , accessibilityHint $ "Pickup : " <> state.data.source
+      ][linearLayout
+        [ orientation HORIZONTAL
+        , gravity CENTER
+        ][imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
+          , height $ V 8
+          , width $ V 8
+          ]
+          ,textView $
+          [ text $ getString PICKUP
+          , margin $ MarginLeft 6
+          , color Color.black700
+          ] <> FontStyle.body3 TypoGraphy
+          ]
+        , textView $
+          [ text state.data.source
+          , maxLines 1
+          , ellipsize true
+          , width $ V ((screenWidth unit) / 10 * 8)
+          , height MATCH_PARENT
+          , gravity LEFT
+          , color Color.black900
+          , margin $ MarginTop 3
+          ] <> FontStyle.body1 TypoGraphy
         ]
-      , textView $ 
-        [ text $ getString DROP
-        , margin $ MarginLeft 6
-        , color Color.black700
-        ] <> FontStyle.body3 TypoGraphy
-      ]
-      , textView $
-        [ text state.data.destination
-        , maxLines 1
-        , ellipsize true
-        , width $ V ((screenWidth unit) / 10 * 8)
-        , height MATCH_PARENT
+      , separator (MarginVertical 12 12) (V 1) Color.ghostWhite isNotRentalRide
+      ,linearLayout
+      [ orientation VERTICAL
+        , height WRAP_CONTENT
+        , width WRAP_CONTENT
         , gravity LEFT
-        , margin $ MarginTop 3
-        , color Color.black900
-        ] <> FontStyle.body1 TypoGraphy
-     ]
-  ]
+        , accessibility ENABLE
+        , accessibilityHint $ "Drop : " <> state.data.destination
+        , visibility $ boolToVisibility isNotRentalRide
+      ][linearLayout
+        [ orientation HORIZONTAL
+        , gravity CENTER
+        ][imageView
+          [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
+          , height $ V 8
+          , width $ V 8
+          ]
+        , textView $ 
+          [ text $ getString DROP
+          , margin $ MarginLeft 6
+          , color Color.black700
+          ] <> FontStyle.body3 TypoGraphy
+        ]
+        , textView $
+          [ text state.data.destination
+          , maxLines 1
+          , ellipsize true
+          , width $ V ((screenWidth unit) / 10 * 8)
+          , height MATCH_PARENT
+          , gravity LEFT
+          , margin $ MarginTop 3
+          , color Color.black900
+          ] <> FontStyle.body1 TypoGraphy
+      ]
+    ]
 
 specialZoneShimmerView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 specialZoneShimmerView push state = 
@@ -1228,3 +1251,156 @@ configurations =
 
 getAnimationDelay :: LazyCheck -> Int
 getAnimationDelay dummy = 100
+
+rentalDetailsView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+rentalDetailsView push state =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , cornerRadius 8.0
+  , padding $ Padding 16 16 16 16
+  , afterRender push $ const NoAction
+  , margin $ Margin 16 12 16 12
+  , background Color.white900
+  , visibility $ boolToVisibility $ state.props.rideType == RideType.RENTAL_RIDE
+  ]
+  [ rentalTimeView push state TIME
+  , separatorView true
+  , rentalTimeView push state DISTANCE
+  , separatorView true
+  , rentalTimeView push state STARTING_ODO
+  -- (Array.mapWithIndex (\index item -> 
+  --   linearLayout
+  --   [ height WRAP_CONTENT
+  --   , width WRAP_CONTENT
+  --   ]
+  --   [ rentalTimeView push state item.text
+  --   , separatorView $ index /= 2
+  --   ]
+  -- ) [{text : TIME}, {text : DISTANCE}, {text : STARTING_ODO}])
+  ]
+
+rentalTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> STR -> PrestoDOM (Effect Unit) w
+rentalTimeView push state showText =
+  let rentalData = state.data.rentalData
+      isRideStarted = state.props.currentStage == RideStarted
+  in 
+    PrestoAnim.animationSet [ fadeIn true] $
+    linearLayout
+    [ height WRAP_CONTENT
+    , width WRAP_CONTENT
+    , gravity $ if isTime showText then LEFT else CENTER
+    , orientation VERTICAL
+    , onAnimationEnd (\_ -> do
+        if isRideStarted then void $ rideDurationTimer (floor (toNumber (runFn2 differenceBetweenTwoUTC (getCurrentUTC "") state.data.startedAt))/60) "1" "RideDurationTimer" push RideDurationTimer
+        else pure unit
+      ) (const NoAction)
+    ]
+    [ textView $
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , text $ getString showText
+      , color Color.black650
+      , singleLine true
+      ] <> FontStyle.body3 TypoGraphy
+    , linearLayout
+      [ height MATCH_PARENT
+      , width $ if isTime showText then WRAP_CONTENT else MATCH_PARENT
+      , orientation HORIZONTAL
+      ] 
+      [ textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , text $ case showText of 
+            TIME -> (if isRideStarted then state.props.rideDurationTimer else "0") <> "hr"
+            DISTANCE -> show rentalData.baseDistance <> "km"
+            _ -> if rentalData.startOdometer == "" then "-" else rentalData.startOdometer <> "km"
+        , color Color.black800
+        ] <> FontStyle.body1 TypoGraphy
+      , textView $
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , visibility $ boolToVisibility $ isTime showText
+        , text $ " / " <> show rentalData.baseDuration <> "hr"
+        , color Color.black600
+        ] <> FontStyle.body1 TypoGraphy
+      ]
+    ]
+    where
+      isTime :: STR -> Boolean
+      isTime str =
+        case str of
+          TIME -> true
+          _ -> false
+
+addStopView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
+addStopView push state =
+  let isDestinationTextGiven = state.data.destination /= ""
+  in 
+    linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , margin $ Margin 16 12 16 0
+    , padding $ Padding 16 12 16 12
+    , background Color.white900
+    , orientation VERTICAL
+    , cornerRadius 8.0
+    , visibility $ boolToVisibility $ state.props.rideType == RideType.RENTAL_RIDE
+    ]
+    [ linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation HORIZONTAL
+      , gravity CENTER_VERTICAL
+      ]
+      [ imageView 
+        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_blue_circle"
+        , height $ V 8
+        , width $ V 8  
+        , margin $ MarginRight 8
+        ]
+      , textView $
+        [ text $ getString NEXT_STOP
+        ] <> FontStyle.body3 TypoGraphy
+      ]
+    , linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation HORIZONTAL
+      , gravity LEFT
+      , margin $ MarginTop 2
+      , accessibility DISABLE_DESCENDANT
+      ]
+      [ textView $
+        [ text $ if isDestinationTextGiven then state.data.destination else getString NOT_ADDED_YET
+        , ellipsize true
+        , singleLine true
+        , color Color.black800
+        , width $ V $ ((screenWidth unit) - 48)/5 * 4
+        ] <> FontStyle.body1 TypoGraphy
+      , linearLayout
+        [ height WRAP_CONTENT
+        , weight 1.0
+        ][]
+      , textView $
+        [ text $ if isDestinationTextGiven then getString EDIT else getString ADD_NOW
+        , color Color.blue800
+        , onClick push $ const AddStop
+        , padding $ Padding 16 2 8 2
+        ] <> FontStyle.body1 TypoGraphy
+      ]
+    ]
+
+separatorView :: forall w . Boolean -> PrestoDOM (Effect Unit) w
+separatorView visibility' =
+  linearLayout
+    [ height MATCH_PARENT
+    , gravity CENTER
+    , weight 1.0
+    , visibility $ boolToVisibility $ visibility'
+    ][ linearLayout
+      [ width $ V 1
+      , background Color.lightGrey
+      , height MATCH_PARENT
+      ][]
+    ]

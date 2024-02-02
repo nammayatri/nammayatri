@@ -183,8 +183,15 @@ homeScreen = do
     ReAllocateRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ REALLOCATE_RIDE updatedState)
-    GoToRentalsFlow -> App.BackT $ App.NoBack <$> (pure $ GO_TO_RENTALS_FLOW)
+    GoToRentalsFlow updatedState -> do 
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_RENTALS_FLOW updatedState)
     GoToScheduledRides -> App.BackT $ App.NoBack <$> (pure $ GO_TO_SCHEDULED_RIDES)
     Add_Stop updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ ADD_STOP updatedState)
+    Go_To_Search_Location_Flow updatedState isSource-> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_SEARCH_LOCATION_SCREEN updatedState isSource)
+    RideSearchSO -> 
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SEARCH_FLOW)

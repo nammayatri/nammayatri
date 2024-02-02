@@ -10,12 +10,13 @@ import Data.Array (singleton)
 import Data.Maybe (maybe)
 import Debug (spy)
 import Effect (Effect)
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
 import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView)
 import Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig (primaryButtonConfig, sourceToDestinationConfig, genericHeaderConfig)
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types (RideScheduledScreenState)
@@ -36,26 +37,32 @@ rideScheduledScreen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+  relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
     ]
-    [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-    , separatorView push state
-    , linearLayout
-      [ height MATCH_PARENT
+    [ linearLayout
+      [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+        , separatorView push state ]
+    , scrollView
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
       , margin $ MarginTop 60
-      , gravity CENTER_HORIZONTAL
-      ]
-      [ scheduledDetailsView push state
-      , notificationView push state
-      , cancelBookingView push state
-      , primaryButtonView push state
-      ]
+      ][linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , gravity CENTER_HORIZONTAL
+        ][ scheduledDetailsView push state
+          , notificationView push state
+          , cancelBookingView push state]
+        ]
+    , primaryButtonView push state
     ]
 
 scheduledDetailsView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
@@ -150,7 +157,7 @@ rideDetailsView push state =
         , height WRAP_CONTENT
         , margin $ MarginLeft 28
         , color Color.blue800
-        , onClick push $ const $ AddFirstStop state.destination
+        , onClick push $ const $ AddFirstStop
         , text $ getString EDIT
         ] <> FontStyle.paragraphText TypoGraphy
 
@@ -181,7 +188,7 @@ rideStartDetails push state =
             ]
             [ textView
                 ( [ textSize FontSize.a_14
-                  , text $ state.startDate
+                  , text $ EHC.convertUTCtoISC state.startTime "ddd" <> ", " <> EHC.convertUTCtoISC state.startTime "D" <> " " <> EHC.convertUTCtoISC state.startTime "MMM"
                   , color Color.black700
                   ] <> FontStyle.body1 TypoGraphy
                 )
@@ -191,7 +198,7 @@ rideStartDetails push state =
                 ] <> FontStyle.body1 TypoGraphy
             , textView $
                 [ textSize FontSize.a_14
-                , text $ " " <> state.startTime
+                , text $ " " <> EHC.convertUTCtoISC state.startTime "hh" <> ":" <> EHC.convertUTCtoISC state.startTime "mm" <> " " <> EHC.convertUTCtoISC state.startTime "a"
                 , color Color.black700
                 ] <> FontStyle.body1 TypoGraphy
             ]

@@ -412,11 +412,13 @@ getDistanceString distanceInMeters decimalPoint
   | distanceInMeters >= 1000 = ReExport.parseFloat (toNumber distanceInMeters / 1000.0) decimalPoint <> " km"
   | otherwise = show distanceInMeters <> " m"
 
+-- threshold is in kms 
 updateLocListWithDistance :: Array LocationListItemState -> Number -> Number -> Boolean -> Number -> Array LocationListItemState 
-updateLocListWithDistance arr currLat currLon useThreshold threshold =   
+updateLocListWithDistance arr currLat currLon useThreshold threshold =  
   arr
   # map updateItemDistance
   # filter withinThreshold
+  # sortByActualDistance
 
   where
     updateItemDistance item = 
@@ -427,6 +429,8 @@ updateLocListWithDistance arr currLat currLon useThreshold threshold =
 
     withinThreshold item = 
       maybe true (\actualDist -> (actualDist <= round (threshold * 1000.0) && useThreshold) || not useThreshold) item.actualDistance
+
+    sortByActualDistance = sortBy (comparing (\item -> item.actualDistance))
 
 getAssetLink :: LazyCheck -> String
 getAssetLink lazy = case (getMerchant lazy) of
@@ -526,6 +530,7 @@ getScreenFromStage stage = case stage of
   TryAgain -> "finding_rides_screen"
   PickUpFarFromCurrentLocation -> "finding_driver_loader"
   LoadMap -> "map_loader"
+  RideSearch -> "ride_search"
 
 getGlobalPayload :: String -> Maybe GlobalPayload
 getGlobalPayload key = do

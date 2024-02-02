@@ -80,6 +80,7 @@ import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
 import Locale.Utils
+import Common.Types.App (RideType(..)) as RideType
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -195,9 +196,9 @@ skipButtonConfig state =
         , id = "SkipButton"
         , enableLoader = (JB.getBtnLoader "SkipButton")
         , visibility = boolToVisibility $ doneButtonVisibility || state.data.ratingViewState.doneButtonVisibility
-        , isClickable = issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
-        , alpha = if issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
-        , enableRipple = issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
+        , isClickable = state.data.rideType == RideType.RENTAL_RIDE || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
+        , alpha = if state.data.rideType == RideType.RENTAL_RIDE || issueFaced || (state.data.ratingViewState.selectedRating >= 1) || getSelectedYesNoButton state >= 0 then 1.0 else 0.4
+        , enableRipple = state.data.rideType == RideType.RENTAL_RIDE || issueFaced || state.data.ratingViewState.selectedRating > 0 || getSelectedYesNoButton state >= 0
         , rippleColor = Color.rippleShade
         }
   in
@@ -907,6 +908,10 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType.priorityTag
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , merchantCity : state.props.city
+                                  , rideDurationTimer : state.props.rideDurationTimer
+                                  , rideDurationTimerId : state.props.rideDurationTimerId
+                                  , rideType : state.data.rideType
+                                  , endOTPShown : state.props.showEndOTP
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -966,7 +971,7 @@ driverInfoTransformer state =
     , vehicleDetails : cardState.vehicleDetails
     , registrationNumber : cardState.registrationNumber
     , rating : cardState.rating
-    , startedAt : cardState.startedAt
+    , startedAt : cardState.createdAt
     , endedAt : cardState.endedAt
     , source : cardState.source
     , destination : cardState.destination
@@ -994,6 +999,7 @@ driverInfoTransformer state =
     , vehicleVariant : cardState.vehicleVariant
     , defaultPeekHeight : getDefaultPeekHeight state
     , bottomSheetState : state.props.currentSheetState
+    , rentalData : RideCompletedCard.dummyRentalBookingConfig
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
@@ -1264,14 +1270,15 @@ specialLocationConfig srcIcon destIcon isAnim animConfig = {
   , polylineAnimationConfig : animConfig
 }
 
-updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.MapRouteConfig -> JB.UpdateRouteMarker
-updateRouteMarkerConfig locations sourceName destName sourceIcon destIcon mapRouteConfig = {
+updateRouteMarkerConfig :: JB.Locations -> String -> String -> String -> String -> JB.MapRouteConfig -> String -> JB.UpdateRouteMarker
+updateRouteMarkerConfig locations sourceName destName sourceIcon destIcon mapRouteConfig pureScriptID = {
     locations : locations
   , sourceName : sourceName
   , destName : destName
   , sourceIcon : sourceIcon
   , destIcon : destIcon
   , mapRouteConfig : mapRouteConfig
+  , pureScriptID : pureScriptID
 }
 
 setTipViewData :: Encode TipViewData => TipViewData -> Effect Unit
@@ -1498,7 +1505,20 @@ rideCompletedCardConfig state =
         },
         primaryButtonConfig = skipButtonConfig state,
         enableContactSupport = state.data.config.feature.enableSupport,
-        needHelpText = getString NEED_HELP
+        needHelpText = getString NEED_HELP,
+        showRentalRideDetails = state.data.rideType == RideType.RENTAL_RIDE,
+        rentalBookingData = RideCompletedCard.dummyRentalBookingConfig,
+        rentalRowDetails {
+          rideTime = getString RIDE_TIME
+        , rideDistance = getString RIDE_DISTANCE
+        , rideStartedAt = getString RIDE_STARTED_AT
+        , rideEndedAt = getString RIDE_ENDED_AT
+        , estimatedFare = getString ESTIMATED_FARE
+        , extraTimePrice = getString EXTRA_TIME_PRICE
+        , totalFare = getString TOTAL_FARE
+        , rideDetailsTitle = getString RIDE_DETAILS
+        , fareUpdateTitle = getString FARE_UPDATE
+        }
       }
   where 
     mkHeaderConfig :: Boolean -> Boolean -> {title :: String, subTitle :: String}
@@ -1681,3 +1701,21 @@ locationTagBarConfig state  = let
           { image : "ny_ic_ambulance", text : "Ambulance", id : "AMBULANCE" }]
   in 
     { tagList : locTagList }
+  
+endOTPAnimConfig :: ST.HomeScreenState -> AnimConfig.AnimConfig
+endOTPAnimConfig state =
+  if EHC.os == "IOS" 
+    then
+      AnimConfig.animConfig
+      { fromX = -30
+      , toX = 0
+      , duration = 1500
+      , ifAnim = state.props.showEndOTP
+      }
+    else
+      AnimConfig.animConfig
+      { fromX =  -20
+      , toX =  0
+      , duration = 1500
+      , ifAnim = state.props.showEndOTP
+      }

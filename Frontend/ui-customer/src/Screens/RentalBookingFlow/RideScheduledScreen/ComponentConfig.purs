@@ -15,6 +15,7 @@
 
 module Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig where
 
+import Prelude
 import Components.GenericHeader.Controller as GenericHeader
 import Components.PrimaryButton.Controller as PrimaryButton
 import Components.SeparatorView.View as SeparatorView
@@ -34,7 +35,7 @@ primaryButtonConfig state =
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-          { text = state.primaryButtonText
+          { text = if state.primaryButtonText == "" then getString GO_HOME else state.primaryButtonText
           , color = Color.yellow900
           , height = V 40
           }
@@ -63,7 +64,7 @@ sourceToDestinationConfig state =
     config = SourceToDestination.config
     sourceToDestinationConfig' = config
       { sourceTextConfig
-          { text = state.source
+          { text = state.source.address
           , textStyle = ParagraphText
           , ellipsize = true
           , maxLines = 2
@@ -83,13 +84,14 @@ sourceToDestinationConfig state =
           , width = V 16
           }
       , destinationTextConfig
-          { text = maybe (getString ADD_FIRST_STOP) (\dest -> dest) state.destination
+          { text = maybe (getString ADD_FIRST_STOP) (\dest -> dest.address) state.destination
           , color = maybe (Color.blue800) (\_ -> Color.black800) state.destination
           , isEditable = true
           , textStyle = ParagraphText
           , ellipsize = true
           , maxLines = 1
           , margin = MarginLeft 12
+          , isClickable = true
           }
       , distanceConfig { distanceVisibility = GONE }
       , separatorMargin = 24

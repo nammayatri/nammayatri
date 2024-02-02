@@ -17,7 +17,7 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _fareProductType)
 
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
@@ -56,6 +56,7 @@ import Control.Monad.Except.Trans (lift)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import ConfigProvider
 import Locale.Utils
+import Debug
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -112,12 +113,14 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
           , driverRating : fromMaybe 0.0 quoteDetails.rating
           , profile : ""
           , price :  show quoteEntity.estimatedTotalFare
-          , vehicleType : "auto"
+          , vehicleType : quoteEntity.vehicleVariant
           , driverName : quoteDetails.driverName
           , selectedQuote : Nothing
           , appConfig : getAppConfig appConfig
           , city : city
         }
+    (RENTAL contents) -> QLI.config
+
 
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
@@ -267,7 +270,13 @@ makePlaceNameResp lat lon =
 getUpdatedLocationList :: Array LocationListItemState -> Maybe String -> Array LocationListItemState
 getUpdatedLocationList locationList placeId = (map
                             (\item ->
-                                ( item  {postfixImageUrl = if (item.placeId == placeId || item.postfixImageUrl == "ic_fav_red") then "ny_ic_fav_red" else "ic_fav" } )
+                                ( item  
+                                  { postfixImageUrl = 
+                                      if (  item.placeId == placeId 
+                                          || item.postfixImageUrl == "ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ic_fav_red.png" 
+                                          || item.postfixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav_red.png" ) 
+                                        then "ny_ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav_red.png" 
+                                        else "ic_fav,https://assets.juspay.in/beckn/nammayatri/user/images/ic_fav.png" } )
                             ) (locationList))
 
 transformSavedLocations :: Array LocationListItemState -> FlowBT String Unit
@@ -314,6 +323,7 @@ getSpecialZoneQuotes quotes estimateAndQuoteConfig = mapWithIndex (\index item -
 getSpecialZoneQuote :: OfferRes -> Int -> ChooseVehicle.Config
 getSpecialZoneQuote quote index =
   let estimatesConfig = (getAppConfig appConfig).estimateAndQuoteConfig
+      _ = spy "quoteee" quote
   in 
   case quote of
     Quotes body -> let (QuoteAPIEntity quoteEntity) = body.onDemandCab
@@ -330,8 +340,23 @@ getSpecialZoneQuote quote index =
       , searchResultType = ChooseVehicle.QUOTES
       , pickUpCharges = 0
       }
+    RentalQuotes body -> let (QuoteAPIEntity quoteEntity) = body.onRentalCab
+      in ChooseVehicle.config {
+        vehicleImage = getVehicleVariantImage quoteEntity.vehicleVariant
+      , isSelected = (index == 0)
+      , vehicleVariant = quoteEntity.vehicleVariant
+      , price = (getCurrency appConfig) <> (show quoteEntity.estimatedTotalFare)
+      , activeIndex = 0
+      , index = index
+      , id = trim quoteEntity.id
+      , capacity = getVehicleCapacity quoteEntity.vehicleVariant
+      , showInfo = estimatesConfig.showInfoIcon
+      , searchResultType = ChooseVehicle.QUOTES
+      , pickUpCharges = 0
+      }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
+
 
 getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array ChooseVehicle.Config
 getEstimateList quotes estimateAndQuoteConfig = mapWithIndex (\index item -> getEstimates item index (isFareRangePresent quotes)) (getFilteredEstimate quotes estimateAndQuoteConfig)
@@ -387,6 +412,10 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                                             let (QuoteAPIEntity quoteEntity) = body.onDemandCab
                                                 orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
                                             in {item : Just quote, order : orderNumber}
+                                          RentalQuotes body -> 
+                                            let (QuoteAPIEntity quoteEntity) = body.onRentalCab
+                                                orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
+                                            in {item : Just quote, order : orderNumber}
                                           _ -> {item : Nothing, order : orderListLength}
                                 ) quotes
           filterMappedQuotes = filter (\quote -> isJust quote.item) mappedQuotes
@@ -397,6 +426,9 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
     filterQuoteByVariants variant quotes = DA.take 1 (sortQuoteWithVariantOrder (DA.filter(\item -> case item of
                                                                                                       Quotes body -> do
                                                                                                         let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                                                                                                        DA.any (_ == quoteEntity.vehicleVariant) variant
+                                                                                                      RentalQuotes body -> do
+                                                                                                        let (QuoteAPIEntity quoteEntity) = body.onRentalCab
                                                                                                         DA.any (_ == quoteEntity.vehicleVariant) variant
                                                                                                       _ -> false
                                                                                           ) quotes) variant)
@@ -608,3 +640,14 @@ fetchPickupCharges estimateFareBreakup =
     deadKmFare = find (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup
   in 
     maybe 0 (\fare -> fare ^. _price) deadKmFare
+
+getOneWaySpecialZoneAPIDetailsQuotes :: Array OfferRes -> Array OfferRes
+getOneWaySpecialZoneAPIDetailsQuotes quotes = 
+  filter 
+  (\quote -> case quote of 
+      Quotes body ->
+        let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+            fareProductType = quoteEntity.quoteDetails^._fareProductType
+        in fareProductType == "OneWaySpecialZoneAPIDetails"
+      _ -> false )
+  quotes

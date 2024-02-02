@@ -1,6 +1,6 @@
 module Screens.SearchLocationScreen.ScreenData where
 
-import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo)
+import Screens.Types (SearchLocationScreenState, SearchLocationStage(..), SearchLocationTextField(..), SearchLocationActionType(..), LocationInfo, City(..))
 import ConfigProvider
 import Screens (ScreenName(..), getScreen)
 import Data.Maybe (Maybe(..))
@@ -11,7 +11,7 @@ initData :: SearchLocationScreenState
 initData = {
   data : { srcLoc : Nothing
          , destLoc : Nothing
-         , currentLoc : Just dummyLocationInfo{
+         , currentLoc : dummyLocationInfo{
             address = "Current Location"
          } 
          , locationList : []
@@ -28,6 +28,7 @@ initData = {
         , nearByGates : []
         , specialZoneCoordinates : ""
         , confirmLocCategory : ""
+        , predictionSelectedFromHome : locationListStateObj
   } ,
   props : {
     searchLocStage : PredictionsStage ,
@@ -39,7 +40,13 @@ initData = {
     showLoader : false,
     canClearText : false,
     locUnserviceable : false,
-    isAutoComplete : false
+    isSpecialZone : false,
+    isAutoComplete : false,
+    textFieldText : {
+      pickUpLoc : "",
+      dropLoc : ""
+    },
+    pickUpSelectedOnMap : false
   },
   appConfig : getAppConfig appConfig
 }
@@ -63,5 +70,5 @@ dummyLocationInfo = {
   placeId : Nothing,
   address : "",
   addressComponents : dummyAddress,
-  city : Nothing 
+  city : AnyCity 
 }

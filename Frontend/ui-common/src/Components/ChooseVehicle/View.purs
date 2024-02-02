@@ -18,7 +18,7 @@ import ConfigProvider
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
-  let isActiveIndex = config.index == config.activeIndex
+  let isActiveIndex = spy "Inside isActive index" (config.index == config.activeIndex)
   in 
   linearLayout
   [ width MATCH_PARENT
@@ -26,11 +26,11 @@ view push config =
   , background if isActiveIndex then Color.blue600 else Color.white900
   , cornerRadius 6.0
   , id $ EHC.getNewIDWithTag config.id
-  , stroke $ if isActiveIndex then "2," <> Color.blue800 else "1," <> Color.white900
+  , stroke $ if isActiveIndex && config.showStroke then "2," <> Color.blue800 else "1," <> Color.white900
   , margin $ config.layoutMargin
   , padding $ Padding 8 16 12 16
   , clickable config.isEnabled
-  , onClick push $ const $ OnSelect config
+  , onClick push $ const $ OnSelect $ spy " INside choose vehic; " config
   , afterRender push (const NoAction)
   ][ linearLayout
       [ height WRAP_CONTENT
@@ -105,7 +105,6 @@ priceDetailsView push config =
     , orientation HORIZONTAL
     , padding $ PaddingLeft 8
     , gravity $ RIGHT
-    , onClick push $ const $ ShowRateCard config
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -120,6 +119,7 @@ priceDetailsView push config =
         , height $ V 15
         , margin $ Margin 4 6 0 0
         , visibility $ boolToVisibility config.showInfo
+        , onClick push $ const $ ShowRateCard config
         ]
     ]
 

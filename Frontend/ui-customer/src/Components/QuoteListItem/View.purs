@@ -46,6 +46,8 @@ import Debug
 import Engineering.Helpers.Commons (liftFlow)
 import Screens.Types (QuoteListItemState(..), City(..))
 import Locale.Utils
+import Data.String
+import MerchantConfig.Utils (Merchant(..), getMerchant)
 
 view :: forall w . (Action  -> Effect Unit) -> QuoteListItemState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -127,12 +129,26 @@ driverImageView state =
         [ height $ V state.appConfig.quoteListItemConfig.vehicleHeight
         , width $ V state.appConfig.quoteListItemConfig.vehicleWidth
         , cornerRadius 20.0
-        , imageWithFallback $ fetchImage FF_ASSET $ getAutoImage state.city
+        , imageWithFallback $ fetchImage FF_ASSET $ getVehicleImage state.vehicleType "" state.city
         , weight 1.0
         ]
       ]
   ]
   where 
+    getVehicleImage :: String -> String -> City -> String
+    getVehicleImage variant vehicleDetail city = do 
+      let details = (toLower vehicleDetail)
+      fetchImage FF_ASSET $ 
+        if variant == "AUTO_RICKSHAW" then getAutoImage city
+        else
+          if contains (Pattern "ambassador") details then "ic_yellow_ambassador"
+          else 
+            case (getMerchant FunctionCall) of
+              YATRISATHI -> case variant of
+                              "SUV" -> "ny_ic_suv_concept_quote_list"
+                              _     -> "ny_ic_sedan_concept_quote_list"
+              _          -> "ny_ic_white_taxi_quote_list"
+
     getAutoImage :: City -> String
     getAutoImage city = case city of
       Hyderabad -> "ny_ic_black_yellow_auto_quote_list"

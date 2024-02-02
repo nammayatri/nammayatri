@@ -167,10 +167,18 @@ checkRideStatus rideAssigned = do
                           }
                 })
                 updateLocalStage RideCompleted
-          Left err -> updateLocalStage HomeScreen
+              when (length listResp.list == 0) $ do 
+                modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
+                updateLocalStage HomeScreen
+          Left err -> do 
+            modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
+            updateLocalStage HomeScreen
       else do
+        modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
         updateLocalStage HomeScreen
-    Left err -> updateLocalStage HomeScreen
+    Left err -> do 
+      modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{currentStage = HomeScreen}})
+      updateLocalStage HomeScreen
   if not (isLocalStageOn RideAccepted) then removeChatService "" else pure unit
   where 
     updateCity :: FlowStatusData -> FlowBT String Unit

@@ -41,8 +41,8 @@ logout dummyString = (getBaseUrl "5") <> "/auth/logout"
 serviceability :: String -> String
 serviceability dummyString = (getBaseUrl "6") <> "/serviceability/ride"
 
-serviceabilityOrigin :: String -> String
-serviceabilityOrigin dummyString = (getBaseUrl "7") <> "/serviceability/origin"
+locServiceability :: String -> String
+locServiceability serviceabilityType = (getBaseUrl "7") <> "/serviceability/" <> serviceabilityType
 
 serviceabilityDest :: String -> String
 serviceabilityDest dummyString = (getBaseUrl "8") <> "/serviceability/destination"
@@ -199,3 +199,12 @@ updateIssue issueId language = (getBaseUrl "45") <> "/issue/" <> issueId <> "/up
 
 fetchIssueList :: String -> String
 fetchIssueList language = (getBaseUrl "46") <> "/issue/list?language=" <> language
+
+addStop :: String -> String
+addStop rideBookingId = (getBaseUrl "47") <> "/rideBooking/" <> rideBookingId <> "/addStop"
+
+editStop :: String -> String
+editStop rideBookingId = (getBaseUrl "48") <> "/rideBooking/" <> rideBookingId <> "/editStop"
+
+rentalSearch :: String -> String
+rentalSearch dummy = (getBaseUrl "49") <> "/rental/search"
