@@ -51,7 +51,7 @@ import Components.SearchLocationModel.Controller as SearchLocationModelControlle
 import Components.SelectListModal.Controller as CancelRidePopUp
 import Components.SettingSideBar.Controller as SettingSideBarController
 import Components.SourceToDestination.Controller as SourceToDestinationController
-import Constants (defaultDensity)
+import Constants (defaultDensity, languageKey)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Monad.Except (runExcept)
 import Control.Monad.Trans.Class (lift)
@@ -123,6 +123,9 @@ import PrestoDOM.Core (getPushFn)
 import Components.BannerCarousel as BannerCarousel
 import PrestoDOM.List
 import PrestoDOM.Core
+import Locale.Utils (getLanguageLocale)
+import RemoteConfig as RC
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -3003,6 +3006,21 @@ getBannerConfigs state =
   (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
     then [disabilityBannerConfig state BannerCarousal] 
     else [])
-  <> 
-  (if (state.data.config.feature.enableZooTicketBookingFlow)
+  <> (if (state.data.config.feature.enableZooTicketBookingFlow)
     then [ticketBannerConfig state BannerCarousal] else [])
+  <> (if state.props.city == Chennai then 
+      [metroBannerConfig state BannerCarousal] 
+    else [])
+  <> (getRemoteBannerConfigs state.props.city)
+  where
+    getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
+    getRemoteBannerConfigs city = do
+      let location = STR.toLower $ show city
+          language = getLanguage $ getLanguageLocale languageKey
+          configName = "customer_carousel_banner" <> language
+          datas = RC.carouselConfigData location configName
+      BannerCarousel.remoteConfigTransformer datas BannerCarousal
+    getLanguage :: String -> String
+    getLanguage lang = 
+      let language = STR.toLower $ STR.take 2 lang
+      in if not (STR.null language) then "_" <> language else "_en"
