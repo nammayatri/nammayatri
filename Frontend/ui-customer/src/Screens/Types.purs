@@ -2030,7 +2030,7 @@ type TicketStatusScreenProps = {
   termsAndConditionsSelected :: Boolean,
   validDate :: Boolean,
   showShimmer :: Boolean,
-  paymentStatus :: Common.PaymentStatus,
+  paymentStatus :: PP.PaymentStatus,
   ticketBookingList :: TicketBookings,
   selectedBookingId :: String,
   selectedBookingInfo :: IndividualBookingItem,
@@ -2328,5 +2328,5 @@ type MetroTicketStatusScreenData = {
 
 type MetroTicketStatusScreenProps = {
   showShimmer :: Boolean
-, paymentStatus :: Common.PaymentStatus
+, paymentStatus :: PP.PaymentStatus
 }

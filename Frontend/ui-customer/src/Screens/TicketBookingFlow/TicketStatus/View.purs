@@ -56,6 +56,7 @@ import Data.Function.Uncurried (runFn3)
 import Mobility.Prelude (groupAdjacent)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Domain.Payments as PP
 
 screen :: ST.TicketStatusScreenState -> Screen Action ST.TicketStatusScreenState ScreenOutput
 screen initialState =
@@ -186,7 +187,7 @@ separatorView color =
 
 bookingStatusView :: forall w. ST.TicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 bookingStatusView state push paymentStatus = 
-  let refundInfoView = if state.props.currentStage == ST.BookingConfirmationStage && state.props.actionType == ST.MetroTicketToPaymentStatusEntry && state.props.paymentStatus == Common.Pending then
+  let refundInfoView = if state.props.currentStage == ST.BookingConfirmationStage && state.props.actionType == ST.MetroTicketToPaymentStatusEntry && state.props.paymentStatus == PP.Pending then
                          refundInfoTextView 
                        else
                          linearLayout [visibility GONE] []
@@ -248,7 +249,7 @@ bookingStatusBody state push paymentStatus =
     , weight 1.0
     , orientation VERTICAL
     , margin $ Margin 16 16 16 0
-    , visibility if paymentStatus == Common.Failed then GONE else VISIBLE
+    , visibility if paymentStatus == PP.Failed then GONE else VISIBLE
     ][ scrollView
         [ width MATCH_PARENT
         , height MATCH_PARENT

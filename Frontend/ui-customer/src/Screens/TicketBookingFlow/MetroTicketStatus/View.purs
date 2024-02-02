@@ -76,6 +76,7 @@ import Timers (startTimer)
 import Engineering.Helpers.Commons (screenHeight)
 import Language.Strings
 import Language.Types
+import Domain.Payments as PP
 
 screen :: ST.MetroTicketStatusScreenState -> Screen Action ST.MetroTicketStatusScreenState ScreenOutput
 screen initialState =
@@ -93,7 +94,7 @@ screen initialState =
   getMetroStatusEvent push = do
     void $ pure $ spy "getMetroStatusEvent" ""
     void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
-    -- if initialState.props.paymentStatus == Common.Success then do
+    -- if initialState.props.paymentStatus == PP.Success then do
     --   void $ pure $ spy "getMetroStatusEvent" ""
     --   void $ launchAff $ flowRunner defaultGlobalState $ do
     --     void $ delay $ Milliseconds 4000.0 
@@ -203,9 +204,9 @@ shimmerView state =
           )
     ]
 
-bookingStatusView :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
+bookingStatusView :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 bookingStatusView state push paymentStatus = 
-  let refundInfoView = if state.props.paymentStatus == Common.Pending then
+  let refundInfoView = if state.props.paymentStatus == PP.Pending then
                          refundInfoTextView 
                        else
                          linearLayout [visibility GONE] []
@@ -252,7 +253,7 @@ copyTransactionIdView state push  =
      ] 
   ]
 
-bookingStatusBody :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus ->  PrestoDOM (Effect Unit) w
+bookingStatusBody :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus ->  PrestoDOM (Effect Unit) w
 bookingStatusBody state push paymentStatus = 
   let 
     headerImgConfig = {
@@ -268,7 +269,7 @@ bookingStatusBody state push paymentStatus =
     , weight 1.0
     , orientation VERTICAL
     , margin $ Margin 16 16 16 0
-    , visibility if paymentStatus == Common.Failed then GONE else VISIBLE
+    , visibility if paymentStatus == PP.Failed then GONE else VISIBLE
     ][ scrollView
         [ width MATCH_PARENT
         , height MATCH_PARENT
@@ -280,7 +281,7 @@ bookingStatusBody state push paymentStatus =
             , padding $ Padding 10 10 10 10
             , cornerRadius 8.0
             , background Color.white900
-            , visibility if paymentStatus == Common.Success then GONE else VISIBLE
+            , visibility if paymentStatus == PP.Success then GONE else VISIBLE
             ][ linearLayout
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
@@ -302,16 +303,16 @@ bookingStatusBody state push paymentStatus =
         ]
       ]
 
-bookingConfirmationActions :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
+bookingConfirmationActions :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 bookingConfirmationActions state push paymentStatus = 
   let 
     topBtnText =  case paymentStatus of 
-      Common.Success ->getString  VIEW_TICKET
-      Common.Failed  ->getString  TRY_AGAIN
+      PP.Success ->getString  VIEW_TICKET
+      PP.Failed  ->getString  TRY_AGAIN
       _ -> ""
     topBtnVisibility = case paymentStatus of 
-      Common.Success -> VISIBLE
-      Common.Failed  -> VISIBLE
+      PP.Success -> VISIBLE
+      PP.Failed  -> VISIBLE
       _ -> GONE 
   in
     linearLayout
@@ -344,17 +345,17 @@ bookingConfirmationActions state push paymentStatus =
       ]
     ]
 
-paymentStatusHeader :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> Common.PaymentStatus -> PrestoDOM (Effect Unit) w
+paymentStatusHeader :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 paymentStatusHeader state push paymentStatus = 
   let transcationConfig = getTransactionConfig paymentStatus
       paymentSt = spy "paymentStatus" paymentStatus
       refreshStatusBtn = 
-        if(paymentStatus == Common.Pending) then
+        if(paymentStatus == PP.Pending) then
           (PrimaryButton.view (push <<< RefreshStatusAC) (refreshStatusButtonConfig state))
         else 
           linearLayout [visibility GONE] []
       copyTransactionView = 
-        if paymentStatus == Common.Failed then
+        if paymentStatus == PP.Failed then
           copyTransactionIdView state push 
         else
           linearLayout [visibility GONE] []
@@ -371,7 +372,7 @@ paymentStatusHeader state push paymentStatus =
       ][imageView
         [ width $ MATCH_PARENT
         , height $ V 100
-        , visibility if paymentStatus == Common.Success then VISIBLE else GONE
+        , visibility if paymentStatus == PP.Success then VISIBLE else GONE
         , imageWithFallback $ fetchImage FF_ASSET "ny_ic_confetti"
         ] 
       , linearLayout
@@ -404,7 +405,7 @@ paymentStatusHeader state push paymentStatus =
 --       , margin (MarginTop ((screenHeight unit)/ 7 - (if EHC.os == "IOS" then 140 else 90)))
 --       , gravity CENTER
 --       , id (getNewIDWithTag "paymentLoader")
---       , visibility if state.props.paymentStatus == Common.Success  then VISIBLE else GONE
+--       , visibility if state.props.paymentStatus == PP.Success  then VISIBLE else GONE
 --       , afterRender (\action -> do
 --         void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/payment_lottie_loader.json", lottieId = (getNewIDWithTag "paymentLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
 --         push action
@@ -463,13 +464,13 @@ keyValueView push state key value index =
   ]
 
 
-getTransactionConfig :: Common.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
+getTransactionConfig :: PP.PaymentStatus -> {image :: String, title :: String, statusTimeDesc :: String}
 getTransactionConfig status = 
   case status of
-    Common.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : getString PLEASE_WHILE_GEN_TICKET, title : getString PAYMENT_RECEIVED }
-    Common.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : getString PLEASE_CHECK_BACK_FEW_MIN, title : getString YOUR_BOOKING_PENDING }
-    Common.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : getString PLEASE_RETRY_BOOKING, title : getString BOOKING_FAILED }
-    Common.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}
+    PP.Success -> {image : fetchImage FF_COMMON_ASSET "ny_ic_green_tick", statusTimeDesc : getString PLEASE_WHILE_GEN_TICKET, title : getString PAYMENT_RECEIVED }
+    PP.Pending -> {image : fetchImage FF_COMMON_ASSET "ny_ic_transaction_pending", statusTimeDesc : getString PLEASE_CHECK_BACK_FEW_MIN, title : getString YOUR_BOOKING_PENDING }
+    PP.Failed  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_payment_failed", statusTimeDesc : getString PLEASE_RETRY_BOOKING, title : getString BOOKING_FAILED }
+    PP.Scheduled  -> {image : fetchImage FF_COMMON_ASSET "ny_ic_pending", statusTimeDesc : "", title : ""}
 
 
 refundInfoTextView :: forall w. PrestoDOM (Effect Unit) w

@@ -33,7 +33,7 @@ import Helpers.Utils (fetchImage, FetchImageFrom(..),getCityFromString)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import MerchantConfig.Utils (getMerchant, Merchant(..))
-import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map)
+import Prelude (Unit, const, unit, ($), (*), (/), (<>), (==), (||), (&&), (/=), map, not)
 import Mobility.Prelude (boolToVisibility)
 import PrestoDOM 
 import PrestoDOM.Animation as PrestoAnim

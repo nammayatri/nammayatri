@@ -25,6 +25,7 @@ import Engineering.Helpers.Commons
 import Data.Maybe
 import Language.Strings
 import Language.Types
+import Domain.Payments as PP
 
 
 metroTicketStatusTransformer :: MetroTicketBookingStatus -> String -> MetroTicketStatusScreenState -> MetroTicketStatusScreenState
@@ -32,10 +33,10 @@ metroTicketStatusTransformer (MetroTicketBookingStatus metroTicketBookingStatus)
   let 
     keyValArray' = metroTicketDetailsKeyVals (MetroTicketBookingStatus metroTicketBookingStatus)
     paymentStatus' = case metroTicketBookingStatus.status of 
-      "CONFIRMED" -> Common.Success
-      "PAYMENT_PENDING" -> Common.Pending
-      "CONFIRMING" -> Common.Pending
-      _ -> Common.Failed
+      "CONFIRMED" -> PP.Success
+      "PAYMENT_PENDING" -> PP.Pending
+      "CONFIRMING" -> PP.Pending
+      _ -> PP.Failed
     ticketName' = getString TICKETS_FOR_CHENNAI_METRO
     validUntil' =  metroTicketBookingStatus.validTill
     paymentOrder = metroTicketBookingStatus.payment >>= (\(FRFSBookingPaymentAPI payment') ->  payment'.paymentOrder)
