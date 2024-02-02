@@ -210,7 +210,7 @@ search personId req bundleVersion clientVersion device = do
             (oneWayReq.origin, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, now, oneWayReq.isReallocationEnabled)
           RentalSearch rentalReq ->
             (rentalReq.origin, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing)
-
+  unless (startTime >= now) $ throwError (InvalidRequest "Ride time should only be future time")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
 

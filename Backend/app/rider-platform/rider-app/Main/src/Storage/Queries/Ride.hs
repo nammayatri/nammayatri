@@ -198,7 +198,9 @@ cancelRides rideIds now =
 data RideItem = RideItem
   { person :: Person,
     ride :: Ride,
-    bookingStatus :: Common.BookingStatus
+    bookingStatus :: Common.BookingStatus,
+    bookingDetails :: BookingDetails,
+    rideScheduledAt :: UTCTime
   }
 
 instance BeamBackend.BeamSqlBackend be => B.HasSqlEqualityCheck be Common.BookingStatus
@@ -243,11 +245,13 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                 pure (booking', ride', person')
   res' <- case res of
     Right x -> do
-      let rides = snd' <$> x
+      let bookings = fst' <$> x
+          rides = snd' <$> x
           persons = thd' <$> x
+      b <- catMaybes <$> mapM fromTType' bookings
       r <- catMaybes <$> mapM fromTType' rides
       p <- catMaybes <$> mapM fromTType' persons
-      pure $ zip3 p r (mkBookingStatus now <$> r)
+      pure $ zip3 p r b
     Left _ -> pure []
   pure $ mkRideItem <$> res'
   where
@@ -264,10 +268,16 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
       | ride.status == Ride.INPROGRESS && ((ride.rideStartTime) > Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now')) = Common.ONGOING
       | ride.status == Ride.CANCELLED = Common.RCANCELLED
       | otherwise = Common.ONGOING_6HRS
+    fst' (x, _, _) = x
     snd' (_, y, _) = y
     thd' (_, _, z) = z
-    mkRideItem (person, ride, bookingStatus) =
-      RideItem {..}
+    mkRideItem (person, ride, booking) =
+      RideItem
+        { bookingStatus = mkBookingStatus now ride,
+          rideScheduledAt = booking.startTime,
+          bookingDetails = booking.bookingDetails,
+          ..
+        }
 
 findRiderIdByRideId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Ride -> m (Maybe (Id Person))
 findRiderIdByRideId rideId = do

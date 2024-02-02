@@ -344,9 +344,7 @@ mkFulfillmentV2 ::
   m Spec.Fulfillment
 mkFulfillmentV2 mbDriver ride booking mbVehicle mbImage mbTags mbPersonTags isDriverBirthDay isFreeRide mbEvent = do
   mbDInfo <- driverInfo
-  let rideOtp = case ride.status of
-        DRide.INPROGRESS -> fromMaybe ride.otp ride.endOtp
-        _ -> ride.otp
+  let rideOtp = fromMaybe ride.otp ride.endOtp
   pure $
     Spec.Fulfillment
       { fulfillmentId = Just ride.id.getId,

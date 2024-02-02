@@ -159,8 +159,16 @@ buildShareRideInfo merchantId ride = do
         fromLocation = mkCommonBookingLocation booking.fromLocation,
         toLocation = mbtoLocation,
         sosStatus = castSosStatus . (.status) <$> sosDetails,
-        vehicleVariant = castVehicleVariant ride.vehicleVariant
+        vehicleVariant = castVehicleVariant ride.vehicleVariant,
+        nextStopLocation = getStopFromBookingDetails booking.bookingDetails,
+        rideScheduledAt = booking.startTime,
+        fareProductType = mkFareProductType booking.bookingDetails
       }
+
+getStopFromBookingDetails :: DTB.BookingDetails -> Maybe Common.Location
+getStopFromBookingDetails bookingDetails = case bookingDetails of
+  DB.RentalDetails rentalDetails -> mkCommonBookingLocation <$> rentalDetails.stopLocation
+  _ -> Nothing
 
 castSosStatus :: DSos.SosStatus -> Common.SosStatus
 castSosStatus = \case
@@ -208,7 +216,7 @@ rideList merchantShortId mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCus
     maxLimit = 20
     defaultLimit = 10
 
-buildRideListItem :: EncFlow m r => QRide.RideItem -> m Common.RideListItem
+buildRideListItem :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- mapM decrypt person.mobileNumber
   pure
@@ -221,7 +229,10 @@ buildRideListItem QRide.RideItem {..} = do
         driverName = ride.driverName,
         driverPhoneNo = ride.driverMobileNumber,
         vehicleNo = ride.vehicleNumber,
-        bookingStatus
+        endOtp = ride.endOtp,
+        nextStopLocation = getStopFromBookingDetails bookingDetails,
+        fareProductType = mkFareProductType bookingDetails,
+        ..
       }
 
 ticketRideList :: ShortId DM.Merchant -> Maybe (ShortId Common.Ride) -> Maybe Text -> Maybe Text -> Maybe Text -> Flow Common.TicketRideListRes
@@ -281,7 +292,11 @@ ticketRideList merchantShortId mbRideShortId countryCode mbPhoneNumber _ = do
           dropLocationArea = (.address.area) =<< detail.customerDropLocation,
           fare = detail.actualFare,
           personId = cast personId,
-          classification = Ticket.CUSTOMER
+          classification = Ticket.CUSTOMER,
+          nextStopLocation = detail.nextStopLocation,
+          rideScheduledAt = detail.rideScheduledAt,
+          fareProductType = detail.fareProductType,
+          endOtp = ride.endOtp
         }
 
 rideInfo :: (EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id Common.Ride -> m Common.RideInfoRes
@@ -347,8 +362,19 @@ rideInfo merchantId reqRideId = do
         estimatedRideDuration = estimatedDuration,
         rideDuration = timeDiffInSeconds <$> ride.rideEndTime <*> ride.rideStartTime,
         cancelledTime = cancelledTime,
-        cancelledBy = cancelledBy
+        cancelledBy = cancelledBy,
+        nextStopLocation = getStopFromBookingDetails booking.bookingDetails,
+        rideScheduledAt = booking.startTime,
+        fareProductType = mkFareProductType booking.bookingDetails,
+        endOtp = ride.endOtp
       }
+
+mkFareProductType :: DTB.BookingDetails -> Common.FareProductType
+mkFareProductType bookingDetails = case bookingDetails of
+  DTB.OneWayDetails _ -> Common.ONE_WAY
+  DTB.RentalDetails _ -> Common.RENTAL
+  DTB.DriverOfferDetails _ -> Common.DRIVER_OFFER
+  DTB.OneWaySpecialZoneDetails _ -> Common.ONE_WAY_SPECIAL_ZONE
 
 timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
 timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1

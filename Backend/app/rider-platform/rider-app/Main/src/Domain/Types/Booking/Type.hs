@@ -69,6 +69,8 @@ data Booking = Booking
     riderId :: Id DPerson.Person,
     fromLocation :: DLoc.Location,
     estimatedFare :: Money,
+    estimatedDistance :: Maybe HighPrecMeters,
+    estimatedDuration :: Maybe Seconds,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
     vehicleVariant :: VehicleVariant,
