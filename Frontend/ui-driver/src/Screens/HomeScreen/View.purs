@@ -741,6 +741,8 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
 
 driverStatusPill :: forall w . PillButtonState -> (Action -> Effect Unit) -> HomeScreenState -> Int -> PrestoDOM (Effect Unit) w
 driverStatusPill pillConfig push state index =
+  let isStatusBtnClickable = not (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer])
+  in
   linearLayout
   [ weight 1.0
   , height $ V 35
@@ -753,15 +755,15 @@ driverStatusPill pillConfig push state index =
                     DEFAULT -> Color.white900
   , cornerRadius 50.0
   ][  linearLayout
-      [ width MATCH_PARENT
+      ([ width MATCH_PARENT
       , height MATCH_PARENT
       , gravity CENTER
       , orientation HORIZONTAL
       , onClick push (const $ SwitchDriverStatus pillConfig.status)
-      , clickable if (DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer]) then false else true
-      , rippleColor Color.rippleShade
+      , clickable isStatusBtnClickable
       , cornerRadius 20.0
-      ][ imageView
+      ] <> if isStatusBtnClickable then [rippleColor Color.rippleShade] else [])
+      [ imageView
         [ width $ V 15
         , height $ V 15
         , margin (Margin 3 0 5 0)
