@@ -1761,6 +1761,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 
 eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_ic_safety_center_clicked"
   exit $ GoToNammaSafety state true false
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
