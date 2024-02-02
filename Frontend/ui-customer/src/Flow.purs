@@ -17,7 +17,7 @@ module Flow where
 
 import Engineering.Helpers.LogEvent
 import Accessor
-import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate)
+import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, RentalBookingConfig)
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.ChooseVehicle.Controller as ChooseVehicle
@@ -63,7 +63,7 @@ import Prelude (Unit, bind, discard, map, mod, negate, not, pure, show, unit, vo
 import ModifyScreenState (modifyScreenState, updateRideDetails, updateRepeatRideDetails)
 import Presto.Core.Types.Language.Flow (doAff, fork, setLogField, delay)
 import Presto.Core.Types.Language.Flow (getLogFields)
-import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId)
+import Resources.Constants (DecodeAddress(..), decodeAddress, encodeAddress, getKeyByLanguage, getValueByComponent, getWard, ticketPlaceId, getAddressFromBooking)
 import Screens.AccountSetUpScreen.ScreenData as AccountSetUpScreenData
 import Screens.AddNewAddressScreen.Controller (encodeAddressDescription, getSavedLocations, getSavedTags, getLocationList, calculateDistance, getSavedTagsFromHome, validTag, isValidLocation, getLocTag, savedLocTransformer) as AddNewAddress
 import Screens.AddNewAddressScreen.ScreenData (dummyLocation) as AddNewAddressScreenData
@@ -144,6 +144,7 @@ import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 import Helpers.API (callApiBT)
 import Effect.Unsafe ( unsafePerformEffect)
+import Components.RideCompletedCard.Controller (dummyRentalBookingConfig)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit
 baseAppFlow gPayload callInitUI = do
@@ -2933,8 +2934,22 @@ getCurrentLocationItem placeDetails state lat lon =
 rideScheduledFlow :: FlowBT String Unit
 rideScheduledFlow = do
   (GlobalState currentState) <- getState
-  -- fetchAndHandleRideBookingResponse
+  rideBookingListResponse <- lift $ lift $ Remote.rideBookingListWithStatus "1" "0" "CONFIRMED"
+  (RideBookingRes resp) <- case rideBookingListResponse of
+                                            Right (RideBookingListRes listResp) -> do
+                                              pure $ fromMaybe dummyRideBooking $ head listResp.list
+                                            Left _ -> pure dummyRideBooking
+  let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+      (RideBookingDetails contents) = bookingDetails.contents
   action <- lift $ lift $ runScreen $ UI.rideScheduledScreen currentState.rideScheduledScreen 
+              { source = SearchLocationScreenData.dummyLocationInfo { addressComponents = getAddressFromBooking resp.fromLocation}
+              , destination = Just SearchLocationScreenData.dummyLocationInfo { addressComponents = getAddressFromBooking contents.toLocation} 
+              , startTime = fromMaybe "" resp.rideStartTime
+              , finalPrice = show resp.estimatedTotalFare
+              , baseDuration = show $ fromMaybe 2 resp.duration
+              , baseDistance = "20" -- TODO-codex : need to check the value for API Integration
+              , bookingId = resp.id
+              }
   case action of
     RideScheduledScreenOutput.GoToHomeScreen -> homeScreenFlow
     RideScheduledScreenOutput.GoToSearchLocationScreen updatedState -> do
@@ -2944,13 +2959,6 @@ rideScheduledFlow = do
                                                      , props {focussedTextField = Just SearchLocDrop, actionType = ST.AddingStopAction}})
       searchLocationFlow
     _ -> pure unit
-    -- where 
-    --   fetchAndHandleRideBookingResponse :: FlowBT String Unit
-    --   fetchAndHandleRideBookingResponse = do
-    --     (GlobalState currentState) <- getState
-    --     rideBookingListResponse <- Remote.rideBookingListWithStatus "1" "0" "CONFIRMED"
-    --     case rideBookingListResponse of
-        -- else pure unit
 
 searchLocationFlow :: FlowBT String Unit
 searchLocationFlow = do 

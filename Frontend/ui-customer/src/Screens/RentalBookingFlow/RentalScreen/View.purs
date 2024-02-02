@@ -66,7 +66,6 @@ rentalScreen initialState =
         let _ = spy "RentalScreen state " state
         eval action state
   }
-
   where 
     getEstimateEvent push = do 
       when (null initialState.data.rentalsQuoteList && initialState.data.currentStage == RENTAL_SELECT_VARIANT) $ do 
@@ -296,8 +295,9 @@ descriptionView push state description =
     getTitleFromDescription :: FareBreakupRowType -> Boolean -> String
     getTitleFromDescription description toShowTitle = 
       let baseDuration = show state.data.rentalBookingData.baseDuration
+          startTimeUTC = if state.data.startTimeUTC == "" then EHC.getCurrentUTC "" else state.data.startTimeUTC
       in case description of
-          BookingTime -> if toShowTitle then getString BOOKING_ON <> " " <> EHC.convertUTCtoISC state.data.startTimeUTC "Do" <> " " <> EHC.convertUTCtoISC state.data.startTimeUTC "MMM" <> ", " <> EHC.convertUTCtoISC state.data.startTimeUTC "hh" <> ":" <> EHC.convertUTCtoISC state.data.startTimeUTC "mm" <> " " <> EHC.convertUTCtoISC state.data.startTimeUTC "a" <> " (" <> baseDuration <> "hrs)" else getString FINAL_FARE_DESCRIPTION
+          BookingTime -> if toShowTitle then getString BOOKING_ON <> " " <> EHC.convertUTCtoISC startTimeUTC "Do" <> " " <> EHC.convertUTCtoISC startTimeUTC "MMM" <> ", " <> EHC.convertUTCtoISC startTimeUTC "hh" <> ":" <> EHC.convertUTCtoISC startTimeUTC "mm" <> " " <> EHC.convertUTCtoISC startTimeUTC "a" <> " (" <> baseDuration <> "hrs)" else getString FINAL_FARE_DESCRIPTION
           BookingDistance -> if toShowTitle then getString INCLUDED_KMS <> baseDuration else getString EXCESS_DISTANCE_CHARGE_DESCRIPTION <> state.props.farePerKm <> "/km."
           BaseFare -> if toShowTitle then getString BASE_FARE else getString ADDITIONAL_CHARGES_DESCRIPTION
           TollFee -> if toShowTitle then getString TOLLS_AND_PARKING_FEES else getString PARKING_FEES_AND_TOLLS_NOT_INCLUDED
