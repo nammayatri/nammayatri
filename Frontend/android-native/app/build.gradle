@@ -201,6 +201,9 @@ android {
             setIgnore(true)
         }
     }
+    buildFeatures {
+        buildConfig true
+    }
 }
 
 ext {

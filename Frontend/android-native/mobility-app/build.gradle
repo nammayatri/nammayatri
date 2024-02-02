@@ -38,6 +38,7 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    namespace 'in.juspay.mobility.app'
 }
 
 def cameraxVersion = "1.1.0-alpha05"
