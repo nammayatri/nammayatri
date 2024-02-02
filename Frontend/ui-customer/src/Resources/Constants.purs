@@ -45,9 +45,6 @@ getDelayForAutoComplete = 800
 getDelayForLocateOnMap :: Int
 getDelayForLocateOnMap = 1000
 
-getSearchRadius :: Int
-getSearchRadius = 100000
-
 getLanguages :: Array Language
 getLanguages =
   [ { name: "English", value: "EN_US" }
