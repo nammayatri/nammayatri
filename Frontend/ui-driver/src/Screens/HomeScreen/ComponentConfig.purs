@@ -67,7 +67,7 @@ import MerchantConfig.Utils as MU
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import ConfigProvider as CP
 import Locale.Utils
-import RemoteConfigs as RemoteConfig
+import RemoteConfig (RCCarousel(..))
 
 --------------------------------- rideActionModalConfig -------------------------------------
 rideActionModalConfig :: ST.HomeScreenState -> RideActionModal.Config
@@ -179,30 +179,6 @@ genderBannerConfig _ action =
         "type" = BannerCarousel.Gender
       }
   in config'
-
-remoteConfigTransformer :: forall a. Array RemoteConfig.RCCarousel -> (BannerCarousel.Action -> a) -> Array (BannerCarousel.Config (BannerCarousel.Action -> a))
-remoteConfigTransformer remoteConfig action = 
-  map (\(RemoteConfig.RCCarousel config) -> 
-    let
-      config' = BannerCarousel.config action
-      config'' = config'{
-        backgroundColor = config.banner_color,
-        title = config.text,
-        titleColor = config.text_color,
-        actionText = config.cta_text,
-        actionTextColor = config.cta_text_color,
-        imageUrl = config.banner_image,
-        "type" = BannerCarousel.Remote config.cta_link,
-        actionIconUrl = config.cta_icon,
-        actionIconVisibility = not $ DS.null config.cta_text,
-        actionTextBackgroundColour = config.cta_background_color,
-        actionTextCornerRadius = config.cta_corner_radius,
-        actionImageUrl = config.cta_image_url,
-        showImageAsCTA = not $ DS.null config.cta_image_url,
-        actionImageVisibility = not $ DS.null config.cta_image_url,
-        actionTextVisibility = DS.null config.cta_image_url 
-      }
-    in config'') remoteConfig
 
 autpPayBannerCarousel :: forall a. ST.HomeScreenState -> (BannerCarousel.Action -> a) -> BannerCarousel.Config (BannerCarousel.Action -> a)
 autpPayBannerCarousel state action =

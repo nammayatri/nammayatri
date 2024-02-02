@@ -768,3 +768,4 @@ getEN stringKey =
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "You already have an active ride"
         CONFIRM_STOP_LOCATION -> "Confirm Stop Location"
         CONFIRM_DROP -> "Confirm Drop"
+        BOOK_METRO_WITH_NY_NOW -> "Book metro tickets with \nNamma Yatri Now!"

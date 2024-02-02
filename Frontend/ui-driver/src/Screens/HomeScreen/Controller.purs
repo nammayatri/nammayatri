@@ -97,8 +97,9 @@ import Components.BannerCarousel as BannerCarousel
 import Styles.Colors as Color
 import PrestoDOM.Core
 import PrestoDOM.List
-import RemoteConfigs as RC
+import RemoteConfig as RC
 import Locale.Utils
+
 
 instance showAction :: Show Action where
   show _ = ""
@@ -1259,8 +1260,11 @@ getBannerConfigs state =
   where 
     getRemoteBannerConfigs :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
     getRemoteBannerConfigs = do 
-      let datas = RC.carouselConfigData (toLower $ getValueToLocalStore DRIVER_LOCATION) $ getLanguage $ getLanguageLocale languageKey
-      remoteConfigTransformer datas BannerCarousal
+      let driverLocation = toLower $ getValueToLocalStore DRIVER_LOCATION
+          language = getLanguage $ getLanguageLocale languageKey
+          configName = "driver_carousel_banner" <> language
+          datas = RC.carouselConfigData driverLocation configName
+      BannerCarousel.remoteConfigTransformer datas BannerCarousal
     getLanguage :: String -> String
     getLanguage lang = 
       let language = toLower $ take 2 lang

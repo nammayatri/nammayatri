@@ -54,7 +54,7 @@ import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..))
 import Styles.Types (FontSize)
 import Common.Types.Config
-import RemoteConfigs as RC
+import RemoteConfig as RC
 
 type EditTextInLabelState =
  {

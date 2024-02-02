@@ -13,9 +13,12 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module RemoteConfig (module Reexport) where
+module RemoteConfig.Types where
 
-import RemoteConfig.Types as Reexport
-import RemoteConfig.Utils as Reexport
-import Common.RemoteConfig as Reexport
+import Prelude
 
+type RCSubscription = {
+    max_dues_limit :: Number,
+    low_dues_warning_limit :: Number,
+    high_due_warning_limit :: Number
+}
