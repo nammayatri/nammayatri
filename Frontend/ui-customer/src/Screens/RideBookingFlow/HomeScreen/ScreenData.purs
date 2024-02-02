@@ -290,7 +290,7 @@ initData = {
     , autoScrollTimerId : ""
     , autoScroll : true
     , enableChatWidget : false
-    , showSosBanner : false
+    , sosBannerType : Nothing
     , showShareRide : false
     , followsRide: false
     }

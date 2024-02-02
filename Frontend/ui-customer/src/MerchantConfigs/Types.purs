@@ -233,7 +233,8 @@ type Features = {
   enableReAllocation :: Boolean,
   forceLogReferrerUrl :: Boolean,
   enableSelfServe :: Boolean,
-  enableAdditionalServices :: Boolean
+  enableAdditionalServices :: Boolean,
+  enableSafetyFlow :: Boolean
   }
 
 type RideCompletedCardConfig = {

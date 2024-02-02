@@ -2,7 +2,6 @@ module Resources.Localizable.BN where
 
 import Prelude ((<>))
 import Language.Types (STR(..))
-import Prelude ((<>))
 
 getBN :: STR -> String
 getBN stringKey =
@@ -786,7 +785,7 @@ getBN stringKey =
         EMERGENCY_REQUEST_SENT -> "জরুরি অনুরোধ পাঠানো হয়েছে!"
         SOS_TRIGGERED_DESC -> "দয়া করে শান্ত থাকুন, আপনার রিয়েল টাইম অবস্থান আপনার জরুরি পরিচিতিদের সাথে শেয়ার করা হচ্ছে।"
         SOS_ACTIONS -> "SOS অ্যাকশন"
-        CALL_POLICE -> "পুলিশকে কল করুন\n(112)"
+        CALL_POLICE -> "পুলিশ কল করুন"
         RECORD_VIDEO -> "রেকর্ড করুন\nভিডিও"
         STOP_AND_SHARE_RECORDING -> "রেকর্ডিং বন্ধ করুন এবং শেয়ার করুন"
         CANCEL_SHARING -> "শেয়ারিং বাতিল করুন"
@@ -808,7 +807,7 @@ getBN stringKey =
         TRIGGER_ALERT_TO_NAMMAYATRI_SUPPORT_TITLE _ -> "নম্মযাত্রী সমর্থনে সতর্কতা ট্রিগার করুন"
         TRIGGER_ALERT_TO_NAMMAYATRI_SUPPORT_DESC -> "আমাদের 24*7 ডেডিকেটেড সমর্থন আছে যারা স্বয়ংক্রিয়ভাবে সতর্ক হবে"
         ENABLE_NIGHT_TIME_SAFETY_ALERTS_TITLE -> "রাতের সময় নিরাপত্তা সতর্কতা সক্ষম করবেন?"
-        ENABLE_NIGHT_TIME_SAFETY_ALERTS_DESC -> "আপনার সুরক্ষা নিশ্চিত করার জন্য, <b><span style='color:#454545'>9 PM-6AM</span></b> এর মধ্যে, ড্রাইভারের রুটের অনৈমিক চেক অ্যালার্ট পাঠিয়েছি। রুট-বিচলনা বা যখন গাড়ি চলছে না হলেও.\n\nএটি সুরক্ষা মোড সক্রিয় আছে কিনা, এটি হবে যা কারণেই।"
+        ENABLE_NIGHT_TIME_SAFETY_ALERTS_DESC -> "আপনার সুরক্ষা নিশ্চিত করার জন্য, <b><span style='color:#454545'>9 PM-6AM</span></b> এর মধ্যে, ড্রাইভারের রুটের অনৈমিক চেক অ্যালার্ট পাঠিয়েছি। রুট-বিচলনা বা যখন গাড়ি চলছে না হলেও.<br><br>এটি সুরক্ষা মোড সক্রিয় আছে কিনা, এটি হবে যা কারণেই।"
         ALMOST_DONE_TITLE -> "প্রায় হয়ে গেছে!"
         ALMOST_DONE_DESC -> "আপাতকালে, আপনি পুলিশ হেল্পলাইনে যোগাযোগ করতে অথবা নিরাপত্তা সমস্যা রিপোর্ট করতে পারেন। এটা করতে, অনুগ্রহ করে প্রয়োজনীয় অনুমতি সরবরাহ করুন।"
         PERSONAL_SAFETY_SETTINGS_PERMISSION_REQUEST -> "(অনুগ্রহ করে রেকর্ড করার প্রাসঙ্গিক অনুমতি দিন)"
@@ -890,18 +889,18 @@ getBN stringKey =
         EMERGENCY_CONTACTS_CAN_FOLLOW _ -> "নম্মা যাত্রী আপনার জরুরি যোগাযোগের লোকগুলির কাছে এটি একটি পরীক্ষা হয় এবং এটি একটি তাণাব-মুক্ত অভিজ্ঞান সাধন করে।"
         ALERT_SAFETY_TEAM _ -> "নম্মা যাত্রী সেফটি টীমকে চেতাবনি করুন"
         OPTION_TO_REPORT_A_SAFETY_ISSUE -> "একটি সুরক্ষা ইস্যু রিপোর্ট করার অপশন"
-        RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL -> "আমরা একটি উন্নত ট্র্যাকিং অভিজ্ঞান জন্য আপাতকালীন যোগাযোগ করা হয় নম্মা যাত্রী ইনস্টল করার জন্য প্রস্তুত করছি"
+        RECOMMEND_EMERGENCY_CONTACTS_TO_INSTALL _ -> "আমরা একটি উন্নত ট্র্যাকিং অভিজ্ঞান জন্য আপাতকালীন যোগাযোগ করা হয় নম্মা যাত্রী ইনস্টল করার জন্য প্রস্তুত করছি"
         TEST_SAFETY_DRILL  -> "নিরাপত্তা ড্রিল পরীক্ষা"
         START_TEST_DRILL -> "টেস্ট ড্রিল শুরু করুন"
         REPORT_SAFETY_ISSUE -> "নিরাপত্তা সমস্যা রিপোর্ট করুন"
-        SAFETY_TEAM_WILL_BE_ALERTED -> "আপাতকালে, নম্মা ইয়াত্রী সুরক্ষা দলকে অবহিত করা হবে"
+        SAFETY_TEAM_WILL_BE_ALERTED _ -> "আপাতকালে, নম্মা ইয়াত্রী সুরক্ষা দলকে অবহিত করা হবে"
         EMERGENCY_CONTACTS_CAN_TAKE_ACTION -> "আপাতকালে, আপাত যোগাযোগ ব্যক্তিগুলি নম্মা যাত্রী এ অনুসরণ করতে এবং আপাত প্রতিক্রিয়া করতে পারে"
         SHARE_RIDE -> "রাইড শেয়ার করুন"
         SHARE_RIDE_DESCRIPTION _ -> "এটি চয়ন করলে এনওয়ায় অ্যাপ পুশ বিজ্ঞপ্তি অ্যাপাট এমারজেন্সি কন্ট্যাক্টসকে প্রেরণ করবে।"
         SHARE_RIDE_WITH_CONTACT number -> number <> " সংপর্ক সাথে ভাগাভাগি করুন"
         SHARE_LINK -> "লিঙ্ক শেয়ার করুন"
         GLAD_TO_KNOW_YOU_ARE_SAFE -> "আপনি নিরাপদ হয়ে গেলে আমরা খুশি!"
-        PLEASE_STAY_CALM_TEAM_ALERTED -> "দয়া করে শান্ত থাকুন, নম্ম ইয়াত্রা সুরক্ষা দলকে সতর্ক করা হয়েছে!"
+        PLEASE_STAY_CALM_TEAM_ALERTED _ -> "দয়া করে শান্ত থাকুন, নম্ম ইয়াত্রা সুরক্ষা দলকে সতর্ক করা হয়েছে!"
         TRY_ANOTHER_CONTACT -> "অন্য একটি জরুরি যোগাযোগ সংপর্ক করার চেষ্টা করুন"
         YOUR_CURRENT_LOCATION -> "আপনার বর্তমান অবস্থান"
         THIS_IS_NOT_A_REAL_SOS_SITUATION -> "এটি কোনও বাস্তব এসওএস অবস্থা নয়"
@@ -921,7 +920,7 @@ getBN stringKey =
         USE_ONLY_IN_EMERGENCY -> "এটি শুধুমাত্র আপাতকালীন অবস্থায় ব্যবহার করুন"
         MISUSE_MAY_LEAD_TO_LEGAL_ACTION -> "এর অপব্যবহার আইনগত ব্যবস্থা নেওয়া হতে পারে"
         USE_TEST_DRILL -> "পরীক্ষা করতে <span style='color:#2194FF'><u>টেস্ট সেফটি ড্রিল</u></span> ব্যবহার করুন"
-        INDICATION_TO_EMERGENCY_CONTACTS -> "আপনার জরুরি যোগাযোগের লোকগুলির কাছে এটি একটি পরীক্ষা হয় এবং এটি একটি তাণাব-মুক্ত অভিজ্ঞান সাধন করে।"
+        INDICATION_TO_EMERGENCY_CONTACTS _ -> "আপনার জরুরি যোগাযোগের লোকগুলির কাছে এটি একটি পরীক্ষা হয় এবং এটি একটি তাণাব-মুক্ত অভিজ্ঞান সাধন করে।"
         ARE_YOU_READY_TO_START_DRILL -> "আপনি কি প্রস্তুত টেস্ট ড্রিল শুরু করতে?"
         TEST_DRILL_DESC -> "এটি একটি পরীক্ষা হয় এবং এটি একটি তাণাব-মুক্ত অভিজ্ঞান সাধন করে। এটি বাস্তব আপাতকালীন অবস্থায় উপলব্ধ হবে।"
         LEARN_ABOUT_SAFETY_MODE -> "নিরাপত্তা মোড সম্পর্কে জানুন"
@@ -942,3 +941,7 @@ getBN stringKey =
         THIS_IS_A_TEST_MOCK_DRILL name -> "এটি " <> name <> " এর জন্য একটি পরীক্ষামূলক ড্রিল"
         THIS_IS_NOT_REAL_DRILL -> "এটি একটি বাস্তব ড্রিল নয়, এটি সহজভাবে ব্যাখ্যা করে যে অ্যাপটি জরুরী পরিস্থিতিতে কীভাবে প্রতিক্রিয়া জানাবে।"
         REACHED_DESTINATION_SAFELY name -> "নিরাপদে গন্তব্যে পৌঁছেছেন " <> name
+        COMPLETE_YOUR_TEST_DRILL -> "আপনার টেস্ট ড্রিল সম্পন্ন করুন"
+        TEST_DRILL -> "টেস্ট ড্রিল"
+        RIDE_ENDED name -> name <> " রাইড শেষ হয়েছে"
+        RIDE_SHARED_WITH_SELECTED_CONTACTS -> "রাইড নিরাপদ হিসাবে চিহ্নিত করুন"

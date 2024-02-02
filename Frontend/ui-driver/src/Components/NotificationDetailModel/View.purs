@@ -106,8 +106,8 @@ view push state =
 
                                             url = state.mediaUrl
                                           case mediaType of
-                                            VideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 false true false) id (show PLAY) push YoutubeVideoStatus
-                                            PortraitVideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0 false true false) id (show PLAY) push YoutubeVideoStatus
+                                            VideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig "VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
+                                            PortraitVideoLink -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig "PORTRAIT_VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
                                             Image -> renderBase64Image state.mediaUrl (getNewIDWithTag "illustrationView") true "FIT_CENTER"
                                             Audio -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
                                             AudioLink -> addMediaPlayer (getNewIDWithTag "illustrationView") state.mediaUrl
@@ -159,7 +159,11 @@ view push state =
           ]
             <> if state.addCommentModelVisibility == VISIBLE then [ addCommentModel state push ] else []
         )
-
+    where 
+      getYoutubeDataConfig videoType videoId = getYoutubeData {
+        videoType = videoType,
+        videoId = videoId
+      }
 addCommentModel :: NotificationDetailModelState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 addCommentModel state push =
   linearLayout

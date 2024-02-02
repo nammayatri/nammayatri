@@ -101,7 +101,7 @@ view push state =
     else
       (PaddingLeft 0)
 
-  headerConfig = Header.config { showLearnMore = state.data.hasCompletedSafetySetup }
+  headerConfig = (Header.config Language) { showLearnMore = state.data.hasCompletedSafetySetup }
 
 ------------------------------------- dashboardView -----------------------------------
 dashboardView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -129,7 +129,7 @@ dashboardView state push =
         ]
     ]
   where
-  showFeatures = state.data.hasCompletedSafetySetup == false && state.props.onRide == false
+  showFeatures = (not state.data.hasCompletedSafetySetup) && (not state.props.onRide)
 
 -- ---------------------------------- nammaSafetyFeaturesView -----------------------------------
 nammaSafetyFeaturesView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
@@ -352,7 +352,6 @@ toggleSwitchViewLayout action isActive text' push visibility' marginLeft =
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , margin $ MarginHorizontal marginLeft 16
-    -- , visibility $ boolToVisibility visibility'
     ]
     [ textView
         $ [ text text'

@@ -1099,12 +1099,14 @@ getEmergencySettingsBT _  = do
     errorHandler (errorPayload) =  do
         BackT $ pure GoBack
 
+updateEmergencySettings :: UpdateEmergencySettingsReq -> Flow GlobalState (Either ErrorResponse UpdateEmergencySettingsRes)
 updateEmergencySettings (UpdateEmergencySettingsReq payload) = do
         headers <- getHeaders "" false
         withAPIResult (EP.updateEmergencySettings "") unwrapResponse $ callAPI headers (UpdateEmergencySettingsReq payload)
     where
         unwrapResponse (x) = x
 
+markRideAsSafe :: String -> Flow GlobalState (Either ErrorResponse UpdateAsSafeRes)
 markRideAsSafe sosId= do
         headers <- getHeaders "" false
         withAPIResult (EP.updateSafeRide sosId) unwrapResponse $ callAPI headers (UpdateAsSafeReq sosId)
@@ -1132,12 +1134,14 @@ makeAskSupportRequest bId isSafe description = AskSupportReq{
     "description" : description
 }
 
+createMockSos :: String -> Flow GlobalState (Either ErrorResponse CreateMockSosRes)
 createMockSos dummy = do
         headers <- getHeaders "" false
         withAPIResult (EP.createMockSos "") unwrapResponse $ callAPI headers (CreateMockSosReq "")
     where
         unwrapResponse (x) = x
 
+shareRide :: ShareRideReq -> Flow GlobalState (Either ErrorResponse ShareRideRes)
 shareRide (ShareRideReq req) = do
         headers <- getHeaders "" false
         withAPIResult (EP.shareRide "") unwrapResponse $ callAPI headers (ShareRideReq req)

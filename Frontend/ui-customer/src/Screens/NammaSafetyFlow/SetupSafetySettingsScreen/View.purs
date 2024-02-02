@@ -111,23 +111,6 @@ view push state =
   where
   padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
-toggleSwitchViewLayout :: SafetySetupStage -> Boolean -> String -> (Action -> Effect Unit) -> Boolean -> forall w. PrestoDOM (Effect Unit) w
-toggleSwitchViewLayout stage isActive text' push visibility' =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width MATCH_PARENT
-    , orientation HORIZONTAL
-    , margin $ MarginHorizontal 16 16
-    , visibility $ boolToVisibility visibility'
-    ]
-    [ textView
-        $ [ text text'
-          , weight 1.0
-          , color Color.black800
-          ]
-        <> FontStyle.body2 TypoGraphy
-    , toggleSwitchView isActive stage push
-    ]
 
 -- ---------------------------------- settingUpView -----------------------------------
 settingUpView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -215,7 +198,7 @@ settingUpContentView config state push =
         [ width MATCH_PARENT
         , height WRAP_CONTENT
         , margin $ MarginHorizontal 16 16
-        , visibility $ boolToVisibility $ state.props.setupStage == SetDefaultEmergencyContacts
+        , visibility $ boolToVisibility $ state.props.setupStage == SetDefaultEmergencyContacts && (not $ null state.data.emergencyContactsList)
         ]
         [ recommendContactsToInstallView Language
         ]

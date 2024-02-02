@@ -48,7 +48,7 @@ import Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller (Action(..), Scre
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.Types
 import Screens.Types as ST
-import Services.API (GetSosDetailsRes(..))
+import Services.API (GetSosDetailsRes(..), SosFlow(..), Sos(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore)
 import Styles.Colors as Color
@@ -66,15 +66,13 @@ screen initialState =
               $ do
                   response <- Remote.getEmergencySettingsBT ""
                   lift $ lift $ doAff do liftEffect $ push $ UpdateEmergencySettings response
-                  let
-                    sosType = getValueToLocalStore SOS_TYPE
-                  when (sosType /= "Police")
+                  when (initialState.data.sosType /= Just Police)
                     $ do
                         if initialState.data.sosId == "" then do
                           (GetSosDetailsRes sosDetails) <- Remote.getSosDetails initialState.data.rideId
-                          case sosDetails.sosId of
-                            Just id -> do
-                              lift $ lift $ doAff do liftEffect $ push $ UpdateSosId id
+                          case sosDetails.sos of
+                            Just sos -> do
+                              lift $ lift $ doAff do liftEffect $ push $ UpdateSosId sos
                               pure unit
                             Nothing -> pure unit
                         else
@@ -116,9 +114,10 @@ view push state =
             , padding padding'
             , visibility $ boolToVisibility $ not state.props.showShimmer
             ]
-            [ case state.props.showTestDrill of
-                true -> testSafetyHeaderView push
-                false -> Header.view (push <<< SafetyHeaderAction) headerConfig
+            [ case state.props.showTestDrill, state.props.confirmTestDrill || state.props.triggeringSos of
+                true, _ -> testSafetyHeaderView push
+                _, true -> emptyTextView
+                false, false -> Header.view (push <<< SafetyHeaderAction) headerConfig
             , case state.props.confirmTestDrill, state.props.triggeringSos, state.props.showCallPolice of
                 true, _, _ -> confirmSafetyDrillView state push
                 _, _, true -> dialPoliceView state push
@@ -131,15 +130,13 @@ view push state =
   padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
   headerConfig =
-    Header.config
+    (Header.config Language)
       { learnMoreTitle = getString LEARN_ABOUT_NAMMA_SAFETY
       , showLearnMore = not state.props.showCallPolice
       , useLightColor = true
       , title = getString if not state.props.showCallPolice then SAFETY_CENTER else CALL_POLICE
-      , headerVisiblity =
-        case state.props.confirmTestDrill of
-          true -> INVISIBLE
-          false -> VISIBLE
+      , headerVisiblity = boolToInvisibility $ not state.props.confirmTestDrill
+      , showCrossImage = true
       }
 
 ------------------------------------- dashboardView -----------------------------------
@@ -366,7 +363,7 @@ emergencyContactsView state push =
     ]
   where
   configDescOne =
-    { text': getString SAFETY_TEAM_WILL_BE_ALERTED
+    { text': getString $ SAFETY_TEAM_WILL_BE_ALERTED "SAFETY_TEAM_WILL_BE_ALERTED"
     , isActive: not $ null state.data.emergencyContactsList
     , textColor: Color.white900
     , useMargin: false
@@ -554,6 +551,7 @@ testSafetyHeaderView push =
         , width WRAP_CONTENT
         , gravity CENTER_VERTICAL
         , orientation VERTICAL
+        , weight 1.0
         ]
         [ textView
             $ [ text $ getString TEST_SAFETY_DRILL
@@ -565,7 +563,6 @@ testSafetyHeaderView push =
             , color Color.black900
             ]
         ]
-    , layoutWithWeight
     , linearLayout
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
@@ -639,7 +636,7 @@ dismissSoSButtonView state push =
         true -> emptyTextView
         false -> separatorView Color.black700 $ MarginVertical 40 16
     , textView
-        $ [ text $ getString INDICATION_TO_EMERGENCY_CONTACTS
+        $ [ text $ getString $ INDICATION_TO_EMERGENCY_CONTACTS "INDICATION_TO_EMERGENCY_CONTACTS"
           , color Color.black500
           , gravity CENTER
           , margin $ Margin 16 16 16 0
@@ -729,11 +726,11 @@ confirmSafetyDrillView state push =
     , orientation VERTICAL
     , padding $ PaddingHorizontal 16 16
     ]
-    [ imageView
+    [ layoutWithWeight
+    , imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_start_test_drill"
         , width MATCH_PARENT
         , height $ V 300
-        , margin $ MarginTop 120
         ]
     , layoutWithWeight
     , textView
@@ -770,11 +767,12 @@ warningView state =
         , height $ V 16
         , width $ V 16
         ]
-    , textView $
-        [ text $ getString SOS_WILL_BE_DISABLED
-        , margin $ MarginLeft 8
-        , color Color.white900
-        ] <> FontStyle.body3 TypoGraphy
+    , textView
+        $ [ text $ getString SOS_WILL_BE_DISABLED
+          , margin $ MarginLeft 8
+          , color Color.white900
+          ]
+        <> FontStyle.body3 TypoGraphy
     ]
 
 dialPoliceView :: forall w. NammaSafetyScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -877,9 +875,11 @@ dialPoliceView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
+        , orientation VERTICAL
         , margin $ MarginBottom 16
         ]
-        [ callPoliceView state push
+        [ safetyPartnerView Language
+        , callPoliceView state push
         ]
     ]
 
@@ -901,9 +901,10 @@ callPoliceView state push =
         , width $ V 26
         ]
     , textView
-        $ [ text $ getString CALL_POLICE
+        $ [ text $ getString DIAL_NOW
           , gravity CENTER
           , color Color.white900
+          , margin $ MarginLeft 6
           ]
         <> FontStyle.subHeading2 TypoGraphy
     ]

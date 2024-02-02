@@ -73,6 +73,7 @@ updateRideDetails state = do
     , settingSideBar {
         gender = globalState.homeScreen.data.settingSideBar.gender 
       , email = globalState.homeScreen.data.settingSideBar.email
+      , hasCompletedSafetySetup = globalState.homeScreen.data.settingSideBar.hasCompletedSafetySetup
     }
     }
     , props{
@@ -85,9 +86,11 @@ updateRideDetails state = do
     , rideRequestFlow = true
     , isSpecialZone = state.data.selectedItem.isSpecialZone
     , isBanner = globalState.homeScreen.props.isBanner
+    , sosBannerType = globalState.homeScreen.props.sosBannerType 
+    , followsRide = globalState.homeScreen.props.followsRide
     }
     })
-
+    
 updateRepeatRideDetails :: Trip -> FlowBT String Unit
 updateRepeatRideDetails state = do 
   (GlobalState globalState) <- getState
@@ -103,6 +106,7 @@ updateRepeatRideDetails state = do
     , settingSideBar {
         gender = globalState.homeScreen.data.settingSideBar.gender 
       , email = globalState.homeScreen.data.settingSideBar.email
+      , hasCompletedSafetySetup = globalState.homeScreen.data.settingSideBar.hasCompletedSafetySetup
     }
     }
     , props{
@@ -115,5 +119,7 @@ updateRepeatRideDetails state = do
     , rideRequestFlow = true
     , isSpecialZone = state.isSpecialZone
     , isBanner = globalState.homeScreen.props.isBanner
+    , sosBannerType = globalState.homeScreen.props.sosBannerType 
+    , followsRide = globalState.homeScreen.props.followsRide
     }
     })

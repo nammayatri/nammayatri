@@ -26,7 +26,7 @@ import Data.Maybe
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Helpers.Utils as HU
-import JBridge (askRequestedPermissions, pauseYoutubeVideo, switchYoutubeVideo)
+import JBridge (askRequestedPermissions, releaseYoutubeView, switchYoutubeVideo)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (delay)
@@ -58,26 +58,44 @@ data ScreenOutput
 data Action
   = BackPressed
   | NoAction
+  | YoutubeVideoStatus String
   | SafetyHeaderAction Header.Action
   | ChangeEducationViewIndex Int
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval (SafetyHeaderAction (Header.GenericHeaderAC GenericHeaderController.PrefixImgOnClick)) state = continueWithCmd state [ pure BackPressed ]
 
-eval (BackPressed) state =
+eval (BackPressed) state = 
   if isNothing state.props.educationViewIndex then
     exit $ GoBack state
   else do
-    void $ pure $ pauseYoutubeVideo unit
+    void $ pure $ releaseYoutubeView unit
     continue state { props { educationViewIndex = Nothing } }
 
 eval (ChangeEducationViewIndex index) state = do
   let
     newState = state { props { educationViewIndex = Just index } }
-
     video = fromMaybe { videoId: "", title: "", coverImageUrl: "" } (state.data.videoList DA.!! index)
   void $ pure $ switchYoutubeVideo video.videoId
-  let _ = spy "newState" newState
   continue newState
 
-eval (_) state = continue state
+eval (YoutubeVideoStatus status) state = do
+  if status == "ENDED" then case state.props.educationViewIndex of
+    Just index -> do
+      let
+        newIndex = index + 1
+      if newIndex < DA.length state.data.videoList then
+        continueWithCmd
+          state
+            { props
+              { educationViewIndex = Just newIndex
+              }
+            }
+          [ pure $ ChangeEducationViewIndex newIndex ]
+      else
+        continue state { props { educationViewIndex = Nothing } }
+    Nothing -> continue state
+  else
+    continue state
+
+eval _ state = continue state

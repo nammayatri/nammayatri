@@ -37,6 +37,7 @@ startNSOnboardingButtonConfig state =
     { textConfig { text = getString START_SETUP }
     , visibility = visibility'
     , margin = Margin 16 0 16 24
+    , id = "ScreenStartOnboardingButton"
     }
   where
   visibility' = if state.data.hasCompletedSafetySetup || state.props.onRide then GONE else VISIBLE
@@ -48,6 +49,7 @@ continueNextStepButtonConfig state =
       { text = text'
       }
     , margin = Margin 16 0 16 24
+    , id = "SetupScreenContinueNextStepButton"
     }
   where
   text' =
@@ -63,20 +65,10 @@ cancelSOSBtnConfig state =
     { textConfig
       { text = getString MARK_RIDE_AS_SAFE
       , color = Color.white900
+      , id = "CancelSosButton"
       }
     , margin = MarginTop 10
     , stroke = "1," <> Color.white900
-    }
-
-goBackBtnConfig :: NammaSafetyScreenState -> PrimaryButton.Config
-goBackBtnConfig state =
-  PrimaryButton.config
-    { textConfig
-      { text = getString GO_BACK_
-      , color = Color.black900
-      }
-    , margin = Margin 16 10 16 24
-    , background = Color.white900
     }
 
 activateSoSButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
@@ -85,6 +77,7 @@ activateSoSButtonConfig state =
     { textConfig { text = getString ACTIVATE_SOS, color = Color.black900 }
     , margin = Margin 16 0 16 8
     , background = Color.white900
+    , id = "SafetyScreenActivateSosButton"
     }
 
 dismissSoSButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
@@ -94,6 +87,7 @@ dismissSoSButtonConfig state =
     , margin = Margin 16 24 16 24
     , stroke = "1," <> Color.white900
     , background = Color.white900
+    , id = "SafetyScreenDismissSosButton"
     }
 
 goToDrillButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
@@ -103,18 +97,7 @@ goToDrillButtonConfig state =
       { text = getString TEST_SAFETY_DRILL
       }
     , margin = Margin 16 0 16 24
-    }
-
-contactListPrimaryButtonConfig :: Int -> PrimaryButton.Config
-contactListPrimaryButtonConfig count =
-  PrimaryButton.config
-    { textConfig
-      { text = if count > 0 then getString CONFIRM_EMERGENCY_CONTACTS else getString SELECT_CONTACTS
-      , color = Color.yellow900
-      }
-    , alpha = if count > 0 then 1.0 else 0.6
-    , isClickable = if count > 0 then true else false
-    , id = "ContactListPrimaryButton"
+    , id = "SafetyScreenGoToDrillButton"
     }
 
 --------------------------------------------------- removeContactPopUpModelConfig -----------------------------------------------------
@@ -174,17 +157,6 @@ confirmPopUpModelConfig state =
       }
     }
 
-goBackButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
-goBackButtonConfig state =
-  PrimaryButton.config
-    { textConfig
-      { text = getString GO_BACK_
-      , color = Color.black700
-      }
-    , margin = Margin 16 0 16 24
-    , background = Color.white900
-    , stroke = "1," <> Color.black700
-    }
 
 startTestDrillButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
 startTestDrillButtonConfig state =

@@ -142,4 +142,4 @@ eval (ContactListAction (ContactList.ContactCardClicked index)) state = do
 eval (ContactListAction ContactList.AddContacts) state = do
   exit $ GoToEmergencyContactScreen state
 
-eval (_) state = continue state
+eval _ state = continue state

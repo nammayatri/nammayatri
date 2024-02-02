@@ -244,11 +244,10 @@ customerSideBottomCardsView config push =
     , padding $ Padding 16 16 16 16
     , background Color.white900
     , gravity CENTER
-    ][
+    ]$[
       customerIssueView config push
     , customerRatingDriverView config push
-    , needHelpPillView config push
-    ]
+    ] <> if config.customerIssueCard.isNightRide then [] else [needHelpPillView config push]
   ]
 
 
@@ -280,7 +279,7 @@ customerIssueView config push =
         , gravity CENTER
         , margin $ MarginTop 15
         , orientation VERTICAL
-        , visibility showOptions
+        , visibility GONE -- Removed as per the design
         ](mapWithIndex (\ index item ->
             linearLayout
             [ height WRAP_CONTENT

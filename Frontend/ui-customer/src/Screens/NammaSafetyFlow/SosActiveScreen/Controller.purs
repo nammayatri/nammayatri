@@ -54,6 +54,7 @@ data ScreenOutput
   = GoBack NammaSafetyScreenState
   | UpdateAsSafe NammaSafetyScreenState
   | GoToEducationScreen NammaSafetyScreenState
+  | UpdateAction NammaSafetyScreenState String
 
 data Action
   = BackPressed
@@ -72,8 +73,6 @@ data Action
 
 eval :: Action -> NammaSafetyScreenState -> Eval Action ScreenOutput NammaSafetyScreenState
 eval PlaceCall state = do
-  let
-    _ = spy "NammaSafetyFlow.SosActiveScreen.Controller" state
   let primaryContact = DA.filter (\item -> item.priority == 0) state.data.emergencyContactsList
   case primaryContact DA.!! 0, state.props.shouldCallAutomatically, state.data.shareToEmergencyContacts of
     Just contact, true, true -> void $ pure $ showDialer contact.number true
@@ -99,13 +98,14 @@ eval (CallContact contactIndex) state = do
   case state.data.emergencyContactsList DA.!! contactIndex of
     Just item -> void $ pure $ showDialer item.number true
     Nothing -> pure unit
-  continue state
+  exit $ UpdateAction state "Called Emergency Contact"
+
 
 eval ShowPoliceView state = continue state { props { showCallPolice = true } }
 
 eval CallPolice state = do
   void $ pure $ showDialer "112" false
-  continue state
+  exit $ UpdateAction state "Called Police"
 
 eval (MarkRideAsSafe PrimaryButtonController.OnClick) state = exit $ UpdateAsSafe state
 
@@ -113,4 +113,4 @@ eval LearnMoreClicked state = exit $ GoToEducationScreen state
 
 eval (SelectedCurrentLocation lat lon name) state = continue state { data { currentLocation = name } }
 
-eval (_) state = continue state
+eval _ state = continue state

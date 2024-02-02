@@ -7,37 +7,30 @@ import Effect (Effect)
 import Engineering.Helpers.Commons (safeMarginTop, safeMarginBottom, os, screenWidth, getNewIDWithTag)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import JBridge (openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, pure, unit, ($), (<<<), (==), (<>), map, (/=), discard, (||), (&&),(-), (>), show, void, not)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), Accessiblity(..),scrollView, swipeRefreshLayout, hint, onScroll, scrollBarY, onScrollStateChange, alignParentBottom, pattern, onChange, id, editText, background, color, fontStyle, gravity, height, lineHeight, linearLayout, margin, onBackPressed, orientation, padding, text, textSize, textView, weight, width, imageView, imageUrl, cornerRadius, onClick, afterRender, visibility, stroke, relativeLayout, clickable, imageWithFallback, onRefresh, accessibility, accessibilityHint)
+import Prelude (Unit, const, discard, pure, unit, void, ($), (&&), (-), (<), (<<<), (<>), (==), (>))
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), accessibility, accessibilityHint, afterRender, alignParentBottom, background, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageView, imageWithFallback, linearLayout, margin, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollBarY, stroke, text, textSize, textView, visibility, weight, width)
 import Screens.EmergencyContactsScreen.Controller (Action(..), ScreenOutput, eval)
-import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
-import Screens.Types (EmergencyContactsScreenState, ContactDetail, NewContacts)
-import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
+import Screens.Types (EmergencyContactsScreenState)
 import Styles.Colors as Color
-import Common.Types.App
-import Helpers.Utils (storeCallBackContacts, contactPermission)
-import Data.Array (take, (!!), mapWithIndex, null, length, difference )
+import Common.Types.App (LazyCheck(..))
+import Helpers.Utils (FetchImageFrom(FF_COMMON_ASSET), fetchImage, storeCallBackContacts)
+import Data.Array (difference, length, null, take, (!!))
 import Data.String as DS
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.String (split, Pattern(..))
 import Components.PopUpModal as PopUpModal
-import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig
+import Screens.CustomerUtils.EmergencyContactsScreen.ComponentConfig (genericHeaderConfig, primaryButtonConfig, removeContactPopUpModelConfig)
 import PrestoDOM.List as PrestoList
 import PrestoDOM.Events (globalOnScroll)
 import PrestoDOM.Elements.Keyed as Keyed
 import Data.Tuple (Tuple(..))
 import Components.PrimaryButton.Controller as PrimaryButtonConfig
-import Data.Array as DA
-import PrestoDOM.Types.Core (toPropValue)
-import Data.String.Regex (match)
-import Halogen.VDom.DOM.Prop (PropValue)
-import Helpers.Utils (fetchImage, FetchImageFrom(..), setRefreshing)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackContacts)
 import Screens.NammaSafetyFlow.Components.ContactsList as ContactsList
 import Screens.NammaSafetyFlow.Components.HelperViews as HelperViews
-import Debug
+import Debug (spy)
 import Engineering.Helpers.Utils (terminateLoader)
 
 screen :: EmergencyContactsScreenState -> PrestoList.ListItem -> Screen Action EmergencyContactsScreenState ScreenOutput
@@ -223,7 +216,7 @@ contactListPrimaryButtonConfig state =
   let
     config' = PrimaryButtonConfig.config
     uniqueContacts = length $ difference state.data.selectedContacts state.data.emergencyContactsList
-    enableBtn = if (uniqueContacts == 0) && null state.data.selectedContacts && not (null state.data.emergencyContactsList) then true else uniqueContacts > 0
+    enableBtn = if (uniqueContacts == 0) && (length state.data.selectedContacts) < (length state.data.emergencyContactsList) then true else uniqueContacts > 0
     primaryButtonConfig' =
       config'
         { textConfig

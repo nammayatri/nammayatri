@@ -93,7 +93,7 @@ eval (UpdateEmergencySettings (GetEmergencySettingsRes response)) state = do
             { number: item.mobileNumber
             , name: item.name
             , isSelected: true
-            , enableForFollowing: fromMaybe false item.enableForFollowing
+            , enableForFollowing: response.shareTripWithEmergencyContacts && fromMaybe false item.enableForFollowing
             , priority: fromMaybe 1 item.priority
             }
         )
@@ -165,4 +165,4 @@ eval (StartTestDrill PrimaryButtonController.OnClick) state =
             }
           }
 
-eval (_) state = continue state
+eval _ state = continue state

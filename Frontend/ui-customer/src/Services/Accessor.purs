@@ -261,6 +261,9 @@ _name = lens (unwrap >>> _.name) (\oldRec newVal -> wrap ((unwrap oldRec) { name
 _hasCompletedSafetySetup :: forall a b c. Newtype a { hasCompletedSafetySetup :: b | c } => Lens' a b
 _hasCompletedSafetySetup = lens (unwrap >>> _.hasCompletedSafetySetup) (\oldRec newVal -> wrap ((unwrap oldRec) { hasCompletedSafetySetup = newVal }))
 
+_hasCompletedMockSafetyDrill :: forall a b c. Newtype a { hasCompletedMockSafetyDrill :: b | c } => Lens' a b
+_hasCompletedMockSafetyDrill = lens (unwrap >>> _.hasCompletedMockSafetyDrill) (\oldRec newVal -> wrap ((unwrap oldRec) { hasCompletedMockSafetyDrill = newVal }))
+
 _followsRide :: forall a b c. Newtype a { followsRide :: b | c } => Lens' a b
 _followsRide = lens (unwrap >>> _.followsRide) (\oldRec newVal -> wrap ((unwrap oldRec) { followsRide = newVal }))
 

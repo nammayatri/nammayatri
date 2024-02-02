@@ -14,7 +14,7 @@
 -}
 module Screens.FollowRideScreen.Controller where
 
-import Data.Array (elem, last, length)
+import Data.Array (elem, last, length, filter)
 import Data.Function.Uncurried (runFn3)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(..), fromMaybe, isNothing)
@@ -104,10 +104,10 @@ eval action state = case action of
   UpdateCurrentStage stage -> continue state{data{currentStage = stage}}
   NotificationListener notification -> 
     case notification of
-      "SOS_TRIGGERED" -> exit $ RestartTracking state{data{sosStatus = Just Pending}}
+      "SOS_TRIGGERED" -> exit $ RestartTracking state
       "SOS_RESOLVED" -> do
         _ <- pure $ clearAudioPlayer ""
-        exit $ RestartTracking state{data{sosStatus = Just Resolved,emergencyAudioStatus = COMPLETED}}
+        exit $ RestartTracking state{data{emergencyAudioStatus = COMPLETED}}
       _ -> continue state
   StopAudioPlayer -> do
     _ <- pure $ clearAudioPlayer ""
@@ -162,18 +162,17 @@ eval action state = case action of
             , sosStatus = resp.sosStatus
             }
           }
-    if isNothing state.data.driverInfoCardState 
+    if isNothing state.data.driverInfoCardState-- || state.data.sosStatus /= resp.sosStatus
       then exit $ RestartTracking newState
       else 
-        if fromMaybe NotResolved resp.sosStatus == Pending 
-          then startAudioPlayerCmd newState
-          else 
-            if resp.status == "COMPLETED" 
-              then continueWithCmd newState{data{currentStage = RideCompletedStage}} [do
-                _ <- runEffectFn1 updateIdMap "FollowsRide"
-                pure NoAction
-              ]
-              else continue newState
+        if resp.status == "COMPLETED" 
+          then continueWithCmd newState{data{currentStage = RideCompletedStage}} [do
+            _ <- runEffectFn1 updateIdMap "FollowsRide"
+            pure NoAction
+          ]
+          else if fromMaybe NotResolved resp.sosStatus == Pending 
+            then startAudioPlayerCmd newState
+            else continue newState
   GenericHeaderAC act -> continueWithCmd state [ pure BackPressed ]
   LoadMessages -> do
     let
@@ -287,9 +286,10 @@ eval action state = case action of
       else
         continue state
     _ -> continue state
-  PrimaryButtonAC act -> case act of
-    PrimaryButton.OnClick -> exit $ Exit state
-    _ -> continue state
+  PrimaryButtonAC act -> do
+    case act of
+      PrimaryButton.OnClick -> exit $ Exit state
+      _ -> continue state
   _ -> continue state
   
 updateMessagesWithCmd :: FollowRideScreenState -> Eval Action ScreenOutput FollowRideScreenState

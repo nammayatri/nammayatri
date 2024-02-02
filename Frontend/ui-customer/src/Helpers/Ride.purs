@@ -43,6 +43,7 @@ import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBook
 import Data.String (split, Pattern(..))
 import Foreign.Generic (decodeJSON)
 import Screens.HomeScreen.ScreenData as HomeScreenData
+import Common.Types.App as Common
 
 checkRideStatus :: Boolean -> FlowBT String Unit --TODO:: Need to refactor this function
 checkRideStatus rideAssigned = do
@@ -75,6 +76,7 @@ checkRideStatus rideAssigned = do
                     , zoneType = getSpecialTag resp.specialLocationTag
                   }
                 }
+        setValueToLocalStore IS_SOS_ACTIVE $ show $ Just Common.Pending == resp.sosStatus
         if rideStatus == HomeScreen then
           updateLocalStage HomeScreen
         else do
@@ -114,6 +116,7 @@ checkRideStatus rideAssigned = do
                                 Just startTime -> (convertUTCtoISC startTime "DD/MM/YYYY")
                                 Nothing        -> "")
                 currentDate =  getCurrentDate ""
+            setValueToLocalStore IS_SOS_ACTIVE $ show false
             if(lastRideDate /= currentDate) then do
               setValueToLocalStore FLOW_WITHOUT_OFFERS "true"
               setValueToLocalStore TEST_MINIMUM_POLLING_COUNT "4"

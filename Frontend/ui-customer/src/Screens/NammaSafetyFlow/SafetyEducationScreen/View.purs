@@ -14,7 +14,7 @@ import Prelude
 import PrestoDOM
 import Common.Types.App (LazyCheck(..))
 import Data.Array
-import Data.Function.Uncurried (runFn3)
+import Data.Function.Uncurried (runFn5)
 import Debug (spy)
 import Effect (Effect)
 import Engineering.Helpers.Commons as EHC
@@ -58,88 +58,25 @@ view push state =
         , onBackPressed push $ const BackPressed
         , padding padding'
         ]
-        [ videoView push state
-        , linearLayout
-            [ height MATCH_PARENT
-            , width MATCH_PARENT
-            , orientation VERTICAL
-            , visibility $ boolToVisibility $ isNothing state.props.educationViewIndex
-            ]
-            [ Header.view (push <<< SafetyHeaderAction) headerConfig
-            , aboutNammaSafetyView state push
-            ]
+        [ if isJust state.props.educationViewIndex then
+            videoView push state
+          else
+            linearLayout
+              [ height MATCH_PARENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , visibility $ boolToVisibility $ isNothing state.props.educationViewIndex
+              ]
+              [ Header.view (push <<< SafetyHeaderAction) headerConfig
+              , aboutNammaSafetyView state push
+              ]
         ]
   where
-  background' = Color.white900
+  background' = if isJust state.props.educationViewIndex then Color.black900 else Color.white900
 
   padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
-  headerConfig = Header.config { title = getString LEARN_ABOUT_NAMMA_SAFETY }
-
-toggleSwitchView :: Boolean -> Boolean -> Action -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-toggleSwitchView isActive visibility' action push =
-  linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity CENTER_VERTICAL
-    , onClick push $ const action
-    , visibility $ boolToVisibility visibility'
-    ]
-    [ imageView
-        [ imageUrl if isActive then "ny_ic_switch_active" else "ny_ic_switch_inactive"
-        , width $ V 40
-        , height $ V 24
-        ]
-    ]
-
-shimmerView :: forall w. NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
-shimmerView state =
-  relativeLayout
-    [ width MATCH_PARENT
-    , height MATCH_PARENT
-    , orientation VERTICAL
-    , margin $ Margin 16 16 16 16
-    , visibility $ boolToVisibility state.props.showShimmer
-    ]
-    [ sfl (V 400) 16 1 true
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , orientation VERTICAL
-        , alignParentBottom "true,-1"
-        ]
-        [ sfl (V 80) 130 3 (getValueToLocalStore IS_SOS_ACTIVE == "true")
-        , sfl (V 80) 130 1 (getValueToLocalStore IS_SOS_ACTIVE /= "true")
-        ]
-    ]
-
-sfl :: forall w. Length -> Int -> Int -> Boolean -> PrestoDOM (Effect Unit) w
-sfl height' marginTop numberOfBoxes visibility' =
-  shimmerFrameLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , margin $ MarginTop marginTop
-    , visibility $ boolToVisibility visibility'
-    ]
-    [ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        ]
-        ( map
-            ( \item ->
-                linearLayout
-                  [ height height'
-                  , background Color.greyDark
-                  , cornerRadius 12.0
-                  , weight 1.0
-                  , stroke $ "1," <> Color.grey900
-                  , margin $ Margin 4 4 4 4
-                  ]
-                  []
-            )
-            (1 .. numberOfBoxes)
-        )
-    ]
+  headerConfig = (Header.config Language) { title = getString LEARN_ABOUT_NAMMA_SAFETY }
 
 aboutNammaSafetyView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 aboutNammaSafetyView state push =
@@ -190,7 +127,7 @@ cardView cardData index push =
         , margin $ MarginRight 14
         ]
         [ imageView
-            [ imageWithFallback $ fetchImage FF_ASSET cardData.coverImageUrl
+            [ imageUrl cardData.coverImageUrl
             , height $ V 90
             , width $ V 100
             ]
@@ -255,7 +192,7 @@ videoView push state =
                     ( \action -> do
                         let
                           _ = spy "onAnimationEnd" "VideoView"
-                        void $ pure $ runFn3 JB.setYoutubePlayer (EHC.getYoutubeData viewConfig.videoId "PORTRAIT_VIDEO" 1500 true false) (EHC.getNewIDWithTag "SafetyYoutubeVideoView") "PAUSED"
+                        void $ pure $ runFn5 JB.setYoutubePlayer (EHC.getYoutubeData{ videoId = viewConfig.videoId , videoType = "PORTRAIT_VIDEO",  videoHeight = 1500,showFullScreen = true,showSeekBar = false, hideFullScreenButton= true}) (EHC.getNewIDWithTag "SafetyYoutubeVideoView") "PAUSED" push YoutubeVideoStatus
                     )
                     (const NoAction)
                 ]

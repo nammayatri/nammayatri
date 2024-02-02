@@ -12,11 +12,7 @@
 
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-module Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller
-  ( Action(..)
-  , ScreenOutput(..)
-  , eval
-  ) where
+module Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller where
 
 import Log
 import Prelude
@@ -24,7 +20,7 @@ import PrestoDOM
 import Screens.Types
 import Storage
 import Timers
-
+import Common.Types.App as CTA
 import Components.GenericHeader.Controller as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
 import Data.Array as DA
@@ -37,13 +33,12 @@ import Debug
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (delay)
-import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.NammaSafetyFlow.Components.ContactCircle as ContactCircle
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
-import Services.API (ContactDetails(..), GetEmergencySettingsRes(..))
+import Services.API (ContactDetails(..), GetEmergencySettingsRes(..), Sos(..), SosFlow(..))
 import Services.Config (getSupportNumber)
 import Types.App (defaultGlobalState)
 import Types.EndPoint (updateSosVideo)
@@ -78,7 +73,7 @@ data Action
   | GoToSafetySettings
   | ContactAction ContactCircle.Action
   | GoToTestDrill
-  | UpdateSosId String
+  | UpdateSosId Sos
   | GoToActiveSos
   | CallPolice
   | ShowPoliceView
@@ -125,8 +120,11 @@ eval (CancelSosTrigger PrimaryButtonController.OnClick) state = do
   _ <- pure $ clearTimerWithId state.props.timerId
   exit $ GoBack state { props { triggeringSos = false, timerValue = 6, timerId = "" } }
 
-eval (BackPressed) state = if state.props.showCallPolice then continue state{props{showCallPolice = false}} 
-  else exit $ GoBack state
+eval (BackPressed) state =
+  if state.props.showCallPolice then
+    continue state { props { showCallPolice = false } }
+  else
+    exit $ GoBack state
 
 eval DisableShimmer state = continue state { props { showShimmer = false } }
 
@@ -180,12 +178,15 @@ eval GoToTestDrill state = do
 eval GoToActiveSos state = do
   exit $ GoToSosScreen state { props { triggeringSos = false, timerValue = 6, timerId = "" } }
 
-eval (UpdateSosId sosId) state = do
-  let
-    newState = state { data { sosId = sosId } }
-  exit $ GoToSosScreen newState
+eval (UpdateSosId (Sos sos)) state = do
+  if sos.flow /= Police && sos.status /= CTA.Resolved then do
+    let
+      newState = state { data { sosId = sos.id, sosType = Just sos.flow } }
+    exit $ GoToSosScreen newState
+  else do
+    continue state
 
-eval ShowPoliceView state = continue state{props{showCallPolice = true}}
+eval ShowPoliceView state = continue state { props { showCallPolice = true } }
 
 eval CallPolice state = do
   void $ pure $ showDialer "112" false
@@ -193,9 +194,10 @@ eval CallPolice state = do
 
 eval ShowSafetyIssueView state = exit $ GoToIssueScreen state
 
-eval (SelectedCurrentLocation lat lon name) state = 
-  continue state  { data { currentLocation =  name  } }
+eval (SelectedCurrentLocation lat lon name) state = continue state { data { currentLocation = name } }
 
-eval GoToEducationView state = exit $ GoToEducationScreen state
+eval GoToEducationView state = do
+  _ <- pure $ clearTimerWithId state.props.timerId
+  exit $ GoToEducationScreen state { props { triggeringSos = false, timerValue = 6, timerId = "" } }
 
-eval (_) state = continue state
+eval _ state = continue state
