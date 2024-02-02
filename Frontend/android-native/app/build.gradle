@@ -1,7 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
-// Apply the Performance Monitoring plugin
 apply plugin: 'com.google.firebase.firebase-perf'
 
 static InetAddress getLocalAddress() throws SocketException {
@@ -29,15 +28,14 @@ repositories {
 }
 
 android {
-    compileSdkVersion 33
-    buildToolsVersion "30.0.3"
+    compileSdk 33
     namespace "in.juspay.mobility"
 
     defaultConfig {
         minSdkVersion 23
         targetSdkVersion 33
-        versionCode 100
-        versionName "1.2.9"
+        versionCode 107
+        versionName "1.4.12"
         multiDexEnabled true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -223,7 +221,6 @@ dependencies {
     implementation "in.juspay:hyperqr:$jpSDKversion"
     implementation project(path: ':mobility-app')
     compileOnly project(path: ':mobility-common')
-    implementation platform('com.google.firebase:firebase-bom:31.1.1')
     nyDriverImplementation project(path: ':mobility-driver')
     passCulturePartnerImplementation project(path: ':mobility-driver')
     ysDriverImplementation project(path: ':mobility-driver')
@@ -231,44 +228,44 @@ dependencies {
     nyUserImplementation project(path: ':mobility-customer')
     ysUserImplementation project(path: ':mobility-customer')
     yatriUserImplementation project(path: ':mobility-customer')
+    implementation platform('com.google.firebase:firebase-bom:32.7.1')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-analytics'
-
-    implementation 'com.google.firebase:firebase-crashlytics:18.4.3'
+    implementation 'com.google.firebase:firebase-firestore'
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-crashlytics'
     implementation 'com.google.firebase:firebase-messaging'
-    implementation 'com.google.firebase:firebase-installations:17.1.4'
+    implementation 'com.google.firebase:firebase-installations'
     implementation 'com.google.firebase:firebase-perf'
     implementation 'com.google.firebase:firebase-inappmessaging-display'
-    implementation 'com.google.android.libraries.places:places:3.1.0'
+    implementation 'com.google.android.libraries.places:places:3.3.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'com.google.android.material:material:1.6.0'
+    implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.maps.android:android-maps-utils:2.4.0'
-    implementation 'androidx.work:work-runtime:2.8.1'
+    implementation 'androidx.work:work-runtime:2.9.0'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.2.0-alpha01'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.0-alpha03'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
-    implementation 'com.google.android.gms:play-services-maps:18.1.0'
-    implementation 'com.google.android.gms:play-services-location:21.0.1'
-    implementation 'com.google.android.libraries.places:places:3.1.0'
-    implementation 'com.google.android.gms:play-services-auth:20.5.0'
+    implementation 'com.google.android.gms:play-services-maps:18.2.0'
+    implementation 'com.google.android.gms:play-services-location:21.1.0'
+    implementation 'com.google.android.gms:play-services-auth:20.7.0'
     implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.1'
     implementation "androidx.coordinatorlayout:coordinatorlayout:1.2.0"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
-    implementation 'com.google.android.play:app-update:2.0.1'
+    implementation 'com.google.android.play:app-update:2.1.0'
     implementation 'com.airbnb.android:lottie:5.2.0'
-    implementation 'com.google.firebase:firebase-firestore'
-    implementation 'com.google.firebase:firebase-auth:22.3.0'
+
     implementation 'com.google.android.play:review:2.0.1'
     implementation 'com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0'
     implementation 'com.facebook.android:facebook-android-sdk:14.0.0'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
     implementation 'com.github.bumptech.glide:glide:4.15.1'
-    implementation 'androidx.core:core:1.4.0'
+    implementation 'androidx.core:core:1.12.0'
     implementation 'com.clevertap.android:clevertap-android-sdk:5.0.0'
     implementation 'com.clevertap.android:push-templates:1.0.9'
     implementation 'com.android.installreferrer:installreferrer:2.2'
-    implementation 'com.google.mlkit:translate:17.0.1'
+    implementation 'com.google.mlkit:translate:17.0.2'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
 }
