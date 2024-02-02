@@ -43,3 +43,7 @@ Sos:
         and:
            - in : [status]
            - eq: [rideId]
+
+  constraints:
+    id: PrimaryKey
+    rideId: SecondaryKey
