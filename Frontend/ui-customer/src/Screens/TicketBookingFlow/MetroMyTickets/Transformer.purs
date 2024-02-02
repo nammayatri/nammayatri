@@ -45,6 +45,9 @@ ticketItemTransformer (MetroTicketBookingStatus bookingItem) =
   let 
     sourceStationEnum = bookingItem.stations !! 0
     destinationStationEnum = bookingItem.stations !! ((length bookingItem.stations)- 1)
+    ticketsValidTill =  case bookingItem.tickets !! 0 of
+                              Just (FRFSTicketAPI ticket) -> (convertUTCtoISC ticket.validTill "hh:mm A") <> ", " <> (convertUTCtoISC ticket.validTill "Do MMM YYYY") 
+                              Nothing -> ""
     
     sourceName' = getStationName sourceStationEnum
     destinationName' = getStationName destinationStationEnum
@@ -61,7 +64,7 @@ ticketItemTransformer (MetroTicketBookingStatus bookingItem) =
     , noOfTickets : noOfTickets'
     , metroTicketStatusApiResp :  metroTicketStatusApiResp'
     , status : status'
-    , validUntill : validUntill'
+    , validUntill : ticketsValidTill -- validUntill'
   }
 
 getStationName :: Maybe FRFSStationAPI -> String

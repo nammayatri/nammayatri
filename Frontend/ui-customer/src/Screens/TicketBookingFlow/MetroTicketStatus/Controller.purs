@@ -30,7 +30,7 @@ import Debug (spy)
 import Helpers.Utils (generateQR)
 import Data.Array (length, (:), foldl, mapWithIndex, head, (!!), filter, elem, groupBy, find)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
-import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC, getNewIDWithTag)
+import Engineering.Helpers.Commons(convertUTCTimeToISTTimeinHHMMSS, getCurrentUTC, convertUTCtoISC, getNewIDWithTag, flowRunner, liftFlow)
 import Resources.Constants
 import Services.API (TicketPlaceResp(..), TicketServicesResponse(..), BusinessHoursResp(..), TicketServiceResp(..), PeopleCategoriesResp(..), BookingStatus(..), PeopleCategoriesResp(..), TicketCategoriesResp(..), PlaceType(..))
 import Data.Int (ceil)
@@ -46,6 +46,11 @@ import Screens.Types as ST
 import Screens.TicketBookingFlow.MetroTicketStatus.Transformer
 import Storage
 import Timers (clearTimerWithId)
+import PrestoDOM.Core (getPushFn)
+import Effect.Aff (launchAff)
+import Types.App
+import Presto.Core.Types.Language.Flow ( delay)
+import Data.Time.Duration (Milliseconds(..))
 
 instance showAction :: Show Action where
   show _ = ""
@@ -74,19 +79,41 @@ eval :: Action -> MetroTicketStatusScreenState -> Eval Action ScreenOutput Metro
 
 eval (BackPressed) state = exit GoBack --continue state -- Handle Back Press
 
-eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatus)) state =
+eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatus)) state = do
+  -- let (MetroTicketBookingStatus getMetroStatusResp2) = metroTicketBookingStatus
   case metroTicketBookingStatus.status of 
     "CONFIRMED" -> do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
-      continue state{ props{paymentStatus = Common.Success, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
-    "FAILED" -> 
-      continue 
-        state{
-          props{
-            paymentStatus = Common.Failed
-          , showShimmer = false
-          }
-        }
+      continueWithCmd state{ props{paymentStatus = Common.Success, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}} [do
+            void $ pure $ spy "getMetroStatusEvent" ""
+            push <- getPushFn Nothing "MetroTicketStatusScreen"
+            void $ launchAff $ flowRunner defaultGlobalState $ do
+              void $ delay $ Milliseconds 4000.0 
+              liftFlow $ push $ ViewTicketBtnOnClick PrimaryButton.OnClick 
+            pure NoAction]
+    "FAILED" -> do
+      void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+      continue state{ props{paymentStatus = Common.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
+      
+      -- continue 
+      --   state{
+      --     props{
+      --       paymentStatus = Common.Failed
+      --     , showShimmer = false
+      --     }
+      --   }
+    "EXPIRED" -> do
+      void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+      continue state{ props{paymentStatus = Common.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
+      -- continue 
+      --   state{
+      --     props{
+      --       paymentStatus = Common.Failed
+      --     , showShimmer = false
+      --     }
+      --   }
+    "PAYMENT_PENDING" -> 
+      continue $ metroTicketStatusTransformer ( MetroTicketBookingStatus metroTicketBookingStatus) "" state
     _ -> continue state
 
 eval (RefreshStatusAC PrimaryButton.OnClick) state = exit $ RefreshPaymentStatus state
