@@ -46,6 +46,7 @@ primaryButtonConfig state = let
       , margin = (Margin 0 0 0 0)
       , cornerRadius = 0.0
       , height = (V 60)
+      , id = "RegistrationScreenButton"
       }
   in primaryButtonConfig'
 
