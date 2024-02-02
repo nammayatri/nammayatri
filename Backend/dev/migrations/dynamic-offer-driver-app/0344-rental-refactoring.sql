@@ -35,6 +35,7 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN fare_params_id character 
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN fare_policy_id character varying(36);
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN is_scheduled boolean;
+ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN estimate_breakup_list DROP NOT NULL;
 
 -- FARE PARAMETERS --
 ALTER TABLE atlas_driver_offer_bpp.fare_parameters ADD COLUMN updated_at TIMESTAMP WITH TIME ZONE;
