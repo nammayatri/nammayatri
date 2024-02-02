@@ -348,7 +348,7 @@ driverMapsHeaderView push state =
               , orientation VERTICAL
               , background Color.transparent
               , gravity BOTTOM
-              ] $ [alternateNumberOrOTPView state push] <> getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
+              ] $ [addAadhaarOrOTPView state push] <> getCarouselView (state.props.driverStatusSet == ST.Offline) true --maybe ([]) (\item -> if DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && DA.any (_ == state.props.driverStatusSet) [ST.Offline] then [] else [bannersCarousal item state push]) state.data.bannerData.bannerItem
             ]
         ]
         , bottomNavBar push state
@@ -422,8 +422,8 @@ rateCardView push state =
   ][ RateCard.view (push <<< RateCardAC) (rateCardState state) ]
 
 
-alternateNumberOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
-alternateNumberOrOTPView state push =
+addAadhaarOrOTPView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+addAadhaarOrOTPView state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
@@ -434,12 +434,12 @@ alternateNumberOrOTPView state push =
   ][  linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
-      , gravity if showAddAltNumber then CENTER else RIGHT
-      ][  addAlternateNumber push state showAddAltNumber
+      , gravity if showAddAadhaar then CENTER else RIGHT
+      ][  addAadhaarNumber push state showAddAadhaar
         , if state.data.config.feature.enableOtpRide then otpButtonView state push else dummyTextView
         ]
       ]
-  where showAddAltNumber = (state.data.driverAlternateMobile == Nothing || state.props.showlinkAadhaarPopup) && state.props.statusOnline
+  where showAddAadhaar = state.props.showlinkAadhaarPopup && state.props.statusOnline
 
 otpButtonView :: forall w . HomeScreenState -> (Action -> Effect Unit) ->  PrestoDOM (Effect Unit) w
 otpButtonView state push =
@@ -1483,8 +1483,8 @@ goOfflineModal push state =
   ]
 
 
-addAlternateNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Boolean -> PrestoDOM (Effect Unit) w
-addAlternateNumber push state visibility' =
+addAadhaarNumber :: forall w . (Action -> Effect Unit) -> HomeScreenState -> Boolean -> PrestoDOM (Effect Unit) w
+addAadhaarNumber push state visibility' =
   linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
@@ -1500,14 +1500,14 @@ addAlternateNumber push state visibility' =
   ][  imageView
       [ width $ V 20
       , height $ V 15
-      , imageWithFallback $ HU.fetchImage HU.FF_ASSET $ if state.props.showlinkAadhaarPopup then "ny_ic_aadhaar_logo" else "ic_call_plus"
+      , imageWithFallback $ HU.fetchImage HU.FF_ASSET  "ny_ic_aadhaar_logo" 
       , margin (MarginRight 5)
       ]
     , textView $
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
       , gravity CENTER
-      , text $ getString if state.props.showlinkAadhaarPopup then ENTER_AADHAAR_DETAILS else ADD_ALTERNATE_NUMBER
+      , text $ getString ENTER_AADHAAR_DETAILS 
       , color Color.black900
       ] <> FontStyle.paragraphText TypoGraphy
    ]

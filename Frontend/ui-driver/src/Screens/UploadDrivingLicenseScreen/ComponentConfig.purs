@@ -48,6 +48,7 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     imageUploadCondition = state.props.openHowToUploadManual && not state.data.cityConfig.uploadRCandDL
     dobNotEmpty = not $ DS.null state.data.dob
+    id = "UploadDrivingLicenseButton"
     driverLicenseLengthValid = DS.length state.data.driver_license_number >= 9
     dateOfIssueNotEmpty = state.data.dateOfIssue /= Just ""
     isDriverInfoValid = dobNotEmpty 

@@ -385,5 +385,8 @@ window.getMerchantConfig = function () {
   , "rideCompletedCardConfig" : {
       "lottieQRAnim" : true
   }
+   , "vehicle" : {
+      "validationPrefix" : "KA|AP|TS|DL|TN|PY|UP|HR"
+    }
   })
 }

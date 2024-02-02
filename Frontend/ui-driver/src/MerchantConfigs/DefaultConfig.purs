@@ -305,7 +305,7 @@ config =
   , engilshInNative: "English"
   , allowAllMobileNumber: false
   , vehicle : {
-    validationPrefix :  "KA|AP|TS|DL|TN|PY"
+    validationPrefix : "KA|AP|TS|DL|TN|PY|UP|HR"
   }
   , appData : defaultAppData
   , banners :{

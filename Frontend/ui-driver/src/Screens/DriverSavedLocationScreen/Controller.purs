@@ -87,7 +87,8 @@ data ScreenOutput
   | EditLocation DriverSavedLocationScreenState
 
 eval :: Action -> DriverSavedLocationScreenState -> Eval Action ScreenOutput DriverSavedLocationScreenState
-eval BackPressed state =
+eval BackPressed state = do
+  void $ pure $ JB.hideKeyboardOnNavigation true
   if state.props.confirmDelete then
     continue state { props { confirmDelete = false } }
   else if state.props.viewType == SearchLocation then do
