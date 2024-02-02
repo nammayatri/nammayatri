@@ -147,7 +147,10 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
     bapConfig <- QBC.findByMerchantIdAndDomain (Just merchant.id) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
     let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
     mRiderNumber <- mapM decrypt rider.mobileNumber
-    bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) dConfirmRes bapConfig Utils.BppData {bppId = dConfirmRes.bppSubscriberId, bppUri = dConfirmRes.bppSubscriberUrl}
+    let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.initTTLSec) now
+    void $ QFRFSTicketBooking.updateValidTillById validTill dConfirmRes.id
+    let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
+    bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) dConfirmRes' bapConfig Utils.BppData {bppId = dConfirmRes.bppSubscriberId, bppUri = dConfirmRes.bppSubscriberUrl}
     logDebug $ "FRFS SearchReq " <> (encodeToText bknInitReq)
     void $ CallBPP.init providerUrl bknInitReq
   return $ makeBookingStatusAPI dConfirmRes stations
@@ -247,7 +250,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 Just $
                   FRFSTicketService.FRFSBookingPaymentAPI
                     { status = paymentStatus_,
-                      paymentOrder = Just paymentOrder_
+                      paymentOrder = paymentOrder_
                     }
           buildFRFSTicketBookingStatusAPIRes updatedBooking paymentObj
     DFRFSTicketBooking.PAYMENT_PENDING -> do
@@ -287,7 +290,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                     Just
                       FRFSTicketService.FRFSBookingPaymentAPI
                         { status = paymentStatus_,
-                          paymentOrder = Just paymentOrder_
+                          paymentOrder = paymentOrder_
                         }
               buildFRFSTicketBookingStatusAPIRes booking paymentObj
   where
@@ -324,7 +327,7 @@ getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do
                 mandateEndDate = Nothing,
                 mandateStartDate = Nothing
               }
-      DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall >>= fromMaybeM (PaymentOrderDoesNotExist paymentOrder.id.getId)
+      DPayment.createOrderService commonMerchantId commonPersonId createOrderReq createOrderCall
 
     createOrderCall = Payment.createOrder merchantId_
     orderStatusCall = Payment.orderStatus merchantId_

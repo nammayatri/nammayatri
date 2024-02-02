@@ -294,6 +294,7 @@ FRFSRecon:
     totalOrderValue: HighPrecMoney # amount paid by customer
     settlementAmount: HighPrecMoney # settlement amount = totalOrderValue - bff
     beneficiaryIFSC: Maybe Text # beneficiary ifsc code, from on_confirm
+    beneficiaryBankAccount: Maybe Text # beneficiary bank account, from on_confirm
     collectorIFSC: Maybe Text # collector ifsc code, from bapConfig
     settlementReferenceNumber: Maybe Text # utr number, to be populated post settlement
     settlementDate: Maybe UTCTime # to be populated post settlement

@@ -28,3 +28,7 @@ ALTER TABLE atlas_app.frfs_recon ADD COLUMN merchant_operating_city_id character
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_recon ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_recon ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+ALTER TABLE atlas_app.frfs_recon ADD COLUMN beneficiary_bank_account text ;

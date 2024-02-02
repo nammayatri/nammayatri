@@ -37,7 +37,8 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.FRFSRecon.FRFSRecon {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.beneficiaryIFSC $ beneficiaryIFSC,
+    [ Se.Set Beam.beneficiaryBankAccount $ beneficiaryBankAccount,
+      Se.Set Beam.beneficiaryIFSC $ beneficiaryIFSC,
       Se.Set Beam.buyerFinderFee $ buyerFinderFee,
       Se.Set Beam.collectorIFSC $ collectorIFSC,
       Se.Set Beam.collectorSubscriberId $ collectorSubscriberId,
@@ -74,7 +75,8 @@ instance FromTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
     pure $
       Just
         Domain.Types.FRFSRecon.FRFSRecon
-          { beneficiaryIFSC = beneficiaryIFSC,
+          { beneficiaryBankAccount = beneficiaryBankAccount,
+            beneficiaryIFSC = beneficiaryIFSC,
             buyerFinderFee = buyerFinderFee,
             collectorIFSC = collectorIFSC,
             collectorSubscriberId = collectorSubscriberId,
@@ -106,7 +108,8 @@ instance FromTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
 instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
   toTType' Domain.Types.FRFSRecon.FRFSRecon {..} = do
     Beam.FRFSReconT
-      { Beam.beneficiaryIFSC = beneficiaryIFSC,
+      { Beam.beneficiaryBankAccount = beneficiaryBankAccount,
+        Beam.beneficiaryIFSC = beneficiaryIFSC,
         Beam.buyerFinderFee = buyerFinderFee,
         Beam.collectorIFSC = collectorIFSC,
         Beam.collectorSubscriberId = collectorSubscriberId,

@@ -67,14 +67,9 @@ onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onConfirm merchant booking' dOrder = do
   let booking = booking' {Booking.bppOrderId = (Just dOrder.bppOrderId)}
   tickets <- traverse (mkTicket booking) dOrder.tickets
-  -- bapConfig <- QBC.findByMerchantIdAndDomain (Just merchant.id) (show Spec.FRFS) >>= fromMaybeM (InternalError "Beckn Config not found")
-  -- quote <- runInReplica $ QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId)
-  -- reconEntries <- traverse (mkRecon booking bapConfig quote.price) tickets
-
   void $ QTicket.createMany tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   buildReconTable merchant booking dOrder tickets
-  -- void $ QRecon.createMany reconEntries
   return ()
 
 buildReconTable :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> [Ticket.FRFSTicket] -> Flow ()
@@ -94,6 +89,7 @@ buildReconTable merchant booking _dOrder tickets = do
         Recon.FRFSRecon
           { Recon.id = "",
             Recon.beneficiaryIFSC = booking.bppBankCode,
+            Recon.beneficiaryBankAccount = booking.bppBankAccountNumber,
             Recon.buyerFinderFee = finderFee,
             Recon.collectorIFSC = bapConfig.bapIFSC,
             Recon.collectorSubscriberId = bapConfig.subscriberId,
@@ -122,8 +118,6 @@ buildReconTable merchant booking _dOrder tickets = do
           }
 
   reconEntries <- mapM (buildRecon reconEntry) tickets
-
-  -- let reconEntries = fmap (mkRecon booking merchant) tickets
   void $ QRecon.createMany reconEntries
 
 mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Flow Ticket.FRFSTicket
@@ -145,48 +139,6 @@ mkTicket booking dTicket = do
         Ticket.merchantOperatingCityId = booking.merchantOperatingCityId,
         Ticket.createdAt = now,
         Ticket.updatedAt = now
-      }
-
-mkRecon :: Booking.FRFSTicketBooking -> BecknConfig -> HighPrecMoney -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
-mkRecon booking bapConfig fare ticket = do
-  now <- getCurrentTime
-  reconId <- generateGUID
-
-  let totalOrderValue = booking.price
-  let finderFee = fromMaybe 0 (bapConfig.buyerFinderFee)
-
-  fromStation <- runInReplica $ QStation.findById booking.fromStationId >>= fromMaybeM (InternalError "Station not found")
-  toStation <- runInReplica $ QStation.findById booking.toStationId >>= fromMaybeM (InternalError "Station not found")
-  bppOrderId <- booking.bppOrderId & fromMaybeM (InternalError "BPP Order Id not found in booking")
-  return
-    Recon.FRFSRecon
-      { Recon.id = reconId,
-        Recon.beneficiaryIFSC = Nothing,
-        Recon.buyerFinderFee = finderFee,
-        Recon.collectorIFSC = bapConfig.bapIFSC,
-        Recon.collectorSubscriberId = bapConfig.subscriberId,
-        Recon.date = "",
-        Recon.destinationStationCode = toStation.code,
-        Recon.differenceAmount = Nothing,
-        Recon.fare = fare,
-        Recon.frfsTicketBookingId = booking.id,
-        Recon.message = Nothing,
-        Recon.mobileNumber = Nothing,
-        Recon.networkOrderId = bppOrderId,
-        Recon.receiverSubscriberId = booking.bppSubscriberId,
-        Recon.settlementAmount = HighPrecMoney $ (totalOrderValue.getHighPrecMoney - finderFee.getHighPrecMoney),
-        Recon.settlementDate = Nothing,
-        Recon.settlementReferenceNumber = Nothing,
-        Recon.sourceStationCode = fromStation.code,
-        Recon.ticketNumber = ticket.ticketNumber,
-        Recon.ticketQty = booking.quantity,
-        Recon.time = "",
-        Recon.totalOrderValue = booking.price,
-        Recon.transactionRefNumber = "",
-        Recon.merchantId = booking.merchantId,
-        Recon.merchantOperatingCityId = booking.merchantOperatingCityId,
-        Recon.createdAt = now,
-        Recon.updatedAt = now
       }
 
 buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon

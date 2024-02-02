@@ -18,7 +18,8 @@ import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data FRFSReconT f = FRFSReconT
-  { beneficiaryIFSC :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { beneficiaryBankAccount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    beneficiaryIFSC :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     buyerFinderFee :: B.C f Kernel.Types.Common.HighPrecMoney,
     collectorIFSC :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     collectorSubscriberId :: B.C f Kernel.Prelude.Text,
