@@ -456,20 +456,3 @@ instance decodeSosStatus :: Decode SosStatus where decode = defaultEnumDecode
 instance encodeSosStatus  :: Encode SosStatus where encode = defaultEnumEncode
 instance eqSosStatus :: Eq SosStatus where eq = genericEq
 
-type RemoteConfig a = {
-    bangalore :: a,
-    kolkata :: a
-} 
-
-defaultRemoteConfig :: forall a. RemoteConfig (Array a)
-defaultRemoteConfig ={
-    bangalore : [],
-    kolkata : []
-}
-
-getConfig :: forall a. RemoteConfig (Array a) -> String -> Array a
-getConfig config city = 
-    case city of
-        "bangalore" -> config.bangalore
-        "kolkata" -> config.kolkata
-        _ -> []

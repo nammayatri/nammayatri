@@ -18,7 +18,7 @@ import Data.Maybe
 import Screens.Types
 
 import MerchantConfig.DefaultConfig as DC
-import RemoteConfigs as RC
+import RemoteConfig as RC
 
 initData :: NammaSafetyScreenState
 initData =
