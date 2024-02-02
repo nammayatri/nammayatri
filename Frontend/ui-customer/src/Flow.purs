@@ -145,7 +145,7 @@ import Screens.NammaSafetyFlow.ActivateSafetyScreen.Controller as ActivateSafety
 import Screens.NammaSafetyFlow.SosActiveScreen.Controller as SosActiveScreen
 import Screens.NammaSafetyFlow.Components.SafetyUtils
 import Screens.NammaSafetyFlow.SafetyFlow (updateEmergencySettings, safetyEducationFlow)
-import RemoteConfigs as RC
+import RemoteConfig as RC
 import Engineering.Helpers.RippleCircles (clearMap)
 
 baseAppFlow :: GlobalPayload -> Boolean-> FlowBT String Unit

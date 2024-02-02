@@ -25,7 +25,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Mobility.Prelude
 import PrestoDOM.Animation as PrestoAnim
-import RemoteConfigs as RC
+import RemoteConfig as RC
 import Screens.NammaSafetyFlow.Components.HeaderView as Header
 import Screens.NammaSafetyFlow.SafetyEducationScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.Types
