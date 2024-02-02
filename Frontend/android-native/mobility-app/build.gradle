@@ -49,7 +49,7 @@ dependencies {
     implementation 'androidx.work:work-runtime:2.7.1'
     implementation 'com.google.android.gms:play-services-maps:18.1.0'
     implementation 'com.google.firebase:firebase-analytics'
-    implementation platform('com.google.firebase:firebase-bom:32.2.0')
+    implementation platform('com.google.firebase:firebase-bom:32.7.1')
     implementation 'com.google.firebase:firebase-dynamic-links'
     implementation 'com.google.firebase:firebase-messaging'
     api 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
