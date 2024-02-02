@@ -16,6 +16,7 @@
 
 module Storage.Beam.Merchant.MerchantServiceUsageConfig where
 
+import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Kernel.External.AadhaarVerification
 import Kernel.External.Call.Types (CallService)
@@ -32,24 +33,24 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     merchantOperatingCityId :: B.C f Text,
     initiateCall :: B.C f CallService,
     getDistances :: B.C f MapsService,
-    getDistancesPercentage :: B.C f Text,
+    getDistancesPercentage :: B.C f A.Value,
     getRoutes :: B.C f MapsService,
-    getRoutesPercentage :: B.C f Text,
+    getRoutesPercentage :: B.C f A.Value,
     snapToRoad :: B.C f MapsService,
-    snapToRoadPercentage :: B.C f Text,
+    snapToRoadPercentage :: B.C f A.Value,
     getPlaceName :: B.C f MapsService,
-    getPlaceNamePercentage :: B.C f Text,
+    getPlaceNamePercentage :: B.C f A.Value,
     getPickupRoutes :: B.C f MapsService,
-    getPickupRoutesPercentage :: B.C f Text,
+    getPickupRoutesPercentage :: B.C f A.Value,
     getTripRoutes :: B.C f MapsService,
-    getTripRoutesPercentage :: B.C f Text,
+    getTripRoutesPercentage :: B.C f A.Value,
     getPlaceDetails :: B.C f MapsService,
-    getPlaceDetailsPercentage :: B.C f Text,
+    getPlaceDetailsPercentage :: B.C f A.Value,
     autoComplete :: B.C f MapsService,
-    autoCompletePercentage :: B.C f Text,
+    autoCompletePercentage :: B.C f A.Value,
     aadhaarVerificationService :: B.C f AadhaarVerificationService,
     getDistancesForCancelRide :: B.C f MapsService,
-    getDistancesForCancelRidePercentage :: B.C f Text,
+    getDistancesForCancelRidePercentage :: B.C f A.Value,
     notifyPerson :: B.C f NotificationService,
     useFraudDetection :: B.C f Bool,
     smsProvidersPriorityList :: B.C f [SmsService],

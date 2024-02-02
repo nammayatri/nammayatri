@@ -211,11 +211,12 @@ content-type: application/json
   }
 
 ###
+@token = 0f3378e2-da5b-4eac-a0f6-397ca48358de
 
-# @name merchanServiceUsageConfig
+# @name merchantServiceUsageConfig
 
-GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceUsageConfig
-token: {{juspay_admin}}
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/merchant/serviceUsageConfig
+token: {{token}}
 content-type: application/json
 
 ###
@@ -288,18 +289,84 @@ content-type: application/json
 
 # @name mapsServiceUsageConfigUpdate
 
-POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/merchant/serviceUsageConfig/maps/update
-token: {{juspay_admin}}
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/merchant/serviceUsageConfig/maps/update
+token: {{token}}
 content-type: application/json
 
-{ "getDistances" : "Google",
-  "getEstimatedPickupDistances" : "Google",
-  "getRoutes" : "Google",
-  "snapToRoad" : "OSRM",
-  "getPlaceName" : "Google",
-  "getPlaceDetails" : "Google",
-  "autoComplete" : "MMI"
+{ "getDistances" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 11,
+      "osrmPercentage" : 19,
+      "mmiPercentage" : 70,
+      "nextBillionPercentage" : null
+    },
+  "getDistancesForCancelRide" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 12,
+      "osrmPercentage" : 18,
+      "mmiPercentage" : 70,
+      "nextBillionPercentage" : null
+    },
+  "getEstimatedPickupDistances" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 12,
+      "osrmPercentage" : 18,
+      "mmiPercentage" : 70,
+      "nextBillionPercentage" : null
+    },
+  "getRoutes" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 94,
+      "osrmPercentage" : 1,
+      "mmiPercentage" : 5,
+      "nextBillionPercentage" : null
+    },
+  "getPickupRoutes" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 11,
+      "osrmPercentage" : null,
+      "mmiPercentage" : 89,
+      "nextBillionPercentage" : null
+    },
+  "getTripRoutes" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 95,
+      "osrmPercentage" : 0,
+      "mmiPercentage" : 5,
+      "nextBillionPercentage" : null
+    },
+  "snapToRoad" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 99,
+      "osrmPercentage" : 1,
+      "mmiPercentage" : 0,
+      "nextBillionPercentage" : null
+    },
+  "autoComplete" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 95,
+      "osrmPercentage" : null,
+      "mmiPercentage" : 5,
+      "nextBillionPercentage" : null
+    },
+  "getPlaceName" :
+    { "mapsService" : "Google",
+      "usePercentage" : true,
+      "googlePercentage" : 90,
+      "osrmPercentage" : null,
+      "mmiPercentage" : 10,
+      "nextBillionPercentage" : null
+    }
 }
+
 ###
 
 # @name merchantMyValueFirstConfigUpdate

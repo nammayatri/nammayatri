@@ -16,6 +16,7 @@
 
 module Storage.Beam.Merchant.MerchantServiceUsageConfig where
 
+import qualified Data.Aeson as A
 import qualified Database.Beam as B
 import Kernel.External.AadhaarVerification.Types
 import Kernel.External.Call (CallService)
@@ -33,25 +34,25 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     merchantOperatingCityId :: B.C f Text,
     initiateCall :: B.C f CallService,
     getDistances :: B.C f MapsService,
-    getDistancesPercentage :: B.C f Text,
+    getDistancesPercentage :: B.C f A.Value,
     getEstimatedPickupDistances :: B.C f MapsService,
-    getEstimatedPickupDistancesPercentage :: B.C f Text,
+    getEstimatedPickupDistancesPercentage :: B.C f A.Value,
     getRoutes :: B.C f MapsService,
-    getRoutesPercentage :: B.C f Text,
+    getRoutesPercentage :: B.C f A.Value,
     getPickupRoutes :: B.C f MapsService,
-    getPickupRoutesPercentage :: B.C f Text,
+    getPickupRoutesPercentage :: B.C f A.Value,
     getTripRoutes :: B.C f MapsService,
-    getTripRoutesPercentage :: B.C f Text,
-    snapToRoad :: B.C f MapsService, -- check, is it used?
-    snapToRoadPercentage :: B.C f Text, -- check, is it used?
+    getTripRoutesPercentage :: B.C f A.Value,
+    snapToRoad :: B.C f MapsService,
+    snapToRoadPercentage :: B.C f A.Value,
     getPlaceName :: B.C f MapsService,
-    getPlaceNamePercentage :: B.C f Text,
+    getPlaceNamePercentage :: B.C f A.Value,
     getPlaceDetails :: B.C f MapsService,
-    getPlaceDetailsPercentage :: B.C f Text,
+    getPlaceDetailsPercentage :: B.C f A.Value,
     autoComplete :: B.C f MapsService,
-    autoCompletePercentage :: B.C f Text,
+    autoCompletePercentage :: B.C f A.Value,
     getDistancesForCancelRide :: B.C f MapsService,
-    getDistancesForCancelRidePercentage :: B.C f Text,
+    getDistancesForCancelRidePercentage :: B.C f A.Value,
     smsProvidersPriorityList :: B.C f [SmsService],
     snapToRoadProvidersList :: B.C f [MapsService],
     whatsappProvidersPriorityList :: B.C f [WhatsappService],

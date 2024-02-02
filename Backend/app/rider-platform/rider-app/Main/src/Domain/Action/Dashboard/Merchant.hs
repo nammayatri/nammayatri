@@ -178,10 +178,13 @@ mapsServiceUsageConfigUpdate merchantShortId city req = do
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
                                    getRoutes = fromMaybe merchantServiceUsageConfig.getRoutes req.getRoutes,
+                                   getPickupRoutes = fromMaybe merchantServiceUsageConfig.getPickupRoutes req.getPickupRoutes,
+                                   getTripRoutes = fromMaybe merchantServiceUsageConfig.getTripRoutes req.getTripRoutes,
                                    snapToRoad = fromMaybe merchantServiceUsageConfig.snapToRoad req.snapToRoad,
                                    getPlaceName = fromMaybe merchantServiceUsageConfig.getPlaceName req.getPlaceName,
                                    getPlaceDetails = fromMaybe merchantServiceUsageConfig.getPlaceDetails req.getPlaceDetails,
-                                   autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete
+                                   autoComplete = fromMaybe merchantServiceUsageConfig.autoComplete req.autoComplete,
+                                   getDistancesForCancelRide = fromMaybe merchantServiceUsageConfig.getDistancesForCancelRide req.getDistancesForCancelRide
                                   }
   _ <- CQMSUC.updateMerchantServiceUsageConfig updMerchantServiceUsageConfig
   CQMSUC.clearCache merchantOperatingCity.id

@@ -111,33 +111,15 @@ getRoutes merchantId merchantOpCityId mbSearchRequestId req = do
   transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig Maps.GetRoutes (Maps.getRoutes transporterConfig.isAvoidToll) (.getRoutes) #getRoutes merchantId merchantOpCityId mbSearchRequestId req
 
--- getRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe (Id DSR.SearchRequest) -> GetRoutesReq -> m GetRoutesResp
--- getRoutes personId merchantId mbMOCId mbSearchRequestId req = do
---   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
---   mOCId <- getMerchantOperatingCityId personId mbMOCId
---   runWithServiceConfig Maps.GetRoutes (Maps.getRoutes merchant.isAvoidToll) (.getRoutes) #getRoutes merchantId mOCId mbSearchRequestId req
-
 getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> GetRoutesReq -> m GetRoutesResp
 getPickupRoutes merchantId merchantOpCityId mbSearchRequestId req = do
   transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig Maps.GetPickupRoutes (Maps.getRoutes transporterConfig.isAvoidToll) (.getPickupRoutes) #getPickupRoutes merchantId merchantOpCityId mbSearchRequestId req
 
--- getPickupRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe (Id DSR.SearchRequest) -> GetRoutesReq -> m GetRoutesResp
--- getPickupRoutes personId merchantId mbMOCId mbSearchRequestId req = do
---   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
---   mOCId <- getMerchantOperatingCityId personId mbMOCId
---   runWithServiceConfig Maps.GetPickupRoutes (Maps.getRoutes merchant.isAvoidToll) (.getPickupRoutes) #getPickupRoutes merchantId mOCId mbSearchRequestId req
-
 getTripRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe (Id DSR.SearchRequest) -> GetRoutesReq -> m GetRoutesResp
 getTripRoutes merchantId merchantOpCityId mbSearchRequestId req = do
   transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig Maps.GetTripRoutes (Maps.getRoutes transporterConfig.isAvoidToll) (.getTripRoutes) #getTripRoutes merchantId merchantOpCityId mbSearchRequestId req
-
--- getTripRoutes :: ServiceFlow m r => Id Person -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> Maybe (Id DSR.SearchRequest) -> GetRoutesReq -> m GetRoutesResp
--- getTripRoutes personId merchantId mbMOCId mbSearchRequestId req = do
---   merchant <- SMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
---   mOCId <- getMerchantOperatingCityId personId mbMOCId
---   runWithServiceConfig Maps.GetTripRoutes (Maps.getRoutes merchant.isAvoidToll) (.getTripRoutes) #getTripRoutes merchantId mOCId mbSearchRequestId req
 
 snapToRoad ::
   ( ServiceFlow m r

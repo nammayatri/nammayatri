@@ -20,6 +20,7 @@ module Storage.Queries.Merchant.MerchantServiceUsageConfig
     #-}
 where
 
+import qualified Data.Aeson as A
 import Database.Beam.Postgres (Postgres)
 import Domain.Types.Merchant.MerchantOperatingCity
 import Domain.Types.Merchant.MerchantServiceUsageConfig
@@ -60,12 +61,12 @@ updateMerchantServiceUsageConfig MerchantServiceUsageConfig {..} = do
   where
     updUsage ::
       Se.Column BeamMSUC.MerchantServiceUsageConfigT Maps.MapsService ->
-      Se.Column BeamMSUC.MerchantServiceUsageConfigT Text ->
+      Se.Column BeamMSUC.MerchantServiceUsageConfigT A.Value ->
       Maps.MapsServiceUsage ->
       [Se.Set Postgres BeamMSUC.MerchantServiceUsageConfigT]
     updUsage dbField dbFieldPercentage dField =
       [ Se.Set dbField dField.mapsService,
-        Se.Set dbFieldPercentage (encodeToText . Maps.mkMapsServiceUsagePercentage $ dField)
+        Se.Set dbFieldPercentage (A.toJSON . Maps.mkMapsServiceUsagePercentage $ dField)
       ]
 
 instance FromTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig where
@@ -102,18 +103,19 @@ instance FromTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConf
         (MonadThrow m, Log m) =>
         Maps.MapsServiceUsageMethod ->
         Maps.MapsService ->
-        Text ->
+        A.Value ->
         m Maps.MapsServiceUsage
       parseField mapsServiceUsageMethod field fieldPercentage = do
         let fieldName = show mapsServiceUsageMethod
         mapsServiceUsagePercentage <-
-          decodeFromText fieldPercentage
-            & fromMaybeM (InternalError $ "Unable to decode MerchantServiceUsageConfigT." <> fieldName <> "Percentage")
+          case A.fromJSON fieldPercentage of
+            A.Success percentage -> pure percentage
+            A.Error err -> throwError $ InternalError $ "Unable to decode MerchantServiceUsageConfigT." <> fieldName <> "Percentage; err: " <> show err
         pure $ Maps.mkMapsServiceUsage field mapsServiceUsagePercentage
 
 instance ToTType' BeamMSUC.MerchantServiceUsageConfig MerchantServiceUsageConfig where
   toTType' MerchantServiceUsageConfig {..} = do
-    let mkPercentage = encodeToText . Maps.mkMapsServiceUsagePercentage
+    let mkPercentage = A.toJSON . Maps.mkMapsServiceUsagePercentage
     BeamMSUC.MerchantServiceUsageConfigT
       { BeamMSUC.merchantId = getId merchantId,
         BeamMSUC.merchantOperatingCityId = getId merchantOperatingCityId,
