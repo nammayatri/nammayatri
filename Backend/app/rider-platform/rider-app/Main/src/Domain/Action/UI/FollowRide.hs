@@ -84,6 +84,8 @@ postShareRide (mbPersonId, merchantId) req = do
             Just id -> do
               emergencyContactEntity <- QPerson.findById id >>= fromMaybeM (PersonDoesNotExist id.getId)
               updateFollowDetails emergencyContactEntity emergencyContact riderConfig
+              dbHash <- getDbHash emergencyContact.mobileNumber
+              PDEN.updateShareRide dbHash id $ Just True
               SLPEN.sendNotificationToEmergencyContact emergencyContactEntity (body person) title Notification.SHARE_RIDE
     )
     emergencyContacts.defaultEmergencyNumbers
@@ -96,12 +98,10 @@ updateFollowDetails :: Person.Person -> PDEN.PersonDefaultEmergencyNumberAPIEnti
 updateFollowDetails contactPersonEntity PDEN.PersonDefaultEmergencyNumberAPIEntity {..} config = do
   now <- getLocalCurrentTime config.timeDiffFromUtc
   let isFollowingEnabled = checkTimeConstraintForFollowRide config now
-  dbHash <- getDbHash mobileNumber
   let shouldUpdate =
         if isFollowingEnabled
           then enableForFollowing
           else enableForShareRide
   unless shouldUpdate $ do
-    PDEN.updateShareRide dbHash contactPersonEntity.id $ Just True
     void $ CQFollowRide.incrementFollowRideCount contactPersonEntity.id
     QPerson.updateFollowsRide contactPersonEntity.id True
