@@ -655,10 +655,6 @@ tableData state =
   , { key: getString CUSTOMER_REFERRAL, value: state.data.config.coinsConfig.customerReferralCoins }
   , { key: getString RIDES_IN_A_DAY_PREFIX <> state.data.config.coinsConfig.numOfRideThresholdForCoins <> getString RIDES_IN_A_DAY_SUFFIX, value: state.data.config.coinsConfig.eightPlusRidesCoins }
   , { key: getString PURPLE_RIDE, value: state.data.config.coinsConfig.purpleRideCoins }
-  , { key: getString RIDE_COMPLETED, value: state.data.config.coinsConfig.rideCompletedCoins }
-  , { key: getString STAR_RATING_FOR_THE_TRIP, value: state.data.config.coinsConfig.fiveStarRatingCoins }
-  , { key: getString ONE_TWO_START_RATING, value: state.data.config.coinsConfig.oneOrTwoStarRatingCoins }
-  , { key: getString BOOKING_CANCELLATION, value: state.data.config.coinsConfig.rideCancellationCoins }
   ]
 
 dummyRideHistoryItem :: RidesInfo
