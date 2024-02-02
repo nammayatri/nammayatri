@@ -25,7 +25,11 @@ import Presto.Core.Utils.Encoding (defaultDecode)
 
 type RemoteConfig a = {
     bangalore :: a,
-    kolkata :: a
+    kolkata :: a,
+    chennai :: a,
+    tumakuru :: a,
+    mysore :: a,
+    default :: a
 }
 
 newtype RCCarousel = RCCarousel {

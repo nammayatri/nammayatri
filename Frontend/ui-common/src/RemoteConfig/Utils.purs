@@ -22,21 +22,29 @@ import DecodeUtil (decodeForeignObject, parseJSON)
 foreign import fetchRemoteConfigString :: String -> String
 
 
-defaultRemoteConfig :: RemoteConfig (Array RCCarousel)
+defaultRemoteConfig :: forall a. RemoteConfig (Array a)
 defaultRemoteConfig ={
     bangalore : [],
-    kolkata : []
+    kolkata : [],
+    chennai : [],
+    tumakuru : [],
+    mysore : [],
+    default : []
 }
 
 carouselConfigData :: String -> String -> Array RCCarousel
 carouselConfigData city configKey = 
-    let remoteConfig = fetchRemoteConfigString configKey --("driver_carousel_banner" <> language)
+    let remoteConfig = fetchRemoteConfigString configKey
         decodedConfg = decodeForeignObject (parseJSON remoteConfig) defaultRemoteConfig
     in getCityBasedConfig decodedConfg city
-    where 
-      getCityBasedConfig :: RemoteConfig (Array RCCarousel) -> String -> Array RCCarousel
-      getCityBasedConfig config city = 
-          case city of
-              "bangalore" -> config.bangalore
-              "kolkata" -> config.kolkata
-              _ -> []
+
+
+getCityBasedConfig :: forall a. RemoteConfig a -> String -> a
+getCityBasedConfig config city = 
+    case city of
+        "bangalore" -> config.bangalore
+        "kolkata" -> config.kolkata
+        "chennai" -> config.chennai
+        "mysore" -> config.mysore
+        "tumakuru" -> config.tumakuru
+        _ -> config.default
