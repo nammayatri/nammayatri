@@ -1,47 +1,36 @@
 module Screens.EmergencyContactsScreen.Controller where
 
-import Prelude (bind, compare, class Show, pure, unit, ($), discard, (/=), (&&), (>=), (==), map, (<), (||), not, (-), (<>), (>), (<=), Unit, show, (+))
-import Screens.Types (EmergencyContactsScreenState, Contacts)
-import PrestoDOM (Eval, continue, exit, continueWithCmd, updateAndExit, ScrollState(..))
-import PrestoDOM.Types.Core (class Loggable)
+import Prelude (class Show, bind, compare, discard, map, not, pure, unit, ($), (&&), (+), (-), (/=), (<), (<=), (<>), (==), (>), (>=), (||))
+import PrestoDOM (Eval, ScrollState, continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM.Types.Core (class Loggable, toPropValue)
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
 import Components.NewContact.Controller as NewContactController
-import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
+import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
 import Screens (ScreenName(..), getScreen)
-import JBridge (toast)
-import Screens.Types (EmergencyContactsScreenState , ContactDetail, NewContacts, NewContactsProp)
-import Data.Array (length, sortBy, filter, snoc, elem, null, unionBy, elem, head, tail, catMaybes, (!!), take, last, slice, union, mapWithIndex, nub, delete, updateAt, dropEnd)
-import Helpers.Utils (storeCallBackContacts, parseNewContacts, contactPermission, setText, toStringJSON, setEnabled, setRefreshing)
-import Log (printLog)
+import JBridge (toast, hideKeyboardOnNavigation)
+import Screens.Types (Contacts, EmergencyContactsScreenState, NewContacts, NewContactsProp)
+import Data.Array (catMaybes, delete, dropEnd, elem, filter, head, last, length, mapWithIndex, nub, null, slice, snoc, sortBy, tail, updateAt, (!!))
+import Helpers.Utils (contactPermission, setEnabled, setRefreshing, setText)
 import Screens.EmergencyContactsScreen.Transformer (getContactList)
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
-import Styles.Types
 import Styles.Colors as Color
 import Components.PopUpModal.Controller as PopUpModal
 import Engineering.Helpers.Commons (getNewIDWithTag, flowRunner, liftFlow)
 import Data.Maybe (fromMaybe, Maybe(..))
 import Data.String as DS
 import Data.Int (fromString)
-import Presto.Core.Types.Language.Flow (Flow)
-import Types.App (GlobalState, defaultGlobalState)
+import Types.App (defaultGlobalState)
 import Effect.Aff (launchAff)
-import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, os, strToBool)
-import Control.Monad.Except.Trans (runExceptT)
-import Control.Transformers.Back.Trans (runBackT)
-import Data.String (split, Pattern(..), Replacement(..), replaceAll)
-import PrestoDOM.Types.Core (class Loggable, toPropValue)
-import Data.Ord (min)
-import Engineering.Helpers.Utils (loaderText, toggleLoader, fromProp)
+import Engineering.Helpers.Utils (loaderText, terminateLoader, toggleLoader)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import Screens.NammaSafetyFlow.Components.ContactsList as ContactsList
 import Screens.NammaSafetyFlow.Components.SafetyUtils (getDefaultPriorityList)
-import Mobility.Prelude
-import Data.String.Regex (Regex, replace, regex)
+import Mobility.Prelude (boolToInt)
+import Data.String.Regex (regex, replace)
 import Data.String.Regex.Flags (global)
 import Data.Either (Either(..))
 
@@ -112,7 +101,7 @@ eval :: Action -> EmergencyContactsScreenState -> Eval Action ScreenOutput Emerg
 eval (PrimaryButtonActionControll PrimaryButton.OnClick) state = 
   if null state.data.emergencyContactsList 
     then continueWithCmd state [pure AddContacts]
-    else updateAndExit state $ PostContacts state true
+    else updateAndExit state $ PostContacts state{data{selectedContacts = state.data.emergencyContactsList}} true
 
 eval AddContacts state = continueWithCmd state
       [do
@@ -141,13 +130,10 @@ eval (ContactsCallback allContacts) state = do
               Nothing -> allContacts
   if flag == "false"  then do
     _ <- pure $ toast (getString PLEASE_ENABLE_CONTACTS_PERMISSION_TO_PROCEED)
-    continueWithCmd state
-      [do
-        pure NoAction
-      ]
+    removeLoader
   else if (null updatedContactList) then do
     _ <- pure $ toast (getString NO_CONTACTS_FOUND_ON_THE_DEVICE_TO_BE_ADDED)
-    continue state
+    removeLoader
   else do
     let filteredContacts = map (\contactItem -> do 
                                 let formattedContact = getFormattedContact contactItem
@@ -158,10 +144,17 @@ eval (ContactsCallback allContacts) state = do
         bufferCardDataPrestoList = contactListTransformerProp unionNewContacts
     if null unionNewContacts then do
       _ <- pure $ toast (getString NO_CONTACTS_LEFT_ON_DEVICE_TO_ADD)
-      continue state
+      removeLoader
     else do
       let newState = state{data{storedContactsList = unionNewContacts, searchResult = unionNewContacts, prestoListArrayItems = bufferCardDataPrestoList, selectedContacts = state.data.emergencyContactsList}, props{showContactList = true}}
       continue newState
+  where
+    removeLoader =     
+      continueWithCmd state
+      [do
+        _ <- terminateLoader ""
+        pure NoAction
+      ]
 
 eval BackPressed state =
   if state.props.showContactList then do
@@ -185,9 +178,9 @@ eval (ContactListClearText) state = continueWithCmd state { data { editedText = 
   ]
 
 eval (NewContactActionController (NewContactController.ContactSelected index)) state = do
-  let contact = fromMaybe {isSelected : false , name : "" , number : "", enableForFollowing: false, priority : 0} (state.data.searchResult !! index)
+  let contact = getValidContact $ fromMaybe {isSelected : false , name : "" , number : "", enableForFollowing: false, priority : 0} (state.data.searchResult !! index)
   let item = (getValidContact contact){isSelected = not contact.isSelected}
-  if (((length state.data.selectedContacts) >= 3) && item.isSelected ) then do
+  if (length state.data.selectedContacts) >= 3 && not contact.isSelected then do
     _ <- pure $ toast $ getString LIMIT_REACHED_3_OF_3_EMERGENCY_CONTACTS_ALREADY_ADDED
     continue state
   else if((DS.length item.number) /= 10 || (fromMaybe 0 (fromString (DS.take 1 item.number)) < 6)) then do
@@ -213,9 +206,10 @@ eval (PrimaryButtonAC PrimaryButton.OnClick) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_emergency_contact_added"
   let validSelectedContacts = (mapWithIndex (\index contact ->
     if ((DS.length contact.number) > 10 && (DS.length contact.number) <= 12 && ((DS.take 1 contact.number) == "0" || (DS.take 2 contact.number) == "91")) then
-      contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number, priority = boolToInt $ index == 0}
-    else contact{priority = boolToInt $ index == 0}
+      contact {number =  DS.drop ((DS.length contact.number) - 10) contact.number, priority = boolToInt $ index /= 0}
+    else contact{priority = boolToInt $ index /= 0}
   ) state.data.selectedContacts)
+  _ <- pure $ hideKeyboardOnNavigation true
   updateAndExit state $ PostContacts state{data{editedText = "", selectedContacts = getDefaultPriorityList validSelectedContacts}, props{showContactList = false}} false
 
 eval FetchContacts state =

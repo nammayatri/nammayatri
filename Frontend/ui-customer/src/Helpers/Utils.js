@@ -146,12 +146,15 @@ export const storeCallBackCustomer = function (cb) {
           notificationCallBacks[screenName] = function(notificationType){
             cb(action(notificationType))();
           }
-          const callback = callbackMapper.map(function (notificationType) {
+          const callback = callbackMapper.map(function (notificationType, notificationBody) {
             console.log("notificationType ->", notificationType);
             if (window.whitelistedNotification.includes(notificationType)) {
               Object.keys(notificationCallBacks).forEach((key) => {
                 notificationCallBacks[key](notificationType);
               })
+              if (notificationBody) {
+                window.notificationBody = JSON.parse(notificationBody);
+              }
             }
           });
           const notificationCallBack = function (notificationType) {
@@ -179,7 +182,7 @@ export const storeCallBackContacts = function (cb) {
     return function () {
       try {
         const callback = callbackMapper.map(function (contact) {
-          const json = JSON.parse(contact);
+          const json = JSON.parse(contact.toString().replace(/\s/g, " "));
           console.log("storeCallBackContacts js " + json);
           cb(action(json))();
         });
@@ -499,8 +502,11 @@ export const incrOrDecrTimeFrom = function (inputTime, minutesToAddOrSubtract, i
 }
 
 export const getMockFollowerName = function() {
-  let currentMockName = "Test User"
-  if (window.__payload && window.__payload.payload && window.__payload.payload.fullNotificationBody && window.__payload.payload.fullNotificationBody.msg) {
+  let currentMockName = "User";
+  if (window.notificationBody) {
+    const msg = window.notificationBody.msg;
+    currentMockName = msg.split(" ")[0];
+  } else if (window.__payload && window.__payload.payload && window.__payload.payload.fullNotificationBody && window.__payload.payload.fullNotificationBody.msg) {
     const msg = window.__payload.payload.fullNotificationBody.msg;
     currentMockName = msg.split(" ")[0];
   }

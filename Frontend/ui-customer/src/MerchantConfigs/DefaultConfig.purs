@@ -102,7 +102,7 @@ config =
   , profileName: "#FFFFFF"
   , profileImage: "#012A72"
   , feedbackBackground: "#2C2F3A"
-  , sideBarList: [ "MyRides", "Favorites", "EmergencyContacts", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout" ]
+  , sideBarList: [ "MyRides", "Favorites", "NammaSafety", "HelpAndSupport", "Language", "Separator", "ShareApp", "LiveStatsDashboard", "About", "Logout" ]
   , rateCardColor: "#2C2F3A"
   , nyBrandingVisibility: false
   , fontType: "Assets"
@@ -220,7 +220,8 @@ config =
     enableReAllocation : true,
     forceLogReferrerUrl : true,
     enableSelfServe : true,
-    enableAdditionalServices : false
+    enableAdditionalServices : false,
+    enableSafetyFlow : true
   }
 
   , rideCompletedCardConfig : {

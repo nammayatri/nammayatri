@@ -104,7 +104,7 @@ import Effect.Class (liftEffect)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Types.App (defaultGlobalState)
 import Screens.RideBookingFlow.HomeScreen.Config (setTipViewData, reportIssueOptions, metersToKm, safetyIssueOptions)
-import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..))
+import Screens.Types (TipViewData(..) , TipViewProps(..), RateCardDetails, PermissionScreenStage(..), SuggestionsMap(..), SosBannerType(..))
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import PrestoDOM.Properties (sheetState) as PP
 import Screens.RideBookingFlow.HomeScreen.Config(reportIssueOptions)
@@ -709,7 +709,7 @@ data ScreenOutput = LogoutUser
                   | GoToHelp HomeScreenState
                   | ConfirmRide HomeScreenState
                   | GoToAbout HomeScreenState
-                  | GoToNammaSafety HomeScreenState Boolean
+                  | GoToNammaSafety HomeScreenState Boolean Boolean
                   | PastRides HomeScreenState
                   | GoToMyProfile HomeScreenState Boolean
                   | ChangeLanguage HomeScreenState
@@ -762,6 +762,7 @@ data ScreenOutput = LogoutUser
                   | GoToShareRide HomeScreenState
                   | GoToNotifyRideShare HomeScreenState
                   | ExitToFollowRide HomeScreenState
+                  | GoToReportSafetyIssue HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -916,7 +917,7 @@ data Action = NoAction
             | BannerChanged String
             | BannerStateChanged String
             | MetroTicketBannerClickAC Banner.Action
-            | StartSOSOnBoarding Banner.Action
+            | SafetyBannerAction Banner.Action
             | SafetyAlertAction PopUpModal.Action
             | ContactAction ContactCircle.Action
             | ShowShareRide
@@ -949,7 +950,7 @@ eval (UpdateFollowers (FollowRideRes resp)) state = do
   let followers = map (\(Followers follower) -> follower) resp
   continue state{
     data{
-      followers = Just $ followers
+      followers = Just followers
     }
   }
 
@@ -1020,6 +1021,7 @@ eval (BannerCarousal (BannerCarousel.OnClick idx)) state =
           BannerCarousel.Disability -> pure $ DisabilityBannerAC $ Banner.OnClick
           BannerCarousel.ZooTicket -> pure $ TicketBookingFlowBannerAC $ Banner.OnClick
           BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
+          BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
           _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
@@ -1132,7 +1134,7 @@ eval (UpdateSavedLoc savedLoc) state = continue state{data{savedLocations = save
 
 eval ( RideCompletedAC (RideCompletedCard.SelectButton index)) state = 
   case state.data.ratingViewState.issueFacedView of
-    true -> continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = index == (boolToInt $ not state.props.nightSafetyFlow)}}}
+    true -> continue state { data { ratingViewState { selectedYesNoButton = index, doneButtonVisibility = true}}}
     false -> continue state {data { ratingViewState{selectedYesNoButton = index, doneButtonVisibility = true, wasOfferedAssistance = Just (index==0)}}} 
 
 eval ( RideCompletedAC (RideCompletedCard.RateClick index)) state = do
@@ -1521,7 +1523,7 @@ eval (SettingSideBarActionController (SettingSideBarController.GoToAbout)) state
   exit $ GoToAbout state { data { settingSideBar { opened = SettingSideBarController.OPEN } } }
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToNammaSafety)) state = do
-  exit $ GoToNammaSafety state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false
+  exit $ GoToNammaSafety state { data { settingSideBar { opened = SettingSideBarController.OPEN } } } false false
 
 eval (SettingSideBarActionController (SettingSideBarController.GoToMyTickets)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_zoo_tickets"
@@ -1618,18 +1620,21 @@ eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButt
     true -> do
             void $ pure $ toggleBtnLoader "SkipButton" false
             _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
-            continue
-              state
-                { props { nightSafetyFlow = false }
-                , data
-                  { rideRatingState =
-                    dummyRideRatingState
-                      { driverName = state.data.driverInfoCardState.driverName
-                      , rideId = state.data.driverInfoCardState.rideId
-                      },
-                    ratingViewState {issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1, doneButtonVisibility = false}
-                  }
-                }
+            let newState = state
+                           { props { nightSafetyFlow = false }
+                           , data
+                             { rideRatingState =
+                               dummyRideRatingState
+                                 { driverName = state.data.driverInfoCardState.driverName
+                                 , rideId = state.data.driverInfoCardState.rideId
+                                 },
+                               ratingViewState {issueFacedView = false, openReportIssue = false, selectedYesNoButton = -1, doneButtonVisibility = false}
+                             }
+                           }
+            if state.props.nightSafetyFlow && state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow  then 
+              exit $ GoToReportSafetyIssue newState
+            else continue newState
+              
     false ->  
       if state.props.showOfferedAssistancePopUp then do
         void $ pure $ toggleBtnLoader "SkipButton" false
@@ -1753,7 +1758,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.LocationTracking)
 
 eval OpenEmergencyHelp state = do
   _ <- pure $ performHapticFeedback unit
-  exit $ GoToNammaSafety state true
+  exit $ GoToNammaSafety state true false
 
 eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet)) state = continue state{props{currentSheetState = if state.props.currentSheetState == EXPANDED then COLLAPSED else EXPANDED}}
 
@@ -2342,7 +2347,7 @@ eval (DisabilityPopUpAC PopUpModal.OnButton1Click) state = do
   _ <- pure $ pauseYoutubeVideo unit
   continue state{props{showDisabilityPopUp = false}}
 
-eval (StartSOSOnBoarding Banner.OnClick) state = exit $ GoToNammaSafety state false
+eval (SafetyBannerAction Banner.OnClick) state = exit $ GoToNammaSafety state false $ state.props.sosBannerType == Just MOCK_DRILL_BANNER
 
 eval ShowRateCard state = do
   continue state { props { showRateCard = true } }
@@ -2519,7 +2524,7 @@ eval (SafetyAlertAction PopUpModal.OnButton1Click) state = do
 eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
     void $ pure $ cleverTapCustomEvent "ny_user_night_safety_mark_need_help"
     void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
-    exit $ GoToNammaSafety state true
+    exit $ GoToNammaSafety state true false
 
 eval ShowShareRide state = exit $ GoToShareRide state
 
@@ -2549,6 +2554,7 @@ constructLatLong lat lng _ =
   , city : Nothing
   }
 
+addItemToFeedbackList :: Array String -> String -> Array String
 addItemToFeedbackList feedbackList feedbackItem = if (any (_ == feedbackItem) feedbackList ) then (filter (\item -> feedbackItem /= item) feedbackList) else snoc feedbackList feedbackItem
 
 checkPermissionAndUpdatePersonMarker :: HomeScreenState -> Effect Unit
@@ -2986,12 +2992,17 @@ logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.da
           
 getBannerConfigs :: HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
 getBannerConfigs state = 
+  (if state.props.city == Chennai 
+    then [metroBannerConfig state BannerCarousal] 
+    else [])
+  <> 
+  (if isJust state.props.sosBannerType 
+    then [sosSetupBannerConfig state BannerCarousal] 
+    else [])
+  <>
   (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
     then [disabilityBannerConfig state BannerCarousal] 
     else [])
-  <> (if (state.data.config.feature.enableZooTicketBookingFlow)
+  <> 
+  (if (state.data.config.feature.enableZooTicketBookingFlow)
     then [ticketBannerConfig state BannerCarousal] else [])
-  <> if state.props.city == Chennai then 
-      [metroBannerConfig state BannerCarousal] 
-    else
-     []

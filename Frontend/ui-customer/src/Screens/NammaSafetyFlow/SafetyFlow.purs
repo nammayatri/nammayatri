@@ -21,7 +21,7 @@ safetyEducationFlow = do
   void $ pure $ cleverTapCustomEvent "ny_user_safety_learn_more_clicked"
   flow <- UI.safetyEducationScreen
   case flow of
-    SafetyEducationScreen.Refresh state -> do
+    SafetyEducationScreen.Refresh _ -> do
       safetyEducationFlow
     _ -> pure unit
   pure unit
@@ -34,15 +34,24 @@ updateEmergencySettings state = do
         { shareEmergencyContacts: Just state.data.shareToEmergencyContacts
         , shareTripWithEmergencyContacts: Just state.data.shareTripWithEmergencyContacts
         , nightSafetyChecks: Just state.data.nightSafetyChecks
-        , hasCompletedSafetySetup: Just if state.props.onRide then false else true
+        , hasCompletedSafetySetup: Just $ not state.props.onRide
         }
 
     wasSetupAlreadyDone = state.data.hasCompletedSafetySetup
-  void $ lift $ lift $ EHU.loaderText (getString LOADING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
-  void $ lift $ lift $ EHU.toggleLoader true
   void $ lift $ lift $ Remote.updateEmergencySettings req
-  modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> state { data { hasCompletedSafetySetup = if state.props.onRide then false else true } })
-  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { showSosBanner = false } })
+  modifyScreenState $ NammaSafetyScreenStateType (\_ -> state { data { hasCompletedSafetySetup = not state.props.onRide } })
+  modifyScreenState
+    $ HomeScreenStateType
+        ( \homeScreen ->
+            homeScreen
+              { props
+                { sosBannerType = if not state.data.hasCompletedMockSafetyDrill 
+                                    then Just MOCK_DRILL_BANNER 
+                                    else Nothing
+                }
+              , data { settingSideBar { hasCompletedSafetySetup = true } }
+              }
+        )
   if not state.props.onRide && not wasSetupAlreadyDone then
     pure $ toast $ getString NAMMA_SAFETY_IS_SET_UP
   else

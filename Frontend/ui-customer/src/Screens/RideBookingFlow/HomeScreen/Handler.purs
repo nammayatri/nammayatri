@@ -185,9 +185,9 @@ homeScreen = do
     Add_Stop updatedState -> do 
       modifyScreenState $ HomeScreenStateType (\homeScreenState → updatedState)
       App.BackT $ App.NoBack <$> (pure $ ADD_STOP updatedState)
-    GoToNammaSafety updatedState triggerSos -> do
+    GoToNammaSafety updatedState triggerSos showTestDrill -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_NAMMASAFETY updatedState triggerSos)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_NAMMASAFETY updatedState triggerSos showTestDrill)
     SafetySupport updatedState isSafe -> do
       modifyScreenState $ HomeScreenStateType (\homeScreenState -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ SAFETY_SUPPORT updatedState isSafe)
@@ -200,3 +200,6 @@ homeScreen = do
     ExitToFollowRide updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure EXIT_TO_FOLLOW_RIDE)
+    GoToReportSafetyIssue updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_REPORT_SAFETY_ISSUE updatedState)

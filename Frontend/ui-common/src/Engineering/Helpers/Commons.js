@@ -2,9 +2,6 @@ import { callbackMapper as PrestoCallbackMapper } from "presto-ui";
 
 const { JBridge, Android } = window;
 
-const countDownTimers = {};
-
-
 function getLanguageLocale (){
   if (!window.languageKey) {
     const locale = JBridge.getKeysInSharedPref("LANGUAGE_KEY");
@@ -191,69 +188,6 @@ export const setText = function (id) {
     setTextImpl(id, text, text.length);
   }
 }
-
-function instantGetTimer (fn ,id, delay) {
-  const timerId = setInterval( fn, delay, id);
-  return timerId;
-}
-
-export const countDown = function (countDownTime) {
-  return function (id) {
-    return function (cb) {
-      return function (action) {
-        return function () {
-          console.log("countDown", countDownTime, id, action);
-          if (countDownTimers[id] != undefined) {
-            clearInterval(countDownTimers[id].id);
-          }
-          const handler = function (keyId) {
-            const timer = countDownTimers[keyId];
-            if (timer) {
-              console.log("countDown", countDownTimers, keyId, timer);
-              timer.time = timer.time -= 1;
-              if (timer.time <= 0) {
-                console.log("countDownEXPIRED", "EXPIRED", timer, countDownTimers[keyId]);
-                clearInterval(timer.id);
-                countDownTimers[keyId] = undefined;
-                delete countDownTimers[keyId];
-                cb(action(0)(keyId)("EXPIRED")(timer.id))();
-              } else {
-                cb(action(timer.time)(keyId)("INPROGRESS")(timer.id))();
-              }
-            }
-          }
-          const timerId = instantGetTimer(handler, id, 1000);
-          const timer = {
-            time: countDownTime,
-            id: timerId
-          }
-          countDownTimers[id] = timer;
-          handler(id);
-        }
-      }
-    }
-  }
-}
-
-export const clearCountDownTimer = function (timerId) {
-  console.log("clearCountDownTimer", timerId, countDownTimers, countDownTimers[timerId]);
-  if (window.__OS == "IOS") {
-    if (window.JBridge.clearCountDownTimer) {
-      window.JBridge.clearCountDownTimer();
-    }
-  } else {
-    if(countDownTimers[timerId]) {
-      clearInterval(countDownTimers[timerId].id);
-      countDownTimers[timerId] = undefined;
-      delete countDownTimers[timerId];
-    }
-  }
-}
-
-export const clearTimer = function (a)
-{
-  clearInterval(parseInt(a));
-};
 
 export const getExpiryTime = function (str1) {
   return function (reverse) {
@@ -574,11 +508,13 @@ function getRandom(max) {
 }
 
 export const updateIdMap = function (key) {
+  console.log ("updateIdMap")
   idMap[key] = {id : getRandom(10000), shouldPush: true};
   return idMap[key];
 };
 
 export const updatePushInIdMap = function (key, flag) {
+  console.log ("updatePushInIdMap", idMap, flag);
   if (idMap[key]) {
     idMap[key]["shouldPush"] = flag;
   }
@@ -586,6 +522,7 @@ export const updatePushInIdMap = function (key, flag) {
 
 export const getValueFromIdMap = function (key) {
   let val = idMap[key]; 
+  console.log ("getValueFromIdMap", idMap);
   if (!val) {
     idMap[key] = {id : getRandom(10000), shouldPush: true};
     val = idMap[key];

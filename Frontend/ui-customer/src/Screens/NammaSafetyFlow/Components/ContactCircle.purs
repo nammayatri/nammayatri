@@ -78,7 +78,7 @@ config :: Config
 config = 
     { contact : 
         { name : ""
-        , priority : 0
+        , priority : 1
         , number : ""
         , isSelected : false
         , enableForFollowing : false

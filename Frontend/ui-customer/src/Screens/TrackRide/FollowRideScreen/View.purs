@@ -20,7 +20,7 @@ import Common.Resources.Constants (pickupZoomLevel, zoomLevel)
 import Common.Types.App (LazyCheck(..), Paths)
 import Components.DriverInfoCard.Common.View (addressShimmerView, driverDetailsView, driverInfoShimmer, sourceDestinationView)
 import Constants.Configs (getPolylineAnimationConfig)
-import Data.Array (any, head, length, mapWithIndex, null, (!!))
+import Data.Array (any, head, length, mapWithIndex, (!!))
 import Data.Either (Either(..))
 import Data.Function.Uncurried (runFn2)
 import Data.Lens ((^.))
@@ -31,7 +31,7 @@ import Effect.Aff (Milliseconds(..), launchAff)
 import Effect.Uncurried (runEffectFn1)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, getValueFromIdMap, liftFlow, os, updatePushInIdMap)
 import Helpers.Utils (FetchImageFrom(..), fetchImage, storeCallBackCustomer)
-import JBridge (addAndUpdateRideSafeOverlay, addAndUpdateSOSRipples, addNavigateMarker, animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, removeSOSRipples, showMap, updateRoute, updateRouteConfig)
+import JBridge (animateCamera, drawRoute, enableMyLocation, getExtendedPath, isCoordOnPath, removeAllPolylines, removeMarker, showMap, updateRoute, updateRouteConfig)
 import Mobility.Prelude (boolToVisibility)
 import Prelude
 import PrestoDOM (PrestoDOM, Screen, onAnimationEnd, onBackPressed, onClick)
@@ -41,8 +41,8 @@ import PrestoDOM.Types.DomAttributes (Accessiblity(..), Corners(..), Gradient(..
 import Screens.FollowRideScreen.Controller (Action(..), ScreenOutput, eval)
 import Screens.FollowRideScreen.ScreenData (mockDriverInfo, mockDriverLocation, mockRoute)
 import Screens.FollowRideScreen.Config (SOSOverlayConfig, genericHeaderConfig, getCurrentFollower, getDriverDetails, getFollowerName, getPeekHeight, getSosOverlayConfig, getTripDetails, primaryButtonConfig)
-import Services.API (GetDriverLocationResp(..), GetRouteResp(..), LatLong(..), RideBookingListRes(..), RideBookingRes, Route(..), Snapped(..))
-import Services.Backend (TrackingType(..), drawMapRoute, getDriverLocation, getRoute, getRouteMarkers, makeGetRouteReq, normalRoute, rideBooking, rideBookingList, walkCoordinate, walkCoordinates)
+import Services.API (GetDriverLocationResp(..), GetRouteResp(..), LatLong(..), RideBookingRes(..), Route(..), Snapped(..))
+import Services.Backend (TrackingType(..), drawMapRoute, getDriverLocation, getRoute, getRouteMarkers, makeGetRouteReq, normalRoute, rideBooking, walkCoordinate, walkCoordinates)
 import Types.App (GlobalState(..), defaultGlobalState)
 import Common.Types.App as Common
 import Components.GenericHeader as GenericHeader
@@ -55,16 +55,15 @@ import PrestoDOM.Animation as PrestoAnim
 import Screens.RideBookingFlow.HomeScreen.Config as HSConfig
 import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers)
 import Styles.Colors as Color
-import Screens.HomeScreen.Transformer (getDriverInfo)
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
 import Components.PrimaryButton as PrimaryButton
-
+import Engineering.Helpers.RippleCircles (addAndUpdateRideSafeOverlay, addAndUpdateSOSRipples, addNavigateMarker, removeSOSRipples)
 
 screen :: FollowRideScreenState -> GlobalState -> Screen Action FollowRideScreenState ScreenOutput
 screen initialState globalState =
   { initialState
-  , view : view globalState
+  , view
   , name: "FollowRideScreen"
   , globalEvents:
       [ ( \push -> do
@@ -74,6 +73,7 @@ screen initialState globalState =
                 tracking <- runEffectFn1 getValueFromIdMap "FollowsRide"
                 storeCallBackCustomer push NotificationListener "FollowRideScreen"
                 when tracking.shouldPush $ void $ launchAff $ flowRunner globalState $ driverLocationTracking push UpdateStatus 5000.0 tracking.id "trip"
+              MockFollowRide -> void $ launchAff $ flowRunner defaultGlobalState $ updateMockData push
               _ -> pure unit
             pure $ pure unit
         )
@@ -92,11 +92,10 @@ type Layout w
 
 view ::
   forall w.
-  GlobalState ->
   (Action -> Effect Unit) ->
   FollowRideScreenState ->
   Layout w
-view globalState push state =
+view push state =
   screenAnimation
     $ linearLayout
         [ height MATCH_PARENT
@@ -107,15 +106,14 @@ view globalState push state =
         ]
     $ case state.data.currentStage of
         PersonList -> [ followersListView push state ]
-        _ -> [ followingRideView globalState push state ]
+        _ -> [ followingRideView push state ]
 
 followingRideView ::
   forall w.
-  GlobalState ->
   (Action -> Effect Unit) ->
   FollowRideScreenState ->
   Layout w
-followingRideView globalState push state =
+followingRideView push state =
   frameLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
@@ -143,10 +141,11 @@ followingRideView globalState push state =
             _ -> [ sosOverlayView push (getSosOverlayConfig state status) ]
           Nothing -> [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state) ]
   where
-    getPush = (\action -> do
-                void $ showMap (getNewIDWithTag "FollowRideMap") true "satellite" pickupZoomLevel push MapReady
-                when (state.data.currentStage == MockFollowRide) $ void $ launchAff $ flowRunner defaultGlobalState $ updateMockData push
-                push action)
+  getPush =
+    ( \action -> do
+        void $ showMap (getNewIDWithTag "FollowRideMap") true "satellite" pickupZoomLevel push MapReady
+        push action
+    )
 
 followersListView ::
   forall w.
@@ -189,53 +188,60 @@ followersListView push state =
           ]
       ]
 
-
 rideCompletedView ::
   forall w.
   (Action -> Effect Unit) ->
   FollowRideScreenState ->
   Layout w
 rideCompletedView push state =
-  let currentFollower = getCurrentFollower state.data.currentFollower
-      name = getFollowerName currentFollower state
+  let
+    currentFollower = getCurrentFollower state.data.currentFollower
+
+    name = getFollowerName currentFollower state
+
+    titleText = getString $ if state.data.sosStatus /= Just Common.Resolved then RIDE_ENDED name else REACHED_DESTINATION_SAFELY name
   in
-  linearLayout
-  [ height MATCH_PARENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , background Color.blackLessTrans
-  , visibility $ boolToVisibility $ state.data.currentStage == RideCompletedStage
-  , gravity BOTTOM
-  ][  linearLayout
-      [ height WRAP_CONTENT
+    linearLayout
+      [ height MATCH_PARENT
       , width MATCH_PARENT
       , orientation VERTICAL
-      , background Color.white900
-      , gravity CENTER
-      , cornerRadii $ Corners 24.0 true true false false
-      ][  imageView
-          [ height $ V 82
-          , width $ V 82
-          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_tick"
-          , margin $ MarginTop 24
-          ]
-        , textView $
-          [ height WRAP_CONTENT
-          , width WRAP_CONTENT
-          , text $ getString $ REACHED_DESTINATION_SAFELY name
-          , color Color.black900
-          , margin $ MarginTop 24
-          , gravity CENTER
-          ] <> FontStyle.h1 TypoGraphy
-        , linearLayout
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , margin $ MarginTop 32
-          ][ sourceDestinationView push (getTripDetails state Color.blue600)]
-        , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
+      , background Color.blackLessTrans
+      , clickable true
+      , visibility $ boolToVisibility $ state.data.currentStage == RideCompletedStage
+      , gravity BOTTOM
       ]
-  ]
-
+      [ linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , background Color.white900
+          , gravity CENTER
+          , cornerRadii $ Corners 24.0 true true false false
+          ]
+          [ imageView
+              [ height $ V 82
+              , width $ V 82
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_green_tick"
+              , margin $ MarginTop 24
+              ]
+          , textView
+              $ [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , text titleText
+                , color Color.black900
+                , margin $ MarginTop 24
+                , gravity CENTER
+                ]
+              <> FontStyle.h1 TypoGraphy
+          , linearLayout
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , margin $ MarginTop 32
+              ]
+              [ sourceDestinationView push (getTripDetails state Color.blue600) ]
+          , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
+          ]
+      ]
 
 followerItem :: forall w. Followers -> (Action -> Effect Unit) -> Layout w
 followerItem item push =
@@ -359,46 +365,46 @@ bottomSheetView push state =
 
 sosOverlayView :: forall w. (Action -> Effect Unit) -> SOSOverlayConfig -> Layout w
 sosOverlayView push config =
-  let currentGradient = if os == "IOS" then Linear 270.0 [ Color.white900, Color.white900, Color.white900,  Color.transparent ] else Linear 180.0 [Color.white900, Color.white900, Color.white900,  Color.transparent ]
+  let
+    currentGradient = if os == "IOS" then Linear 270.0 [ Color.white900, Color.white900, Color.white900, Color.transparent ] else Linear 180.0 [ Color.white900, Color.white900, Color.white900, Color.transparent ]
   in
-  linearLayout
-    [ width MATCH_PARENT
-    , height WRAP_CONTENT
-    , orientation VERTICAL
-    , padding $ Padding 16 10 16 70
-    , gradient currentGradient
-    ]
-    [ linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , gravity RIGHT
-        , onClick push $ const BackPressed
-        ]
-        [ imageView
-            [ height $ V 24
-            , width $ V 24
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
+    linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , padding $ Padding 16 10 16 70
+      , gradient currentGradient
+      ]
+      [ linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , gravity RIGHT
+          , onClick push $ const BackPressed
+          ]
+          [ imageView
+              [ height $ V 24
+              , width $ V 24
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_close"
+              ]
+          ]
+      , textView
+          $ [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , text $ config.title
+            , color config.color
+            , gravity CENTER
             ]
-        ]
-    , textView
-        $ [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , text $ config.title
-          , color config.color
-          , gravity CENTER
-          ]
-        <> FontStyle.h2 TypoGraphy
-    , textView
-        $ [ width MATCH_PARENT
-          , height WRAP_CONTENT
-          , text $ config.subTitle
-          , gravity CENTER
-          , margin $ MarginTop 6
-          , color config.color
-          ]
-        <> FontStyle.body1 TypoGraphy
-    ]
-
+          <> FontStyle.h2 TypoGraphy
+      , textView
+          $ [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , text $ config.subTitle
+            , gravity CENTER
+            , margin $ MarginTop 6
+            , color config.color
+            ]
+          <> FontStyle.body1 TypoGraphy
+      ]
 
 knobView :: forall w. Layout w
 knobView =
@@ -522,7 +528,6 @@ headerView push state =
           ]
       ]
 
-
 emergencyActionsView ::
   forall w.
   (Action -> Effect Unit) ->
@@ -558,9 +563,10 @@ buttonView push state =
     , clickable $ state.data.currentStage /= MockFollowRide
     ]
     [ imageView
-        [ width $ V 20
-        , height $ V 20
-        , imageWithFallback ""
+        [ width $ V 16
+        , height $ V 16
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_police_black"
+        , margin $ MarginRight 10
         ]
     , textView
         $ [ text $ getString CALL_POLICE
@@ -577,16 +583,20 @@ driverLocationTracking push action duration id routeState = do
   let state = gs.followRideScreen
   trackingId <- liftFlow $ runEffectFn1 getValueFromIdMap "FollowsRide"
   when (id == trackingId.id) $ do
-    let _ = runFn2 updatePushInIdMap "FollowsRide" false
     when (isJust state.data.currentFollower)
       $ do
-          let follower = getCurrentFollower state.data.currentFollower
+          let
+            follower = getCurrentFollower state.data.currentFollower
           resp <- rideBooking follower.bookingId
+          void $ pure $ runFn2 updatePushInIdMap "FollowsRide" false
           case resp of
             Right respBooking -> do
+              updateSosStatus respBooking
               liftFlow $ push $ action respBooking
               when ((getPeekHeight state) == 300) $ liftFlow $ push $ UpdatePeekHeight
             Left err -> pure unit
+    (GlobalState gs) <- getState
+    let state = gs.followRideScreen
     case state.data.driverInfoCardState of
       Nothing -> pure unit
       Just ride -> do
@@ -594,11 +604,10 @@ driverLocationTracking push action duration id routeState = do
         case response of
           Right resp -> do
             trackingId <- liftFlow $ runEffectFn1 getValueFromIdMap "FollowsRide"
-            if id == trackingId.id then do
+            when (id == trackingId.id) $ do
               case state.data.route of
                 Nothing -> routeNotExist resp ride state
                 Just route -> routeExist resp route ride state
-              else pure unit
           Left _ -> do
             void $ delay $ Milliseconds $ duration * 2.0
             resetRoute
@@ -616,17 +625,38 @@ driverLocationTracking push action duration id routeState = do
                     }
                   }
                 }
+  updateSosStatus :: RideBookingRes -> Flow GlobalState Unit
+  updateSosStatus (RideBookingRes resp) =
+    void
+      $ modifyState \(GlobalState globalState) ->
+          GlobalState
+            $ globalState
+                { followRideScreen
+                  { data
+                    { sosStatus = resp.sosStatus
+                    }
+                  }
+                }
   routeNotExist :: GetDriverLocationResp -> DriverInfoCard -> FollowRideScreenState -> Flow GlobalState Unit
   routeNotExist (GetDriverLocationResp resp) ride state = do
-    let srcLat = (resp ^. _lat)
-        srcLon = (resp ^. _lon)
-        dstLat = ride.destinationLat
-        dstLon = ride.destinationLng
-        destination = ride.destination
-        markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
-        sourceSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.sourceTag
-        destSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.destinationTag
-        specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
+    let
+      srcLat = (resp ^. _lat)
+
+      srcLon = (resp ^. _lon)
+
+      dstLat = ride.destinationLat
+
+      dstLon = ride.destinationLng
+
+      destination = ride.destination
+
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
+
+      sourceSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.sourceTag
+
+      destSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.destinationTag
+
+      specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
     routeResponse <- getRoute routeState $ makeGetRouteReq srcLat srcLon dstLat dstLon
     case routeResponse of
       Right (GetRouteResp routeResp) -> do
@@ -636,13 +666,16 @@ driverLocationTracking push action duration id routeState = do
             void $ liftFlow $ removeSOSRipples ""
             let
               (Snapped routePoints) = routes.points
+
               newPoints =
                 if length routePoints > 1 then
                   getExtendedPath (walkCoordinates routes.points)
                 else
                   walkCoordinate srcLat srcLon dstLat dstLon
+
               newRoute = routes { points = Snapped (map (\item -> LatLong { lat: item.lat, lon: item.lng }) newPoints.points) }
-              point = {lat :srcLat , lng : srcLon} 
+
+              point = { lat: srcLat, lng: srcLon }
             addSosMarkers state.data.sosStatus point
             liftFlow $ drawRoute newPoints "LineString" "#323643" true markers.srcMarker markers.destMarker 8 "DRIVER_LOCATION_UPDATE" "" ride.destination specialLocationTag
             liftFlow $ animateCamera srcLat srcLon 17.0 "ZOOM"
@@ -665,20 +698,31 @@ driverLocationTracking push action duration id routeState = do
       Left _ -> do
         void $ delay $ Milliseconds $ duration * 2.0
         driverLocationTracking push action duration id routeState
+
   routeExist :: GetDriverLocationResp -> Route -> DriverInfoCard -> FollowRideScreenState -> Flow GlobalState Unit
   routeExist (GetDriverLocationResp resp) (Route route) ride state = do
-    let srcLat = (resp ^. _lat)
-        srcLon = (resp ^. _lon)
-        dstLat = ride.destinationLat
-        dstLon = ride.destinationLng
-        markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
-        sourceSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.sourceTag
-        destSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.destinationTag
-        specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
+    let
+      srcLat = (resp ^. _lat)
+
+      srcLon = (resp ^. _lon)
+
+      dstLat = ride.destinationLat
+
+      dstLon = ride.destinationLng
+
+      markers = getRouteMarkers ride.vehicleVariant state.props.city RIDE_TRACKING
+
+      sourceSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.sourceTag
+
+      destSpecialTagIcon = HSConfig.specialLocationIcons state.data.zoneType.destinationTag
+
+      specialLocationTag = HSConfig.specialLocationConfig sourceSpecialTagIcon destSpecialTagIcon false getPolylineAnimationConfig
     locationResp <- liftFlow $ isCoordOnPath (walkCoordinates route.points) (resp ^. _lat) (resp ^. _lon) (state.data.speed)
     if locationResp.isInPath then do
-      let newPoints = { points: locationResp.points }
-          mbPoint = head locationResp.points
+      let
+        newPoints = { points: locationResp.points }
+
+        mbPoint = head locationResp.points
       liftFlow
         $ runEffectFn1 updateRoute
             updateRouteConfig { json = newPoints, destMarker = markers.destMarker, eta = (HSConfig.metersToKm locationResp.distance true), srcMarker = markers.srcMarker, specialLocation = specialLocationTag, zoomLevel = zoomLevel, autoZoom = false }
@@ -691,18 +735,18 @@ driverLocationTracking push action duration id routeState = do
     else do
       resetRoute
       driverLocationTracking push action duration id routeState
+
   addSosMarkers :: Maybe Common.SosStatus -> Paths -> Flow GlobalState Unit
-  addSosMarkers mbStatus point = 
-    case mbStatus of
-      Nothing -> pure unit
-      Just status -> case status of
-          Common.Resolved -> do
-            _ <- pure $ removeMarker "SOSMarkerLabel"
-            liftFlow $ addAndUpdateRideSafeOverlay point
-          Common.Pending -> do
-            liftFlow $ addAndUpdateSOSRipples point
-            liftFlow $ addNavigateMarker point push OnNavigate
-          _ -> pure unit
+  addSosMarkers mbStatus point = case mbStatus of
+    Nothing -> pure unit
+    Just status -> case status of
+      Common.Resolved -> do
+        _ <- pure $ removeMarker "SOSMarkerLabel"
+        liftFlow $ addAndUpdateRideSafeOverlay point
+      Common.Pending -> do
+        liftFlow $ addAndUpdateSOSRipples point
+        liftFlow $ addNavigateMarker point push OnNavigate
+      _ -> pure unit
 
 separatorView :: forall w. PrestoDOM (Effect Unit) w
 separatorView =
@@ -713,64 +757,76 @@ separatorView =
     ]
     []
 
-
 updateMockData :: (Action -> Effect Unit) -> Flow GlobalState Unit
-updateMockData push = do
-  _ <- pure $ spy "updateMockData" "updateMockData"
-  rideBookingListResponse <- rideBookingList "1" "0" "true"
-  case rideBookingListResponse of 
-    Right (RideBookingListRes listResp) -> do
-      if null listResp.list 
-        then defaultMockFlow
-        else do
-          let mbRideBooking = head listResp.list
-          case mbRideBooking of
-            Nothing -> defaultMockFlow
-            Just ride -> do
-              let driverInfoCardState = getDriverInfo Nothing ride false
-              eiResp <- getDriverLocation driverInfoCardState.rideId
-              case eiResp of
-                Right resp -> currentRideDataMockFlow driverInfoCardState resp
-                Left _ -> defaultMockFlow
-    Left _ -> defaultMockFlow
+updateMockData push = defaultMockFlow
+  -- rideBookingListResponse <- rideBookingList "1" "0" "true" -- Required when we show actual data
+  -- case rideBookingListResponse of
+  --   Right (RideBookingListRes listResp) -> do
+  --     if null listResp.list then
+  --       defaultMockFlow
+  --     else do
+  --       let
+  --         mbRideBooking = head listResp.list
+  --       case mbRideBooking of
+  --         Nothing -> defaultMockFlow
+  --         Just ride -> do
+  --           let
+  --             driverInfoCardState = getDriverInfo Nothing ride false
+  --           eiResp <- getDriverLocation driverInfoCardState.rideId
+  --           case eiResp of
+  --             Right resp -> currentRideDataMockFlow driverInfoCardState resp
+  --             Left _ -> defaultMockFlow
+  --   Left _ -> defaultMockFlow
   where
-    defaultMockFlow :: Flow GlobalState Unit
-    defaultMockFlow = do 
-      let srcPoint = getPoint mockDriverLocation
-      pushAction $ UpdateMockData mockDriverInfo
-      drawDriverRoute mockDriverInfo srcPoint $ Just mockRoute
-      pushSOSStatus Common.Pending
-      localDelay 10000.0
-      liftFlow $ addAndUpdateRideSafeOverlay srcPoint
-      pushSOSStatus Common.Resolved
-      localDelay 10000.0
-      pushAction BackPressed
-    currentRideDataMockFlow :: DriverInfoCard -> GetDriverLocationResp -> Flow GlobalState Unit
-    currentRideDataMockFlow ride resp = do
-      let srcPoint = getPoint resp
-      pushAction $ UpdateMockData ride
-      drawDriverRoute ride srcPoint Nothing
-      pushSOSStatus Common.Pending
-      localDelay 10000.0
-      liftFlow $ addAndUpdateRideSafeOverlay srcPoint
-      pushSOSStatus Common.Resolved
-      localDelay 10000.0
-      pushAction $ UpdateCurrentStage RideCompletedStage
-    pushAction :: Action ->  Flow GlobalState Unit
-    pushAction action = liftFlow $ push $ action
-    localDelay :: Number -> Flow GlobalState Unit
-    localDelay seconds = void $ delay $ Milliseconds seconds
-    pushSOSStatus :: Common.SosStatus -> Flow GlobalState Unit
-    pushSOSStatus status = liftFlow $ push $ UpdateMockSOSStatus status
-    drawDriverRoute :: DriverInfoCard -> Paths -> Maybe Route -> Flow GlobalState Unit
-    drawDriverRoute ride srcPoint route = do
-      let srcLat = srcPoint.lat
-          srcLon = srcPoint.lng
-          dstLat = ride.destinationLat
-          dstLon = ride.destinationLng
-      void $ runExceptT $ runBackT $ drawMapRoute srcLat srcLon dstLat dstLon (normalRoute "") "NORMAL" (getString SOS_LOCATION) (getString DROP) route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig){autoZoom = false}
-      liftFlow $ addAndUpdateSOSRipples srcPoint
-      liftFlow $ animateCamera srcLat srcLon 17.0 "ZOOM"
-    getPoint :: GetDriverLocationResp -> Paths
-    getPoint (GetDriverLocationResp resp) = {lat :resp ^. _lat , lng : resp ^. _lon} 
+  defaultMockFlow :: Flow GlobalState Unit
+  defaultMockFlow = do
+    localDelay 1000.0
+    let
+      srcPoint = getPoint mockDriverLocation
+    pushAction $ UpdateMockData mockDriverInfo
+    drawDriverRoute mockDriverInfo srcPoint $ Just mockRoute
+    pushSOSStatus Common.Pending
+    localDelay 10000.0
+    liftFlow $ addAndUpdateRideSafeOverlay srcPoint
+    pushSOSStatus Common.Resolved
+    localDelay 10000.0
+    pushAction BackPressed
 
+  currentRideDataMockFlow :: DriverInfoCard -> GetDriverLocationResp -> Flow GlobalState Unit
+  currentRideDataMockFlow ride resp = do
+    let
+      srcPoint = getPoint resp
+    pushAction $ UpdateMockData ride
+    drawDriverRoute ride srcPoint Nothing
+    pushSOSStatus Common.Pending
+    localDelay 10000.0
+    liftFlow $ addAndUpdateRideSafeOverlay srcPoint
+    pushSOSStatus Common.Resolved
+    localDelay 10000.0
+    pushAction $ UpdateCurrentStage RideCompletedStage
+
+  pushAction :: Action -> Flow GlobalState Unit
+  pushAction action = liftFlow $ push $ action
+
+  localDelay :: Number -> Flow GlobalState Unit
+  localDelay seconds = void $ delay $ Milliseconds seconds
+
+  pushSOSStatus :: Common.SosStatus -> Flow GlobalState Unit
+  pushSOSStatus status = liftFlow $ push $ UpdateMockSOSStatus status
+
+  drawDriverRoute :: DriverInfoCard -> Paths -> Maybe Route -> Flow GlobalState Unit
+  drawDriverRoute ride srcPoint route = do
+    let
+      srcLat = srcPoint.lat
+
+      srcLon = srcPoint.lng
+
+      dstLat = ride.destinationLat
+
+      dstLon = ride.destinationLng
+    void $ runExceptT $ runBackT $ drawMapRoute srcLat srcLon dstLat dstLon (normalRoute "") "NORMAL" (getString SOS_LOCATION) (getString DROP) route "trip" $ (HSConfig.specialLocationConfig "" "" false getPolylineAnimationConfig) { autoZoom = false }
+    liftFlow $ addAndUpdateSOSRipples srcPoint
+    liftFlow $ animateCamera srcLat srcLon 17.0 "ZOOM"
+
+  getPoint :: GetDriverLocationResp -> Paths
+  getPoint (GetDriverLocationResp resp) = { lat: resp ^. _lat, lng: resp ^. _lon }

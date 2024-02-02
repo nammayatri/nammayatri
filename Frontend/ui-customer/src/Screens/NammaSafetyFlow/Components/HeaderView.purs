@@ -15,6 +15,7 @@ import Components.GenericHeader as GenericHeader
 import Effect (Effect)
 import Language.Strings (getString)
 import Language.Types (STR(..))
+import Common.Types.App
 import Mobility.Prelude
 
 view :: (Action -> Effect Unit) -> Config -> forall w. PrestoDOM (Effect Unit) w
@@ -71,8 +72,8 @@ data Action
   = GenericHeaderAC GenericHeader.Action
   | LearnMoreClicked
 
-config :: Config
-config =
+config :: LazyCheck -> Config
+config _ =
   { title: getString NAMMA_SAFETY
   , showLearnMore: false
   , showCrossImage: false

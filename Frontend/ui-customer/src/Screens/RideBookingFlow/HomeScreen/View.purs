@@ -132,7 +132,7 @@ screen initialState =
             _ <- pure $ printLog "storeCallBackCustomer initially" "."
             _ <- pure $ printLog "storeCallBackCustomer callbackInitiated" initialState.props.callbackInitiated
             -- push NewUser -- TODO :: Handle the functionality
-            -- _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
+            _ <- if initialState.data.config.enableMockLocation then isMockLocation push IsMockLocation else pure unit
             _ <- launchAff $ flowRunner defaultGlobalState $ checkForLatLongInSavedLocations push UpdateSavedLoc initialState
             when (initialState.props.followsRide && isNothing initialState.data.followers) $ void $ launchAff $ flowRunner defaultGlobalState $ getFollowRide push UpdateFollowers
             if (not initialState.props.callbackInitiated) then do
@@ -420,7 +420,7 @@ view push state =
         ]
   ]
   where
-    showSafetyAlertPopup = not $ any (_ == (getValueToLocalNativeStore SAFETY_ALERT_TYPE))["__failed", "false", "(null)"]
+    showSafetyAlertPopup = Arr.notElem (getValueToLocalNativeStore SAFETY_ALERT_TYPE) ["__failed", "false", "(null)"]
 
 bottomNavBarView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 bottomNavBarView push state = let 
@@ -901,13 +901,13 @@ sosView push state =
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER
-    , visibility $ boolToVisibility $ isStageInList state.props.currentStage [RideAccepted, RideStarted, ChatWithDriver]
+    , visibility $ boolToVisibility $ state.props.currentStage == RideStarted && state.data.config.feature.enableSafetyFlow
     ]
     [ textView
         $ [ text $ getString NEW <> "✨"
           , color Color.white900
-          , margin $ Margin 18 16 12 12
-          , padding $ Padding 12 30 12 3
+          , margin $ Margin 22 16 22 0
+          , padding $ PaddingVertical 30 3
           , background Color.blue900
           , width $ V 130
           , gravity CENTER
@@ -922,7 +922,7 @@ sosView push state =
         ]
         [ linearLayout
             [ height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , width $ V 150
             , margin $ Margin 12 12 12 12
             , shadow $ Shadow 0.1 2.0 10.0 24.0 Color.greyBackDarkColor 0.5
             , background Color.white900
@@ -930,8 +930,10 @@ sosView push state =
             , onClick push $ const OpenEmergencyHelp
             ]
             [ linearLayout
-                [ gravity CENTER_VERTICAL
-                , padding $ Padding 12 6 12 6
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , gravity CENTER
+                , padding $ PaddingVertical 6 6
                 ]
                 [ imageView
                     [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_sos"
@@ -1113,7 +1115,7 @@ emptySuggestionsBanner state push =
             ] <> (FontStyle.body2 LanguageStyle)
          , linearLayout
             [ height WRAP_CONTENT
-            , width $ V $ (screenWidth unit)/2
+            , width WRAP_CONTENT
             , gravity CENTER_VERTICAL
             ][
               textView $
@@ -1373,7 +1375,6 @@ rideRequestFlowView push state =
 
       isCityInList :: City -> Array City -> Boolean
       isCityInList city = any (_ == city)
-
 
 isStageInList :: Stage -> Array Stage -> Boolean
 isStageInList stage = any (_ == stage)
@@ -4357,18 +4358,6 @@ computeListItem push = do
   bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousal)
   void $ liftFlow $ push (SetBannerItem bannerItem)
     
-sosSetupBannerView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w 
-sosSetupBannerView state push = 
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    , margin (Margin 10 10 10 10)
-    , gravity BOTTOM
-    ][     
-        Banner.view (push <<< StartSOSOnBoarding) (sosSetupBannerConfig state)
-    ]
-
 safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 safetyAlertPopup push state =
   linearLayout

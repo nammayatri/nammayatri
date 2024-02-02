@@ -39,7 +39,7 @@ import Prelude (class Eq, class Show)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import PrestoDOM (LetterSpacing, BottomSheetState(..), Visibility(..))
 import RemoteConfigs as RC
-import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat)
+import Services.API (AddressComponents, BookingLocationAPIEntity, EstimateAPIEntity(..), QuoteAPIEntity, TicketPlaceResp, RideBookingRes, Route, BookingStatus(..), LatLong(..), PlaceType(..), ServiceExpiry(..), Chat, SosFlow(..))
 import Components.SettingSideBar.Controller as SideBar
 import Components.MessagingView.Controller (ChatComponent)
 import Screens(ScreenName)
@@ -451,7 +451,7 @@ type ReportIssueChatScreenData = {
   entryPoint :: ReportIssueChatScreenEntryPoint,
   config :: AppConfig
 }
-data ReportIssueChatScreenEntryPoint = TripDetailsScreenEntry | RideSelectionScreenEntry | HelpAndSupportScreenEntry | OldChatEntry | SafetyScreen
+data ReportIssueChatScreenEntryPoint = TripDetailsScreenEntry | RideSelectionScreenEntry | HelpAndSupportScreenEntry | OldChatEntry | SafetyScreen | HomeScreenEntry
 derive instance genericReportIssueChatScreenEntryPoint :: Generic ReportIssueChatScreenEntryPoint _
 instance showReportIssueChatScreenEntryPoint :: Show ReportIssueChatScreenEntryPoint where show = genericShow
 instance eqReportIssueChatScreenEntryPoint :: Eq ReportIssueChatScreenEntryPoint where eq = genericEq
@@ -935,7 +935,7 @@ type HomeScreenStateProps =
   , autoScroll :: Boolean
   , enableChatWidget :: Boolean
   , focussedBottomIcon :: BottomNavBarIcon
-  , showSosBanner :: Boolean
+  , sosBannerType :: Maybe SosBannerType
   , showShareRide :: Boolean
   , followsRide :: Boolean 
   }
@@ -1081,6 +1081,12 @@ type RateCardDetails = {
   title :: String ,
   description :: String
 }
+
+data SosBannerType = SETUP_BANNER | MOCK_DRILL_BANNER
+
+derive instance genericSosBannerType :: Generic SosBannerType _
+instance showSosBannerType :: Show SosBannerType where show = genericShow
+instance eqSosBannerType :: Eq SosBannerType where eq = genericEq
 
 type EmergencyHelpModelState = {
    currentlySelectedContact :: Contact,
@@ -2004,7 +2010,8 @@ type NammaSafetyScreenData =  {
   removedContactDetail :: NewContacts,
   currentLocation :: String,
   vehicleDetails :: String,
-  videoList :: Array RC.SafetyVideoConfig
+  videoList :: Array RC.SafetyVideoConfig,
+  sosType :: Maybe SosFlow
  }
 
 type NammaSafetyScreenProps =  {
@@ -2022,7 +2029,6 @@ type NammaSafetyScreenProps =  {
   triggeringSos :: Boolean,
   confirmTestDrill :: Boolean,
   educationViewIndex :: Maybe Int,
-  setYoutubeView :: Boolean,
   showCallPolice :: Boolean,
   shouldCallAutomatically :: Boolean
 }

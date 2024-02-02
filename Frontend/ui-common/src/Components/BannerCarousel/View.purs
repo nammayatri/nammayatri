@@ -90,7 +90,6 @@ bannerView push config =
             , width WRAP_CONTENT
             , visibility GONE
             , visibilityHolder "actionTextVisibility"
-            , padding $ Padding 10 0 10 0
             , margin $ MarginTop 5
             , gravity CENTER_VERTICAL
             , backgroundHolder "actionTextBackgroundColour"

@@ -38,6 +38,7 @@ data BannerType = AutoPay
   | Gender
   | Remote String --TODO:: Temp added for just youtube links
   | ZooTicket
+  | Safety
   | MetroTicket
 
 type CarouselConfig a = {

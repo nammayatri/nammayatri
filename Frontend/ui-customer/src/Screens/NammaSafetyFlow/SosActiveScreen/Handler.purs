@@ -38,3 +38,6 @@ sosActiveScreen = do
     GoToEducationScreen updatedState -> do
       modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ act)
+    UpdateAction updatedState comment -> do
+      modifyScreenState $ NammaSafetyScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ act)

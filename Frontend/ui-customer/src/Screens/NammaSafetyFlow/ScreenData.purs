@@ -42,7 +42,8 @@ initData =
           }
       , currentLocation : "Loading..."
       , vehicleDetails : "Loading..."
-      , videoList : educationData --RC.safetyVideoConfig
+      , videoList : []
+      , sosType : Nothing
       }
   , props:
       { onRide: false
@@ -59,7 +60,6 @@ initData =
       , showTestDrill : false
       , confirmTestDrill : false
       , educationViewIndex : Nothing
-      , setYoutubeView : true
       , showCallPolice : false
       , shouldCallAutomatically : false
       }

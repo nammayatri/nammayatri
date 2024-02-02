@@ -254,6 +254,7 @@ foreign import scrollViewFocus :: String -> Int -> Boolean
 foreign import clearChatMessages :: Effect Unit
 foreign import getLocationPermissionStatus :: Fn1 Unit String 
 foreign import pauseYoutubeVideo :: Unit -> Unit 
+foreign import releaseYoutubeView :: Unit -> Unit 
 foreign import storeCallBackLocateOnMap :: forall action. (action -> Effect Unit) -> (String -> String -> String -> action) -> Effect Unit
 foreign import debounceFunction :: forall action. Int -> (action -> Effect Unit) -> (String -> Boolean -> action) -> Boolean -> Effect Unit
 foreign import updateInputString :: String -> Unit
@@ -274,7 +275,9 @@ foreign import stopRecord :: Unit -> Effect Unit
 foreign import setMapPaddingImpl :: EffectFn4 Int Int Int Int Unit
 foreign import datePickerImpl :: forall action. EffectFn3 (action -> Effect Unit) (String -> Int -> Int -> Int -> action) Int Unit
 foreign import timePickerImpl :: forall action. EffectFn2 (action -> Effect Unit) (String -> Int -> Int -> action) Unit
-
+foreign import clearAudioPlayer :: String -> Unit
+foreign import pauseAudioPlayer :: String -> Unit
+foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect Unit) (String -> action) Unit
 foreign import displayBase64Image :: EffectFn1 DisplayBase64ImageConig Unit
 
 setMapPadding :: Int -> Int -> Int -> Int -> Effect Unit
@@ -590,110 +593,3 @@ showDatePicker push action= do
   let (TimePicker timeResp hour minute) = timePicker
   liftEffect $ push $ action dateResp year month day timeResp hour minute
   
-  
-
-foreign import addRippleCircle :: EffectFn1 CircleRippleConfig Unit
-foreign import animateRippleCircle :: EffectFn1 CircleRippleConfig Unit
-foreign import removeRippleCircle :: EffectFn1 CircleRippleConfig Unit
-foreign import updateRippleCirclePosition :: EffectFn1 CircleRippleConfig Unit
-foreign import addGroundOverlay :: EffectFn1 GroundOverlayConfig Unit
-foreign import updateGroundOverlay :: EffectFn1 GroundOverlayConfig Unit
-foreign import removeGroundOverlay :: EffectFn1 GroundOverlayConfig Unit
-foreign import upsertMarkerLabel :: EffectFn1 MarkerLabelConfig Unit
-foreign import clearMap :: EffectFn1 String Unit
-foreign import isOverlayPresent :: String -> Boolean
-foreign import isCirclePresent :: String -> Boolean
-foreign import clearAudioPlayer :: String -> Unit
-foreign import pauseAudioPlayer :: String -> Unit
-foreign import startAudioPlayer :: forall action. Fn3 String (action -> Effect Unit) (String -> action) Unit
-
-
-addAndUpdateRideSafeOverlay :: Paths -> Effect Unit
-addAndUpdateRideSafeOverlay center = 
-    if isOverlayPresent "SOSDangerOverlay" 
-      then do
-        removeSOSRipples ""
-        addOverlay center
-      else 
-        if isOverlayPresent "SOSSafeOverlay" 
-          then do
-            removeSOSRipples ""
-            updateSafeGroundOverlay center
-          else addOverlay center
-  where
-    addOverlay center = void $ runEffectFn1 addGroundOverlay groundOverlayConfig{center = center, id = "SOSSafeOverlay", imageUrl = "ny_ic_sos_safe"}
-
-addAndUpdateSOSRipples :: Paths -> Effect Unit
-addAndUpdateSOSRipples center = do
-  if isCirclePresent "ripples_1" 
-    then do
-      void $ runEffectFn1 updateRippleCirclePosition circleRippleConfig{center = center}
-      void $ runEffectFn1 updateGroundOverlay groundOverlayConfig{center = center, id = "SOSDangerOverlay"} 
-    else do
-      void $ runEffectFn1 addRippleCircle circleRippleConfig{center = center}
-      void $ runEffectFn1 animateRippleCircle circleRippleConfig{center = center}
-      void $ runEffectFn1 addGroundOverlay groundOverlayConfig{center = center, id = "SOSDangerOverlay"}
-
-addNavigateMarker :: forall action. Paths -> (action -> Effect Unit) -> action -> Effect Unit
-addNavigateMarker point push action = do
-  let
-    callBack = callbackMapper (push action)
-    locationName = runFn2 getLocationNameV2 point.lat point.lng
-  runEffectFn1 
-    upsertMarkerLabel 
-      { id: "SOSMarkerLabel"
-      , title: locationName
-      , actionImage: "ny_ic_navigate"
-      , actionCallBack: callBack
-      , position: point
-      , markerImage : ""
-      }
-updateSafeGroundOverlay :: Paths -> Effect Unit
-updateSafeGroundOverlay center = do
-  void $ runEffectFn1 updateGroundOverlay groundOverlayConfig{center = center, id = "SOSSafeOverlay"}
-  -- void $ addMarker "ny_ic_green_circle" center.lat center.lng 60 0.5 0.0 -- Need to check with designer not looking good
-
-removeSOSRipples :: String -> Effect Unit
-removeSOSRipples _ = do
-  void $ runEffectFn1 removeRippleCircle circleRippleConfig
-  void $ runEffectFn1 removeGroundOverlay groundOverlayConfig{id = "SOSDangerOverlay"}
-  void $ pure $ removeMarker "ny_ic_red_circle"
-
-circleRippleConfig :: CircleRippleConfig
-circleRippleConfig = {
-  delay : 100
-, duration : 1000
-, pause : 100
-, repeatMode : -1
-, count : 5
-, radius : 10.0
-, maxRadius : 5.0
-, strokeWidth : 5.0
-, maxStrokeWidth : 8.0
-, fromStrokeColor : "#f9cdcc"
-, toStrokeColor : "#FF0000"
-, prefix : "ripples"
-, center : {
-  lat : 0.0
-, lng : 0.0
-}
-}
-
-groundOverlayConfig :: GroundOverlayConfig
-groundOverlayConfig = {
-  id : "<unique>"
-, height : 150
-, width : 150
-, imageUrl : "ny_ic_sos_active"
-, fetchFromView : false
-, viewId : ""
-, center : {
-  lat : 0.0
-, lng : 0.0
-}
-}
-
--- RepeatMode Mappings
--- RESTART = 1
--- REVERSE = 2
--- INFINITE = -1

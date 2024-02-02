@@ -33,7 +33,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, getLocationName)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -78,8 +78,6 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  -- screenAnimation
-  --   $ 
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
@@ -87,6 +85,12 @@ view push state =
     , background Color.black900
     , padding padding'
     , onBackPressed push $ const $ BackPressed
+    , afterRender
+            ( \_ -> do
+                getLocationName push 9.9 9.9 "Current Location" SelectedCurrentLocation
+                pure unit
+            )
+            (const NoAction)
     ]
     [ case state.props.showTestDrill of
         true -> testSafetyHeaderView push
@@ -94,12 +98,11 @@ view push state =
     , case state.props.showCallPolice of
         true -> dialPoliceView state push
         false -> sosActiveView state push
-    -- , shimmerView state
     ]
   where
   padding' = if EHC.os == "IOS" then (PaddingVertical EHC.safeMarginTop (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
-  headerConfig = Header.config { useLightColor = true, title = if not state.props.showCallPolice then getString EMERGENCY_SOS else "Call Police", learnMoreTitle = getString LEARN_ABOUT_NAMMA_SAFETY, showLearnMore = false }
+  headerConfig = (Header.config Language) { useLightColor = true, title = getString $ if not state.props.showCallPolice then EMERGENCY_SOS else CALL_POLICE, learnMoreTitle = getString LEARN_ABOUT_NAMMA_SAFETY, showLearnMore = false }
 
 ------------------------------------- dashboardView -----------------------------------
 sosActiveView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
@@ -119,7 +122,7 @@ sosActiveView state push =
         , margin $ Margin 16 16 16 16
         , orientation VERTICAL
         ]
-        [ callPoliceView state push
+        [ callPoliceView state push CALL_POLICE
         , PrimaryButton.view (push <<< MarkRideAsSafe) (cancelSOSBtnConfig state)
         ]
     ]
@@ -160,7 +163,7 @@ sosDescriptionView state push =
       $ if state.props.showTestDrill then
           TEST_SOS_TRIGGERED_DESC
         else if null state.data.emergencyContactsList then
-          PLEASE_STAY_CALM_TEAM_ALERTED
+          PLEASE_STAY_CALM_TEAM_ALERTED "PLEASE_STAY_CALM_TEAM_ALERTED"
         else
           SOS_TRIGGERED_DESC
 
@@ -243,8 +246,8 @@ emergencyContactsView state push =
         )
     ]
 
-callPoliceView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
-callPoliceView state push =
+callPoliceView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> STR -> forall w. PrestoDOM (Effect Unit) w
+callPoliceView state push text' =
   linearLayout
     ( [ height WRAP_CONTENT
       , width MATCH_PARENT
@@ -261,9 +264,10 @@ callPoliceView state push =
         , width $ V 26
         ]
     , textView
-        $ [ text $ getString CALL_POLICE
+        $ [ text $ getString text'
           , gravity CENTER
           , color Color.white900
+          , margin $ MarginLeft 6
           ]
         <> FontStyle.subHeading2 TypoGraphy
     ]
@@ -277,9 +281,6 @@ type ImageTextViewConfig
     , useFullWidth :: Boolean
     , image :: Maybe String
     }
-
-getHeaderTitle :: SafetySetupStage -> String
-getHeaderTitle stage = getString NAMMA_SAFETY
 
 shimmerView :: forall w. ST.NammaSafetyScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
@@ -470,8 +471,10 @@ dialPoliceView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , alignParentBottom "true,-1"
+        , orientation VERTICAL
         , margin $ MarginBottom 16
         ]
-        [ callPoliceView state push
+        [ safetyPartnerView Language
+        , callPoliceView state push DIAL_NOW
         ]
     ]

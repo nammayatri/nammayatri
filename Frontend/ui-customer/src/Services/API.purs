@@ -1247,6 +1247,7 @@ newtype GetProfileRes = GetProfileRes
   , disability :: Maybe String
   , hasDisability :: Maybe Boolean
   , hasCompletedSafetySetup :: Maybe Boolean
+  , hasCompletedMockSafetyDrill :: Maybe Boolean
   , followsRide :: Maybe Boolean
   }
 
@@ -1861,7 +1862,7 @@ newtype UserSosFlow = UserSosFlow
 
 newtype UserSosRes = UserSosRes
   {
-    id :: String
+    sosId :: String
   }
 
 instance makeUserSosReq :: RestEndpoint UserSosReq UserSosRes where
@@ -2796,7 +2797,28 @@ data GetSosDetailsReq = GetSosDetailsReq String
 
 newtype GetSosDetailsRes = GetSosDetailsRes
   {
-    sosId :: Maybe String
+    sos :: Maybe Sos
+  }
+
+data SosFlow = Police | CustomerCare | EmergencyContact String | SafetyFlow
+
+derive instance genericSosFlow :: Generic SosFlow _
+instance showSosFlow :: Show SosFlow where show = genericShow
+instance decodeSosFlow :: Decode SosFlow where decode = defaultDecode
+instance encodeSosFlow :: Encode SosFlow where encode = defaultEncode
+instance eqSosFlow :: Eq SosFlow where eq = genericEq
+instance standardEncodeSosFlow :: StandardEncode SosFlow
+  where
+    standardEncode Police = standardEncode {}
+    standardEncode CustomerCare = standardEncode {}
+    standardEncode (EmergencyContact param) = standardEncode param
+    standardEncode SafetyFlow = standardEncode {}
+
+newtype Sos = Sos 
+  {
+    flow :: SosFlow,
+    id :: String,
+    status :: CTA.SosStatus
   }
 
 instance makeGetSosDetailsReq :: RestEndpoint GetSosDetailsReq GetSosDetailsRes where
@@ -2816,6 +2838,13 @@ instance standardEncodeGetSosDetailsRes :: StandardEncode GetSosDetailsRes where
 instance showGetSosDetailsRes :: Show GetSosDetailsRes where show = genericShow
 instance decodeGetSosDetailsRes :: Decode GetSosDetailsRes where decode = defaultDecode
 instance encodeGetSosDetailsRes :: Encode GetSosDetailsRes where encode = defaultEncode
+
+derive instance genericSos :: Generic Sos _
+derive instance newtypeSos :: Newtype Sos _
+instance standardEncodeSos :: StandardEncode Sos where standardEncode (Sos res) = standardEncode res
+instance showSos :: Show Sos where show = genericShow
+instance decodeSos :: Decode Sos where decode = defaultDecode
+instance encodeSos :: Encode Sos where encode = defaultEncode
 
 data UpdateAsSafeReq = UpdateAsSafeReq String
 

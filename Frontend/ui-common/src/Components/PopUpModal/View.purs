@@ -155,8 +155,8 @@ view push state =
                                 url = state.coverVideoConfig.mediaUrl
                             if (supportsInbuildYoutubePlayer unit) then 
                                 case mediaType of
-                                    "VideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeData (getVideoID url) "VIDEO" 0 false true false) id (show PLAY) push YoutubeVideoStatus
-                                    "PortraitVideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeData (getVideoID url) "PORTRAIT_VIDEO" 0 false true false) id (show PLAY) push YoutubeVideoStatus
+                                    "VideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig  "VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
+                                    "PortraitVideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig  "PORTRAIT_VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
                                     _ -> pure unit
                                 else pure unit
                         )(const NoAction)
@@ -397,6 +397,11 @@ view push state =
             ]
         ]
     ]
+    where 
+    getYoutubeDataConfig videoType videoId = getYoutubeData {
+        videoType = videoType,
+        videoId = videoId
+        }
 
 listView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 listView push state = 

@@ -185,10 +185,16 @@ skipButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 skipButtonConfig state =
   let
     config = PrimaryButton.config
+    buttonText =
+      if state.data.ratingViewState.selectedYesNoButton == boolToInt state.props.nightSafetyFlow 
+      then
+        REPORT_ISSUE_
+      else
+        DONE
     primaryButtonConfig' =
       config
         { textConfig
-          { text = getString DONE
+          { text = getString buttonText
           , accessibilityHint = "Done : Button"
           , color = state.data.config.primaryTextColor
           }
@@ -417,21 +423,30 @@ disabilityBannerConfig state action =
       }
   in config'
   
-sosSetupBannerConfig :: ST.HomeScreenState -> Banner.Config
-sosSetupBannerConfig state = 
-  let 
-    config = Banner.config
-    config' = config
-      { 
-        backgroundColor = Color.lightMintGreen
-      , title = getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE
-      , titleColor = Color.elfGreen
-      , actionText = (getString SETUP_NOW)
-      , actionTextColor = Color.elfGreen
-      , imageUrl = fetchImage FF_ASSET "ny_ic_banner_sos"
-      , isBanner = true
-      }
-  in config'
+sosSetupBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
+sosSetupBannerConfig state action =
+  let
+    config = BannerCarousel.config action
+
+    bannerConfig =
+      case state.props.sosBannerType of
+        Just ST.SETUP_BANNER -> {title: getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE, actionText: getString SETUP_NOW, image : "ny_ic_banner_sos"}
+        Just ST.MOCK_DRILL_BANNER -> {title: getString COMPLETE_YOUR_TEST_DRILL, actionText: getString TEST_DRILL, image : "ny_ic_mock_drill_banner"}
+        Nothing -> {title: "", actionText: "", image : ""}
+
+    config' =
+      config
+        { backgroundColor = Color.lightMintGreen
+        , title = bannerConfig.title
+        , titleColor = Color.elfGreen
+        , actionText = bannerConfig.actionText
+        , actionTextColor = Color.elfGreen
+        , imageUrl = fetchImage FF_ASSET bannerConfig.image
+        , type = BannerCarousel.Safety
+        }
+  in
+    config'
+
 
 
 metroBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
@@ -1621,7 +1636,7 @@ getCarouselData :: ST.HomeScreenState -> Array CarouselData
 getCarouselData state =
   map (\item -> 
     { imageConfig : { image : item.image , height : item.imageHeight , width : 200, bgColor : item.imageBgColor, cornerRadius : 8.0 },
-      youtubeConfig : (EHC.getYoutubeData item.videoLink "PORTRAIT_VIDEO" item.videoHeight false true false),
+      youtubeConfig : EHC.getYoutubeData{ videoId = item.videoLink , videoType = "PORTRAIT_VIDEO",  videoHeight = item.videoHeight},
       contentType : if item.videoLink == "" then "IMAGE" else "VIDEO" ,
       gravity : item.gravity ,
       backgroundColor : item.carouselBgColor,
