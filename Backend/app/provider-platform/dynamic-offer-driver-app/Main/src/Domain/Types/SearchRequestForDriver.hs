@@ -17,6 +17,7 @@
 module Domain.Types.SearchRequestForDriver where
 
 import qualified Domain.Types.BapMetadata as DSM
+import Domain.Types.Common as DTC
 import Domain.Types.Driver.GoHomeFeature.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Location as DLoc
@@ -103,6 +104,8 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     newFromLocation :: DLoc.Location,
     newToLocation :: Maybe DLoc.Location, -- we need to show all requests or last one ?
     distance :: Maybe Meters,
+    duration :: Maybe Seconds,
+    tripCategory :: DTC.TripCategory,
     driverLatLong :: LatLong,
     driverMinExtraFee :: Maybe Money,
     driverMaxExtraFee :: Maybe Money,
@@ -148,6 +151,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       keepHiddenForSeconds = keepHiddenForSeconds,
       goHomeRequestId = nearbyReq.goHomeRequestId,
       customerCancellationDues = nearbyReq.customerCancellationDues,
+      tripCategory = searchTry.tripCategory,
+      duration = searchRequest.estimatedDuration,
       ..
     }
 

@@ -90,7 +90,7 @@ handler req@PaymentCompletedReq {} = do
 handler AddStopReq {..} = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   case listToMaybe stops of
-    Nothing -> throwError (InvalidRequest $ "No stop information received from rider side for bookimg " <> bookingId.getId)
+    Nothing -> throwError (InvalidRequest $ "No stop information received from rider side for booking " <> bookingId.getId)
     Just loc -> processStop booking loc False
 handler EditStopReq {..} = do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
@@ -165,9 +165,9 @@ buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCity
 
 processStop :: DBooking.Booking -> Common.Location -> Bool -> Flow ()
 processStop booking loc isEdit = do
-  validateStopReq booking True
+  validateStopReq booking isEdit
   location <- buildLocation loc
-  locationMapping <- buildLocationMapping location.id booking.providerId.getId isEdit (Just booking.providerId) (Just booking.merchantOperatingCityId)
+  locationMapping <- buildLocationMapping location.id booking.id.getId isEdit (Just booking.providerId) (Just booking.merchantOperatingCityId)
   QL.create location
   QLM.create locationMapping
   QRB.updateStop booking.id (Just location.id.getId)

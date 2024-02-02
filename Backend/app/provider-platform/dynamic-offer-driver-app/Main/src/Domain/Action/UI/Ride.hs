@@ -258,7 +258,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         autoPayStatus = driverInfo >>= (.autoPayStatus),
         isFreeRide = ride.isFreeRide,
         customerCancellationDues = fareParams.customerCancellationDues,
-        stopLocationId = (.id) <$> booking.toLocation,
+        stopLocationId = booking.stopLocationId,
         tripCategory = booking.tripCategory,
         nextStopLocation = nextStopLocation,
         lastStopLocation = lastStopLocation,

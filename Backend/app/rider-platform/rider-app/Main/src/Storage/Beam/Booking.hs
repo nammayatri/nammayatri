@@ -48,6 +48,8 @@ data BookingT f = BookingT
     estimatedFare :: B.C f HighPrecMoney,
     discount :: B.C f (Maybe HighPrecMoney),
     estimatedTotalFare :: B.C f HighPrecMoney,
+    estimatedDistance :: B.C f (Maybe HighPrecMeters),
+    estimatedDuration :: B.C f (Maybe Seconds),
     distance :: B.C f (Maybe HighPrecMeters),
     otpCode :: B.C f (Maybe Text),
     vehicleVariant :: B.C f VehVar.VehicleVariant,

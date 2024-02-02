@@ -203,6 +203,8 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         estimatedFare = quote.estimatedFare,
         discount = quote.discount,
         estimatedTotalFare = quote.estimatedTotalFare,
+        estimatedDistance = searchRequest.distance,
+        estimatedDuration = searchRequest.estimatedRideDuration,
         vehicleVariant = quote.vehicleVariant,
         bookingDetails,
         tripTerms = quote.tripTerms,

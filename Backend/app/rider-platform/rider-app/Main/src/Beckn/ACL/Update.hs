@@ -139,7 +139,7 @@ mkUpdateMessage req@AddStopBuildReq {} = do
           update_target = "fulfillment.state.code,fufillment.stops",
           fulfillment =
             AddStopU.FulfillmentInfo
-              { id = req.bppRideId.getId,
+              { id = req.bppBookingId.getId,
                 stops = req.stops
               }
         }
@@ -151,7 +151,7 @@ mkUpdateMessage req@EditStopBuildReq {} = do
           update_target = "fulfillment.state.code,fufillment.stops",
           fulfillment =
             EditStopU.FulfillmentInfo
-              { id = req.bppRideId.getId,
+              { id = req.bppBookingId.getId,
                 stops = req.stops
               }
         }

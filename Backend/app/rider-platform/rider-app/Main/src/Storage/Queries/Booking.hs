@@ -323,6 +323,8 @@ instance FromTType' BeamB.Booking Booking where
             merchantOperatingCityId = merchantOperatingCityId',
             specialLocationTag = specialLocationTag,
             createdAt = createdAt,
+            estimatedDistance = estimatedDistance,
+            estimatedDuration = estimatedDuration,
             updatedAt = updatedAt
           }
     where
@@ -393,6 +395,8 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.merchantId = getId merchantId,
             BeamB.merchantOperatingCityId = Just $ getId merchantOperatingCityId,
             BeamB.specialLocationTag = specialLocationTag,
+            BeamB.estimatedDistance = estimatedDistance,
+            BeamB.estimatedDuration = estimatedDuration,
             BeamB.createdAt = createdAt,
             BeamB.updatedAt = updatedAt
           }

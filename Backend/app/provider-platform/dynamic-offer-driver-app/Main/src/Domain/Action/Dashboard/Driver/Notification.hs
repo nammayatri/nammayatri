@@ -20,6 +20,7 @@ where
 
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Driver as Common
 import Data.Time hiding (getCurrentTime, secondsToNominalDiffTime)
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DMOC
@@ -109,6 +110,8 @@ mkDummyNotificationEntityData now driverVehicle fromLocData toLocData =
           goHomeRequestId = Nothing,
           isTranslated = False,
           customerCancellationDues = 0,
+          tripCategory = DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
+          duration = Just (Seconds 300),
           ..
         }
 
