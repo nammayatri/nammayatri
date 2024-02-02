@@ -51,6 +51,7 @@ import Effect.Aff (launchAff)
 import Types.App
 import Presto.Core.Types.Language.Flow ( delay)
 import Data.Time.Duration (Milliseconds(..))
+import Domain.Payments as PP
 
 instance showAction :: Show Action where
   show _ = ""
@@ -84,7 +85,7 @@ eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatu
   case metroTicketBookingStatus.status of 
     "CONFIRMED" -> do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
-      continueWithCmd state{ props{paymentStatus = Common.Success, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}} [do
+      continueWithCmd state{ props{paymentStatus = PP.Success, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}} [do
             void $ pure $ spy "getMetroStatusEvent" ""
             push <- getPushFn Nothing "MetroTicketStatusScreen"
             void $ launchAff $ flowRunner defaultGlobalState $ do
@@ -93,7 +94,7 @@ eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatu
             pure NoAction]
     "FAILED" -> do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
-      continue state{ props{paymentStatus = Common.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
+      continue state{ props{paymentStatus = PP.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
       
       -- continue 
       --   state{
@@ -104,7 +105,7 @@ eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatu
       --   }
     "EXPIRED" -> do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
-      continue state{ props{paymentStatus = Common.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
+      continue state{ props{paymentStatus = PP.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
       -- continue 
       --   state{
       --     props{
@@ -127,8 +128,8 @@ eval (Copy text) state =
 
 eval (ViewTicketBtnOnClick PrimaryButton.OnClick) state = 
   case state.props.paymentStatus of 
-    Common.Success -> updateAndExit state $ GoToMetroTicketDetails state state.data.resp
-    Common.Failed -> exit $ GoToTryAgainPayment state
+    PP.Success -> updateAndExit state $ GoToMetroTicketDetails state state.data.resp
+    PP.Failed -> exit $ GoToTryAgainPayment state
     _ -> continue state
 
 eval (AfterRender) state = continue state{

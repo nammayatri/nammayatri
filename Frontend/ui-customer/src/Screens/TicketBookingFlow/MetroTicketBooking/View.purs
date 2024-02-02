@@ -282,7 +282,7 @@ headerView state push =
 
 incrementDecrementView :: forall w. (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
 incrementDecrementView push state =
-  let ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then 6 else 6
+  let ticketLimit = if state.data.ticketType == ST.ROUND_TRIP then 1 else 1
       limitReached = (state.data.ticketType == ST.ROUND_TRIP && state.data.ticketCount >= ticketLimit) || (state.data.ticketType == ST.ONE_WAY && state.data.ticketCount >= ticketLimit)
   in 
   linearLayout

@@ -20,6 +20,7 @@ import Data.Maybe
 import ConfigProvider
 import Screens.Types 
 import Services.API 
+import Domain.Payments as PP
 
 initData :: MetroTicketStatusScreenState
 initData = 
@@ -36,7 +37,7 @@ initData =
   }
   , props : {
       showShimmer : true,
-      paymentStatus : Common.Success  
+      paymentStatus : PP.Success  
     }
   }
 
