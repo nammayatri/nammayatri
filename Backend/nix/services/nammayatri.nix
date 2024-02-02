@@ -28,9 +28,9 @@ in
   };
 
   imports = [
-    ny.inputs.services-flake.processComposeModules.default
-    ny.inputs.passetto.processComposeModules.default
-    ./postgres-with-replica.nix
+    # ny.inputs.services-flake.processComposeModules.default
+    # ny.inputs.passetto.processComposeModules.default
+    # ./postgres-with-replica.nix
   ];
 
   config =
@@ -104,17 +104,16 @@ in
           nammayatri-init = {
             imports = [ common ];
             depends_on = {
-              # Services
-              "db-primary".condition = "process_healthy";
-              "kafka".condition = "process_healthy";
-              "redis".condition = "process_healthy";
-              # "redis-cluster".condition = "process_healthy";
-              "nginx".condition = "process_healthy";
-              "osrm-server".condition = "process_started";
-              "passetto-service".condition = "process_started";
-            } // lib.optionalAttrs cfg.useCabal {
               # Compile Haskell code
               "cabal-build".condition = "process_completed_successfully";
+              # Services
+              # "db-primary".condition = "process_healthy";
+              # "kafka".condition = "process_healthy";
+              # "redis".condition = "process_healthy";
+              # "redis-cluster".condition = "process_healthy";
+              # "nginx".condition = "process_healthy";
+              "osrm-server".condition = "process_healthy";
+              # "passetto-server".condition = "process_healthy";
             };
             command = pkgs.writeShellApplication {
               name = "run-mobility-stack-init";
@@ -163,11 +162,6 @@ in
           location-tracking-service = {
             imports = [ common ];
             command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
-            availability = {
-              restart = "on_failure";
-              backoff_seconds = 2;
-              max_restarts = 5;
-            };
           };
           osrm-server = {
             imports = [ common ];
@@ -176,7 +170,7 @@ in
 
           kafka-consumers-exe = {
             environment = {
-              CONSUMER_TYPE = "AVAILABILITY_TIME";
+              CONSUMER_TYPE = "LOCATION_UPDATE";
             };
           };
 
@@ -213,83 +207,83 @@ in
       };
 
       # External services
-      services = {
-        postgres-with-replica.db-primary = {
-          enable = true;
-          extraMasterDBSettings = { name, ... }: {
-            # Unix socket length is supposed to be under 108 chars, see: https://linux.die.net/man/7/unix
-            socketDir = "$HOME/NY/socket/${name}";
-            extensions = extensions: [
-              extensions.postgis
-            ];
-            initialDatabases = [
-              {
-                name = "atlas_dev";
-                schemas = [
-                  ../../dev/sql-seed/pre-init.sql
-                  ../../dev/sql-seed/rider-app-seed.sql
-                  ../../dev/local-testing-data/rider-app.sql
-                  ../../dev/sql-seed/public-transport-rider-platform-seed.sql
-                  ../../dev/local-testing-data/public-transport-rider-platform.sql
-                  ../../dev/sql-seed/mock-registry-seed.sql
-                  ../../dev/local-testing-data/mock-registry.sql
-                  ../../dev/sql-seed/dynamic-offer-driver-app-seed.sql
-                  ../../dev/local-testing-data/dynamic-offer-driver-app.sql
-                  ../../dev/sql-seed/rider-dashboard-seed.sql
-                  ../../dev/local-testing-data/rider-dashboard.sql
-                  ../../dev/sql-seed/provider-dashboard-seed.sql
-                  ../../dev/local-testing-data/provider-dashboard.sql
-                  ../../dev/sql-seed/special-zone-seed.sql
-                  ../../dev/local-testing-data/special-zone.sql
-                ];
-              }
-            ];
-            initialScript.before = ''
-              CREATE USER repl_user replication;
-              CREATE USER atlas WITH PASSWORD 'atlas';
-            '';
-            port = 5434;
-          };
-          extraReplicaDBSettings = { name, ... }: {
-            socketDir = "$HOME/NY/socket/${name}";
-            port = 5435;
-          };
-        };
+      # services = {
+      #   postgres-with-replica.db-primary = {
+      #     enable = true;
+      #     extraMasterDBSettings = { name, ... }: {
+      #       # Unix socket length is supposed to be under 108 chars, see: https://linux.die.net/man/7/unix
+      #       socketDir = "$HOME/NY/socket/${name}";
+      #       extensions = extensions: [
+      #         extensions.postgis
+      #       ];
+      #       initialDatabases = [
+      #         {
+      #           name = "atlas_dev";
+      #           schemas = [
+      #             ../../dev/sql-seed/pre-init.sql
+      #             ../../dev/sql-seed/rider-app-seed.sql
+      #             ../../dev/local-testing-data/rider-app.sql
+      #             ../../dev/sql-seed/public-transport-rider-platform-seed.sql
+      #             ../../dev/local-testing-data/public-transport-rider-platform.sql
+      #             ../../dev/sql-seed/mock-registry-seed.sql
+      #             ../../dev/local-testing-data/mock-registry.sql
+      #             ../../dev/sql-seed/dynamic-offer-driver-app-seed.sql
+      #             ../../dev/local-testing-data/dynamic-offer-driver-app.sql
+      #             ../../dev/sql-seed/rider-dashboard-seed.sql
+      #             ../../dev/local-testing-data/rider-dashboard.sql
+      #             ../../dev/sql-seed/provider-dashboard-seed.sql
+      #             ../../dev/local-testing-data/provider-dashboard.sql
+      #             ../../dev/sql-seed/special-zone-seed.sql
+      #             ../../dev/local-testing-data/special-zone.sql
+      #           ];
+      #         }
+      #       ];
+      #       initialScript.before = ''
+      #         CREATE USER repl_user replication;
+      #         CREATE USER atlas WITH PASSWORD 'atlas';
+      #       '';
+      #       port = 5434;
+      #     };
+      #     extraReplicaDBSettings = { name, ... }: {
+      #       socketDir = "$HOME/NY/socket/${name}-replica";
+      #       port = 5435;
+      #     };
+      #   };
 
-        redis."redis".enable = true;
+      #   redis."redis".enable = true;
 
-        redis-cluster."cluster1".enable = true;
+      #   redis-cluster."cluster1".enable = true;
 
-        zookeeper."zookeeper".enable = true;
+      #   zookeeper."zookeeper".enable = true;
 
-        apache-kafka."kafka" = {
-          enable = true;
-          port = 29092;
-          settings = {
-            # Since the available brokers are only 1
-            "offsets.topic.replication.factor" = 1;
-            "zookeeper.connect" = [ "localhost:2181" ];
-          };
-        };
+      #   apache-kafka."kafka" = {
+      #     enable = true;
+      #     port = 29092;
+      #     settings = {
+      #       # Since the available brokers are only 1
+      #       "offsets.topic.replication.factor" = 1;
+      #       "zookeeper.connect" = [ "localhost:2181" ];
+      #     };
+      #   };
 
 
-        nginx."nginx".enable = true;
-      };
+      #   nginx."nginx".enable = true;
+      # };
       # kafka should start only after zookeeper is healthy
-      settings.processes.kafka.depends_on."zookeeper".condition = "process_healthy";
+      # settings.processes.kafka.depends_on."zookeeper".condition = "process_healthy";
 
-      services.passetto = {
-        enable = true;
-        port = 8021;
-        extraDbSettings = { name, ... }: {
-          port = 5422;
-          socketDir = "$HOME/NY/socket/${name}";
-        };
-        # FIXME: https://github.com/juspay/passetto/issues/2
-        package = lib.getBin
-          (if pkgs.stdenv.isDarwin
-          then inputs.passetto.packages.x86_64-darwin.passetto-service
-          else inputs'.passetto.packages.passetto-service);
-      };
+      # services.passetto = {
+      #   enable = true;
+      #   port = 8021;
+      #   extraDbSettings = { name, ... }: {
+      #     port = 5422;
+      #     socketDir = "$HOME/NY/socket/${name}";
+      #   };
+      #   # FIXME: https://github.com/juspay/passetto/issues/2
+      #   package = lib.getBin
+      #     (if pkgs.stdenv.isDarwin
+      #     then inputs.passetto.packages.x86_64-darwin.passetto-service
+      #     else inputs'.passetto.packages.passetto-service);
+      # };
     };
 }
