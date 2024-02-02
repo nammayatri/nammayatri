@@ -2913,7 +2913,9 @@ metroTicketPaymentFlow bookingId = do
                 modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer getMetroStatusResp2 metroTicketDetailsState)
                 modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer getMetroStatusResp2 shortOrderID metroTicketStatusScreen)
                 metroTicketStatusFlow
-             Nothing -> metroTicketBookingFlow
+             Nothing -> do
+              modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{ props { currentStage = MetroTicketSelection }})
+              metroTicketBookingFlow
         Nothing -> metroTicketBookingFlow
     Nothing -> metroTicketBookingFlow
 
@@ -3154,7 +3156,7 @@ metroMyTicketsFlow = do
   case flow of 
     GO_TO_METRO_TICKET_DETAILS_FLOW bookingStatusResp -> do
       modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer bookingStatusResp metroTicketDetailsState)
-      -- modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{props{previousScreenStage = ST.MetroTicketStatusStage}})
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\slsState -> slsState{props{previousScreenStage = ST.MetroTicketStatusStage}})
       metroTicketDetailsFlow
     GO_TO_METRO_TICKET_STAUS_FLOW bookingStatusResp -> do
       modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer bookingStatusResp "" metroTicketStatusScreen)

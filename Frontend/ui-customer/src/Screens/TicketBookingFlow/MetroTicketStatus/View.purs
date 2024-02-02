@@ -43,7 +43,7 @@ import Screens.Types as ST
 import Styles.Colors as Color
 import Screens.TicketBookingFlow.MetroTicketStatus.ComponentConfig 
 import Resources.Constants -- TODO:: Replace these constants with API response
-import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag, convertUTCTimeToISTTimeinHHMMSS)
+import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag, convertUTCTimeToISTTimeinHHMMSS, liftFlow)
 import Services.API 
 import Animation (fadeInWithDelay, translateInXBackwardAnim, translateInXBackwardFadeAnimWithDelay, translateInXForwardAnim, translateInXForwardFadeAnimWithDelay)
 import Halogen.VDom.DOM.Prop (Prop)
@@ -93,29 +93,47 @@ screen initialState =
   getMetroStatusEvent push = do
     void $ pure $ spy "getMetroStatusEvent" ""
     void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
-    if initialState.props.paymentStatus == Common.Success then do
-      void $ pure $ spy "getMetroStatusEvent" ""
-      startTimer 4 "success" "1" push CountDown
-    else pure unit
+    -- if initialState.props.paymentStatus == Common.Success then do
+    --   void $ pure $ spy "getMetroStatusEvent" ""
+    --   void $ launchAff $ flowRunner defaultGlobalState $ do
+    --     void $ delay $ Milliseconds 4000.0 
+    --     liftFlow $ push $ ViewTicketBtnOnClick PrimaryButton.OnClick
+    --     -- startTimer 4 "success" "1" push CountDown
+    --   -- startTimer 4 "success" "1" push CountDown
+    -- else pure unit
     pure $ pure unit
 --------------------------------------------------------------------------------------------
 
 metroPaymentStatusPooling :: forall action. String -> String -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (MetroTicketBookingStatus -> action) -> Flow GlobalState Unit
 metroPaymentStatusPooling bookingId validUntil delayDuration state push action = do
   let dummy = spy (getCurrentUTC "") validUntil
-  let diffSec = spy "DIFF" $ runFn2 JB.differenceBetweenTwoUTC  validUntil (getCurrentUTC "")
+  let diffSec = spy "DIFF validUntil" $ runFn2 JB.differenceBetweenTwoUTC  validUntil (getCurrentUTC "")
   if (getValueToLocalStore METRO_PAYMENT_STATUS_POOLING) == "true" && bookingId /= "" then do
     ticketStatus <-  Remote.getMetroBookingStatus bookingId 
     void $ pure $ spy "ticketStatus" ticketStatus
     case ticketStatus of
       Right (API.GetMetroBookingStatusResp resp) -> do
         let (MetroTicketBookingStatus statusResp) = resp
-        if ((DA.any (_ == statusResp.status) ["CONFIRMED", "FAILED", "EXPIRED", "PAYMENT_PENDING"]) || diffSec < 0) then do
-            _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
-            doAff do liftEffect $ push $ action resp
-        else do
-            void $ delay $ Milliseconds delayDuration
-            metroPaymentStatusPooling bookingId validUntil delayDuration state push action
+        case statusResp.payment of
+          Just (FRFSBookingPaymentAPI paymentInfo) -> do
+            if paymentInfo.status == "NEW" then do
+              void $ pure $ spy "case 1" paymentInfo.status
+              _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+              doAff do liftEffect $ push $ action resp
+            else if ((DA.any (_ == statusResp.status) ["CONFIRMED", "FAILED", "EXPIRED"])) then do
+                void $ pure $ spy "case 2" statusResp.status
+                _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+                doAff do liftEffect $ push $ action resp
+            else do
+                if (diffSec + 2) < 0 then do
+                  void $ pure $ spy "case 3" (show diffSec)
+                  _ <- pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
+                  doAff do liftEffect $ push $ action resp
+                else do
+                  void $ pure $ spy "case 4" bookingId
+                  void $ delay $ Milliseconds delayDuration
+                  metroPaymentStatusPooling bookingId validUntil delayDuration state push action
+          _ -> pure unit
       Left _ -> pure unit
   else pure unit
 
@@ -372,27 +390,27 @@ paymentStatusHeader state push paymentStatus =
       , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
       , copyTransactionView
       , refreshStatusBtn
-      , paymentLottieLoader push state
+      -- , paymentLottieLoader push state
     ]
-paymentLottieLoader push state =
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , gravity CENTER_HORIZONTAL
-  ][  lottieAnimationView
-      [ height $ if EHC.os == "IOS" then V 170 else V 130
-      , width $ V 130
-      , padding $ PaddingBottom 80
-      , margin (MarginTop ((screenHeight unit)/ 7 - (if EHC.os == "IOS" then 140 else 90)))
-      , gravity CENTER
-      , id (getNewIDWithTag "paymentLoader")
-      , visibility if state.props.paymentStatus == Common.Success  then VISIBLE else GONE
-      , afterRender (\action -> do
-        void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/payment_lottie_loader.json", lottieId = (getNewIDWithTag "paymentLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
-        push action
-        ) (const NoAction)
-      ]
-    ]
+-- paymentLottieLoader push state =
+--   linearLayout
+--   [ height WRAP_CONTENT
+--   , width MATCH_PARENT
+--   , gravity CENTER_HORIZONTAL
+--   ][  lottieAnimationView
+--       [ height $ if EHC.os == "IOS" then V 170 else V 130
+--       , width $ V 130
+--       , padding $ PaddingBottom 80
+--       , margin (MarginTop ((screenHeight unit)/ 7 - (if EHC.os == "IOS" then 140 else 90)))
+--       , gravity CENTER
+--       , id (getNewIDWithTag "paymentLoader")
+--       , visibility if state.props.paymentStatus == Common.Success  then VISIBLE else GONE
+--       , afterRender (\action -> do
+--         void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/payment_lottie_loader.json", lottieId = (getNewIDWithTag "paymentLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
+--         push action
+--         ) (const NoAction)
+--       ]
+--     ]
 
 commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> Action -> PrestoDOM (Effect Unit) w
 commonTV push text' color' fontStyle marginTop gravity' action =
