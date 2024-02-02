@@ -41,9 +41,11 @@ type Layout w = PrestoDOM (Effect Unit) w
 carouselView :: forall w a action. Homogeneous a PropValue => (action -> Effect Unit) -> CarouselHolderConfig a action -> Layout w
 carouselView push config =
   let itemsLen = length config.items
+      layoutHeight = if os == "IOS" then V 100 else WRAP_CONTENT
+      indicatorLayoutHeight = if os == "IOS" then V 100 else MATCH_PARENT
   in
   frameLayout
-  [ height $ V 100
+  [ height layoutHeight
   , width MATCH_PARENT
   , gravity BOTTOM
   , visibility $ boolToVisibility $ itemsLen  > 0
@@ -52,7 +54,7 @@ carouselView push config =
   ]$ viewPager2
       $ [ listItem  $ config.view
       , listDataV2 $ config.items
-      , height $ V 100
+      , height layoutHeight
       , width MATCH_PARENT
       , currentItem config.currentPage
       , afterRender (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
@@ -61,7 +63,7 @@ carouselView push config =
         <> addPageCallBack itemsLen onPageScrollStateChanged config.onPageScrollStateChanged
         <> addPageCallBack itemsLen onPageScrolled config.onPageScrolled
     , linearLayout
-      [ height $ V 100
+      [ height indicatorLayoutHeight
       , width MATCH_PARENT
       , orientation VERTICAL
       , padding $ PaddingBottom 8

@@ -785,3 +785,4 @@ getML stringKey =
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "ഇതിനകം നിങ്ങളുടെ റൈഡ് പ്രവർത്തിക്കുന്നു"
         CONFIRM_STOP_LOCATION -> "Confirm stop location"
         CONFIRM_DROP -> "Confirm Drop"
+        BOOK_METRO_WITH_NY_NOW -> "നമ്മ യാത്രി ഉപയോഗിച്ച് \nമെട്രോ ടിക്കറ്റുകൾ ബുക്ക് ചെയ്യുക!"

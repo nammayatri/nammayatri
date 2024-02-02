@@ -122,7 +122,7 @@ import Types.App as TA
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import ConfigProvider
 import Timers (clearTimerWithId)
-import RemoteConfigs as RC
+import RemoteConfig as RC
 import Locale.Utils
 import Data.Array as DA
 

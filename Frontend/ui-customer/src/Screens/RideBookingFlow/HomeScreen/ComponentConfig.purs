@@ -417,6 +417,30 @@ disabilityBannerConfig state action =
       }
   in config'
 
+
+metroBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
+metroBannerConfig state action =
+  let
+    config = BannerCarousel.config action
+    config' = config
+      {
+        backgroundColor = Color.blue600'
+      , title = getString BOOK_METRO_WITH_NY_NOW
+      , titleColor = Color.blue800
+      , actionText = getString BOOK_NOW
+      , actionTextColor = Color.white900
+      , actionTextBackgroundColour = Color.blue800
+      , actionTextCornerRadius = "12.0"
+      , imageUrl = fetchImage FF_ASSET "ny_ic_metro_banner"
+      , margin = MarginTop 0
+      , imageHeight = V 100
+      , imageWidth = V 120
+      , padding = Padding 0 2 5 5
+      , imagePadding = PaddingLeft 24
+      , type = BannerCarousel.MetroTicket
+      }
+  in config'
+
 ticketBannerConfig :: forall action. ST.HomeScreenState -> action -> BannerCarousel.Config action
 ticketBannerConfig state action =
   let

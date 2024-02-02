@@ -768,3 +768,4 @@ getBN stringKey =
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "আপনার কাছে ইতিমধ্যে একটি সক্রিয় রাইড আছে"
         CONFIRM_STOP_LOCATION -> "Confirm stop location"
         CONFIRM_DROP -> "Confirm Drop"
+        BOOK_METRO_WITH_NY_NOW -> "নম্মা যাত্রীর সাথে এখনই \nমেট্রোর টিকিট বুক করুন!"

@@ -768,3 +768,4 @@ getKN stringKey =
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "ಈಗಾಗಲೇ ಸಕ್ರಿಯವಾಗಿರುವ ಸವಾರಿ ಇದೆ"
         CONFIRM_STOP_LOCATION -> "Confirm stop location"
         CONFIRM_DROP -> "Confirm Drop"
+        BOOK_METRO_WITH_NY_NOW -> "ಇದೀಗ ನಮ್ಮ ಯಾತ್ರಿ \nಮೂಲಕ ಮೆಟ್ರೋ ಟಿಕೆಟ್‌ಗಳನ್ನು ಬುಕ್ ಮಾಡಿ!"

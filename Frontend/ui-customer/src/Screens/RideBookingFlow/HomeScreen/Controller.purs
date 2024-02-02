@@ -93,7 +93,7 @@ import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity, getDriverInfo, getEstimateList, getQuoteList, getSpecialZoneQuotes, transformContactList, getNearByDrivers, getEstimatesInfo, dummyEstimateEntity)
 import Screens.RideBookingFlow.HomeScreen.Config
 import Screens.SuccessScreen.Handler as UI
-import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..))
+import Screens.Types (CallType(..), CardType(..), CurrentLocationDetails, CurrentLocationDetailsWithDistance(..), HomeScreenState, Location, LocationItemType(..), LocationListItemState, PopupType(..), RatingCard, SearchLocationModelType(..), SearchResultType(..), SheetState(..), SpecialTags, Stage(..), TipViewStage(..), ZoneType(..), Trip, BottomNavBarIcon(..), City(..))
 import Services.API (EstimateAPIEntity(..), FareRange, GetDriverLocationResp, GetQuotesRes(..), GetRouteResp, LatLong(..), OfferRes, PlaceName(..), QuoteAPIEntity(..), RideBookingRes(..), SelectListRes(..), SelectedQuotes(..), RideBookingAPIDetails(..), GetPlaceNameResp(..), RideBookingListRes(..))
 import Services.Backend as Remote
 import Services.Config (getDriverNumber, getSupportNumber)
@@ -909,6 +909,7 @@ data Action = NoAction
             | UpdateBanner
             | BannerChanged String
             | BannerStateChanged String
+            | MetroTicketBannerClickAC Banner.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -993,9 +994,12 @@ eval (BannerCarousal (BannerCarousel.OnClick idx)) state =
           BannerCarousel.Gender -> pure $ GenderBannerModal $ Banner.OnClick
           BannerCarousel.Disability -> pure $ DisabilityBannerAC $ Banner.OnClick
           BannerCarousel.ZooTicket -> pure $ TicketBookingFlowBannerAC $ Banner.OnClick
+          BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
           _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
+
+eval (MetroTicketBannerClickAC Banner.OnClick) state = continue state -- Handle Metro Ticket Flow
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
@@ -2960,3 +2964,7 @@ getBannerConfigs state =
     else [])
   <> (if (state.data.config.feature.enableZooTicketBookingFlow)
     then [ticketBannerConfig state BannerCarousal] else [])
+  <> if state.props.city == Chennai then 
+      [metroBannerConfig state BannerCarousal] 
+    else
+     []

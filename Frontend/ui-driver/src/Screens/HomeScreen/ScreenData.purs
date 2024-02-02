@@ -22,7 +22,7 @@ import Data.Maybe
 import Foreign.Object (empty)
 import Common.Types.App as Common
 import ConfigProvider
-import RemoteConfigs as RC
+import RemoteConfig as RC
 
 initData :: HomeScreenState
 initData = {

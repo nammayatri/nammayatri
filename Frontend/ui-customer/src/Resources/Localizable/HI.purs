@@ -768,4 +768,5 @@ getHI stringKey =
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "पहले से ही एक सक्रिय सवारी है"
         CONFIRM_STOP_LOCATION -> "Confirm stop location"
         CONFIRM_DROP -> "Confirm Drop"
-
+        BOOK_METRO_WITH_NY_NOW -> "नम्मा यात्री के साथ अभी \nमेट्रो टिकट बुक करें!"
+        

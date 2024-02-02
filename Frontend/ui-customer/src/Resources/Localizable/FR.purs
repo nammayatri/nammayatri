@@ -768,3 +768,4 @@ getFR stringKey =
         ALREADY_HAVE_AN_ACTIVE_RIDE -> "Vous avez déjà un trajet actif"
         CONFIRM_STOP_LOCATION -> "Confirm stop location"
         CONFIRM_DROP -> "Confirm Drop"
+        BOOK_METRO_WITH_NY_NOW -> "Réservez des billets de métro avec \namma Yatri maintenant !"
