@@ -48,7 +48,7 @@
                 <data android:scheme="http"/>
                 <data android:host="getyatri.com"/>
                 <data android:path="/p" />
-                <data android:path="/refer" />
+                <data android:path="/driverRefer" />
             </intent-filter>
 
         </activity>

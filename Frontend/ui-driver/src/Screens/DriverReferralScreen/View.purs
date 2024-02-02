@@ -36,6 +36,8 @@ import Mobility.Prelude
 import Engineering.Helpers.BackTrack (liftFlowBT)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Data.Maybe (isJust, fromMaybe)
+import Effect.Uncurried (runEffectFn4)
+import ConfigProvider
 
 screen :: DriverReferralScreenState -> Screen Action DriverReferralScreenState ScreenOutput
 screen initialState =
@@ -204,8 +206,12 @@ driverReferralCode push state =
             [ imageView
                 [ width $ V 148
                 , height $ V 148
+                , id (getNewIDWithTag "ReferralQRCode")
                 , gravity CENTER
-                , imageWithFallback $ fetchImage FF_ASSET config.qr_img
+                , padding (Padding 5 5 5 5)
+                , afterRender (\action -> do
+                                runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType config.referralDomain) (getNewIDWithTag "ReferralQRCode") 500 0
+                              ) (const RenderQRCode)
                 ]
             , textView
                 $ [ width MATCH_PARENT
@@ -268,22 +274,26 @@ driverReferralCode push state =
   config = if state.props.driverReferralType == DRIVER then driverReferralConfig else customerReferralConfig
 
   driverReferralConfig =
-    { backgroundColor: Color.yellow900
-    , qr_img: "ny_driver_app_qr_code"
-    , infoText: getString REFERRED_DRIVERS
-    , separatorColor: Color.white300
-    , popupType: REFERRED_DRIVERS_POPUP
-    , referralText: DRIVER_REFERRAL_CODE
-    }
+    let appConfigs = getAppConfig appConfig
+    in  {backgroundColor: Color.yellow900
+        , qr_img: "ny_driver_app_qr_code"
+        , infoText: getString REFERRED_DRIVERS
+        , separatorColor: Color.white300
+        , popupType: REFERRED_DRIVERS_POPUP
+        , referralText: DRIVER_REFERRAL_CODE
+        , referralDomain : appConfigs.appData.website
+        }
 
   customerReferralConfig =
-    { backgroundColor: Color.frenchSkyBlue800
-    , qr_img: "ny_customer_app_qr_code"
-    , infoText: getString ACTIVATED
-    , separatorColor: Color.frenchSkyBlue400
-    , popupType: ACTIVATED_CUSTOMERS_POPUP
-    , referralText: CUSTOMER_REFERRAL_CODE
-    }
+    let appConfigs = getAppConfig appConfig
+    in  { backgroundColor: Color.frenchSkyBlue800
+        , qr_img: "ny_customer_app_qr_code"
+        , infoText: getString ACTIVATED
+        , separatorColor: Color.frenchSkyBlue400
+        , popupType: ACTIVATED_CUSTOMERS_POPUP
+        , referralText: CUSTOMER_REFERRAL_CODE
+        , referralDomain : appConfigs.appData.website
+        }
 
 referralCountView :: forall w. Boolean -> String -> String -> Boolean -> (Action -> Effect Unit) -> ReferralInfoPopType -> PrestoDOM (Effect Unit) w
 referralCountView showStar text' count visibility' push popupType =
@@ -365,7 +375,11 @@ appQRCodeView push state =
             [ width MATCH_PARENT
             , height $ V 280
             , gravity CENTER
-            , imageWithFallback $ fetchImage FF_ASSET qr_img
+            , id (getNewIDWithTag "ExpandedReferralQRCode")
+            , padding (Padding 5 5 5 5)
+            , afterRender (\action -> do
+                            runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode state.props.driverReferralType state.data.config.appData.website) (getNewIDWithTag "ExpandedReferralQRCode") 280 0
+                          ) (const RenderQRCode)
             ]
         , PrimaryButton.view (push <<< PrimaryButtonActionController state) (primaryButtonConfig state)
         ]
