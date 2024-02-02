@@ -824,7 +824,7 @@ statsModel push state =
         , gravity CENTER_VERTICAL
         , background Color.blue600
         , cornerRadius 12.0
-        , padding $ Padding 16 8 8 8
+        , padding $ Padding 16 2 8 2
         ][ textView $
            [ width WRAP_CONTENT
            , height WRAP_CONTENT
@@ -832,6 +832,7 @@ statsModel push state =
            , color Color.black700
            , weight 1.0
            , onClick push $ const $ ToggleStatsModel
+           , padding $ PaddingVertical 6 6
            ] <> FontStyle.tags TypoGraphy
          , linearLayout
            [ width WRAP_CONTENT

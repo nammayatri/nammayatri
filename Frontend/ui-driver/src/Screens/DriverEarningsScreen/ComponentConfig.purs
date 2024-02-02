@@ -216,6 +216,7 @@ calendarPrimaryButtonConfig state =
     , margin = Margin 16 8 16 0
     , isClickable = isJust state.props.calendarState.startDate
     , alpha = if isJust state.props.calendarState.startDate then 1.0 else 0.5
+    , enableRipple = isJust state.props.calendarState.startDate
     }
 
 calendarCancelButtonConfig :: ST.DriverEarningsScreenState -> PrimaryButtonConfig.Config
