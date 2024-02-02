@@ -57,10 +57,11 @@ findByMerchantOpCityId id =
             Right contextValue' ->
               case (DAT.parse jsonToTransporterConfig contextValue') of
                 Success dpc -> dpc
-                DAT.Error err -> error $ (Text.pack "error in parsing the context value ") <> (Text.pack err)
-
+                DAT.Error err -> error $ (Text.pack "error in parsing the context value for transporter config ") <> (Text.pack err)
+      -- pure $ Just ans
       logDebug $ "transporterConfig: " <> show ans
-      flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
+      cacheTransporterConfig ans
+      pure $ Just ans
 
 cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do

@@ -20,7 +20,12 @@ module Storage.CachedQueries.Merchant.DriverIntelligentPoolConfig
   )
 where
 
+import Client.Main as CM
+import Data.Aeson as DA
+import Data.Aeson.Types as DAT
 import Data.Coerce (coerce)
+import qualified Data.HashMap.Strict as HashMap
+import Data.Text as Text
 import Domain.Types.Common
 import Domain.Types.Merchant.DriverIntelligentPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
@@ -29,12 +34,31 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.Merchant.DriverIntelligentPoolConfig as Queries
+import qualified System.Environment as SE
 
 findByMerchantOpCityId :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe DriverIntelligentPoolConfig)
 findByMerchantOpCityId id =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
     Just a -> return . Just $ coerce @(DriverIntelligentPoolConfigD 'Unsafe) @DriverIntelligentPoolConfig a
-    Nothing -> flip whenJust cacheDriverIntelligentPoolConfig /=<< Queries.findByMerchantOpCityId id
+    Nothing -> do
+      dipcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId id))])
+      logDebug $ "dipc: the context value is " <> show dipcCond
+      tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
+      contextValue <- liftIO $ CM.evalCtx (fromMaybe "test" tenant) dipcCond
+      case contextValue of
+        Left err -> error $ (pack "dipc: error in fetching the context value ") <> (pack err)
+        Right contextValue' -> do
+          logDebug $ "dipc: the fetched context value is " <> show contextValue'
+          --value <- liftIO $ (CM.hashMapToString (fromMaybe (HashMap.fromList [(pack "defaultKey", DA.String (Text.pack ("defaultValue")))]) contextValue))
+          valueHere <- buildDipcType contextValue'
+          logDebug $ "dipc: he build context value is1 " <> show valueHere
+          cacheDriverIntelligentPoolConfig valueHere
+          pure $ Just valueHere
+  where
+    buildDipcType cv = case (DAT.parse jsonToDriverIntelligentPoolConfig cv) of
+      DA.Success dipc -> pure $ dipc
+      DA.Error err ->
+        error $ (pack "error in parsing the context value ") <> (pack err)
 
 cacheDriverIntelligentPoolConfig :: CacheFlow m r => DriverIntelligentPoolConfig -> m ()
 cacheDriverIntelligentPoolConfig cfg = do

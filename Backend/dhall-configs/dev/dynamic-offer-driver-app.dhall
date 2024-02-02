@@ -6,7 +6,7 @@ let globalCommon = ../generic/common.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5436
+      , connectPort = 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -16,7 +16,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = 5436
+      , connectPort = 5434
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -28,7 +28,7 @@ let esqLocationDBCfg = esqDBCfg
 
 let esqLocationDBRepCfg =
       { connectHost = esqLocationDBCfg.connectHost
-      , connectPort = 5436
+      , connectPort = 5434
       , connectUser = esqLocationDBCfg.connectUser
       , connectPassword = esqLocationDBCfg.connectPassword
       , connectDatabase = esqLocationDBCfg.connectDatabase
@@ -214,6 +214,20 @@ let jobInfoMapx =
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
 
+let cacConfig =
+        { host = "http://localhost:8080"
+        , interval = 10
+        , tenants = [ "test", "dev" ]
+        }
+      : { host : Text, interval : Natural, tenants : List Text }
+
+let superPositionConfig =
+        { host = "http://localhost:8080"
+        , interval = 10
+        , tenants = [ "test", "dev" ]
+        }
+      : { host : Text, interval : Natural, tenants : List Text }
+
 let maxMessages
     : Text
     = "5000"
@@ -305,4 +319,6 @@ in  { esqDBCfg
     , internalEndPointMap = common.internalEndPointMap
     , isBecknSpecVersion2 = False
     , _version = "2.0.0"
+    , cacConfig
+    , superPositionConfig
     }

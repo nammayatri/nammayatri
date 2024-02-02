@@ -268,14 +268,17 @@ in
         };
 
 
-        nginx."nginx".enable = true;
+        nginx."nginx" = {
+          enable = true;
+          port = 8085;
+        };
       };
       # kafka should start only after zookeeper is healthy
       settings.processes.kafka.depends_on."zookeeper".condition = "process_healthy";
 
       services.passetto = {
         enable = true;
-        port = 8021;
+        port = 8085;
         extraDbSettings = { name, ... }: {
           port = 5422;
           socketDir = "$HOME/NY/socket/${name}";

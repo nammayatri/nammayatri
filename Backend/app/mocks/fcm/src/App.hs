@@ -32,7 +32,7 @@ runMockFcm configModifier = do
 defaultConfig :: AppCfg
 defaultConfig =
   AppCfg
-    { port = 4545,
+    { port = 4546,
       loggerConfig =
         LoggerConfig
           { level = DEBUG,

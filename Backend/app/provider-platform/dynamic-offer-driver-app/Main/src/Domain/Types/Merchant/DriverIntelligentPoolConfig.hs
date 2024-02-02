@@ -15,10 +15,14 @@
 module Domain.Types.Merchant.DriverIntelligentPoolConfig where
 
 import Data.Aeson
+-- import Data.Time.Clock.POSIX
+
+import Data.Aeson as A
 import Data.Aeson.Key as DAK
 import Data.Aeson.Types
+import qualified Data.ByteString.Lazy as BL
 import Data.Text as Text
-import Data.Time.Clock.POSIX
+import qualified Data.Text.Encoding as DTE
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.Merchant.MerchantOperatingCity as DTMM
@@ -73,32 +77,57 @@ data IntelligentScores = IntelligentScores
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read)
 
-readWithInfo :: (Read a, Show a) => String -> a
-readWithInfo s = case KP.readMaybe s of
-  Just val -> val
-  Nothing -> error . Text.pack $ "Failed to parse: " ++ s
+readWithInfo :: (Read a, Show a) => Value -> a
+readWithInfo s = case s of
+  String str -> case KP.readMaybe (Text.unpack str) of
+    Just val -> val
+    Nothing -> error . Text.pack $ "Failed to parse: " ++ Text.unpack str
+  Number scientific -> case KP.readMaybe (show scientific) of
+    Just val -> val
+    Nothing -> error . Text.pack $ "Failed to parse: " ++ show scientific
+  _ -> error $ "Not able to parse value" <> show s
+
+readWithInfo' :: (Read a, Show a) => Value -> Maybe a
+readWithInfo' s = case s of
+  String str -> case KP.readMaybe (Text.unpack str) of
+    Just val -> Just val
+    Nothing -> Nothing
+  Number scientific -> case KP.readMaybe (show scientific) of
+    Just val -> Just val
+    Nothing -> Nothing
+  _ -> error $ "Not able to parse value" <> show s
+
+valueToType :: FromJSON a => Value -> a
+valueToType value = case value of
+  String str -> case A.decode (BL.fromStrict (DTE.encodeUtf8 (replaceSingleQuotes str))) of
+    Just val -> val
+    Nothing -> error $ "Not able to parse value" <> show value
+  _ -> error $ "Not able to parse value" <> show value
+
+replaceSingleQuotes :: Text -> Text
+replaceSingleQuotes = Text.replace "'" "\""
 
 jsonToDriverIntelligentPoolConfig :: Object -> (Parser DriverIntelligentPoolConfig)
 jsonToDriverIntelligentPoolConfig v =
   DriverIntelligentPoolConfig
-    <$> (Id <$> (v .: DAK.fromText (Text.pack "merchantId")))
-    <*> (Id <$> (v .: DAK.fromText (Text.pack "merchantOperatingCityId")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "actualPickupDistanceWeightage")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "availabilityTimeWeightage")))
-    <*> ((readWithInfo :: (String -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "availabilityTimeWindowOption")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "acceptanceRatioWeightage")))
-    <*> ((readWithInfo :: (String -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "acceptanceRatioWindowOption")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "cancellationRatioWeightage")))
-    <*> ((readWithInfo :: (String -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "cancellationAndRideFrequencyRatioWindowOption")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "minQuotesToQualifyForIntelligentPool")))
-    <*> ((readWithInfo :: (String -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "minQuotesToQualifyForIntelligentPoolWindowOption")))
-    <*> ((v .: DAK.fromText (Text.pack "intelligentPoolPercentage")))
-    <*> ((readWithInfo :: (String -> Double)) <$> (v .: DAK.fromText (Text.pack "speedNormalizer")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverSpeedWeightage")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "minLocationUpdates")))
-    <*> ((readWithInfo :: (String -> Minutes)) <$> (v .: DAK.fromText (Text.pack "locationUpdateSampleTime")))
-    <*> ((readWithInfo :: (String -> Double)) <$> (v .: DAK.fromText (Text.pack "defaultDriverSpeed")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "maxNumRides")))
-    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "numRidesWeightage")))
-    <*> (pure (posixSecondsToUTCTime 0))
-    <*> (pure (posixSecondsToUTCTime 0))
+    <$> (Id <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:merchantId")))
+    <*> (Id <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:merchantOperatingCityId")))
+    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:actualPickupDistanceWeightage")))
+    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:availabilityTimeWeightage")))
+    <*> ((valueToType :: (Value -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:availabilityTimeWindowOption")))
+    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:acceptanceRatioWeightage")))
+    <*> ((valueToType :: (Value -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:acceptanceRatioWindowOption")))
+    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:cancellationRatioWeightage")))
+    <*> ((valueToType :: (Value -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:cancellationAndRideFrequencyRatioWindowOption")))
+    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:minQuotesToQualifyForIntelligentPool")))
+    <*> ((valueToType :: (Value -> SWC.SlidingWindowOptions)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:minQuotesToQualifyForIntelligentPoolWindowOption")))
+    <*> ((readWithInfo' :: (Value -> Maybe Int)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:intelligentPoolPercentage")))
+    <*> ((readWithInfo :: (Value -> Double)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:speedNormalizer")))
+    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:driverSpeedWeightage")))
+    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:minLocationUpdates")))
+    <*> ((readWithInfo :: (Value -> Minutes)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:locationUpdateSampleTime")))
+    <*> ((readWithInfo :: (Value -> Double)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:defaultDriverSpeed")))
+    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:maxNumRides")))
+    <*> ((readWithInfo :: (Value -> Int)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:numRidesWeightage")))
+    <*> ((readWithInfo :: (Value -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:createdAt")))
+    <*> ((readWithInfo :: (Value -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "driverIntelligentPoolConfig:updatedAt")))

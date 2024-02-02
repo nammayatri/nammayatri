@@ -566,6 +566,7 @@ library
       Storage.Queries.Vehicle
       Storage.Queries.Vehicle.Internal
       Storage.Queries.Volunteer
+      Test
       Tools.AadhaarVerification
       Tools.Auth
       Tools.Beam.UtilsTH

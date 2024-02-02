@@ -21,7 +21,7 @@ import Data.Aeson.Key as DAK
 import Data.Aeson.Types
 import Data.Text as Text
 import Data.Time.Clock
-import Data.Time.Clock.POSIX
+-- import Data.Time.Clock.POSIX
 import Domain.Types.Common
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity
@@ -92,34 +92,38 @@ type DriverPoolConfig = DriverPoolConfigD 'Safe
 -- <*>  ( (v.: DAK.fromText (Text.pack "updatedAt")))
 -- <*> (v.: DAK.fromText (Text.pack "vehicleVariant")) -- Think about something
 --   parseJSON _ = mzero
+readWithInfo :: (Read a, Show a) => String -> a
+readWithInfo s = case KP.readMaybe s of
+  Just val -> val
+  Nothing -> error . Text.pack $ "Failed to parse: " ++ s
 
 jsonToDriverPoolConfig :: Object -> (Parser DriverPoolConfig)
 jsonToDriverPoolConfig v =
   DriverPoolConfig
-    <$> (Id <$> ((v .: DAK.fromText (Text.pack "id"))))
-    <*> (Id <$> (v .: DAK.fromText (Text.pack "merchantId")))
-    <*> (Id <$> (v .: DAK.fromText (Text.pack "merchantOperatingCityId")))
-    <*> (Meters <$> KP.read <$> (v .: DAK.fromText (Text.pack "minRadiusOfSearch")))
-    <*> (Meters <$> KP.read <$> (v .: DAK.fromText (Text.pack "maxRadiusOfSearch")))
-    <*> (Meters <$> KP.read <$> (v .: DAK.fromText (Text.pack "radiusStepSize")))
-    <*> ((Seconds <$>) <$> KP.readMaybe <$> (v .: DAK.fromText (Text.pack "driverPositionInfoExpiry")))
-    <*> ((Meters <$>) <$> KP.readMaybe <$> (v .: DAK.fromText (Text.pack "actualDistanceThreshold")))
-    <*> ((KP.read :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "maxDriverQuotesRequired")))
-    <*> ((KP.read :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverQuoteLimit")))
-    <*> ((KP.read :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverRequestCountLimit")))
-    <*> ((KP.read :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverBatchSize")))
-    <*> ((KP.read :: (String -> [BatchSplitByPickupDistance])) <$> (v .: DAK.fromText (Text.pack "distanceBasedBatchSplit")))
-    <*> ((KP.read :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "maxNumberOfBatches")))
-    <*> ((KP.read :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "maxParallelSearchRequests")))
-    <*> ((KP.read :: (String -> PoolSortingType)) <$> v .: DAK.fromText (Text.pack "poolSortingType"))
-    <*> (Seconds <$> KP.read <$> (v .: DAK.fromText (Text.pack "singleBatchProcessTime")))
-    <*> (Meters <$> KP.read <$> (v .: DAK.fromText (Text.pack "tripDistance")))
-    <*> (Meters <$> KP.read <$> (v .: DAK.fromText (Text.pack "radiusShrinkValueForDriversOnRide")))
-    <*> (Meters <$> KP.read <$> (v .: DAK.fromText (Text.pack "driverToDestinationDistanceThreshold")))
-    <*> (Seconds <$> KP.read <$> (v .: DAK.fromText (Text.pack "driverToDestinationDuration")))
-    <*> (pure (posixSecondsToUTCTime 0))
-    <*> (pure (posixSecondsToUTCTime 0))
-    <*> ((KP.readMaybe :: (String -> Maybe DVeh.Variant)) <$> (v .: DAK.fromText (Text.pack "vehicleVariant")))
+    <$> (Id <$> ((v .: DAK.fromText (Text.pack "driverPoolConfig:id"))))
+    <*> (Id <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:merchantId")))
+    <*> (Id <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:merchantOperatingCityId")))
+    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:minRadiusOfSearch")))
+    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxRadiusOfSearch")))
+    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:radiusStepSize")))
+    <*> ((Seconds <$>) <$> KP.readMaybe <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverPositionInfoExpiry")))
+    <*> ((Meters <$>) <$> KP.readMaybe <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:actualDistanceThreshold")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxDriverQuotesRequired")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverQuoteLimit")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverRequestCountLimit")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverBatchSize")))
+    <*> (((readWithInfo :: (String -> BatchSplitByPickupDistance)) <$>) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:distanceBasedBatchSplit")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxNumberOfBatches")))
+    <*> ((readWithInfo :: (String -> Int)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:maxParallelSearchRequests")))
+    <*> ((readWithInfo :: (String -> PoolSortingType)) <$> v .: DAK.fromText (Text.pack "driverPoolConfig:poolSortingType"))
+    <*> (Seconds <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:singleBatchProcessTime")))
+    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:tripDistance")))
+    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:radiusShrinkValueForDriversOnRide")))
+    <*> (Meters <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverToDestinationDistanceThreshold")))
+    <*> (Seconds <$> readWithInfo <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:driverToDestinationDuration")))
+    <*> ((readWithInfo :: (String -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:createdAt")))
+    <*> ((readWithInfo :: (String -> UTCTime)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:updatedAt")))
+    <*> ((KP.readMaybe :: (String -> Maybe DVeh.Variant)) <$> (v .: DAK.fromText (Text.pack "driverPoolConfig:vehicleVariant")))
 
 instance FromJSON (DriverPoolConfigD 'Unsafe)
 

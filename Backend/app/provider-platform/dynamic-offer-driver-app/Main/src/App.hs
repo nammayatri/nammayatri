@@ -61,8 +61,9 @@ import "utils" Utils.Common.Events as UE
 
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
-  _ <- CM.main
   appCfg <- configModifier <$> readDhallConfigDefault "dynamic-offer-driver-app"
+  _ <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  _ <- CM.startCACPolling appCfg.cacConfig.tenants
   Metrics.serve (appCfg.metricsPort)
   runDynamicOfferDriverApp' appCfg
 

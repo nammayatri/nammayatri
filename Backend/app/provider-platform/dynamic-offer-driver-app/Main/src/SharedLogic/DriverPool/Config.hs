@@ -55,7 +55,7 @@ getDriverPoolConfig merchantOpCityId mbvt dist = do
   dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "tripDistance", DA.String (Text.pack (show dist)))] ++ (bool [] [(pack "variant", DA.String (Text.pack (show $ fromJust mbvt)))] (isJust mbvt)))
   logDebug $ "the context value is " <> show dpcCond
   tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
-  contextValue <- liftIO $ CM.evalCtx (fromMaybe "atlas_driver_offer_bpp_v2" tenant) dpcCond
+  contextValue <- liftIO $ CM.evalCtx (fromMaybe "test" tenant) dpcCond
   case contextValue of
     Left err -> error $ (pack "error in fetching the context value ") <> (pack err)
     Right contextValue' -> do

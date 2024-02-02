@@ -12,7 +12,7 @@
   redis-cluster-n6 = 30006;
   zookeeper = 2181;
   kafka = 29092;
-  nginx = 8080;
+  nginx = 8085;
   passetto-db = 5422;
   passetto-service = 8021;
   # osrm-server port is not configurable atm
