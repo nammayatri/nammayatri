@@ -15,7 +15,7 @@ import Prelude (bind, class Show, pure, unit, ($), discard, (>=), (<=), (==), (&
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
 import Components.BottomNavBar as BottomNavBar
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, getValueToLocalStore)
-import Helpers.Utils (incrementValueOfLocalStoreKey)
+import Helpers.Utils (incrementValueOfLocalStoreKey, generateReferralLink, generateQR)
 import Components.PrimaryButton as PrimaryButton
 import Common.Types.App (ShareImageConfig)
 import Engineering.Helpers.Commons (getNewIDWithTag)
@@ -24,7 +24,8 @@ import MerchantConfig.Utils (getMerchant, Merchant(..))
 import Common.Types.App (LazyCheck(..))
 import Foreign (unsafeToForeign)
 import Data.Array (find)
-import Services.API 
+import Services.API
+import Effect.Uncurried (runEffectFn4)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -54,6 +55,7 @@ instance loggableAction :: Loggable Action where
     GoToLeaderBoard -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "change_tab" "leaderboard"
     UpdateDriverPerformance _ -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "referral_screen_response_action" "referral_screen_response_action"
     UpdateLeaderBoard _ -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "referral_screen_leaderboard_rank_action_action" "referral_screen_leaderboard_rank_action_action"
+    RenderQRCode -> trackAppActionClick appId (getScreen REFERRAL_SCREEN) "screen" "render_qr_code"
 
 data Action = BackPressed
             | AfterRender
@@ -69,6 +71,7 @@ data Action = BackPressed
             | GoToLeaderBoard
             | UpdateDriverPerformance GetPerformanceRes
             | UpdateLeaderBoard LeaderBoardRes
+            | RenderQRCode
 
 data ScreenOutput = GoToHomeScreen DriverReferralScreenState
                   | GoToNotifications DriverReferralScreenState
@@ -131,8 +134,13 @@ eval (UpdateLeaderBoard (LeaderBoardRes resp)) state = do
   continue state {data {totalEligibleDrivers = resp.totalEligibleDrivers, rank = currentDriverRank}}
 
 eval (ChangeTab tab) state = do
-  let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_driver_referral_scn_changetab" $ [{key : "Tab", value : unsafeToForeign (show tab)}]
-  continue state {props {driverReferralType = tab}}
+  let referralAppId = if tab == DRIVER then state.data.config.referral.driverAppId else state.data.config.referral.customerAppId
+      _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField "ny_driver_referral_scn_changetab" $ [{key : "Tab", value : unsafeToForeign (show tab)}]
+  continueWithCmd state {props {driverReferralType = tab}}
+    [ do
+      runEffectFn4 generateQR (generateReferralLink (getValueToLocalStore DRIVER_LOCATION) "qrcode" "referral" "coins" state.data.referralCode tab state.data.config.appData.website) (getNewIDWithTag "ReferralQRCode") 500 0
+      pure $ RenderQRCode
+    ]
 
 eval (ShowReferedInfo referralInfoPopType) state = 
   continue state {props {referralInfoPopType = referralInfoPopType}}

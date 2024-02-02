@@ -199,6 +199,8 @@ type BannerConfig = {
 type ReferralConfig = {
   type :: String
 , link :: String
+, customerAppId :: String
+, driverAppId :: String
 }
 
 type RideRequestConfig = {

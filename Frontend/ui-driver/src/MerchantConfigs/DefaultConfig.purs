@@ -315,9 +315,11 @@ config =
     autoPay : true
   }
   ,referral: {
-    "type" : "QRScreen"
-  , link : "https://nammayatri.in/link/rider/mvnw"
-  }
+      "type" : "QRScreen"
+    , link : "https://nammayatri.in/link/rider/mvnw"
+    , customerAppId : "in.juspay.nammayatri"
+    , driverAppId : "in.juspay.nammayatripartner"
+    }
   , dashboard : {
       enable : false,
       url : ""

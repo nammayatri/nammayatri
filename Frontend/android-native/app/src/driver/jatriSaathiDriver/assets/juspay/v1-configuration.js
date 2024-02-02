@@ -247,7 +247,9 @@ window.getMerchantConfig = function () {
     }
     , "referral": {
       "type": "LeaderBoard",
-      "link" : "https://nammayatri.in/link/rider/kTZ1"
+      "link" : "https://nammayatri.in/link/rider/kTZ1",
+      "customerAppId" : "in.juspay.jatrisaathi",
+      "driverAppId" : "in.juspay.jatrisaathidriver"
     }
     , "enableMockLocation" : false
     , "flowConfig" : {

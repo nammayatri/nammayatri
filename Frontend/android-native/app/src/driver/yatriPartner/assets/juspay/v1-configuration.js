@@ -116,7 +116,9 @@ window.getMerchantConfig = function () {
     }
     , "referral": {
       "type": "LeaderBoard",
-      "link" : "https://yatricustomer.page.link/pcJb"
+      "link" : "https://yatricustomer.page.link/pcJb",
+      "customerAppId" : "net.openkochi.yatri",
+      "driverAppId" : "net.openkochi.yatripartner"
     }
     , "flowConfig" : {
       "chooseCity" : {

@@ -19,7 +19,7 @@ module Helpers.Utils
     ) where
 
 -- import Prelude (Unit, bind, discard, identity, pure, show, unit, void, ($), (<#>), (<$>), (<*>), (<<<), (<>), (>>=))
-import Screens.Types (AllocationData, DisabilityType(..))
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), elemIndex, length, slice, last, find) as DA
@@ -642,3 +642,16 @@ splitBasedOnLanguage str =
                 "ML_IN" | len > 4 -> 4
                 "TA_IN" | len > 5 -> 5
                 _ -> 0
+
+generateReferralLink :: String -> String -> String -> String -> String -> DriverReferralType -> String -> String
+generateReferralLink source medium term content campaign driverReferralType domain =
+  let config = getAppConfig appConfig 
+      path = if driverReferralType == DRIVER then "/driverRefer" else "/refer"
+      packageId = if driverReferralType == DRIVER then config.referral.driverAppId else config.referral.customerAppId
+  in domain <> path <> "?referrer=" 
+      <> "utm_source%3D" <> source 
+      <> "%26utm_medium%3D" <> medium 
+      <> "%26utm_term%3D" <> term 
+      <> "%26utm_content%3D" <> content 
+      <> "%26utm_campaign%3D" <> campaign 
+      <> "%26anid%3Dadmob&id=" <> packageId
