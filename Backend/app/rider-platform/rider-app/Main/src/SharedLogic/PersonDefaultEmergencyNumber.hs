@@ -60,8 +60,7 @@ sendNotificationToEmergencyContact person body title notificationType = do
           body = body,
           title = title,
           dynamicParams = EmptyDynamicParam,
-          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
-          ttl = Nothing
+          auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken
         }
 
 sendMessageToEmergencyContact :: Person.Person -> DPDEN.PersonDefaultEmergencyNumberAPIEntity -> Text -> Flow ()

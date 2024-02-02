@@ -664,8 +664,7 @@ notifyRideStartToEmergencyContacts booking ride = do
                 body = body,
                 title = title,
                 dynamicParams = EmptyDynamicParam,
-                auth = Notification.Auth personId.getId person.deviceToken person.notificationToken,
-                ttl = Nothing
+                auth = Notification.Auth personId.getId person.deviceToken person.notificationToken
               }
           title = T.pack "Follow Ride"
           body =

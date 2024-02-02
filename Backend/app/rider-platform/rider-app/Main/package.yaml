@@ -111,6 +111,7 @@ dependencies:
   - raw-strings-qq
   - directory
   - filepath
+  - hashmap
   - scheduler
   - singletons
   - singletons-th
