@@ -1,5 +1,7 @@
 module Main where
 
+import qualified Data.ByteString as BS
+import qualified Data.Yaml as Yaml
 import Kernel.Prelude
 import qualified NammaDSL.App as NammaDSL
 import System.Directory
@@ -46,6 +48,21 @@ applyDirectory dirPath processFile = do
     let yamlFiles = filter (\file -> takeExtension file `elem` [".yaml", ".yml"]) files
     mapM_ (processFile . (dirPath </>)) yamlFiles
 
+data Apps = DriverApp | RiderApp deriving (Generic, FromJSON, Show)
+
+data LibraryPaths = LibraryPaths
+  { libPath :: FilePath,
+    usedIn :: [Apps]
+  }
+  deriving (Generic, FromJSON, Show)
+
+getFilePathsForConfiguredApps :: FilePath -> IO [LibraryPaths]
+getFilePathsForConfiguredApps rootDir = do
+  contents <- BS.readFile $ rootDir </> "Backend/dslLibs.yaml"
+  case Yaml.decodeEither' contents of
+    Left err -> error $ show err
+    Right yml -> return yml
+
 main :: IO ()
 main = do
   putStrLn ("Version " ++ NammaDSL.version)
@@ -55,6 +72,20 @@ main = do
 
   processApp riderAppDatabaseName rootDir riderAppPath rideAppName
   processApp driverAppDatabaseName rootDir driverAppPath driverAppName
+  paths <- getFilePathsForConfiguredApps rootDir
+  mapM_
+    ( \libPaths ->
+        mapM_
+          ( \lib -> do
+              let (databaseName, appName) =
+                    case lib of
+                      DriverApp -> (driverAppDatabaseName, driverAppName)
+                      RiderApp -> (riderAppDatabaseName, riderAppDatabaseName)
+              processApp databaseName rootDir libPaths.libPath appName
+          )
+          libPaths.usedIn
+    )
+    paths
   where
     processApp :: String -> FilePath -> FilePath -> FilePath -> IO ()
     processApp dbName rootDir appPath appName = do
