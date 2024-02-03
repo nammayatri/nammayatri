@@ -846,7 +846,7 @@ getKN stringKey =
         ACTIVATE_NAMMA_SAFETY_POPUP_ACTION -> "ಸಕ್ರಿಯಗೊಳಿಸುತ್ತಿದ್ದೀರಿ ದೃಢಪಡಿಸಿ"
         DISMISS -> "ತಿರಸ್ಕರಿಸಿ"
         SEND_SILENT_SOS_TO_POLICE -> "ಪೋಲಿಸ್ ಸಹಾಯದಾಳಕ್ಕೆ ಸುರುಳಿ ಹಾಕಿ"
-        OUR_SAFETY_PARTNER -> "ನಮ್ಮ ಸುರಕ್ಷಾ ಭಾಗಿಗ"
+        OUR_SAFETY_PARTNER -> "ನಮ್ಮ ಸುರಕ್ಷತೆಯ ಭಾಗಿದಾರ"
         BANGALURU_CITY_POLICE -> "ಬೆಂಗಳೂರು ನಗರ ಪೋಲೀಸ್"
         GET_OPTIONS_TO_DIRECTLY_CALL_POLICE -> "ಪೋಲೀಸ್ ಸಹಾಯದಾಳಕ್ಕೆ ಸಂಪರ್ಕ ಸೆಳೆಯಲು ಆಯ್ಕೆಗಳನ್ನು ಪಡೆಯಿರಿ"
         SHARE_SOS_SILENTLY_WITH_POLICE -> "ಪೋಲೀಸ್ ಸಹಾಯದಾಳಕ್ಕೆ ಸುರುಳಿ ಹಾಕಿ"
