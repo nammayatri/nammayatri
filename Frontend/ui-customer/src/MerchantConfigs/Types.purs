@@ -234,7 +234,8 @@ type Features = {
   forceLogReferrerUrl :: Boolean,
   enableSelfServe :: Boolean,
   enableAdditionalServices :: Boolean,
-  enableSafetyFlow :: Boolean
+  enableSafetyFlow :: Boolean,
+  shareWithEmergencyContacts :: Boolean
   }
 
 type RideCompletedCardConfig = {

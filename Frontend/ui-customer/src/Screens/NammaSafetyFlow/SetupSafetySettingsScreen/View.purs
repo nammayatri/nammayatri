@@ -19,7 +19,6 @@ import Prelude
 import PrestoDOM
 import Screens.NammaSafetyFlow.ComponentConfig
 import Screens.NammaSafetyFlow.Components.HelperViews
-
 import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader as GenericHeader
 import Components.GenericRadioButton.Controller as GenericRadioButton
