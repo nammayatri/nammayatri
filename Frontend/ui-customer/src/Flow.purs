@@ -218,6 +218,7 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
           "prof" -> hideSplashAndCallFlow myProfileScreenFlow
           "lang" -> hideSplashAndCallFlow selectLanguageScreenFlow
           "tkts" -> hideSplashAndCallFlow placeListFlow
+          "mt" -> hideSplashAndCallFlow metroTicketBookingFlow
           _ -> if skipDefaultCase then pure unit else currentFlowStatus
         Nothing -> currentFlowStatus
     Nothing -> do
