@@ -188,8 +188,8 @@ window.onMerchantEvent = function (_event, globalPayload) {
       console.log("window Payload: ", window.__payload);
       if (eventObject.type != "" && eventObject.type == "SOS_MOCK_DRILL") {
         purescript.mockFollowRideEvent(eventObject)();
-      } else if (!clientPaylod.onNewIntent) {
-        purescript.main(eventObject)();
+      } else {
+        purescript.main(eventObject)(!clientPaylod.onNewIntent)();
       }
     }
   }
