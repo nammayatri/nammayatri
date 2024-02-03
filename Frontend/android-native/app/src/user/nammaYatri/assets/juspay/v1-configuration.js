@@ -180,7 +180,7 @@ window.getMerchantConfig = function () {
     , "enableGeocoder" : true
     , "estimateAndQuoteConfig" : 
       { "variantTypes" : [ ["SUV"], ["HATCHBACK", "TAXI_PLUS", "SEDAN"], ["TAXI"], ["AUTO_RICKSHAW"] ]
-      , "variantOrder" : ["HATCHBACK", "TAXI_PLUS", "SEDAN", "TAXI", "SUV", "AUTO_RICKSHAW"]
+      , "variantOrder" : []
       , "variantInfo" : {
         "hatchback" : {
           "name" : "Hatchback",
