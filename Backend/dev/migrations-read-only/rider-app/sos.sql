@@ -11,3 +11,9 @@ ALTER TABLE atlas_app.sos ADD COLUMN merchant_operating_city_id character varyin
 ALTER TABLE atlas_app.sos ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.sos ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.sos ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.sos DROP CONSTRAINT sos_pkey;
+ALTER TABLE atlas_app.sos ADD PRIMARY KEY ( id, ride_id);
