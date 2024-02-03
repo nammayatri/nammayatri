@@ -85,7 +85,7 @@ postShareRide (mbPersonId, merchantId) req = do
               emergencyContactEntity <- QPerson.findById id >>= fromMaybeM (PersonDoesNotExist id.getId)
               updateFollowDetails emergencyContactEntity emergencyContact riderConfig
               dbHash <- getDbHash emergencyContact.mobileNumber
-              PDEN.updateShareRide dbHash id $ Just True
+              PDEN.updateShareRide dbHash personId $ Just True
               SLPEN.sendNotificationToEmergencyContact emergencyContactEntity (body person) title Notification.SHARE_RIDE
     )
     emergencyContacts.defaultEmergencyNumbers
