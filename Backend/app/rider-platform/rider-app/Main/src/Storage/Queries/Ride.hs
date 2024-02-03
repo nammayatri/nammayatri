@@ -324,7 +324,10 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
                 case bookingDetails of
                   DRB.OneWaySpecialZoneDetails details -> details.otpCode
                   _ -> Nothing
-           in isJust maybeRide || isJust otpCode && isNothing maybeRide
+              isconfirmedRentalRide = case bookingDetails of
+                DRB.RentalDetails _ -> booking.status == DRB.CONFIRMED
+                _ -> False
+           in isJust maybeRide || isJust otpCode && isNothing maybeRide || isconfirmedRentalRide
 
 countRidesByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m Int
 countRidesByRiderId riderId = do
