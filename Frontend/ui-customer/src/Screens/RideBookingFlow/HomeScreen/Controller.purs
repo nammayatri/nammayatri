@@ -3011,7 +3011,9 @@ logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.da
           
 getBannerConfigs :: HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
 getBannerConfigs state = 
-  (getRemoteBannerConfigs state.props.city)
+  (if state.props.city == Chennai
+  then [metroBannerConfig state BannerCarousal]
+  else [])
   <>
   (if isJust state.props.sosBannerType 
     then [sosSetupBannerConfig state BannerCarousal] 

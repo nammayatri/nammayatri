@@ -3059,6 +3059,7 @@ metroTicketBookingFlow = do
       modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusScreen{data{quoteId = state.data.quoteId}})
       _ <- pure $ spy "REFRESH_METRO_TICKET_SCREEN" state
       metroTicketBookingFlow
+    GO_TO_HOME_FROM_METRO_TICKET -> homeScreenFlow
     where
       getMetroStationsList :: Array GetMetroStationResp -> ST.MetroStationsList
       getMetroStationsList metroStationArr = {

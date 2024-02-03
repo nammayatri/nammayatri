@@ -33,6 +33,8 @@ metroTicketBookingScreen = do
     case action of
         GoBack updatedState -> do
             App.BackT $ pure App.GoBack
+        GoToHome -> do
+            App.BackT $ App.BackPoint <$> (pure $ GO_TO_HOME_FROM_METRO_TICKET)
         UpdateAction updatedState -> do
             void $ modifyScreenState $ MetroTicketBookingScreenStateType (\_ -> updatedState)
             App.BackT $ App.NoBack <$> (pure $ METRO_FARE_AND_PAYMENT updatedState)

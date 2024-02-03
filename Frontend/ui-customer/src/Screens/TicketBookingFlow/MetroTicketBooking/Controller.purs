@@ -60,12 +60,13 @@ data ScreenOutput = GoBack ST.MetroTicketBookingScreenState
                   | UpdateAction ST.MetroTicketBookingScreenState
                   | MyMetroTicketScreen
                   | GoToMetroRouteMap
+                  | GoToHome
                   | SelectSrcDest ST.LocationActionId ST.MetroTicketBookingScreenState
                   | Refresh ST.MetroTicketBookingScreenState
 
 eval :: Action -> ST.MetroTicketBookingScreenState -> Eval Action ScreenOutput ST.MetroTicketBookingScreenState
 
-eval BackPressed state =  exit $ GoBack state
+eval BackPressed state =  exit $ GoToHome
 eval (UpdateButtonAction (PrimaryButton.OnClick)) state = do
     updateAndExit state $ UpdateAction state
 
