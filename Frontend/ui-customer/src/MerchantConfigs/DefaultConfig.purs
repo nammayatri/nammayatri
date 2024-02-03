@@ -221,7 +221,8 @@ config =
     forceLogReferrerUrl : true,
     enableSelfServe : true,
     enableAdditionalServices : false,
-    enableSafetyFlow : true
+    enableSafetyFlow : true, 
+    shareWithEmergencyContacts: true
   }
 
   , rideCompletedCardConfig : {

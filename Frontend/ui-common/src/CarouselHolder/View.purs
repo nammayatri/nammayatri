@@ -72,7 +72,8 @@ carouselView push config =
       ]
     ]
   where
-    addPageCallBack itemsLen prop = maybe [] (\action -> if (itemsLen > 1) then [prop push action] else [])
+    addPageCallBack itemsLen prop = maybe [] (\action -> [prop (getPush itemsLen) action])
+    getPush itemsLen = (\action -> when (itemsLen > 1) $ push action)
 
 
 scrollIndicator :: forall w a action. Homogeneous a PropValue => Int -> CarouselHolderConfig a action -> Layout w

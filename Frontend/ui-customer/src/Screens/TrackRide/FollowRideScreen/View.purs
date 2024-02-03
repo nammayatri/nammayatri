@@ -53,7 +53,7 @@ import Language.Types (STR(..))
 import Presto.Core.Types.Language.Flow (Flow, delay, getState, modifyState)
 import PrestoDOM.Animation as PrestoAnim
 import Screens.RideBookingFlow.HomeScreen.Config as HSConfig
-import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers)
+import Screens.Types (DriverInfoCard, EmAudioPlayStatus(..), FollowRideScreenStage(..), FollowRideScreenState, Followers, City(..))
 import Styles.Colors as Color
 import Control.Monad.Except.Trans (runExceptT)
 import Control.Transformers.Back.Trans (runBackT)
@@ -73,7 +73,7 @@ screen initialState globalState =
                 tracking <- runEffectFn1 getValueFromIdMap "FollowsRide"
                 storeCallBackCustomer push NotificationListener "FollowRideScreen"
                 when tracking.shouldPush $ void $ launchAff $ flowRunner globalState $ driverLocationTracking push UpdateStatus 5000.0 tracking.id "trip"
-              MockFollowRide -> void $ launchAff $ flowRunner defaultGlobalState $ updateMockData push
+              MockFollowRide -> void $ launchAff $ flowRunner defaultGlobalState $ updateMockData push initialState
               _ -> pure unit
             pure $ pure unit
         )
@@ -757,8 +757,8 @@ separatorView =
     ]
     []
 
-updateMockData :: (Action -> Effect Unit) -> Flow GlobalState Unit
-updateMockData push = defaultMockFlow
+updateMockData :: (Action -> Effect Unit) -> FollowRideScreenState -> Flow GlobalState Unit
+updateMockData push state = defaultMockFlow
   -- rideBookingListResponse <- rideBookingList "1" "0" "true" -- Required when we show actual data
   -- case rideBookingListResponse of
   --   Right (RideBookingListRes listResp) -> do
@@ -783,7 +783,7 @@ updateMockData push = defaultMockFlow
     localDelay 1000.0
     let
       srcPoint = getPoint mockDriverLocation
-    pushAction $ UpdateMockData mockDriverInfo
+    pushAction $ UpdateMockData mockDriverInfo{vehicleDetails = if state.props.city == Bangalore then "AUTO_RICKSHAW" else mockDriverInfo.vehicleDetails}
     drawDriverRoute mockDriverInfo srcPoint $ Just mockRoute
     pushSOSStatus Common.Pending
     localDelay 10000.0

@@ -215,8 +215,9 @@ window.getMerchantConfig = function () {
       , "showInfoIcon" : true 
       }
     , "feature" : {
-      "enableSupport" : false
+        "enableSupport" : false
       , "enableSuggestions" : true
+      , "shareWithEmergencyContacts" : false
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)

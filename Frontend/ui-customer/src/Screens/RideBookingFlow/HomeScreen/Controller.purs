@@ -1769,7 +1769,7 @@ eval (DriverInfoCardActionController (DriverInfoCardController.ToggleBottomSheet
 eval ShareRide state = do
   continueWithCmd state
         [ do
-            _ <- pure $ shareTextMessage "" $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/track/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
+            _ <- pure $ shareTextMessage "" $ "👋 Hey,\n\nI am riding with Namma Driver " <> (state.data.driverInfoCardState.driverName) <> "! Track this ride on: " <> ("https://nammayatri.in/journey/?id="<>state.data.driverInfoCardState.rideId) <> "\n\nVehicle number: " <> (state.data.driverInfoCardState.registrationNumber)
             void $ pure $ cleverTapCustomEvent "ny_user_share_ride_via_link"
             pure NoAction
          ]
@@ -2530,7 +2530,10 @@ eval (SafetyAlertAction PopUpModal.OnButton2Click) state = do
     void $ pure $ setValueToLocalNativeStore SAFETY_ALERT_TYPE "false"
     exit $ GoToNammaSafety state true false
 
-eval ShowShareRide state = exit $ GoToShareRide state
+eval ShowShareRide state = 
+  if state.data.config.feature.shareWithEmergencyContacts 
+    then exit $ GoToShareRide state
+    else continueWithCmd state [pure ShareRide]
 
 eval (NotifyRideShare PrimaryButtonController.OnClick) state = exit $ GoToNotifyRideShare state
 
@@ -2996,10 +2999,6 @@ logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.da
           
 getBannerConfigs :: HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
 getBannerConfigs state = 
-  (if state.props.city == Chennai 
-    then [metroBannerConfig state BannerCarousal] 
-    else [])
-  <> 
   (if isJust state.props.sosBannerType 
     then [sosSetupBannerConfig state BannerCarousal] 
     else [])
@@ -3009,9 +3008,6 @@ getBannerConfigs state =
     else [])
   <> (if (state.data.config.feature.enableZooTicketBookingFlow)
     then [ticketBannerConfig state BannerCarousal] else [])
-  <> (if state.props.city == Chennai then 
-      [metroBannerConfig state BannerCarousal] 
-    else [])
   <> (getRemoteBannerConfigs state.props.city)
   where
     getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
