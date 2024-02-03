@@ -1028,11 +1028,14 @@ eval (BannerCarousal (BannerCarousel.OnClick idx)) state =
           BannerCarousel.ZooTicket -> pure $ TicketBookingFlowBannerAC $ Banner.OnClick
           BannerCarousel.MetroTicket -> pure $ MetroTicketBannerClickAC $ Banner.OnClick
           BannerCarousel.Safety -> pure $ SafetyBannerAction $ Banner.OnClick
+          BannerCarousel.Remote link -> do
+            void $ openUrlInApp link
+            pure NoAction
           _ -> pure NoAction
       Nothing -> pure NoAction
   ] 
 
-eval (MetroTicketBannerClickAC Banner.OnClick) state = continue state -- Handle Metro Ticket Flow
+eval (MetroTicketBannerClickAC Banner.OnClick) state =  exit $ GoToMetroTicketBookingFlow state
 
 eval SearchForSelectedLocation state = do
   let currentStage = if state.props.searchAfterEstimate then TryAgain else FindingEstimate
