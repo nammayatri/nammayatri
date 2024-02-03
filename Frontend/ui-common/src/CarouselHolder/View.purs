@@ -49,7 +49,7 @@ carouselView push config =
   , width MATCH_PARENT
   , gravity BOTTOM
   , visibility $ boolToVisibility $ itemsLen  > 0
-  ][ animationSet
+  ]$[ animationSet
   [ scaleYAnimWithDelay 50
   ]$ viewPager2
       $ [ listItem  $ config.view
@@ -57,20 +57,24 @@ carouselView push config =
       , height layoutHeight
       , width MATCH_PARENT
       , currentItem config.currentPage
-      , afterRender (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
       , registerEvent "RestartAutoScroll" (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
       ] <> addPageCallBack itemsLen onPageSelected config.onPageSelected
         <> addPageCallBack itemsLen onPageScrollStateChanged config.onPageScrollStateChanged
         <> addPageCallBack itemsLen onPageScrolled config.onPageScrolled
-    , linearLayout
-      [ height indicatorLayoutHeight
-      , width MATCH_PARENT
-      , orientation VERTICAL
-      , padding $ PaddingBottom 8
-      ][ linearLayout [weight 1.0, orientation VERTICAL] []
-      , scrollIndicator itemsLen config
-      ]
-    ]
+    ] <> if itemsLen > 1 then
+          [ linearLayout
+              [ height indicatorLayoutHeight
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , padding $ PaddingBottom 8
+              , afterRender (\_ -> when (itemsLen > 1) $ checkAndStartAutoLoop push config) (pure unit)
+              ]
+              [ linearLayout [ weight 1.0, orientation VERTICAL ] []
+              , scrollIndicator itemsLen config
+              ]
+          ]
+        else
+          []
   where
     addPageCallBack itemsLen prop = maybe [] (\action -> [prop (getPush itemsLen) action])
     getPush itemsLen = (\action -> when (itemsLen > 1) $ push action)
@@ -85,7 +89,6 @@ scrollIndicator itemsLen config =
   , width MATCH_PARENT
   , orientation VERTICAL
   , gravity CENTER
-  , visibility  $ boolToVisibility $ itemsLen  > 1
   ][  linearLayout
       [ height $ V 14
       , width WRAP_CONTENT
