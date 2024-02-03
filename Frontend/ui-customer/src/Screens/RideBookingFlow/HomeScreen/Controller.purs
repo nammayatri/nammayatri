@@ -3005,10 +3005,12 @@ logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.da
           
 getBannerConfigs :: HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
 getBannerConfigs state = 
-  (if state.props.city == Chennai 
-    then [metroBannerConfig state BannerCarousal] 
-    else [])
-  <> 
+  -- (if state.props.city == Chennai 
+  --   then [metroBannerConfig state BannerCarousal] 
+  --   else [])
+  -- <> 
+  (getRemoteBannerConfigs state.props.city)
+  <>
   (if isJust state.props.sosBannerType 
     then [sosSetupBannerConfig state BannerCarousal] 
     else [])
@@ -3018,10 +3020,6 @@ getBannerConfigs state =
     else [])
   <> (if (state.data.config.feature.enableZooTicketBookingFlow)
     then [ticketBannerConfig state BannerCarousal] else [])
-  <> (if state.props.city == Chennai then 
-      [metroBannerConfig state BannerCarousal] 
-    else [])
-  <> (getRemoteBannerConfigs state.props.city)
   where
     getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
     getRemoteBannerConfigs city = do
