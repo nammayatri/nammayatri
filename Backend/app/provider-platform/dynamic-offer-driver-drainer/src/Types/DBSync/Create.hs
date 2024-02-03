@@ -147,7 +147,7 @@ data DBCreateObject
   | MessageTranslationObject MessageTranslation.MessageTranslation
   | MetaDataObject MetaData.MetaData
   | PersonObject Person.Person
-  | QuoteSpecialZoneObject Quote.Quote
+  | QuoteSpecialZoneObject Quote.QuoteSpecialZone
   | RatingObject Rating.Rating
   | RideObject Ride.Ride
   | RideDetailsObject RideDetails.RideDetails
@@ -235,7 +235,7 @@ modelName (MessageReportObject _) = "MessageReport"
 modelName (MessageTranslationObject _) = "MessageTranslation"
 modelName (MetaDataObject _) = "MetaData"
 modelName (PersonObject _) = "Person"
-modelName (QuoteSpecialZoneObject _) = "Quote"
+modelName (QuoteSpecialZoneObject _) = "QuoteSpecialZone"
 modelName (RatingObject _) = "Rating"
 modelName (RideObject _) = "Ride"
 modelName (RideDetailsObject _) = "RideDetails"

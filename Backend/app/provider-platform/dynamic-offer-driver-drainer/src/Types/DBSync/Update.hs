@@ -407,7 +407,7 @@ data DBUpdateObject
   | MessageTranslationOptions UpdateModel [Set Postgres MessageTranslation.MessageTranslationT] (Where Postgres MessageTranslation.MessageTranslationT)
   | MetaDataOptions UpdateModel [Set Postgres MetaData.MetaDataT] (Where Postgres MetaData.MetaDataT)
   | PersonOptions UpdateModel [Set Postgres Person.PersonT] (Where Postgres Person.PersonT)
-  | QuoteSpecialZoneOptions UpdateModel [Set Postgres Quote.QuoteT] (Where Postgres Quote.QuoteT)
+  | QuoteSpecialZoneOptions UpdateModel [Set Postgres Quote.QuoteSpecialZoneT] (Where Postgres Quote.QuoteSpecialZoneT)
   | RatingOptions UpdateModel [Set Postgres Rating.RatingT] (Where Postgres Rating.RatingT)
   | RegistrationTokenOptions UpdateModel [Set Postgres RegistrationToken.RegistrationTokenT] (Where Postgres RegistrationToken.RegistrationTokenT)
   | RideOptions UpdateModel [Set Postgres Ride.RideT] (Where Postgres Ride.RideT)

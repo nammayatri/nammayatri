@@ -402,7 +402,7 @@ data DBDeleteObject
   | MessageTranslationDeleteOptions DeleteModel (Where Postgres MessageTranslation.MessageTranslationT)
   | MetaDataDeleteOptions DeleteModel (Where Postgres MetaData.MetaDataT)
   | PersonDeleteOptions DeleteModel (Where Postgres Person.PersonT)
-  | QuoteSpecialZoneDeleteOptions DeleteModel (Where Postgres Quote.QuoteT)
+  | QuoteSpecialZoneDeleteOptions DeleteModel (Where Postgres Quote.QuoteSpecialZoneT)
   | RatingDeleteOptions DeleteModel (Where Postgres Rating.RatingT)
   | RideDeleteOptions DeleteModel (Where Postgres Ride.RideT)
   | RideDetailsDeleteOptions DeleteModel (Where Postgres RideDetails.RideDetailsT)

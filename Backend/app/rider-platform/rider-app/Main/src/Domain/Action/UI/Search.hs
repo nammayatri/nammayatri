@@ -204,12 +204,12 @@ search ::
   m SearchRes
 search personId req bundleVersion clientVersion device = do
   now <- getCurrentTime
-  let (origin, stops, isSourceManuallyMoved, isSpecialLocation, startTime, isReallocationEnabled) =
+  let (riderPreferredOption, origin, stops, isSourceManuallyMoved, isSpecialLocation, startTime, isReallocationEnabled) =
         case req of
           OneWaySearch oneWayReq ->
-            (oneWayReq.origin, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, now, oneWayReq.isReallocationEnabled)
+            (SearchRequest.OneWay, oneWayReq.origin, [oneWayReq.destination], oneWayReq.isSourceManuallyMoved, oneWayReq.isSpecialLocation, now, oneWayReq.isReallocationEnabled)
           RentalSearch rentalReq ->
-            (rentalReq.origin, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing)
+            (SearchRequest.Rental, rentalReq.origin, fromMaybe [] rentalReq.stops, rentalReq.isSourceManuallyMoved, rentalReq.isSpecialLocation, rentalReq.startTime, Nothing)
   unless (startTime >= now) $ throwError (InvalidRequest "Ride time should only be future time")
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
@@ -296,6 +296,7 @@ search personId req bundleVersion clientVersion device = do
       device
       tag
       shortestRouteDuration
+      riderPreferredOption
   Metrics.incrementSearchRequestCount merchant.name
 
   let txnId = getId (searchRequest.id)
@@ -377,8 +378,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Seconds ->
+  SearchRequest.RiderPerferredOption ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime bundleVersion clientVersion device disabilityTag duration = do
+buildSearchRequest searchRequestId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime bundleVersion clientVersion device disabilityTag duration riderPreferredOption = do
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   return
@@ -404,7 +406,8 @@ buildSearchRequest searchRequestId person pickup merchantOperatingCity mbDrop mb
         autoAssignEnabled = Nothing,
         autoAssignEnabledV2 = Nothing,
         availablePaymentMethods = [],
-        selectedPaymentMethodId = Nothing
+        selectedPaymentMethodId = Nothing,
+        riderPreferredOption -- this is just to store the rider preference for the ride type to handle backward compatibility
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime

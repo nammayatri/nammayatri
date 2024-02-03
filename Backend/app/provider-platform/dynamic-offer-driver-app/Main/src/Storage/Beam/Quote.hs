@@ -23,7 +23,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common as Common
 import Tools.Beam.UtilsTH
 
-data QuoteT f = QuoteT
+data QuoteSpecialZoneT f = QuoteSpecialZoneT
   { id :: B.C f Text,
     searchRequestId :: B.C f Text,
     providerId :: B.C f Text,
@@ -42,20 +42,14 @@ data QuoteT f = QuoteT
   }
   deriving (Generic, B.Beamable)
 
-instance B.Table QuoteT where
-  data PrimaryKey QuoteT f
+instance B.Table QuoteSpecialZoneT where
+  data PrimaryKey QuoteSpecialZoneT f
     = Id (B.C f Text)
     deriving (Generic, B.Beamable)
   primaryKey = Id . id
 
-type Quote = QuoteT Identity
+type QuoteSpecialZone = QuoteSpecialZoneT Identity
 
-$(enableKVPG ''QuoteT ['id] [['searchRequestId]])
+$(enableKVPG ''QuoteSpecialZoneT ['id] [['searchRequestId]])
 
-{-
-  The table named quote_special_zone in the QuoteT database was originally created exclusively for handling
-  data pertaining to special zones. This naming convention has been retained for reasons of backward compatibility.
-  Over time, the use of this table was expanded beyond its initial scope to accommodate a broader range of use cases,
-  extending its functionality beyond just special zones
--}
-$(mkTableInstances ''QuoteT "quote_special_zone")
+$(mkTableInstances ''QuoteSpecialZoneT "quote_special_zone")

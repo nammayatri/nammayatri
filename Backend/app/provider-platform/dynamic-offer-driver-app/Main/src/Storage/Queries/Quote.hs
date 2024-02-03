@@ -34,8 +34,14 @@ create quote = SQFP.create quote.fareParams >> createWithKV quote
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Quote -> m (Maybe Quote)
 findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
 
-instance FromTType' BeamQSZ.Quote Quote where
-  fromTType' BeamQSZ.QuoteT {..} = do
+{-
+  The table named quote_special_zone in the QuoteT database was originally created exclusively for handling
+  data pertaining to special zones. This naming convention has been retained for reasons of backward compatibility.
+  Over time, the use of this table was expanded beyond its initial scope to accommodate a broader range of use cases,
+  extending its functionality beyond just special zones
+-}
+instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
+  fromTType' BeamQSZ.QuoteSpecialZoneT {..} = do
     farePolicy <- maybe (pure Nothing) (BeamFPolicy.findById . Id) farePolicyId
     fareParams <- BeamQFP.findById (Id fareParametersId) >>= fromMaybeM (InternalError $ "FareParameters not found in Quote for id: " <> show fareParametersId)
     return $
@@ -49,9 +55,9 @@ instance FromTType' BeamQSZ.Quote Quote where
             ..
           }
 
-instance ToTType' BeamQSZ.Quote Quote where
+instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
   toTType' Quote {..} = do
-    BeamQSZ.QuoteT
+    BeamQSZ.QuoteSpecialZoneT
       { BeamQSZ.id = getId id,
         BeamQSZ.searchRequestId = getId searchRequestId,
         BeamQSZ.providerId = getId providerId,

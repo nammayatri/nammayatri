@@ -172,8 +172,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   let merchantOperatingCityId = _searchRequest.merchantOperatingCityId
-  estimates <- traverse (buildEstimate providerInfo now _searchRequest) estimatesInfo
-  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest) quotesInfo
+  estimates <- traverse (buildEstimate providerInfo now _searchRequest) (filterEstimtesByPrefference estimatesInfo)
+  quotes <- traverse (buildQuote requestId providerInfo now _searchRequest) (filterQuotesByPrefference quotesInfo)
   merchantPaymentMethods <- CQMPM.findAllByMerchantOperatingCityId merchantOperatingCityId
   let paymentMethods = intersectPaymentMethods paymentMethodsInfo merchantPaymentMethods
   forM_ estimates $ \est -> do
@@ -183,6 +183,24 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   _ <- QPFS.updateStatus _searchRequest.riderId DPFS.GOT_ESTIMATE {requestId = _searchRequest.id, validTill = _searchRequest.validTill}
   _ <- QSearchReq.updatePaymentMethods _searchRequest.id (paymentMethods <&> (.id))
   QPFS.clearCache _searchRequest.riderId
+  where
+    {- Author: Hemant Mangla
+      Rider quotes and estimates are filtered based on their preferences.
+      Currently, riders preferring rentals receive only rental options.
+      Ideally, rental options should also be available for one-way preferences, but frontend limitations prevent this.
+      Once the frontend is updated for compatibility, we can extend this feature.
+    -}
+    filterQuotesByPrefference :: [QuoteInfo] -> [QuoteInfo]
+    filterQuotesByPrefference _quotesInfo =
+      case _searchRequest.riderPreferredOption of
+        Rental -> filter (\qInfo -> case qInfo.quoteDetails of RentalDetails _ -> True; _ -> False) _quotesInfo
+        _ -> filter (\qInfo -> case qInfo.quoteDetails of RentalDetails _ -> False; _ -> True) _quotesInfo
+
+    filterEstimtesByPrefference :: [EstimateInfo] -> [EstimateInfo]
+    filterEstimtesByPrefference _estimateInfo =
+      case _searchRequest.riderPreferredOption of
+        Rental -> []
+        _ -> _estimateInfo
 
 buildEstimate ::
   MonadFlow m =>

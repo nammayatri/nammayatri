@@ -131,6 +131,7 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
             autoAssignEnabledV2 = autoAssignEnabledV2,
             availablePaymentMethods = Id <$> availablePaymentMethods,
             selectedPaymentMethodId = Id <$> selectedPaymentMethodId,
+            riderPreferredOption = fromMaybe OneWay riderPreferredOption,
             createdAt = createdAt
           }
     where
@@ -162,5 +163,6 @@ instance ToTType' BeamSR.SearchRequest SearchRequest where
         BeamSR.autoAssignEnabledV2 = autoAssignEnabledV2,
         BeamSR.availablePaymentMethods = getId <$> availablePaymentMethods,
         BeamSR.selectedPaymentMethodId = getId <$> selectedPaymentMethodId,
+        BeamSR.riderPreferredOption = Just riderPreferredOption,
         BeamSR.createdAt = createdAt
       }
