@@ -16,7 +16,8 @@ import qualified Kernel.Types.Id
 import Tools.Beam.UtilsTH
 
 data NextBillionDataT f = NextBillionDataT
-  { routes :: B.C f [Kernel.Prelude.Text],
+  { mapsProvider :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    routes :: B.C f [Kernel.Prelude.Text],
     searchRequestId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),

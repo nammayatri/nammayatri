@@ -36,7 +36,8 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.NextBillionData.NextBillionData {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.routes $ routes,
+    [ Se.Set Beam.mapsProvider $ mapsProvider,
+      Se.Set Beam.routes $ routes,
       Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt $ createdAt,
@@ -52,7 +53,8 @@ instance FromTType' Beam.NextBillionData Domain.Types.NextBillionData.NextBillio
     pure $
       Just
         Domain.Types.NextBillionData.NextBillionData
-          { routes = routes,
+          { mapsProvider = mapsProvider,
+            routes = routes,
             searchRequestId = Kernel.Types.Id.Id searchRequestId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -63,7 +65,8 @@ instance FromTType' Beam.NextBillionData Domain.Types.NextBillionData.NextBillio
 instance ToTType' Beam.NextBillionData Domain.Types.NextBillionData.NextBillionData where
   toTType' Domain.Types.NextBillionData.NextBillionData {..} = do
     Beam.NextBillionDataT
-      { Beam.routes = routes,
+      { Beam.mapsProvider = mapsProvider,
+        Beam.routes = routes,
         Beam.searchRequestId = Kernel.Types.Id.getId searchRequestId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
