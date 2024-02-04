@@ -54,6 +54,7 @@ update' farePolicy = do
       Se.Set BeamFP.maxAllowedTripDistance $ (.maxAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
       Se.Set BeamFP.minAllowedTripDistance $ (.minAllowedTripDistance) <$> farePolicy.allowedTripDistanceBounds,
       Se.Set BeamFP.govtCharges $ farePolicy.govtCharges,
+      Se.Set BeamFP.serviceCharge $ farePolicy.serviceCharge,
       Se.Set BeamFP.perMinuteRideExtraTimeCharge $ farePolicy.perMinuteRideExtraTimeCharge,
       Se.Set BeamFP.description $ farePolicy.description,
       Se.Set BeamFP.updatedAt now
