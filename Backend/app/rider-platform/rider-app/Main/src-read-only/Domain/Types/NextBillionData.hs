@@ -12,7 +12,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data NextBillionData = NextBillionData
-  { routes :: [Kernel.Prelude.Text],
+  { mapsProvider :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    routes :: [Kernel.Prelude.Text],
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

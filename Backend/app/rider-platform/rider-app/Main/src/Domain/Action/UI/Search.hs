@@ -40,7 +40,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps
 import qualified Kernel.External.Maps as MapsK
-import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
+import qualified Kernel.External.Maps.Interface as MapsRoutes
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import Kernel.Types.Beckn.Context (City)
@@ -194,7 +194,8 @@ search ::
     HasBAPMetrics m r,
     MonadFlow m,
     EventStreamFlow m r,
-    HasField "hotSpotExpiry" r Seconds
+    HasField "hotSpotExpiry" r Seconds,
+    HasFlowEnv m r '["collectRouteData" ::: Bool]
   ) =>
   Id Person.Person ->
   SearchReq ->
@@ -250,26 +251,44 @@ search personId req bundleVersion clientVersion device = do
                   mode = Just Maps.CAR
                 }
         routeResponse <- Maps.getRoutes person.id person.merchantId (Just merchantOperatingCity.id) request
-        fork "calling next billion directions api" $ do
-          nextBillionConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.NextBillion) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "NextBillion")
-          case nextBillionConfigs.serviceConfig of
-            DMSC.MapsServiceConfig mapsCfg -> do
-              case mapsCfg of
-                MapsK.NextBillionConfig msc -> do
-                  nextBillionrouteResponse <- NextBillion.getRoutes msc request
-                  logInfo $ "NextBillion route response: " <> show nextBillionrouteResponse
-                  let routeData =
-                        DNB.NextBillionData
-                          { routes = map show nextBillionrouteResponse,
-                            searchRequestId = searchRequestId,
-                            merchantId = Just merchant.id,
-                            merchantOperatingCityId = Just merchantOperatingCity.id,
-                            createdAt = now,
-                            updatedAt = now
-                          }
-                  QNB.create routeData
-                _ -> logInfo "No NextBillion config"
-            _ -> logInfo "NextBillion route not found"
+
+        shouldCollectRouteData <- asks (.collectRouteData)
+        when shouldCollectRouteData $
+          fork "calling MMI and OSRM directions api" $ do
+            mmiConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.MMI) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "MMI")
+            case mmiConfigs.serviceConfig of
+              DMSC.MapsServiceConfig mapsCfg -> do
+                routeResp <- MapsRoutes.getRoutes True mapsCfg request
+                logInfo $ "MMI route response: " <> show routeResp
+                let routeData =
+                      DNB.NextBillionData
+                        { mapsProvider = Just $ show MapsK.MMI,
+                          routes = map show routeResp,
+                          searchRequestId = searchRequestId,
+                          merchantId = Just merchant.id,
+                          merchantOperatingCityId = Just merchantOperatingCity.id,
+                          createdAt = now,
+                          updatedAt = now
+                        }
+                QNB.create routeData
+              _ -> logInfo "MapsServiceConfig config not found for MMI"
+            osrmConfigs <- QMSC.findByMerchantIdAndService person.merchantId (DMSC.MapsService MapsK.OSRM) >>= fromMaybeM (MerchantServiceConfigNotFound person.merchantId.getId "Maps" "OSRM")
+            case osrmConfigs.serviceConfig of
+              DMSC.MapsServiceConfig mapsCfg -> do
+                routeResp <- MapsRoutes.getRoutes True mapsCfg request
+                logInfo $ "OSRM route response: " <> show routeResp
+                let routeData =
+                      DNB.NextBillionData
+                        { mapsProvider = Just $ show MapsK.OSRM,
+                          routes = map show routeResp,
+                          searchRequestId = searchRequestId,
+                          merchantId = Just merchant.id,
+                          merchantOperatingCityId = Just merchantOperatingCity.id,
+                          createdAt = now,
+                          updatedAt = now
+                        }
+                QNB.create routeData
+              _ -> logInfo "MapsServiceConfig config not found for OSRM"
 
         let durationWeightage = 100 - merchant.distanceWeightage
         let shortestRouteInfo = getEfficientRouteInfo routeResponse merchant.distanceWeightage durationWeightage

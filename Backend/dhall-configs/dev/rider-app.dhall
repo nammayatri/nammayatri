@@ -235,4 +235,5 @@ in  { esqDBCfg
     , isBecknSpecVersion2 = False
     , _version = "2.0.0"
     , hotSpotExpiry = +604800
+    , collectRouteData = True
     }

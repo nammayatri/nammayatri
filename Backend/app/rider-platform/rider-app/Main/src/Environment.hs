@@ -128,7 +128,8 @@ data AppCfg = AppCfg
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
     _version :: Text,
-    hotSpotExpiry :: Seconds
+    hotSpotExpiry :: Seconds,
+    collectRouteData :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -198,7 +199,8 @@ data AppEnv = AppEnv
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
     _version :: Text,
-    hotSpotExpiry :: Seconds
+    hotSpotExpiry :: Seconds,
+    collectRouteData :: Bool
   }
   deriving (Generic)
 
