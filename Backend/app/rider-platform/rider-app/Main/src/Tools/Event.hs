@@ -25,6 +25,7 @@ import qualified Domain.Types.SearchRequest as DSearchRequest
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Kernel.Utils.JSON (constructorsWithSnakeCase)
 import Lib.SessionizerMetrics.EventStream
 import Lib.SessionizerMetrics.Types.Event
 
@@ -64,7 +65,10 @@ data Payload
         exophoneNumber :: Maybe Text,
         rideId :: Maybe (Id DRide.Ride)
       }
-  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Generic, FromJSON, ToSchema)
+
+instance ToJSON Payload where
+  toJSON = genericToJSON constructorsWithSnakeCase
 
 data RideEventData = RideEventData
   { ride :: DRide.Ride,
