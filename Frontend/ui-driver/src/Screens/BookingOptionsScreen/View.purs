@@ -50,6 +50,7 @@ view push state =
   ] $ [ headerLayout push state
       , defaultVehicleView push state
       , downgradeVehicleView push state
+      , toggleRentalView push state
       , linearLayout
         [ height MATCH_PARENT
         , width $ V 1
@@ -88,7 +89,7 @@ downgradeVehicleView push state =
               [ width MATCH_PARENT
               , height WRAP_CONTENT
               , gravity RIGHT
-              ][ toggleView push state.props.downgraded canDowngrade ]
+              ][ toggleView push state.props.downgraded canDowngrade DowngradeVehicle]
           ]
         , linearLayout
           [ width MATCH_PARENT
@@ -189,8 +190,8 @@ downgradeVehicleCard variant enabled opacity =
        ]
    ]
 
-toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> PrestoDOM (Effect Unit) w
-toggleView push enabled canDowngrade =
+toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> Action -> PrestoDOM (Effect Unit) w
+toggleView push enabled isClickable action =
   let backgroundColor = if enabled then Color.blue800 else Color.black600
       align = if enabled then RIGHT else LEFT
   in  linearLayout
@@ -200,8 +201,8 @@ toggleView push enabled canDowngrade =
       , background backgroundColor
       , stroke $ "1," <> backgroundColor
       , gravity CENTER_VERTICAL
-      , onClick push (const DowngradeVehicle)
-      , clickable canDowngrade
+      , onClick push (const action)
+      , clickable isClickable
       ][  linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -354,3 +355,42 @@ customTV text' textSize' fontStyle' color' =
       , color color'
       ]
     <> fontStyle' TypoGraphy
+
+toggleRentalView :: forall w. (Action -> Effect Unit) -> ST.BookingOptionsScreenState -> PrestoDOM (Effect Unit) w      
+toggleRentalView push state = 
+  linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , padding $ Padding 16 16 16 16
+      , margin $ Margin 16 16 16 16
+      , stroke $ "1," <> Color.grey900
+      , cornerRadius 8.0
+      , orientation VERTICAL
+      ][  linearLayout
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , orientation HORIZONTAL
+          ][  textView $
+              [ width WRAP_CONTENT
+              , height WRAP_CONTENT
+              , color $ Color.black800 
+              , text $ getString RENTAL_BOOKINGS
+              ] <> FontStyle.body4 TypoGraphy
+            , linearLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , gravity RIGHT
+              ][ toggleView push state.props.canSwitchToRental true ToggleRental]
+          ],
+          linearLayout
+          [ width MATCH_PARENT
+          , height $ V 1
+          , margin (Margin 0 16 0 16)
+          , background Color.grey700
+          ][],
+           textView $
+          [ width MATCH_PARENT
+          , height WRAP_CONTENT
+          , text $ getString RENTAL_BOOKINGS_DESCRIPTION
+          , color Color.black700
+          ] <> FontStyle.body1 TypoGraphy]

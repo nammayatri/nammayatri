@@ -193,6 +193,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                     .put("msg",body);
                     NotificationUtils.triggerUICallbacks(notificationType, notificationData.toString());
                     switch (notificationType) {
+                        case NotificationTypes.EDIT_STOP:
+                        case NotificationTypes.NEW_STOP_ADDED:
+                            if (remoteMessage.getData().containsKey("entity_data")) {
+                                String entityPayload = remoteMessage.getData().get("entity_data");
+                                if (entityPayload != null){
+                                    JSONObject driverPayloadJsonObject = new JSONObject(entityPayload);
+                                    if(driverPayloadJsonObject.has("isEdit") && !driverPayloadJsonObject.isNull("isEdit")){
+                                        String stopStatus = driverPayloadJsonObject.optBoolean("isEdit",false) ? "EDIT_STOP" : "ADD_STOP";
+                                        payload.put("stopStatus", stopStatus);
+                                        NotificationUtils.showNotification(this, title, body, payload, null);
+                                    }
+                                }
+                            }
+                            break;
                         case NotificationTypes.DRIVER_NOTIFY:
                             if (remoteMessage.getData().containsKey("driver_notification_payload")) {
                                 String driverNotification = remoteMessage.getData().get("driver_notification_payload");
@@ -614,6 +628,8 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         }
     }
     public static class NotificationTypes {
+        public static final String NEW_STOP_ADDED = "ADD_STOP";
+        public static final String EDIT_STOP = "EDIT_STOP";
         public static final String TRIGGER_SERVICE = "TRIGGER_SERVICE";
         public static final String NEW_RIDE_AVAILABLE = "NEW_RIDE_AVAILABLE";
         public static final String CLEARED_FARE = "CLEARED_FARE";

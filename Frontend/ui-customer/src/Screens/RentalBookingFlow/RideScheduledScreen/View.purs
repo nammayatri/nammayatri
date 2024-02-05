@@ -124,7 +124,7 @@ rideDetailsView push state =
             ] <> FontStyle.body1 TypoGraphy
         , textView $
             [ textSize FontSize.a_14
-            , text $ state.baseDuration <> "hr"
+            , text $ state.baseDuration <> " hr"
             , color Color.black800
             ] <> FontStyle.subHeading1 TypoGraphy
         , textView $

@@ -150,6 +150,11 @@ public class MobilityAppBridge extends HyperBridge {
         }
 
         @Override
+        public void addStopCallBack(String newStopLocation){
+            Log.i(CALLBACK, "Not required");
+        }
+
+        @Override
         public void imageUploadCallBack(String encImage, String filename, String filePath) {
             callImageUploadCallBack(encImage, filename, filePath);
         }
@@ -1093,6 +1098,7 @@ public class MobilityAppBridge extends HyperBridge {
                     throw new RuntimeException(e);
                 }
             } else {
+                System.out.println("Error in multipart response: " + responseCode);
                 Toast.makeText(bridgeComponents.getContext(), "Unable to upload image", Toast.LENGTH_SHORT).show();
             }
             callUploadMultiPartCallBack(fileType, res);
