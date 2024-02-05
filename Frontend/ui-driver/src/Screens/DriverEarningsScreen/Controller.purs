@@ -477,7 +477,7 @@ rideHistoryItemTransformer (RidesInfo ride) =
     id : ride.shortRideId,
     updatedAt : ride.updatedAt,
     source : (decodeAddress (ride.fromLocation) false),
-    destination : (decodeAddress (ride.toLocation) false),
+    destination : maybe "" (\toLocation -> decodeAddress toLocation false) ride.toLocation,
     vehicleType : ride.vehicleVariant,
     riderName : fromMaybe "" ride.riderName,
     customerExtraFee : ride.customerExtraFee,
@@ -501,7 +501,7 @@ earningHistoryItemsListTransformer :: Array RidesInfo -> Array ST.CoinHistoryIte
 earningHistoryItemsListTransformer list =
   ( map
       ( \(RidesInfo ride) ->
-          { destination: Just (decodeAddress (ride.toLocation) false)
+          { destination:  (\toLocation -> decodeAddress toLocation false) <$> ride.toLocation
           , timestamp: ride.createdAt
           , earnings:
               case ride.status of
@@ -672,36 +672,12 @@ dummyRideHistoryItem = RidesInfo {
       vehicleVariant : "",
       estimatedBaseFare : 0,
       vehicleColor : "",
-      tripStartTime : Nothing,
       id : "",
       updatedAt : "",
       riderName : Nothing,
       rideRating : Nothing,
-      tripEndTime : Nothing,
-      fromLocation : LocationInfo {
-        area : Nothing,
-        state : Nothing,
-        country : Nothing,
-        building : Nothing,
-        door : Nothing,
-        street : Nothing,
-        lat : 0.0,
-        city : Nothing,
-        areaCode : Nothing,
-        lon : 0.0
-      },
-      toLocation : LocationInfo {
-        area : Nothing,
-        state : Nothing,
-        country : Nothing,
-        building : Nothing,
-        door : Nothing,
-        street : Nothing,
-        lat : 0.0,
-        city : Nothing,
-        areaCode : Nothing,
-        lon : 0.0
-      },
+      fromLocation : dummyLocationInfo,
+      toLocation : Just dummyLocationInfo,
       estimatedDistance : 0,
       exoPhone : "",
       specialLocationTag : Nothing,
@@ -711,5 +687,29 @@ dummyRideHistoryItem = RidesInfo {
       payerVpa : Nothing,
       autoPayStatus : Nothing,
       driverGoHomeRequestId : Nothing,
-      isFreeRide : Nothing
+      isFreeRide : Nothing,
+      tripCategory : Nothing,
+      tripScheduledAt : Nothing,
+      tripStartTime : Nothing,
+      tripEndTime : Nothing,
+      nextStopLocation : Nothing,
+      lastStopLocation : Nothing,
+      actualRideDistance : Nothing,
+      stopLocationId : Nothing,
+      estimatedDuration : Nothing,
+      actualDuration : Nothing
+  }
+
+dummyLocationInfo :: LocationInfo
+dummyLocationInfo = LocationInfo {
+      area : Nothing,
+      state : Nothing,
+      country : Nothing,
+      building : Nothing,
+      door : Nothing,
+      street : Nothing,
+      lat : 0.0,
+      city : Nothing,
+      areaCode : Nothing,
+      lon : 0.0
   }

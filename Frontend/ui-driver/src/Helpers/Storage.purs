@@ -35,6 +35,7 @@ data KeyStore = USER_NAME
                 | TEST_FLOW_FOR_REGISTRATOION
                 | MOBILE_NUMBER_KEY
                 | IS_RIDE_ACTIVE
+                | NEW_ADD_STOP
                 | IS_DRIVER_ENABLED
                 | DRIVER_STATUS
                 | DRIVER_STATUS_N
@@ -45,6 +46,8 @@ data KeyStore = USER_NAME
                 | LOCAL_STAGE
                 | RIDE_STATUS_POLLING
                 | RIDE_STATUS_POLLING_ID
+                | RENTAL_RIDE_STATUS_POLLING
+                | RENTAL_RIDE_STATUS_POLLING_ID
                 | RIDE_T_FREQUENCY
                 | RIDE_G_FREQUENCY
                 | IS_DRIVER_VERIFIED
@@ -123,6 +126,14 @@ data KeyStore = USER_NAME
                 | ENTERED_RC
                 | ENTERED_DL
                 | COINS_POPUP_SHOWN_DATE
+                | RIDE_START_ODOMETER
+                | RIDE_START_ODOMETER_READING
+                | RIDE_END_ODOMETER
+                | RIDE_END_ODOMETER_READING
+                | RIDE_PRODUCT_TYPE
+                | RIDE_START_TIME
+                | RIDE_END_TIME
+                | RIDE_START_TIMER_ID
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
