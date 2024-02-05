@@ -121,6 +121,8 @@ INSERT INTO atlas_driver_offer_bpp.fare_policy (id, night_shift_start, night_shi
 
 INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow, trip_category, merchant_operating_city_id) VALUES ('294abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '71b52524-e773-03dc-5853-290132ce6fd5', 'SEDAN', 'Default', 'RENTAL', 'Rental_OnDemandStaticOffer', (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
 INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow, trip_category, merchant_operating_city_id) VALUES ('394abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SUV', 'Default', 'RENTAL', 'Rental_OnDemandStaticOffer', (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
+-- ONLY FOR LOCAL
+INSERT INTO atlas_driver_offer_bpp.fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow, trip_category, merchant_operating_city_id) VALUES ('494abc7f-9cc9-e3t3-3c8b-7721c6f1809f', 'favorit0-0000-0000-0000-00000favorit', '51b42524-e113-03dc-5453-290032ce6fd5', 'SEDAN', 'Default', 'INTERCITY', 'InterCity_OneWayOnDemandStaticOffer', (SELECT id from atlas_driver_offer_bpp.merchant_operating_city where merchant_id = 'favorit0-0000-0000-0000-00000favorit'));
 
 -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ --
 -- @ WARNING: DO NOT ENTER BEFORE FULL RELEASE - DROP QUERY ZONE @ --

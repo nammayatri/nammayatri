@@ -53,7 +53,8 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     variant :: Maybe Vehicle.Variant,
     fromLocation :: a,
     toLocation :: a,
-    merchantId :: Id DM.Merchant
+    merchantId :: Id DM.Merchant,
+    isRental :: Bool
   }
 
 data GoHomeDriverPoolResult = GoHomeDriverPoolResult

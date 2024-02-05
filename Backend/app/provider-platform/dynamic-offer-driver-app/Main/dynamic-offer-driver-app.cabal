@@ -468,6 +468,7 @@ library
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
+      Storage.CachedQueries.Merchant.MerchantState
       Storage.CachedQueries.Merchant.OnboardingDocumentConfig
       Storage.CachedQueries.Merchant.Overlay
       Storage.CachedQueries.Merchant.TransporterConfig
@@ -600,8 +601,14 @@ library
       Tools.Verification
       Tools.Whatsapp
       Domain.Types.DriverPoolConfig
+      Domain.Types.InterCityTravelCities
+      Domain.Types.MerchantState
       Storage.Beam.DriverPoolConfig
+      Storage.Beam.InterCityTravelCities
+      Storage.Beam.MerchantState
       Storage.Queries.DriverPoolConfig
+      Storage.Queries.InterCityTravelCities
+      Storage.Queries.MerchantState
   other-modules:
       Paths_dynamic_offer_driver_app
   hs-source-dirs:

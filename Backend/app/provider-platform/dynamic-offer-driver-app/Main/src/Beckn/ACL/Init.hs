@@ -53,6 +53,7 @@ buildInitReq subscriber req = do
       "RIDE" -> pure $ DInit.EstimateId (Id fId)
       "RIDE_OTP" -> pure $ DInit.QuoteId (Id fId)
       "RENTAL" -> pure $ DInit.QuoteId (Id fId)
+      "INTER_CITY" -> pure $ DInit.QuoteId (Id fId)
       _ -> pure $ DInit.QuoteId (Id fId)
   let maxEstimatedDistance = getMaxEstimateDistance =<< order.fulfillment.tags
   -- should we check start time and other details?

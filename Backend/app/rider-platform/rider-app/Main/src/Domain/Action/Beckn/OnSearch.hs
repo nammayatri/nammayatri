@@ -21,6 +21,7 @@ module Domain.Action.Beckn.OnSearch
     QuoteDetails (..),
     OneWayQuoteDetails (..),
     OneWaySpecialZoneQuoteDetails (..),
+    InterCityQuoteDetails (..),
     RentalQuoteDetails (..),
     EstimateBreakupInfo (..),
     BreakupPriceInfo (..),
@@ -135,6 +136,7 @@ data QuoteInfo = QuoteInfo
 
 data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
+  | InterCityDetails InterCityQuoteDetails
   | RentalDetails RentalQuoteDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneQuoteDetails
 
@@ -143,6 +145,10 @@ newtype OneWayQuoteDetails = OneWayQuoteDetails
   }
 
 newtype OneWaySpecialZoneQuoteDetails = OneWaySpecialZoneQuoteDetails
+  { quoteId :: Text
+  }
+
+newtype InterCityQuoteDetails = InterCityQuoteDetails
   { quoteId :: Text
   }
 
@@ -265,6 +271,8 @@ buildQuote requestId providerInfo now _searchRequest QuoteInfo {..} = do
       DQuote.RentalDetails <$> buildRentalDetails rentalDetails
     OneWaySpecialZoneDetails details -> do
       DQuote.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneQuoteDetails details
+    InterCityDetails details -> do
+      DQuote.InterCityDetails <$> buildInterCityQuoteDetails details
   pure
     DQuote.Quote
       { id = uid,
@@ -285,6 +293,11 @@ mkOneWayQuoteDetails OneWayQuoteDetails {..} = DQuote.OneWayQuoteDetails {..}
 
 buildOneWaySpecialZoneQuoteDetails :: MonadFlow m => OneWaySpecialZoneQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
 buildOneWaySpecialZoneQuoteDetails OneWaySpecialZoneQuoteDetails {..} = do
+  id <- generateGUID
+  pure DSpecialZoneQuote.SpecialZoneQuote {..}
+
+buildInterCityQuoteDetails :: MonadFlow m => InterCityQuoteDetails -> m DSpecialZoneQuote.SpecialZoneQuote
+buildInterCityQuoteDetails InterCityQuoteDetails {..} = do
   id <- generateGUID
   pure DSpecialZoneQuote.SpecialZoneQuote {..}
 

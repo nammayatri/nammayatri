@@ -65,7 +65,7 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
         transactionId <- Utils.getTransactionId reqV2.searchReqContext
         Utils.withTransactionIdLogTag transactionId $ do
           logTagInfo "SearchV2 API Flow" "Reached"
-          dSearchReq <- ACL.buildSearchReqV2 transporterId subscriber reqV2
+          dSearchReq <- ACL.buildSearchReqV2 subscriber reqV2
           let context = reqV2.searchReqContext
           messageId <- Utils.getMessageId context
           bapId <- Utils.getContextBapId context
@@ -76,16 +76,16 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
       Left reqV1 ->
         withTransactionIdLogTag reqV1 $ do
           logTagInfo "Search API Flow" "Reached"
-          dSearchReq <- ACL.buildSearchReqV1 transporterId subscriber reqV1
+          dSearchReq <- ACL.buildSearchReqV1 subscriber reqV1
           pure (dSearchReq, reqV1.context.bap_id, reqV1.context.bap_uri, reqV1.context.message_id, reqV1.context.city, reqV1.context.country, reqV1.context.transaction_id)
 
   Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-    merchant <- DSearch.validateRequest transporterId dSearchReq
-    let bppId = merchant.subscriberId.getShortId
+    validatedSReq <- DSearch.validateRequest transporterId dSearchReq
+    let bppId = validatedSReq.merchant.subscriberId.getShortId
     bppUri <- Utils.mkBppUri transporterId.getId
     fork "search request processing" $
       Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-        dSearchRes <- DSearch.handler merchant dSearchReq
+        dSearchRes <- DSearch.handler validatedSReq dSearchReq
         let callbackUrl = gateway.subscriber_url
         internalEndPointHashMap <- asks (.internalEndPointHashMap)
         isBecknSpecVersion2 <- asks (.isBecknSpecVersion2)

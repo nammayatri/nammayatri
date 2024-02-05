@@ -93,6 +93,7 @@ data BookingDetails
   | RentalDetails RentalBookingDetails
   | DriverOfferDetails OneWayBookingDetails
   | OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails
+  | InterCityDetails InterCityBookingDetails
   deriving (Show)
 
 data RentalBookingDetails = RentalBookingDetails
@@ -110,5 +111,11 @@ data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
   { toLocation :: DLoc.Location,
     distance :: HighPrecMeters,
     otpCode :: Maybe Text
+  }
+  deriving (Show)
+
+data InterCityBookingDetails = InterCityBookingDetails
+  { toLocation :: DLoc.Location,
+    distance :: HighPrecMeters
   }
   deriving (Show)

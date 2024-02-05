@@ -92,6 +92,7 @@ mkConfirmMessage res = do
     fulfillmentType = case res.bookingDetails of
       DRB.OneWaySpecialZoneDetails _ -> "RIDE_OTP"
       DRB.RentalDetails _ -> "RENTAL"
+      DRB.InterCityDetails _ -> "INTER_CITY"
       _ -> "RIDE"
 
 mkFulfillment :: Maybe Text -> Text -> DL.Location -> Maybe DL.Location -> Text -> Text -> Maybe Text -> Confirm.VehicleVariant -> Bool -> Confirm.FulfillmentInfo
@@ -239,6 +240,7 @@ tfFulfillments res =
     mkFulfillmentType = \case
       DRB.OneWaySpecialZoneDetails _ -> "RIDE_OTP"
       DRB.RentalDetails _ -> "RENTAL"
+      DRB.InterCityDetails _ -> "INTER_CITY"
       _ -> "RIDE"
 
 tfItems :: DOnInit.OnInitRes -> Maybe [Spec.Item]

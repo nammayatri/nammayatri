@@ -55,6 +55,7 @@ data Quote = Quote
 
 data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
+  | InterCityDetails DSpecialZoneQuote.SpecialZoneQuote
   | RentalDetails DRentalDetails.RentalDetails
   | DriverOfferDetails DDriverOffer.DriverOffer
   | OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote
@@ -85,6 +86,7 @@ data QuoteAPIEntity = QuoteAPIEntity
 -- do not change constructor names without changing fareProductConstructorModifier
 data QuoteAPIDetails
   = OneWayAPIDetails OneWayQuoteAPIDetails
+  | InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity
   | RentalAPIDetails DRentalDetails.RentalDetailsAPIEntity
   | DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity
   | OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity
@@ -115,6 +117,7 @@ mkQuoteAPIDetails = \case
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
   DriverOfferDetails DDriverOffer.DriverOffer {..} -> DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {..}
   OneWaySpecialZoneDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> OneWaySpecialZoneAPIDetails DSpecialZoneQuote.SpecialZoneQuoteAPIEntity {..}
+  InterCityDetails DSpecialZoneQuote.SpecialZoneQuote {..} -> InterCityAPIDetails DSpecialZoneQuote.InterCityQuoteAPIEntity {..}
 
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} = do

@@ -80,6 +80,7 @@ data BookingAPIDetails
   | RentalAPIDetails RentalBookingAPIDetails
   | DriverOfferAPIDetails OneWayBookingAPIDetails
   | OneWaySpecialZoneAPIDetails OneWaySpecialZoneBookingAPIDetails
+  | InterCityAPIDetails InterCityBookingAPIDetails
   deriving (Show, Generic)
 
 instance ToJSON BookingAPIDetails where
@@ -97,6 +98,12 @@ data RentalBookingAPIDetails = RentalBookingAPIDetails
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data OneWayBookingAPIDetails = OneWayBookingAPIDetails
+  { toLocation :: LocationAPIEntity,
+    estimatedDistance :: HighPrecMeters
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data InterCityBookingAPIDetails = InterCityBookingAPIDetails
   { toLocation :: LocationAPIEntity,
     estimatedDistance :: HighPrecMeters
   }
@@ -165,6 +172,7 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
       RentalDetails details -> RentalAPIDetails . mkRentalAPIDetails $ details
       DriverOfferDetails details -> DriverOfferAPIDetails . mkOneWayAPIDetails $ details
       OneWaySpecialZoneDetails details -> OneWaySpecialZoneAPIDetails . mkOneWaySpecialZoneAPIDetails $ details
+      InterCityDetails details -> InterCityAPIDetails . mkInterCityAPIDetails $ details
       where
         mkOneWayAPIDetails OneWayBookingDetails {..} =
           OneWayBookingAPIDetails
@@ -180,6 +188,11 @@ makeBookingAPIEntity booking activeRide allRides fareBreakups mbExophone mbPayme
             { toLocation = SLoc.makeLocationAPIEntity toLocation,
               estimatedDistance = distance,
               ..
+            }
+        mkInterCityAPIDetails InterCityBookingDetails {..} =
+          InterCityBookingAPIDetails
+            { toLocation = SLoc.makeLocationAPIEntity toLocation,
+              estimatedDistance = distance
             }
 
 getActiveSos :: (CacheFlow m r, EsqDBFlow m r) => Maybe DRide.Ride -> m (Maybe DSos.SosStatus)

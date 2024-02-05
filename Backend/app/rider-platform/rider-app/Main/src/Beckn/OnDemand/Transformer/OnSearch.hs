@@ -69,6 +69,9 @@ tfQuotesInfo provider fulfillments item = do
     "RIDE_OTP" -> do
       let quoteDetails_ = Domain.Action.Beckn.OnSearch.OneWaySpecialZoneDetails (Domain.Action.Beckn.OnSearch.OneWaySpecialZoneQuoteDetails {quoteId = quoteOrEstId_})
       pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, vehicleVariant = vehicleVariant_}
+    "INTER_CITY" -> do
+      let quoteDetails_ = Domain.Action.Beckn.OnSearch.InterCityDetails (Domain.Action.Beckn.OnSearch.InterCityQuoteDetails {quoteId = quoteOrEstId_})
+      pure $ Right $ Domain.Action.Beckn.OnSearch.QuoteInfo {descriptions = descriptions_, discount = discount_, estimatedFare = estimatedFare_, estimatedTotalFare = estimatedTotalFare_, itemId = itemId_, quoteDetails = quoteDetails_, specialLocationTag = specialLocationTag_, vehicleVariant = vehicleVariant_}
     _ -> do
       let bppEstimateId_ = Id quoteOrEstId_
       driversLocation_ <- Beckn.OnDemand.Utils.OnSearch.getProviderLocation provider

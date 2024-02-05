@@ -162,6 +162,7 @@ mkFulfillmentType = \case
   DCT.RoundTrip DCT.RideOtp -> "RIDE_OTP"
   DCT.RideShare DCT.RideOtp -> "RIDE_OTP"
   DCT.Rental _ -> "RENTAL"
+  DCT.InterCity _ -> "INTER_CITY"
   _ -> "RIDE"
 
 getTagV2 :: TagGroupCode -> TagCode -> [Spec.TagGroup] -> Maybe Text

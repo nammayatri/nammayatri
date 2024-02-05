@@ -171,6 +171,7 @@ buildBookingToOrder SP.Person {firstName, lastName, mobileNumber, id} booking = 
         DRB.OneWayDetails details -> Just details.toLocation
         DRB.DriverOfferDetails details -> Just details.toLocation
         DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+        DRB.InterCityDetails details -> Just details.toLocation
   rbStatus <- DRB.buildBookingAPIEntity booking id
   decMobNum <- mapM decrypt mobileNumber
   let details =

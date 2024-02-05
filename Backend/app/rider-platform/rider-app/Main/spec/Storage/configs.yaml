@@ -1,5 +1,6 @@
 imports:
   City: Kernel.Types.Beckn.Context
+  IndianState: Kernel.Types.Beckn.Context
   Merchant: Domain.Types.Merchant
 
 MerchantOperatingCity:
@@ -9,9 +10,16 @@ MerchantOperatingCity:
     id: Id MerchantOperatingCity
     merchantId: Id Merchant
     merchantShortId: ShortId Merchant
+    state: IndianState
     city: City
+    lat: Double
+    long: Double
 
   excludedFields: [merchantOperatingCityId]
+
+  default:
+    lat: '0.0'
+    long: '0.0'
 
   queries:
     findById:
@@ -25,3 +33,30 @@ MerchantOperatingCity:
       kvFunction: findOneWithKV
       where:
         and: [merchantId, city]
+    findAllByMerchantIdAndState:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, state]
+
+MerchantState:
+  tableName: merchant_state
+
+  fields:
+    merchantId: Id Merchant
+    state: IndianState
+    allowedDestinationStates: '[IndianState]'
+
+  excludedFields: [merchantOperatingCityId]
+
+  sqlType:
+    allowedDestinationStates: text[]
+
+  constraints:
+    merchantId: PrimaryKey
+    state: PrimaryKey
+
+  queries:
+    findByMerchantIdAndState:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, state]

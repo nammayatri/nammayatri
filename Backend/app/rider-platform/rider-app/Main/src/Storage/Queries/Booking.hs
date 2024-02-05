@@ -62,6 +62,7 @@ create dBooking = do
     RentalDetails detail -> whenJust detail.stopLocation $ \stopLoc -> void $ whenNothingM_ (QL.findById stopLoc.id) $ do QL.create stopLoc
     DriverOfferDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
     OneWaySpecialZoneDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
+    InterCityDetails toLoc -> void $ whenNothingM_ (QL.findById toLoc.toLocation.id) $ do QL.create toLoc.toLocation
   void $ createBooking' dBooking
 
 createBooking :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Booking -> m ()
@@ -72,6 +73,7 @@ createBooking booking = do
     DRB.RentalDetails detail -> (\loc -> SLM.buildDropLocationMapping loc.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)) `mapM` detail.stopLocation
     DRB.DriverOfferDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
     DRB.OneWaySpecialZoneDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
+    DRB.InterCityDetails detail -> Just <$> SLM.buildDropLocationMapping detail.toLocation.id booking.id.getId DLM.BOOKING (Just booking.merchantId) (Just booking.merchantOperatingCityId)
 
   void $ QLM.create fromLocationMap
   void $ whenJust mbToLocationMap $ \toLocMap -> QLM.create toLocMap
@@ -291,6 +293,9 @@ instance FromTType' BeamB.Booking Booking where
             DFF.ONE_WAY_SPECIAL_ZONE -> do
               upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
               DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocationId
+            DFF.INTER_CITY -> do
+              upsertToLocationAndMappingForOldData toLocationId id merchantId merchantOperatingCityId
+              DRB.InterCityDetails <$> buildInterCityDetails toLocationId
           return (pickupLoc, bookingDetails)
         else do
           let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
@@ -305,6 +310,7 @@ instance FromTType' BeamB.Booking Booking where
             DFF.RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId
             DFF.DRIVER_OFFER -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
             DFF.ONE_WAY_SPECIAL_ZONE -> DRB.OneWaySpecialZoneDetails <$> buildOneWaySpecialZoneDetails toLocId
+            DFF.INTER_CITY -> DRB.InterCityDetails <$> buildInterCityDetails toLocId
           return (fl, bookingDetails)
     tt <- if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
     pUrl <- parseBaseUrl providerUrl
@@ -354,6 +360,14 @@ instance FromTType' BeamB.Booking Booking where
             { toLocation = toLocation,
               distance = distance'
             }
+      buildInterCityDetails toLocid = do
+        toLocation <- maybe (pure Nothing) (QL.findById . Id) toLocid >>= fromMaybeM (InternalError "toLocation is null for one way booking")
+        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
+        pure
+          DRB.InterCityBookingDetails
+            { toLocation = toLocation,
+              distance = distance'
+            }
       buildOneWaySpecialZoneDetails toLocid = do
         toLocation <- maybe (pure Nothing) (QL.findById . Id) toLocid >>= fromMaybeM (InternalError "toLocation is null for one way special zone booking")
         distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
@@ -381,6 +395,7 @@ instance ToTType' BeamB.Booking Booking where
           DRB.RentalDetails rentalDetails -> (DQuote.RENTAL, Nothing, Nothing, (getId . (.id)) <$> rentalDetails.stopLocation, Nothing)
           DRB.DriverOfferDetails details -> (DQuote.DRIVER_OFFER, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
           DRB.OneWaySpecialZoneDetails details -> (DQuote.ONE_WAY_SPECIAL_ZONE, Just (getId details.toLocation.id), Just details.distance, Nothing, details.otpCode)
+          DRB.InterCityDetails details -> (DQuote.INTER_CITY, Just (getId details.toLocation.id), Just details.distance, Nothing, Nothing)
      in BeamB.BookingT
           { BeamB.id = getId id,
             BeamB.transactionId = transactionId,

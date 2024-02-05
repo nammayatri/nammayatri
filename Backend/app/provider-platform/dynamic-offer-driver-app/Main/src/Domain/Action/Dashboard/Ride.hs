@@ -366,6 +366,7 @@ castTripCategory = \case
   DTC.RoundTrip _ -> Common.RoundTrip
   DTC.Rental _ -> Common.Rental
   DTC.RideShare _ -> Common.RideShare
+  DTC.InterCity _ -> Common.InterCity
 
 timeDiffInMinutes :: UTCTime -> UTCTime -> Minutes
 timeDiffInMinutes t1 = secondsToMinutes . nominalDiffTimeToSeconds . diffUTCTime t1

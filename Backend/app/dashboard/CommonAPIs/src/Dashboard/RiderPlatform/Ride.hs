@@ -56,7 +56,7 @@ type RideInfoAPI =
     :> Capture "rideId" (Id DP.Ride)
     :> Get '[JSON] RideInfoRes
 
-data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | ONE_WAY_SPECIAL_ZONE deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
+data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER | INTER_CITY | ONE_WAY_SPECIAL_ZONE deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
 
 data ShareRideInfoRes = ShareRideInfoRes
   { id :: Id Ride,

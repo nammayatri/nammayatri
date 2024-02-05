@@ -174,6 +174,9 @@ buildEstimateOrQuoteInfo provider item = do
     "RENTAL" -> do
       quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
       pure $ Right DOnSearch.QuoteInfo {..}
+    "INTER_CITY" -> do
+      quoteDetails <- DOnSearch.InterCityDetails <$> buildInterCityQuoteDetails fulfillment
+      pure $ Right DOnSearch.QuoteInfo {..}
     _ -> do
       -- "RIDE"
       estimateBreakupList <- buildEstimateBreakUpList item
@@ -207,6 +210,16 @@ buildOneWaySpecialZoneQuoteDetails ::
 buildOneWaySpecialZoneQuoteDetails fulfillment = do
   pure
     DOnSearch.OneWaySpecialZoneQuoteDetails
+      { quoteId = fulfillment.id
+      }
+
+buildInterCityQuoteDetails ::
+  (MonadThrow m, Log m) =>
+  OnSearch.FulfillmentInfo ->
+  m DOnSearch.InterCityQuoteDetails
+buildInterCityQuoteDetails fulfillment = do
+  pure
+    DOnSearch.InterCityQuoteDetails
       { quoteId = fulfillment.id
       }
 

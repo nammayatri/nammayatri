@@ -54,6 +54,7 @@ buildInitReqV2 res = do
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
         SConfirm.ConfirmOneWayDetails -> ("RIDE", Nothing, Nothing)
         SConfirm.ConfirmRentalDetails quoteId -> ("RENTAL", Just quoteId, Nothing)
+        SConfirm.ConfirmInterCityDetails quoteId -> ("INTER_CITY", Just quoteId, Nothing)
         SConfirm.ConfirmAutoDetails estimateId driverId -> ("RIDE", Just estimateId, driverId)
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> ("RIDE_OTP", Just quoteId, Nothing) --need to be  checked
   let action = Context.INIT
@@ -66,6 +67,7 @@ buildInitMessage res = do
   let (fulfillmentType, mbBppFullfillmentId, mbDriverId) = case res.quoteDetails of
         SConfirm.ConfirmOneWayDetails -> ("RIDE", Nothing, Nothing)
         SConfirm.ConfirmRentalDetails quoteId -> ("RENTAL", Just quoteId, Nothing)
+        SConfirm.ConfirmInterCityDetails quoteId -> ("INTER_CITY", Just quoteId, Nothing)
         SConfirm.ConfirmAutoDetails estimateId driverId -> ("RIDE", Just estimateId, driverId)
         SConfirm.ConfirmOneWaySpecialZoneDetails quoteId -> ("RIDE_OTP", Just quoteId, Nothing) --need to be  checked
   let vehicleVariant = castVehicleVariant res.vehicleVariant
