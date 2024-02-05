@@ -29,6 +29,14 @@ defaultRemoteConfig ={
     chennai : [],
     tumakuru : [],
     mysore : [],
+    kochi : [],
+    delhi : [],
+    hyderabad : [],
+    mumbai : [],
+    coimbatore : [],
+    pondicherry : [],
+    goa : [],
+    pune : [],
     default : []
 }
 
@@ -47,4 +55,12 @@ getCityBasedConfig config city =
         "chennai" -> config.chennai
         "mysore" -> config.mysore
         "tumakuru" -> config.tumakuru
+        "kochi" -> config.kochi
+        "delhi" -> config.delhi
+        "hyderabad" -> config.hyderabad
+        "mumbai" -> config.mumbai
+        "coimbatore" -> config.coimbatore
+        "pondicherry" -> config.pondicherry
+        "goa" -> config.goa
+        "pune" -> config.pune
         _ -> config.default

@@ -29,6 +29,14 @@ type RemoteConfig a = {
     chennai :: a,
     tumakuru :: a,
     mysore :: a,
+    kochi :: a,
+    delhi :: a,
+    hyderabad :: a,
+    mumbai :: a,
+    coimbatore :: a,
+    pondicherry :: a,
+    goa :: a,
+    pune :: a,
     default :: a
 }
 
