@@ -23,14 +23,14 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common
 import qualified Tools.Maps as Maps
 
-mkSearchFulFillmentTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe Bool -> Maybe [Spec.TagGroup]
-mkSearchFulFillmentTags distance duration mbPoints mbIsReallocationEnabled =
+mkSearchFulFillmentTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe Bool -> Maybe [Maps.RouteInfo] -> Maybe [Spec.TagGroup]
+mkSearchFulFillmentTags distance duration mbPoints mbIsReallocationEnabled mbMultipleRoutes =
   Just $
-    mkRouteInfoTags distance duration mbPoints
+    mkRouteInfoTags distance duration mbPoints mbMultipleRoutes
       ++ mkReallocationInfoTags mbIsReallocationEnabled
 
-mkRouteInfoTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> [Spec.TagGroup]
-mkRouteInfoTags distance duration mbPoints =
+mkRouteInfoTags :: Maybe Meters -> Maybe Seconds -> Maybe [Maps.LatLong] -> Maybe [Maps.RouteInfo] -> [Spec.TagGroup]
+mkRouteInfoTags distance duration mbPoints mbMultipleRoutes =
   [ Spec.TagGroup
       { tagGroupDescriptor =
           Just $
@@ -45,6 +45,7 @@ mkRouteInfoTags distance duration mbPoints =
             distanceSingleton
               ++ durationSingleton
               ++ mbPointsSingleton
+              ++ mkMultipleRoutesTags
       }
   ]
   where
@@ -92,6 +93,21 @@ mkRouteInfoTags distance duration mbPoints =
                     },
               tagDisplay = Just False,
               tagValue = (Just . LT.toStrict . TE.decodeUtf8 . A.encode) =<< mbPoints
+            }
+    mkMultipleRoutesTags
+      | isNothing mbMultipleRoutes = []
+      | otherwise =
+        List.singleton $
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just "multiple_routes",
+                      descriptorName = Just "Multiple Routes",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = (Just . LT.toStrict . TE.decodeUtf8 . A.encode) =<< mbMultipleRoutes
             }
 
 mkCustomerInfoTags :: Maybe Maps.Language -> Maybe Text -> Maybe Text -> Maybe [Spec.TagGroup]

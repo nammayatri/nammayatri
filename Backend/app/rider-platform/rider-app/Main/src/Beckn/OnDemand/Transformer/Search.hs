@@ -23,16 +23,30 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
 import Kernel.Utils.Common (type (:::))
 import qualified Tools.Maps
+import qualified Tools.Maps as Maps
 
-buildBecknSearchReqV2 :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Domain.Action.UI.Search.SearchReqLocation -> [Domain.Action.UI.Search.SearchReqLocation] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Domain.Types.Merchant.Merchant -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.Bool -> Data.Time.UTCTime -> m BecknV2.OnDemand.Types.SearchReq
-buildBecknSearchReqV2 action domain origin stops searchId distance duration customerLanguage disabilityTag merchant bapUri city mbPoints mbPhoneNumber isReallocationEnabled startTime = do
+buildBecknSearchReqV2 :: (Kernel.Types.App.MonadFlow m) => Kernel.Types.Beckn.Context.Action -> Kernel.Types.Beckn.Context.Domain -> Domain.Action.UI.Search.SearchReqLocation -> [Domain.Action.UI.Search.SearchReqLocation] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Domain.Types.Merchant.Merchant -> Kernel.Prelude.BaseUrl -> Kernel.Types.Beckn.Context.City -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.Bool -> Data.Time.UTCTime -> Maybe [Maps.RouteInfo] -> m BecknV2.OnDemand.Types.SearchReq
+buildBecknSearchReqV2 action domain origin stops searchId distance duration customerLanguage disabilityTag merchant bapUri city mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes = do
   searchReqContext_ <- BecknV2.OnDemand.Utils.Context.buildContextV2 action domain searchId.getId (Just searchId.getId) merchant.bapId bapUri Nothing Nothing city merchant.country
-  searchReqMessage_ <- buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isReallocationEnabled startTime
+  searchReqMessage_ <- buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes
   pure $ BecknV2.OnDemand.Types.SearchReq {searchReqContext = searchReqContext_, searchReqMessage = searchReqMessage_}
 
-buildSearchMessageV2 :: (Kernel.Types.App.MonadFlow m) => Domain.Action.UI.Search.SearchReqLocation -> [Domain.Action.UI.Search.SearchReqLocation] -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.Bool -> Data.Time.UTCTime -> m BecknV2.OnDemand.Types.SearchReqMessage
-buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isReallocationEnabled startTime = do
-  searchReqMessageIntent_ <- tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime
+buildSearchMessageV2 ::
+  (Kernel.Types.App.MonadFlow m) =>
+  Domain.Action.UI.Search.SearchReqLocation ->
+  [Domain.Action.UI.Search.SearchReqLocation] ->
+  Maybe Kernel.Types.Common.Meters ->
+  Maybe Kernel.Types.Common.Seconds ->
+  Maybe Tools.Maps.Language ->
+  Maybe Data.Text.Text ->
+  Maybe [Tools.Maps.LatLong] ->
+  Maybe Data.Text.Text ->
+  Maybe Kernel.Prelude.Bool ->
+  Data.Time.UTCTime ->
+  Maybe [Maps.RouteInfo] ->
+  m BecknV2.OnDemand.Types.SearchReqMessage
+buildSearchMessageV2 origin stops distance duration customerLanguage disabilityTag mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes = do
+  searchReqMessageIntent_ <- tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes
   pure $ BecknV2.OnDemand.Types.SearchReqMessage {searchReqMessageIntent = searchReqMessageIntent_}
 
 tfCustomer :: (Kernel.Types.App.MonadFlow m) => Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Data.Text.Text -> m (Maybe BecknV2.OnDemand.Types.Customer)
@@ -45,13 +59,13 @@ tfCustomer customerLanguage disabilityTag mbPhoneNumber = do
     then pure Nothing
     else pure $ Just returnData
 
-tfFulfillment :: (Kernel.Types.App.MonadFlow m) => Domain.Action.UI.Search.SearchReqLocation -> [Domain.Action.UI.Search.SearchReqLocation] -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.Bool -> Data.Time.UTCTime -> m (Maybe BecknV2.OnDemand.Types.Fulfillment)
-tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime = do
+tfFulfillment :: (Kernel.Types.App.MonadFlow m) => Domain.Action.UI.Search.SearchReqLocation -> [Domain.Action.UI.Search.SearchReqLocation] -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.Bool -> Data.Time.UTCTime -> Maybe [Maps.RouteInfo] -> m (Maybe BecknV2.OnDemand.Types.Fulfillment)
+tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes = do
   let fulfillmentAgent_ = Nothing
   let fulfillmentId_ = Nothing
   let fulfillmentState_ = Nothing
   let fulfillmentStops_ = Beckn.OnDemand.Utils.Common.mkStops origin stops startTime
-  let fulfillmentTags_ = Beckn.OnDemand.Utils.Search.mkSearchFulFillmentTags distance duration mbPoints isReallocationEnabled
+  let fulfillmentTags_ = Beckn.OnDemand.Utils.Search.mkSearchFulFillmentTags distance duration mbPoints isReallocationEnabled multipleRoutes
   let fulfillmentType_ = Nothing
   let fulfillmentVehicle_ = Nothing
   fulfillmentCustomer_ <- tfCustomer customerLanguage disabilityTag mbPhoneNumber
@@ -61,10 +75,23 @@ tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPo
     then pure Nothing
     else pure $ Just returnData
 
-tfIntent :: (Kernel.Types.App.MonadFlow m) => Domain.Action.UI.Search.SearchReqLocation -> [Domain.Action.UI.Search.SearchReqLocation] -> Maybe Tools.Maps.Language -> Maybe Data.Text.Text -> Maybe Kernel.Types.Common.Meters -> Maybe Kernel.Types.Common.Seconds -> Maybe [Tools.Maps.LatLong] -> Maybe Data.Text.Text -> Maybe Kernel.Prelude.Bool -> Data.Time.UTCTime -> m (Maybe BecknV2.OnDemand.Types.Intent)
-tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime = do
+tfIntent ::
+  (Kernel.Types.App.MonadFlow m) =>
+  Domain.Action.UI.Search.SearchReqLocation ->
+  [Domain.Action.UI.Search.SearchReqLocation] ->
+  Maybe Tools.Maps.Language ->
+  Maybe Data.Text.Text ->
+  Maybe Kernel.Types.Common.Meters ->
+  Maybe Kernel.Types.Common.Seconds ->
+  Maybe [Tools.Maps.LatLong] ->
+  Maybe Data.Text.Text ->
+  Maybe Kernel.Prelude.Bool ->
+  Data.Time.UTCTime ->
+  Maybe [Maps.RouteInfo] ->
+  m (Maybe BecknV2.OnDemand.Types.Intent)
+tfIntent origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes = do
   let intentTags_ = Nothing
-  intentFulfillment_ <- tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime
+  intentFulfillment_ <- tfFulfillment origin stops customerLanguage disabilityTag distance duration mbPoints mbPhoneNumber isReallocationEnabled startTime multipleRoutes
   intentPayment_ <- tfPayment "BPP"
   let returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
   let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
