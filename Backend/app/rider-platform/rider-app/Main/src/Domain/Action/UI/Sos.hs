@@ -100,9 +100,9 @@ postSosCreate (mbPersonId, merchantId) req = do
           rideLink = trackLink
         }
   emergencyContacts <- DP.getDefaultEmergencyNumbers (personId, person.merchantId)
-  void $ QPDEN.updateShareRideForAll personId (Just True)
-  enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers riderConfig
   when (shouldSendSms person) $ do
+    void $ QPDEN.updateShareRideForAll personId (Just True)
+    enableFollowRideInSos emergencyContacts.defaultEmergencyNumbers riderConfig
     SPDEN.notifyEmergencyContacts person (notificationBody person) notificationTitle Notification.SOS_TRIGGERED (Just message) True emergencyContacts.defaultEmergencyNumbers
   return $
     SosRes
