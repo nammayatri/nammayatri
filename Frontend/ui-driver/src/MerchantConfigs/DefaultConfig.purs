@@ -350,6 +350,10 @@ config =
       straightLineDistLogic : false
   }
   , bannerCarousel : defaultBannerCarousel
+  , safetyRide : {
+    startTime : "21:00:00"
+  , endTime : "06:00:00"
+  }
 }
 
 registrationConfig :: CTC.RegistrationConfig

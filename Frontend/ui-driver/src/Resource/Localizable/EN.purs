@@ -1226,3 +1226,8 @@ getEN stringKey =
         YOU_CAN_SHARE_SCREENSHOT -> "You can share screenshots and documents  for manual onboarding"
         PLACE_A_CALL -> "Place a call for quick help in getting documents verified"
         TERMS_AND_CONDITIONS_UPDATED -> "T&C's and Privacy policy have been updated"
+        SAFETY_IS_OUR_RESPONSIBILITY -> "Safety is our responsibility"
+        CUSTOMER_SAFETY_FIRST -> "Customer safety First!"
+        LETS_ENSURE_SAFE_RIDE -> "Let’s ensure a safe and secure ride"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "Customer safety is our responsibility. Let’s ensure a safe and happy ride"
+        OUR_SAFETY_PARTNER -> "Our Safety Partner"

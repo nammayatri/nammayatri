@@ -89,6 +89,7 @@ import ConfigProvider
 import Screens.Types as ST
 import MerchantConfig.Types as MCT
 import Locale.Utils
+import Language.Types (STR(..))
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -114,7 +115,6 @@ foreign import getcurrentdate :: String -> String
 foreign import getDatebyCount :: Int -> String
 foreign import launchAppSettings :: Unit -> Effect Unit
 foreign import getTimeStampString :: String -> String
-foreign import addMediaPlayer :: String -> String -> Effect Unit
 foreign import parseNumber :: Int -> String
 foreign import getPixels :: Fn1 String Number
 foreign import setValueToLocalStore :: Fn2 String String Unit
@@ -325,19 +325,19 @@ getRideLabelData maybeLabel = fromMaybe dummyLabelConfig (getRequiredTag maybeLa
 getRequiredTag :: Maybe String -> Maybe LabelConfig
 getRequiredTag maybeLabel  =
   case maybeLabel of
-    Just label -> if DA.any (_ == label) ["Accessibility", "GOTO"] then
-                    DA.head (DA.filter (\item -> item.label == label) rideLabelConfig)
+    Just label -> if DA.any (_ == label) ["Accessibility", "GOTO", "Safety"] then
+                    DA.head (DA.filter (\item -> item.label == label) (rideLabelConfig FunctionCall))
                   else do
                     let arr = DS.split (DS.Pattern "_") label
                     let pickup = fromMaybe "" (arr DA.!! 0)
                     let drop = fromMaybe "" (arr DA.!! 1)
                     let priority = fromMaybe "" (arr DA.!! 2)
-                    DA.head (DA.filter (\item -> item.label == (pickup <> "_Pickup")) rideLabelConfig)
+                    DA.head (DA.filter (\item -> item.label == (pickup <> "_Pickup")) (rideLabelConfig FunctionCall))
 
     Nothing    -> Nothing
 
-rideLabelConfig :: Array LabelConfig
-rideLabelConfig = [
+rideLabelConfig :: LazyCheck -> Array LabelConfig
+rideLabelConfig _ = [
     { label: "SureMetro_Pickup",
       backgroundColor : "#2194FF",
       text : "Metro Pickup",
@@ -361,6 +361,14 @@ rideLabelConfig = [
       imageUrl : "ny_ic_wheelchair,https://assets.juspay.in/beckn/nammayatri/driver/images/ny_ic_wheelchair.png",
       cancelText : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
       cancelConfirmImage : "ic_cancel_prevention,https://assets.juspay.in/beckn/nammayatri/driver/images/ic_cancel_prevention.png"
+    },
+    { label : "Safety",
+      backgroundColor : Color.green900,
+      text : getString SAFETY_IS_OUR_RESPONSIBILITY,
+      secondaryText : getString LEARN_MORE,
+      imageUrl : fetchImage FF_ASSET  "ny_ic_user_safety_shield",
+      cancelText : "FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES",
+      cancelConfirmImage : fetchImage FF_ASSET  "ic_cancel_prevention"
     },
     { label : "GOTO",
       backgroundColor : "#2C2F3A",

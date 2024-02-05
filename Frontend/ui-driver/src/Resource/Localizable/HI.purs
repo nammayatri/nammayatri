@@ -1226,3 +1226,8 @@ getHI stringKey =
         YOU_CAN_SHARE_SCREENSHOT -> "मैन्युअल ऑनबोर्डिंग के लिए आप स्क्रीनशॉट और दस्तावेज़ साझा कर सकते हैं"
         PLACE_A_CALL -> "दस्तावेज़ों को सत्यापित करने में त्वरित सहायता के लिए कॉल करें"
         TERMS_AND_CONDITIONS_UPDATED -> "नियम एवं शर्तें और गोपनीयता नीति अद्यतन कर दी गई है"
+        SAFETY_IS_OUR_RESPONSIBILITY -> "सुरक्षा हमारी जिम्मेदारी है"
+        CUSTOMER_SAFETY_FIRST -> "ग्राहक सुरक्षा पहले!"
+        LETS_ENSURE_SAFE_RIDE -> "सुनिश्चित करें कि यात्रा सुरक्षित है"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ग्राहक सुरक्षा हमारी जिम्मेदारी है। सुनिश्चित करें कि यात्रा सुरक्षित और खुशहाल है"
+        OUR_SAFETY_PARTNER -> "हमारा सुरक्षा साथी"

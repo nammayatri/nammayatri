@@ -2208,6 +2208,16 @@ export const scrollViewFocus = function (parentID) {
   }
 }
 
+export const addMediaPlayer = function (id) {
+  return function(source) {
+    return function () {
+      if (JBridge.addMediaPlayer) {
+        JBridge.addMediaPlayer(id,source);
+      }
+    }
+  };
+};
+
 export const setYoutubePlayer = function (json, viewId, videoStatus, cb, action) {
   if (JBridge.setYoutubePlayer) {
     try {

@@ -66,7 +66,7 @@ accessibilityPopUpConfig selectedDisability purpleRideConfig =
          , margin = Margin 16 20 16 0
          }
          , listViewArray = popupData.listViewArray
-          , coverVideoConfig {
+          , coverMediaConfig {
             visibility = if popupData.videoUrl /= "" && (JB.supportsInbuildYoutubePlayer unit) then VISIBLE else GONE 
           , height = V 200
           , width = MATCH_PARENT

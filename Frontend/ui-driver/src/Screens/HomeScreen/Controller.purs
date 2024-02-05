@@ -49,7 +49,7 @@ import Effect.Class (liftEffect)
 import Effect.Uncurried (runEffectFn4)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC)
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (saveObject)
@@ -69,7 +69,7 @@ import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..)
 import Types.ModifyScreenState (modifyScreenState)
 import Helpers.Utils as HU
 import JBridge as JB
-import Effect.Uncurried (runEffectFn4)
+import Effect.Uncurried (runEffectFn1, runEffectFn4)
 import Constants 
 import Data.Function.Uncurried (runFn1, runFn2)
 import Screens.HomeScreen.ComponentConfig
@@ -363,7 +363,7 @@ data Action = NoAction
             | ToggleStatsModel
             | ToggleBonusPopup
             | GoToEarningsScreen Boolean
-            
+            | CustomerSafetyPopupAC PopUpModal.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -981,13 +981,17 @@ eval RemovePaymentBanner state = if state.data.paymentState.blockedDueToPayment 
 eval (LinkAadhaarPopupAC PopUpModal.OnButton1Click) state = exit $ AadhaarVerificationFlow state
 
 eval (LinkAadhaarPopupAC PopUpModal.DismissPopup) state = continue state {props{showAadharPopUp = false}}
-eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = do
+eval (PopUpModalAccessibilityAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false}} [ do 
   _ <- pure $ pauseYoutubeVideo unit
-  continue state{props{showAccessbilityPopup = false}}
+  void $ runEffectFn1 removeMediaPlayer ""
+  pure NoAction
+  ] 
 
-eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = do
+eval (GenericAccessibilityPopUpAction PopUpModal.OnButton1Click) state = continueWithCmd state{props{showAccessbilityPopup = false}} [ do 
   _ <- pure $ pauseYoutubeVideo unit
-  continue state{props{showGenericAccessibilityPopUp = false}}
+  void $ runEffectFn1 removeMediaPlayer ""
+  pure NoAction
+  ] 
 
 eval (PopUpModalChatBlockerAction PopUpModal.OnButton2Click) state = continueWithCmd state{props{showChatBlockerPopUp = false}} [do
       pure $ RideActionModalAction (RideActionModal.MessageCustomer)
@@ -1112,6 +1116,7 @@ activeRideDetail state (RidesInfo ride) =
   let waitTimeSeconds = DS.split (DS.Pattern "<$>") (getValueToLocalStore TOTAL_WAITED)
       waitTime = maybe 0 (fromMaybe 0 <<< Int.fromString) $ waitTimeSeconds Array.!! 1
       isTimerValid = (fromMaybe "" (waitTimeSeconds Array.!! 0)) == ride.id
+      isSafetyRide = isSafetyPeriod state ride.createdAt
   in 
   {
   id : ride.id,
@@ -1139,16 +1144,20 @@ activeRideDetail state (RidesInfo ride) =
   waitTimeInfo : state.data.activeRide.waitTimeInfo,
   requestedVehicleVariant : ride.requestedVehicleVariant,
   waitTimerId : state.data.activeRide.waitTimerId,
-  specialLocationTag :  if isJust ride.disabilityTag then Just "Accessibility"
+  specialLocationTag : if isJust ride.disabilityTag then Just "Accessibility"
                         else if isJust ride.driverGoHomeRequestId then Just "GOTO" 
+                        else if isJust ride.specialLocationTag then ride.specialLocationTag
+                        else if isSafetyRide then Just "Safety"
                         else ride.specialLocationTag, --  "None_SureMetro_PriorityDrop",--"GOTO",
-  disabilityTag :  case ride.disabilityTag of
+  disabilityTag : case ride.disabilityTag of
               Just "BLIND_LOW_VISION" -> Just ST.BLIND_AND_LOW_VISION
               Just "HEAR_IMPAIRMENT" -> Just ST.HEAR_IMPAIRMENT
               Just "LOCOMOTOR_DISABILITY" -> Just ST.LOCOMOTOR_DISABILITY
               Just "OTHER" -> Just ST.OTHER_DISABILITY
               Just _ -> Just ST.OTHER_DISABILITY
-              Nothing -> Nothing
+              Nothing -> if isSafetyRide && (isNothing ride.specialLocationTag) 
+                          then Just ST.SAFETY 
+                          else Nothing
 }
 
 cancellationReasons :: String -> Array Common.OptionButtonList
@@ -1270,3 +1279,9 @@ getBannerConfigs state =
     getLanguage lang = 
       let language = toLower $ take 2 lang
       in if not (null language) then "_" <> language else "_en"
+
+
+isSafetyPeriod :: ST.HomeScreenState -> String -> Boolean
+isSafetyPeriod state riseStartTime = 
+  let timeStamp = EHC.convertUTCtoISC riseStartTime "HH:mm:ss"
+  in JB.withinTimeRange state.data.config.safetyRide.startTime state.data.config.safetyRide.endTime timeStamp

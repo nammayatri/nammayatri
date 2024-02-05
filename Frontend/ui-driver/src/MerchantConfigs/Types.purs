@@ -39,7 +39,8 @@ type AppConfigDriver a =
     rideRequest :: RideRequestConfig,
     coinsConfig :: CoinsConfig,
     inAppKeyboardModalConfig :: InAppKeyboardModalConfig,
-    chooseCity :: ChooseCityScreenConfig
+    chooseCity :: ChooseCityScreenConfig,
+    safetyRide :: SafetyRideConfig
     | a
   } 
 
@@ -229,4 +230,9 @@ type InAppKeyboardModalConfig = {
 }
 type ChooseCityScreenConfig = {
   straightLineDistLogic :: Boolean
+}
+
+type SafetyRideConfig = {
+  startTime :: String
+, endTime :: String
 }

@@ -31,8 +31,8 @@ import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner, getNewIDWithTag, screenWidth, getVideoID, getYoutubeData)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (fetchImage, FetchImageFrom(..), addMediaPlayer, parseNumber)
-import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer)
+import Helpers.Utils (fetchImage, FetchImageFrom(..), parseNumber)
+import JBridge (renderBase64Image, openUrlInApp, setScaleType, setYoutubePlayer, addMediaPlayer)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude (Unit, bind, const, pure, show, unit, void, discard, ($), (<<<), (<>), (==), (&&), (-), (*), (/))

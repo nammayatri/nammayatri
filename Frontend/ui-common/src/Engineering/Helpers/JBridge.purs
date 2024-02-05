@@ -186,6 +186,7 @@ foreign import sendMessage :: String -> Unit
 foreign import getSuggestionsfromLocal :: String -> Array String
 foreign import getSuggestionfromKey :: String -> String -> String
 foreign import setYoutubePlayer :: forall action. Fn5 YoutubeData String String (action -> Effect Unit) (String -> action) Unit
+foreign import addMediaPlayer :: String -> String -> Effect Unit
 foreign import switchYoutubeVideo :: String -> Unit
 foreign import addCarouselImpl :: EffectFn2 CarouselModal String Unit
 foreign import scrollToEnd :: String -> Boolean -> Effect Unit
