@@ -1,0 +1,75 @@
+name: Check PNG Size
+
+on:
+  pull_request:
+    paths:
+      - 'Frontend/android-native/**'
+
+jobs:
+  check-size:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Check PNG File Sizes
+      id: check-size
+      run: |
+        #!/bin/bash
+        set -e
+        echo "Checking PNG file sizes..."
+        failed_files=""
+        for file in $(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD | grep -e '\.png$'); do
+            size=$(stat -c%s "$file")
+            echo "Checking size for $file: $size bytes"
+            if [ $size -gt 30720 ]; then
+                echo "Error: $file exceeds 30KB size limit"
+                failed_files="$failed_files $file"
+            fi
+        done
+        if [ -n "$failed_files" ]; then
+            echo "::set-output name=failed_files::$failed_files"
+            exit 1
+        fi
+        echo "All PNG files are within the size limit."
+
+    - name: Post Comment
+      if: ${{ steps.check-size.outcome == 'failure' }}
+      uses: actions/github-script@v3
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const issue_number = context.issue.number;
+          const files = "${{ steps.check-size.outputs.failed_files }}";
+          github.issues.createComment({
+            issue_number: issue_number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `:warning: The following PNG files exceed the 30KB size limit: ${files}. Please reduce their size.`
+          });
+
+# jobs:
+#   check-size:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#     - name: Checkout repository
+#       uses: actions/checkout@v2
+
+#     - name: Check PNG File Sizes
+#       run: |
+#         #!/bin/bash
+#         set -e
+#         echo "Checking PNG file sizes..."
+#         for file in $(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD | grep -e '\.png$'); do
+#             size=$(stat -c%s "$file")
+#             echo "Checking size for $file: $size bytes"
+#             if [ $size -gt 30720 ]; then
+#                 echo "Error: $file exceeds 30KB size limit"
+#                 exit 1
+#             fi
+#         done
+#         echo "All PNG files are within the size limit."
