@@ -155,7 +155,8 @@ type WaitTimeConfig = {
   enableWaitTime :: Boolean,
   thresholdDist :: Number,
   thresholdTime :: Int,
-  routeDistance :: Int
+  routeDistance :: Int,
+  diffBtwTwoHeartBeats :: Int
 }
 
 type FlowConfig = {
