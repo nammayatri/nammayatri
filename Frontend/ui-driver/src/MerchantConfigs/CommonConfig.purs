@@ -87,7 +87,7 @@ commonConfig =
             showVehicleVariant : true
           }
         , features : {
-            enableSuggestions : false
+            enableSuggestions : true
           }
         , referralType : "QRScreen"
         , mapConfig : 

@@ -58,7 +58,7 @@ config =
     enableSubscriptionSupportPopup : false
   },
   features : {
-    enableSuggestions : false
+    enableSuggestions : true
   },
   showPaymentDetails : true,
   rideActionModelConfig : {
