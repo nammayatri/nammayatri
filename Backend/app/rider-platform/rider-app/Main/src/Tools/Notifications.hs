@@ -632,14 +632,14 @@ notifySafetyAlert ::
   SRB.Booking ->
   T.Text ->
   m ()
-notifySafetyAlert booking reason = do
+notifySafetyAlert booking _ = do
   person <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   let merchantOperatingCityId = person.merchantOperatingCityId
-  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.SAFETY_ALERT merchantOperatingCityId
+  notificationSoundFromConfig <- SQNSC.findByNotificationType Notification.SAFETY_ALERT_DEVIATION merchantOperatingCityId
   let notificationSound = maybe Nothing NSC.defaultSound notificationSoundFromConfig
   let notificationData =
         Notification.NotificationReq
-          { category = Notification.SAFETY_ALERT,
+          { category = Notification.SAFETY_ALERT_DEVIATION,
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
@@ -651,11 +651,9 @@ notifySafetyAlert booking reason = do
             ttl = Nothing,
             sound = notificationSound
           }
-      title = T.pack "SafetyAlert"
-      body =
-        unwords
-          [ reason
-          ]
+      title = "Everything okay?"
+      body = "We noticed your ride is on a different route. Are you feeling safe on your trip?"
+
   notifyPerson person.merchantId person.merchantOperatingCityId notificationData
 
 notifyDriverBirthDay ::

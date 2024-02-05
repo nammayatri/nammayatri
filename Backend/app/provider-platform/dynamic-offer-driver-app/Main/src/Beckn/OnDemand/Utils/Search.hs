@@ -148,3 +148,12 @@ buildRoutePoints req = do
       >>= (.fulfillmentTags)
       & fromMaybeM (InvalidRequest "Missing Tags")
   return $ getTagV2 "route_info" "route_points" tagGroups >>= decode . encodeUtf8 >>= Just
+
+buildMultipleRoutesTag :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe [Maps.RouteInfo])
+buildMultipleRoutesTag req = do
+  tagGroups <-
+    req.searchReqMessageIntent
+      >>= (.intentFulfillment)
+      >>= (.fulfillmentTags)
+      & fromMaybeM (InvalidRequest "Missing Tags")
+  return $ getTagV2 "route_info" "multiple_routes" tagGroups >>= decode . encodeUtf8 >>= Just
