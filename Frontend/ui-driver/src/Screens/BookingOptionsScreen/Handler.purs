@@ -19,3 +19,6 @@ bookingOptions = do
       _ <- modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ SELECT_CAB updatedState toggleDowngrade)
     GoBack -> App.BackT $ pure App.GoBack
+    EnableRental updatedState toggleRental -> do
+      _ <- modifyScreenState $ BookingOptionsScreenType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ ENABLE_RENTAL_RIDE updatedState toggleRental)
