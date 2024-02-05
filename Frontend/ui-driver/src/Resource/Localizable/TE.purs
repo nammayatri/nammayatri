@@ -1226,3 +1226,8 @@ getTE stringKey =
         YOU_CAN_SHARE_SCREENSHOT -> "మీరు మాన్యువల్ ఆన్‌బోర్డింగ్ కోసం స్క్రీన్‌షాట్‌లు మరియు పత్రాలను పంచుకోవచ్చు"
         PLACE_A_CALL -> "పత్రాలను ధృవీకరించడంలో త్వరిత సహాయం కోసం కాల్ చేయండి"
         TERMS_AND_CONDITIONS_UPDATED -> "T&Cలు మరియు గోప్యతా విధానం నవీకరించబడ్డాయి"
+        SAFETY_IS_OUR_RESPONSIBILITY -> "భద్రత మన బాధ్యత"
+        CUSTOMER_SAFETY_FIRST -> "మొదట కస్టమర్ భద్రత!"
+        LETS_ENSURE_SAFE_RIDE -> "సురక్షితమైన మరియు సురక్షితమైన ప్రయాణాన్ని నిర్ధారిద్దాం"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "కస్టమర్ భద్రత మా బాధ్యత. సురక్షితమైన మరియు సంతోషకరమైన ప్రయాణాన్ని నిర్ధారిద్దాం"
+        OUR_SAFETY_PARTNER -> "మా భద్రతా భాగస్వామి"

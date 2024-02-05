@@ -135,6 +135,7 @@ baseAppFlow baseFlow event = do
     checkVersion versionCode
     checkTimeSettings
     cacheAppParameters versionCode baseFlow
+    updateNightSafetyPopup
     void $ lift $ lift $ liftFlow $ initiateLocationServiceClient
     updateOperatingCity
     when baseFlow $ lift $ lift $ initUI
@@ -208,6 +209,18 @@ baseAppFlow baseFlow event = do
         chooseCityFlow
       else
         authenticationFlow ""
+
+    updateNightSafetyPopup :: FlowBT String Unit
+    updateNightSafetyPopup = do
+      let curr_time = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
+          config = getAppConfig appConfig
+          withInTime = JB.withinTimeRange curr_time config.safetyRide.startTime config.safetyRide.endTime
+      if (not withInTime) then 
+        setValueToLocalStore NIGHT_SAFETY_POP_UP "false"
+      else 
+        pure unit
+
+       
 
 authenticationFlow :: String -> FlowBT String Unit
 authenticationFlow _ = 
@@ -1729,6 +1742,19 @@ currentRideFlow activeRideResp = do
           sourceMod <- translateString decodedSource 500
           destinationMod <- translateString decodedDestination 500
           setValueToLocalNativeStore IS_RIDE_ACTIVE  "true"
+          
+           -- Night Ride Safety PopUp 
+          when (activeRide.disabilityTag == Just ST.SAFETY) $ do 
+            let curr_time = convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"
+                withInTime =JB.withinTimeRange curr_time (state.data.config.safetyRide.startTime) (state.data.config.safetyRide.endTime)
+                localVal =  getValueToLocalStore NIGHT_SAFETY_POP_UP
+                isShown = localVal == "true"
+            if withInTime then do
+              when (not isShown) $ setValueToLocalStore NIGHT_SAFETY_POP_UP "true"
+              modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showAccessbilityPopup = not isShown}})
+            else
+              setValueToLocalStore NIGHT_SAFETY_POP_UP "false"
+         
           _ <- updateStage $ HomeScreenStage stage
           void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { data{ activeRide = activeRide{source = sourceMod, destination = destinationMod}}, props{ silentPopUpView = false, goOfflineModal = false}})

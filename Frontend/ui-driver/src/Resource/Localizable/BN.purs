@@ -1226,3 +1226,8 @@ getBN stringKey =
         YOU_CAN_SHARE_SCREENSHOT -> "আপনি ম্যানুয়াল অনবোর্ডিংয়ের জন্য স্ক্রিনশট এবং নথি শেয়ার করতে পারেন"
         PLACE_A_CALL -> "দস্তাবেজ যাচাই করার জন্য দ্রুত সাহায্যের জন্য একটি কল করুন"
         TERMS_AND_CONDITIONS_UPDATED -> "T&C এবং গোপনীয়তা নীতি আপডেট করা হয়েছে"
+        SAFETY_IS_OUR_RESPONSIBILITY -> "নিরাপত্তা আমাদের দায়িত্ব"
+        CUSTOMER_SAFETY_FIRST -> "গ্রাহকের নিরাপত্তা প্রথমে!"
+        LETS_ENSURE_SAFE_RIDE -> "আসুন একটি নিরাপদ এবং নিরাপদ রাইড নিশ্চিত করি"
+        CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "গ্রাহকের নিরাপত্তা আমাদের দায়িত্ব। আসুন একটি নিরাপদ এবং সুখী যাত্রা নিশ্চিত করি"
+        OUR_SAFETY_PARTNER -> "আমাদের নিরাপত্তা অংশীদার"

@@ -17,7 +17,7 @@ module Components.PopUpModal.View where
 import Prelude (Unit, const, unit, ($), (<>), (/), (-), (+), (==), (||), (&&), (>), (/=),  not, (<<<), bind, discard, show, pure, map, when)
 import Effect (Effect)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Orientation(..), PrestoDOM, Visibility(..), Accessiblity(..), afterRender, imageView, imageUrl, background, clickable, color, cornerRadius, fontStyle, gravity, height, linearLayout, margin, onClick, orientation, text, textSize, textView, width, stroke, alignParentBottom, relativeLayout, padding, visibility, onBackPressed, alpha, imageWithFallback, weight, accessibilityHint, accessibility, textFromHtml, shimmerFrameLayout, onAnimationEnd, id, rippleColor)
-import Components.PopUpModal.Controller (Action(..), Config, CoverVideoConfig)
+import Components.PopUpModal.Controller (Action(..), Config, CoverMediaConfig)
 import PrestoDOM.Properties (lineHeight, cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Font.Style as FontStyle
@@ -33,14 +33,14 @@ import Engineering.Helpers.Commons (os, getNewIDWithTag)
 import Data.Array ((!!), mapWithIndex, null)
 import Data.Maybe (Maybe(..),fromMaybe)
 import Control.Monad.Trans.Class (lift)
-import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer)
+import JBridge (setYoutubePlayer, supportsInbuildYoutubePlayer, addMediaPlayer)
 import Animation (fadeIn) as Anim
 import Data.String (replaceAll, Replacement(..), Pattern(..))
 import Data.Function.Uncurried (runFn5)
 import PrestoDOM.Animation as PrestoAnim
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Timers
-import Debug
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push state =
@@ -121,7 +121,7 @@ view push state =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , gravity CENTER
-            , visibility state.coverVideoConfig.visibility
+            , visibility state.coverMediaConfig.visibility
             , cornerRadii state.cornerRadius
             , accessibility DISABLE_DESCENDANT
             , orientation VERTICAL
@@ -132,31 +132,61 @@ view push state =
                 , color state.topTitle.color
                 , gravity state.topTitle.gravity
                 , text state.topTitle.text
-                , visibility state.topTitle.visibility
-                ] <> (FontStyle.h2 LanguageStyle)
+                , visibility $ boolToVisibility $ state.topTitle.visibility == VISIBLE && state.onlyTopTitle == VISIBLE
+                ] <> (FontStyle.h2 LanguageStyle) 
+             , linearLayout
+                [ width MATCH_PARENT
+                    , height WRAP_CONTENT
+                    , gravity CENTER
+                    , margin $ state.coverMediaConfig.coverMediaText.margin
+                    , padding state.coverMediaConfig.coverMediaText.padding
+                    , visibility $ state.coverMediaConfig.coverMediaText.visibility
+                ][ textView $
+                    [ width WRAP_CONTENT
+                    , height WRAP_CONTENT
+                    , color $ state.coverMediaConfig.coverMediaText.color
+                    , gravity $ state.coverMediaConfig.coverMediaText.gravity
+                    , textFromHtml state.coverMediaConfig.coverMediaText.text
+                    , accessibility ENABLE
+                    , accessibilityHint $ replaceAll (Pattern " ,") (Replacement ":") state.coverMediaConfig.coverMediaText.text
+                    , visibility $ state.coverMediaConfig.coverMediaText.visibility
+                    ]  <> (FontStyle.getFontStyle state.coverMediaConfig.coverMediaText.textStyle LanguageStyle)
+                    , imageView [
+                    width state.coverMediaConfig.coverMediaText.suffixImage.width
+                    , height state.coverMediaConfig.coverMediaText.suffixImage.height
+                    , imageWithFallback state.coverMediaConfig.coverMediaText.suffixImage.imageUrl
+                    , visibility state.coverMediaConfig.coverMediaText.suffixImage.visibility
+                    , margin state.coverMediaConfig.coverMediaText.suffixImage.margin
+                    ]
+                ]
               , linearLayout[
-                  height $ state.coverVideoConfig.height
-                , width state.coverVideoConfig.width
-                , width MATCH_PARENT
+                 height WRAP_CONTENT
+                , width WRAP_CONTENT
                 , gravity CENTER
-                ][  PrestoAnim.animationSet [Anim.fadeIn (state.coverVideoConfig.visibility == VISIBLE) ] $   linearLayout
-                    [ height WRAP_CONTENT
-                    , width state.coverVideoConfig.width
-                    , margin state.coverVideoConfig.margin
-                    , padding state.coverVideoConfig.padding
-                    , cornerRadius 16.0
-                    , visibility state.coverVideoConfig.visibility
-                    , id (getNewIDWithTag  state.coverVideoConfig.id)
+                , margin state.coverMediaConfig.margin
+                , background state.coverMediaConfig.background
+                
+                , stroke state.coverMediaConfig.stroke
+                , visibility state.coverMediaConfig.visibility
+                , cornerRadius state.coverMediaConfig.cornerRadius
+                ][  PrestoAnim.animationSet [Anim.fadeIn (state.coverMediaConfig.visibility == VISIBLE) ] $   linearLayout
+                    [ height state.coverMediaConfig.height
+                    , width state.coverMediaConfig.width
+                    , gravity CENTER_VERTICAL
+                    , padding state.coverMediaConfig.padding
+                    , id (getNewIDWithTag  state.coverMediaConfig.id)
                     , onAnimationEnd
                         ( \action -> do
                             let
-                                mediaType = state.coverVideoConfig.mediaType
-                                id = getNewIDWithTag state.coverVideoConfig.id
-                                url = state.coverVideoConfig.mediaUrl
+                                mediaType = state.coverMediaConfig.mediaType
+                                id = getNewIDWithTag state.coverMediaConfig.id
+                                url = state.coverMediaConfig.mediaUrl
                             if (supportsInbuildYoutubePlayer unit) then 
                                 case mediaType of
                                     "VideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig  "VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
                                     "PortraitVideoLink" -> pure $ runFn5 setYoutubePlayer (getYoutubeDataConfig  "PORTRAIT_VIDEO" (getVideoID url)) id (show PLAY) push YoutubeVideoStatus
+                                    "Audio" -> addMediaPlayer id url
+                                    "AudioLink" -> addMediaPlayer id url
                                     _ -> pure unit
                                 else pure unit
                         )(const NoAction)

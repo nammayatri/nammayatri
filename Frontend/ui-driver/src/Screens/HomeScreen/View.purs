@@ -710,7 +710,7 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
   , gravity CENTER
   , visibility if isJust state.data.activeRide.disabilityTag then VISIBLE else GONE
   , margin (Margin 10 10 10 10)
-  , background Color.lightPurple
+  , background accessibilityHeaderconfig.background
   , cornerRadius 50.0
   , padding (Padding 8 8 8 8)
   ][
@@ -729,13 +729,13 @@ accessibilityHeaderView push state accessibilityHeaderconfig =
             , height WRAP_CONTENT
             , padding $ PaddingRight 4
             , text accessibilityHeaderconfig.primaryText
-            , color Color.purple
+            , color accessibilityHeaderconfig.textColor
         ] <> FontStyle.body1 TypoGraphy
       , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
         , text accessibilityHeaderconfig.secondaryText
-        , color Color.purple
+        , color accessibilityHeaderconfig.textColor
         ] <> FontStyle.body4 TypoGraphy
     ]
   ]

@@ -292,13 +292,6 @@ export const getTimeStampString = function (utcTime){
   else            return s + (s == 1 ? " second" : " seconds")
 }
 
-export const addMediaPlayer = function (id) {
-  return function(source) {
-    return function () {
-      JBridge.addMediaPlayer(id,source);
-    }
-  };
-};
 
 export const getPeriod = function(date) {
   const currentDate = new Date();
