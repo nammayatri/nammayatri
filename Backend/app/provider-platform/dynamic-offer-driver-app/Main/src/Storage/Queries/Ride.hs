@@ -312,6 +312,7 @@ updateAll rideId ride = do
       Se.Set BeamR.fareParametersId (getId <$> ride.fareParametersId),
       Se.Set BeamR.distanceCalculationFailed ride.distanceCalculationFailed,
       Se.Set BeamR.pickupDropOutsideOfThreshold ride.pickupDropOutsideOfThreshold,
+      Se.Set BeamR.endOdometerReadingValue (ride.endOdometerReading <&> (.value)),
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]

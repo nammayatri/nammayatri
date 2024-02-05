@@ -239,12 +239,12 @@ calculateFareParameters params = do
       let estimatedDistance = (.getMeters) <$> params.estimatedDistance
           estimatedDistanceInKm = fromMaybe 0 estimatedDistance `div` 1000
           actualDistance = (.getMeters) <$> params.actualDistance
-          actualDistanceInKm = fromMaybe 0 actualDistance `div` 1000
+          actualDistanceInKm = fromMaybe estimatedDistanceInKm actualDistance `div` 1000
           extraDist = max 0 (actualDistanceInKm - estimatedDistanceInKm)
           distanceBuffer = DFP.findFPRentalDetailsByDuration actualRideDurationInHr distanceBuffers
           fareByDist = if extraDist > distanceBuffer.bufferKms then Money (extraDist * perExtraKmRate.getMoney) else 0
 
-      let extraPlannedKm = estimatedDistanceInKm - (estimatedDurationInHr * includedKmPerHr.getKilometers)
+      let extraPlannedKm = max 0 (estimatedDistanceInKm - (estimatedDurationInHr * includedKmPerHr.getKilometers))
           extraPlannedKmFare = extraPlannedKm * plannedPerKmRate.getMoney
           baseFare_ = Money (estimatedDurationInHr * perHourCharge.getMoney + extraPlannedKmFare)
       ( baseFare_,

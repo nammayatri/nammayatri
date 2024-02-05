@@ -58,6 +58,7 @@ data BookingT f = BookingT
     merchantId :: B.C f Text,
     merchantOperatingCityId :: B.C f (Maybe Text),
     specialLocationTag :: B.C f (Maybe Text),
+    isScheduled :: B.C f (Maybe Bool),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

@@ -327,7 +327,7 @@ calculateLocations bookingId stopLocationId = do
   maxOrder <- QLM.maxOrderByEntity bookingId.getId
   case stopLocationId of
     Nothing -> do
-      lastLoc <- mkLocationFromLocationMapping bookingId.getId maxOrder
+      lastLoc <- if maxOrder == 0 then pure Nothing else mkLocationFromLocationMapping bookingId.getId maxOrder
       return (Nothing, lastLoc)
     Just nextStopId -> do
       nextLoc <- QL.findById nextStopId
