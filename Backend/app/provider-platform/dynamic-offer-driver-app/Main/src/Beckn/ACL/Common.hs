@@ -76,7 +76,7 @@ makeLocation DLoc.Location {..} =
         Just
           Search.Address
             { area_code = address.areaCode,
-              locality = address.area,
+              locality = Nothing,
               ward = address.area,
               state = address.state,
               country = address.country,
