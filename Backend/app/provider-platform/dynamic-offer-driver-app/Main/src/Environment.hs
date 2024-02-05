@@ -53,8 +53,22 @@ import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.Merchant as CM
 import Storage.CachedQueries.RegistryMapFallback as CRM
-import System.Environment (lookupEnv)
+import System.Environment (lookupEnv, setEnv)
 import Tools.Metrics
+
+data CacConfig = CacConfig
+  { host :: String,
+    interval :: Natural,
+    tenants :: [String]
+  }
+  deriving (Generic, FromDhall)
+
+data SuperPositionConfig = SuperPositionConfig
+  { host :: String,
+    interval :: Natural,
+    tenants :: [String]
+  }
+  deriving (Generic, FromDhall)
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -127,7 +141,10 @@ data AppCfg = AppCfg
     incomingAPIResponseTimeout :: Int,
     internalEndPointMap :: M.Map BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
-    _version :: Text
+    _version :: Text,
+    toss :: Int,
+    cacConfig :: CacConfig,
+    superPositionConfig :: SuperPositionConfig
   }
   deriving (Generic, FromDhall)
 
@@ -207,7 +224,10 @@ data AppEnv = AppEnv
     incomingAPIResponseTimeout :: Int,
     internalEndPointHashMap :: HMS.HashMap BaseUrl BaseUrl,
     isBecknSpecVersion2 :: Bool,
-    _version :: Text
+    _version :: Text,
+    toss :: Int,
+    cacConfig :: CacConfig,
+    superPositionConfig :: SuperPositionConfig
   }
   deriving (Generic)
 
@@ -220,6 +240,7 @@ buildAppEnv cfg@AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   version <- lookupDeploymentVersion
   isShuttingDown <- newEmptyTMVarIO
+  _ <- setEnv "TOSS" (show toss)
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg

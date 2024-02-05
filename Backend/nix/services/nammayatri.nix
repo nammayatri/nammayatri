@@ -274,7 +274,7 @@ in
 
       services.passetto = {
         enable = true;
-        port = 8021;
+        port = 8066;
         extraDbSettings = { name, ... }: {
           port = 5422;
           socketDir = "$HOME/NY/socket/${name}";

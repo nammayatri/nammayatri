@@ -6,7 +6,7 @@ let globalCommon = ../generic/common.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5436
+      , connectPort = 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -16,7 +16,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = 5436
+      , connectPort = 5434
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase

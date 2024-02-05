@@ -39,7 +39,9 @@ findByMerchantOpCityId id = do
   ghcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id))]
   logDebug $ "the context is " <> show ghcCond
   tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
-  contextValue <- liftIO $ CM.evalCtx (fromMaybe "atlas_driver_offer_bpp_v2" tenant) ghcCond
+  toss <- liftIO $ fromMaybe 0 . (>>= readMaybe) <$> SE.lookupEnv "TOSS"
+  logDebug $ "the toss value is " <> show toss
+  contextValue <- liftIO $ CM.evalExperiment (fromMaybe "atlas_driver_offer_bpp_v2" tenant) ghcCond toss
   case contextValue of
     Left err -> error $ (pack "error in fetching the context value for GoHomeConfig ") <> (pack err)
     Right contextValue' -> do
