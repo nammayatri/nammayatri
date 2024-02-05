@@ -217,7 +217,6 @@ window.getMerchantConfig = function () {
     , "feature" : {
         "enableSupport" : false
       , "enableSuggestions" : true
-      , "shareWithEmergencyContacts" : false
       , "enableAdditionalServices" : false
     }
     , "appData" : {
