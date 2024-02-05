@@ -278,9 +278,12 @@ checkRideAndInitiate event driverInfoResponse = do
         modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps { driverInformation = Just (GetDriverInfoResp driverInfoResp) }
         pure (Tuple Nothing driverInfoResp.onRide)
       _ -> do
-        GetRidesHistoryResp rideListResponse <- Remote.getRideHistoryReqBT "2" "0" "true" "null" "null"
-        let activeRide = not (null rideListResponse.list)
-        pure (Tuple (Just $ GetRidesHistoryResp rideListResponse) activeRide)
+        resp <- lift $ lift $ Remote.getRideHistoryReq "2" "0" "true" "null" "null"
+        case resp of
+          Right (GetRidesHistoryResp rideListResponse) -> do
+            let activeRide = not (null rideListResponse.list)
+            pure (Tuple (Just $ GetRidesHistoryResp rideListResponse) activeRide)
+          Left error -> pure (Tuple Nothing false)
   void $ lift $ lift $ fork $ checkAndDownloadMLModel
   liftFlowBT $ markPerformance "CHECK_RIDE_AND_INITIATE_END"
   activeRide ?
@@ -2749,6 +2752,11 @@ homeScreenFlow = do
       void $ pure $ HU.transformSpecialLocationList resp
       homeScreenFlow
     GO_TO_BOOKING_PREFERENCES -> bookingOptionsFlow
+    REFRESH_BASEAPP state -> do
+      internetCondition <- lift $ lift $ liftFlow $ isInternetAvailable unit
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { noInternetAnim = false }})
+      if internetCondition then baseAppFlow false Nothing Nothing
+      else homeScreenFlow
     UPDATE_AIR_CONDITIONED isAcWorking -> do
       resp <- lift $ lift $ HelpersAPI.callApi $ API.UpdateAirConditionUpdateRequest { isAirConditioned : isAcWorking }
       case resp of
@@ -3234,7 +3242,7 @@ changeDriverStatus status = do
   let API.DriverGoHomeInfo driverGoHomeInfo = getDriverInfoResp.driverGoHomeInfo
       qParam = toUpper $ show status
       isDriverActive = any ( _ == status) [Online, Silent]
-  void $ Remote.driverActiveInactiveBT (show isDriverActive) qParam
+  void $ lift $ lift $ Remote.driverActiveInactive (show isDriverActive) qParam
   when (driverGoHomeInfo.status == Just "ACTIVE" && status == Offline) do
     void $ lift $ lift $ Remote.deactivateDriverGoTo "" -- disabling goto when driver is Offline
     modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ GetDriverInfoResp getDriverInfoResp {driverGoHomeInfo = API.DriverGoHomeInfo driverGoHomeInfo { status = Nothing} } }
@@ -3252,10 +3260,13 @@ getDriverInfoDataFromCache (GlobalState globalState) mkCall = do
     let driverInfoResp = fromMaybe dummyDriverInfo globalState.globalProps.driverInformation
     pure driverInfoResp
   else do
-    driverInfoResp <- Remote.getDriverInfoBT (DriverInfoReq {isAdvancedBookingEnabled : Just globalState.homeScreen.data.cityConfig.enableAdvancedBooking})
-    modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ driverInfoResp}
-    updateDriverDataToStates
-    pure driverInfoResp
+    resp <- lift $ lift $ Remote.getDriverInfoApi (DriverInfoReq {isAdvancedBookingEnabled : Just globalState.homeScreen.data.cityConfig.enableAdvancedBooking})
+    case resp of
+      Right driverInfoResp -> do
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverInformation = Just $ driverInfoResp}
+        updateDriverDataToStates
+        pure driverInfoResp
+      Left err -> pure dummyDriverInfo
 
 updateDriverStatusGlobal :: String -> Boolean -> FlowBT String Unit
 updateDriverStatusGlobal mode active= do
@@ -3563,6 +3574,7 @@ updateBannerAndPopupFlags = do
                 , waitTimeStatus = RC.waitTimeConstructor $ getValueToLocalStore WAITING_TIME_STATUS
                 , showCoinsPopup = showCoinPopup
                 , coinPopupType = coinPopupType
+                , noInternet = allState.globalProps.noInternet
                 , showAcWorkingPopup = if isNothing allState.homeScreen.props.showAcWorkingPopup
                                           then getDriverInfoResp.checkIfACWorking
                                        else allState.homeScreen.props.showAcWorkingPopup

@@ -180,3 +180,6 @@ homeScreen = do
     GoToBookingPreferences updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_BOOKING_PREFERENCES)
+    ExitRefreshApp updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ REFRESH_BASEAPP updatedState)

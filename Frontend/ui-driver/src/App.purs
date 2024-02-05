@@ -191,7 +191,8 @@ defaultGlobalProps = {
   gotoPopupType : NO_POPUP_VIEW,
   addTimestamp : true,
   bgLocPopupShown : false,
-  onBoardingDocs : Nothing
+  onBoardingDocs : Nothing,
+  noInternet : false
 }
 
 data ScreenType =
@@ -417,6 +418,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN
                           | UPDATE_AIR_CONDITIONED Boolean
                           | GO_TO_BOOKING_PREFERENCES
                           | UPDATE_ROUTE_ON_STAGE_SWITCH HomeScreenState
+                          | REFRESH_BASEAPP HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

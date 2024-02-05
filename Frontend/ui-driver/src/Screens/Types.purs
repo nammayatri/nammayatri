@@ -1238,7 +1238,9 @@ type HomeScreenProps =  {
   toll :: TollState,
   bookingStage :: BookingTypes,
   showAdvancedRidePopUp :: Boolean,
-  showInterOperablePopUp :: Boolean
+  showInterOperablePopUp :: Boolean,
+  noInternetAnim :: Boolean,
+  noInternet :: Boolean
  }
 
 type TollState = {
@@ -2006,7 +2008,8 @@ type GlobalProps = {
   gotoPopupType :: GoToPopUpType,
   addTimestamp :: Boolean,
   bgLocPopupShown :: Boolean,
-  onBoardingDocs :: Maybe API.OnboardingDocsRes
+  onBoardingDocs :: Maybe API.OnboardingDocsRes,
+  noInternet :: Boolean
 }
 
 --------------------------------------------------------------- SubscriptionScreenState ---------------------------------------------------

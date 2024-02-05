@@ -302,6 +302,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | UpdateAirConditioned ST.HomeScreenState Boolean
                     | GoToBookingPreferences ST.HomeScreenState
                     | UpdateRouteOnStageSwitch ST.HomeScreenState
+                    | ExitRefreshApp ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -432,6 +433,7 @@ data Action = NoAction
             | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
+            | RefreshApp
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1473,6 +1475,10 @@ eval (SwitchBookingStage stage) state = do
       data {activeRide = activeRideData, currentRideData = Just currentRideData},
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
+
+eval RefreshApp state = do
+  let newState = state{props{noInternetAnim = true}}
+  updateAndExit newState $ ExitRefreshApp newState
 
 eval _ state = continue state
 

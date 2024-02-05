@@ -482,7 +482,9 @@ driverMapsHeaderView push state =
           [ width MATCH_PARENT
           , height MATCH_PARENT
           ]$[  googleMap state
-            , if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state else dummyTextView
+            , if state.props.noInternet then internetIssueView push state
+              else if (state.props.driverStatusSet == Offline && not state.data.paymentState.blockedDueToPayment) then offlineView push state 
+              else dummyTextView
             , linearLayout
               [ width MATCH_PARENT
               , height WRAP_CONTENT
@@ -866,6 +868,67 @@ sourceUnserviceableView push state =
         [
           ErrorModal.view (push <<< ErrorModalActionController) (sourceUnserviceableConfig state)
         ]
+
+internetIssueView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+internetIssueView push state =
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , gravity BOTTOM
+  , background Color.black9000
+  ][ linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , gravity CENTER
+      , orientation VERTICAL
+      , background Color.white900
+      , PP.cornerRadii $ PTD.Corners 40.0 true true false false
+      ][ imageView
+          [ imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_offline"
+          , height $ V 120
+          , width $ V 120
+          , gravity CENTER
+          ]
+        , textView $
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER_HORIZONTAL
+          , margin $ MarginTop 5
+          , text "Internet issues detected! "
+          ] <> FontStyle.h2 TypoGraphy
+        , textView $
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , gravity CENTER_HORIZONTAL
+          , margin $ MarginTop 8
+          , text "Please make sure you have internet connection to go Online"
+          ] <> FontStyle.paragraphText TypoGraphy
+        , linearLayout
+          [ width WRAP_CONTENT
+          , height WRAP_CONTENT
+          , margin $ MarginVertical 12 23
+          , cornerRadius 30.0
+          , background Color.blue600
+          , gravity CENTER
+          , padding $ Padding 12 4 12 4
+          , onClick push $ const $ RefreshApp
+          ][  PrestoAnim.animationSet [Anim.rotateAnim (AnimConfig.rotateAnimConfig state.props.noInternetAnim)] $
+              imageView
+              [ width $ V 14
+              , height $ V 14
+              , margin $ MarginRight 5
+              , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_refresh"
+              ]
+            , textView $
+              [ height WRAP_CONTENT
+              , width WRAP_CONTENT
+              , color Color.blue900
+              , margin $ MarginLeft 5
+              , text "Refresh"
+              ] <> FontStyle.tags TypoGraphy
+          ]
+      ]
+  ]
 
 offlineView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 offlineView push state =

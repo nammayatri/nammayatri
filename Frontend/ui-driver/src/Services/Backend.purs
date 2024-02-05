@@ -43,7 +43,7 @@ import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=), (<$>))
+import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=), (<$>), negate)
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
 import Screens.Types (DriverStatus)
@@ -62,6 +62,8 @@ import Data.Boolean (otherwise)
 import Screens.Types as ST
 import Resource.Constants as RC
 import SessionCache
+import Control.Monad.Except (runExceptT)
+import Control.Transformers.Back.Trans (runBackT)
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -104,6 +106,7 @@ withAPIResult url f flow = do
         case resp of
             Right res -> void $ pure $ printLog "success resp" res
             Left err -> do
+                void $ runExceptT $ runBackT $ modifyScreenState $ GlobalPropsType $ \gp -> gp { noInternet = err.code == -1 }
                 let errResp = err.response
                 _ <- pure $ printLog "error resp" errResp
                 let codeMessage = decodeErrorCode errResp.errorMessage
@@ -135,6 +138,7 @@ withAPIResultBT url f errorHandler flow = do
                 _ <- pure $ printLog "success resp" res
                 pure res
             Left (err) -> do
+                modifyScreenState $ GlobalPropsType $ \gp -> gp { noInternet = err.code == -1 }
                 let errResp = err.response
                 _ <- pure $ printLog "error resp" errResp
                 let codeMessage = decodeErrorCode errResp.errorMessage
@@ -280,6 +284,14 @@ driverActiveInactiveBT status status_n = do
             pure if not accountBlocked then toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN else unit
             void $ lift $ lift $ toggleLoader false
             BackT $ pure GoBack
+
+driverActiveInactive :: String -> String -> Flow GlobalState (Either ErrorResponse DriverActiveInactiveResp)
+driverActiveInactive status status_n = do
+  headers <- getHeaders "" false
+  withAPIResult (EP.driverActiveInactiveSilent status status_n) unwrapResponse $ callAPI headers (DriverActiveInactiveReq status status_n)
+  where
+    unwrapResponse x = x
+
 --------------------------------- startRide ---------------------------------------------------------------------------------------------------------------------------------
 
 startRide :: String -> StartRideReq -> Flow GlobalState (Either ErrorResponse StartRideResponse)
