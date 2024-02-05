@@ -15,16 +15,24 @@
 
 module Screens.HomeScreen.Controller where
 
+import Constants
 import Helpers.Utils
+import Locale.Utils
+import PrestoDOM.Core
+import PrestoDOM.List
+import Screens.HomeScreen.ComponentConfig
 import Screens.SubscriptionScreen.Controller
-import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+
+import Common.Resources.Constants (zoomLevel)
 import Common.Styles.Colors as Color
-import Common.Types.App (OptionButtonList, LazyCheck(..)) as Common
-import Domain.Payments (APIPaymentStatus(..), PaymentStatus(..)) as PP
+import Common.Types.App (OptionButtonList, LazyCheck(..), Paths(..)) as Common
 import Components.Banner as Banner
+import Components.BannerCarousel as BannerCarousel
 import Components.BottomNavBar as BottomNavBar
 import Components.ChatView as ChatView
 import Components.ChatView as ChatView
+import Components.ErrorModal.Controller as ErrorModalController
+import Components.GoToLocationModal as GoToLocationModal
 import Components.InAppKeyboardModal as InAppKeyboardModal
 import Components.MakePaymentModal as MakePaymentModal
 import Components.PopUpModal as PopUpModal
@@ -36,40 +44,63 @@ import Components.RideActionModal as RideActionModal
 import Components.RideCompletedCard as RideCompletedCard
 import Components.SelectListModal as SelectListModal
 import Components.StatsModel.Controller as StatsModelController
-import Components.GoToLocationModal as GoToLocationModal
+import Control.Monad.Except (runExcept)
+import Control.Monad.Except (runExceptT)
+import Control.Monad.Except.Trans (lift)
 import Control.Monad.State (state)
+import Control.Transformers.Back.Trans (runBackT)
 import Data.Array as Array
+import Data.Either (Either(..))
+import Data.Function.Uncurried (runFn1, runFn2)
+import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried as Uncurried
 import Data.Int (round, toNumber, fromString, ceil)
+import Data.Int as Int
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing, maybe)
 import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower, null)
+import Data.String as DS
+import Domain.Payments (APIPaymentStatus(..), PaymentStatus(..)) as PP
 import Effect (Effect)
+import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn4)
+import Effect.Uncurried (runEffectFn4, runEffectFn3)
 import Effect.Unsafe (unsafePerformEffect)
-import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
+import Engineering.Helpers.BackTrack (getState, liftFlowBT)
+import Engineering.Helpers.Commons (flowRunner)
+import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion,liftFlow)
+import Engineering.Helpers.Commons as EHC
 import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, removeMediaPlayer)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (saveObject)
+import Foreign.Generic (class Decode, ForeignError, decode, decodeJSON, encode)
+import Helpers.Utils as HU
+import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams, sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC, uploadFile, getCurrentLatLong, uploadMultiPartData)
+import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=))
+import Log (printLog, trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
+import MerchantConfig.Utils (getMerchant, Merchant(..))
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=), (<$>))
+import Presto.Core.Types.Language.Flow (Flow, delay, doAff)
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
+import PrestoDOM.Core (getPushFn)
 import PrestoDOM.Types.Core (class Loggable)
-import Resource.Constants (decodeAddress)
+import RemoteConfig as RC
+import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideTypeConstructor)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..))
+import Services.API (GetRidesHistoryResp(..), RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..),StopLocation(..))
 import Services.Accessor (_lat, _lon)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Helpers.Utils as HU
+import Services.API (LocationInfo(..))
 import JBridge as JB
-import Effect.Uncurried (runEffectFn1, runEffectFn4)
+import Effect.Uncurried (runEffectFn1,runEffectFn4)
 import Constants 
 import Data.Function.Uncurried (runFn1, runFn2)
 import Screens.HomeScreen.ComponentConfig
@@ -81,26 +112,15 @@ import Effect.Aff (launchAff)
 import Engineering.Helpers.Commons (flowRunner)
 import Types.App (defaultGlobalState)
 import Services.API as API
+import Services.Accessor (_lat, _lon)
 import Services.Backend as Remote
-import Engineering.Helpers.Commons (liftFlow)
-import PrestoDOM.Core (getPushFn)
-import Control.Monad.Except.Trans (lift)
-import Data.Either (Either(..))
-import Components.ErrorModal.Controller as ErrorModalController
-import Data.Int as Int
-import Data.Function.Uncurried as Uncurried
-import Engineering.Helpers.Commons as EHC
-import Data.String as DS
 import Services.Config as SC
-import Data.Function.Uncurried (runFn2)
-import Timers as TF
-import Components.BannerCarousel as BannerCarousel
+import Services.EndPoints as EP
 import Styles.Colors as Color
-import PrestoDOM.Core
-import PrestoDOM.List
-import RemoteConfig as RC
-import Locale.Utils
-
+import Timers as TF
+import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
+import Types.App (defaultGlobalState)
+import Types.ModifyScreenState (modifyScreenState)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -117,6 +137,7 @@ instance loggableAction :: Loggable Action where
     GoOffline status -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "go_offline"
     CancelGoOffline -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "cancell_go_offline"
     ShowMap key lat lon -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "show_map"
+    RentalRideTimerCallback id min sec -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "rental_ride_timer_callBack"
     BottomNavBarAction (BottomNavBar.OnNavigate item) -> do
       trackAppActionClick appId (getScreen HOME_SCREEN) "bottom_nav_bar" "on_navigate"
       trackAppEndScreen appId (getScreen HOME_SCREEN)
@@ -137,7 +158,7 @@ instance loggableAction :: Loggable Action where
       -- InAppKeyboardModal.BackPressed -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_backpressed"
       -- InAppKeyboardModal.OnClickDone text -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_app_otp_modal" "on_click_done"
       -- _ -> pure unit
-
+    InAppKeyboardModalOdometerAction act -> pure unit
     CountDown seconds -> trackAppActionClick appId (getScreen HOME_SCREEN) "in_screen" "count_down"
     PopUpModalAction act -> pure unit --case act of
       -- PopUpModal.OnButton1Click -> trackAppActionClick appId (getScreen HOME_SCREEN) "popup_modal_end_ride" "go_back_onclick"
@@ -228,6 +249,9 @@ instance loggableAction :: Loggable Action where
     OfferPopupAC _ -> pure unit
     RCDeactivatedAC _ -> pure unit
     FreeTrialEndingAC _ -> pure unit
+    UploadImage -> pure unit
+    CallBackImageUpload _ _ _ -> pure unit
+    CallBackNewStop _ -> pure unit
     _ -> pure unit
 
 
@@ -238,6 +262,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToReferralScreen
                     | StartRide ST.HomeScreenState
                     | EndRide ST.HomeScreenState
+                    | ArrivedAtStop ST.HomeScreenState
                     | SelectListModal ST.HomeScreenState
                     | DriverAvailabilityStatus ST.HomeScreenState ST.DriverStatus
                     | UpdatedState ST.HomeScreenState
@@ -263,6 +288,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | ExitGotoLocation ST.HomeScreenState Boolean
                     | RefreshGoTo ST.HomeScreenState
                     | EarningsScreen ST.HomeScreenState Boolean
+                    | FetchOdometerReading ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -276,6 +302,7 @@ data Action = NoAction
             | BottomNavBarAction BottomNavBar.Action
             | RideActionModalAction RideActionModal.Action
             | InAppKeyboardModalAction InAppKeyboardModal.Action
+            | InAppKeyboardModalOdometerAction InAppKeyboardModal.Action
             | CountDown Int
             | CurrentLocation String String
             | ActiveRideAPIResponseAction (Array RidesInfo)
@@ -363,6 +390,13 @@ data Action = NoAction
             | ToggleStatsModel
             | ToggleBonusPopup
             | GoToEarningsScreen Boolean
+            | CallBackImageUpload String String String
+            | UploadMultiPartDataCallback  String String
+            | UploadImage
+            | CallBackNewStop String
+            | NewStopAdded Common.Paths (Maybe StopLocation) (Maybe StopLocation)
+            | NewStopPopup PopUpModal.Action
+            | RentalRideTimerCallback String String Int
             | CustomerSafetyPopupAC PopUpModal.Action
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -477,7 +511,9 @@ eval BackPressed state = do
     continue state
 
 eval TriggerMaps state = continueWithCmd state[ do
-  _ <- pure $ openNavigation 0.0 0.0 state.data.activeRide.dest_lat state.data.activeRide.dest_lon "DRIVE"
+  let destLat = if (state.data.activeRide.tripType == ST.Rental) then fromMaybe state.data.activeRide.src_lat state.data.activeRide.nextStopLat else state.data.activeRide.dest_lat
+  let destLon = if (state.data.activeRide.tripType == ST.Rental) then fromMaybe state.data.activeRide.src_lon state.data.activeRide.nextStopLon else state.data.activeRide.dest_lon
+  _ <- pure $ openNavigation 0.0 0.0 destLat destLon "DRIVE"
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
   pure NoAction
   ]
@@ -514,6 +550,96 @@ eval (ShowMap key lat lon) state = continueWithCmd state [ do
   id <- checkPermissionAndUpdateDriverMarker state
   pure AfterRender
   ]
+
+eval (UploadImage) state = do
+  if state.props.odometerUploadAttempts < 2 then do
+    continueWithCmd (state {props {odometerUploadAttempts = state.props.odometerUploadAttempts + 1}}) [do
+      let _ = unsafePerformEffect $ logEvent state.data.logField "UPLOAD odometer reading"
+      _ <- liftEffect $ uploadFile false
+      pure NoAction
+      ]
+  else do
+    let newState = state{props{odometerFileId = Nothing,endRideOdometerReadingModal = false,enterOdometerReadingModal = false}}
+        exitAction = if state.props.endRideOdometerReadingModal then
+            EndRide newState
+          else do
+            StartRide newState
+    updateAndExit newState exitAction
+
+eval (CallBackImageUpload image imageName imagePath) state = do
+    _ <- pure $ printLog ("value of image base 64 taking time" <> imageName <> " " <> imagePath) image
+   
+    newState <- if state.props.endRideOdometerReadingModal then do
+                  void $ pure $ setValueToLocalStore RIDE_END_ODOMETER image
+                  pure state{props{endRideOdometerImage =image}} 
+                else do 
+                  void $ pure $ setValueToLocalStore RIDE_START_ODOMETER image 
+                  pure state{props{startRideOdometerImage =image,currentStage= ST.RideStarted}}
+    
+    continueWithCmd newState [do
+        void $  runEffectFn3 uploadMultiPartData imagePath (EP.uploadOdometerImage "") "Image"
+        pure NoAction
+      ]
+
+eval (UploadMultiPartDataCallback fileType fileId) state = do
+  let newState = state{props{odometerFileId = Just fileId,endRideOdometerReadingModal = false,enterOdometerReadingModal = false}}
+      exitAction = if state.props.endRideOdometerReadingModal then
+          EndRide newState
+        else do
+          StartRide newState
+  updateAndExit newState exitAction
+
+eval (CallBackNewStop stopStatus) state = do
+  _ <- pure $ printLog "new Stop Status " stopStatus
+  let action = continueWithCmd state [ do
+        void $ launchAff $ flowRunner defaultGlobalState $ do
+          push <- liftFlow $ getPushFn Nothing "HomeScreen"
+          activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
+          case activeRideResponse of
+            Right (GetRidesHistoryResp rideList) -> do
+              case (rideList.list Array.!! 0) of
+                Just (RidesInfo {nextStopLocation,lastStopLocation}) -> do
+                  currentLocation <- doAff do liftEffect JB.getCurrentLatLong 
+                  liftFlow $ push $ NewStopAdded currentLocation nextStopLocation lastStopLocation
+                Nothing -> pure unit
+            Left err -> pure unit
+          pure unit
+        pure NoAction]
+  case stopStatus of
+    "ADD_STOP"  -> action
+    "EDIT_STOP" -> action
+    _ -> continue state
+  
+
+eval (NewStopAdded currentLocationLatLong nextStopLocation lastStopLocation) state = do
+  _ <- pure $ printLog "NewStopAdded Action " nextStopLocation
+  let newState = state { data 
+    { activeRide 
+      { nextStopAddress = (\(StopLocation {address, lat, lon}) -> decodeAddress (getLocationInfoFromStopLocation address lat lon) true) <$> nextStopLocation ,
+        src_lat = (currentLocationLatLong.lat),
+        src_lon = (currentLocationLatLong.lng), 
+        nextStopLat = (\loc -> loc ^. _lat) <$> nextStopLocation, 
+        nextStopLon = (\loc -> loc ^. _lon) <$> nextStopLocation,
+        lastStopAddress = (\(StopLocation {address, lat, lon}) -> decodeAddress (getLocationInfoFromStopLocation address lat lon) true) <$> lastStopLocation
+      }
+    }, 
+    props
+      {showDottedRoute = false, 
+      arrivedAtStop = isNothing nextStopLocation,
+      routeVisible = false,
+      showNewStopPopup = true,
+      mapRendered = true
+      }}
+  if isNothing nextStopLocation then do
+    updateAndExit newState $ Refresh newState {props{showNewStopPopup = false}}
+  else do
+    continue newState
+  
+eval (NewStopPopup PopUpModal.OnButton1Click) state = do
+  _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
+  let newState = state { props{showNewStopPopup = false}}
+  updateAndExit newState $ Refresh newState
+  
 eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
   case item of
     "Rides" -> exit $ GoToRidesScreen state
@@ -607,9 +733,15 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state
     rideOtp = if (index + 1) > (length state.props.rideOtp) then ( take 4 (state.props.rideOtp <> key)) else (take index (state.props.rideOtp)) <> key <> (take 4 (drop (index+1) state.props.rideOtp))
     focusIndex = length rideOtp
     newState = state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex ,otpIncorrect = false} }
-    exitAction = if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
-  if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then updateAndExit newState exitAction
+    exitAction = if state.props.endRideOtpModal then EndRide newState else if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
+  if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then 
+      if state.data.activeRide.tripType == ST.Rental then 
+        continue $ rentalNewState state
+      else updateAndExit newState exitAction
   else continue newState
+  where
+    rentalNewState newState = (newState { props = newState.props {enterOdometerReadingModal =  newState.props.enterOtpModal, endRideOdometerReadingModal = newState.props.endRideOtpModal, enterOtpModal = false, endRideOtpModal = false }})  
+
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickBack text)) state = do
   let
     rideOtp = (if length( text ) > 0 then (take (length ( text ) - 1 ) text) else "" )
@@ -621,21 +753,69 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnclickTextBox index)) state 
   continue state { props = state.props { enterOtpFocusIndex = focusIndex, rideOtp = rideOtp, otpIncorrect = false } }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.BackPressed)) state = do
   void $ pure $ hideKeyboardOnNavigation true
-  continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false} }
+  continue state { props = state.props { rideOtp = "", enterOtpFocusIndex = 0, enterOtpModal = false, endRideOtpModal= false} }
 eval (InAppKeyboardModalAction (InAppKeyboardModal.OnClickDone otp)) state = do
-    let updatedState = state{ props{ rideOtp = otp } }
-        exitState = if state.props.zoneRideBooking then StartZoneRide updatedState else StartRide updatedState
-    exit exitState
+    let newState = state{props{rideOtp = otp ,enterOdometerReadingModal = state.props.enterOtpModal , enterOtpModal = false, endRideOtpModal = false, endRideOdometerReadingModal = state.props.endRideOtpModal}}
+    if state.data.activeRide.tripType == ST.Rental then continue (newState {data = state.data {odometerReading {valueInM = "", valueInkm=""}}, props = state.props {rideOtp = otp ,enterOdometerReadingModal =  state.props.enterOtpModal, endRideOdometerReadingModal = state.props.endRideOtpModal, enterOtpModal = false,endRideOtpModal = false, odometerConfig = state.props.odometerConfig {updateKm = true, updateM = false} }}) 
+    else if state.props.endRideOtpModal then updateAndExit newState $ EndRide newState else if state.props.zoneRideBooking then updateAndExit newState $ StartZoneRide state else updateAndExit newState $ StartRide newState
+
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.BackPressed)) state = do
+  continue $ state { props = state.props { enterOtpModal = state.props.enterOdometerReadingModal, enterOdometerReadingModal = false,endRideOtpModal = state.props.endRideOdometerReadingModal,endRideOdometerReadingModal = false} }
+
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickDone text)) state = do
+  _ <- pure $ printLog "InAppKeyboardModalOdometerAction" text
+  let startOdometerValue = fromMaybe 0 $ fromString $ getValueToLocalStore RIDE_START_ODOMETER_READING
+  let endOdometerValue = fromMaybe 0 $ fromString state.data.odometerReading.valueInkm
+  if endOdometerValue < startOdometerValue then
+    continue state
+  else if(state.props.odometerConfig.updateKm && state.data.odometerReading.valueInM == "" )
+    then do                                        
+    continue $ state { data { odometerReading{valueInkm = text}}}
+  else if ( state.props.odometerConfig.updateM && state.data.odometerReading.valueInkm == "") then do
+    continue $ state { data { odometerReading{valueInM = text}}}
+  else do                                 
+    let valueInM = if state.props.odometerConfig.updateM then text else state.data.odometerReading.valueInM
+    let newState = state{ data{odometerReading {valueInM=valueInM}},props{enterOtpModal = false, endRideOtpModal = false, odometerValue = state.data.odometerReading.valueInkm <> "." <> state.data.odometerReading.valueInM}}
+    continueWithCmd newState [pure UploadImage]
+  
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnSelection key index)) state = do 
+  let kmStrLen = length state.data.odometerReading.valueInkm 
+      mStrLen = length state.data.odometerReading.valueInM 
+  if(state.props.odometerConfig.updateKm && kmStrLen >= 6  || state.props.odometerConfig.updateM && mStrLen >= 3) then continue state
+  else if (state.props.odometerConfig.updateKm) then
+    continue state {data { odometerReading {valueInkm = state.data.odometerReading.valueInkm <> key}}}
+  else if (state.props.odometerConfig.updateM) then
+    continue state {data { odometerReading {valueInM = state.data.odometerReading.valueInM <> key}}}
+  else 
+    continue state
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnTextViewClick str)) state = 
+  continue state{props{odometerConfig {updateKm = (str == "Km") , updateM = (str == "m")}}}
+
+eval (InAppKeyboardModalOdometerAction (InAppKeyboardModal.OnClickBack _)) state = do 
+  if (state.props.odometerConfig.updateKm) then 
+    continue state{data{odometerReading{valueInkm = (if length state.data.odometerReading.valueInkm > 0 then (take (length state.data.odometerReading.valueInkm - 1) state.data.odometerReading.valueInkm) else "")}}}
+    else if (state.props.odometerConfig.updateM) then 
+      continue state{data{odometerReading{valueInM = (if length state.data.odometerReading.valueInM > 0 then (take (length state.data.odometerReading.valueInM - 1) state.data.odometerReading.valueInM) else "")}}}
+      else continue state
 
 eval (RideActionModalAction (RideActionModal.NoAction)) state = continue state {data{triggerPatchCounter = state.data.triggerPatchCounter + 1,peekHeight = getPeekHeight state}}
 eval (RideActionModalAction (RideActionModal.StartRide)) state = do
-  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false } }
+  continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false, zoneRideBooking = false, arrivedAtStop = isNothing state.data.activeRide.nextStopAddress } }
 eval (RideActionModalAction (RideActionModal.EndRide)) state = do
-  continue $ (state {props {endRidePopUp = true}, data {route = []}})
+  if state.data.activeRide.tripType == ST.Rental then continue state{props{endRideOtpModal = true,enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp="",odometerValue="0000•0"}, data{route = []}}
+  else if state.data.activeRide.tripType == ST.Intercity then continue state { props{ endRideOtpModal = true, enterOtpFocusIndex = 0, otpIncorrect = false, rideOtp = "" } }
+  else continue $ (state {props {endRidePopUp = true}, data {route = []}})
+
+eval (RideActionModalAction (RideActionModal.ArrivedAtStop)) state = do
+  exit $ ArrivedAtStop state
+
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   _ <- pure $ setValueToLocalStore TRIGGER_MAPS "false"
-  let lat = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lat else state.data.activeRide.dest_lat
-      lon = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lon else state.data.activeRide.dest_lon
+  let lat = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lat else if state.data.activeRide.tripType == ST.Rental then fromMaybe state.data.activeRide.src_lat state.data.activeRide.nextStopLat else state.data.activeRide.dest_lat
+      lon = if (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) then state.data.activeRide.src_lon else if state.data.activeRide.tripType == ST.Rental then fromMaybe state.data.activeRide.src_lon state.data.activeRide.nextStopLon else state.data.activeRide.dest_lon
   void $ pure $ openNavigation 0.0 0.0 lat lon "DRIVE"
   continue state
 eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
@@ -649,6 +829,15 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
     ] $ CallCustomer state exophoneNumber
 
 eval (RideActionModalAction (RideActionModal.SecondaryTextClick)) state = continue state{props{showAccessbilityPopup = true}}
+eval (RideActionModalAction (RideActionModal.RideStartTimer seconds status id)) state = do
+  void $ pure $ printLog "RideActionModal rideStartTimer " seconds
+  if (getValueToLocalStore RIDE_START_TIMER_ID) == id then do
+    if status == "EXPIRED" then do
+      continue state { props {rideStartTimer = 0}}
+    else continue state { props {rideStartTimer = seconds}}
+  else 
+    continue state
+
 
 eval (MakePaymentModalAC (MakePaymentModal.PrimaryButtonActionController PrimaryButtonController.OnClick)) state = updateAndExit state $ OpenPaymentPage state
 
@@ -1069,6 +1258,12 @@ eval ToggleStatsModel state = continue state { props { isStatsModelExpanded = no
 
 eval (GoToEarningsScreen showCoinsView) state = exit $ EarningsScreen state showCoinsView
 
+eval (RentalRideTimerCallback id min sec) state = do
+  case id of
+    "rentalRideStartTimerId" -> continue state
+    "rentalRideDurationId" -> continue state
+    _ -> continue state
+
 eval _ state = continue state
 
 checkPermissionAndUpdateDriverMarker :: ST.HomeScreenState -> Effect Unit
@@ -1121,11 +1316,11 @@ activeRideDetail state (RidesInfo ride) =
   {
   id : ride.id,
   source : (decodeAddress ride.fromLocation true),
-  destination : (decodeAddress ride.toLocation true),
+  destination : (\toLocation -> decodeAddress toLocation true) <$> ride.toLocation,
   src_lat :  ((ride.fromLocation) ^. _lat),
   src_lon :  ((ride.fromLocation) ^. _lon),
-  dest_lat: ((ride.toLocation) ^. _lat),
-  dest_lon: ((ride.toLocation) ^. _lon),
+  dest_lat: maybe ((ride.fromLocation) ^. _lat) (\toLocation -> toLocation ^. _lat) ride.toLocation,
+  dest_lon: maybe ((ride.fromLocation) ^. _lon) (\toLocation -> toLocation ^. _lon) ride.toLocation,
   actualRideDistance : fromMaybe 0.0 (Number.fromString (parseFloat (toNumber( fromMaybe 0 ride.chargeableDistance)) 2)),
   status : case ride.status of
               "NEW" -> NEW
@@ -1135,6 +1330,8 @@ activeRideDetail state (RidesInfo ride) =
               _ -> COMPLETED,
   distance : (toNumber ride.estimatedDistance),
   duration : state.data.activeRide.duration,
+  tripDuration : ride.estimatedDuration,
+  actualRideDuration : ride.actualDuration,
   riderName : fromMaybe "" ride.riderName,
   estimatedFare : ride.driverSelectedFare + ride.estimatedBaseFare,
   notifiedCustomer : getValueToLocalStore WAITING_TIME_STATUS == (show ST.PostTriggered),
@@ -1157,8 +1354,24 @@ activeRideDetail state (RidesInfo ride) =
               Just _ -> Just ST.OTHER_DISABILITY
               Nothing -> if isSafetyRide && (isNothing ride.specialLocationTag) 
                           then Just ST.SAFETY 
-                          else Nothing
+                          else Nothing,
+  tripScheduledAt: ride.tripScheduledAt,
+  tripType: rideTypeConstructor ride.tripCategory,
+  tripStartTime: ride.tripStartTime,
+  tripEndTime: ride.tripEndTime,
+  tripActualDistance: ride.actualRideDistance,
+  nextStopAddress : getAddressFromStopLocation ride.nextStopLocation,
+  lastStopAddress : case ride.lastStopLocation of
+    Just (API.StopLocation {address,lat,lon}) -> if lat == ((ride.fromLocation) ^. _lat) && lon == ((ride.fromLocation) ^. _lon) then Nothing else getAddressFromStopLocation ride.lastStopLocation
+    Nothing -> Nothing,
+  nextStopLat : (\a -> ( a ^. _lat)) <$> ride.nextStopLocation,
+  nextStopLon : (\a -> ( a ^. _lon)) <$> ride.nextStopLocation,
+  lastStopLat : (\a -> ( a ^. _lat)) <$> ride.lastStopLocation,
+  lastStopLon : (\a -> ( a ^. _lon)) <$> ride.lastStopLocation
 }
+  where 
+    getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String
+    getAddressFromStopLocation  stopLocation = (\(API.StopLocation {address,lat,lon}) -> decodeAddress (getLocationInfoFromStopLocation address lat lon) true) <$>  stopLocation
 
 cancellationReasons :: String -> Array Common.OptionButtonList
 cancellationReasons dummy = [

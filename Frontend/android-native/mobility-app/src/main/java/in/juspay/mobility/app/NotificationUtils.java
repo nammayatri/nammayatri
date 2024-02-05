@@ -64,6 +64,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.HashMap;
 import java.util.TimeZone;
@@ -89,6 +90,10 @@ public class NotificationUtils {
     public static String RIDE_STARTED = "RIDE_STARTED";
     public static String NO_VARIANT = "NO_VARIANT";
     public static String SAFETY_ALERT = "SAFETY_ALERT";
+    public static String RENTAL = "Rental";
+    public static String INTERCITY = "InterCity";
+    public static String NEW_STOP_ADDED = "NEW_STOP_ADDED";
+    public static String EDIT_STOP = "EDIT_STOP";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
     public static ArrayList<Bundle> listData = new ArrayList<>();
@@ -133,12 +138,13 @@ public class NotificationUtils {
                 Intent svcT = new Intent(context, OverlaySheetService.class);
                 svcT.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 System.out.println("Call Service before");
+                String tripType = entity_payload.has("tripCategory") && !entity_payload.isNull("tripCategory") ? (entity_payload.getJSONObject("tripCategory")).getString("tag") : "";
                 Bundle sheetData = new Bundle();
                 String expiryTime = "";
                 String searchRequestId = "";
                 try {
                     JSONObject addressPickUp = new JSONObject(entity_payload.get("fromLocation").toString());
-                    JSONObject addressDrop = new JSONObject(entity_payload.get("toLocation").toString());
+                    JSONObject addressDrop = new JSONObject(entity_payload.has("toLocation") && !entity_payload.isNull("toLocation") ? entity_payload.get("toLocation").toString() : "{}");
                     sheetData.putString("searchRequestId", entity_payload.getString("searchRequestId"));
                     sheetData.putString("searchRequestValidTill", entity_payload.getString("searchRequestValidTill"));
                     sheetData.putInt("baseFare", entity_payload.getInt("baseFare"));
@@ -147,9 +153,9 @@ public class NotificationUtils {
                     sheetData.putString("durationToPickup", entity_payload.getString("durationToPickup"));
                     sheetData.putInt("distanceTobeCovered", entity_payload.getInt("distance"));
                     sheetData.putString("sourceArea", addressPickUp.getString("area"));
-                    sheetData.putString("destinationArea", addressDrop.getString("area"));
+                    sheetData.putString("destinationArea", addressDrop.has("area") && !addressDrop.isNull("area") ? addressDrop.getString("area") : "");
                     sheetData.putString("addressPickUp", addressPickUp.getString("full_address"));
-                    sheetData.putString("addressDrop", addressDrop.getString("full_address"));
+                    sheetData.putString("addressDrop", addressDrop.has("full_address") && !addressDrop.isNull("full_address") ? addressDrop.getString("full_address") : "");
                     sheetData.putInt("driverMinExtraFee", entity_payload.has("driverMinExtraFee") ? entity_payload.optInt("driverMinExtraFee", 0) : 10);
                     sheetData.putInt("driverMaxExtraFee", entity_payload.has("driverMaxExtraFee") ? entity_payload.optInt("driverMaxExtraFee", 0) : 20);
                     sheetData.putString("specialLocationTag", entity_payload.has("specialLocationTag") && !entity_payload.isNull("specialLocationTag") ?entity_payload.getString("specialLocationTag"):null);//null "SureAirport - Pickup"
@@ -162,8 +168,13 @@ public class NotificationUtils {
                     sheetData.putString("requestedVehicleVariant", (entity_payload.has("requestedVehicleVariant") && !entity_payload.isNull("requestedVehicleVariant")) ? getCategorizedVariant(entity_payload.getString("requestedVehicleVariant"), context) : NO_VARIANT);
                     sheetData.putBoolean("disabilityTag", (entity_payload.has("disabilityTag") && !entity_payload.isNull("disabilityTag")));
                     sheetData.putBoolean("gotoTag", entity_payload.has("goHomeRequestId") && !entity_payload.isNull("goHomeRequestId"));
+                    sheetData.putString("rideProductType", tripType);
+                    sheetData.putInt("rentalRideDuration",entity_payload.has("duration") && !entity_payload.isNull("duration") ? entity_payload.getInt("duration") : 0);
+                    sheetData.putInt("rentalRideDistance",entity_payload.has("distance") && !entity_payload.isNull("distance") ? entity_payload.getInt("distance") : 0);
+                    sheetData.putString("rentalStartTime",entity_payload.has("startTime") && !entity_payload.isNull("startTime") ? entity_payload.getString("startTime") : "");
                     expiryTime = entity_payload.getString("searchRequestValidTill");
                     searchRequestId = entity_payload.getString("searchRequestId");
+
                     System.out.println(entity_payload);
                 } catch (Exception e) {
                     System.out.println("exception_parsing_overlay_data" + " <> " + searchRequestId + " <> " + sharedPref.getString("DRIVER_ID", "null"));
@@ -457,6 +468,11 @@ public class NotificationUtils {
             startMediaPlayer(context, audio, !key.equals("USER"));
         }
         notificationId++;
+        if(NEW_STOP_ADDED.equals(notificationType) || EDIT_STOP.equals(notificationType) ){
+            for (int i = 0; i < callBack.size(); i++) {
+                callBack.get(i).addStopCallBack(data.optString("stopStatus", ""));
+            }
+        }
         if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             Log.e(LOG_TAG, "no notification permission");
         } else {
