@@ -77,16 +77,18 @@ public class WidgetService extends Service {
     private static FirebaseAnalytics mFirebaseAnalytics;
     private int LAYOUT_FLAG;
 
+    private Runnable animationRunnable;
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
         String intentMessage = intent != null && intent.hasExtra(getResources().getString(R.string.WIDGET_MESSAGE)) ? intent.getStringExtra(getResources().getString(R.string.WIDGET_MESSAGE)) : null;
-        if (intent != null && calculatedTime == 0 && intentMessage == null) {
+        if (intent != null && calculatedTime == 0 && intentMessage == null && animationRunnable == null) {
             showSilentNotification(intent);
         } else {
             if (intentMessage != null && intentMessage.equals("CLEAR_FARE") && silentRideRequest != null && progressBar != null && dismissRequest != null && handler != null) {
                 removeViewAndRequest(0);
-            } else if (isRemovingInProcess) {
+            } else if (isRemovingInProcess || animationRunnable != null) {
                 rideRequestQueue.offer(intent);
             } else if (intentMessage != null && !intentMessage.equals("CLEAR_FARE")) {
                 addMessageToWidget(intent);
@@ -111,6 +113,7 @@ public class WidgetService extends Service {
 
     private void showSilentNotification(Intent intent) {
         if(widgetView == null) return;
+        animationRunnable = null;
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(getApplicationContext());
         try {
             // Fetch TextView for fare and distanceToPickup
@@ -261,6 +264,7 @@ public class WidgetService extends Service {
                     silentRideRequest = null;
                     progressBar = null;
                     handler.removeCallbacksAndMessages(null);
+                    animationRunnable = null;
                     calculatedTime = 0;
                 });
                 mFirebaseAnalytics.logEvent("ny_silent_ride_request", params);
@@ -274,6 +278,23 @@ public class WidgetService extends Service {
     }
 
     private void removeViewAndRequest(int delayInMilliSeconds) {
+        animationRunnable = () -> {
+            if (silentRideRequest != null && progressBar != null && dismissRequest != null) {
+                silentRideRequest.setVisibility(View.GONE);
+                progressBar.setVisibility(View.GONE);
+                dismissRequest.setVisibility(View.GONE);
+                silentRideRequest = null;
+                progressBar = null;
+                dismissRequest = null;
+                calculatedTime = 0;
+                isRemovingInProcess = false;
+                handler.removeCallbacksAndMessages(null);
+                animationRunnable = null;
+                if (rideRequestQueue.size() > 0 && rideRequestQueue.peek() != null) {
+                    showSilentNotification(rideRequestQueue.poll());
+                }
+            }
+        };
         handler.postDelayed(() -> {
             isRemovingInProcess = true;
             if (silentRideRequest != null) {
@@ -291,22 +312,7 @@ public class WidgetService extends Service {
 
             rotationAnimation(floatingWidget, mAngleToRotate, 0.0f);
 
-            handler.postDelayed(() -> {
-                if (silentRideRequest != null && progressBar != null && dismissRequest != null) {
-                    silentRideRequest.setVisibility(View.GONE);
-                    progressBar.setVisibility(View.GONE);
-                    dismissRequest.setVisibility(View.GONE);
-                    silentRideRequest = null;
-                    progressBar = null;
-                    dismissRequest = null;
-                    calculatedTime = 0;
-                    isRemovingInProcess = false;
-                    handler.removeCallbacksAndMessages(null);
-                    if (rideRequestQueue.size() > 0 && rideRequestQueue.peek() != null) {
-                        showSilentNotification(rideRequestQueue.poll());
-                    }
-                }
-            }, 700);
+            handler.postDelayed(animationRunnable, 700);
         }, delayInMilliSeconds);
     }
 
