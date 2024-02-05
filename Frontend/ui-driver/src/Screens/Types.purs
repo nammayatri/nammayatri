@@ -15,13 +15,15 @@
 
 module Screens.Types where
 
+import Common.Types.Config
+
 import Common.Types.App as Common
 import Domain.Payments as PP
-import Components.ChatView.Controller as ChatView
 import Components.ChatView.Controller as ChatView
 import Components.ChooseVehicle.Controller (Config) as ChooseVehicle
 import Components.GoToLocationModal.Controller as GoToModal
 import Components.PaymentHistoryListItem.Controller as PaymentHistoryListItem
+import Components.RecordAudioModel.Controller as RecordAudioModel
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Components.RecordAudioModel.Controller as RecordAudioModel
 import Data.Eq.Generic (genericEq)
@@ -33,29 +35,22 @@ import Foreign (Foreign)
 import Foreign.Class (class Decode, class Encode)
 import Foreign.Object (Object)
 import Halogen.VDom.DOM.Prop (PropValue)
+import MerchantConfig.Types (AppConfig)
 import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig)
 import Prelude (class Eq, class Show)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
 import Presto.Core.Utils.Encoding (defaultDecode, defaultEncode)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode)
 import PrestoDOM (LetterSpacing, Visibility, visibility)
-import Styles.Types (FontSize)
-import Components.ChatView.Controller as ChatView
-import Components.RecordAudioModel.Controller as RecordAudioModel
-import MerchantConfig.Types (AppConfig)
-import Foreign.Object (Object)
-import Foreign (Foreign)
 import PrestoDOM.List (ListItem)
-import Services.API (GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp)
-import Styles.Types (FontSize)
-import Components.ChatView.Controller as ChatView
-import Foreign.Object (Object)
-import Foreign (Foreign)
 import Screens (ScreenName)
 import Services.API (AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..))
+import Services.API (GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, TripCategory(..))
 import Styles.Types (FontSize)
 import Common.Types.Config
-import RemoteConfig as RC
+import RemoteConfig.Types as RC
+import Styles.Types (FontSize)
+
 
 type EditTextInLabelState =
  {
@@ -433,6 +428,7 @@ type DriverProfileScreenProps = {
   alternateNumberView :: Boolean,
   removeAlternateNumber :: Boolean,
   enterOtpModal :: Boolean,
+  enterOdometerFocusIndex :: Int,
   enterOtpFocusIndex :: Int,
   otpIncorrect :: Boolean,
   otpAttemptsExceeded :: Boolean,
@@ -455,7 +451,8 @@ type DriverProfileScreenProps = {
   upiQrView :: Boolean,
   paymentInfoView :: Boolean,
   enableGoto :: Boolean,
-  isRideActive :: Boolean
+  isRideActive :: Boolean,
+  canSwitchToRental :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -763,7 +760,7 @@ type DriverDetailsScreenState = {
   props :: DriverDetailsScreenStateProps
 }
 
-data KeyboardModalType = MOBILE__NUMBER | OTP | NONE
+data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE
 
 derive instance genericKeyboardModalType :: Generic KeyboardModalType _
 instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
@@ -891,6 +888,7 @@ type HomeScreenData =  {
   driverGotoState :: DriverGoToState,
   snappedOrigin :: Maybe Location,
   gender :: String,
+  odometerReading :: OdometerReading,
   coinBalance :: Int,
   subsRemoteConfig :: RC.RCSubscription,
   bannerData :: BannerCarousalData,
@@ -1008,7 +1006,7 @@ type Rides = {
 type ActiveRide = {
   id :: String,
   source :: String,
-  destination :: String,
+  destination :: Maybe String,
   src_lat :: Number,
   src_lon :: Number,
   dest_lat :: Number,
@@ -1027,7 +1025,20 @@ type ActiveRide = {
   specialLocationTag :: Maybe String,
   requestedVehicleVariant :: Maybe String,
   disabilityTag :: Maybe DisabilityType,
-  waitTimeSeconds :: Int
+  waitTimeSeconds :: Int,
+  tripScheduledAt :: Maybe String,
+  tripType :: TripType,
+  tripStartTime :: Maybe String,
+  tripEndTime :: Maybe String,
+  tripDuration :: Maybe Int,
+  actualRideDuration :: Maybe Int,
+  nextStopAddress :: Maybe String,
+  lastStopAddress :: Maybe String,
+  nextStopLat :: Maybe Number,
+  nextStopLon :: Maybe Number,
+  tripActualDistance :: Maybe Int,
+  lastStopLat :: Maybe Number,
+  lastStopLon :: Maybe Number
 }
 
 type HomeScreenProps =  {
@@ -1037,7 +1048,13 @@ type HomeScreenProps =  {
   screenName :: String,
   rideActionModal :: Boolean,
   enterOtpModal :: Boolean,
+  endRideOtpModal :: Boolean,
   rideOtp :: String,
+  odometerValue :: String,
+  enterOdometerReadingModal :: Boolean,
+  endRideOdometerReadingModal :: Boolean,
+  showNewStopPopup :: Boolean,
+  odometerConfig :: OdometerConfig,
   enterOtpFocusIndex :: Int,
   time :: Int,
   otpIncorrect :: Boolean,
@@ -1081,7 +1098,13 @@ type HomeScreenProps =  {
   accountBlockedPopup :: Boolean,
   showCoinsPopup :: Boolean,
   isStatsModelExpanded :: Boolean,
-  tobeLogged :: Boolean
+  tobeLogged :: Boolean,
+  startRideOdometerImage :: String,
+  endRideOdometerImage :: String,
+  arrivedAtStop :: Boolean,
+  rideStartTimer :: Int,
+  odometerFileId :: Maybe String,
+  odometerUploadAttempts :: Int
  }
 
 data SubscriptionBannerType = FREE_TRIAL_BANNER | SETUP_AUTOPAY_BANNER | CLEAR_DUES_BANNER | NO_SUBSCRIPTION_BANNER | DUE_LIMIT_WARNING_BANNER | LOW_DUES_BANNER
@@ -1099,6 +1122,14 @@ instance eqSubscriptionPopupType :: Eq SubscriptionPopupType where eq = genericE
 instance showSubscriptionPopupType :: Show SubscriptionPopupType where show = genericShow
 instance encodeSubscriptionPopupType :: Encode SubscriptionPopupType where encode = defaultEnumEncode
 instance decodeSubscriptionPopupType :: Decode SubscriptionPopupType where decode = defaultEnumDecode
+
+data TripType = OneWay | RoundTrip | Rental | Intercity | RideShare
+
+derive instance genericTripType :: Generic TripType _
+instance eqTripType :: Eq TripType where eq = genericEq
+instance showTripType :: Show TripType where show = genericShow
+instance encodeTripType :: Encode TripType where encode = defaultEnumEncode
+instance decodeTripType :: Decode TripType where decode = defaultEnumDecode
 
 data DisabilityType = BLIND_AND_LOW_VISION | HEAR_IMPAIRMENT | LOCOMOTOR_DISABILITY | OTHER_DISABILITY | SAFETY
 
@@ -1681,7 +1712,8 @@ type BookingOptionsScreenData = {
 
 type BookingOptionsScreenProps = {
   isBtnActive :: Boolean,
-  downgraded :: Boolean
+  downgraded :: Boolean,
+  canSwitchToRental :: Boolean
 }
 
 data LeaderBoardType = Daily | Weekly
@@ -2362,3 +2394,13 @@ instance showGoBackToScreen :: Show GoBackToScreen where show = genericShow
 instance eqGoBackToScreen :: Eq GoBackToScreen where eq = genericEq
 instance encodeGoBackToScreen :: Encode GoBackToScreen where encode = defaultEnumEncode
 instance decodeGoBackToScreen :: Decode GoBackToScreen where decode = defaultEnumDecode
+
+type OdometerConfig = {
+  updateKm :: Boolean,
+  updateM :: Boolean
+}
+
+type OdometerReading = {
+  valueInM :: String,
+  valueInkm :: String
+}
