@@ -193,8 +193,8 @@ ticketRideList merchantShortId opCity mbRideShortId countryCode mbPhoneNumber _ 
         }
 
 ---------------------------------------------------------------------------------------------------
-getActualRoute :: MonadFlow m => CHDriverEda.DriverEdaKafka -> m Common.ActualRoute
-getActualRoute CHDriverEda.DriverEdaKafkaT {..} =
+getActualRoute :: MonadFlow m => (Maybe Double, Maybe Double, UTCTime, Maybe Double, Maybe CHDriverEda.Status) -> m Common.ActualRoute
+getActualRoute (lat, lon, timestamp, accuracy, rideStatus) =
   case (lat, lon) of
     (Just lat', Just lon') -> do
       let rideStatus' = castRideStatus <$> rideStatus
@@ -217,7 +217,7 @@ rideRoute merchantShortId opCity reqRideId = do
   -- version 2
   let firstDate = ride.createdAt
       lastDate = addUTCTime (intToNominalDiffTime 86400) ride.createdAt
-  driverEdaKafkaList <- CHDriverEda.findAll firstDate lastDate ride.driverId (Just rideId)
+  driverEdaKafkaList <- CHDriverEda.findAllTuple firstDate lastDate ride.driverId (Just rideId)
   logDebug $ "clickhouse driverEdaKafka res v2: " <> show driverEdaKafkaList
   actualRoute <- mapM getActualRoute driverEdaKafkaList
 
