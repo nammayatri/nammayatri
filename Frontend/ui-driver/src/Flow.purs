@@ -2633,6 +2633,7 @@ constructLatLong lat lng =
   { lat: fromMaybe 0.0 (Number.fromString lat)
   , lon : fromMaybe 0.0 (Number.fromString lng)
   , place : ""
+  , timeStamp : ""
   }
 
 updateCustomerMarker :: Location -> Effect Unit

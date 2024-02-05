@@ -44,6 +44,7 @@ initData =
               { place: ""
               , lat: 0.0
               , lon: 0.0
+              , timeStamp: ""
               }
           , address: ""
           , tag: ""

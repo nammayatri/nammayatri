@@ -1135,7 +1135,8 @@ instance decodeDriverStatus :: Decode DriverStatus where decode = defaultEnumDec
 type Location = {
   place :: String,
   lat :: Number,
-  lon :: Number
+  lon :: Number,
+  timeStamp :: String
 }
 
 data LocationType = LATITUDE | LONGITUDE

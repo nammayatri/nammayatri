@@ -964,6 +964,9 @@ export const saveAudioFile = function (source) {
 
 export const differenceBetweenTwoUTC = function (date1, date2) {
   const diffInSeconds = Math.round((new Date(date1) - new Date(date2)) / 1000);
+  if (isNaN(diffInSeconds)){
+    return 0;
+  }
   return diffInSeconds;
 }
 
