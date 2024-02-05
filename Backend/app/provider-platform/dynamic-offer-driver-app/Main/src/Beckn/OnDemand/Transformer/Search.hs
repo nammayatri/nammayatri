@@ -66,6 +66,6 @@ tfAddress (Just location) = do
 
 tfLatLong :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> m Kernel.External.Maps.LatLong
 tfLatLong locationGps = do
-  let lat_ = Beckn.OnDemand.Utils.Common.parseLatLong locationGps & Kernel.External.Maps.lat
-  let lon_ = Beckn.OnDemand.Utils.Common.parseLatLong locationGps & Kernel.External.Maps.lon
-  pure $ Kernel.External.Maps.LatLong {lat = lat_, lon = lon_}
+  lat_ <- Beckn.OnDemand.Utils.Common.parseLatLong locationGps
+  lon_ <- Beckn.OnDemand.Utils.Common.parseLatLong locationGps
+  pure $ Kernel.External.Maps.LatLong {lat = Kernel.External.Maps.lat lat_, lon = Kernel.External.Maps.lon lon_}

@@ -202,14 +202,14 @@ getMessageIdText context = do
   messageUuid <- context.contextMessageId & fromMaybeM (InvalidRequest "Missing message_id")
   pure $ T.pack $ show messageUuid
 
-parseLatLong :: Text -> Maps.LatLong
+parseLatLong :: MonadFlow m => Text -> m Maps.LatLong
 parseLatLong a =
   case T.splitOn "," a of
     [latStr, longStr] ->
       let lat = fromMaybe 0.0 $ readMaybe $ T.unpack latStr
           lon = fromMaybe 0.0 $ readMaybe $ T.unpack longStr
-       in LatLong lat lon
-    _ -> error "Unable to parse LatLong"
+       in return $ LatLong lat lon
+    _ -> throwError . InvalidRequest $ "Unable to parse LatLong"
 
 getContextBppUri :: MonadFlow m => Spec.Context -> m (Maybe BaseUrl)
 getContextBppUri context = do

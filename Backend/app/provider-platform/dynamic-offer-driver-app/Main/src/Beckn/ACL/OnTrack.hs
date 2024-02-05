@@ -30,11 +30,11 @@ mkOnTrackMessage res = do
     }
 
 mkOnTrackMessageV2 :: DTrack.DTrackRes -> Spec.OnTrackReqMessage
-mkOnTrackMessageV2 res = do
+mkOnTrackMessageV2 res =
   Spec.OnTrackReqMessage
     { onTrackReqMessageTracking =
         Spec.Tracking
-          { trackingUrl = Just $ show res.url,
+          { trackingUrl = Just $ showBaseUrl res.url,
             trackingStatus = if res.isRideCompleted then Just "INACTIVE" else Just "ACTIVE"
           }
     }

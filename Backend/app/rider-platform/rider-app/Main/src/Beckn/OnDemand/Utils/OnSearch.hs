@@ -227,7 +227,7 @@ getProviderLocation provider = do
 makeLatLong :: MonadFlow m => Spec.Location -> m Maps.LatLong
 makeLatLong location = do
   gps <- location.locationGps & fromMaybeM (InvalidRequest "Missing GPS")
-  return $ Common.parseLatLong gps
+  Common.parseLatLong gps
 
 buildSpecialLocationTag :: MonadFlow m => Spec.Item -> m (Maybe Text)
 buildSpecialLocationTag item = do

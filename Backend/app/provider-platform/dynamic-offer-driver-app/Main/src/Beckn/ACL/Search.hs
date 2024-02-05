@@ -121,7 +121,7 @@ buildSearchReqV2 merchantId subscriber req = do
         pickup <- Utils.firstStop stops & fromMaybeM (InvalidRequest "Missing pickup in stops")
         pickupLatLongText <- pickup.stopLocation >>= (.locationGps) & fromMaybeM (InvalidRequest "Missing pickup location Gps")
 
-        let pickupLatLong = Utils.parseLatLong pickupLatLongText
+        pickupLatLong <- Utils.parseLatLong pickupLatLongText
         geometry <-
           runInReplica $
             findGeometriesContaining pickupLatLong regions >>= \case
