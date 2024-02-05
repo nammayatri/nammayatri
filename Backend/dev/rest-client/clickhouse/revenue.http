@@ -1,0 +1,345 @@
+# run migration for dev testing:
+
+# UPDATE atlas_bpp_dashboard.access_matrix
+# 	SET user_access_type='USER_FULL_ACCESS'
+# 	WHERE (api_entity = 'VOLUNTEER'
+# 		AND (user_action_type = 'ALL_FEE_HISTORY' OR user_action_type = 'VOLUNTEER_COLLECTION_HISTORY')
+# 		AND role_id = '37947162-3b5d-4ed6-bcac-08841be1534d');
+
+# INSERT INTO atlas_driver_offer_bpp.volunteer (id, place, created_at, updated_at) VALUES
+# 	('8b278f98-f9fb-4be6-a19f-175ffe2ac1fb', 'Kochi', now(), now());
+
+@empty =
+
+@clickhouse-driver-offer-bpp = http://localhost:8123
+
+@clickhouse-password = {{empty}}
+
+@merchantId = favorit0-0000-0000-0000-00000favorit
+
+@driverId = favorit-auto1-0000000000000000000000
+
+@volunteerId = 8b278f98-f9fb-4be6-a19f-175ffe2ac1fb
+
+@dashboardToken = 0f3378e2-da5b-4eac-a0f6-397ca48358de
+
+@dbName = atlas_driver_offer_bpp
+
+# @name dashboard
+
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name clickhouse
+
+GET {{clickhouse-driver-offer-bpp}}
+
+###
+
+
+# @name version
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+Select version()
+
+###
+
+# @name testQuery
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+Select 1
+
+###
+
+# @name createDB
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+CREATE DATABASE iF NOT EXISTS atlas_driver_offer_bpp
+
+###
+
+# @name createDriverFeeTable
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+CREATE TABLE {{dbName}}.driver_fee
+( `id` String,
+  `merchant_id` String,
+  `driver_id` Nullable (String),
+  `status` Nullable (String),
+  `num_rides` Nullable(Int64),
+  `platform_fee` Nullable(Float64),
+  `cgst` Nullable(Float64),
+  `sgst` Nullable(Float64),
+  `govt_charges` Nullable(Int64),
+  `collected_at` DateTime DEFAULT now(),
+  `collected_by` Nullable(String)
+)
+ENGINE = MergeTree()
+PRIMARY KEY (id)
+
+###
+
+# @name insertDriverFees
+
+# COLLECTED_CASH: totalAmount = 3.0+2.0+1.5+6=12.5
+# PAYMENT_PENDING: totalAmount = 4+3+2.5+7=16.5
+# CLEARED: totalAmount = 5+4+3.5+8=20.5
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+INSERT INTO {{dbName}}.driver_fee
+(id, merchant_id, driver_id, status, num_rides, platform_fee, cgst, sgst, govt_charges, collected_at, collected_by)
+Values
+( '5289bb0b-b012-4d1a-abed-32555212ea03',
+  '{{merchantId}}',
+  '{{driverId}}',
+  'COLLECTED_CASH',
+  '3',
+  '3.0',
+  '2.0',
+  '1.5',
+  6,
+  '2024-01-22 07:02:42',
+  '{{volunteerId}}'
+),
+( '5289bb0b-b012-4d1a-abed-32555212ea04',
+  '{{merchantId}}',
+  '{{driverId}}',
+  'PAYMENT_PENDING',
+  '5',
+  '4.0',
+  '3.0',
+  '2.5',
+  7,
+  '2024-01-22 07:02:42',
+  '{{volunteerId}}'
+),
+( '5289bb0b-b012-4d1a-abed-32555212ea05',
+  '{{merchantId}}',
+  '{{driverId}}',
+  'CLEARED',
+  '6',
+  '5.0',
+  '4.0',
+  '3.5',
+  8,
+  '2024-01-22 07:02:42',
+  '{{volunteerId}}'
+)
+
+
+###
+
+# @name selectAll
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT (*) from {{dbName}}.driver_fee
+FORMAT JSON
+
+###
+
+# @name getAllDriverFeeHistory
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/revenue/allFeeHistory
+  ?from=2024-01-01T07:02:42Z
+  &to=2024-01-22T08:02:42Z
+token: {{dashboardToken}}
+
+#  clickhouse queries for above api:
+
+###
+
+# @name getAllDriverFeeHistory_dueFees
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT
+    status as res1,
+    SUM(num_rides) as res2,
+    COUNT(DISTINCT(driver_id)) as res3,
+    SUM((((platform_fee + cgst) + sgst) + govt_charges)) as res4
+FROM
+    {{dbName}}.driver_fee
+WHERE
+    (
+        (
+            merchant_id = 'favorit0-0000-0000-0000-00000favorit'
+        )
+        AND (
+            (status IN ('PAYMENT_PENDING', 'PAYMENT_OVERDUE'))
+            AND (
+                (true)
+                AND (true)
+            )
+        )
+    )
+GROUP BY
+    status
+FORMAT JSON
+
+###
+
+# @name getAllDriverFeeHistory_paidFees
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT
+    status as res1,
+    SUM(num_rides) as res2,
+    COUNT(DISTINCT(driver_id)) as res3,
+    SUM((((platform_fee + cgst) + sgst) + govt_charges)) as res4
+FROM
+    {{dbName}}.driver_fee
+WHERE
+    (
+        (
+            merchant_id = 'favorit0-0000-0000-0000-00000favorit'
+        )
+        AND (
+            (status IN ('CLEARED', 'COLLECTED_CASH', 'EXEMPTED'))
+            AND (
+                (collected_at >= '2024-01-01 07:02:42')
+                AND (collected_at <= '2024-01-22 08:02:42')
+            )
+        )
+    )
+GROUP BY
+    status
+FORMAT JSON
+
+###
+
+# @name getCollectionHistory
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/revenue/collectionHistory
+  ?volunteerId={{volunteerId}}
+  # &place="Kochi"
+  &from=2024-01-01T07:02:42Z
+  &to=2024-01-22T08:02:42Z
+token: {{dashboardToken}}
+
+#  clickhouse queries for above api:
+
+###
+
+# @name getCollectionHistory_offlineCollectionFees
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT
+    SUM((((platform_fee + cgst) + sgst) + govt_charges)) as res1,
+    SUM(num_rides) as res2,
+    COUNT(DISTINCT(driver_id)) as res3,
+    toDate(collected_at) as res4,
+    '0' as res5
+FROM
+    {{dbName}}.driver_fee
+WHERE
+    (
+        (
+            merchant_id = 'favorit0-0000-0000-0000-00000favorit'
+        )
+        AND (
+            (status IN ('COLLECTED_CASH'))
+            AND (
+                (collected_at >= '2024-01-01 07:02:42')
+                AND (
+                    (collected_at <= '2024-01-22 08:02:42')
+                    AND (
+                        collected_by IN ('8b278f98-f9fb-4be6-a19f-175ffe2ac1fb')
+                    )
+                )
+            )
+        )
+    )
+GROUP BY
+    toDate(collected_at),
+    '0'
+ORDER BY
+    toDate(collected_at),
+    '0' ASC
+FORMAT JSON
+
+###
+
+# @name getCollectionHistory_offlineCollectionFees
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+SELECT
+    SUM((((platform_fee + cgst) + sgst) + govt_charges)) as res1,
+    SUM(num_rides) as res2,
+    COUNT(DISTINCT(driver_id)) as res3,
+    toDate(collected_at) as res4,
+    '0' as res5
+FROM
+    {{dbName}}.driver_fee
+WHERE
+    (
+        (
+            merchant_id = 'favorit0-0000-0000-0000-00000favorit'
+        )
+        AND (
+            (status IN ('CLEARED'))
+            AND (
+                (collected_at >= '2024-01-01 07:02:42')
+                AND (
+                    (collected_at <= '2024-01-22 08:02:42')
+                    AND (true)
+                )
+            )
+        )
+    )
+GROUP BY
+    toDate(collected_at),
+    '0'
+ORDER BY
+    toDate(collected_at),
+    '0' ASC
+FORMAT JSON
+
+###
+
+# @name deleteDriverFeeTable
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+DELETE FROM {{dbName}}.driver_feee WHERE True
+
+###
+
+# @name dropDriverFeeTable
+
+POST {{clickhouse-driver-offer-bpp}}
+Authorization: Basic default:{{clickhouse-password}}
+content-type: text/html
+
+DROP TABLE {{dbName}}.driver_fee
