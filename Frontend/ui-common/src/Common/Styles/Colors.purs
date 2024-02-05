@@ -249,7 +249,6 @@ squidInkBlue = "#303440"
 
 rippleShade :: Color
 rippleShade = "#D5D5D8"
-
 green200 :: Color
 green200 = "#2053BB6F"
 
@@ -288,3 +287,5 @@ redCoin = "#1AE55454"
 
 blackOpacity12 :: Color
 blackOpacity12 = "#373A45"
+blueGreen :: Color
+blueGreen = "#42B8BA"

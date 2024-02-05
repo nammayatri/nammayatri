@@ -16,29 +16,31 @@
 module Services.Backend where
 
 import Data.Maybe
+import Locale.Utils
 import Services.API
 
 import Common.Types.App (Version(..))
 import Control.Monad.Except.Trans (lift)
 import Control.Transformers.Back.Trans (BackT(..), FailBack(..))
+import Data.Array as DA
 import Data.Either (Either(..), either)
 import Data.Int as INT
 import Data.Number as Number
 import Data.String as DS
-import Data.Array as DA
 import Debug (spy)
 import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons (liftFlow, isInvalidUrl)
 import Engineering.Helpers.Utils (toggleLoader)
 import Foreign.Generic (encode)
 import Foreign.NullOrUndefined (undefined)
+import Foreign.Object (empty)
 import Helpers.Utils (decodeErrorCode, getTime, toStringJSON, decodeErrorMessage, LatLon(..))
 import JBridge (setKeyInSharedPrefKeys, toast, factoryResetApp, stopLocationPollingAPI, Locations, getVersionName, stopChatListenerService)
 import Juspay.OTP.Reader as Readers
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog)
-import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=))
+import Prelude (bind, discard, pure, unit, identity, ($), ($>), (&&), (*>), (<<<), (=<<), (==), void, map, show, class Show, (<>), (||), not, (/=), (<$>))
 import Presto.Core.Types.API (ErrorResponse(..), Header(..), Headers(..))
 import Presto.Core.Types.Language.Flow (Flow, callAPI, doAff, loadS)
 import Screens.Types (DriverStatus)
@@ -52,8 +54,6 @@ import Tracker.Types as Tracker
 import Types.App (FlowBT, GlobalState(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Types.ModifyScreenState (modifyScreenState)
-import Foreign.Object (empty)
-import Locale.Utils
 
 getHeaders :: String -> Boolean -> Flow GlobalState Headers
 getHeaders dummy isGzipCompressionEnabled = do
@@ -277,9 +277,13 @@ startRide productId payload = do
     where
         unwrapResponse (x) = x
 
-makeStartRideReq :: String -> Number -> Number -> String -> StartRideReq
-makeStartRideReq otp lat lon ts = StartRideReq {
+makeStartRideReq :: String -> Maybe String -> Maybe String -> Number -> Number -> String -> StartRideReq
+makeStartRideReq otp odometerReading fileId lat lon ts = StartRideReq {
     "rideOtp": otp,
+    "odometer" : (\value -> Odometer {
+        "value" : fromMaybe 0.0 $ Number.fromString value,
+        "fileId" : fileId
+    }) <$> odometerReading,
     "point": Point {
         lat,
         lon,
@@ -288,17 +292,16 @@ makeStartRideReq otp lat lon ts = StartRideReq {
 }
 --------------------------------- endRide ---------------------------------------------------------------------------------------------------------------------------------
 
-endRide :: String -> EndRideReq -> FlowBT String EndRideResponse
-endRide productId payload = do
-        headers <-getHeaders' "" false
-        withAPIResultBT (EP.endRide productId) identity errorHandler (lift $ lift $ callAPI headers (EndRideRequest productId payload))
-    where
-      errorHandler (ErrorPayload errorPayload) =  do
-            void $ lift $ lift $ toggleLoader false
-            BackT $ pure GoBack
 
-makeEndRideReq :: Number -> Number -> Maybe Boolean -> Int -> Int -> String -> EndRideReq
-makeEndRideReq lat lon numDeviation tripDistance tripDistanceWithAcc ts = EndRideReq {
+
+
+makeEndRideReq :: Maybe String -> Maybe String -> Maybe String -> Number -> Number -> Maybe Boolean -> Int -> Int -> String -> EndRideReq
+makeEndRideReq endOtp endOdometerReading fileId lat lon numDeviation tripDistance tripDistanceWithAcc ts = EndRideReq {
+    "endRideOtp" : endOtp,
+    "odometer" : (\value -> Odometer {
+        "value" : fromMaybe 0.0 $ Number.fromString value,
+        "fileId" : fileId
+    }) <$> endOdometerReading,
     "point" :  Point {
         lat,
         lon,
@@ -308,6 +311,15 @@ makeEndRideReq lat lon numDeviation tripDistance tripDistanceWithAcc ts = EndRid
     "uiDistanceCalculationWithAccuracy" : tripDistanceWithAcc,
     "uiDistanceCalculationWithoutAccuracy" : tripDistance
 }
+
+--------------------------------- ARRIVED AT STOP ---------------------------------------------------------------------------------------------------------------------------------
+
+
+makeArrivedAtStopReq :: String -> String -> LatLong
+makeArrivedAtStopReq  lat lon = LatLong {
+        "lat" : (fromMaybe 0.0 (Number.fromString lat)),
+        "lon" : (fromMaybe 0.0 (Number.fromString lon))
+        }
 
 --------------------------------- driverCancelRide ---------------------------------------------------------------------------------------------------------------------------------
 
@@ -475,6 +487,7 @@ mkUpdateDriverInfoReq dummy
     , hometown: Nothing
     , vehicleName: Nothing
     , availableUpiApps: Nothing
+    , canSwitchToRental: Nothing
     }
 
 
