@@ -195,7 +195,7 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : true,
         "registration" : {
-            "supportWAN" : "919625724848",
+            "supportWAN" : "918618963188",
             "callSupport" : true,
             "whatsappSupport" : true
         }
@@ -214,9 +214,9 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
         "registration" : {
-            "supportWAN" : "",
+            "supportWAN" : "919392636637",
             "callSupport" : true,
-            "whatsappSupport" : false
+            "whatsappSupport" : true
         }
       },
       {
@@ -233,9 +233,9 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : true,
         "registration" : {
-            "supportWAN" : "",
+            "supportWAN" : "918618963188",
             "callSupport" : true,
-            "whatsappSupport" : false
+            "whatsappSupport" : true
         }
       },
       {
@@ -252,9 +252,9 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
         "registration" : {
-            "supportWAN" : "",
+            "supportWAN" : "919625724848",
             "callSupport" : true,
-            "whatsappSupport" : false
+            "whatsappSupport" : true
         }
       },
       {
@@ -271,9 +271,9 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : false,
         "enableYatriCoins" : false,
         "registration" : {
-            "supportWAN" : "",
+            "supportWAN" : "917483117936",
             "callSupport" : true,
-            "whatsappSupport" : false
+            "whatsappSupport" : true
         }
       },
       {
@@ -309,9 +309,9 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
         "registration" : {
-          "supportWAN" : "",
+          "supportWAN" : "917483117936",
           "callSupport" : true,
-          "whatsappSupport" : false
+          "whatsappSupport" : true
       }
       },
       {
@@ -328,9 +328,9 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : true,
         "registration" : {
-          "supportWAN" : "",
+          "supportWAN" : "918618963188",
           "callSupport" : true,
-          "whatsappSupport" : false
+          "whatsappSupport" : true
       }
       },
       {
@@ -347,9 +347,9 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
         "registration" : {
-          "supportWAN" : "",
+          "supportWAN" : "919625724848",
           "callSupport" : true,
-          "whatsappSupport" : false
+          "whatsappSupport" : true
       }
       },
       {
@@ -366,9 +366,9 @@ window.getMerchantConfig = function () {
         "uploadRCandDL" : true,
         "enableYatriCoins" : false,
         "registration" : {
-          "supportWAN" : "",
+          "supportWAN" : "919625724848",
           "callSupport" : true,
-          "whatsappSupport" : false
+          "whatsappSupport" : true
       }
       }
   ]
