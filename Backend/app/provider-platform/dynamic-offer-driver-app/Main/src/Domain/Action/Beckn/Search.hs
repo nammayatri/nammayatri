@@ -95,7 +95,8 @@ data DSearchReq = DSearchReq
     dropAddrress :: Maybe BA.Address,
     routeDistance :: Maybe Meters,
     routeDuration :: Maybe Seconds,
-    routePoints :: Maybe [LatLong]
+    routePoints :: Maybe [LatLong],
+    multipleRoutes :: Maybe [Maps.RouteInfo]
   }
 
 data ValidatedDSearchReq = ValidatedDSearchReq
@@ -150,10 +151,17 @@ handler ValidatedDSearchReq {..} sReq = do
         logDebug $ "distance: " <> show estimatedDistance
         let routeInfo = RouteInfo {distance = Just estimatedDistance, duration = Just estimatedDuration, points = sReq.routePoints}
         toLocation <- buildSearchReqLocation merchant.id merchantOpCityId sessiontoken sReq.dropAddrress sReq.customerLanguage dropLoc
+        let setRouteInfo srId =
+              ( do
+                  Redis.setExp (searchRequestKey $ getId srId) routeInfo 3600
+                  case sReq.multipleRoutes of
+                    Just routes -> do
+                      let multipleRoutesInfo = map createRouteInfo routes
+                      Redis.setExp (multipleRouteKey $ getId srId) multipleRoutesInfo 3600
+                    Nothing -> logInfo "No multiple routes found"
+              )
 
-        let setRouteInfo srId = Redis.setExp (searchRequestKey $ getId srId) routeInfo 3600
-
-        return $ (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration)
+        return (Just setRouteInfo, Just toLocation, Just estimatedDistance, Just estimatedDuration)
       _ -> return (Nothing, Nothing, sReq.routeDistance, sReq.routeDuration) -- estimate distance and durations by user
   allFarePoliciesProduct <- (pure . combineFarePoliciesProducts) =<< ((getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.pickupLocation sReq.dropLocation) `mapM` possibleTripOption.tripCategories)
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) allFarePoliciesProduct.farePolicies
@@ -242,6 +250,18 @@ handler ValidatedDSearchReq {..} sReq = do
               logWarning "Failed to calculate Customer Cancellation Dues as BAP Phone Number is NULL"
               return 0
         else return 0
+
+    createRouteInfo :: Maps.RouteInfo -> RouteAndDeviationInfo
+    createRouteInfo Maps.RouteInfo {..} =
+      RouteAndDeviationInfo
+        { routeInfo =
+            RouteInfo
+              { points = Just points,
+                ..
+              },
+          deviationInfo =
+            DeviationInfo {deviation = False, safetyDeviation = False}
+        }
 
 addNearestDriverInfo ::
   (HasField "vehicleVariant" a DVeh.Variant) =>

@@ -110,7 +110,10 @@ handler merchantId req validatedReq = do
         case routeInfo of
           Just route -> Redis.setExp (SR.searchRequestKey $ getId booking.id) route 3600
           Nothing -> logDebug "Unable to get the key"
-
+        multipleRoutes :: Maybe [RI.RouteAndDeviationInfo] <- Redis.safeGet $ SR.multipleRouteKey $ getId searchRequest.id
+        case multipleRoutes of
+          Just routes -> Redis.setExp (SR.multipleRouteKey $ getId booking.id) routes 3600
+          Nothing -> logInfo "Unable to get the multiple route key"
         return (booking, Nothing, Nothing)
 
   let paymentMethodInfo = req.paymentMethodInfo

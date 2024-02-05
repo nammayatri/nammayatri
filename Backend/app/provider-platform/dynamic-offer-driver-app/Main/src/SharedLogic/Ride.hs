@@ -92,6 +92,10 @@ initializeRide merchantId driver booking mbOtpCode routeInfoId = do
   case routeInfo of
     Just route -> Redis.setExp (searchRequestKey $ getId ride.id) route 14400
     Nothing -> logDebug "Unable to get the key"
+  multipleRoutes :: Maybe [RouteAndDeviationInfo] <- Redis.safeGet $ multipleRouteKey routeInfoId
+  case multipleRoutes of
+    Just routes -> Redis.setExp (multipleRouteKey $ getId ride.id) routes 14400
+    Nothing -> logInfo "Unable to get the multiple route key"
 
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
@@ -212,3 +216,6 @@ pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDrive
 
 searchRequestKey :: Text -> Text
 searchRequestKey sId = "Driver:Search:Request:" <> sId
+
+multipleRouteKey :: Text -> Text
+multipleRouteKey id = "multiple-routes-" <> id
