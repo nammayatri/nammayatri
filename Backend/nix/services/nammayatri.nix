@@ -291,5 +291,29 @@ in
           then inputs.passetto.packages.x86_64-darwin.passetto-service
           else inputs'.passetto.packages.passetto-service);
       };
+
+      services.clickhouse."clickhouse-db" = {
+        enable = true;
+        port = 9000;
+        extraConfig = ''
+          http_port: 8123
+        '';
+        initialDatabases = [
+          {
+            name = "atlas_kafka";
+            schemas = [
+              ../../dev/clickhouse/sql-seed/atlas-kafka-seed.sql
+              ../../dev/clickhouse/local-testing-data/atlas-kafka.sql
+            ];
+          }
+          {
+            name = "atlas_driver_offer_bpp";
+            schemas = [
+              ../../dev/clickhouse/sql-seed/atlas-driver-offer-bpp-seed.sql
+              ../../dev/clickhouse/local-testing-data/atlas-driver-offer-bpp.sql
+            ];
+          }
+        ];
+      };
     };
 }

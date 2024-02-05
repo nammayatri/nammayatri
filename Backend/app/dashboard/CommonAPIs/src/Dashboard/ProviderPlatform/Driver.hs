@@ -24,6 +24,7 @@ import Dashboard.Common as Reexport
 import Data.Aeson
 import Kernel.External.Maps.Types
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Storage.Esqueleto (derivePersistField)
 import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.City as City
@@ -282,6 +283,8 @@ data PlatformFee = PlatformFee
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
 data DriverFeeStatus = ONGOING | PAYMENT_PENDING | PAYMENT_OVERDUE | CLEARED | EXEMPTED | COLLECTED_CASH | INACTIVE | CLEARED_BY_YATRI_COINS | MANUAL_REVIEW_NEEDED deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema)
+
+instance CH.ClickhouseValue DriverFeeStatus
 
 type DriverOutstandingBalanceAPI =
   "paymentDue"

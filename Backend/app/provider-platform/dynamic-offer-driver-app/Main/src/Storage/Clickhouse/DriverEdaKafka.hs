@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Storage.Clickhouse.DriverEdaKafka where
 
@@ -29,18 +27,18 @@ import Kernel.Types.Id
 data DriverEdaKafkaT f = DriverEdaKafkaT
   { driverId :: C f (Id DP.Driver),
     rideId :: C f (Maybe (Id DRide.Ride)),
-    timestamp :: C f UTCTime,
+    timestamp :: C f UTCTime, -- DateTime64(3) on clickhouse side
     accuracy :: C f (Maybe Double),
     rideStatus :: C f (Maybe Status),
     lat :: C f (Maybe Double),
     lon :: C f (Maybe Double),
     merchantId :: C f (Maybe (Id DM.Merchant)),
-    updatedAt :: C f (Maybe UTCTime),
+    updatedAt :: C f (Maybe UTCTime), -- Nullable(String) on clickhouse side
     createdAt :: C f (Maybe UTCTime),
     onRide :: C f (Maybe Bool),
     active :: C f (Maybe Bool),
-    partitionDate :: C f Time.Day,
-    date :: C f UTCTime
+    partitionDate :: C f Time.Day, -- Date on clickhouse side
+    date :: C f CH.DateTime -- DateTime on clickhouse side
   }
   deriving (Generic)
 
@@ -83,13 +81,35 @@ findAll :: CH.HasClickhouseEnv CH.ATLAS_KAFKA m => UTCTime -> UTCTime -> Id DP.D
 findAll firstDate lastDate driverId rideId = do
   CH.findAll $
     CH.select $
-      CH.orderBy_ (\driverEdaKafka -> CH.asc driverEdaKafka.timestamp) $
+      CH.orderBy_ (\driverEdaKafka _ -> CH.asc driverEdaKafka.timestamp) $
         CH.filter_
-          ( \driverEdaKafka ->
+          ( \driverEdaKafka _ ->
               ( driverEdaKafka.partitionDate CH.==. Time.utctDay firstDate
                   CH.||. driverEdaKafka.partitionDate ==. Time.utctDay lastDate
               )
                 CH.&&. driverEdaKafka.driverId CH.==. driverId
                 CH.&&. driverEdaKafka.rideId CH.==. rideId
+          )
+          (CH.all_ @CH.ATLAS_KAFKA driverEdaKafkaTTable)
+
+-- up to 5 columns supported now
+findAllTuple ::
+  CH.HasClickhouseEnv CH.ATLAS_KAFKA m =>
+  UTCTime ->
+  UTCTime ->
+  Id DP.Driver ->
+  Maybe (Id DRide.Ride) ->
+  m [(Maybe Double, Maybe Double, UTCTime, Maybe Double, Maybe Status)]
+findAllTuple firstDate lastDate driverId rideId = do
+  CH.findAll $
+    CH.select_ (\dek -> CH.notGrouped (dek.lat, dek.lon, dek.timestamp, dek.accuracy, dek.rideStatus)) $
+      CH.orderBy_ (\dek _ -> CH.asc dek.timestamp) $
+        CH.filter_
+          ( \dek _ ->
+              ( dek.partitionDate CH.==. Time.utctDay firstDate
+                  CH.||. dek.partitionDate ==. Time.utctDay lastDate
+              )
+                CH.&&. dek.driverId CH.==. driverId
+                CH.&&. dek.rideId CH.==. rideId
           )
           (CH.all_ @CH.ATLAS_KAFKA driverEdaKafkaTTable)

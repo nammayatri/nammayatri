@@ -41,17 +41,17 @@ let kafkaClickhouseCfg =
       , host = "localhost"
       , port = 8123
       , password = sec.clickHousePassword
-      , database = "test_db"
+      , database = "default"
       , tls = False
       }
 
 let driverClickhouseCfg =
       { username = sec.clickHouseUsername
-      , host = "xxxxx"
-      , port = 1234
+      , host = "localhost"
+      , port = 8124
       , password = sec.clickHousePassword
-      , database = "xxxx"
-      , tls = True
+      , database = "default"
+      , tls = False
       }
 
 let rcfg =
