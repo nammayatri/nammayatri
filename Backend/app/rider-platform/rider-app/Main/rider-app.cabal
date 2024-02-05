@@ -324,6 +324,7 @@ library
       Storage.CachedQueries.Merchant.MerchantPaymentMethod
       Storage.CachedQueries.Merchant.MerchantServiceConfig
       Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
+      Storage.CachedQueries.Merchant.MerchantState
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
       Storage.CachedQueries.Person
@@ -415,6 +416,7 @@ library
       Domain.Types.FRFSTicketBookingPayment
       Domain.Types.FRFSTrip
       Domain.Types.MerchantOperatingCity
+      Domain.Types.MerchantState
       Domain.Types.NextBillionData
       Domain.Types.RiderConfig
       Domain.Types.SeatManagement
@@ -438,6 +440,7 @@ library
       Storage.Beam.FRFSTicketBookingPayment
       Storage.Beam.FRFSTrip
       Storage.Beam.MerchantOperatingCity
+      Storage.Beam.MerchantState
       Storage.Beam.NextBillionData
       Storage.Beam.RiderConfig
       Storage.Beam.SeatManagement
@@ -461,6 +464,7 @@ library
       Storage.Queries.FRFSTicketBookingPayment
       Storage.Queries.FRFSTrip
       Storage.Queries.MerchantOperatingCity
+      Storage.Queries.MerchantState
       Storage.Queries.NextBillionData
       Storage.Queries.RiderConfig
       Storage.Queries.SeatManagement

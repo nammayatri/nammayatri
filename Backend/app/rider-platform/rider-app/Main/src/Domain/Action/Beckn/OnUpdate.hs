@@ -316,6 +316,7 @@ onUpdate ValidatedRideAssignedReq {..} = do
             SRB.RentalDetails _ -> Nothing
             SRB.DriverOfferDetails details -> Just details.toLocation
             SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+            SRB.InterCityDetails details -> Just details.toLocation
       let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
       return
         SRide.Ride
@@ -562,6 +563,7 @@ validateRequest StopArrivedReq {..} = do
     SRB.OneWayDetails _ -> throwError $ InvalidRequest "Stops are not present in static offer on demand rides"
     SRB.DriverOfferDetails _ -> throwError $ InvalidRequest "Stops are not present in dynamic offer on demand rides"
     SRB.OneWaySpecialZoneDetails _ -> throwError $ InvalidRequest "Stops are not present in on ride otp rides"
+    SRB.InterCityDetails _ -> throwError $ InvalidRequest "Stops are not present in intercity rides"
     SRB.RentalDetails SRB.RentalBookingDetails {..} -> do
       unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
       return $ ValidatedStopArrivedReq {..}

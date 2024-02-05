@@ -138,6 +138,7 @@ buildShareRideInfo merchantId ride = do
         DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
         DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
+        DB.InterCityDetails details -> Just details.distance
         _ -> Nothing
   sosDetails <- CQSos.findByRideIdAndStatus ride.id [DSos.Pending, DSos.Resolved]
   return $
@@ -333,6 +334,7 @@ rideInfo merchantId reqRideId = do
         DB.OneWayDetails locationDetail -> Just $ locationDetail.distance
         DB.DriverOfferDetails driverOfferDetail -> Just $ driverOfferDetail.distance
         DB.OneWaySpecialZoneDetails oneWaySpecialZoneDetail -> Just $ oneWaySpecialZoneDetail.distance
+        DB.InterCityDetails details -> Just details.distance
         _ -> Nothing
   let cancelledBy = castCancellationSource <$> (mbBCReason <&> (.source))
   pure
@@ -375,6 +377,7 @@ mkFareProductType bookingDetails = case bookingDetails of
   DTB.RentalDetails _ -> Common.RENTAL
   DTB.DriverOfferDetails _ -> Common.DRIVER_OFFER
   DTB.OneWaySpecialZoneDetails _ -> Common.ONE_WAY_SPECIAL_ZONE
+  DTB.InterCityDetails _ -> Common.INTER_CITY
 
 timeDiffInSeconds :: UTCTime -> UTCTime -> Seconds
 timeDiffInSeconds t1 = nominalDiffTimeToSeconds . diffUTCTime t1

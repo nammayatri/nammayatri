@@ -36,5 +36,6 @@ fareProductConstructorModifier :: String -> String
 fareProductConstructorModifier = \case
   "OneWayAPIDetails" -> "ONE_WAY"
   "RentalAPIDetails" -> "RENTAL"
+  "InterCityAPIDetails" -> "INTER_CITY"
   "DriverOfferAPIDetails" -> "DRIVER_OFFER"
   x -> x

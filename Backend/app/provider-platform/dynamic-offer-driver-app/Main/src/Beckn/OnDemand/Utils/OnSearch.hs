@@ -75,6 +75,7 @@ convertQuoteToPricing (DQuote.Quote {..}, mbDriverLocations) =
     mapToFulfillmentType (DTC.RoundTrip DTC.RideOtp) = "RIDE_OTP"
     mapToFulfillmentType (DTC.RideShare DTC.RideOtp) = "RIDE_OTP"
     mapToFulfillmentType (DTC.Rental _) = "RENTAL"
+    mapToFulfillmentType (DTC.InterCity _) = "INTER_CITY"
     mapToFulfillmentType _ = "RIDE_OTP" -- backward compatibility
 
 mkProviderLocations :: [Maybe NearestDriverInfo] -> [Spec.Location]

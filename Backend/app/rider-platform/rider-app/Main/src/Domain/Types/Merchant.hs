@@ -30,6 +30,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     shortId :: ShortId Merchant,
     name :: Text,
     defaultCity :: Context.City,
+    defaultState :: Context.IndianState,
     country :: Context.Country,
     geofencingConfig :: GeofencingConfig,
     gatewayUrl :: BaseUrl,

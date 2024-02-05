@@ -41,6 +41,7 @@ createDetails = \case
   RentalDetails rentalDetails -> QueryRD.createRentalDetails rentalDetails
   DriverOfferDetails driverOffer -> QueryDO.createDriverOffer driverOffer
   OneWaySpecialZoneDetails specialZoneQuote -> QuerySZQ.createSpecialZoneQuote specialZoneQuote
+  InterCityDetails specialZoneQuote -> QuerySZQ.createSpecialZoneQuote specialZoneQuote
 
 createQuote :: MonadFlow m => Quote -> m ()
 createQuote = createWithKV
@@ -110,6 +111,9 @@ instance FromTType' BeamQ.Quote Quote where
       DFFP.ONE_WAY_SPECIAL_ZONE -> do
         qd <- getSpecialZoneQuote specialZoneQuoteId
         maybe (throwError (InternalError "No special zone details")) return qd
+      DFFP.INTER_CITY -> do
+        qd <- getInterCityQuote specialZoneQuoteId
+        maybe (throwError (InternalError "No inter city details")) return qd
     merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId
     pure $
       Just
@@ -146,6 +150,10 @@ instance FromTType' BeamQ.Quote Quote where
         res <- maybe (pure Nothing) (QuerySZQ.findById . Id) specialZoneQuoteId'
         maybe (pure Nothing) (pure . Just . DQ.OneWaySpecialZoneDetails) res
 
+      getInterCityQuote specialZoneQuoteId' = do
+        res <- maybe (pure Nothing) (QuerySZQ.findById . Id) specialZoneQuoteId'
+        maybe (pure Nothing) (pure . Just . DQ.InterCityDetails) res
+
       backfillMOCId = \case
         Just mocId -> pure $ Id mocId
         Nothing -> (.id) <$> CQM.getDefaultMerchantOperatingCity (Id merchantId)
@@ -157,6 +165,7 @@ instance ToTType' BeamQ.Quote Quote where
           DQ.RentalDetails rentalDetails -> (DFFP.RENTAL, Nothing, Just $ getId rentalDetails.id, Nothing, Nothing)
           DQ.DriverOfferDetails driverOffer -> (DFFP.DRIVER_OFFER, Nothing, Nothing, Just $ getId driverOffer.id, Nothing)
           DQ.OneWaySpecialZoneDetails specialZoneQuote -> (DFFP.ONE_WAY_SPECIAL_ZONE, Nothing, Nothing, Nothing, Just $ getId specialZoneQuote.id)
+          DQ.InterCityDetails details -> (DFFP.INTER_CITY, Nothing, Nothing, Nothing, Just $ getId details.id)
      in BeamQ.QuoteT
           { BeamQ.id = getId id,
             BeamQ.fareProductType = fareProductType,

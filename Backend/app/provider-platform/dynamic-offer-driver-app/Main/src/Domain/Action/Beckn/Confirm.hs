@@ -180,6 +180,9 @@ validateRequest subscriber transporterId req now = do
     DTC.RoundTrip DTC.OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     DTC.Rental DTC.OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
     DTC.RideShare DTC.OnDemandStaticOffer -> getStaticQuoteDetails booking transporter
+    DTC.InterCity DTC.OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
+    DTC.InterCity DTC.OneWayRideOtp -> getRideOtpQuoteDetails booking transporter
+    DTC.InterCity DTC.OneWayOnDemandStaticOffer -> getStaticQuoteDetails booking transporter
   where
     getDriverQuoteDetails booking transporter = do
       driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)

@@ -36,6 +36,9 @@ findAllByMerchantId (Id merchantId) = findAllWithKV [Se.And [Se.Is BeamMOC.merch
 findByMerchantIdAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantIdAndCity (Id merchantId) city = findOneWithKV [Se.And [Se.Is BeamMOC.merchantId $ Se.Eq merchantId, Se.Is BeamMOC.city $ Se.Eq city]]
 
+findAllByMerchantIdAndState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Context.IndianState -> m [MerchantOperatingCity]
+findAllByMerchantIdAndState (Id merchantId) state = findAllWithKV [Se.And [Se.Is BeamMOC.merchantId $ Se.Eq merchantId, Se.Is BeamMOC.state $ Se.Eq state]]
+
 findByMerchantShortIdAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ShortId DM.Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantShortIdAndCity (ShortId merchantShortId) city = findOneWithKV [Se.And [Se.Is BeamMOC.merchantShortId $ Se.Eq merchantShortId, Se.Is BeamMOC.city $ Se.Eq city]]
 
@@ -58,6 +61,7 @@ instance ToTType' BeamMOC.MerchantOperatingCity MerchantOperatingCity where
         BeamMOC.merchantId = getId merchantId,
         BeamMOC.merchantShortId = getShortId merchantShortId,
         BeamMOC.city = city,
+        BeamMOC.state = state,
         BeamMOC.lat = location.lat,
         BeamMOC.lon = location.lon,
         BeamMOC.supportNumber = supportNumber,

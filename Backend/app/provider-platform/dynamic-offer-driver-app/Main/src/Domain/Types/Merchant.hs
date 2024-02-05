@@ -20,7 +20,7 @@ import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
 import Domain.Types.Common
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import Kernel.Prelude (BaseUrl)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
@@ -48,6 +48,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     uniqueKeyId :: Text,
     shortId :: ShortId Merchant,
     city :: Context.City,
+    state :: Context.IndianState,
     country :: Context.Country,
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,

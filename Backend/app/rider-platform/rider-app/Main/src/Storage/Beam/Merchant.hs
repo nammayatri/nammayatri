@@ -44,6 +44,7 @@ data MerchantT f = MerchantT
     subscriberId :: B.C f Text,
     name :: B.C f Text,
     city :: B.C f Context.City,
+    state :: B.C f Context.IndianState,
     country :: B.C f Context.Country,
     bapId :: B.C f Text,
     bapUniqueKeyId :: B.C f Text,

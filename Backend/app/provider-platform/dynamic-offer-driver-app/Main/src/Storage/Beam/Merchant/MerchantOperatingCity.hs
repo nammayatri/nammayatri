@@ -26,6 +26,7 @@ data MerchantOperatingCityT f = MerchantOperatingCityT
     merchantId :: B.C f Text,
     merchantShortId :: B.C f Text,
     city :: B.C f Context.City,
+    state :: B.C f Context.IndianState,
     lat :: B.C f Double,
     lon :: B.C f Double,
     supportNumber :: B.C f (Maybe Text),

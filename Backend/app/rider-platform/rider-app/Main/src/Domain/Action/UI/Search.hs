@@ -54,6 +54,7 @@ import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
+import qualified Storage.CachedQueries.Merchant.MerchantState as QMMS
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedLocation as CSavedLocation
@@ -225,7 +226,7 @@ search personId req bundleVersion clientVersion device = do
 
   let sourceLatLong = origin.gps
   let stopsLatLong = map (.gps) stops
-  originCity <- validateServiceability sourceLatLong stopsLatLong person <&> fromMaybe merchant.defaultCity <$> (.city)
+  originCity <- validateServiceability sourceLatLong stopsLatLong person
   -- merchant operating city of search-request-origin-location
 
   when (shouldSaveSearchHotSpot && shouldTakeHotSpot) do
@@ -344,13 +345,12 @@ search personId req bundleVersion clientVersion device = do
   return dSearchRes
   where
     validateServiceability origin stops person' = do
-      originServiceability <- Serviceability.checkServiceabilityAndGetCity (.origin) (person'.id, person'.merchantId) False origin
-      stopsServiceabilities <- traverse (Serviceability.checkServiceabilityAndGetCity (.origin) (person'.id, person'.merchantId) False) stops
-      if originServiceability.serviceable && (all (.serviceable) stopsServiceabilities)
-        then
-          if all (\s -> s.city == originServiceability.city) stopsServiceabilities
-            then pure originServiceability
-            else throwError $ InvalidRequest "All stops should be inside the source city"
+      Serviceability.NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity} <- Serviceability.getNearestOperatingAndCurrentCity (.origin) (person'.id, person'.merchantId) False origin
+      stopCitiesAndStates <- traverse (Serviceability.getNearestOperatingAndCurrentCity (.destination) (person'.id, person'.merchantId) False) stops
+      mbMerchantState <- QMMS.findByMerchantIdAndState person'.merchantId currentCity.state
+      let allowedStates = maybe [currentCity.state] (.allowedDestinationStates) mbMerchantState
+      if all (\d -> d.currentCity.state `elem` allowedStates) stopCitiesAndStates
+        then return nearestOperatingCity.city
         else throwError RideNotServiceable
 
 getLongestRouteDistance :: [Maps.RouteInfo] -> Maybe Maps.RouteInfo

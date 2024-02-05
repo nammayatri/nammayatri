@@ -22,6 +22,7 @@ data MerchantOperatingCity = MerchantOperatingCity
     merchantId :: Id DM.Merchant,
     merchantShortId :: ShortId DM.Merchant,
     city :: Context.City,
+    state :: Context.IndianState,
     location :: LatLong,
     supportNumber :: Maybe Text,
     language :: Language

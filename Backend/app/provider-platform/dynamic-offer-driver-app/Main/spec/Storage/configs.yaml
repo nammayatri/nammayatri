@@ -4,6 +4,7 @@ imports:
   BatchSplitByPickupDistance: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   Seconds: Kernel.Types.Common
+  IndianState: Kernel.Types.Beckn.Context
 
 DriverPoolConfig:
   tableName: driver_pool_config
@@ -56,3 +57,48 @@ DriverPoolConfig:
       kvFunction: findAllWithOptionsKV
       where: merchantOperatingCityId
       orderBy: tripDistance
+
+MerchantState:
+  tableName: merchant_state
+
+  fields:
+    merchantId: Id Merchant
+    state: IndianState
+    allowedDestinationStates: '[IndianState]'
+
+  excludedFields: [merchantOperatingCityId]
+
+  constraints:
+    merchantId: PrimaryKey
+    state: PrimaryKey
+
+  sqlType:
+    allowedDestinationStates: text[]
+
+  queries:
+    findByMerchantIdAndState:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, state]
+
+InterCityTravelCities:
+  tableName: inter_city_travel_cities
+
+  fields:
+    merchantId: Id Merchant
+    cityName: Text
+    state: IndianState
+    lat: Double
+    lng: Double
+
+  excludedFields: [merchantOperatingCityId]
+
+  constraints:
+    merchantId: PrimaryKey
+    cityName: PrimaryKey
+
+  queries:
+    findByMerchantAndState:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantId, state]

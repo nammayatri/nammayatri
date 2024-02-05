@@ -238,6 +238,7 @@ buildNewRide mbMerchant booking NewRideInfo {..} = do
         DB.RentalDetails _ -> Nothing
         DB.DriverOfferDetails details -> Just details.toLocation
         DB.OneWaySpecialZoneDetails details -> Just details.toLocation
+        DB.InterCityDetails details -> Just details.toLocation
   let allowedEditLocationAttempts = Just $ maybe 0 (.numOfAllowedEditPickupLocationAttemptsThreshold) mbMerchant
   let createdAt = now
       updatedAt = now
