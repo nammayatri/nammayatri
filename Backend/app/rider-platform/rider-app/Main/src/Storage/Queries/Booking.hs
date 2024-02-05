@@ -104,10 +104,18 @@ updateOtpCodeBookingId rbId otp = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-findLatestByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> [BookingStatus] -> m (Maybe BookingStatus)
-findLatestByRiderIdAndStatus (Id riderId) bookingStatusList =
+findLatestByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe BookingStatus)
+findLatestByRiderId (Id riderId) =
   do
-    let options = [Se.And [Se.Is BeamB.riderId $ Se.Eq riderId, Se.Is BeamB.status $ Se.In bookingStatusList]]
+    let options =
+          [ Se.And
+              [ Se.Is BeamB.riderId $ Se.Eq riderId,
+                Se.Or
+                  [ Se.And [Se.Is BeamB.status $ Se.In activeScheduledBookingStatus, Se.Is BeamB.isScheduled $ Se.Eq (Just True)],
+                    Se.And [Se.Is BeamB.status $ Se.In activeBookingStatus, Se.Is BeamB.isScheduled $ Se.Not $ Se.Eq (Just True)]
+                  ]
+              ]
+          ]
         sortBy = Se.Desc BeamB.createdAt
         limit' = Just 1
     findAllWithOptionsKV options sortBy limit' Nothing
@@ -160,9 +168,18 @@ findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
 findByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> [BookingStatus] -> m [Booking]
 findByRiderIdAndStatus (Id personId) statusList = findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In statusList]]
 
-findActiveBookingIdByRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe (Id Booking))
-findActiveBookingIdByRiderId (Id personId) = do
-  bookings <- findAllWithKV [Se.And [Se.Is BeamB.riderId $ Se.Eq personId, Se.Is BeamB.status $ Se.In activeBookingStatus]]
+findByRiderId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe (Id Booking))
+findByRiderId (Id personId) = do
+  bookings <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamB.riderId $ Se.Eq personId,
+            Se.Or
+              [ Se.And [Se.Is BeamB.status $ Se.In activeScheduledBookingStatus, Se.Is BeamB.isScheduled $ Se.Eq (Just True)],
+                Se.And [Se.Is BeamB.status $ Se.In activeBookingStatus, Se.Is BeamB.isScheduled $ Se.Not $ Se.Eq (Just True)]
+              ]
+          ]
+      ]
   return $ listToMaybe $ Domain.id <$> bookings
 
 findAssignedByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Booking)
@@ -317,6 +334,7 @@ instance FromTType' BeamB.Booking Booking where
             discount = roundToIntegral <$> discount,
             estimatedTotalFare = roundToIntegral estimatedTotalFare,
             vehicleVariant = vehicleVariant,
+            isScheduled = fromMaybe False isScheduled,
             bookingDetails = bookingDetails,
             tripTerms = tt,
             merchantId = Id merchantId,
@@ -391,6 +409,7 @@ instance ToTType' BeamB.Booking Booking where
             BeamB.vehicleVariant = vehicleVariant,
             BeamB.distance = distance,
             BeamB.tripTermsId = getId <$> (tripTerms <&> (.id)),
+            BeamB.isScheduled = Just isScheduled,
             BeamB.stopLocationId = stopLocationId,
             BeamB.merchantId = getId merchantId,
             BeamB.merchantOperatingCityId = Just $ getId merchantOperatingCityId,

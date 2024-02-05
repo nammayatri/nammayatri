@@ -57,6 +57,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     driverDistanceThresholdFromPickup :: HighPrecMeters,
     numOfAllowedEditPickupLocationAttemptsThreshold :: Int,
     publicMediaFileUrlPattern :: Text,
+    scheduleRideBufferTime :: NominalDiffTime,
     kaptureDisposition :: Text
   }
   deriving (Generic, Show)

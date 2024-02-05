@@ -33,6 +33,9 @@ import Tools.Beam.UtilsTH
 activeBookingStatus :: [BookingStatus]
 activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
 
+activeScheduledBookingStatus :: [BookingStatus]
+activeScheduledBookingStatus = [AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
+
 data BookingStatus
   = NEW
   | CONFIRMED
@@ -73,6 +76,7 @@ data Booking = Booking
     estimatedDuration :: Maybe Seconds,
     discount :: Maybe Money,
     estimatedTotalFare :: Money,
+    isScheduled :: Bool,
     vehicleVariant :: VehicleVariant,
     bookingDetails :: BookingDetails,
     tripTerms :: Maybe DTripTerms.TripTerms,

@@ -137,6 +137,8 @@ data DriverRideRes = DriverRideRes
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
     specialLocationTag :: Maybe Text,
+    actualDuration :: Maybe Seconds,
+    estimatedDuration :: Maybe Seconds,
     chargeableDistance :: Maybe Meters,
     exoPhone :: Text,
     bapName :: Maybe Text,
@@ -234,6 +236,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
         vehicleModel = fromMaybe initial rideDetails.vehicleModel,
         computedFare = ride.fare,
+        estimatedDuration = booking.estimatedDuration,
+        actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
         estimatedBaseFare = estimatedBaseFare,
         estimatedDistance = booking.estimatedDistance,
         driverSelectedFare = fromMaybe 0 fareParams.driverSelectedFare,
@@ -276,7 +280,7 @@ calculateLocations bookingId stopLocationId = do
   maxOrder <- QLM.maxOrderByEntity bookingId.getId
   case stopLocationId of
     Nothing -> do
-      lastLoc <- mkLocationFromLocationMapping bookingId.getId maxOrder
+      lastLoc <- if maxOrder == 0 then pure Nothing else mkLocationFromLocationMapping bookingId.getId maxOrder
       return (Nothing, lastLoc)
     Just nextStopId -> do
       nextLoc <- QLoc.findById nextStopId

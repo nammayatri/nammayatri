@@ -99,6 +99,7 @@ instance FromTType' BeamM.Merchant Merchant where
             numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
             publicMediaFileUrlPattern = publicMediaFileUrlPattern,
             kaptureDisposition = kaptureDisposition,
+            scheduleRideBufferTime = secondsToNominalDiffTime scheduleRideBufferTime,
             ..
           }
 
@@ -139,5 +140,6 @@ instance ToTType' BeamM.Merchant Merchant where
         BeamM.driverDistanceThresholdFromPickup = driverDistanceThresholdFromPickup,
         BeamM.numOfAllowedEditPickupLocationAttemptsThreshold = numOfAllowedEditPickupLocationAttemptsThreshold,
         BeamM.publicMediaFileUrlPattern = publicMediaFileUrlPattern,
+        BeamM.scheduleRideBufferTime = nominalDiffTimeToSeconds scheduleRideBufferTime,
         BeamM.kaptureDisposition = kaptureDisposition
       }

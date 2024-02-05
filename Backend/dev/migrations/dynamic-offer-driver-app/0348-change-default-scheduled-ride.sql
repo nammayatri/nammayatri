@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN schedule_ride_buffer_time SET DEFAULT 1800

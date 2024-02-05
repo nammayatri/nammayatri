@@ -104,8 +104,12 @@ confirm DConfirmReq {..} = do
         pure (Just estimate.bppEstimateId.getId)
       DQuote.OneWaySpecialZoneDetails details -> pure (Just details.quoteId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  activeBooking <- QRideB.findByRiderIdAndStatus personId DRB.activeBookingStatus
-  unless (null activeBooking) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
+  activeBooking <- QRideB.findByRiderId personId
+  scheduledBookings <- QRideB.findByRiderIdAndStatus personId [DRB.CONFIRMED]
+  let searchDist = round $ fromMaybe 0 $ (.getHighPrecMeters) <$> searchRequest.distance
+      searchDur = fromMaybe 0 $ (.getSeconds) <$> searchRequest.estimatedRideDuration
+      overlap = any (checkOverlap searchDist searchDur now) scheduledBookings
+  unless (null activeBooking && not overlap) $ throwError $ InvalidRequest "ACTIVE_BOOKING_PRESENT"
   when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
@@ -115,12 +119,13 @@ confirm DConfirmReq {..} = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
-  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId
+  merchant <- CQM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
+  let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
+  booking <- buildBooking searchRequest fulfillmentId quote fromLocation mbToLocation exophone now Nothing paymentMethodId driverId isScheduled
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   riderPhone <- mapM decrypt person.mobileNumber
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
-  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   details <- mkConfirmQuoteDetails quote.quoteDetails fulfillmentId
   paymentMethod <- forM paymentMethodId $ \paymentMethodId' -> do
     paymentMethod <-
@@ -163,6 +168,12 @@ confirm DConfirmReq {..} = do
     getDriverId = \case
       DQuote.DriverOfferDetails driverOffer -> driverOffer.driverId
       _ -> Nothing
+    checkOverlap :: Int -> Int -> UTCTime -> DRB.Booking -> Bool
+    checkOverlap estimatedDistance estimatedDuration now booking = do
+      let estimatedDistanceInKm = estimatedDistance `div` 1000
+          estRideEndTimeByDuration = addUTCTime (intToNominalDiffTime estimatedDuration) now
+          estRideEndTimeByDist = addUTCTime (intToNominalDiffTime $ (estimatedDistanceInKm * 3 * 60) + (30 * 60)) now -- TODO: Make config later
+      max estRideEndTimeByDuration estRideEndTimeByDist < addUTCTime (intToNominalDiffTime $ fromMaybe 0 ((.getSeconds) <$> booking.estimatedDuration)) now
 
 buildBooking ::
   MonadFlow m =>
@@ -176,8 +187,9 @@ buildBooking ::
   Maybe Text ->
   Maybe (Id DMPM.MerchantPaymentMethod) ->
   Maybe Text ->
+  Bool ->
   m DRB.Booking
-buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId driverId = do
+buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now otpCode paymentMethodId driverId isScheduled = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   return $
@@ -211,6 +223,7 @@ buildBooking searchRequest mbFulfillmentId quote fromLoc mbToLoc exophone now ot
         merchantId = searchRequest.merchantId,
         merchantOperatingCityId = searchRequest.merchantOperatingCityId,
         specialLocationTag = quote.specialLocationTag,
+        isScheduled = isScheduled,
         createdAt = now,
         updatedAt = now
       }

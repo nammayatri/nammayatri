@@ -62,6 +62,7 @@ data MerchantT f = MerchantT
     signatureExpiry :: B.C f Int,
     distanceWeightage :: B.C f Int,
     updatedAt :: B.C f UTCTime,
+    scheduleRideBufferTime :: B.C f Seconds,
     createdAt :: B.C f UTCTime,
     isAvoidToll :: B.C f Bool,
     aadhaarVerificationTryLimit :: B.C f Int,

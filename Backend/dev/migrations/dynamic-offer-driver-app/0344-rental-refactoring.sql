@@ -75,7 +75,7 @@ ALTER TABLE atlas_driver_offer_bpp.fare_product ALTER COLUMN trip_category SET N
 -- TRANSPORTER CONFIG --
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN can_switch_to_rental boolean default true;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN consider_drivers_for_search boolean default true;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN schedule_ride_buffer_time integer default 600;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN schedule_ride_buffer_time integer default 1800;
 
 -- QUOTE SPECIAL ZONE --
 ALTER TABLE atlas_driver_offer_bpp.quote_special_zone ADD COLUMN trip_category text;

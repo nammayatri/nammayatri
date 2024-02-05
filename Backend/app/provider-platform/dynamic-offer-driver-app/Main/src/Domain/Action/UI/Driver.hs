@@ -698,7 +698,7 @@ updateDriver (personId, _, merchantOpCityId) req = do
   QPerson.updatePersonRec personId updPerson
   QDriverInformation.updateDriverInformation person.id updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback updDriverInfo.canDowngradeToTaxi updDriverInfo.canSwitchToRental updDriverInfo.availableUpiApps
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
+  driverEntity <- buildDriverEntityRes (updPerson, updDriverInfo)
   driverReferralCode <- fmap (.referralCode) <$> QDR.findById personId
   let merchantId = person.merchantId
   org <-
