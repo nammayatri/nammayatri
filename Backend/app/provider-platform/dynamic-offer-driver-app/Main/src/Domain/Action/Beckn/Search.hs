@@ -265,7 +265,7 @@ addNearestDriverInfo (Just driverPool) estdOrQuotes = do
       input <- inputs
       let driverPool' = M.lookup input.vehicleVariant driverPools
       case driverPool' of
-        Nothing -> mempty
+        Nothing -> (input, Nothing)
         Just dp -> do
           let driverLatLongs = fmap (\x -> LatLong x.lat x.lon) dp
               distanceToNearestDriver = NE.head dp & (.distanceToPickup)
