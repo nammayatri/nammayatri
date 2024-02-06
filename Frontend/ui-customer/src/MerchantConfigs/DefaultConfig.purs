@@ -323,6 +323,13 @@ config =
             { radius : 50000
             , strictBounds : true
             }
+        },
+        { cityCode : "std:033"
+        , cityName : "Kolkata"
+        , geoCodeConfig :
+            { radius : 700000
+            , strictBounds : true
+            }
         }
       ]
   , bannerCarousel : defaultBannerCarousel

@@ -25,6 +25,7 @@ type Config
     , showPreferences :: Boolean
     , bookingPreferenceEnabled :: Boolean
     , flowWithoutOffers :: Boolean
+    , intercity :: Boolean
     }
 
 config :: Config
@@ -38,4 +39,5 @@ config =
   , showPreferences : false
   , bookingPreferenceEnabled : false
   , flowWithoutOffers : false
+  , intercity : false
   }

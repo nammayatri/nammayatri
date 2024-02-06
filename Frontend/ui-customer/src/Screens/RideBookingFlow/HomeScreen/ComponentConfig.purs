@@ -1309,7 +1309,8 @@ chooseYourRideConfig state = ChooseYourRide.config
     nearByDrivers = state.data.nearByDrivers,
     showPreferences = state.data.showPreferences,
     bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city /= Kochi,
-    flowWithoutOffers = state.props.flowWithoutOffers
+    flowWithoutOffers = state.props.flowWithoutOffers,
+    intercity = Just state.props.city /= state.props.destCity
   }
 
 

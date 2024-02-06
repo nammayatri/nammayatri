@@ -995,3 +995,4 @@ getEN stringKey =
         EDIT_PICKUP -> "Edit pickup"
         ADD_STOP ->  "Add stop"
         ENTER_PICKUP_LOC ->  "Enter pickup location"
+        INTERCITY_OPTIONS -> "Intercity Options"

@@ -998,3 +998,4 @@ getKN stringKey =
         EDIT_PICKUP -> "ಪಿಕಪ್ ಸಂಪಾದಿಸಿp"
         ADD_STOP ->  "ನಿಲ್ಲಿಸಿ ಸೇರಿಸಿ"
         ENTER_PICKUP_LOC ->  "ಪಿಕಪ್ ಸ್ಥಳ ನಮೂದಿಸಿ"
+        INTERCITY_OPTIONS -> "ಇಂಟರ್‌ಸಿಟಿ ಆಯ್ಕೆಗಳು"

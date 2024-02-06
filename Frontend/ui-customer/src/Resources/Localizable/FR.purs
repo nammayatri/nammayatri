@@ -999,3 +999,4 @@ getFR stringKey =
         ADD_STOP -> "Ajouter un arrêt"
         ENTER_PICKUP_LOC ->  "Entrer l'emplacement de prise en charge"
         
+        INTERCITY_OPTIONS -> "Options interurbaines"

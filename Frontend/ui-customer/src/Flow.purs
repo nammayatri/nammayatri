@@ -557,7 +557,8 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration, source = state.data.source, sourceAddress = state.data.sourceAddress}})
           let distanceBtwCurrentAndSource = getDistanceBwCordinates state.props.sourceLat state.props.sourceLong state.props.currentLocation.lat state.props.currentLocation.lng
               isDistMoreThanThreshold = distanceBtwCurrentAndSource > state.data.config.mapConfig.locateOnMapConfig.pickUpToSourceThreshold
-          if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000) then do
+              cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+          if ( cityConfig.geoCodeConfig.strictBounds && response.distance >= cityConfig.geoCodeConfig.radius) then do
             updateLocalStage DistanceOutsideLimits
             modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0, isShorterTrip = false}})
             homeScreenFlow
@@ -1591,7 +1592,8 @@ rideSearchFlow flowType = do
                   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration,source = finalState.data.source, sourceAddress = finalState.data.sourceAddress }})
                   let distanceBtwCurrentAndSource = getDistanceBwCordinates finalState.props.sourceLat finalState.props.sourceLong finalState.props.currentLocation.lat finalState.props.currentLocation.lng
                       isDistMoreThanThreshold = (distanceBtwCurrentAndSource > finalState.data.config.mapConfig.locateOnMapConfig.pickUpToSourceThreshold) && flowType == "NORMAL_FLOW"
-                  if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000 )then do
+                      cityConfig = getCityConfig finalState.data.config.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+                  if ( cityConfig.geoCodeConfig.strictBounds && response.distance >= cityConfig.geoCodeConfig.radius) then do
                     _ <- pure $ updateLocalStage DistanceOutsideLimits
                     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation}})
                     else if ( (response.distance < 500  || isDistMoreThanThreshold )&& Arr.all (_ == false ) [ isLocalStageOn PickUpFarFromCurrentLocation , isLocalStageOn ShortDistance]) then do 
@@ -3613,7 +3615,8 @@ rideSearchFlowV2 = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rideDistance = distance, rideDuration = duration, source = srcAddress, sourceAddress = srcAddressComponents}})
       let distanceBtwCurrentAndSource = getDistanceBwCordinates srcLat srcLon currLat currLon
           isDistMoreThanThreshold = distanceBtwCurrentAndSource > slsState.appConfig.mapConfig.locateOnMapConfig.pickUpToSourceThreshold
-      if ((MU.getMerchant FunctionCall) /= MU.YATRI && response.distance >= 50000) then do
+          cityConfig = getCityConfig slsState.appConfig.cityConfig (getValueToLocalStore CUSTOMER_LOCATION)
+      if ( cityConfig.geoCodeConfig.strictBounds && response.distance >= cityConfig.geoCodeConfig.radius) then do
         updateLocalStage DistanceOutsideLimits
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = DistanceOutsideLimits ,rideRequestFlow = true, isSearchLocation = SearchLocation, findingQuotesProgress = 0.0, isShorterTrip = false}})
         homeScreenFlow

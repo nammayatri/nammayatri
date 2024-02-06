@@ -996,3 +996,4 @@ getBN stringKey =
         EDIT_PICKUP -> "পিকআপ সম্পাদনা করুন"
         ADD_STOP ->  "স্টপ যোগ করুন"
         ENTER_PICKUP_LOC ->  "পিকআপ স্থান লিখুন"
+        INTERCITY_OPTIONS -> "ইন্টারসিটি অপশন"

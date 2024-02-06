@@ -1016,3 +1016,4 @@ getML stringKey =
         ENTER_PICKUP_LOC ->  "പിക്കപ്പ് സ്ഥാനം നമുക്ക് പ്രവേശിപ്പിക്കുക"
 
 
+        INTERCITY_OPTIONS -> "ഇന്റർസിറ്റി ഓപ്ഷനുകൾ"

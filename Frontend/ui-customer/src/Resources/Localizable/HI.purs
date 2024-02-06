@@ -996,3 +996,4 @@ getHI stringKey =
         EDIT_PICKUP -> "पिकअप संपादित करें"
         ADD_STOP ->  "स्थान जोड़ें"
         ENTER_PICKUP_LOC ->  "पिकअप स्थान दर्ज करें"
+        INTERCITY_OPTIONS -> "इंटरसिटी विकल्प"
