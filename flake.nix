@@ -43,8 +43,7 @@
       };
     };
     # Question: move this to common?
-    services-flake.url = "github:roman-bodavskiy/services-flake/clickhouse";
-    # services-flake.url = "github:juspay/services-flake";
+    services-flake.url = "github:juspay/services-flake";
 
     # We cannot use southern-zone-latest here, because the sha256 will change
     # over time.  NOTE: This file is not permanent, find the available one at

@@ -41,16 +41,16 @@ let kafkaClickhouseCfg =
       , host = "localhost"
       , port = 8123
       , password = sec.clickHousePassword
-      , database = "default"
+      , database = "atlas_kafka"
       , tls = False
       }
 
 let driverClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
-      , port = 8124
+      , port = 8123
       , password = sec.clickHousePassword
-      , database = "default"
+      , database = "atlas_driver_offer_bpp"
       , tls = False
       }
 
