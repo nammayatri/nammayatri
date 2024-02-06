@@ -2954,6 +2954,19 @@ ticketStatusFlow = do
       (GetAllBookingsRes pendingRes) <- Remote.getAllBookingsBT Pending
       modifyScreenState $ TicketBookingScreenStateType (\_ -> TicketBookingScreenData.initData{props{navigateToHome = false, currentStage = ViewTicketStage, previousStage = ViewTicketStage, ticketBookingList = getTicketBookings (buildBookingDetails bookedRes) (buildBookingDetails pendingRes)}})
       ticketListFlow
+    GET_BOOKING_INFO_SCREEN state bookingStatus -> do
+      (TicketBookingDetails resp) <- Remote.getTicketBookingDetailsBT state.props.selectedBookingId
+      if bookingStatus == Pending
+        then do
+          modifyScreenState $ TicketBookingScreenStateType (\ticketBookingScreen -> ticketBookingScreen { props { currentStage = BookingConfirmationStage } })
+          setValueToLocalStore PAYMENT_STATUS_POOLING "true"
+          fillBookingDetails (TicketBookingDetails resp) state.props.selectedBookingId "Pending"
+          ticketStatusFlow
+        else do
+          let ticketBookingDetails = (ticketDetailsTransformer (TicketBookingDetails resp))
+          let dummyListItem = TicketBookingScreenData.dummyServiceDetails
+          modifyScreenState $ TicketInfoScreenStateType (\ticketInfoScreen ->  ticketInfoScreen{data{selectedBookingInfo = ticketBookingDetails}, props {activeListItem = fromMaybe dummyListItem (ticketBookingDetails.services !! 0), rightButtonDisable = (length ticketBookingDetails.services < 2)}})
+          zooTicketInfoFlow
     _ -> ticketStatusFlow
 
 ticketListFlow :: FlowBT String Unit
@@ -3109,10 +3122,13 @@ fillBookingDetails (TicketBookingDetails resp) shortOrderID ticketStatus = do
                                 val: (maybe (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "hh:mm A") (\sl -> fromMaybe "" (convertUTCToISTAnd12HourFormat sl)) serviceDetails.slot )  
                                      <> ", " <> (convertUTCtoISC (fromMaybe "" serviceDetails.expiryDate) "Do MMM YYYY") } ] 
                           else []
-                , bookedForArray = (map (\(TicketBookingServiceDetails item) -> item.ticketServiceName) resp.services)
+                , bookedForArray = (map (\(TicketBookingServiceDetails item) ->  getTicketBookingForName item) resp.services)
                 }
               }
         )
+  where
+    getTicketBookingForName ticket = ticket.ticketServiceName <> (DS.joinWith "" $ (map (\(TicketBookingCategoryDetails cat) ->  if cat.name /= "all" then " ( " <> cat.name <> " ) " else "") ticket.categories))
+
 
 getCurrentLocationItem :: LocationDetails -> HomeScreenState -> Number -> Number ->  Maybe LocationListItemState
 getCurrentLocationItem placeDetails state lat lon = 

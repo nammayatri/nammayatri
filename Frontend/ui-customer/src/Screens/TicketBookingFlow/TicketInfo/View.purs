@@ -26,6 +26,7 @@ import Debug
 import Data.List ((:))
 import Effect.Uncurried  (runEffectFn1)
 import PaymentPage (consumeBP)
+import Data.String as DS
 
 screen :: ST.TicketInfoScreenState -> Screen Action ST.TicketInfoScreenState ScreenOutput
 screen initialState =
@@ -302,9 +303,11 @@ ticketImageView state push =
             ]
           ]
       ]
-    , textContentView ((getTextForQRType activeItem.ticketServiceName) <> "QR") (getInfoColor activeItem.ticketServiceName) (MarginVertical 10 10) (FontStyle.subHeading1 TypoGraphy)
+    , textContentView ((getTextForQRType (getTicketQRName activeItem)) <> "QR") (getInfoColor activeItem.ticketServiceName) (MarginVertical 10 10) (FontStyle.subHeading1 TypoGraphy)
     , pillView state push (getPillBackgroundColor activeItem.ticketServiceName) (getPillInfoColor activeItem.ticketServiceName)
   ]
+  where
+    getTicketQRName ticket = ticket.ticketServiceName <> (DS.joinWith "" $ (map (\cat ->  if cat.name /= "all" then " ( " <> cat.name <> " ) " else "") ticket.categories))
 
 getTextForQRType :: String -> String
 getTextForQRType ticketServiceName = case ticketServiceName of

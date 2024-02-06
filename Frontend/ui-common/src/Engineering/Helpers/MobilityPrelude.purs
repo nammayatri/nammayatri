@@ -72,3 +72,17 @@ caseInsensitiveCompare str1 str2 =
 groupAdjacent :: forall a. Array a -> Array (Array a)
 groupAdjacent [] = []
 groupAdjacent x = cons (DA.take 2 x) (groupAdjacent (DA.drop 2 x))
+
+sortAccToDayName arr = DA.sortBy (\a b -> compare (dayToIndex a) (dayToIndex b)) arr
+
+dayToIndex :: String -> Int
+dayToIndex day =
+  case day of
+    "Mon" -> 0
+    "Tue" -> 1
+    "Wed" -> 2
+    "Thu" -> 3
+    "Fri" -> 4
+    "Sat" -> 5
+    "Sun" -> 6
+    _ -> 7
