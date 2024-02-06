@@ -3292,7 +3292,7 @@ searchLocationFlow = do
                   searchLocationFlow
             
               AddingStopAction -> do 
-                -- updateRentalsData focussedField geoJson state -- depending on fromScreen change the screen addStopFlow
+                updateRentalsData focussedField geoJson state -- depending on fromScreen change the screen addStopFlow
                 addStopFlow state
               _ -> pure unit
           _ -> pure unit
