@@ -410,7 +410,8 @@ parseEstimateRepetitionEvent transactionId order = do
   bppEstimateId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in EstimateRepetition Event.")
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in EstimateRepetition Event.")
   bppRideId <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentId) & fromMaybeM (InvalidRequest "fulfillment_id is not present in EstimateRepetition Event.")
-  cancellationSource <- order.orderCancellation >>= (.cancellationCancelledBy) & fromMaybeM (InvalidRequest "order.cancellation.cancelled_by is not present in EstimateRepetition Event.")
+  tagGroups <- order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags) & fromMaybeM (InvalidRequest "fulfillment.tags is not present in EstimateRepetition Event.")
+  cancellationSource <- Utils.getTagV2 "previous_cancellation_reasons" "cancellation_reason" tagGroups & fromMaybeM (InvalidRequest "previous_cancellation_reasons tag is not present in EstimateRepetition Event.")
   return $
     DOnUpdate.EstimateRepetitionReq
       { searchRequestId = Id transactionId,
