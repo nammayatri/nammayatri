@@ -17,6 +17,7 @@ RiderConfig:
     safetyCheckEndTime: Seconds
     trackingShortUrlPattern: Text
     appUrl: Text
+    collectAutoCompleteData: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
