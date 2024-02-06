@@ -2760,7 +2760,7 @@ otpView push state =
 rideInfoActionView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM ( Effect Unit) w
 rideInfoActionView push state =
   let enableSupport = state.data.config.feature.enableSupport
-      enableShareRide = state.data.config.feature.enableShareRide
+      enableShareRide = state.data.config.feature.enableShareRide  && state.props.currentStage == RideStarted
   in 
   linearLayout
   [ height $ WRAP_CONTENT

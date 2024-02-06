@@ -313,7 +313,8 @@ window.getMerchantConfig = function () {
       "enableAutoReadOtp" : true ,
       "enableZooTicketBookingFlow" : true,
       "enableShareRide" : false,
-      "enableAdditionalServices" : true
+      "enableAdditionalServices" : true,
+      "enableSafetyFlow" : false
     } 
     , "suggestedTripsAndLocationConfig" : {
       "minLocationsToBeShown" : 1,

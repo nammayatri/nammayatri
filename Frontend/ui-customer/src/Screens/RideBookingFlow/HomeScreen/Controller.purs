@@ -3015,7 +3015,7 @@ getBannerConfigs state =
   then [metroBannerConfig state BannerCarousal]
   else [])
   <>
-  (if isJust state.props.sosBannerType 
+  (if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
     then [sosSetupBannerConfig state BannerCarousal] 
     else [])
   <>

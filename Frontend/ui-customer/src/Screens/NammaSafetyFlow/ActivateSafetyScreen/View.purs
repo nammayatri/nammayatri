@@ -292,7 +292,7 @@ emergencyContactsView state push =
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , orientation VERTICAL
-        , visibility $ boolToVisibility $ null state.data.emergencyContactsList
+        , visibility $ boolToVisibility $ null state.data.emergencyContactsList || not state.data.shareToEmergencyContacts
         , gravity CENTER
         ]
         [ imageWithTextView configDescThree
@@ -319,7 +319,7 @@ emergencyContactsView state push =
         , background Color.black900
         , margin $ MarginTop 16
         , cornerRadius 12.0
-        , visibility $ boolToVisibility $ not $ null state.data.emergencyContactsList
+        , visibility $ boolToVisibility $ state.data.shareToEmergencyContacts && (not $ null state.data.emergencyContactsList)
         ]
         [ textView
             $ [ text $ getString SELECT_CONTACT_TO_CALL
@@ -364,7 +364,7 @@ emergencyContactsView state push =
   where
   configDescOne =
     { text': getString $ SAFETY_TEAM_WILL_BE_ALERTED "SAFETY_TEAM_WILL_BE_ALERTED"
-    , isActive: not $ null state.data.emergencyContactsList
+    , isActive: state.data.shareToEmergencyContacts && (not $ null state.data.emergencyContactsList)
     , textColor: Color.white900
     , useMargin: false
     , useFullWidth: true
@@ -381,7 +381,7 @@ emergencyContactsView state push =
     , useFullWidth: true
     , usePadding: false
     , image: Nothing
-    , visibility: not $ null state.data.emergencyContactsList
+    , visibility: state.data.shareToEmergencyContacts && (not $ null state.data.emergencyContactsList)
     }
 
   configDescThree =
