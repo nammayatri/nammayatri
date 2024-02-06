@@ -262,7 +262,7 @@ eval action state = case action of
         Just follower -> do
           void $ pure $ performHapticFeedback unit
           void $ pure $ hideKeyboardOnNavigation true
-          pure $ showDialer follower.mobileNumber false
+          pure $ showDialer follower.mobileNumber true
           continue state
     MessagingView.SendMessage -> do
       if state.data.messageToBeSent /= "" then do

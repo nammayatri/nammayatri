@@ -84,7 +84,8 @@ import PrestoDOM.Elements.Elements (bottomSheetLayout, coordinatorLayout)
 import PrestoDOM.Properties (cornerRadii, sheetState, alpha, nestedScrollView)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.AddNewAddressScreen.Controller as AddNewAddress
-import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight, getBannerConfigs)
+import Screens.HomeScreen.Controller (Action(..), ScreenOutput, checkCurrentLocation, checkSavedLocations, dummySelectedQuotes, eval, flowWithoutOffers, getPeekHeight)
+import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
 import Screens.HomeScreen.ScreenData as HomeScreenData
 import Screens.HomeScreen.Transformer (transformSavedLocations)
 import Screens.RideBookingFlow.HomeScreen.Config
@@ -470,10 +471,10 @@ getMapHeight state = V (if state.data.currentSearchResultType == QUOTES then (((
                             else (((screenHeight unit)/ 15)*10))
 
 
-getCarouselConfig ∷ forall a. ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
+getCarouselConfig ∷ ListItem → HomeScreenState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
 getCarouselConfig view state = {
     view
-  , items : BannerCarousel.bannerTransformer $ getBannerConfigs state
+  , items : BannerCarousel.bannerTransformer $ getBannerConfigs state BannerCarousel
   , orientation : HORIZONTAL
   , currentPage : state.data.bannerData.currentPage
   , autoScroll : state.data.config.bannerCarousel.enableAutoScroll
@@ -4373,7 +4374,7 @@ additionalServicesView push state =
 
 computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
 computeListItem push = do
-  bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousal)
+  bannerItem <- preComputeListItem $ BannerCarousel.view push (BannerCarousel.config BannerCarousel)
   void $ liftFlow $ push (SetBannerItem bannerItem)
     
 safetyAlertPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w

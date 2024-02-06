@@ -148,11 +148,23 @@ sosDescriptionView state push =
           , gravity CENTER
           ]
         <> FontStyle.body1 TypoGraphy
-    , imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_emergency_sent"
-        , width $ V if not $ null state.data.emergencyContactsList then 200 else 250
+    , linearLayout
+        [ width $ V if not $ null state.data.emergencyContactsList then 200 else 250
         , height $ V if not $ null state.data.emergencyContactsList then 180 else 250
         , margin $ MarginTop 20
+        , gravity CENTER
+        ]
+        [ screenAnimationFadeInOut
+          $ lottieAnimationView
+              [ id $ EHC.getNewIDWithTag "SafetylottieAnimationView"
+              , onAnimationEnd
+                  ( \_ -> do
+                      void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig { rawJson = "ny_ic_sos_active.json", lottieId = EHC.getNewIDWithTag "SafetylottieAnimationView", scaleType = "FIT_CENTER", repeat = true }
+                  )
+                  (const NoAction)
+              , height MATCH_PARENT
+              , width MATCH_PARENT
+              ]
         ]
     ]
   where

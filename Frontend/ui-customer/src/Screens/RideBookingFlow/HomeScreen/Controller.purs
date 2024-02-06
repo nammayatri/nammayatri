@@ -125,6 +125,7 @@ import PrestoDOM.List
 import PrestoDOM.Core
 import Locale.Utils (getLanguageLocale)
 import RemoteConfig as RC
+import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs)
 
 
 instance showAction :: Show Action where
@@ -917,7 +918,7 @@ data Action = NoAction
             | LocationTagBarAC LocationTagBarV2Controller.Action
             | RentalBannerAction Banner.Action
             | BottomNavBarAction BottomNavBarIcon
-            | BannerCarousal BannerCarousel.Action
+            | BannerCarousel BannerCarousel.Action
             | SetBannerItem ListItem
             | UpdateBanner
             | BannerChanged String
@@ -998,7 +999,7 @@ eval UpdateBanner state = do
   if state.data.bannerData.bannerScrollState == "1" then continue state
   else do
     let nextBanner = state.data.bannerData.currentBanner + 1
-        updatedIdx = if nextBanner >= (length $ getBannerConfigs state) then 0 else nextBanner
+        updatedIdx = if nextBanner >= (length $ getBannerConfigs state BannerCarousel) then 0 else nextBanner
         newState = state{data {bannerData{currentBanner = updatedIdx, currentPage = updatedIdx}}}
     continue newState
 
@@ -1016,9 +1017,9 @@ eval (BannerStateChanged item) state = do
   let newState = state{data {bannerData{bannerScrollState = item}}}
   continue newState
 
-eval (BannerCarousal (BannerCarousel.OnClick idx)) state = 
+eval (BannerCarousel (BannerCarousel.OnClick idx)) state = 
   continueWithCmd state [do
-    let banners = getBannerConfigs state
+    let banners = getBannerConfigs state BannerCarousel
     case index banners idx of
       Just config -> do
         let _ = runFn2 updatePushInIdMap "bannerCarousel" false
@@ -1206,6 +1207,26 @@ eval MessageDriver state = do
     ]
 
 eval (MessagingViewActionController (MessagingView.TextChanged value)) state = continue state{data{messageToBeSent = (STR.trim value)},props{sendMessageActive = (STR.length (STR.trim value)) >= 1}}
+
+eval (DriverInfoCardActionController (DriverInfoCardController.BannerCarousel act)) state = 
+  continueWithCmd state [do
+      pure $ BannerCarousel act
+    ]
+    
+eval (DriverInfoCardActionController (DriverInfoCardController.UpdateBanner)) state = 
+  continueWithCmd state [do
+      pure $ UpdateBanner
+    ]
+
+eval (DriverInfoCardActionController (DriverInfoCardController.BannerChanged value)) state = 
+  continueWithCmd state [do
+      pure $ BannerChanged value
+    ]
+
+eval (DriverInfoCardActionController (DriverInfoCardController.BannerStateChanged value)) state = 
+  continueWithCmd state [do
+      pure $ BannerStateChanged value
+    ]
 
 eval(MessagingViewActionController (MessagingView.Call)) state = do
   void $ pure $ performHapticFeedback unit
@@ -3007,32 +3028,3 @@ getPeekHeight state =
 
 logChatSuggestion :: HomeScreenState -> String -> Unit
 logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.data.logField $ "ny_" <> STR.toLower (STR.replaceAll (STR.Pattern "'") (STR.Replacement "") (STR.replaceAll (STR.Pattern ",") (STR.Replacement "") (STR.replaceAll (STR.Pattern " ") (STR.Replacement "_") chatSuggestion)))
-
-          
-getBannerConfigs :: HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
-getBannerConfigs state = 
-  (if state.props.city == Chennai
-  then [metroBannerConfig state BannerCarousal]
-  else [])
-  <>
-  (if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
-    then [sosSetupBannerConfig state BannerCarousal] 
-    else [])
-  <>
-  (if (getValueToLocalStore DISABILITY_UPDATED == "false" && state.data.config.showDisabilityBanner) 
-    then [disabilityBannerConfig state BannerCarousal] 
-    else [])
-  <> (if (state.data.config.feature.enableZooTicketBookingFlow)
-    then [ticketBannerConfig state BannerCarousal] else [])
-  where
-    getRemoteBannerConfigs :: City -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
-    getRemoteBannerConfigs city = do
-      let location = STR.toLower $ show city
-          language = getLanguage $ getLanguageLocale languageKey
-          configName = "customer_carousel_banner" <> language
-          datas = RC.carouselConfigData location configName
-      BannerCarousel.remoteConfigTransformer datas BannerCarousal
-    getLanguage :: String -> String
-    getLanguage lang = 
-      let language = STR.toLower $ STR.take 2 lang
-      in if not (STR.null language) then "_" <> language else "_en"

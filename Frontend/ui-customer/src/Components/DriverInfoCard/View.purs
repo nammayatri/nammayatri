@@ -60,6 +60,9 @@ import Mobility.Prelude (boolToVisibility)
 import Locale.Utils
 import Components.DriverInfoCard.Common.View
 import Components.DriverInfoCard.Common.Types
+import CarouselHolder as CarouselHolder
+import Components.BannerCarousel as BannerCarousel
+import PrestoDOM.List as PrestoList
 
 view :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM ( Effect Unit ) w
 view push state =
@@ -240,10 +243,6 @@ driverInfoView push state =
          , cornerRadii $ Corners 24.0 true true false false
          , stroke $ state.data.config.driverInfoConfig.cardStroke
          ][ linearLayout
-            [ height $ WRAP_CONTENT
-            , width $ MATCH_PARENT
-            , orientation VERTICAL
-            ][linearLayout
               [ height WRAP_CONTENT
               , width MATCH_PARENT
               , orientation VERTICAL
@@ -281,7 +280,7 @@ driverInfoView push state =
                 , background Color.grey700
                 , gravity CENTER
                 , cornerRadii $ Corners 24.0 true true false false
-                ][ linearLayout
+                ]$[ linearLayout
                   [ gravity CENTER
                   , background Color.transparentGrey
                   , height $ V 4
@@ -295,9 +294,18 @@ driverInfoView push state =
                   ][]
                   , contactView push state
                   , if state.props.currentStage == RideStarted then distanceView push state else dummyView push
-                  , driverDetailsView (getDriverDetails state) "DriverDetailsView"
-                  , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
-                ]
+                ] <> (if state.props.showBanner then (maybe [] (\item -> [ CarouselHolder.carouselView push $ getCarouselConfig item state ]) state.data.bannerData.bannerItem) else [])
+                  <> ( [ linearLayout
+                          [ height WRAP_CONTENT
+                          , width MATCH_PARENT
+                          , orientation VERTICAL
+                          , margin $ MarginTop 12
+                          ]
+                          [ driverDetailsView (getDriverDetails state) "DriverDetailsView"
+                          , paymentMethodView push state (getString FARE_ESTIMATE) true "PaymentMethodView"
+                          ]
+                      ]
+                    )
               ]
               , linearLayout
                 [ width MATCH_PARENT
@@ -308,10 +316,25 @@ driverInfoView push state =
                 , cancelRideLayout push state
                 , brandingBannerView state.data.config.driverInfoConfig INVISIBLE Nothing
                 ]
-            ]
          ]
       ]
   ]
+
+getCarouselConfig ∷ PrestoList.ListItem → DriverInfoCardState → CarouselHolder.CarouselHolderConfig BannerCarousel.PropConfig Action
+getCarouselConfig view state = {
+    view
+  , items : BannerCarousel.bannerTransformer $ state.data.bannerArray
+  , orientation : HORIZONTAL
+  , currentPage : state.data.bannerData.currentPage
+  , autoScroll : state.data.config.bannerCarousel.enableAutoScroll
+  , autoScrollDelay : state.data.config.bannerCarousel.autoScrollDelay
+  , id : "bannerCarousel"
+  , autoScrollAction : Just UpdateBanner
+  , onPageSelected : Just BannerChanged
+  , onPageScrollStateChanged : Just BannerStateChanged
+  , onPageScrolled : Nothing
+  , currentIndex : state.data.bannerData.currentBanner
+}
 
 distanceView :: forall w.(Action -> Effect Unit) -> DriverInfoCardState -> PrestoDOM (Effect Unit) w
 distanceView push state = 

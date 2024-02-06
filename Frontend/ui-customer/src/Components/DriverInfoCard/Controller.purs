@@ -23,7 +23,8 @@ import Components.PrimaryButton as PrimaryButtonController
 import Components.SourceToDestination as SourceToDestinationController
 import Data.Maybe (Maybe)
 import PrestoDOM
-import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..))
+import Screens.Types (Stage, ZoneType(..), SheetState(..), SearchResultType, City(..), BannerCarousalData(..))
+import Components.BannerCarousel as BannerCarousel
 
 data Action = NoAction
             | PrimaryButtonAC PrimaryButtonController.Action
@@ -36,6 +37,10 @@ data Action = NoAction
             | OnNavigateToZone
             | ToggleBottomSheet
             | CollapseBottomSheet
+            | UpdateBanner
+            | BannerChanged String
+            | BannerStateChanged String
+            | BannerCarousel BannerCarousel.Action
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps
@@ -52,7 +57,8 @@ type DriverInfoCardProps =
     isSpecialZone :: Boolean,
     estimatedTime :: String,
     zoneType :: ZoneType,
-    merchantCity :: City
+    merchantCity :: City,
+    showBanner :: Boolean
   }
 
 type DriverInfoCardData =
@@ -90,4 +96,6 @@ type DriverInfoCardData =
   , vehicleVariant :: String
   , defaultPeekHeight :: Int
   , bottomSheetState :: BottomSheetState
+  , bannerData :: BannerCarousalData
+  , bannerArray :: Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
   }
