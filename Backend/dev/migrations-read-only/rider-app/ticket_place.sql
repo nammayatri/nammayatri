@@ -28,3 +28,8 @@ ALTER TABLE atlas_app.ticket_place ALTER COLUMN short_desc SET DEFAULT 'Short de
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_place ALTER COLUMN merchant_operating_city_id SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN status text NOT NULL default 'Active';

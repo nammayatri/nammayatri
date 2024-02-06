@@ -24,6 +24,7 @@ data TicketPlace = TicketPlace
     openTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     placeType :: Domain.Types.TicketPlace.PlaceType,
     shortDesc :: Kernel.Prelude.Text,
+    status :: Domain.Types.TicketPlace.PlaceStatus,
     termsAndConditions :: [Kernel.Prelude.Text],
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -31,7 +32,12 @@ data TicketPlace = TicketPlace
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data PlaceStatus = Active | Inactive | ComingSoon
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data PlaceType = Museum | ThemePark | AmusementPark | WaterPark | WildLifeSanctuary | ArtGallery | HeritageSite | ReligiousSite | Other
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PlaceStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PlaceType)

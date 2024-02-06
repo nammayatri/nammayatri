@@ -29,6 +29,7 @@ data TicketPlaceT f = TicketPlaceT
     openTimings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     placeType :: B.C f Domain.Types.TicketPlace.PlaceType,
     shortDesc :: B.C f Kernel.Prelude.Text,
+    status :: B.C f Domain.Types.TicketPlace.PlaceStatus,
     termsAndConditions :: B.C f [Kernel.Prelude.Text],
     merchantId :: B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

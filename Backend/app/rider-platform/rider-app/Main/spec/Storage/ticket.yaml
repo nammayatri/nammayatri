@@ -35,15 +35,19 @@ TicketPlace:
     mapImageUrl : Maybe Text
     openTimings : Maybe TimeOfDay
     closeTimings : Maybe TimeOfDay
+    status : PlaceStatus
 
   types:
     PlaceType:
       enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Other"
+    PlaceStatus:
+      enum: "Active,Inactive,ComingSoon"
 
   default:
     termsAndConditions: "'{}'"
     placeType: "'Other'"
     shortDesc: "'Short description not available'"
+    status: "'Active'"
 
   queries:
     getTicketPlaces:
