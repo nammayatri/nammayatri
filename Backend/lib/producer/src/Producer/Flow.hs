@@ -46,19 +46,22 @@ getMyShardKey = do
   myShardId <- (`mod` maxShards) . fromIntegral <$> Hedis.incr myShardKey
   return $ show myShardId
 
+getShardedKey :: Text -> Text -> Text
+getShardedKey key shardId = key <> "{" <> shardId <> "}"
+
 runProducer :: Flow ()
 runProducer = do
-  Hedis.whenWithLockRedis producerLockKey 10 $ do
+  myShardId <- getMyShardKey
+  Hedis.whenWithLockRedis (getShardedKey producerLockKey myShardId) 10 $ do
     someErr <-
       try @_ @SomeException $ do
-        myShardId <- getMyShardKey
         begTime <- getCurrentTimestamp
         producerTimestampKeyPrefix <- asks (.producerTimestampKey)
-        let producerTimestampKey = producerTimestampKeyPrefix <> "{" <> myShardId <> "}"
+        let producerTimestampKey = getShardedKey producerTimestampKeyPrefix myShardId
         startTime <- getTime begTime producerTimestampKey
         endTime <- getCurrentTimestamp
         setName <- asks (.schedulerSetName)
-        let myShardSetKey = setName <> "{" <> myShardId <> "}"
+        let myShardSetKey = getShardedKey setName myShardId
         currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore myShardSetKey startTime endTime
         logDebug $ "Jobs taken out of sortedset : " <> show currentJobs
         logDebug $ "Job chunks produced to be inserted into stream : " <> show currentJobs
