@@ -18,6 +18,7 @@ module Domain.Types.FareProduct where
 
 import qualified Data.List as List
 import qualified Data.Text as T
+import Data.Time
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as FarePolicyD
 import Domain.Types.Merchant
@@ -29,6 +30,34 @@ import Kernel.Utils.GenericPretty
 import Lib.Types.SpecialLocation (SpecialLocation (..))
 import qualified Text.Show
 import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+
+data TimeBound = Bounded [(TimeOfDay, TimeOfDay)] | Unbounded
+  deriving (Eq, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+  deriving (PrettyShow) via Showable TimeBound
+
+instance Show TimeBound where
+  show (Bounded intervals) = T.unpack $ T.intercalate "," $ map (\(start, end) -> T.pack (show start ++ "-" ++ show end)) intervals
+  show Unbounded = "Unbounded"
+
+instance Read TimeBound where
+  readsPrec _ str =
+    case T.strip $ T.pack str of
+      "Unbounded" -> [(Unbounded, "")]
+      intervalsStr ->
+        case mapMaybe readInterval (T.splitOn "," intervalsStr) of
+          [] -> [(Unbounded, "")]
+          intervals -> [(Bounded intervals, "")]
+    where
+      readInterval interval =
+        case T.splitOn "-" interval of
+          [start, end] -> do
+            case (readMaybe $ T.unpack start, readMaybe $ T.unpack end) of
+              (Just startTime, Just endTime) -> Just (startTime, endTime)
+              _ -> Nothing
+          _ -> Nothing
+
+$(mkBeamInstancesForEnum ''TimeBound)
 
 data Area
   = Pickup (Id SpecialLocation)
@@ -71,6 +100,7 @@ data FareProduct = FareProduct
     farePolicyId :: Id FarePolicyD.FarePolicy,
     vehicleVariant :: Variant.Variant,
     area :: Area,
-    tripCategory :: DTC.TripCategory
+    tripCategory :: DTC.TripCategory,
+    timeBounds :: TimeBound
   }
   deriving (Generic, Show, Eq, ToSchema, FromJSON, ToJSON)

@@ -14,7 +14,8 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Merchant as D
 import Data.Coerce (coerce)
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
-import Data.Text as T
+import Data.Text as T hiding (find)
+import Data.Time hiding (getCurrentTime)
 import Domain.Types.Common (UsageSafety (..))
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as FarePolicyD
@@ -62,19 +63,44 @@ cacheFarePolicyByEstimateId estimateId fp = Redis.setExp (makeFarePolicyByEstOrQ
 clearCachedFarePolicyByEstOrQuoteId :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Text -> m ()
 clearCachedFarePolicyByEstOrQuoteId = Redis.del . makeFarePolicyByEstOrQuoteIdKey
 
+getBoundedFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> Variant -> FareProductD.Area -> m (Maybe FareProductD.FareProduct)
+getBoundedFarePolicy merchantOpCityId tripCategory vehVariant area = do
+  fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId tripCategory vehVariant area
+  now <- utcTimeToDiffTime <$> getCurrentTime
+  return $
+    find
+      ( \fp ->
+          case fp.timeBounds of
+            FareProductD.Bounded timeBounds -> isWithin now timeBounds
+            FareProductD.Unbounded -> False
+      )
+      fareProducts
+  where
+    isWithin _ [] = False
+    isWithin currTime [(startTime, endTime)] = currTime > (timeOfDayToTime startTime) && currTime < (timeOfDayToTime endTime)
+    isWithin currTime ((startTime, endTime) : xs) = (currTime > (timeOfDayToTime startTime) && currTime < (timeOfDayToTime endTime)) || isWithin currTime xs
+
 getFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DTC.TripCategory -> Variant -> Maybe FareProductD.Area -> m FarePolicyD.FullFarePolicy
 getFarePolicy merchantOpCityId tripCategory vehVariant Nothing = do
-  fareProduct <- QFareProduct.findByMerchantVariantArea merchantOpCityId tripCategory vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
+  fareProduct <-
+    getBoundedFarePolicy merchantOpCityId tripCategory vehVariant FareProductD.Default
+      |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId tripCategory vehVariant FareProductD.Default
+      >>= fromMaybeM NoFareProduct
   farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
   return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant fareProduct.tripCategory farePolicy
 getFarePolicy merchantOpCityId tripCategory vehVariant (Just area) = do
-  mbFareProduct <- QFareProduct.findByMerchantVariantArea merchantOpCityId tripCategory vehVariant area
+  mbFareProduct <-
+    getBoundedFarePolicy merchantOpCityId tripCategory vehVariant area
+      |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId tripCategory vehVariant area
   case mbFareProduct of
     Just fareProduct -> do
       farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant fareProduct.tripCategory farePolicy
     Nothing -> do
-      fareProduct <- QFareProduct.findByMerchantVariantArea merchantOpCityId tripCategory vehVariant FareProductD.Default >>= fromMaybeM NoFareProduct
+      fareProduct <-
+        getBoundedFarePolicy merchantOpCityId tripCategory vehVariant FareProductD.Default
+          |<|>| QFareProduct.findUnboundedByMerchantVariantArea merchantOpCityId tripCategory vehVariant FareProductD.Default
+          >>= fromMaybeM NoFareProduct
       farePolicy <- QFP.findById fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
       return $ FarePolicyD.farePolicyToFullFarePolicy fareProduct.merchantId fareProduct.vehicleVariant fareProduct.tripCategory farePolicy
 
