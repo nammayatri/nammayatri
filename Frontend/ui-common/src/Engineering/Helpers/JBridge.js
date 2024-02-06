@@ -439,8 +439,8 @@ export const scanQrCode = function (requestCode) {
 export const timePicker = function (cb) {
   return function (action) {
     return function () {
-      const callback = callbackMapper.map(function (resp, hour, min) {
-        cb(action(resp)(hour)(min))();
+      const callback = callbackMapper.map(function (hour, min, resp) {
+        cb(action(hour)(min)(resp))();
       });
       return window.JBridge.timePicker(callback);
     };
@@ -591,41 +591,19 @@ export const parseAddress = function (json) {
   return JSON.parse(json);
 };
 
-export const drawRoute = function (data) {
-  return function (style) {
-    return function (trackColor) {
-      return function (isActual) {
-        return function (sourceMarker) {
-          return function (destMarker) {
-            return function (polylineWidth) {
-              return function (type) {
-                return function (sourceName) {
-                  return function (destinationName) {
-                    return function (mapRouteConfig) {
-                      return function () {
-                        console.log("I AM HERE ------------------ IN DRAW ROUTE");
-
-                        try {
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(mapRouteConfig));
-                        } catch (err) {
-                          /*
-                           * This Function is deprecated on 10 Jul- 2023
-                           * Remove this function once it is not begin used.
-                           */
-                          return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName);
-                        }
-                      }
-                    };
-                  };
-                };
-              };
-            };
-          };
-        };
-      };
-    };
-  };
-};
+const drawRoute = function (data, style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, mapRouteConfig) {
+  console.log("I AM HERE ------------------ IN DRAW ROUTE");
+  try {
+    return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName, JSON.stringify(mapRouteConfig));
+  } catch (err) {
+    /*
+        * This Function is deprecated on 10 Jul- 2023
+        * Remove this function once it is not begin used.
+        */
+    return window.JBridge.drawRoute(JSON.stringify(data), style, trackColor, isActual, sourceMarker, destMarker, polylineWidth, type, sourceName, destinationName);
+  }
+}
+                   
 
 export const updateRouteMarker = function (data) {
   return function () {
@@ -690,6 +668,24 @@ export const storeCallBackMessageUpdated = function (cb) {
     };
   };
 };
+
+
+export const drawRouteV2 = function (drawRouteConfig){
+  return function() {
+    try{
+      console.log("Inside drawRouteV2")
+      const { locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig } = drawRouteConfig.routes.normalRoute;
+      if (window.JBridge.drawRouteV2){
+        return window.JBridge.drawRouteV2(JSON.stringify(drawRouteConfig));
+      } else {
+        return drawRoute(locations, style, routeColor, isActual, startMarker, endMarker, routeWidth, routeType, startMarkerLabel, endMarkerLabel, mapRouteConfig);
+      }
+    } catch (err) {
+      console.log("error in drawRouteV2----------------------------------", err);
+    }
+  };
+};
+
 
 export const storeKeyBoardCallback = function (cb, action) {
   const keyBoardCallback = function (state) {
@@ -1126,21 +1122,6 @@ export const getCurrentPositionWithTimeoutImpl = function (cb, action, delay, sh
     window.JBridge.getCurrentPosition(callback);
   }
 }
-
-export const datePickerImpl = function (cb , action, delay){
-  const callback = callbackMapper.map(function (str, year, month, date) {
-    cb(action(str)(year)(month)(date))();
-  })
-  window.JBridge.datePicker(callback, "");
-}
-
-export const timePickerImpl = function (cb , action, delay){
-  const callback = callbackMapper.map(function (str, hour, min) {
-    cb(action(str)(hour)(min))();
-  })
-  window.JBridge.timePicker(callback);
-}
-
 
 
 export const translateStringWithTimeout = function (cb) {
@@ -2419,5 +2400,49 @@ export const pauseAudioPlayer = function () {
 export const clearAudioPlayer = function () {
   if (JBridge.clearAudioPlayer) {
     JBridge.clearAudioPlayer()
+  }
+}
+
+export const datePickerImpl = function (cb , action, delay){
+  const callback = callbackMapper.map(function (str, year, month, date) {
+    cb(action(str)(year)(month)(date))();
+  })
+  window.JBridge.datePicker(callback, "");
+}
+
+export const timePickerImpl = function (cb , action, delay){
+  const callback = callbackMapper.map(function (hour, min, str) {
+    cb(action(hour)(min)(str))();
+  })
+  window.JBridge.timePicker(callback);
+}
+
+export const renderSliderImpl = (cb, action, config) => {
+  
+  const callback = callbackMapper.map(function (val) {
+    cb(action(parseInt(val)))();
+  });
+  const { id, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId, enableToolTip, progressColor, thumbColor, bgColor, bgAlpha } = config;
+  const configg =  { id, sliderConversionRate, sliderMinValue, sliderMaxValue, sliderDefaultValue, toolTipId, enableToolTip, progressColor, thumbColor, bgColor, bgAlpha, callback };
+
+  window.JBridge.renderSlider(JSON.stringify(configg));
+};
+export const getFromUTC = (timestamp) => (val) => {
+  const date = new Date(timestamp);
+  switch (val) {
+    case "DAY":
+      return date.getUTCDate();
+    case "MONTH":
+      return date.getUTCMonth() + 1;
+    case "YEAR":
+      return date.getUTCFullYear();
+    case "HOUR":
+      return date.getUTCHours() + 6;
+    case "MINUTE":
+      return (date.getUTCMinutes() + 30) % 60;
+    case "SECOND":
+      return date.getUTCSeconds();
+    default:
+      return date.getUTCDate();
   }
 }

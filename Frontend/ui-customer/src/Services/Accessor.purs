@@ -285,3 +285,5 @@ _bookedSeats = lens (unwrap >>> _.bookedSeats) (\oldRec newVal -> wrap ((unwrap 
 _peopleCategories :: forall a b c. Newtype a { peopleCategories :: b | c } => Lens' a b
 _peopleCategories = lens (unwrap >>> _.peopleCategories) (\oldRec newVal -> wrap ((unwrap oldRec) { peopleCategories = newVal }))
 
+_stopLocation :: forall a b c. Newtype a { stopLocation :: b | c } => Lens' a b
+_stopLocation = lens (unwrap >>> _.stopLocation) (\oldRec newVal -> wrap ((unwrap oldRec) { stopLocation = newVal }))

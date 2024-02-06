@@ -4,6 +4,7 @@ import Prelude
 
 import MerchantConfig.Types (AppConfig)
 import Screens.Types (City, SearchResultType)
+import Common.Types.App 
 
 type DriverDetailsType
   = { searchType :: SearchResultType
@@ -23,4 +24,5 @@ type TripDetails a
   , destination :: String
   , onAnimationEnd :: a
   , backgroundColor :: String
+  , rideType :: RideType
     }

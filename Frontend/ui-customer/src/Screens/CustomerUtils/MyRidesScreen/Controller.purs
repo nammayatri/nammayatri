@@ -48,6 +48,7 @@ import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
 import JBridge (toast)
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -188,11 +189,11 @@ eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController Prima
 eval _ state = continue state
 
 myRideListTransformerProp :: Array RideBookingRes  -> Array ItemState
-myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED"))) (map (\(RideBookingRes ride) -> {
+myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropValue "COMPLETED") || item.status == (toPropValue "CANCELLED") || item.status == (toPropValue "CONFIRMED"))) (map (\(RideBookingRes ride) -> {
     date : toPropValue (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time : toPropValue (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source : toPropValue (decodeAddress (Booking ride.fromLocation)),
-    destination : toPropValue (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
+    destination : toPropValue (decodeAddress (Booking (fromMaybe dummyBookingDetails (ride.bookingDetails ^._contents^._toLocation)))), -- ride.bookingDetails ^._contents^._toLocation))),
     totalAmount : toPropValue ((getCurrency appConfig) <> " " <> show (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),
     cardVisibility : toPropValue "visible",
     shimmerVisibility : toPropValue "gone",
@@ -213,7 +214,7 @@ myRideListTransformerProp listRes =  filter (\item -> (item.status == (toPropVal
 
 
 myRideListTransformer :: MyRidesScreenState -> Array RideBookingRes -> Array IndividualRideCardState
-myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED")) (map (\(RideBookingRes ride) ->
+myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETED" || item.status == "CANCELLED" || item.status == "CONFIRMED")) (map (\(RideBookingRes ride) ->
   let
     fares = getFares ride.fareBreakup
     (RideAPIEntity rideDetails) = (fromMaybe dummyRideAPIEntity (ride.rideList !!0))
@@ -226,7 +227,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     date : (( (fromMaybe "" ((split (Pattern ",") (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "llll")) !!0 )) <> ", " <>  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "Do MMM") )),
     time :  (convertUTCtoISC (fromMaybe ride.createdAt ride.rideStartTime) "h:mm A"),
     source :  decodeAddress (Booking ride.fromLocation),
-    destination : decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation)),
+    destination : decodeAddress (Booking (fromMaybe dummyBookingDetails (ride.bookingDetails ^._contents^._toLocation))),
     totalAmount :  ((getCurrency appConfig) <> " " <> show (fromMaybe (0) rideDetails.computedPrice)),
     cardVisibility :  "visible",
     shimmerVisibility :  "gone",
@@ -244,7 +245,7 @@ myRideListTransformer state listRes = filter (\item -> (item.status == "COMPLETE
     bookingId : ride.id,
     rideEndTimeUTC : fromMaybe "" (ride.rideEndTime),
     sourceLocation : ride.fromLocation,
-    destinationLocation : ((ride.bookingDetails)^._contents)^._toLocation,
+    destinationLocation : fromMaybe dummyBookingDetails (((ride.bookingDetails)^._contents)^._toLocation),
     alpha : if isLocalStageOn HomeScreen then "1.0" else "0.5"
   , fareBreakUpList : fares
   , faresList : updatedFareList

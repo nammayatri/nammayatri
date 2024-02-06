@@ -6,57 +6,114 @@ import Common.Types.App (LazyCheck(..))
 import Components.GenericHeader.View as GenericHeader
 import Components.PrimaryButton as PrimaryButton
 import Components.SourceToDestination.View as SourceToDestinationView
-import Data.Array (singleton)
-import Data.Maybe (maybe)
+import Components.SelectListModal as CancelRidePopUp
+import Data.Array (singleton, head)
+import Data.Either (Either(..))
+import Data.Maybe (maybe, fromMaybe)
+import Data.Time.Duration (Milliseconds(..))
 import Debug (spy)
 import Effect (Effect)
+import Effect.Aff (launchAff)
+import Effect.Class (liftEffect)
+import Engineering.Helpers.Commons as EHC
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, decodeError)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
-import Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig (primaryButtonConfig, sourceToDestinationConfig, genericHeaderConfig)
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, Visibility(..), background, color, cornerRadius, gravity, height, imageView, imageWithFallback, linearLayout, margin, onClick, orientation, padding, stroke, text, textFromHtml, textSize, textView, visibility, weight, width, relativeLayout, scrollView, shimmerFrameLayout)
+import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
+import Screens.RentalBookingFlow.RideScheduledScreen.ComponentConfig (primaryButtonConfig, sourceToDestinationConfig, genericHeaderConfig, cancelRidePopUpConfig)
 import Screens.RentalBookingFlow.RideScheduledScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.HomeScreen.ScreenData (dummyRideBooking)
 import Screens.Types (RideScheduledScreenState)
+import Services.API
+import Services.Backend as Remote
 import Styles.Colors as Color
+import Helpers.CommonView (dummyView)
+import Types.App (GlobalState, defaultGlobalState)
 
 rideScheduledScreen :: RideScheduledScreenState -> Screen Action RideScheduledScreenState ScreenOutput
 rideScheduledScreen initialState =
   { initialState
   , view
   , name: "RideScheduledScreen"
-  , globalEvents: []
+  , globalEvents: [getBookingListEvent]
   , eval:
       \action state -> do
         let _ = spy "RideScheduledScreen action " action
         let _ = spy "RideScheduledScreen state " state
         eval action state
   }
+  where
+    getBookingListEvent push = do
+      when (initialState.data.bookingId == "") do
+        void $ launchAff $ EHC.flowRunner defaultGlobalState $ getBookingList GetBookingList CheckFlowStatusAction 10 1000.0 push initialState
+      pure $ pure unit
+
+    getBookingList :: forall action. (RideBookingListRes -> action) -> action -> Int -> Number -> (action -> Effect Unit) -> RideScheduledScreenState -> Flow GlobalState Unit
+    getBookingList action flowStatusAction count duration push state = do
+      if(count > 0) then do
+        resp <- Remote.rideBookingListWithStatus "1" "0" "CONFIRMED"
+        case resp of
+          Right response -> do
+            let (RideBookingListRes listResp) = response
+                (RideBookingRes resp) = fromMaybe dummyRideBooking $ head listResp.list
+            if not (resp.id == "") then doAff do liftEffect $ push $ action response
+            else do
+              if count == 1 then do
+                doAff do liftEffect $ push $ action response
+              else do
+                void $ delay $ Milliseconds duration
+                getBookingList action flowStatusAction (count - 1) duration push state
+          Left err -> do
+            let errResp = err.response
+                codeMessage = decodeError errResp.errorMessage "errorMessage"
+            void $ delay $ Milliseconds duration
+            if(count == 1) then do
+              let response = RideBookingListRes { list : []}
+              doAff do liftEffect $ push $ action response
+            else getBookingList action flowStatusAction (count - 1) duration push state
+      else pure unit
 
 view :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 view push state =
-  linearLayout
+  relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
     , background Color.white900
     ]
-    [ GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
-    , separatorView push state
-    , linearLayout
-      [ height MATCH_PARENT
+    ([ linearLayout
+      [ height WRAP_CONTENT
       , width MATCH_PARENT
       , orientation VERTICAL
+      ][  GenericHeader.view (push <<< GenericHeaderAC) (genericHeaderConfig state)
+        , separatorView push state ]
+    , scrollView
+      [ height $ V $ EHC.screenHeight unit
+      , width MATCH_PARENT
       , margin $ MarginTop 60
-      , gravity CENTER_HORIZONTAL
-      ]
-      [ scheduledDetailsView push state
-      , notificationView push state
-      , cancelBookingView push state
-      , primaryButtonView push state
-      ]
-    ]
+      ][linearLayout
+        [ height MATCH_PARENT
+        , width MATCH_PARENT
+        , orientation VERTICAL
+        , gravity CENTER_HORIZONTAL
+        ][ if state.data.bookingId == "" then
+            shimmerFrameLayout
+              [ width MATCH_PARENT
+              , height WRAP_CONTENT
+              , orientation VERTICAL 
+              , background Color.transparent
+              ] [scheduledDetailsView push state]
+           else scheduledDetailsView push state
+          , notificationView push state
+          , cancelBookingView push state]
+        ]
+    , primaryButtonView push state
+    ] <> if state.props.isCancelRide then [cancelRidePopUpView push state] else [dummyView])
+
+
 
 scheduledDetailsView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
 scheduledDetailsView push state =
@@ -109,7 +166,7 @@ rideDetailsView push state =
     [ rideStartDetails push state
     , separatorView push state
     , sourceDestinationView push state
-    , maybe (dummyView) (\_ -> addStopView push state) state.destination
+    , maybe (dummyView) (\_ -> addStopView push state) state.data.destination
     , linearLayout
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
@@ -124,7 +181,7 @@ rideDetailsView push state =
             ] <> FontStyle.body1 TypoGraphy
         , textView $
             [ textSize FontSize.a_14
-            , text $ state.baseDuration <> "hr"
+            , text $ state.data.baseDuration <> "hr"
             , color Color.black800
             ] <> FontStyle.subHeading1 TypoGraphy
         , textView $
@@ -134,7 +191,7 @@ rideDetailsView push state =
             ] <> FontStyle.h1 TypoGraphy
         , textView $
             [ textSize FontSize.a_14
-            , text $ state.baseDistance <> "km"
+            , text $ state.data.baseDistance <> "km"
             , color Color.black800
             ] <> FontStyle.subHeading1 TypoGraphy
         ]
@@ -150,7 +207,7 @@ rideDetailsView push state =
         , height WRAP_CONTENT
         , margin $ MarginLeft 28
         , color Color.blue800
-        , onClick push $ const $ AddFirstStop state.destination
+        , onClick push $ const $ AddFirstStop
         , text $ getString EDIT
         ] <> FontStyle.paragraphText TypoGraphy
 
@@ -181,7 +238,7 @@ rideStartDetails push state =
             ]
             [ textView
                 ( [ textSize FontSize.a_14
-                  , text $ state.startDate
+                  , text $ EHC.convertUTCtoISC state.data.startTime "ddd" <> ", " <> EHC.convertUTCtoISC state.data.startTime "D" <> " " <> EHC.convertUTCtoISC state.data.startTime "MMM"
                   , color Color.black700
                   ] <> FontStyle.body1 TypoGraphy
                 )
@@ -191,7 +248,7 @@ rideStartDetails push state =
                 ] <> FontStyle.body1 TypoGraphy
             , textView $
                 [ textSize FontSize.a_14
-                , text $ " " <> state.startTime
+                , text $ " " <> EHC.convertUTCtoISC state.data.startTime "hh" <> ":" <> EHC.convertUTCtoISC state.data.startTime "mm" <> " " <> EHC.convertUTCtoISC state.data.startTime "a"
                 , color Color.black700
                 ] <> FontStyle.body1 TypoGraphy
             ]
@@ -199,7 +256,7 @@ rideStartDetails push state =
     , textView $
         [ width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text $ "₹" <> state.finalPrice
+        , text $ "₹" <> state.data.finalPrice
         , weight 0.1
         , gravity RIGHT
         , textSize FontSize.a_18
@@ -227,7 +284,7 @@ notificationView push state =
     , textView $
         [ margin $ MarginLeft 8
         , width WRAP_CONTENT
-        , text $ getVarString DRIVER_WILL_BE_ASSIGNED_MINUTES_BEFORE_STARTING_THE_RIDE (singleton state.driverAllocationTime)  --  getString DRIVER_WILL_BE_ASSIGNED <> " " <> state.driverAllocationTime <> " " <> getString MINUTES_BEFORE_STARTING_THE_RIDE
+        , text $ getVarString DRIVER_WILL_BE_ASSIGNED_MINUTES_BEFORE_STARTING_THE_RIDE (singleton state.props.driverAllocationTime)  --  getString DRIVER_WILL_BE_ASSIGNED <> " " <> state.driverAllocationTime <> " " <> getString MINUTES_BEFORE_STARTING_THE_RIDE
         , color Color.black800
         ] <> FontStyle.body3 TypoGraphy
     ]
@@ -260,3 +317,11 @@ cancelBookingView push state =
   , onClick push $ const CancelRide
   , gravity CENTER_HORIZONTAL
   ] <> FontStyle.body3 TypoGraphy
+
+cancelRidePopUpView :: forall w. (Action -> Effect Unit) -> RideScheduledScreenState -> PrestoDOM (Effect Unit) w
+cancelRidePopUpView push state =
+  linearLayout
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    -- , accessibility DISABLE
+    ][ CancelRidePopUp.view (push <<< CancelRidePopUpAction) (cancelRidePopUpConfig state)]

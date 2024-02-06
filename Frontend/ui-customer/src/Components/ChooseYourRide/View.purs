@@ -327,7 +327,9 @@ chooseYourRideView push config =
             -- , 
             textView (
               [ text 
-                  if length config.quoteList > 1 
+                  if config.intercity
+                  then (getString INTERCITY_OPTIONS)
+                  else if length config.quoteList > 1 
                   then (getString CHOOSE_YOUR_RIDE)
                   else (getString CONFIRM_YOUR_RIDE)
               , color Color.black800

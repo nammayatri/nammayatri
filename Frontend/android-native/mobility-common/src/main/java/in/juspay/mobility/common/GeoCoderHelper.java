@@ -67,6 +67,7 @@ public class GeoCoderHelper {
     public GeoCoordinate getGeoCoordinateFromAddress(String address) {
         Geocoder geocoder = new Geocoder(context, Locale.getDefault());
         try {
+            System.out.println("GeoCoder address" + address );
             List<Address> addresses = geocoder.getFromLocationName(address, 1);
             if (addresses != null && addresses.size() > 0) {
                 Log.d(LOG_TAG, "FromLocationName: " + addresses + " \n" + "GivenAddress: " + address);
