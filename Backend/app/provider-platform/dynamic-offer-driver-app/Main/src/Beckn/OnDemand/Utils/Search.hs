@@ -114,7 +114,7 @@ buildDisabilityTag req = do
       >>= (.personTags)
       & fromMaybeM (InvalidRequest "Missing Tags")
   let tagValue = getTagV2 "customer_info" "customer_disability" tagGroups
-  return $ tagValue >>= readMaybe . T.unpack >>= Just
+  return tagValue
 
 buildCustomerPhoneNumber :: MonadFlow m => Spec.SearchReqMessage -> m (Maybe Text)
 buildCustomerPhoneNumber req = do
@@ -126,7 +126,7 @@ buildCustomerPhoneNumber req = do
       >>= (.personTags)
       & fromMaybeM (InvalidRequest "Missing Tags")
   let tagValue = getTagV2 "customer_info" "customer_phone_number" tagGroups
-  return $ tagValue >>= readMaybe . T.unpack >>= Just
+  return tagValue
 
 -- customerPerson <- req ^? (ix "searchReqMessageIntent" . key "intentFulfillment" . key "fulfillmentCustomer" . key "customerPerson" . key "tags") & fromMaybeM (InvalidRequest "Missing Fields")
 
