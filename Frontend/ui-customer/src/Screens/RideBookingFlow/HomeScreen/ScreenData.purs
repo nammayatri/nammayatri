@@ -15,7 +15,7 @@
 
 module Screens.HomeScreen.ScreenData where
 
-import Common.Types.App (RateCardType(..))
+import Common.Types.App (RateCardType(..), RideType(..), RentalBookingConfig)
 import Components.LocationListItem.Controller (locationListStateObj)
 import Components.SettingSideBar.Controller (SettingSideBarState, Status(..))
 import Components.ChooseVehicle.Controller (SearchType(..)) as CV
@@ -93,6 +93,10 @@ initData = {
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
     , specialZoneSelectedVariant : Nothing
+    , quoteList : []
+    , selectedQuoteId : Nothing
+    , selectedQuoteVariant : Nothing
+    , intercity : false
     , selectedEstimatesObject : {
       vehicleImage: ""
       , isSelected: false
@@ -112,6 +116,7 @@ initData = {
       , isBookingOption : false
       , pickUpCharges : 0
       , layoutMargin : Margin 0 0 0 0
+      , showStroke: true
       }
     , lastMessage : { message : "", sentBy : "", timeStamp : "", type : "", delay : 0 }
     , cancelRideConfirmationData : { delayInSeconds : 5, timerID : "", enableTimer : true, continueEnabled : false }
@@ -141,7 +146,6 @@ initData = {
     , infoCardPeekHeight : 0
     , peekHeight : 0
     , rideHistoryTrip : Nothing
-    , rentalsInfo : Just {rentalsScheduledAt : "12 : 45 PM"}
     , bannerData : {
         bannerItem : Nothing
       , currentBanner : 0
@@ -150,6 +154,8 @@ initData = {
     } 
     , contactList : []
     , followers : Nothing
+    , rentalsInfo : Nothing 
+    , rideType : NORMAL_RIDE
     },
     props: {
       rideRequestFlow : false
@@ -276,6 +282,7 @@ initData = {
     , bottomSheetState : STATE_COLLAPSED
     , removeNotification : true
     , city : AnyCity
+    , destCity : Nothing
     , isRepeatRide : false
     , currSlideIndex : 0.0
     , suggestionsListExpanded : false
@@ -293,6 +300,10 @@ initData = {
     , sosBannerType : Nothing
     , showShareRide : false
     , followsRide: false
+    , showEndOTP : false
+    , rideDurationTimer : ""
+    , rideDurationTimerId : ""
+    , stopLoc : Nothing
     }
 }
 
@@ -395,6 +406,7 @@ dummyDriverInfo =
   , vehicleVariant : ""
   , sourceAddress : dummyAddress
   , destinationAddress : dummyAddress
+  , rentalData : dummyRentalBookingConfig
   }
 
 dummySettingBar :: SettingSideBarState
@@ -502,7 +514,10 @@ dummyRideBooking = RideBookingRes
   merchantExoPhone : "",
   specialLocationTag : Nothing,
   hasDisability : Nothing,
-  sosStatus: Nothing
+  sosStatus: Nothing,
+  estimatedDistance : Nothing,
+  estimatedDuration : Nothing,
+  rideScheduledTime : Nothing
   }
 
 dummyRideBookingAPIDetails ::RideBookingAPIDetails
@@ -513,9 +528,10 @@ dummyRideBookingAPIDetails= RideBookingAPIDetails{
 
 dummyRideBookingDetails :: RideBookingDetails
 dummyRideBookingDetails = RideBookingDetails {
-  toLocation : dummyBookingDetails,
+  toLocation : Nothing,
   estimatedDistance : Nothing,
-  otpCode : Nothing
+  otpCode : Nothing,
+  stopLocation : Nothing
 }
 
 dummyFareBreakUp :: FareBreakupAPIEntity
@@ -539,3 +555,17 @@ dummyTrip = {
     locationScore: Nothing,  
     isSpecialZone: true
 }
+
+dummyRentalBookingConfig :: RentalBookingConfig
+dummyRentalBookingConfig = 
+  { startTimeUTC : ""
+  , baseDuration : 0
+  , baseDistance : 0
+  , startOdometer : ""
+  , endOdometer : ""
+  , nightCharge : ""
+  , estimatedFare : 0
+  , finalFare : 0
+  , finalDuration : 0
+  , finalDistance : 0
+  }

@@ -16,12 +16,12 @@
 module Resources.Constants where
 
 import Accessor (_description, _amount)
-import Common.Types.App (LazyCheck(..))
+import Common.Types.App (LazyCheck(..), OptionButtonList)
 import Data.Array (filter, length, null, reverse, (!!), head, all, elem, foldl)
 import Data.Function.Uncurried (runFn2)
 import Data.Int (toNumber)
 import Data.Lens ((^.))
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust, isNothing)
 import Data.String (Pattern(..), Replacement(..), contains, joinWith, replaceAll, split, trim)
 import Helpers.Utils (parseFloat, toStringJSON, extractKeyByRegex)
 import Engineering.Helpers.Commons (os)
@@ -33,6 +33,7 @@ import Prelude (map, show, (&&), (-), (<>), (==), (>), ($), (+), (/=), (<), (/),
 import Screens.Types as ST
 import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), SavedReqLocationAPIEntity(..), FareBreakupAPIEntity(..))
 import ConfigProvider
+import Debug
 
 type Language
   = { name :: String
@@ -59,10 +60,12 @@ decodeAddress :: DecodeAddress -> String
 decodeAddress addressWithCons =
   let
     (BookingLocationAPIEntity address) = case addressWithCons of
-      Booking bookingLocation -> bookingLocation
+      Booking bookingLocation -> spy "Inside decodeAddress :: " bookingLocation
       SavedLoc savedLocation -> getBookingEntity savedLocation
   in
-    if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
+    if (all isNothing [address.city, address.area, address.country, address.building, address.door, address.street, address.city, address.areaCode, address.ward]) then
+      ""
+    else if (trim (fromMaybe "" address.city) == "" && trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
       ((fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
     else if (trim (fromMaybe "" address.area) == "" && trim (fromMaybe "" address.street) == "" && trim (fromMaybe "" address.door) == "" && trim (fromMaybe "" address.building) == "") then
       ((fromMaybe "" address.city) <> ", " <> (fromMaybe "" address.state) <> ", " <> (fromMaybe "" address.country))
@@ -306,3 +309,45 @@ ticketCamId = "d8f47b42-50a5-4a97-8dda-e80a3633d7ab"
 
 maxImageUploadInIssueReporting :: Int  
 maxImageUploadInIssueReporting = 3 
+
+cancelReasons :: String -> Array OptionButtonList
+cancelReasons dummy =
+  [ { reasonCode: "CHANGE_OF_PLANS"
+    , description: getString CHANGE_OF_PLANS
+    , subtext: Just $ getString NO_LONGER_REQUIRE_A_RIDE_DUE_TO_CHANGE_IN_PLANS
+    , textBoxRequired : false
+    }
+  , { reasonCode: "GOT_ANOTHER_RIDE"
+    , description: getString GOT_ANOTHER_RIDE_ELSE_WHERE
+    , subtext: Just $ getString CANCELLING_AS_I_GOT_A_RIDE_ON_ANOTHER_APP
+    , textBoxRequired : false
+    }
+  , { reasonCode: "DRIVER_NOT_MOVING"
+    , description: getString DRIVER_IS_NOT_MOVING
+    , subtext: Just $ getString DRIVER_LOCATION_WASNT_CHANGING_ON_THE_MAP
+    , textBoxRequired : false
+    }
+  , { reasonCode: "WAIT_TIME_TOO_LONG"
+    , description: getString WAIT_TIME_TOO_LONG
+    , subtext: Just $ getString DRIVER_WAS_TAKING_TOO_LONG_TO_REACH_THE_PICKUP_LOCATION
+    , textBoxRequired : false
+    }
+  , { reasonCode: "WRONG_PICKUP_LOCATION"
+    , description: getString WRONG_PICKUP_LOCATION
+    , subtext: Just $ getString THE_PICKUP_LOCATION_ENTERED_WAS_WRONG
+    , textBoxRequired : false
+    }
+  , { reasonCode: "OTHER"
+    , description: getString OTHER
+    , subtext: Just $ getString SOME_OTHER_REASON
+    , textBoxRequired : true
+    }
+  ]
+
+dummyCancelReason :: OptionButtonList
+dummyCancelReason =
+  { reasonCode: ""
+  , description: ""
+  , textBoxRequired: false
+  , subtext: Nothing
+  }

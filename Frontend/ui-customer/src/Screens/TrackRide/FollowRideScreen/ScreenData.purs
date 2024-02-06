@@ -73,6 +73,7 @@ mockRoute =
     { boundingBox: Nothing
     , distance: 1671
     , duration: 150
+    , pointsForRentals : Nothing
     , points:
         Snapped
           [ LatLong
@@ -196,4 +197,5 @@ mockDriverInfo =
   , vehicleVariant: ""
   , sourceAddress: dummyAddress
   , destinationAddress: dummyAddress
+  , rentalData : dummyRentalBookingConfig
   }

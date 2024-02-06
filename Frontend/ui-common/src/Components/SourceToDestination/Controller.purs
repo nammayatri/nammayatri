@@ -22,7 +22,7 @@ import Common.Styles.Colors as Color
 import Common.Types.App
 import Data.Maybe (Maybe(..))
 
-data Action = Dummy
+data Action = Dummy | DestinationClicked
 type Config =
   {
     margin :: Margin
@@ -79,6 +79,7 @@ type TextConfig =
   , maxLines :: Int
   , textStyle :: Style
   , isEditable :: Boolean
+  , isClickable :: Boolean
   }
 
 type TimeConfig =
@@ -115,6 +116,7 @@ config = {
     , maxLines : 10
     , textStyle : Body3
     , isEditable : false
+    , isClickable :false
   }
   , rideStartedAtConfig : {
       text : ""
@@ -143,6 +145,7 @@ config = {
     , maxLines : 10
     , textStyle : Body3
     , isEditable : false
+    , isClickable : false
     }
   , rideEndedAtConfig : {
       text : ""

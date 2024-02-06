@@ -44,7 +44,7 @@ import Helpers.Utils (parseFloat)
 import Data.Int(toNumber)
 import MerchantConfig.Types (DriverInfoConfig)
 import Mobility.Prelude (boolToVisibility)
-
+import Common.Types.App (RideType(..)) as RideType
 
 ---------------------------------- driverDetailsView ---------------------------------------
 driverDetailsView :: forall w. DriverDetailsType -> String -> PrestoDOM (Effect Unit) w
@@ -257,83 +257,87 @@ getVehicleImage variant vehicleDetail city = do
 ---------------------------------- tripDetailsView ---------------------------------------
 
 sourceDestinationView :: forall action w.(action -> Effect Unit) -> TripDetails action -> PrestoDOM (Effect Unit) w
-sourceDestinationView push config =
-  PrestoAnim.animationSet [ scaleYAnimWithDelay 100] $ 
-  linearLayout
-  [ height WRAP_CONTENT
-  , width MATCH_PARENT
-  , orientation VERTICAL
-  , margin $ Margin 16 0 16 (if os == "IOS" && config.rideStarted then safeMarginBottom + 36 else 12)
-  , background config.backgroundColor
-  , onAnimationEnd push $ const $ config.onAnimationEnd
-  , cornerRadius 8.0
-  , padding $ Padding 16 12 16 12
-  ][linearLayout
-    [ orientation VERTICAL
-    , height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , gravity LEFT
-    , accessibility ENABLE
-    , accessibilityHint $ "Pickup : " <> config.source
-    ][linearLayout
-      [ orientation HORIZONTAL
-      , gravity CENTER
-      ][imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
-        , height $ V 8
-        , width $ V 8
-        ]
-        ,textView $
-         [ text $ getString PICKUP
-         , margin $ MarginLeft 6
-         , color Color.black700
-         ] <> FontStyle.body3 TypoGraphy
-        ]
-       , textView $
-         [ text config.source
-         , maxLines 1
-         , ellipsize true
-         , width $ V ((screenWidth unit) / 10 * 8)
-         , height MATCH_PARENT
-         , gravity LEFT
-         , color Color.black900
-         , margin $ MarginTop 3
-         ] <> FontStyle.body1 TypoGraphy
-      ]
-    , separator (MarginVertical 12 12) (V 1) Color.ghostWhite true
-    ,linearLayout
-    [ orientation VERTICAL
-      , height WRAP_CONTENT
-      , width WRAP_CONTENT
-      , gravity LEFT
-      , accessibility ENABLE
-      , accessibilityHint $ "Drop : " <> config.destination
-    ][linearLayout
-      [ orientation HORIZONTAL
-      , gravity CENTER
-      ][imageView
-        [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
-        , height $ V 8
-        , width $ V 8
-        ]
-      , textView $ 
-        [ text $ getString DROP
-        , margin $ MarginLeft 6
-        , color Color.black700
-        ] <> FontStyle.body3 TypoGraphy
-      ]
-      , textView $
-        [ text config.destination
-        , maxLines 1
-        , ellipsize true
-        , width $ V ((screenWidth unit) / 10 * 8)
-        , height MATCH_PARENT
+sourceDestinationView push config = 
+  let isNotRentalRide = (config.rideType /= RideType.RENTAL_RIDE)
+      bottomMargin = (if os == "IOS" && config.rideStarted then (safeMarginBottom + 36) else 12)
+  in 
+    PrestoAnim.animationSet [ scaleYAnimWithDelay 100] $ 
+      linearLayout
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      , margin $ Margin 16 0 16 bottomMargin
+      , background config.backgroundColor
+      , onAnimationEnd push $ const $ config.onAnimationEnd
+      , cornerRadius 8.0
+      , padding $ Padding 16 12 16 12
+      ][linearLayout
+        [ orientation VERTICAL
+        , height WRAP_CONTENT
+        , width WRAP_CONTENT
         , gravity LEFT
-        , margin $ MarginTop 3
-        , color Color.black900
-        ] <> FontStyle.body1 TypoGraphy
-     ]
-  ]
+        , accessibility ENABLE
+        , accessibilityHint $ "Pickup : " <> config.source
+        ][linearLayout
+          [ orientation HORIZONTAL
+          , gravity CENTER
+          ][imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_pickup"
+            , height $ V 8
+            , width $ V 8
+            ]
+            ,textView $
+            [ text $ getString PICKUP
+            , margin $ MarginLeft 6
+            , color Color.black700
+            ] <> FontStyle.body3 TypoGraphy
+            ]
+          , textView $
+            [ text config.source
+            , maxLines 1
+            , ellipsize true
+            , width $ V ((screenWidth unit) / 10 * 8)
+            , height MATCH_PARENT
+            , gravity LEFT
+            , color Color.black900
+            , margin $ MarginTop 3
+            ] <> FontStyle.body1 TypoGraphy
+          ]
+        , separator (MarginVertical 12 12) (V 1) Color.ghostWhite isNotRentalRide
+        ,linearLayout
+        [ orientation VERTICAL
+          , height WRAP_CONTENT
+          , width WRAP_CONTENT
+          , gravity LEFT
+          , accessibility ENABLE
+          , accessibilityHint $ "Drop : " <> config.destination
+          , visibility $ boolToVisibility $ isNotRentalRide 
+        ][linearLayout
+          [ orientation HORIZONTAL
+          , gravity CENTER
+          ][imageView
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_drop"
+            , height $ V 8
+            , width $ V 8
+            ]
+          , textView $ 
+            [ text $ getString DROP
+            , margin $ MarginLeft 6
+            , color Color.black700
+            ] <> FontStyle.body3 TypoGraphy
+          ]
+          , textView $
+            [ text config.destination
+            , maxLines 1
+            , ellipsize true
+            , width $ V ((screenWidth unit) / 10 * 8)
+            , height MATCH_PARENT
+            , gravity LEFT
+            , margin $ MarginTop 3
+            , color Color.black900
+            ] <> FontStyle.body1 TypoGraphy
+        ]
+      ] 
 
 separator :: forall w. Margin -> Length -> String -> Boolean -> PrestoDOM (Effect Unit) w
 separator margin' height' color' isVisible =
