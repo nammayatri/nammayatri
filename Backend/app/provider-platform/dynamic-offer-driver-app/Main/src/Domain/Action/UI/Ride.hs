@@ -157,6 +157,8 @@ data DriverRideRes = DriverRideRes
     tripCategory :: DTC.TripCategory,
     nextStopLocation :: Maybe DLoc.Location,
     lastStopLocation :: Maybe DLoc.Location,
+    startOdometerReading :: Maybe DRide.OdometerReading,
+    endOdometerReading :: Maybe DRide.OdometerReading,
     tripScheduledAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
@@ -262,6 +264,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         autoPayStatus = driverInfo >>= (.autoPayStatus),
         isFreeRide = ride.isFreeRide,
         customerCancellationDues = fareParams.customerCancellationDues,
+        startOdometerReading = ride.startOdometerReading,
+        endOdometerReading = ride.endOdometerReading,
         stopLocationId = booking.stopLocationId,
         tripCategory = booking.tripCategory,
         nextStopLocation = nextStopLocation,
