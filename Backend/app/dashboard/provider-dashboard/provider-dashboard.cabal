@@ -32,6 +32,7 @@ library
       API.ProviderPlatform
       API.ProviderPlatform.DynamicOfferDriver
       API.ProviderPlatform.DynamicOfferDriver.Booking
+      API.ProviderPlatform.DynamicOfferDriver.CacAuth
       API.ProviderPlatform.DynamicOfferDriver.Driver
       API.ProviderPlatform.DynamicOfferDriver.Driver.Coin
       API.ProviderPlatform.DynamicOfferDriver.Driver.Registration
@@ -123,6 +124,7 @@ library
     , text
     , time
     , unordered-containers
+    , utf8-string
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -197,6 +199,7 @@ executable provider-dashboard-exe
     , text
     , time
     , unordered-containers
+    , utf8-string
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
