@@ -250,18 +250,12 @@ validateRefferalCode personId refCode = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
   when (person.hasTakenValidRide) do
     throwError (InvalidRequest "You have been already referred by someone")
-  case person.referralCode of
-    Just code ->
-      if code /= refCode
-        then throwError (InvalidRequest "Referral Code is not same")
-        else return Nothing -- idempotent behaviour
-    Nothing -> do
-      merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
-      case (person.mobileNumber, person.mobileCountryCode) of
-        (Just mobileNumber, Just countryCode) -> do
-          void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
-          return $ Just refCode
-        _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
+  merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  case (person.mobileNumber, person.mobileCountryCode) of
+    (Just mobileNumber, Just countryCode) -> do
+      void $ CallBPPInternal.linkReferee merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId refCode mobileNumber countryCode
+      return $ Just refCode
+    _ -> throwError (PersonMobileNumberIsNULL person.id.getId)
 
 updateDefaultEmergencyNumbers ::
   Id Person.Person ->

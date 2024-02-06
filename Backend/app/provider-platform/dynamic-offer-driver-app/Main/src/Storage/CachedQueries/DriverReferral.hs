@@ -11,6 +11,7 @@
 
 module Storage.CachedQueries.DriverReferral where
 
+import qualified Data.List as List
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
@@ -19,12 +20,14 @@ import qualified Storage.Queries.DriverReferral as Queries
 getNextRefferalCode :: (CacheFlow m r, EsqDBFlow m r) => m Integer
 getNextRefferalCode =
   Hedis.safeGet makeLastRefferalCodeKey >>= \case
-    Just (_ :: Integer) -> do
-      Hedis.incr makeLastRefferalCodeKey
+    Just (cachedCode :: Integer) -> do
+      let nextValidCode = getNextValidCode (cachedCode + 1)
+      Hedis.incrby makeLastRefferalCodeKey (nextValidCode - cachedCode)
     Nothing -> do
       lastReferralCode <- Queries.getLastRefferalCode
       cacheLastRefferalCode lastReferralCode
-      Hedis.incr makeLastRefferalCodeKey
+      let nextValidCode = getNextValidCode (lastReferralCode + 1)
+      Hedis.incrby makeLastRefferalCodeKey (nextValidCode - lastReferralCode)
 
 cacheLastRefferalCode :: (CacheFlow m r) => Integer -> m ()
 cacheLastRefferalCode referralCode = do
@@ -38,3 +41,19 @@ makeLastRefferalCodeKey = "driver-offer:CachedQueries:DriverReferral:Id-getNextR
 cleaLastRefferalCodeCache :: (CacheFlow m r) => m ()
 cleaLastRefferalCodeCache = Hedis.withCrossAppRedis $ do
   Hedis.del makeLastRefferalCodeKey
+
+getNextValidCode :: Integer -> Integer
+getNextValidCode =
+  until isValidReferralCode (\a -> getNextValidCode (a + 1))
+  where
+    hasRepetitiveDigits :: String -> Bool
+    hasRepetitiveDigits code = any (\d -> List.length d >= 3) (List.group code)
+
+    isSequential :: String -> Bool
+    isSequential (a : b : c : rest) = fromEnum a + 1 == fromEnum b && fromEnum b + 1 == fromEnum c || isSequential (b : c : rest)
+    isSequential _ = False
+
+    isValidReferralCode :: Integer -> Bool
+    isValidReferralCode code =
+      let stringCode :: String = show code
+       in not (hasRepetitiveDigits (List.replicate (6 - List.length stringCode) '0' <> stringCode) || isSequential stringCode)

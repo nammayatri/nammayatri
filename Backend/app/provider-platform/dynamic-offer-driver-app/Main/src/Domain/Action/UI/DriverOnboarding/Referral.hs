@@ -32,6 +32,7 @@ import Kernel.Utils.Common (fromMaybeM)
 import Kernel.Utils.Validation (runRequestValidation, validateField)
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverReferral as QDR
+import qualified Storage.Queries.DriverStats as DriverStats
 import Tools.Error (DriverInformationError (..), DriverReferralError (..))
 
 newtype ReferralReq = ReferralReq
@@ -42,13 +43,14 @@ newtype GetReferredDriverRes = GetReferredDriverRes
   {value :: Int}
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
-data ReferralRes = Success | AlreadyReferred
+data ReferralRes = Success | AlreadyReferred | AlreadyTakenRide
   deriving stock (Generic, Show)
   deriving anyclass (ToSchema)
 
 instance ToJSON ReferralRes where
   toJSON Success = A.object ["result" .= ("Success" :: Text)]
   toJSON AlreadyReferred = A.object ["result" .= ("AlreadyReferred" :: Text)]
+  toJSON AlreadyTakenRide = A.object ["result" .= ("AlreadyTakenRide" :: Text)]
 
 instance FromJSON ReferralRes where
   parseJSON (A.Object obj) = do
@@ -56,6 +58,7 @@ instance FromJSON ReferralRes where
     case result of
       "Success" -> pure Success
       "AlreadyReferred" -> pure AlreadyReferred
+      "AlreadyTakenRide" -> pure AlreadyTakenRide
       _ -> parseFail "Expected \"Success\""
   parseJSON err = typeMismatch "String" err
 
@@ -72,15 +75,19 @@ addReferral ::
 addReferral (personId, _, _) req = do
   runRequestValidation validateReferralReq req
   di <- B.runInReplica (DriverInformation.findById personId) >>= fromMaybeM DriverInfoNotFound
-  if isJust di.referralCode || isJust di.referredByDriverId
+  (totalRidesTaken, _) <- B.runInReplica (DriverStats.findTotalRides personId)
+  if (isJust di.referralCode || isJust di.referredByDriverId) && totalRidesTaken > 0
     then return AlreadyReferred
-    else do
-      dr <- B.runInReplica (QDR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
-      DriverInformation.addReferralCode personId req.value dr.driverId
-      referredByDriver <- B.runInReplica (DriverInformation.findById dr.driverId) >>= fromMaybeM DriverInfoNotFound
-      let newtotalRef = fromMaybe 0 referredByDriver.totalReferred + 1
-      DriverInformation.incrementReferralCountByPersonId dr.driverId newtotalRef
-      return Success
+    else
+      if totalRidesTaken > 0
+        then return AlreadyTakenRide
+        else do
+          dr <- B.runInReplica (QDR.findByRefferalCode $ Id req.value) >>= fromMaybeM (InvalidReferralCode req.value)
+          DriverInformation.addReferralCode personId req.value dr.driverId
+          referredByDriver <- B.runInReplica (DriverInformation.findById dr.driverId) >>= fromMaybeM DriverInfoNotFound
+          let newtotalRef = fromMaybe 0 referredByDriver.totalReferred + 1
+          DriverInformation.incrementReferralCountByPersonId dr.driverId newtotalRef
+          return Success
 
 getReferredDrivers :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow GetReferredDriverRes
 getReferredDrivers (personId, _, _) = do
