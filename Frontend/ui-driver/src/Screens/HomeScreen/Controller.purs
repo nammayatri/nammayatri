@@ -46,17 +46,17 @@ import Data.Number (fromString) as Number
 import Data.String (Pattern(..), Replacement(..), drop, length, take, trim, replaceAll, toLower, null)
 import Effect (Effect)
 import Effect.Class (liftEffect)
-import Effect.Uncurried (runEffectFn4)
+import Effect.Uncurried (runEffectFn4, runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getCurrentUTC, getNewIDWithTag, convertUTCtoISC, isPreviousVersion)
-import JBridge (animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC)
+import JBridge (Location, locateOnMap, locateOnMapConfig, animateCamera, enableMyLocation, firebaseLogEvent, getCurrentPosition, getHeightFromPercent, hideKeyboardOnNavigation, isLocationEnabled, isLocationPermissionEnabled, minimizeApp, openNavigation, removeAllPolylines, requestLocation, showDialer, showMarker, toast, firebaseLogEventWithTwoParams,sendMessage, stopChatListenerService, getSuggestionfromKey, scrollToEnd, getChatMessages, cleverTapCustomEvent, metaLogEvent, toggleBtnLoader, openUrlInApp, pauseYoutubeVideo, differenceBetweenTwoUTC)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams)
 import Engineering.Helpers.Suggestions (getMessageFromKey, getSuggestionsfromKey)
 import Engineering.Helpers.Utils (saveObject)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (printLog, trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
-import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=))
+import Prelude (class Show, Unit, bind, discard, map, not, pure, show, unit, void, ($), (&&), (*), (+), (-), (/), (/=), (<), (<>), (==), (>), (||), (<=), (>=), when, negate, (<<<), (>>=),(<$>))
 import PrestoDOM (Eval, continue, continueWithCmd, exit, updateAndExit, updateWithCmdAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Resource.Constants (decodeAddress)
@@ -100,6 +100,7 @@ import PrestoDOM.Core
 import PrestoDOM.List
 import RemoteConfig as RC
 import Locale.Utils
+import Debug (spy)
 
 
 instance showAction :: Show Action where
@@ -363,6 +364,7 @@ data Action = NoAction
             | ToggleStatsModel
             | ToggleBonusPopup
             | GoToEarningsScreen Boolean
+            | AnimationEnd
             
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
@@ -384,6 +386,14 @@ eval (ConfirmDisableGoto PopUpModal.OnButton2Click) state = continue state { dat
 eval (ConfirmDisableGoto PopUpModal.OnButton1Click) state = updateAndExit state{ data { driverGotoState { confirmGotoCancel = false } }}  $ DisableGoto state{ data { driverGotoState { confirmGotoCancel = false } }} 
 
 eval (AccountBlockedAC PopUpModal.OnButton2Click) state = continue state { props { accountBlockedPopup = false } }
+
+eval AnimationEnd state = do
+  let geoJson = state.data.dummyGeoJsonResp.geoInfo.geoJson
+      pts = state.data.dummyGeoJsonResp.geoInfo.gates
+      combinedGeoJson = combineGeoJson pts geoJson
+      _  = spy "NEW GEO JSON" combinedGeoJson
+  let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = false, lat = state.data.currentDriverLat, lon = state.data.currentDriverLon, geoJson = combinedGeoJson, points = transformerLocation <$> pts, zoomLevel = zoomLevel}
+  continue state
 
 eval (AccountBlockedAC PopUpModal.OnButton1Click) state = do 
   void $ pure $ showDialer (SC.getSupportNumber "") false 
@@ -1061,7 +1071,11 @@ eval (PaymentBannerAC (Banner.OnClick)) state = do
 
 eval (SetBannerItem bannerItem) state = continue state{data{bannerData{bannerItem = Just bannerItem}}}
 
-eval ToggleStatsModel state = continue state { props { isStatsModelExpanded = not state.props.isStatsModelExpanded } }
+eval ToggleStatsModel state = do
+  -- let points = [{ place : "Pick Up Zone Old Complex", lat : 22.5827613, lng : 88.3431982, address : Nothing, city : Nothing},
+  --               { place : "Pick Up Zone New Complex", lat : 22.5813363, lng : 88.3422678, address : Nothing, city : Nothing}]
+  -- let _ = unsafePerformEffect $ runEffectFn1 locateOnMap locateOnMapConfig { goToCurrentLocation = true, lat = 0.0, lon = 0.0, geoJson = "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[88.335300567,22.586964867],[88.33354078,22.589504829],[88.334265111,22.589824629],[88.335455875,22.587839029],[88.336291152,22.586932127],[88.337865806,22.586128744],[88.339684412,22.585515482],[88.342197572,22.584824925],[88.344021696,22.584254089],[88.344404931,22.584159517],[88.347338756,22.583036988],[88.346958136,22.581915884],[88.346377934,22.580811581],[88.345901299,22.579698022],[88.345469907,22.578648571],[88.34416784,22.575531891],[88.339551955,22.577894626],[88.338999938,22.578981088],[88.338741071,22.580560813],[88.338664823,22.581403289],[88.337718801,22.583128575],[88.337008875,22.584293219],[88.336115324,22.585805961],[88.335300567,22.586964867]]]]}", points = points, zoomLevel = zoomLevel}
+  continue state { props { isStatsModelExpanded = not state.props.isStatsModelExpanded } }
 
 eval (GoToEarningsScreen showCoinsView) state = exit $ EarningsScreen state showCoinsView
 
@@ -1270,3 +1284,20 @@ getBannerConfigs state =
     getLanguage lang = 
       let language = toLower $ take 2 lang
       in if not (null language) then "_" <> language else "_en"
+
+transformerLocation :: ST.GatesInfo -> Location
+transformerLocation newPoints = { lat: newPoints.point.lat, lng: newPoints.point.lon, place: newPoints.name, address: newPoints.address, city: Nothing}
+
+combineGeoJson :: Array ST.GatesInfo -> String -> String
+combineGeoJson geoInfos singleGeoJson =
+  let
+    singleFeature = "{\"type\":\"Feature\",\"properties\":{\"stroke-color\":\"#2194FF\",\"stroke-width\":3,\"fill\":\"#0D2194FF\"},\"geometry\":" <> singleGeoJson <> "}"
+    featuresArray = map (\geo -> case geo.geoJson of
+                                    Nothing -> ""
+                                    Just x -> "{\"type\":\"Feature\",\"properties\":{\"name\":\"" <> geo.name <> "\",\"stroke-color\":\"#53BB6F\",\"stroke-width\":3,\"fill\":\"#3353BB6F\"},\"geometry\":" <> x <> "}"
+                      ) geoInfos
+    combinedFeatures = Array.filter (\x -> x /= "") featuresArray
+    featuresText = Array.intercalate ", " combinedFeatures
+    typeText = "{\"type\":\"FeatureCollection\",\"features\":[" <> singleFeature <> (if Array.null combinedFeatures then "" else ", ") <> featuresText <> "]}"
+  in
+    typeText

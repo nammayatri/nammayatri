@@ -3532,3 +3532,59 @@ instance standardDetectCityResp :: StandardEncode DetectCityResp where standardE
 instance showDetectCityResp :: Show DetectCityResp where show = genericShow
 instance decodeDetectCityResp :: Decode DetectCityResp where decode = defaultDecode
 instance encodeDetectCityResp  :: Encode DetectCityResp where encode = defaultEncode
+
+
+----------------------------- Special Zones Drivers -----------------------------------------------------
+
+data GeoJsonReq =  GeoJsonReq String 
+
+newtype GatesInfo = GatesInfo
+  { point :: LatLong,
+    name :: String,
+    geoJson :: Maybe String,
+    address :: Maybe String
+  }
+
+newtype GeoInfo = GeoInfo
+  { address :: Maybe String,
+    gates :: Array GatesInfo,
+    geoJson :: String
+  }
+
+newtype GeoJsonResp = GeoJsonResp
+  { specialLocationName :: String,
+    category :: String,
+    geoInfo :: GeoInfo
+  }
+
+instance makeGeoJsonReq :: RestEndpoint GeoJsonReq GeoJsonResp where
+    makeRequest reqBody@(GeoJsonReq date) headers = defaultMakeRequest GET (EP.geoJson "") headers reqBody Nothing
+    decodeResponse = decodeJSON
+    encodeRequest req = defaultEncode req
+
+derive instance genericGeoJsonReq :: Generic GeoJsonReq _
+instance showGeoJsonReq :: Show GeoJsonReq where show = genericShow
+instance decodeGeoJsonReq :: Decode GeoJsonReq where decode = defaultDecode
+instance encodeRGeoJsonReq :: Encode GeoJsonReq where encode = defaultEncode
+instance standardGeoJsonReq :: StandardEncode GeoJsonReq where standardEncode body = standardEncode {}
+
+derive instance genericGeoJsonResp :: Generic GeoJsonResp _
+derive instance newtypeGeoJsonResp :: Newtype GeoJsonResp _
+instance standardGeoJsonResp :: StandardEncode GeoJsonResp where standardEncode (GeoJsonResp resp) = standardEncode resp
+instance showGeoJsonResp :: Show GeoJsonResp where show = genericShow
+instance decodeGeoJsonResp :: Decode GeoJsonResp where decode = defaultDecode
+instance encodeGeoJsonResp :: Encode GeoJsonResp where encode = defaultEncode
+
+derive instance genericGeoInfo :: Generic GeoInfo _
+derive instance newtypeGeoInfo :: Newtype GeoInfo _
+instance standardEncodeGeoInfo :: StandardEncode GeoInfo where standardEncode (GeoInfo resp) = standardEncode resp
+instance showGeoInfo :: Show GeoInfo where show = genericShow
+instance decodeGeoInfo :: Decode GeoInfo where decode = defaultDecode
+instance encodeGeoInfo :: Encode GeoInfo where encode = defaultEncode
+
+derive instance genericGatesInfo :: Generic GatesInfo _
+derive instance newtypeGatesInfo :: Newtype GatesInfo _
+instance standardEncodeGatesInfo :: StandardEncode GatesInfo where standardEncode (GatesInfo resp) = standardEncode resp
+instance showGatesInfo :: Show GatesInfo where show = genericShow
+instance decodeGatesInfo :: Decode GatesInfo where decode = defaultDecode
+instance encodeGatesInfo :: Encode GatesInfo where encode = defaultEncode

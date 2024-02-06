@@ -17,7 +17,7 @@ module Screens.HomeScreen.ScreenData where
 
 import Screens.Types
 import Prelude(negate)
-import Services.API (DriverProfileStatsResp(..), Status(..))
+import Services.API (DriverProfileStatsResp(..), Status(..)) -- , GeoJsonResp(..), GeoInfo(..), GatesInfo(..), LatLong(..)
 import Data.Maybe
 import Foreign.Object (empty)
 import Domain.Payments as PP
@@ -151,7 +151,8 @@ initData = {
         , currentBanner : 0
         , bannerScrollState: "0"
         , currentPage : 0
-      } 
+      },
+      dummyGeoJsonResp : dummyGeoJsonResp
     },
     props: {
         isFreeRide : false,
@@ -215,4 +216,48 @@ dummyDriverRideStats = DriverProfileStatsResp
     , totalEarningsOfDay : 0
     , bonusEarning : 0
     , coinBalance : 0
+    }
+
+dummayLatlon1 :: LatLong
+dummayLatlon1 =  {
+  lat : 22.5827613,
+  lon : 88.3431982
+}
+
+dummayLatlon2 :: LatLong
+dummayLatlon2 =  {
+  lat : 22.5813363,
+  lon : 88.3422678
+}
+
+dummyGatesInfo :: Array GatesInfo
+dummyGatesInfo = [ 
+     {
+      point : dummayLatlon2
+    , name : "Pick Up Zone New Complex"
+    , geoJson : Just "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[88.34124576606496,22.58425434295195],[88.34124576606496,22.58212857588947],[88.34339037500337,22.58212857588947],[88.34339037500337,22.58425434295195],[88.34124576606496,22.58425434295195]]]]}"
+    , address : Nothing
+    },
+    {
+      point : dummayLatlon1
+    , name : "Pick Up Zone Old Complex"
+    , geoJson : Just "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[88.33922731059289,22.581051119783652],[88.33922731059289,22.57918739203197],[88.3414665346329,22.57918739203197],[88.3414665346329,22.581051119783652],[88.33922731059289,22.581051119783652]]]]}"
+    , address : Nothing
+    }
+  ]
+
+dummyGeoInfo :: GeoInfo 
+dummyGeoInfo = 
+    {
+      address : Nothing
+    , gates :  dummyGatesInfo
+    , geoJson : "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[88.335300567,22.586964867],[88.33354078,22.589504829],[88.334265111,22.589824629],[88.335455875,22.587839029],[88.336291152,22.586932127],[88.337865806,22.586128744],[88.339684412,22.585515482],[88.342197572,22.584824925],[88.344021696,22.584254089],[88.344404931,22.584159517],[88.347338756,22.583036988],[88.346958136,22.581915884],[88.346377934,22.580811581],[88.345901299,22.579698022],[88.345469907,22.578648571],[88.34416784,22.575531891],[88.339551955,22.577894626],[88.338999938,22.578981088],[88.338741071,22.580560813],[88.338664823,22.581403289],[88.337718801,22.583128575],[88.337008875,22.584293219],[88.336115324,22.585805961],[88.335300567,22.586964867]]]]}"
+    }
+
+dummyGeoJsonResp :: GeoJsonResp 
+dummyGeoJsonResp = 
+    {
+      specialLocationName : "xxx"
+    , category : "yyy"
+    , geoInfo : dummyGeoInfo
     }

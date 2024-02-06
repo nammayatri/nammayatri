@@ -298,6 +298,7 @@ driverMapsHeaderView push state =
   [ width MATCH_PARENT
   , height MATCH_PARENT
   , orientation VERTICAL
+  , onAnimationEnd push $ const AnimationEnd
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT

@@ -285,3 +285,6 @@ getCoinUsageHistory limit offset =  (getBaseUrl "") <> "/coins/usageHistory?limi
 
 convertCoinToCash :: String -> String
 convertCoinToCash _ =  (getBaseUrl "") <> "/coins/convertCoinToCash"
+
+geoJson :: String -> String
+geoJson _ = (getBaseUrl "") <> "/geoJson"

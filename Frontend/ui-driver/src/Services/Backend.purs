@@ -1325,3 +1325,10 @@ detectCity lat lon = do
         lat : lat,
         lon : lon
     }
+
+geoJson :: GeoJsonReq -> Flow GlobalState (Either ErrorResponse GeoJsonResp)
+geoJson payload = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.geoJson "") unwrapResponse (callAPI headers payload)
+    where
+        unwrapResponse x = x

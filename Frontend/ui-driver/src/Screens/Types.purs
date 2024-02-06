@@ -893,8 +893,33 @@ type HomeScreenData =  {
   gender :: String,
   coinBalance :: Int,
   subsRemoteConfig :: RC.RCSubscription,
-  bannerData :: BannerCarousalData
+  bannerData :: BannerCarousalData,
+  dummyGeoJsonResp :: GeoJsonResp
 }
+
+type LatLong =  {
+  lat :: Number,
+  lon :: Number
+}
+
+type GatesInfo = 
+  { point :: LatLong,
+    name :: String,
+    geoJson :: Maybe String,
+    address :: Maybe String
+  }
+
+type GeoInfo = 
+  { address :: Maybe String,
+    gates :: Array GatesInfo,
+    geoJson :: String
+  }
+
+type GeoJsonResp = 
+  { specialLocationName :: String,
+    category :: String,
+    geoInfo :: GeoInfo
+  }
 
 type BannerCarousalData = {
   bannerItem :: Maybe ListItem,
