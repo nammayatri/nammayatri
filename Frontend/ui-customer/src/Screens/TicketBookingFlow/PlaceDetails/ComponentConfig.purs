@@ -5,7 +5,7 @@ import Prelude
 import Common.Styles.Colors as Color
 import Components.GenericHeader as GenericHeader
 import Components.PrimaryButton as PrimaryButton
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Font.Style (Style(..))
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), visibility)
@@ -14,6 +14,7 @@ import Data.Lens ((^.))
 import Screens.Types as ST
 import Data.Array as DA
 import JBridge as JB
+import Services.API (TicketPlaceStatus (..), TicketPlaceResp(..))
 
 genericHeaderConfig :: ST.TicketBookingScreenState -> GenericHeader.Config
 genericHeaderConfig state = let
@@ -49,10 +50,11 @@ genericHeaderConfig state = let
 primaryButtonConfig :: ST.TicketBookingScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let
     config = PrimaryButton.config
+    buttonConfigForDescription = getButtonTextForDescriptionStage
     primaryButtonConfig' = config
       { textConfig
         { text = (case state.props.currentStage of 
-                    ST.DescriptionStage -> "Book Tickets"
+                    ST.DescriptionStage -> buttonConfigForDescription.buttonText
                     ST.ChooseTicketStage -> ("Pay ₹" <> (show state.data.totalAmount))
                     ST.ViewTicketStage -> "Book Tickets"
                     _ -> "")
@@ -60,12 +62,22 @@ primaryButtonConfig state = let
         }
       , cornerRadius = 8.0
       , background = Color.black900 
-      , isClickable = (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate )
-      , alpha = if (state.props.currentStage == ST.DescriptionStage) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate ) then 1.0 else 0.5
+      , isClickable = (state.props.currentStage == ST.DescriptionStage && buttonConfigForDescription.isClickable) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate )
+      , alpha = if (state.props.currentStage == ST.DescriptionStage && buttonConfigForDescription.isClickable) || (state.props.currentStage == ST.ViewTicketStage) || (state.props.termsAndConditionsSelected && state.data.totalAmount > 0 && state.props.validDate ) then 1.0 else 0.5
       , id = "BookTicketsButton"
       , margin = (MarginHorizontal 20 20)
       }
   in primaryButtonConfig'
+  where
+    getButtonTextForDescriptionStage :: {buttonText :: String, isClickable :: Boolean}
+    getButtonTextForDescriptionStage =
+      maybe  {buttonText : "Book Tickets", isClickable : true} 
+        (\(TicketPlaceResp pInfo) ->  maybe {buttonText : "Book Tickets", isClickable : true}  
+                      (\status -> case status of
+                                    ComingSoon -> {buttonText : "Coming Soon", isClickable : false} 
+                                    _ -> {buttonText : "Book Tickets", isClickable : true} 
+                      ) pInfo.status
+        ) state.data.placeInfo
 
 primaryButtonConfig1 :: ST.TicketBookingScreenState -> PrimaryButton.Config
 primaryButtonConfig1 state = 

@@ -2270,6 +2270,17 @@ instance standardEncodeSpecialDayType :: StandardEncode SpecialDayType
   where
     standardEncode _ = standardEncode {}
 
+data TicketPlaceStatus = Active | Inactive | ComingSoon
+
+derive instance genericTicketPlaceStatus :: Generic TicketPlaceStatus _
+instance showTicketPlaceStatus :: Show TicketPlaceStatus where show = genericShow
+instance decodeTicketPlaceStatus :: Decode TicketPlaceStatus where decode = defaultEnumDecode
+instance encodeTicketPlaceStatus :: Encode TicketPlaceStatus where encode = defaultEnumEncode
+instance eqTicketPlaceStatus :: Eq TicketPlaceStatus where eq = genericEq
+instance standardEncodeTicketPlaceStatus :: StandardEncode TicketPlaceStatus
+  where
+    standardEncode _ = standardEncode {}
+
 newtype BusinessHoursResp = BusinessHoursResp {
   id :: String,
   slot :: Maybe String, -- array of slots
@@ -2311,7 +2322,8 @@ newtype TicketPlaceResp = TicketPlaceResp
     shortDesc :: Maybe String,
     mapImageUrl :: Maybe String,
     termsAndConditions :: Array String,
-    placeType :: String
+    placeType :: String,
+    status :: Maybe TicketPlaceStatus
   }
 
 data GetTicketStatusReq = GetTicketStatusReq String
