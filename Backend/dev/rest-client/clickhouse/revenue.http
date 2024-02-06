@@ -37,7 +37,6 @@ GET {{clickhouse-driver-offer-bpp}}
 
 ###
 
-
 # @name version
 
 POST {{clickhouse-driver-offer-bpp}}
@@ -58,94 +57,11 @@ Select 1
 
 ###
 
-# @name createDB
-
-POST {{clickhouse-driver-offer-bpp}}
-Authorization: Basic default:{{clickhouse-password}}
-content-type: text/html
-
-CREATE DATABASE iF NOT EXISTS atlas_driver_offer_bpp
-
-###
-
-# @name createDriverFeeTable
-
-POST {{clickhouse-driver-offer-bpp}}
-Authorization: Basic default:{{clickhouse-password}}
-content-type: text/html
-
-CREATE TABLE {{dbName}}.driver_fee
-( `id` String,
-  `merchant_id` String,
-  `driver_id` Nullable (String),
-  `status` Nullable (String),
-  `num_rides` Nullable(Int64),
-  `platform_fee` Nullable(Float64),
-  `cgst` Nullable(Float64),
-  `sgst` Nullable(Float64),
-  `govt_charges` Nullable(Int64),
-  `collected_at` DateTime DEFAULT now(),
-  `collected_by` Nullable(String)
-)
-ENGINE = MergeTree()
-PRIMARY KEY (id)
-
-###
-
-# @name insertDriverFees
+# @name selectAll
 
 # COLLECTED_CASH: totalAmount = 3.0+2.0+1.5+6=12.5
 # PAYMENT_PENDING: totalAmount = 4+3+2.5+7=16.5
 # CLEARED: totalAmount = 5+4+3.5+8=20.5
-
-POST {{clickhouse-driver-offer-bpp}}
-Authorization: Basic default:{{clickhouse-password}}
-content-type: text/html
-
-INSERT INTO {{dbName}}.driver_fee
-(id, merchant_id, driver_id, status, num_rides, platform_fee, cgst, sgst, govt_charges, collected_at, collected_by)
-Values
-( '5289bb0b-b012-4d1a-abed-32555212ea03',
-  '{{merchantId}}',
-  '{{driverId}}',
-  'COLLECTED_CASH',
-  '3',
-  '3.0',
-  '2.0',
-  '1.5',
-  6,
-  '2024-01-22 07:02:42',
-  '{{volunteerId}}'
-),
-( '5289bb0b-b012-4d1a-abed-32555212ea04',
-  '{{merchantId}}',
-  '{{driverId}}',
-  'PAYMENT_PENDING',
-  '5',
-  '4.0',
-  '3.0',
-  '2.5',
-  7,
-  '2024-01-22 07:02:42',
-  '{{volunteerId}}'
-),
-( '5289bb0b-b012-4d1a-abed-32555212ea05',
-  '{{merchantId}}',
-  '{{driverId}}',
-  'CLEARED',
-  '6',
-  '5.0',
-  '4.0',
-  '3.5',
-  8,
-  '2024-01-22 07:02:42',
-  '{{volunteerId}}'
-)
-
-
-###
-
-# @name selectAll
 
 POST {{clickhouse-driver-offer-bpp}}
 Authorization: Basic default:{{clickhouse-password}}
@@ -160,7 +76,7 @@ FORMAT JSON
 
 GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/revenue/allFeeHistory
   ?from=2024-01-01T07:02:42Z
-  &to=2024-01-22T08:02:42Z
+  &to=2024-02-22T08:02:42Z
 token: {{dashboardToken}}
 
 #  clickhouse queries for above api:
@@ -237,7 +153,7 @@ GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/Kochi/revenue/co
   ?volunteerId={{volunteerId}}
   # &place="Kochi"
   &from=2024-01-01T07:02:42Z
-  &to=2024-01-22T08:02:42Z
+  &to=2024-02-22T08:02:42Z
 token: {{dashboardToken}}
 
 #  clickhouse queries for above api:
@@ -323,23 +239,3 @@ ORDER BY
     toDate(collected_at),
     '0' ASC
 FORMAT JSON
-
-###
-
-# @name deleteDriverFeeTable
-
-POST {{clickhouse-driver-offer-bpp}}
-Authorization: Basic default:{{clickhouse-password}}
-content-type: text/html
-
-DELETE FROM {{dbName}}.driver_feee WHERE True
-
-###
-
-# @name dropDriverFeeTable
-
-POST {{clickhouse-driver-offer-bpp}}
-Authorization: Basic default:{{clickhouse-password}}
-content-type: text/html
-
-DROP TABLE {{dbName}}.driver_fee
