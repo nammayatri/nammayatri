@@ -17,6 +17,7 @@ module Domain.Action.Beckn.FRFS.OnConfirm where
 import qualified Beckn.ACL.FRFS.Cancel as ACL
 import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Data.Text as DL
 import Domain.Action.Beckn.FRFS.Common
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSRecon as Recon
@@ -117,8 +118,9 @@ buildReconTable merchant booking _dOrder tickets = do
             Recon.updatedAt = now
           }
 
-  reconEntries <- mapM (buildRecon reconEntry) tickets
-  void $ QRecon.createMany reconEntries
+  let reconTickets = DL.intercalate ", " (map (\ticket -> show ticket.ticketNumber) tickets)
+  reckon <- buildRecon reconEntry reconTickets
+  void $ QRecon.create reckon
 
 mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Flow Ticket.FRFSTicket
 mkTicket booking dTicket = do
@@ -141,14 +143,14 @@ mkTicket booking dTicket = do
         Ticket.updatedAt = now
       }
 
-buildRecon :: Recon.FRFSRecon -> Ticket.FRFSTicket -> Flow Recon.FRFSRecon
+buildRecon :: Recon.FRFSRecon -> Text -> Flow Recon.FRFSRecon
 buildRecon recon ticket = do
   now <- getCurrentTime
   reconId <- generateGUID
   return
     recon
       { Recon.id = reconId,
-        Recon.ticketNumber = ticket.ticketNumber,
+        Recon.ticketNumber = ticket,
         Recon.createdAt = now,
         Recon.updatedAt = now
       }
