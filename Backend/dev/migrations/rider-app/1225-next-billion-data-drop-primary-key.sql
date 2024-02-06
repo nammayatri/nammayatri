@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.next_billion_data DROP CONSTRAINT next_billion_data_pkey;
