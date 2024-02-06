@@ -82,6 +82,7 @@ import Resources.Localizable.EN(getEN)
 import Engineering.Helpers.Utils as EHU
 import Mobility.Prelude
 import Locale.Utils
+import Screens.RideBookingFlow.HomeScreen.BannerConfig (getBannerConfigs, getDriverInfoCardBanners)
 
 shareAppConfig :: ST.HomeScreenState -> PopUpModal.Config
 shareAppConfig state = let
@@ -407,90 +408,6 @@ rentalBannerConfig state =
       }
   in config'
 
-disabilityBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
-disabilityBannerConfig state action =
-  let
-    config = BannerCarousel.config action
-    config' = config
-      {
-        backgroundColor = Color.paleLavender
-      , title = (getString NOW_GET_ASSISTED_RIDES)
-      , titleColor = Color.purple
-      , actionText = (getString UPDATE_PROFILE)
-      , actionTextColor = Color.purple
-      , imageUrl = "ny_ic_accessibility_banner_img"
-      , type = BannerCarousel.Disability
-      }
-  in config'
-  
-sosSetupBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
-sosSetupBannerConfig state action =
-  let
-    config = BannerCarousel.config action
-
-    bannerConfig =
-      case state.props.sosBannerType of
-        Just ST.SETUP_BANNER -> {title: getString COMPLETE_YOUR_NAMMA_SAFETY_SETUP_FOR_SAFE_RIDE_EXPERIENCE, actionText: getString SETUP_NOW, image : "ny_ic_banner_sos"}
-        Just ST.MOCK_DRILL_BANNER -> {title: getString COMPLETE_YOUR_TEST_DRILL, actionText: getString TEST_DRILL, image : "ny_ic_mock_drill_banner"}
-        Nothing -> {title: "", actionText: "", image : ""}
-
-    config' =
-      config
-        { backgroundColor = Color.lightMintGreen
-        , title = bannerConfig.title
-        , titleColor = Color.elfGreen
-        , actionText = bannerConfig.actionText
-        , actionTextColor = Color.elfGreen
-        , imageUrl = fetchImage FF_ASSET bannerConfig.image
-        , type = BannerCarousel.Safety
-        }
-  in
-    config'
-
-
-
-metroBannerConfig :: forall a. ST.HomeScreenState -> a -> BannerCarousel.Config a
-metroBannerConfig state action =
-  let
-    config = BannerCarousel.config action
-    config' = config
-      {
-        backgroundColor = Color.blue600'
-      , title = getString BOOK_METRO_WITH_NY_NOW
-      , titleColor = Color.blue800
-      , actionText = getString BOOK_NOW
-      , actionTextColor = Color.white900
-      , actionTextBackgroundColour = Color.blue800
-      , actionTextCornerRadius = "12.0"
-      , imageUrl = fetchImage FF_ASSET "ny_ic_metro_banner"
-      , margin = MarginTop 0
-      , imageHeight = V 100
-      , imageWidth = V 120
-      , padding = Padding 0 2 5 5
-      , imagePadding = PaddingLeft 24
-      , type = BannerCarousel.MetroTicket
-      }
-  in config'
-
-ticketBannerConfig :: forall action. ST.HomeScreenState -> action -> BannerCarousel.Config action
-ticketBannerConfig state action =
-  let
-    config = BannerCarousel.config action
-    config' = config
-      {
-        backgroundColor = "#FFF6DE"
-      , title = "Book Millennium Jetty, Heritage cruise and Alipore  zoo tickets "
-      , titleColor = Color.black800
-      , actionText = "Book Now"
-      , actionTextColor = Color.black900
-      , imageUrl = fetchImage FF_ASSET "ny_ic_zoo_banner"
-      , margin = MarginTop 0
-      , imageHeight = V 75
-      , imageWidth = V 60
-      , padding = Padding 0 5 5 5
-      , type = BannerCarousel.ZooTicket
-      }
-  in config'
 
 reportIssuePopUpConfig :: ST.HomeScreenState -> CancelRidePopUpConfig.Config
 reportIssuePopUpConfig state =
@@ -964,6 +881,7 @@ driverInfoCardViewState state = { props:
                                   , zoneType : state.props.zoneType.priorityTag
                                   , currentSearchResultType : state.data.currentSearchResultType
                                   , merchantCity : state.props.city
+                                  , showBanner : state.props.currentStage == RideStarted
                                   }
                               , data: driverInfoTransformer state
                             }
@@ -1051,6 +969,8 @@ driverInfoTransformer state =
     , vehicleVariant : cardState.vehicleVariant
     , defaultPeekHeight : getDefaultPeekHeight state
     , bottomSheetState : state.props.currentSheetState
+    , bannerData : state.data.bannerData
+    , bannerArray : getDriverInfoCardBanners state DriverInfoCard.BannerCarousel
     }
 
 emergencyHelpModelViewState :: ST.HomeScreenState -> EmergencyHelp.EmergencyHelpModelState
