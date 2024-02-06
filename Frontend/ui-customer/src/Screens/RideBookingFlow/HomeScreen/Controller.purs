@@ -2999,7 +2999,7 @@ logChatSuggestion state chatSuggestion = unsafePerformEffect $ logEvent state.da
           
 getBannerConfigs :: HomeScreenState -> Array (BannerCarousel.Config (BannerCarousel.Action -> Action))
 getBannerConfigs state = 
-  (if isJust state.props.sosBannerType 
+  (if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
     then [sosSetupBannerConfig state BannerCarousal] 
     else [])
   <>

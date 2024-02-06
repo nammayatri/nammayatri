@@ -40,7 +40,7 @@ import Effect.Class (liftEffect)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
 import Font.Style as FontStyle
-import Helpers.Utils (FetchImageFrom(..), fetchImage)
+import Helpers.Utils (FetchImageFrom(..), fetchImage, getDefaultPixelSize)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -110,7 +110,6 @@ view push state =
   where
   padding' = if EHC.os == "IOS" then (Padding 0 EHC.safeMarginTop 0 (if EHC.safeMarginBottom == 0 && EHC.os == "IOS" then 16 else EHC.safeMarginBottom)) else (PaddingLeft 0)
 
-
 -- ---------------------------------- settingUpView -----------------------------------
 settingUpView :: NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 settingUpView state push =
@@ -128,93 +127,116 @@ settingUpView state push =
 
 settingUpContentView :: ContentViewDataType -> NammaSafetyScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
 settingUpContentView config state push =
-  linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , orientation VERTICAL
-    ]
-    [ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderData config.step)
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , padding $ Padding 16 32 16 0
-        , orientation VERTICAL
-        ]
-        [ linearLayout
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            ]
-            [ linearLayout
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                , weight 1.0
-                ]
-                [ imageView
-                    [ imageWithFallback $ fetchImage FF_ASSET config.image
-                    , height $ V 50
-                    , margin $ Margin 0 0 14 0
-                    , width $ V 50
-                    , visibility $ boolToVisibility $ config.image /= ""
-                    ]
-                ]
-            , toggleSwitchView config.isActive state.props.setupStage push
-            ]
-        , textView
-            $ [ width WRAP_CONTENT
-              , height MATCH_PARENT
-              , text config.title
-              , color Color.black900
+  let
+    headerBounds = JB.getLayoutBounds $ EHC.getNewIDWithTag "SettingUpContentViewHeader"
+    exactHeightHeader = getDefaultPixelSize headerBounds.height
+    footerBounds = JB.getLayoutBounds $ EHC.getNewIDWithTag "SettingUpContentViewFooter"
+    exactHeightFooter = getDefaultPixelSize footerBounds.height
+    scrollViewHeight = EHC.screenHeight unit - exactHeightHeader - exactHeightFooter
+  in
+    relativeLayout
+      [ height MATCH_PARENT
+      , width MATCH_PARENT
+      , orientation VERTICAL
+      ]
+      [ linearLayout
+          [ height MATCH_PARENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          ]
+          [ linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , id $ EHC.getNewIDWithTag "SettingUpContentViewHeader"
+              , orientation VERTICAL
               ]
-            <> FontStyle.h2 TypoGraphy
-        , textView
-            $ [ width WRAP_CONTENT
-              , height MATCH_PARENT
-              , textFromHtml config.desc
-              , color Color.black700
-              , margin $ MarginTop 8
+              [ StepsHeaderModel.view (push <<< StepsHeaderModelAC) (stepsHeaderData config.step)
               ]
-            <> FontStyle.body5 TypoGraphy
-        , scrollView
-            [ height WRAP_CONTENT
-            , width MATCH_PARENT
-            ]
-            [ linearLayout
-                [ height WRAP_CONTENT
-                , width MATCH_PARENT
-                , visibility $ boolToVisibility $ state.props.setupStage == SetDefaultEmergencyContacts
-                , orientation VERTICAL
-                ]
-                [ ContactsList.view (push <<< ContactListAction) state.data.emergencyContactsList
-                ]
-            ]
-        ]
-    , linearLayout
-        [ width MATCH_PARENT
-        , weight 1.0
-        ]
-        []
-    , linearLayout
-        [ width MATCH_PARENT
-        , height WRAP_CONTENT
-        , margin $ MarginHorizontal 16 16
-        , visibility $ boolToVisibility $ state.props.setupStage == SetDefaultEmergencyContacts && (not $ null state.data.emergencyContactsList)
-        ]
-        [ recommendContactsToInstallView Language
-        ]
-    , linearLayout
-        [ height WRAP_CONTENT
-        , width MATCH_PARENT
-        , orientation VERTICAL
-        , background Color.white900
-        , alignParentBottom "true,-1"
-        ]
-        [ PrimaryButton.view (push <<< GoToNextStep) (continueNextStepButtonConfig state) ]
-    ]
+          , scrollView
+              [ height $ V scrollViewHeight
+              , width MATCH_PARENT
+              , padding $ PaddingBottom exactHeightFooter
+              ]
+              [ linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , padding $ Padding 16 32 16 0
+                  , orientation VERTICAL
+                  ]
+                  [ linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      ]
+                      [ linearLayout
+                          [ height WRAP_CONTENT
+                          , width WRAP_CONTENT
+                          , weight 1.0
+                          ]
+                          [ imageView
+                              [ imageWithFallback $ fetchImage FF_ASSET config.image
+                              , height $ V 50
+                              , margin $ MarginRight 14
+                              , width $ V 50
+                              , visibility $ boolToVisibility $ config.image /= ""
+                              ]
+                          ]
+                      , toggleSwitchView config.isActive state.props.setupStage push
+                      ]
+                  , textView
+                      $ [ width WRAP_CONTENT
+                        , height MATCH_PARENT
+                        , text config.title
+                        , color Color.black900
+                        ]
+                      <> FontStyle.h2 TypoGraphy
+                  , textView
+                      $ [ width WRAP_CONTENT
+                        , height MATCH_PARENT
+                        , textFromHtml config.desc
+                        , color Color.black700
+                        , margin $ MarginTop 8
+                        ]
+                      <> FontStyle.body5 TypoGraphy
+                  , linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , visibility $ boolToVisibility $ state.props.setupStage == SetDefaultEmergencyContacts
+                      , orientation VERTICAL
+                      ]
+                      [ ContactsList.view (push <<< ContactListAction) state.data.emergencyContactsList
+                      ]
+                  , linearLayout
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , visibility $ boolToVisibility $ state.props.setupStage == SetDefaultEmergencyContacts && (not $ null state.data.emergencyContactsList)
+                      ]
+                      [ recommendContactsToInstallView Language
+                      ]
+                  ]
+              ]
+          ]
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation VERTICAL
+          , id $ EHC.getNewIDWithTag "SettingUpContentViewFooter"
+          , alignParentBottom "true,-1"
+          ]
+          [ linearLayout
+              [ height WRAP_CONTENT
+              , width MATCH_PARENT
+              , orientation VERTICAL
+              , background Color.white900
+              , alignParentBottom "true,-1"
+              ]
+              [ PrimaryButton.view (push <<< GoToNextStep) (continueNextStepButtonConfig state) ]
+          ]
+      ]
 
 stepsHeaderData :: Int -> StepsHeaderModelState
 stepsHeaderData currentIndex =
   { activeIndex: currentIndex
-  , textArray: [ getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS, getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS, getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS]
+  , textArray: [ getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS, getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS, getString SET_UP_YOUR_PERSONAL_SAFETY_SETTINGS ]
   , backArrowVisibility: true
   , config: DC.config
   }
