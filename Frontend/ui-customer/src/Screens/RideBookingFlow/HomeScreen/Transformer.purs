@@ -17,7 +17,7 @@ module Screens.HomeScreen.Transformer where
 
 import Prelude
 
-import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag)
+import Accessor (_contents, _description, _place_id, _toLocation, _lat, _lon, _estimatedDistance, _rideRating, _driverName, _computedPrice, _otpCode, _distance, _maxFare, _estimatedFare, _estimateId, _vehicleVariant, _estimateFareBreakup, _title, _price, _totalFareRange, _maxFare, _minFare, _nightShiftRate, _nightShiftEnd, _nightShiftMultiplier, _nightShiftStart, _specialLocationTag, _fareProductType, _stopLocation)
 
 import Components.ChooseVehicle (Config, config, SearchType(..)) as ChooseVehicle
 import Components.QuoteListItem.Controller (config) as QLI
@@ -39,7 +39,7 @@ import PrestoDOM (Visibility(..))
 import Resources.Constants (DecodeAddress(..), decodeAddress, getValueByComponent, getWard, getVehicleCapacity, getFaresList, getKmMeter, fetchVehicleVariant, getAddressFromBooking)
 import Screens.HomeScreen.ScreenData (dummyAddress, dummyLocationName, dummySettingBar, dummyZoneType)
 import Screens.Types (DriverInfoCard, LocationListItemState, LocItemType(..), LocationItemType(..), NewContacts, Contact, VehicleVariant(..), TripDetailsScreenState, SearchResultType(..), EstimateInfo, SpecialTags, ZoneType(..), HomeScreenState(..), MyRidesScreenState(..), Trip(..), QuoteListItemState(..), City(..))
-import Services.API (AddressComponents(..), BookingLocationAPIEntity, DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..))
+import Services.API (AddressComponents(..), BookingLocationAPIEntity(..), DeleteSavedLocationReq(..), DriverOfferAPIEntity(..), EstimateAPIEntity(..), GetPlaceNameResp(..), LatLong(..), OfferRes, OfferRes(..), PlaceName(..), Prediction, QuoteAPIContents(..), QuoteAPIEntity(..), RideAPIEntity(..), RideBookingAPIDetails(..), RideBookingRes(..), SavedReqLocationAPIEntity(..), SpecialZoneQuoteAPIDetails(..), FareRange(..), LatLong(..), EstimateFares(..))
 import Services.Backend as Remote
 import Types.App(FlowBT,  GlobalState(..), ScreenType(..))
 import Storage ( setValueToLocalStore, getValueToLocalStore, KeyStore(..))
@@ -47,6 +47,7 @@ import JBridge (fromMetersToKm, getLatLonFromAddress)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
 import Common.Types.App (LazyCheck(..), Paths)
+import Common.Types.App (RideType(..)) as RideType
 import MerchantConfig.Utils (Merchant(..), getMerchant)
 import Resources.Localizable.EN (getEN)
 import MerchantConfig.Types (EstimateAndQuoteConfig)
@@ -56,6 +57,8 @@ import Control.Monad.Except.Trans (lift)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import ConfigProvider
 import Locale.Utils
+import Debug
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 
 getLocationList :: Array Prediction -> Array LocationListItemState
 getLocationList prediction = map (\x -> getLocation x) prediction
@@ -112,16 +115,21 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
           , driverRating : fromMaybe 0.0 quoteDetails.rating
           , profile : ""
           , price :  show quoteEntity.estimatedTotalFare
-          , vehicleType : "auto"
+          , vehicleType : quoteEntity.vehicleVariant
           , driverName : quoteDetails.driverName
           , selectedQuote : Nothing
           , appConfig : getAppConfig appConfig
           , city : city
         }
+    (RENTAL contents) -> QLI.config
+
 
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
+      fareProductType = resp.bookingDetails ^._fareProductType
+      stopLocation = if fareProductType == "RENTAL" then _stopLocation else _toLocation
+      (BookingLocationAPIEntity toLocation) = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
   in  {
         otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else rideList.rideOtp
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
@@ -135,15 +143,15 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       , startedAt : (convertUTCtoISC resp.createdAt "h:mm A")
       , endedAt : (convertUTCtoISC resp.updatedAt "h:mm A")
       , source : decodeAddress (Booking resp.fromLocation)
-      , destination : decodeAddress (Booking (resp.bookingDetails ^._contents^._toLocation))
+      , destination : decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)))
       , rideId : rideList.id
       , price : resp.estimatedTotalFare
       , sourceLat : resp.fromLocation ^._lat
       , sourceLng : resp.fromLocation ^._lon
-      , destinationLat : (resp.bookingDetails ^._contents^._toLocation ^._lat)
-      , destinationLng : (resp.bookingDetails ^._contents^._toLocation ^._lon)
+      , destinationLat : (toLocation.lat)
+      , destinationLng : (toLocation.lon)
       , sourceAddress : getAddressFromBooking resp.fromLocation
-      , destinationAddress : getAddressFromBooking (resp.bookingDetails ^._contents^._toLocation)
+      , destinationAddress : getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))
       , estimatedDistance : parseFloat ((toNumber (fromMaybe 0 (resp.bookingDetails ^._contents ^._estimatedDistance)))/1000.0) 2
       , createdAt : resp.createdAt
       , driverLat : 0.0
@@ -191,7 +199,7 @@ encodeAddressDescription address tag placeId lat lon addressComponents = do
 dummyRideAPIEntity :: RideAPIEntity
 dummyRideAPIEntity = RideAPIEntity{
   computedPrice : Nothing,
-  status : "NEW",
+  status : "",
   vehicleModel : "",
   createdAt : "",
   driverNumber : Nothing,
@@ -267,7 +275,13 @@ makePlaceNameResp lat lon =
 getUpdatedLocationList :: Array LocationListItemState -> Maybe String -> Array LocationListItemState
 getUpdatedLocationList locationList placeId = (map
                             (\item ->
-                                ( item  {postfixImageUrl = if (item.placeId == placeId || item.postfixImageUrl == "ic_fav_red") then "ny_ic_fav_red" else "ic_fav" } )
+                                ( item  
+                                  { postfixImageUrl = 
+                                      if (  item.placeId == placeId 
+                                          || item.postfixImageUrl == "ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ic_fav_red.png" 
+                                          || item.postfixImageUrl == "ny_ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav_red.png" ) 
+                                        then "ny_ic_fav_red,https://assets.juspay.in/beckn/nammayatri/user/images/ny_ic_fav_red.png" 
+                                        else "ic_fav,https://assets.juspay.in/beckn/nammayatri/user/images/ic_fav.png" } )
                             ) (locationList))
 
 transformSavedLocations :: Array LocationListItemState -> FlowBT String Unit
@@ -314,6 +328,7 @@ getSpecialZoneQuotes quotes estimateAndQuoteConfig = mapWithIndex (\index item -
 getSpecialZoneQuote :: OfferRes -> Int -> ChooseVehicle.Config
 getSpecialZoneQuote quote index =
   let estimatesConfig = (getAppConfig appConfig).estimateAndQuoteConfig
+      _ = spy "quoteee" quote
   in 
   case quote of
     Quotes body -> let (QuoteAPIEntity quoteEntity) = body.onDemandCab
@@ -330,8 +345,23 @@ getSpecialZoneQuote quote index =
       , searchResultType = ChooseVehicle.QUOTES
       , pickUpCharges = 0
       }
+    RentalQuotes body -> let (QuoteAPIEntity quoteEntity) = body.onRentalCab
+      in ChooseVehicle.config {
+        vehicleImage = getVehicleVariantImage quoteEntity.vehicleVariant
+      , isSelected = (index == 0)
+      , vehicleVariant = quoteEntity.vehicleVariant
+      , price = (getCurrency appConfig) <> (show quoteEntity.estimatedTotalFare)
+      , activeIndex = 0
+      , index = index
+      , id = trim quoteEntity.id
+      , capacity = getVehicleCapacity quoteEntity.vehicleVariant
+      , showInfo = estimatesConfig.showInfoIcon
+      , searchResultType = ChooseVehicle.QUOTES
+      , pickUpCharges = 0
+      }
     Metro body -> ChooseVehicle.config
     Public body -> ChooseVehicle.config
+
 
 getEstimateList :: Array EstimateAPIEntity -> EstimateAndQuoteConfig -> Array ChooseVehicle.Config
 getEstimateList quotes estimateAndQuoteConfig = mapWithIndex (\index item -> getEstimates item index (isFareRangePresent quotes)) (getFilteredEstimate quotes estimateAndQuoteConfig)
@@ -387,6 +417,10 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
                                             let (QuoteAPIEntity quoteEntity) = body.onDemandCab
                                                 orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
                                             in {item : Just quote, order : orderNumber}
+                                          RentalQuotes body -> 
+                                            let (QuoteAPIEntity quoteEntity) = body.onRentalCab
+                                                orderNumber = fromMaybe (orderListLength + 1) (DA.elemIndex quoteEntity.vehicleVariant orderList)
+                                            in {item : Just quote, order : orderNumber}
                                           _ -> {item : Nothing, order : orderListLength}
                                 ) quotes
           filterMappedQuotes = filter (\quote -> isJust quote.item) mappedQuotes
@@ -397,6 +431,9 @@ getFilteredQuotes quotes estimateAndQuoteConfig =
     filterQuoteByVariants variant quotes = DA.take 1 (sortQuoteWithVariantOrder (DA.filter(\item -> case item of
                                                                                                       Quotes body -> do
                                                                                                         let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+                                                                                                        DA.any (_ == quoteEntity.vehicleVariant) variant
+                                                                                                      RentalQuotes body -> do
+                                                                                                        let (QuoteAPIEntity quoteEntity) = body.onRentalCab
                                                                                                         DA.any (_ == quoteEntity.vehicleVariant) variant
                                                                                                       _ -> false
                                                                                           ) quotes) variant)
@@ -444,7 +481,7 @@ getTripDetailsState (RideBookingRes ride) state = do
       date = (convertUTCtoISC (ride.createdAt) "ddd, Do MMM"),
       time = (convertUTCtoISC (fromMaybe (ride.createdAt) ride.rideStartTime ) "h:mm A"),
       source= decodeAddress (Booking ride.fromLocation),
-      destination= (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
+      destination= (decodeAddress (Booking (fromMaybe dummyBookingDetails (ride.bookingDetails ^._contents^._toLocation)))),
       rating= (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _rideRating)),
       driverName =((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _driverName) ,
       totalAmount = ("₹ " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _computedPrice))),
@@ -455,7 +492,7 @@ getTripDetailsState (RideBookingRes ride) state = do
         date = (convertUTCtoISC (ride.createdAt) "ddd, Do MMM"),
         time = (convertUTCtoISC (fromMaybe (ride.createdAt) ride.rideStartTime ) "h:mm A"),
         source= decodeAddress (Booking ride.fromLocation),
-        destination= (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
+        destination= (decodeAddress (Booking (fromMaybe dummyBookingDetails (ride.bookingDetails ^._contents^._toLocation)))),
         rating= (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _rideRating)),
         driverName =((fromMaybe dummyRideAPIEntity (ride.rideList DA.!!0) )^. _driverName),
         rideStartTime = (convertUTCtoISC (fromMaybe "" rideDetails.rideStartTime ) "h:mm A"),
@@ -608,3 +645,14 @@ fetchPickupCharges estimateFareBreakup =
     deadKmFare = find (\a -> a ^. _title == "DEAD_KILOMETER_FARE") estimateFareBreakup
   in 
     maybe 0 (\fare -> fare ^. _price) deadKmFare
+
+getOneWaySpecialZoneAPIDetailsQuotes :: Array OfferRes -> Array OfferRes
+getOneWaySpecialZoneAPIDetailsQuotes quotes = 
+  filter 
+  (\quote -> case quote of 
+      Quotes body ->
+        let (QuoteAPIEntity quoteEntity) = body.onDemandCab
+            fareProductType = quoteEntity.quoteDetails^._fareProductType
+        in fareProductType == "OneWaySpecialZoneAPIDetails"
+      _ -> false )
+  quotes

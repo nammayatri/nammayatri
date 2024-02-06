@@ -6,14 +6,17 @@ import Components.InputView.Controller
 import Components.SeparatorView.View as SeparatorView
 import Styles.Colors as Color
 import Mobility.Prelude (boolToVisibility)
-import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable)
+import PrestoDOM (PrestoDOM(..), Orientation(..), Length(..), Visibility(..), Gravity(..), Padding(..), Margin(..), linearLayout, height, width, orientation, margin, padding, textView, color, background, cornerRadius, weight, text, imageView, imageWithFallback, stroke, gravity, visibility, onChange, onFocus, onClick, selectAllOnFocus, hint, hintColor, cursorColor, pattern, maxLines, singleLine, ellipsize, editText, id, clickable, afterRender, textSize)
 import Data.Array (mapWithIndex, length)
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Engineering.Helpers.Commons (getNewIDWithTag)
+import Engineering.Helpers.Commons (getNewIDWithTag, isTrue)
 import Font.Style as FontStyle
+import Font.Size as FontSize
 import Common.Types.App (LazyCheck(..))
-import JBridge (debounceFunction)
+import JBridge (debounceFunction, showKeyboard)
 import Resources.Constants (getDelayForAutoComplete)
+import Helpers.CommonView (emptyTextView)
+import Debug (spy)
 
 view :: forall w. (Action -> Effect Unit) -> InputViewConfig -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -23,27 +26,28 @@ view push state =
     , orientation VERTICAL
     , padding $ PaddingHorizontal 16 16
     , background Color.black900 
-    ][  backPressView state push
+    ][  if state.headerVisibility then backPressView state push else emptyTextView
       , linearLayout
         [ height WRAP_CONTENT
         , width MATCH_PARENT
         , padding $ PaddingVertical 16 16
         , gravity CENTER_VERTICAL
-        ][  inputImageView push state
-          , textViews push state]
+        ][  if not state.headerVisibility then backPressView state push else emptyTextView
+          , inputImageView push state
+          , inputLayoutViews push state]
         ]
 
 backPressView :: forall w. InputViewConfig -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 backPressView config push = 
   linearLayout
     [ height MATCH_PARENT
-    , width WRAP_CONTENT
+    , width $ if config.headerVisibility then MATCH_PARENT else WRAP_CONTENT
     , padding $ config.backIcon.padding 
-    , onClick push $ const $ BackPress
     ][  imageView
         [ height $ config.backIcon.height 
         , width $ config.backIcon.width
         , imageWithFallback config.backIcon.imageName
+        , onClick push $ const $ BackPressed
         ]
       , textView $
         [ text $ config.headerText
@@ -51,44 +55,43 @@ backPressView config push =
         , color Color.white900  
         , margin $ MarginLeft 8
         ] <> (FontStyle.subHeading2 LanguageStyle)
+      , dateTimePickerButton config push
     ]
 
 
-inputImageView :: forall w. (Action -> Effect Unit ) -> InputViewConfig -> PrestoDOM (Effect Unit) w
-inputImageView push config = 
-  linearLayout
-    [ height WRAP_CONTENT
-    , width $ config.imageLayoutWidth 
-    , orientation VERTICAL
-    , margin $ config.imageLayoutMargin
-    , gravity CENTER
-    ]
-    ( mapWithIndex 
-        ( \index item -> imageAndSeparatorView item index config ) 
-        (config.inputView))
-
-imageAndSeparatorView :: forall w. InputView -> Int -> InputViewConfig -> PrestoDOM (Effect Unit) w
-imageAndSeparatorView item index config = let 
-  lastIndex = (length config.inputView) - 1
-  imageConfig = item.prefixImage
+inputImageView :: forall w. (Action -> Effect Unit) -> InputViewConfig -> PrestoDOM (Effect Unit) w
+inputImageView push config =
+  let
+    lastIndex = (length config.inputView) - 1
   in
-  linearLayout
-    [ height WRAP_CONTENT
-    , width WRAP_CONTENT
-    , orientation VERTICAL 
-    , gravity CENTER
-    ]
-    [ imageView
-        [ height $ imageConfig.height
-        , width $ imageConfig.width
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET imageConfig.imageName 
-        ]
-    , if index /= lastIndex then SeparatorView.view (item.imageSeparator) else textView[height $ V 0, visibility GONE]
-    ]
-
+    linearLayout
+      [ height WRAP_CONTENT
+      , width $ config.imageLayoutWidth
+      , orientation VERTICAL
+      , margin $ config.imageLayoutMargin
+      , gravity CENTER
+      , visibility config.imageLayoutVisibility
+      ]
+      (mapWithIndex (\index item -> prefixImageView push (index /= lastIndex) item) config.inputView)
+  where
+  prefixImageView :: forall w. (Action -> Effect Unit) -> Boolean -> InputView -> PrestoDOM (Effect Unit) w
+  prefixImageView push showSeparator config =
+    linearLayout
+      [ height WRAP_CONTENT
+      , width WRAP_CONTENT
+      , orientation VERTICAL
+      , gravity CENTER
+      ]
+      [ imageView
+          [ height $ config.prefixImage.height
+          , width $ config.prefixImage.width
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET config.prefixImage.imageName
+          ]
+      , if showSeparator then SeparatorView.view (config.imageSeparator) else emptyTextView
+      ]
     
-textViews :: forall w. (Action -> Effect Unit ) -> InputViewConfig -> PrestoDOM (Effect Unit) w
-textViews push config = 
+inputLayoutViews :: forall w. (Action -> Effect Unit ) -> InputViewConfig -> PrestoDOM (Effect Unit) w
+inputLayoutViews push config = 
   linearLayout
     [ height WRAP_CONTENT
     , weight 1.0 
@@ -104,72 +107,138 @@ textViews push config =
         ) 
         (config.inputView))
 
+dateTimePickerButton :: forall w. InputViewConfig -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+dateTimePickerButton config push =
+  linearLayout
+    [ height MATCH_PARENT
+    , weight 1.0
+    , gravity RIGHT
+    , orientation HORIZONTAL
+    , visibility config.suffixButtonVisibility
+    ]
+    [ linearLayout
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
+        , background Color.squidInkBlue
+        , cornerRadius 4.0
+        , padding $ config.suffixButton.padding
+        , gravity config.suffixButton.gravity
+        , onClick push $ const DateTimePickerButtonClicked
+        ]
+        [ imageView
+            [ imageWithFallback $ fetchImage FF_ASSET config.suffixButton.prefixImage
+            , height $ V 16
+            , width $ V 16
+            , margin $ MarginTop 1
+            ]
+        , textView $
+            [ text config.suffixButton.text
+            , margin $ MarginHorizontal 4 4
+            , color Color.black600
+            ] <> FontStyle.subHeading2 LanguageStyle
+        , imageView
+            [ imageWithFallback $ fetchImage FF_ASSET config.suffixButton.suffixImage
+            , height $ V 16
+            , width $ V 16
+            , margin $ MarginTop 1
+            ]
+        ]
+    ]
+
+
 nonEditableTextView :: forall w. (Action -> Effect Unit ) -> InputView -> PrestoDOM (Effect Unit) w
 nonEditableTextView push config = let
-  strokeValue = ((if config.isFocussed then "1," else "0,") <> Color.yellow900)
+  strokeValue = ((if config.inputTextConfig.isFocussed then "1," else "0,") <> Color.yellow900)
   in 
   linearLayout 
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , orientation VERTICAL
-    , gravity CENTER
+    , orientation HORIZONTAL
+    , gravity config.gravity
     , padding $ config.padding 
     , background Color.squidInkBlue
-    , margin $ config.margin
-    , cornerRadius $ config.cornerRadius
+    , margin $ config.inputTextConfig.margin
+    , cornerRadius $ config.inputTextConfig.cornerRadius
     , clickable $ config.isClickable 
-    , onClick push $ const $ TextFieldFocusChanged config.id true
+    , onClick push $ const $ TextFieldFocusChanged config.inputTextConfig.id true true
     , stroke $ strokeValue 
     ]
-    [  textView $ 
-          [ text $ config.textValue
-          , color Color.black600
-          , width MATCH_PARENT
+    [  imageView
+        [ imageWithFallback $ config.inputTextConfig.prefixImageConfig.imageName
+        , height $ config.inputTextConfig.prefixImageConfig.height
+        , width $ config.inputTextConfig.prefixImageConfig.width
+        , visibility $ config.inputTextConfig.prefixImageVisibility
+        ]
+      , textView $ 
+          [ text $ if config.inputTextConfig.textValue == "" then config.inputTextConfig.placeHolder else config.inputTextConfig.textValue
+          , color config.inputTextConfig.textColor
           , height WRAP_CONTENT
           , maxLines 1
           , ellipsize true
-          ] <> (FontStyle.body6 LanguageStyle)
+          ] <> config.fontStyle
      ]
 
 
 inputTextField :: forall w. (Action -> Effect Unit ) -> InputView -> PrestoDOM (Effect Unit) w
-inputTextField push config = 
+inputTextField push config =
   linearLayout 
     [ height WRAP_CONTENT
     , width MATCH_PARENT
     , orientation VERTICAL
-    , margin config.margin 
+    , margin config.inputTextConfig.margin 
     ] 
     [ linearLayout
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , background Color.squidInkBlue
-      , cornerRadius $ config.cornerRadius 
+      , cornerRadius $ config.inputTextConfig.cornerRadius 
       ][  editText $ 
           [ height $ config.height 
           , weight 1.0
           , padding $ config.padding 
-          , color Color.black600
+          , color config.inputTextConfig.textColor
           , gravity LEFT
           , background Color.squidInkBlue
-          , cornerRadius $ config.cornerRadius 
-          , text config.textValue
+          , cornerRadius $ config.inputTextConfig.cornerRadius 
+          , text config.inputTextConfig.textValue
           , selectAllOnFocus true
           , singleLine true
-          , hint config.placeHolder
+          , hint config.inputTextConfig.placeHolder
           , hintColor $ Color.blueGrey
           , pattern "[^\n]*,255"
-          , id $ getNewIDWithTag $ config.id
+          , id $ getNewIDWithTag $ config.inputTextConfig.id
           , onChange (\action -> do 
-              void $ debounceFunction getDelayForAutoComplete push AutoCompleteCallBack config.isFocussed
-              void $ push action
+              case action of 
+                InputChanged text -> if text /= "false" && text /= config.inputTextConfig.textValue then do 
+                  void $ debounceFunction getDelayForAutoComplete push AutoCompleteCallBack config.inputTextConfig.isFocussed
+                  void $ push action
+                  else pure unit 
+                _ -> push action
+              pure unit
             ) InputChanged
-          , onFocus push $ const $ TextFieldFocusChanged config.id true
+          , afterRender (\_ -> do 
+              if (config.inputTextConfig.isFocussed) then do
+                void $ pure $ showKeyboard $ getNewIDWithTag config.inputTextConfig.id 
+                pure unit
+                else 
+                  pure unit
+              ) $ const NoAction
+          , onFocus 
+              (\action -> do 
+                case action of 
+                  TextFieldFocusChanged _ _ hasFocus -> do 
+                    if (isTrue hasFocus) then do 
+                      push action
+                      else  
+                        pure unit
+                  _ -> pure unit
+
+              ) $ TextFieldFocusChanged config.inputTextConfig.id true
           , cursorColor Color.yellow900
-          ] <> FontStyle.body6 LanguageStyle
+          ] <> FontStyle.subHeading1 TypoGraphy
         , crossButtonView push config
         ]
-    , bottomStrokeView $ boolToVisibility config.isFocussed
+    , bottomStrokeView $ boolToVisibility config.inputTextConfig.isFocussed
     ]
 
 crossButtonView :: forall w. (Action -> Effect Unit) -> InputView -> PrestoDOM (Effect Unit) w
@@ -179,7 +248,7 @@ crossButtonView push config =
         , width $ V 32
         , gravity CENTER 
         , padding $ config.clearTextIcon.padding 
-        , onClick push $ const $ ClearTextField config.id
+        , onClick push $ const $ ClearTextField config.inputTextConfig.id
         , visibility $ boolToVisibility config.canClearText
         ][  imageView
             [ height $ config.clearTextIcon.height

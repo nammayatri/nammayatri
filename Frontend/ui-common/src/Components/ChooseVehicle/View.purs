@@ -20,45 +20,43 @@ view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config =
   let isActiveIndex = config.index == config.activeIndex
   in 
-  linearLayout
-  [ width MATCH_PARENT
-  , height WRAP_CONTENT
-  , background if isActiveIndex then Color.blue600 else Color.white900
-  , cornerRadius 6.0
-  , id $ EHC.getNewIDWithTag config.id
-  , stroke $ if isActiveIndex then "2," <> Color.blue800 else "1," <> Color.white900
-  , margin $ config.layoutMargin
-  , padding $ Padding 8 16 12 16
-  , clickable config.isEnabled
-  , onClick push $ const $ OnSelect config
-  , afterRender push (const NoAction)
-  ][ linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , afterRender push (const NoAction)
-      ][ imageView
-          [ imageWithFallback config.vehicleImage
-          , height $ V 48
-          , width $ V 60
-          ]
-        , linearLayout
-          [ weight 1.0
-          , height WRAP_CONTENT
-          , orientation VERTICAL
-          , padding $ PaddingLeft 8
-          ][ vehicleDetailsView push config
-           , capacityView push config 
-          ]
-        , linearLayout
-          [ width WRAP_CONTENT
-          , height WRAP_CONTENT
-          , gravity RIGHT
-          , afterRender push (const NoAction)
-          ][priceDetailsView push config]
-      ]
-
-
-  ]
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , background if isActiveIndex then Color.blue600 else Color.white900
+    , cornerRadius 6.0
+    , id $ EHC.getNewIDWithTag config.id
+    , stroke $ if isActiveIndex && config.showStroke then "2," <> Color.blue800 else "1," <> Color.white900
+    , margin $ config.layoutMargin
+    , padding $ Padding 8 16 12 16
+    , clickable config.isEnabled
+    , onClick push $ const $ OnSelect $ spy " INside choose vehic; " config
+    , afterRender push (const NoAction)
+    ][ linearLayout
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , afterRender push (const NoAction)
+        ][ imageView
+            [ imageWithFallback config.vehicleImage
+            , height $ V 48
+            , width $ V 60
+            ]
+          , linearLayout
+            [ weight 1.0
+            , height WRAP_CONTENT
+            , orientation VERTICAL
+            , padding $ PaddingLeft 8
+            ][ vehicleDetailsView push config
+            , capacityView push config 
+            ]
+          , linearLayout
+            [ width WRAP_CONTENT
+            , height WRAP_CONTENT
+            , gravity RIGHT
+            , afterRender push (const NoAction)
+            ][priceDetailsView push config]
+        ]
+    ]
 
 vehicleDetailsView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 vehicleDetailsView push config =
@@ -105,7 +103,6 @@ priceDetailsView push config =
     , orientation HORIZONTAL
     , padding $ PaddingLeft 8
     , gravity $ RIGHT
-    , onClick push $ const $ ShowRateCard config
     ]
     [ textView
         $ [ width WRAP_CONTENT
@@ -120,6 +117,7 @@ priceDetailsView push config =
         , height $ V 15
         , margin $ Margin 4 6 0 0
         , visibility $ boolToVisibility config.showInfo
+        , onClick push $ const $ ShowRateCard config
         ]
     ]
 

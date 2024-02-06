@@ -114,6 +114,7 @@ getTripDetails state color =
     , destination: ride.destination
     , onAnimationEnd: NoAction
     , backgroundColor: color
+    , rideType : Common.NORMAL_RIDE
     }
 
 getCurrentFollower :: Maybe Followers -> Followers

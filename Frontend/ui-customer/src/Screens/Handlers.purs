@@ -54,3 +54,4 @@ import Screens.RideSelectionScreen.Handler (rideSelection) as UI
 import Screens.ReportIssueChatScreen.Handler (reportIssueChatScreen) as UI
 import Screens.SearchLocationScreen.View (searchLocationScreen) as UI
 import Screens.FollowRideScreen.Handler (followRideScreen) as UI
+import Screens.RentalBookingFlow.RentalScreen.View (rentalScreen) as UI

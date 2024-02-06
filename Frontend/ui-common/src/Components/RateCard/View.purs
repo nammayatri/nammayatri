@@ -24,8 +24,6 @@ import Animation (translateInXForwardAnim, translateInXBackwardAnim)
 import Effect (Effect)
 import Font.Size as FontSize
 import Font.Style as FontStyle
-import Language.Strings (getString)
-import Language.Types (STR(..))
 import Prelude (Unit, ($), const, (<>), (>),(==), (||), (&&), (/), (*), (/=), (+), (<<<), unit)
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Visibility(..), background, color, cornerRadius, imageUrl, fontStyle, gravity, height, imageView, textFromHtml,imageWithFallback, linearLayout, margin, onClick, orientation, padding, text, textSize, textView, visibility, weight, width, lineHeight,fontStyle, scrollView, maxLines, singleLine)
 import PrestoDOM.Properties (cornerRadii)
@@ -39,6 +37,7 @@ import Data.Maybe (Maybe(..))
 import Components.PrimaryButton as PrimaryButton
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
 import Engineering.Helpers.Commons (os, screenWidth)
+import Mobility.Prelude (boolToVisibility)
 
 view :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w 
 view push config = 
@@ -69,21 +68,24 @@ view push config =
            , height WRAP_CONTENT
            , orientation VERTICAL
            , padding $ Padding 16 22 16 0
+           , gravity LEFT
            ][ commonTV push config.title (if config.nightCharges then Color.white900 else Color.black800) FontStyle.h1 LEFT 0 NoAction
             , commonTV push config.description (if config.nightCharges then Color.black500 else Color.black700) FontStyle.tags LEFT 3 NoAction
             ]
-         , imageView
-           [ width MATCH_PARENT
-           , height $ V 90
-           , imageWithFallback $ fetchImage FF_COMMON_ASSET $ 
-              case config.currentRateCardType of
-              PaymentFareBreakup -> ""
-              _ -> if config.nightCharges then "ny_ic_night" else "ny_ic_day"
-           ]  
+         , if config.currentRateCardType == RentalRateCard then suffixTitleImageView push config
+           else imageView
+            [ width MATCH_PARENT
+            , height $ V 90
+            , imageWithFallback $ fetchImage FF_COMMON_ASSET $ 
+                case config.currentRateCardType of
+                PaymentFareBreakup -> ""
+                _ -> if config.nightCharges then "ny_ic_night" else "ny_ic_day"
+            ]  
          ]
       ,linearLayout
         [ width MATCH_PARENT
-        , height if config.currentRateCardType == PaymentFareBreakup then WRAP_CONTENT else if config.showDetails then  (V 350) else (V 250) -- check in IOS (Added to handle glitch)
+        , height $ if DA.any (_ == config.currentRateCardType) [PaymentFareBreakup, RentalRateCard] then WRAP_CONTENT 
+                   else if config.showDetails then V 350 else V 250 -- check in IOS (Added to handle glitch)
         , orientation HORIZONTAL
         ][PrestoAnim.animationSet [ if (DA.any (_ == config.currentRateCardType) [ PaymentFareBreakup, DefaultRateCard]) then (translateInXBackwardAnim config.onFirstPage) else (translateInXForwardAnim true) ] $
           case config.currentRateCardType of 
@@ -92,14 +94,16 @@ view push config =
             FareUpdate -> fareUpdateView push config
             PaymentFareBreakup -> paymentfareBreakup push config
             WaitingCharges -> waitingChargesView push config
+            RentalRateCard -> rentalRateCardView push config
             _ -> defaultRateCardView push config 
-        ]     
+        ]
       ,linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
       , padding $ PaddingBottom 20
+      , visibility $ boolToVisibility $ config.currentRateCardType /= RentalRateCard
       ][ case config.buttonText of
-          Just text ->  commonTV push text Color.blue800 FontStyle.subHeading1 CENTER 8 (if config.currentRateCardType == DefaultRateCard then Close else GoToDefaultStart)
+          Just text ->  commonTV push text Color.blue800 FontStyle.subHeading1 CENTER 8 (if DA.any (_ == config.currentRateCardType) [DefaultRateCard, RentalRateCard] then Close else GoToDefaultStart)
           Nothing -> linearLayout[][]
       ]
     ]      
@@ -378,13 +382,13 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config
       { textConfig
-      { text = state.primaryButtonText
-      , color = Color.yellow900
+      { text = state.primaryButtonConfig.text
+      , color = state.primaryButtonConfig.color
       }
-      , margin = MarginVertical 20 10
-      , cornerRadius = 8.0
-      , background = Color.black900
-      , height = V 54
+      , margin = state.primaryButtonConfig.margin
+      , cornerRadius = state.primaryButtonConfig.cornerRadius
+      , background = state.primaryButtonConfig.background
+       , height = state.primaryButtonConfig.height
       , id = "RateCardButton"
       }
   in primaryButtonConfig'
@@ -410,3 +414,42 @@ getStringByKey config key = do
   case arr DA.!! 0 of
     Just ob -> ob.val
     Nothing -> ""
+
+suffixTitleImageView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+suffixTitleImageView push config =
+  linearLayout 
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
+  ]
+  [ linearLayout [weight 1.0] []
+  , imageView
+    [ height MATCH_PARENT
+    , width $ V 81
+    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_suv_right"
+    , gravity RIGHT
+    ] 
+  ]
+
+rentalRateCardView :: forall w. (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+rentalRateCardView push config =
+  linearLayout
+  [ height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation VERTICAL
+  , padding $ PaddingHorizontal 16 16
+  , margin $ MarginBottom 12
+  ]
+  [ commonTV push (getStringByKey config "FINAL_FARE_DESCRIPTION") Color.black650 FontStyle.paragraphText LEFT 16 NoAction
+  , commonTV push (getStringByKey config "EXCESS_DISTANCE_CHARGE_DESCRIPTION") Color.black650 FontStyle.paragraphText LEFT 20 NoAction
+  , imageView
+    [ height $ V 118
+    , width MATCH_PARENT
+    , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_rental_hourly_charge"
+    , margin $ MarginVertical 12 12
+    , gravity CENTER
+    ]
+  , commonTV push (getStringByKey config "NIGHT_TIME_FEE_DESCRIPTION") Color.black650 FontStyle.paragraphText LEFT 0 NoAction
+  , commonTV push (getStringByKey config "PARKING_FEES_AND_TOLLS_NOT_INCLUDED") Color.black650 FontStyle.paragraphText LEFT 20 NoAction
+  , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig config)
+  ]

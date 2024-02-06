@@ -36,7 +36,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.HomeScreen.Transformer (dummyRideAPIEntity)
 import Screens.Types (HelpAndSupportScreenState, DeleteStatus(..), IssueInfo, IssueModalType(..))
 import Services.API (IssueReportCustomerListItem(..), RideBookingRes(..), FareBreakupAPIEntity(..), RideAPIEntity(..), BookingLocationAPIEntity(..), RideBookingAPIDetails(..), RideBookingListRes(..))
-import Screens.MyRidesScreen.ScreenData (dummyIndividualCard)
+import Screens.MyRidesScreen.ScreenData (dummyIndividualCard, dummyBookingDetails)
 import Data.String 
 import Storage (getValueToLocalStore, KeyStore(..))
 import Common.Types.App (LazyCheck(..), CategoryListType)
@@ -69,7 +69,7 @@ myRideListTransform state listRes = filter (\item -> (item.data.status == "COMPL
           date : (convertUTCtoISC (ride.createdAt) "ddd, Do MMM"),
           time : (convertUTCtoISC (fromMaybe (ride.createdAt) ride.rideStartTime ) "h:mm A"),
           source: decodeAddress (Booking ride.fromLocation),
-          destination: (decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation))),
+          destination: (decodeAddress (Booking (fromMaybe dummyBookingDetails (ride.bookingDetails ^._contents^._toLocation)))),
           rating: (fromMaybe 0 ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _rideRating)),
           driverName :((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _driverName) ,
           totalAmount : (config.currency <> " " <> show (fromMaybe (0) ((fromMaybe dummyRideAPIEntity (ride.rideList !!0) )^. _computedPrice))),

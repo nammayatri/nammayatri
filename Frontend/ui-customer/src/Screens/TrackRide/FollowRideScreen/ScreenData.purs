@@ -73,6 +73,7 @@ mockRoute =
     { boundingBox: Nothing
     , distance: 1671
     , duration: 150
+    , pointsForRentals : Nothing
     , points:
         Snapped
           [ LatLong

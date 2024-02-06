@@ -43,6 +43,7 @@ import Resources.Constants (DecodeAddress(..), decodeAddress, getAddressFromBook
 import Data.Foldable (foldl)
 import Data.Lens((^.))
 import Accessor (_contents, _lat, _lon, _toLocation, _otpCode)
+import Screens.MyRidesScreen.ScreenData (dummyBookingDetails)
 
 foreign import encodeGeohash :: Fn3 Number Number Int String
 foreign import geohashNeighbours :: String -> Array String
@@ -265,7 +266,7 @@ rideListToTripsTransformer listRes =
     transformBooking (RideBookingRes ride) =
       let
        sourceAddressTransformed = getAddressFromBooking ride.fromLocation
-       toLocationTransformed = ((ride.bookingDetails)^._contents)^._toLocation
+       toLocationTransformed = fromMaybe dummyBookingDetails (((ride.bookingDetails)^._contents)^._toLocation)
        destinationAddressTransformed = getAddressFromBooking $ toLocationTransformed
        in {  sourceLat : (ride.fromLocation)^._lat,
              sourceLong : (ride.fromLocation)^._lon,
@@ -273,7 +274,7 @@ rideListToTripsTransformer listRes =
              destLong : toLocationTransformed^._lon,
              recencyDate : Just  (fromMaybe ride.createdAt ride.rideStartTime),
              source :  decodeAddress (Booking ride.fromLocation),
-             destination : decodeAddress (Booking (ride.bookingDetails ^._contents^._toLocation)),
+             destination : decodeAddress (Booking (fromMaybe dummyBookingDetails (ride.bookingDetails ^._contents^._toLocation))),
              sourceAddress : sourceAddressTransformed,
              destinationAddress : destinationAddressTransformed,
              isSpecialZone : (null ride.rideList || isJust (ride.bookingDetails ^._contents^._otpCode)),

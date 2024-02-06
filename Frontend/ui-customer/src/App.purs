@@ -51,7 +51,7 @@ import Screens.TicketBookingFlow.TicketBooking.ScreenData as TicketBookingScreen
 import Screens.TicketInfoScreen.ScreenData as TicketInfoScreenData
 import Screens.TicketBookingFlow.PlaceList.ScreenData as TicketingScreenData
 import Screens.SearchLocationScreen.ScreenData as SearchLocationScreenData
-import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, RideSelectionScreenState, ReportIssueChatScreenState, IssueInfo, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState ) 
+import Screens.Types (AboutUsScreenState, AccountSetUpScreenState, AddNewAddressScreenState, AppUpdatePopUpState, ChooseLanguageScreenState, ContactUsScreenState, EnterMobileNumberScreenState, HelpAndSupportScreenState, HomeScreenState, InvoiceScreenState, LocItemType, LocationListItemState, MyProfileScreenState, MyRidesScreenState, PermissionScreenState, SavedLocationScreenState, SelectLanguageScreenState, SplashScreenState, TripDetailsScreenState, ReferralScreenState, EmergencyContactsScreenState, CallType, WelcomeScreenState, PermissionScreenStage, TicketBookingScreenState, TicketInfoScreenState, Trip(..), TicketingScreenState, RideScheduledScreenState, RideSelectionScreenState, ReportIssueChatScreenState, IssueInfo, SearchLocationScreenState, GlobalProps, NammaSafetyScreenState, FollowRideScreenState, RentalScreenState ) 
 import Screens.FollowRideScreen.ScreenData as FollowRideScreenData
 import Screens.AppUpdatePopUp.ScreenData as AppUpdatePopUpScreenData
 import Foreign.Object ( Object(..), empty)
@@ -61,6 +61,7 @@ import MerchantConfig.Types (AppConfig)
 import Data.Maybe (Maybe(..))
 import Screens.RentalBookingFlow.RideScheduledScreen.ScreenData as RideScheduledScreenData
 import Common.Types.App (CategoryListType)
+import Screens.RentalBookingFlow.RentalScreen.ScreenData as RentalScreenData
 
 type FlowBT e a = BackT (ExceptT e (Free (FlowWrapper GlobalState))) a
 
@@ -97,6 +98,7 @@ newtype GlobalState = GlobalState {
   , rideSelectionScreen :: RideSelectionScreenState
   , reportIssueChatScreen :: ReportIssueChatScreenState
   , nammaSafetyScreen :: NammaSafetyScreenState
+  , rentalScreen :: RentalScreenState
   }
 
 defaultGlobalState :: GlobalState
@@ -133,6 +135,7 @@ defaultGlobalState = GlobalState {
   , rideSelectionScreen : RideSelectionScreenData.initData
   , reportIssueChatScreen : ReportIssueChatScreenData.initData
   , nammaSafetyScreen : NammaSafetyScreenData.initData
+  , rentalScreen : RentalScreenData.initData
   }
 
 defaultGlobalProps :: GlobalProps 
@@ -219,7 +222,6 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | EXIT_TO_TICKETING HomeScreenState
                         | GO_TO_HELP_AND_SUPPORT 
                         | REALLOCATE_RIDE HomeScreenState
-                        | GO_TO_RENTALS_FLOW
                         | GO_TO_SCHEDULED_RIDES
                         | ADD_STOP HomeScreenState
                         | SAFETY_SUPPORT HomeScreenState Boolean
@@ -227,6 +229,10 @@ data HOME_SCREEN_OUTPUT = LOGOUT
                         | GO_TO_NOTIFY_RIDE_SHARE HomeScreenState
                         | EXIT_TO_FOLLOW_RIDE
                         | GO_TO_REPORT_SAFETY_ISSUE HomeScreenState
+                        | GO_TO_RENTALS_FLOW HomeScreenState
+                        | GO_TO_SEARCH_LOCATION_SCREEN HomeScreenState Boolean
+                        | GO_TO_RIDE_SEARCH_FLOW 
+                        | CONFIRM_RENTAL_RIDE
 
 data SELECT_LANGUAGE_SCREEN_OUTPUT = GO_TO_HOME_SCREEN | UPDATE_LANGUAGE SelectLanguageScreenState
 
@@ -296,3 +302,4 @@ data ScreenType =
   | GlobalPropsType (GlobalProps -> GlobalProps) 
   | NammaSafetyScreenStateType (NammaSafetyScreenState -> NammaSafetyScreenState)
   | FollowRideScreenStateType (FollowRideScreenState -> FollowRideScreenState)
+  | RentalScreenStateType (RentalScreenState -> RentalScreenState)

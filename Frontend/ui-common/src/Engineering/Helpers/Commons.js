@@ -529,3 +529,31 @@ export const getValueFromIdMap = function (key) {
   }
   return val;
 };
+
+export const isTrue = function (a) {
+  const bool = true;
+  return a.toString() === bool.toString();
+}
+
+export const convertDateTimeConfigToUTCImpl = function (year, month, day, hour, minute, second) {
+  const dateIST = new Date(year, month - 1, day, hour, minute, second);
+  return new Date(dateIST).toISOString();
+};
+
+export const getUTCAfterNSecondsImpl = function (str, seconds) {
+  const date = new Date(str);
+  date.setSeconds(date.getSeconds() + seconds);
+  return date.toISOString();
+}
+
+export const compareUTCDateImpl = function (date1, date2) {
+  const d1 = new Date(date1);
+  const d2 = new Date(date2);
+  return d1.getTime() - d2.getTime();
+}
+
+export const getUTCAfterNHoursImpl = function (str, hours) {
+  const date = new Date(str);
+  date.setHours(date.getHours() + hours);
+  return date.toISOString();
+}
