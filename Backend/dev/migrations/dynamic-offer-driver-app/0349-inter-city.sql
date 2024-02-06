@@ -149,3 +149,6 @@ INSERT INTO atlas_driver_offer_bpp.merchant_state (allowed_destination_states, m
 SELECT ARRAY_AGG(DISTINCT state), merchant_id, state
 FROM atlas_driver_offer_bpp.merchant_operating_city
 GROUP BY merchant_id, state;
+
+insert into fare_product (id, merchant_id, fare_policy_id, vehicle_variant, area, flow, merchant_operating_city_id, trip_category)
+(select md5(random()::text || clock_timestamp()::text)::uuid as id, merchant_id, fare_policy_id, vehicle_variant, area, flow, merchant_operating_city_id, 'InterCity_OneWayOnDemandStaticOffer' as trip_category from fare_product where area = 'Default' and trip_category = 'OneWay_OneWayOnDemandDynamicOffer');
