@@ -83,6 +83,7 @@ dependencies:
   - servant-openapi3
   - unordered-containers
   - beckn-services
+  - utf8-string
 
 ghc-options:
   - -Wall
