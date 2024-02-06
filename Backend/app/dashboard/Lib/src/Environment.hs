@@ -32,6 +32,7 @@ import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
+import System.Environment
 import Tools.Metrics
 import Tools.Streaming.Kafka
 
@@ -104,7 +105,8 @@ data AppEnv = AppEnv
     slackEnv :: SlackEnv,
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     cacheConfig :: CacheConfig,
-    kafkaProducerTools :: KafkaProducerTools
+    kafkaProducerTools :: KafkaProducerTools,
+    cacAclMap :: [(String, [(String, String)])]
   }
   deriving (Generic)
 
@@ -132,6 +134,8 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
       else connectHedisCluster hedisNonCriticalClusterCfg modifierFunc
   isShuttingDown <- mkShutdown
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  cacAclMapRaw <- fromMaybe (error "AUTH_MAP not found in Env !!!!") <$> lookupEnv "AUTH_MAP"
+  let cacAclMap = fromMaybe (error "Unable to Parse AUTH_MAP of CAC") ((readMaybe cacAclMapRaw) :: Maybe [(String, [(String, String)])])
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

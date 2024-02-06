@@ -34,6 +34,7 @@ library
       Dashboard.Common.Message
       Dashboard.Common.Ride
       Dashboard.Common.SpecialZone
+      Dashboard.ProviderPlatform.CacAuth
       Dashboard.ProviderPlatform.Driver
       Dashboard.ProviderPlatform.Driver.Coin
       Dashboard.ProviderPlatform.Driver.Registration

@@ -102,3 +102,22 @@ instance IsHTTPError MerchantError where
     MerchantAccountLimitExceeded _ -> E400
 
 instance IsAPIError MerchantError
+
+------------------ CAC ---------------------
+-- This is for temporary implementation of the CAC auth API. This will be depcricated once we have SSO for CAC.
+data CacAuthError = CacAuthError
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''CacAuthError
+
+instance IsBaseError CacAuthError where
+  toMessage = \case
+    CacAuthError -> Just "Invalid Auth Token !!!!!!!!"
+
+instance IsHTTPError CacAuthError where
+  toErrorCode = \case
+    CacAuthError -> "CAC_AUTH_ERROR"
+  toHttpCode = \case
+    CacAuthError -> E401
+
+instance IsAPIError CacAuthError
