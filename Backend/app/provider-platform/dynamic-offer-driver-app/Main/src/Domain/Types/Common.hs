@@ -101,6 +101,7 @@ isRideOtpBooking _ = False
 -- Move it to configs later if required
 isEndOtpRequired :: TripCategory -> Bool
 isEndOtpRequired (Rental _) = True
+isEndOtpRequired (InterCity _) = True
 isEndOtpRequired _ = False
 
 -- Move it to configs later if required

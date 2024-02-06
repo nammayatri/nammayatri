@@ -42,28 +42,33 @@ myShardKey = "MyShard:Key"
 
 getMyShardKey :: Flow Text
 getMyShardKey = do
-  setName <- asks (.schedulerSetName)
   maxShards <- asks (.maxShards)
   myShardId <- (`mod` maxShards) . fromIntegral <$> Hedis.incr myShardKey
-  return $ setName <> "{" <> show myShardId <> "}"
+  return $ show myShardId
+
+getShardedKey :: Text -> Text -> Text
+getShardedKey key shardId = key <> "{" <> shardId <> "}"
 
 runProducer :: Flow ()
 runProducer = do
-  Hedis.whenWithLockRedis producerLockKey 10 $ do
+  myShardId <- getMyShardKey
+  Hedis.whenWithLockRedis (getShardedKey producerLockKey myShardId) 10 $ do
     someErr <-
       try @_ @SomeException $ do
         begTime <- getCurrentTimestamp
-        producerTimestampKey <- asks (.producerTimestampKey)
+        producerTimestampKeyPrefix <- asks (.producerTimestampKey)
+        let producerTimestampKey = getShardedKey producerTimestampKeyPrefix myShardId
         startTime <- getTime begTime producerTimestampKey
         endTime <- getCurrentTimestamp
-        myShardKey <- getMyShardKey
-        currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore myShardKey startTime endTime
+        setName <- asks (.schedulerSetName)
+        let myShardSetKey = getShardedKey setName myShardId
+        currentJobs <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRangeByScore myShardSetKey startTime endTime
         logDebug $ "Jobs taken out of sortedset : " <> show currentJobs
         logDebug $ "Job chunks produced to be inserted into stream : " <> show currentJobs
         Hedis.set producerTimestampKey endTime
         result <- insertIntoStream currentJobs
         logDebug $ "Jobs inserted into stream with timeStamp :" <> show result
-        _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore myShardKey startTime endTime
+        _ <- Hedis.withNonCriticalCrossAppRedis $ Hedis.zRemRangeByScore myShardSetKey startTime endTime
         endTime <- getCurrentTimestamp
         let diff = endTime - begTime
         waitTimeMilliSec <- asks (.waitTimeMilliSec)

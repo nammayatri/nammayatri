@@ -51,12 +51,13 @@ createJobFunc :: (HedisFlow m r, HasField "schedulerSetName" r Text, HasField "m
 createJobFunc (AnyJob job) = do
   key <- getShardKey
   Hedis.withNonCriticalCrossAppRedis $ Hedis.zAdd key [(utcToMilliseconds job.scheduledAt, AnyJob job)]
-  where
-    getShardKey = do
-      setName <- asks (.schedulerSetName)
-      maxShards <- asks (.maxShards)
-      myShardId <- (`mod` maxShards) . fromIntegral <$> Hedis.incr getShardIdKey
-      return $ setName <> "{" <> show myShardId <> "}"
+
+getShardKey :: (HedisFlow m r, HasField "schedulerSetName" r Text, HasField "maxShards" r Int) => m Text
+getShardKey = do
+  setName <- asks (.schedulerSetName)
+  maxShards <- asks (.maxShards)
+  myShardId <- (`mod` maxShards) . fromIntegral <$> Hedis.incr getShardIdKey
+  return $ setName <> "{" <> show myShardId <> "}"
 
 createJobByTime :: forall t (e :: t) m r. (JobFlow t e, JobCreator r m) => Text -> UTCTime -> Int -> JobContent e -> m ()
 createJobByTime uuid byTime maxShards jobData = do
@@ -158,7 +159,7 @@ updateKey _ _ other = other
 reSchedule :: forall t m r. (JobCreator r m, HasField "schedulerSetName" r Text, JobProcessor t, ToJSON t) => AnyJob t -> UTCTime -> m ()
 reSchedule j byTime = do
   let jobJson = toJSON j
-  key <- asks (.schedulerSetName)
+  key <- getShardKey
   case toJSON byTime of
     A.String newScheduleTime -> do
       let newJOB = updateKey "scheduledAt" newScheduleTime jobJson
