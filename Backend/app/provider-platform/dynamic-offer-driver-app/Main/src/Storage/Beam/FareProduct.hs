@@ -30,7 +30,8 @@ data FareProductT f = FareProductT
     farePolicyId :: B.C f Text,
     vehicleVariant :: B.C f Variant.Variant,
     area :: B.C f Domain.Area,
-    tripCategory :: B.C f TripCategory
+    tripCategory :: B.C f TripCategory,
+    timeBounds :: B.C f Domain.TimeBound
   }
   deriving (Generic, B.Beamable)
 

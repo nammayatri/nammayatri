@@ -47,24 +47,44 @@ findAllFareProductForVariants (Id merchantOpCityId) tripCategory area =
     [ Se.And
         [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
           Se.Is BeamFP.area $ Se.Eq area,
-          Se.Is BeamFP.tripCategory $ Se.Eq tripCategory
+          Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
+          Se.Is BeamFP.timeBounds $ Se.Eq Domain.Unbounded
         ]
     ]
 
-findByMerchantOpCityIdVariantArea ::
+findAllBoundedByMerchantOpCityIdVariantArea ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  TripCategory ->
+  Variant ->
+  Domain.Area ->
+  m [Domain.FareProduct]
+findAllBoundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory vehicleVariant area =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+          Se.Is BeamFP.area $ Se.Eq area,
+          Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant,
+          Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
+          Se.Is BeamFP.timeBounds $ Se.Not $ Se.Eq Domain.Unbounded
+        ]
+    ]
+
+findUnboundedByMerchantOpCityIdVariantArea ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   TripCategory ->
   Variant ->
   Domain.Area ->
   m (Maybe Domain.FareProduct)
-findByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory vehicleVariant area =
+findUnboundedByMerchantOpCityIdVariantArea (Id merchantOpCityId) tripCategory vehicleVariant area =
   findOneWithKV
     [ Se.And
         [ Se.Is BeamFP.merchantOperatingCityId $ Se.Eq merchantOpCityId,
           Se.Is BeamFP.area $ Se.Eq area,
           Se.Is BeamFP.vehicleVariant $ Se.Eq vehicleVariant,
-          Se.Is BeamFP.tripCategory $ Se.Eq tripCategory
+          Se.Is BeamFP.tripCategory $ Se.Eq tripCategory,
+          Se.Is BeamFP.timeBounds $ Se.Eq Domain.Unbounded
         ]
     ]
 
