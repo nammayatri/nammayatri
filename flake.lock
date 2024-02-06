@@ -3140,16 +3140,15 @@
     },
     "services-flake_2": {
       "locked": {
-        "lastModified": 1707137434,
-        "narHash": "sha256-dBUtJ39p/9Wlg4roZBubvJLx+LZWmmzpo/Yjv+jLUKU=",
-        "owner": "roman-bodavskiy",
+        "lastModified": 1708407362,
+        "narHash": "sha256-MtA8Q1XiJAeoUkjTH8jvYeW2JDG2M+amWHZLGZU1YBk=",
+        "owner": "juspay",
         "repo": "services-flake",
-        "rev": "433dda6c55747cca2cf0307de5b2645d4e8aacb0",
+        "rev": "dafaeb048d0445ef87f3a29c114161168c095896",
         "type": "github"
       },
       "original": {
-        "owner": "roman-bodavskiy",
-        "ref": "clickhouse",
+        "owner": "juspay",
         "repo": "services-flake",
         "type": "github"
       }
@@ -3171,11 +3170,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1707138043,
-        "narHash": "sha256-A4IxOfGf4z4otz/taEMWRWiZCcK7sV46n84GAK+IAzw=",
+        "lastModified": 1708430453,
+        "narHash": "sha256-gCeHNxgFWNh1vZ55z1g6Od0Tvvjq0dPjaiMvZGMrxC8=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "9708ef8e2491e47d66f02e9c060bc798cfe2d4cf",
+        "rev": "390e3c93711a1deccb18350cf879eda11d136771",
         "type": "github"
       },
       "original": {
