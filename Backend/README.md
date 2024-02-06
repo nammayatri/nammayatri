@@ -12,27 +12,16 @@ To build or develop the project, you need to install the following.
 [Nix](https://nixos.asia/en/nix) is central to building and developing the [Namamayatri][nammayatri] project. To prepare your system for a pleasant [Nix-based development](https://nixos.asia/en/dev), follow these four steps:
 
 1. [Install **Nix**](https://nixos.asia/en/install)
-1. Run `nix run nixpkgs#nix-health github:nammayatri/nammayatri` and make sure that everything is green (✅)
 1. Setup the Nix **binary cache** (to avoid compiling locally for hours):
     ```sh
     nix run nixpkgs#cachix use nammayatri
     ```
     - For this command to succeed, you should add yourself to the `trusted-users` list of `nix.conf` and then restart the Nix daemon using `sudo pkill nix-daemon`.
 1. Install **home-manager**[^hm] and setup **nix-direnv** and **starship** by following the instructions [in this home-manager template](https://github.com/juspay/nix-dev-home).[^direnv] You want this to facilitate a nice Nix develoment environment. Read more about direnv [here](https://nixos.asia/en/direnv).
+1. Run `nix run nixpkgs#nix-health github:nammayatri/nammayatri` and make sure that everything is green (✅) or Amber (🟧)
 
 [^hm]: Unless you are using NixOS in which case home-manager is not strictly needed.
 [^direnv]: Not strictly required to develop nammayatri. If you do not use `direnv` however you would have to remember to manually restart the `nix develop` shell, and know when exactly to do this each time.
-
-#### Other tools
-
-Aside from Nix, you also need to:
-
-1. Install [Docker](https://www.docker.com/products/docker-desktop/)[^when-docker] (we use [arion]--a `docker-compose` invoker in Nix--for running external service dependencies).
-    - If you are on macOS, open *Docker -> Preferences... -> Resources -> File Sharing* in Docker Desktop and add `/nix/store` to the list of shared folders. ![image](https://user-images.githubusercontent.com/3998/235455381-f88466b7-ee29-4baf-b0a9-4ddcf54ba402.png)
-
-1. Install [Xcode](https://developer.apple.com/xcode/), if you are on macOS.
-
-[^when-docker]: Docker is only used to run monitoring tools and pgadmin, native support for them is WIP in [services-flake]: [Grafana](https://github.com/juspay/services-flake/issues/59), [Prometheus](https://github.com/juspay/services-flake/issues/60), [pgadmin](https://github.com/juspay/services-flake/issues/80)
 
 ### Building
 
@@ -51,6 +40,8 @@ This should produce a `./result` symlink in the current directory, containing al
 **🚧 Warning 🚧**: The `nix build` command should _only_ build the nammayatri project and it should finish in a matter of minutes. If not, you must not have setup the Nix cache properly. Consult [the steps further above](#nix).
 
 #### Building the docker image
+
+**🚨 Attention 🚨**: You can skip this step if you intend to run locally only.
 
 ```sh
 docker load -i $(nix build .#dockerImage --no-link --print-out-paths)
@@ -83,6 +74,7 @@ To compile the project, use [cabal]:
 cd ./Backend
 # Build all packages
 cabal build all
+# Once the build is complete, you will be able to run backend services directly
 # Run a cabal package (by path to the directory containing .cabal file)
 cabal run lib/location-updates
 # Run ghcid (for fast compile feedback)
