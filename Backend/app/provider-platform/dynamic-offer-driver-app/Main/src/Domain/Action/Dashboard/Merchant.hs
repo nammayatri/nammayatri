@@ -275,7 +275,7 @@ driverPoolConfigUpdate merchantShortId opCity tripDistance mbVariant mbTripCateg
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let tripCategory = fromMaybe "All" mbTripCategory
-  let variant = maybe "All" (show . castVehicleVariant) mbVariant
+  let variant = castVehicleVariant <$> mbVariant
   config <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant tripCategory >>= fromMaybeM (DriverPoolConfigDoesNotExist merchantOpCityId.getId tripDistance)
   let updConfig =
         config{minRadiusOfSearch = maybe config.minRadiusOfSearch (.value) req.minRadiusOfSearch,
@@ -320,7 +320,7 @@ driverPoolConfigCreate merchantShortId opCity tripDistance mbVariant mbTripCateg
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let tripCategory = fromMaybe "All" mbTripCategory
-  let variant = maybe "All" (show . castVehicleVariant) mbVariant
+  let variant = castVehicleVariant <$> mbVariant
   mbConfig <- CQDPC.findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant tripCategory
   whenJust mbConfig $ \_ -> throwError (DriverPoolConfigAlreadyExists merchantOpCityId.getId tripDistance)
   newConfig <- buildDriverPoolConfig merchant.id merchantOpCityId tripDistance variant tripCategory req
@@ -335,12 +335,13 @@ buildDriverPoolConfig ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Meters ->
-  Text ->
+  Maybe DVeh.Variant ->
   Text ->
   Common.DriverPoolConfigCreateReq ->
   m DDPC.DriverPoolConfig
 buildDriverPoolConfig merchantId merchantOpCityId tripDistance vehicleVariant tripCategory Common.DriverPoolConfigCreateReq {..} = do
   now <- getCurrentTime
+  id <- generateGUID
   pure
     DDPC.DriverPoolConfig
       { merchantId,

@@ -5,11 +5,13 @@ imports:
   PoolSortingType: SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config
   Seconds: Kernel.Types.Common
   IndianState: Kernel.Types.Beckn.Context
+  Variant: Domain.Types.Vehicle.Variant
 
 DriverPoolConfig:
   tableName: driver_pool_config
 
   fields:
+    id : Id DriverPoolConfig
     merchantId : Id Merchant
     merchantOperatingCityId : Id MerchantOperatingCity
     minRadiusOfSearch : Meters
@@ -33,24 +35,20 @@ DriverPoolConfig:
     scheduleTryTimes : '[Int]'
     createdAt : UTCTime
     updatedAt : UTCTime
-    vehicleVariant : Text
+    vehicleVariant : Maybe Variant
     tripCategory : Text
 
   constraints:
-    tripDistance: PrimaryKey
-    merchantOperatingCityId: PrimaryKey
-    vehicleVariant: PrimaryKey
-    tripCategory: PrimaryKey
+    id: PrimaryKey
 
   sqlType:
     distanceBasedBatchSplit: text[]
     scheduleTryTimes: integer[]
 
   default:
-    vehicleVariant: "'All'"
     tripCategory: "'All'"
     distanceBasedBatchSplit: "Array ['BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 0 }', 'BatchSplitByPickupDistance { batchSplitSize = 1, batchSplitDelay = 4 }']"
-    scheduleTryTimes: "'{}'"
+    scheduleTryTimes: "'{1800, 900, 300}'"
 
   queries:
     findAllByMerchantOpCityId:

@@ -6,8 +6,10 @@
 module Storage.Beam.DriverPoolConfig where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.DriverPoolConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Vehicle.Variant
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -26,6 +28,7 @@ data DriverPoolConfigT f = DriverPoolConfigT
     driverRequestCountLimit :: B.C f Kernel.Prelude.Int,
     driverToDestinationDistanceThreshold :: B.C f Kernel.Types.Common.Meters,
     driverToDestinationDuration :: B.C f Kernel.Types.Common.Seconds,
+    id :: B.C f Kernel.Prelude.Text,
     maxDriverQuotesRequired :: B.C f Kernel.Prelude.Int,
     maxNumberOfBatches :: B.C f Kernel.Prelude.Int,
     maxParallelSearchRequests :: B.C f Kernel.Prelude.Int,
@@ -41,17 +44,17 @@ data DriverPoolConfigT f = DriverPoolConfigT
     tripCategory :: B.C f Kernel.Prelude.Text,
     tripDistance :: B.C f Kernel.Types.Common.Meters,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    vehicleVariant :: B.C f Kernel.Prelude.Text
+    vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant.Variant)
   }
   deriving (Generic, B.Beamable)
 
 instance B.Table DriverPoolConfigT where
-  data PrimaryKey DriverPoolConfigT f = DriverPoolConfigId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) (B.C f Kernel.Types.Common.Meters) (B.C f Kernel.Prelude.Text)
+  data PrimaryKey DriverPoolConfigT f = DriverPoolConfigId (B.C f Kernel.Prelude.Text)
     deriving (Generic, B.Beamable)
-  primaryKey = DriverPoolConfigId <$> merchantOperatingCityId <*> tripCategory <*> tripDistance <*> vehicleVariant
+  primaryKey = DriverPoolConfigId . id
 
 type DriverPoolConfig = DriverPoolConfigT Identity
 
-$(enableKVPG ''DriverPoolConfigT ['merchantOperatingCityId, 'tripCategory, 'tripDistance, 'vehicleVariant] [])
+$(enableKVPG ''DriverPoolConfigT ['id] [])
 
 $(mkTableInstances ''DriverPoolConfigT "driver_pool_config")

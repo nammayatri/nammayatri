@@ -20,23 +20,10 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN min_radius_of_s
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN pool_sorting_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN radius_shrink_value_for_drivers_on_ride integer NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN radius_step_size integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN schedule_try_times integer[] NOT NULL default '{1800, 900, 300}';
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN single_batch_process_time integer NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN trip_category text NOT NULL default 'All';
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN trip_distance integer NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN vehicle_variant text;
+ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN vehicle_variant text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD PRIMARY KEY ( id);
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN vehicle_variant SET NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN vehicle_variant SET DEFAULT 'All';
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN trip_category text NOT NULL default 'All';
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP CONSTRAINT driver_pool_config_pkey;
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config DROP COLUMN id;
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD PRIMARY KEY ( merchant_operating_city_id, trip_category, trip_distance, vehicle_variant);
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN schedule_try_times integer[] NOT NULL default '{480, 300}';

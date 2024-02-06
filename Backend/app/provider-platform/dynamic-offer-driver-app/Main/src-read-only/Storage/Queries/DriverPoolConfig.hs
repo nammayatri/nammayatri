@@ -7,6 +7,7 @@ module Storage.Queries.DriverPoolConfig where
 import qualified Domain.Types.DriverPoolConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Vehicle.Variant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -34,14 +35,11 @@ findAllByMerchantOpCityId limit offset (Kernel.Types.Id.Id merchantOperatingCity
     limit
     offset
 
-findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Merchant.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> Kernel.Types.Common.Meters -> Kernel.Prelude.Text -> m (Maybe (Domain.Types.DriverPoolConfig.DriverPoolConfig))
-findByPrimaryKey (Kernel.Types.Id.Id merchantOperatingCityId) tripCategory tripDistance vehicleVariant = do
+findByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig -> m (Maybe (Domain.Types.DriverPoolConfig.DriverPoolConfig))
+findByPrimaryKey (Kernel.Types.Id.Id id) = do
   findOneWithKV
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
-          Se.Is Beam.tripCategory $ Se.Eq tripCategory,
-          Se.Is Beam.tripDistance $ Se.Eq tripDistance,
-          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant
+        [ Se.Is Beam.id $ Se.Eq id
         ]
     ]
 
@@ -63,19 +61,20 @@ updateByPrimaryKey Domain.Types.DriverPoolConfig.DriverPoolConfig {..} = do
       Se.Set Beam.maxParallelSearchRequests $ maxParallelSearchRequests,
       Se.Set Beam.maxRadiusOfSearch $ maxRadiusOfSearch,
       Se.Set Beam.merchantId $ (Kernel.Types.Id.getId merchantId),
+      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.minRadiusOfSearch $ minRadiusOfSearch,
       Se.Set Beam.poolSortingType $ poolSortingType,
       Se.Set Beam.radiusShrinkValueForDriversOnRide $ radiusShrinkValueForDriversOnRide,
       Se.Set Beam.radiusStepSize $ radiusStepSize,
       Se.Set Beam.scheduleTryTimes $ scheduleTryTimes,
       Se.Set Beam.singleBatchProcessTime $ singleBatchProcessTime,
-      Se.Set Beam.updatedAt $ now
+      Se.Set Beam.tripCategory $ tripCategory,
+      Se.Set Beam.tripDistance $ tripDistance,
+      Se.Set Beam.updatedAt $ now,
+      Se.Set Beam.vehicleVariant $ vehicleVariant
     ]
     [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.tripCategory $ Se.Eq tripCategory,
-          Se.Is Beam.tripDistance $ Se.Eq tripDistance,
-          Se.Is Beam.vehicleVariant $ Se.Eq vehicleVariant
+        [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
         ]
     ]
 
@@ -93,6 +92,7 @@ instance FromTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPo
             driverRequestCountLimit = driverRequestCountLimit,
             driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
             driverToDestinationDuration = driverToDestinationDuration,
+            id = Kernel.Types.Id.Id id,
             maxDriverQuotesRequired = maxDriverQuotesRequired,
             maxNumberOfBatches = maxNumberOfBatches,
             maxParallelSearchRequests = maxParallelSearchRequests,
@@ -123,6 +123,7 @@ instance ToTType' Beam.DriverPoolConfig Domain.Types.DriverPoolConfig.DriverPool
         Beam.driverRequestCountLimit = driverRequestCountLimit,
         Beam.driverToDestinationDistanceThreshold = driverToDestinationDistanceThreshold,
         Beam.driverToDestinationDuration = driverToDestinationDuration,
+        Beam.id = Kernel.Types.Id.getId id,
         Beam.maxDriverQuotesRequired = maxDriverQuotesRequired,
         Beam.maxNumberOfBatches = maxNumberOfBatches,
         Beam.maxParallelSearchRequests = maxParallelSearchRequests,

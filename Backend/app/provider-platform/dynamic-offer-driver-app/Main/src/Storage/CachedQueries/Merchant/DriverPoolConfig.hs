@@ -25,6 +25,7 @@ where
 
 import Domain.Types.DriverPoolConfig
 import Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Vehicle.Variant as Variant
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -43,7 +44,7 @@ findAllByMerchantOpCityId id =
 findByMerchantOpCityIdAndTripDistance :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> m (Maybe DriverPoolConfig)
 findByMerchantOpCityIdAndTripDistance merchantOpCityId tripDistance = find (\config -> config.tripDistance == tripDistance) <$> findAllByMerchantOpCityId merchantOpCityId
 
-findByMerchantOpCityIdAndTripDistanceAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Text -> Text -> m (Maybe DriverPoolConfig)
+findByMerchantOpCityIdAndTripDistanceAndDVeh :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Meters -> Maybe Variant.Variant -> Text -> m (Maybe DriverPoolConfig)
 findByMerchantOpCityIdAndTripDistanceAndDVeh merchantOpCityId tripDistance variant tripCategory = find (\config -> config.tripDistance == tripDistance && config.vehicleVariant == variant && config.tripCategory == tripCategory) <$> findAllByMerchantOpCityId merchantOpCityId
 
 cacheDriverPoolConfigs :: (CacheFlow m r) => Id MerchantOperatingCity -> [DriverPoolConfig] -> m ()

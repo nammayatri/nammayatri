@@ -6,6 +6,7 @@ module Domain.Types.DriverPoolConfig where
 
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant.MerchantOperatingCity
+import qualified Domain.Types.Vehicle.Variant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -22,6 +23,7 @@ data DriverPoolConfig = DriverPoolConfig
     driverRequestCountLimit :: Kernel.Prelude.Int,
     driverToDestinationDistanceThreshold :: Kernel.Types.Common.Meters,
     driverToDestinationDuration :: Kernel.Types.Common.Seconds,
+    id :: Kernel.Types.Id.Id Domain.Types.DriverPoolConfig.DriverPoolConfig,
     maxDriverQuotesRequired :: Kernel.Prelude.Int,
     maxNumberOfBatches :: Kernel.Prelude.Int,
     maxParallelSearchRequests :: Kernel.Prelude.Int,
@@ -37,6 +39,6 @@ data DriverPoolConfig = DriverPoolConfig
     tripCategory :: Kernel.Prelude.Text,
     tripDistance :: Kernel.Types.Common.Meters,
     updatedAt :: Kernel.Prelude.UTCTime,
-    vehicleVariant :: Kernel.Prelude.Text
+    vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.Vehicle.Variant.Variant
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
