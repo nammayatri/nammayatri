@@ -82,6 +82,10 @@ instance Read TripCategory where
                  | r1 <- stripPrefix "RideShare_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (InterCity v1, r2)
+                 | r1 <- stripPrefix "InterCity_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
