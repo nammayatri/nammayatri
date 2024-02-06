@@ -122,8 +122,8 @@ getQuote (QuoteAPIEntity quoteEntity) city = do
           , city : city
         }
     (RENTAL contents) -> QLI.config
-
-
+    (INTER_CITY contents) -> QLI.config
+    
 getDriverInfo :: Maybe String -> RideBookingRes -> Boolean -> DriverInfoCard
 getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
   let (RideAPIEntity rideList) = fromMaybe  dummyRideAPIEntity ((resp.rideList) DA.!! 0)
@@ -653,6 +653,6 @@ getOneWaySpecialZoneAPIDetailsQuotes quotes =
       Quotes body ->
         let (QuoteAPIEntity quoteEntity) = body.onDemandCab
             fareProductType = quoteEntity.quoteDetails^._fareProductType
-        in fareProductType == "OneWaySpecialZoneAPIDetails"
+        in fareProductType == "OneWaySpecialZoneAPIDetails" || fareProductType == "INTER_CITY" 
       _ -> false )
   quotes

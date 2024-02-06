@@ -64,6 +64,7 @@ checkRideStatus rideAssigned = do
             otpCode = ((resp.bookingDetails) ^. _contents ^. _otpCode)
             rideScheduledAt = if bookingStatus == "CONFIRMED" then fromMaybe "" resp.rideScheduledTime else ""
             searchResultType = if (fareProductType == "OneWaySpecialZoneAPIDetails" || otpCode /= Nothing) then QUOTES 
+                                else if fareProductType == "INTER_CITY" then INTERCITY
                                 else if (fareProductType == "RENTAL") then RENTALS 
                                 else ESTIMATES
             dropLocation = if (fareProductType == "RENTAL") then _stopLocation else _toLocation
@@ -75,7 +76,11 @@ checkRideStatus rideAssigned = do
                     , sourceAddress = getAddressFromBooking resp.fromLocation
                     , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.dropLocation))
                     , currentSearchResultType = searchResultType
-                    , rideType = if fareProductType == "RENTAL" then RideType.RENTAL_RIDE else RideType.NORMAL_RIDE
+                    , rideType = 
+                        if fareProductType == "RENTAL" 
+                          then RideType.RENTAL_RIDE 
+                        else if fareProductType == "INTER_CITY" then RideType.INTERCITY
+                        else RideType.NORMAL_RIDE
                     , rentalsInfo = (if rideScheduledAt == "" then Nothing else (Just{
                         rideScheduledAtUTC : rideScheduledAt
                       , bookingId : resp.id
@@ -111,7 +116,17 @@ checkRideStatus rideAssigned = do
               case otpCode of
                 Just otp' -> do
                   setValueToLocalStore TRACKING_ENABLED "True"
-                  modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{props{isSpecialZone = true, isInApp = true}, data{driverInfoCardState{otp = otp'}}})
+                  modifyScreenState $ HomeScreenStateType (\homeScreen → 
+                    homeScreen
+                    { props
+                      { isSpecialZone = true
+                      , isInApp = true
+                      }
+                    , data
+                      { driverInfoCardState
+                        { otp = otp' }
+                      }
+                    })
                 Nothing -> pure unit
             Just (RideAPIEntity _) ->
               if isJust otpCode then do

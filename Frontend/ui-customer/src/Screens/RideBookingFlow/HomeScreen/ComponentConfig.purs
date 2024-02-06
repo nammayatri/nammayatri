@@ -1304,13 +1304,13 @@ chooseYourRideConfig state = ChooseYourRide.config
   {
     rideDistance = state.data.rideDistance,
     rideDuration = state.data.rideDuration,
-    quoteList = state.data.specialZoneQuoteList,
+    quoteList = if state.data.intercity then state.data.quoteList else state.data.specialZoneQuoteList,
     showTollExtraCharges = state.data.config.searchLocationConfig.showAdditionalChargesText,
     nearByDrivers = state.data.nearByDrivers,
     showPreferences = state.data.showPreferences,
     bookingPreferenceEnabled = state.data.config.estimateAndQuoteConfig.enableBookingPreference && state.props.city /= Kochi,
     flowWithoutOffers = state.props.flowWithoutOffers,
-    intercity = Just state.props.city /= state.props.destCity
+    intercity = state.data.intercity
   }
 
 

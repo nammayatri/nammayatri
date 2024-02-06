@@ -669,9 +669,14 @@ data QuoteAPIContents
   | RENTAL RentalQuoteAPIDetails
   | DRIVER_OFFER DriverOfferAPIEntity
   | SPECIAL_ZONE SpecialZoneQuoteAPIDetails
+  | INTER_CITY IntercityQuoteAPIDetails
 
 newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails {
   distanceToNearestDriver :: String
+}
+
+newtype IntercityQuoteAPIDetails = IntercityQuoteAPIDetails {
+  quoteId :: String
 }
 
 newtype RentalQuoteAPIDetails = RentalQuoteAPIDetails {
@@ -813,6 +818,14 @@ instance showSpecialZoneQuoteAPIDetails :: Show SpecialZoneQuoteAPIDetails where
 instance decodeSpecialZoneQuoteAPIDetails :: Decode SpecialZoneQuoteAPIDetails where decode = defaultDecode
 instance encodeSpecialZoneQuoteAPIDetails  :: Encode SpecialZoneQuoteAPIDetails where encode = defaultEncode
 
+derive instance genericIntercityQuoteAPIDetails :: Generic IntercityQuoteAPIDetails _
+derive instance newtypeIntercityQuoteAPIDetails :: Newtype IntercityQuoteAPIDetails _
+instance standardEncodeIntercityQuoteAPIDetails :: StandardEncode IntercityQuoteAPIDetails where standardEncode (IntercityQuoteAPIDetails body) = standardEncode body
+instance showIntercityQuoteAPIDetails :: Show IntercityQuoteAPIDetails where show = genericShow
+instance decodeIntercityQuoteAPIDetails :: Decode IntercityQuoteAPIDetails where decode = defaultDecode
+instance encodeIntercityQuoteAPIDetails  :: Encode IntercityQuoteAPIDetails where encode = defaultEncode
+
+
 derive instance genericOfferRes :: Generic OfferRes _
 instance standardEncodeOfferRes :: StandardEncode OfferRes where
   standardEncode (Quotes body) = standardEncode body
@@ -835,6 +848,7 @@ instance standardEncodeQuoteAPIContents :: StandardEncode QuoteAPIContents where
   standardEncode (DRIVER_OFFER body) = standardEncode body
   standardEncode (SPECIAL_ZONE body) = standardEncode body
   standardEncode (RENTAL body) = standardEncode body
+  standardEncode (INTER_CITY body) = standardEncode body
 instance showQuoteAPIContents :: Show QuoteAPIContents where show = genericShow
 instance decodeQuoteAPIContents :: Decode QuoteAPIContents
   where
@@ -844,6 +858,7 @@ instance encodeQuoteAPIContents  :: Encode QuoteAPIContents where
   encode (DRIVER_OFFER body) = encode body
   encode (SPECIAL_ZONE body) = encode body
   encode (RENTAL body) = encode body
+  encode (INTER_CITY body) = encode body
 
 
 derive instance genericQuoteAPIEntity :: Generic QuoteAPIEntity _

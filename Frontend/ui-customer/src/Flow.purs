@@ -713,23 +713,47 @@ homeScreenFlow = do
         updateFlowStatus SEARCH_CANCELLED
       homeScreenFlow
     CONFIRM_RIDE state -> do
-          _ <- pure $ enableMyLocation false
-          let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES then state.data.specialZoneSelectedQuote else state.props.selectedQuote
-          if isJust selectedQuote then do
-            updateLocalStage ConfirmingRide
-            response  <- lift $ lift $ Remote.rideConfirm (fromMaybe "" selectedQuote)
-            case response of
-              Right (ConfirmRes resp) -> do
-                let bookingId = resp.bookingId
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = ConfirmingRide, bookingId = bookingId, isPopUp = NoPopUp}})
-                homeScreenFlow
-              Left err  -> do
-                if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") then pure $ toast (getString STR.ERROR_OCCURED_TRY_AGAIN) else pure unit
-                _ <- setValueToLocalStore AUTO_SELECTING "false"
-                _ <- pure $ updateLocalStage QuoteList
-                modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{props{currentStage = QuoteList,selectedQuote = Nothing, expiredQuotes = snoc state.props.expiredQuotes (fromMaybe "" state.props.selectedQuote)}, data {quoteListModelState = []}})
-                homeScreenFlow
-            else homeScreenFlow
+      pure $ enableMyLocation false
+      let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES 
+                            then state.data.specialZoneSelectedQuote 
+                          else if state.data.currentSearchResultType == INTERCITY 
+                            then state.data.selectedQuoteId
+                          else state.props.selectedQuote
+      
+      if isJust selectedQuote then do
+        updateLocalStage ConfirmingRide
+        response  <- lift $ lift $ Remote.rideConfirm (fromMaybe "" selectedQuote)
+        case response of
+          Right (ConfirmRes resp) -> do
+            let bookingId = resp.bookingId
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> 
+              homeScreen
+                { props
+                    { currentStage = ConfirmingRide
+                    , bookingId = bookingId
+                    , isPopUp = NoPopUp
+                    }
+                })
+            homeScreenFlow
+          Left err  -> do
+            if not (err.code == 400 && (decodeError err.response.errorMessage "errorCode") == "QUOTE_EXPIRED") 
+            then pure $ toast (getString STR.ERROR_OCCURED_TRY_AGAIN) 
+            else pure unit
+            setValueToLocalStore AUTO_SELECTING "false"
+            updateLocalStage QuoteList
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> 
+              homeScreen
+                { props
+                    { currentStage = QuoteList
+                    , selectedQuote = Nothing
+                    , expiredQuotes = snoc state.props.expiredQuotes (fromMaybe "" state.props.selectedQuote)
+                    }
+                , data 
+                    { quoteListModelState = []
+                    }
+                })
+            homeScreenFlow
+      else homeScreenFlow
     ONGOING_RIDE state -> do
       setValueToLocalStore TRACKING_ENABLED "True"
       setValueToLocalStore TRACKING_DRIVER "False"
@@ -1396,7 +1420,18 @@ homeScreenFlow = do
       placeListFlow
     GO_TO_HELP_AND_SUPPORT -> helpAndSupportScreenFlow
     GO_TO_RENTALS_FLOW state -> do 
-      modifyScreenState $ RentalScreenStateType (\_ -> RentalScreenData.initData{data{pickUpLoc {address = (getString STR.CURRENT_LOCATION), city = state.props.city , lat = Just state.props.currentLocation.lat , lon = Just state.props.currentLocation.lng, placeId = Nothing}}})
+      modifyScreenState $ RentalScreenStateType (\_ -> 
+        RentalScreenData.initData
+          { data
+              { pickUpLoc 
+                  { address = getString STR.CURRENT_LOCATION
+                  , city = state.props.city
+                  , lat = Just state.props.currentLocation.lat
+                  , lon = Just state.props.currentLocation.lng
+                  , placeId = Nothing
+                  }
+              }
+          })
       rentalScreenFlow
     GO_TO_SCHEDULED_RIDES -> rideScheduledFlow
     GO_TO_NAMMASAFETY state triggerSos showtestDrill -> do

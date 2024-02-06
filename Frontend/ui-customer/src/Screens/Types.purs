@@ -749,6 +749,10 @@ type HomeScreenStateData =
   , specialZoneQuoteList :: Array ChooseVehicle.Config
   , specialZoneSelectedQuote :: Maybe String
   , specialZoneSelectedVariant :: Maybe String
+  , quoteList :: Array ChooseVehicle.Config
+  , selectedQuoteId :: Maybe String
+  , selectedQuoteVariant :: Maybe String
+  , intercity :: Boolean
   , selectedEstimatesObject :: ChooseVehicle.Config
   , lastMessage :: ChatComponentConfig
   , cancelRideConfirmationData :: CancelRideConfirmationData
@@ -1483,7 +1487,7 @@ instance showLocItemType :: Show LocItemType where show = genericShow
 instance encodeLocItemType :: Encode LocItemType where encode = defaultEnumEncode
 instance decodeLocItemType:: Decode LocItemType where decode = defaultEnumDecode
 
-data SearchResultType = QUOTES | ESTIMATES | RENTALS
+data SearchResultType = QUOTES | ESTIMATES | RENTALS | INTERCITY
 
 derive instance genericSearchResultType :: Generic SearchResultType _
 instance eqSearchResultType :: Eq SearchResultType where eq = genericEq

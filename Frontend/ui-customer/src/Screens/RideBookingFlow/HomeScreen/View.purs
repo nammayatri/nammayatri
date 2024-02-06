@@ -3104,8 +3104,8 @@ confirmRide action count duration push state = do
         _ <- pure $ printLog "api Results " response
         let (RideBookingRes resp) = response
             fareProductType = (resp.bookingDetails) ^. _fareProductType
-            status = if any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL"] then "CONFIRMED" else "TRIP_ASSIGNED"
-            willRideListNull = any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL"]
+            status = if any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL", "INTER_CITY"] then "CONFIRMED" else "TRIP_ASSIGNED"
+            willRideListNull = any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL", "INTER_CITY"]
         if  status == resp.status && (willRideListNull || not (null resp.rideList)) then do
             doAff do liftEffect $ push $ action response
             -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"

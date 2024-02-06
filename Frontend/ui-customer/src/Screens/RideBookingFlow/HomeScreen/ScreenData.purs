@@ -93,6 +93,10 @@ initData = {
     , specialZoneQuoteList : []
     , specialZoneSelectedQuote : Nothing
     , specialZoneSelectedVariant : Nothing
+    , quoteList : []
+    , selectedQuoteId : Nothing
+    , selectedQuoteVariant : Nothing
+    , intercity : false
     , selectedEstimatesObject : {
       vehicleImage: ""
       , isSelected: false
