@@ -31,14 +31,14 @@ data QuoteSpecialZoneT f = QuoteSpecialZoneT
     estimatedFinishTime :: B.C f (Maybe UTCTime),
     tripCategory :: B.C f (Maybe DTC.TripCategory),
     distance :: B.C f (Maybe Common.Meters),
-    validTill :: B.C f UTCTime,
+    validTill :: B.C f LocalTime,
     estimatedFare :: B.C f Common.Money,
     specialLocationTag :: B.C f (Maybe Text),
     fareParametersId :: B.C f Text,
     farePolicyId :: B.C f (Maybe Text),
     isScheduled :: B.C f (Maybe Bool),
-    createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    createdAt :: B.C f LocalTime,
+    updatedAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)
 

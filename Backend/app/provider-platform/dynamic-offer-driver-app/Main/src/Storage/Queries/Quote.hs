@@ -15,6 +15,7 @@
 
 module Storage.Queries.Quote where
 
+import qualified Data.Time as T
 import qualified Domain.Types.Common as DTC
 import Domain.Types.Quote
 import Kernel.Beam.Functions
@@ -52,6 +53,9 @@ instance FromTType' BeamQSZ.QuoteSpecialZone Quote where
             providerId = Id providerId,
             tripCategory = fromMaybe (DTC.OneWay DTC.OneWayRideOtp) tripCategory,
             isScheduled = fromMaybe False isScheduled,
+            createdAt = T.localTimeToUTC T.utc createdAt,
+            updatedAt = T.localTimeToUTC T.utc updatedAt,
+            validTill = T.localTimeToUTC T.utc validTill,
             ..
           }
 
@@ -65,9 +69,9 @@ instance ToTType' BeamQSZ.QuoteSpecialZone Quote where
         BeamQSZ.estimatedFinishTime = estimatedFinishTime,
         BeamQSZ.tripCategory = Just tripCategory,
         BeamQSZ.distance = distance,
-        BeamQSZ.createdAt = createdAt,
-        BeamQSZ.updatedAt = updatedAt,
-        BeamQSZ.validTill = validTill,
+        BeamQSZ.createdAt = T.utcToLocalTime T.utc createdAt,
+        BeamQSZ.updatedAt = T.utcToLocalTime T.utc updatedAt,
+        BeamQSZ.validTill = T.utcToLocalTime T.utc validTill,
         BeamQSZ.estimatedFare = estimatedFare,
         BeamQSZ.specialLocationTag = specialLocationTag,
         BeamQSZ.fareParametersId = getId fareParams.id,
