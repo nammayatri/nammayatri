@@ -1,6 +1,7 @@
 module Resources.Localizable.HI where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getHI :: STR -> String
 getHI stringKey =
@@ -1231,3 +1232,5 @@ getHI stringKey =
         LETS_ENSURE_SAFE_RIDE -> "सुनिश्चित करें कि यात्रा सुरक्षित है"
         CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ग्राहक सुरक्षा हमारी<br>जिम्मेदारी है। सुनिश्चित<br>करें कि यात्रा सुरक्षित और खुशहाल है"
         OUR_SAFETY_PARTNER -> "हमारा सुरक्षा साथी"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "नमस्कार!\n\nकृपया " <> name <> " पर पंजीकरण करने के लिए मेरे रेफरल कोड " <> code <> " का उपयोग करें।\n\nऐप डाउनलोड करने के लिए QR कोड को स्कैन करें या नीचे दिए गए लिंक पर क्लिक करें। आवश्यक पंजीकरण चरणों को पूरा करें और मेरा रेफरल कोड इनपुट करें। ऑनलाइन जाएं और कमाई शुरू करें!\n\n"
+        DOWNLOAD_NOW -> "(अभी डाउनलोड करें) "

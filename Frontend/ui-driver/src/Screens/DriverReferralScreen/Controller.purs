@@ -26,6 +26,11 @@ import Foreign (unsafeToForeign)
 import Data.Array (find)
 import Services.API
 import Effect.Uncurried (runEffectFn4)
+import Resources.Localizable.EN (getEN)
+import Language.Strings (getString, getStringFromConfigOrLocal, getStringFromLocal)
+import Language.Types (STR(..))
+import Locale.Utils
+import Helpers.Utils (getCityConfig)
 
 instance showAction :: Show Action where
   show _ = ""
@@ -97,7 +102,7 @@ eval ShowQRCode state = do
 
 eval ShareOptions state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_driver_contest_share_referral_code_click"
-  let message = "👋 Hey,\n\nMy " <> state.data.config.appData.name <> " Referral Code is " <> (state.data.referralCode) <> ".\n\nScan the QR code and download " <> state.data.config.appData.name <> " app. You can help me out by entering my referral code on the Home screen.\n\nThanks!"
+  let message = getReferralMessageText state
   void $ pure $ shareImageMessage message (shareImageMessageConfig state)
   continue state
 
@@ -158,3 +163,14 @@ shareImageMessageConfig state = {
   logoId : getNewIDWithTag "DriverReferralScreenLogo",
   isReferral : true
   }
+
+getReferralMessageText :: DriverReferralScreenState -> String
+getReferralMessageText state = 
+  let cityConfig = getCityConfig state.data.config.cityConfig $ (getValueToLocalStore DRIVER_LOCATION)
+      text = (getEN (PLEASE_USE_MY_REFERRAL_CODE state.data.referralCode cityConfig.appName))
+             <> (getStringFromLocal cityConfig.languageKey (PLEASE_USE_MY_REFERRAL_CODE state.data.referralCode state.data.config.appData.name))
+             <> ( getEN DOWNLOAD_NOW <> (getStringFromLocal cityConfig.languageKey DOWNLOAD_NOW) <> state.data.config.appData.link)
+  in
+    text
+
+

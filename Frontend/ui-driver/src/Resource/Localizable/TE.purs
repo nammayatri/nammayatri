@@ -1,6 +1,7 @@
 module Resources.Localizable.TE where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getTE :: STR -> String
 getTE stringKey =
@@ -1231,3 +1232,5 @@ getTE stringKey =
         LETS_ENSURE_SAFE_RIDE -> "సురక్షితమైన మరియు సురక్షితమైన ప్రయాణాన్ని నిర్ధారిద్దాం"
         CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "కస్టమర్ భద్రత<br>మా బాధ్యత. సురక్షితమైన మరియు<br>సంతోషకరమైన ప్రయాణాన్ని నిర్ధారిద్దాం"
         OUR_SAFETY_PARTNER -> "మా భద్రతా భాగస్వామి"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "శుభాకాంక్షలు!\n\nదయచేసి నమోదు చేసుకోవడానికి నా రిఫరల్ కోడ్ " <> code <> "ని ఉపయోగించండి " <> name <> ".\n\nయాప్‌ను డౌన్‌లోడ్ చేయడానికి QR కోడ్‌ని స్కాన్ చేయండి లేదా క్రింది లింక్‌పై క్లిక్ చేయండి. అవసరమైన నమోదు దశలను పూర్తి చేయండి మరియు నా రిఫరల్ కోడ్‌ను ఇన్‌పుట్ చేయండి. ఆన్‌లైన్‌కి వెళ్లి సంపాదించడం ప్రారంభించండి!\n\n"
+        DOWNLOAD_NOW -> "(ఇపుడు డౌన్లోడ్ చేసుకోండి) "

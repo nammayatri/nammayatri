@@ -1,6 +1,7 @@
 module Resources.Localizable.EN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getEN :: STR -> String
 getEN stringKey =
@@ -1231,3 +1232,5 @@ getEN stringKey =
         LETS_ENSURE_SAFE_RIDE -> "Let’s ensure a safe and secure ride"
         CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "Customer safety is our<br>responsibility. Let’s ensure a safe<br>and happy ride"
         OUR_SAFETY_PARTNER -> "Our Safety Partner"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "Greetings!\n\nPlease use my Referral Code " <> code <> " to register on " <> name <> ".\n\nScan the QR code or click on the link below to download the app. Complete required registration steps and input my referral code. Go online and start earning!\n\n"
+        DOWNLOAD_NOW -> "Download Now "

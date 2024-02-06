@@ -1,6 +1,7 @@
 module Resources.Localizable.BN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getBN :: STR -> String
 getBN stringKey =
@@ -1231,3 +1232,5 @@ getBN stringKey =
         LETS_ENSURE_SAFE_RIDE -> "আসুন একটি নিরাপদ এবং নিরাপদ রাইড নিশ্চিত করি"
         CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "গ্রাহকের নিরাপত্তা আমাদের<br>দায়িত্ব। আসুন একটি নিরাপদ এবং<br>সুখী যাত্রা নিশ্চিত করি"
         OUR_SAFETY_PARTNER -> "আমাদের নিরাপত্তা অংশীদার"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "শুভেচ্ছা!\n\nঅনুগ্রহ করে রেজিস্টার করতে আমার রেফারেল কোড " <> code <> " ব্যবহার করুন " <> name <> ".\n\nঅ্যাপটি ডাউনলোড করতে QR কোড স্ক্যান করুন বা নিচের লিঙ্কে ক্লিক করুন। প্রয়োজনীয় রেজিস্ট্রেশন ধাপগুলি সম্পূর্ণ করুন এবং আমার রেফারেল কোড ইনপুট করুন। অনলাইন যান এবং উপার্জন শুরু করুন!\n\n"
+        DOWNLOAD_NOW -> "(এখনই ডাউনলোড করুন) "

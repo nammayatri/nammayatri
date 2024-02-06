@@ -1,6 +1,7 @@
 module Resources.Localizable.KN where
 
 import Language.Types (STR(..))
+import Prelude ((<>))
 
 getKN :: STR -> String
 getKN stringKey =
@@ -1231,3 +1232,5 @@ getKN stringKey =
         CUSTOMER_SAFETY_OUR_RESP_HAPPY_RIDE -> "ಗ್ರಾಹಕರ ಸುರಕ್ಷತೆ ನಮ್ಮ<br>ಜವಾಬ್ದಾರಿಯಾಗಿದೆ. ಸವಾರಿ ಸುರಕ್ಷಿತ<br>ಮತ್ತು ಸಂತೋಷವಾಗಿದೆ ಎಂದು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ"
         OUR_SAFETY_PARTNER -> "ನಮ್ಮ ಸುರಕ್ಷತಾ ಪಾಲುದಾರ"
         SAFETY_IS_OUR_RESPONSIBILITY -> "ಸುರಕ್ಷೆ ನಮ್ಮ ಜವಾಬ್ದಾರಿ"
+        PLEASE_USE_MY_REFERRAL_CODE code name -> "ಶುಭಾಶಯಗಳು!\n\nಶುಭಾಶಯಗಳು, ನೋಂದಾಯಿಸಲು ದಯವಿಟ್ಟು ನನ್ನ ರೆಫರಲ್ ಕೋಡ್ " <> code <> "ಅನ್ನು ಬಳಸಿ " <> name <> ".\n\nಅಪ್ಲಿಕೇಶನ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಲು QR ಕೋಡ್ ಅನ್ನು ಸ್ಕ್ಯಾನ್ ಮಾಡಿ ಅಥವಾ ಕೆಳಗಿನ ಲಿಂಕ್ ಅನ್ನು ಕ್ಲಿಕ್ ಮಾಡಿ. ಅಗತ್ಯವಿರುವ ನೋಂದಣಿ ಹಂತಗಳನ್ನು ಪೂರ್ಣಗೊಳಿಸಿ ಮತ್ತು ನನ್ನ ರೆಫರಲ್ ಕೋಡ್ ಅನ್ನು ನಮೂದಿಸಿ. ಆನ್‌ಲೈನ್‌ಗೆ ಹೋಗಿ ಮತ್ತು ಗಳಿಸಲು ಪ್ರಾರಂಭಿಸಿ!\n\n"
+        DOWNLOAD_NOW -> "(ಈಗ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ) "
