@@ -1929,7 +1929,10 @@ homeScreenFlow = do
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{ props {enterOtpModal = false,enterOdometerReadingModal = false}, data{ route = [], activeRide{status = INPROGRESS}}})
           void $ lift $ lift $ toggleLoader false
           _ <- updateStage $ HomeScreenStage RideStarted
-          _ <- pure $ setValueToLocalStore TRIGGER_MAPS "true"
+          if updatedState.data.activeRide.tripType == ST.Rental && isNothing updatedState.data.activeRide.nextStopAddress then do
+            pure unit
+          else
+            void $ pure $ setValueToLocalStore TRIGGER_MAPS "true"
           _ <- pure $ setValueToLocalStore TRIP_STATUS "started"
           void $ pure $ setValueToLocalStore WAITING_TIME_STATUS (show ST.NoStatus)
           void $ pure $ setValueToLocalStore TOTAL_WAITED if updatedState.data.activeRide.waitTimeSeconds > updatedState.data.config.waitTimeConfig.thresholdTime then (updatedState.data.activeRide.id <> "<$>" <> show updatedState.data.activeRide.waitTimeSeconds) else "-1"
@@ -1938,6 +1941,7 @@ homeScreenFlow = do
           void $ pure $ clearTimerWithId updatedState.data.activeRide.waitTimerId
           currentRideFlow Nothing
         Left errorPayload -> do
+          _ <- updateStage $ HomeScreenStage RideAccepted
           let errResp = errorPayload.response
           let codeMessage = decodeErrorCode errResp.errorMessage
           
@@ -1967,6 +1971,7 @@ homeScreenFlow = do
           let errResp = errorPayload.response
           let codeMessage = decodeErrorCode errResp.errorMessage
           let errorMessage = decodeErrorMessage errResp.errorMessage
+          _ <- updateStage $ HomeScreenStage RideAccepted
           if ( errorPayload.code == 400 && (codeMessage == "BOOKING_NOT_FOUND_FOR_SPECIAL_ZONE_OTP")) then do
               modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {wrongVehicleVariant = false, otpIncorrect = true, enterOtpModal = true, otpAttemptsExceeded = false, rideOtp = ""} })
             else if ( errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then do
@@ -2079,7 +2084,7 @@ homeScreenFlow = do
                   }
                 })
             
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props { showRideCompleted = true}})
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {endRideOdometerReadingModal = false, showRideCompleted = true}})
           _ <- updateStage $ HomeScreenStage RideCompleted
           void $ lift $ lift $ toggleLoader false
           updateDriverDataToStates
@@ -2143,6 +2148,7 @@ homeScreenFlow = do
       resp <- lift $ lift $ callApi $ API.ArrivedAtStopRequest id (Remote.makeArrivedAtStopReq lat lon)
       case resp of
         Left errorPayload -> do
+          _ <- pure $ printLog "GO_TO_ARRIVED_AT_STOP" (show resp)
           let errResp = errorPayload.response
           let codeMessage = decodeErrorCode errResp.errorMessage
           if ( errorPayload.code /= 200) then do
@@ -2151,7 +2157,7 @@ homeScreenFlow = do
         Right _ -> do
           _ <- pure $ printLog "GO_TO_ARRIVED_AT_STOP" "Arrived at stop"
           _ <- pure $ removeAllPolylines ""
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {route = []}, props {routeVisible = true, arrivedAtStop = true}})          
+          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {route = [],activeRide{nextStopAddress=Nothing,nextStopLat=Nothing,nextStopLon=Nothing}}, props {routeVisible = true, arrivedAtStop = true}})          
       homeScreenFlow
     NOTIFY_CUSTOMER state -> do
       driverArrived <- lift $ lift $ Remote.driverArrived (state.data.activeRide.id) (DriverArrivedReq {

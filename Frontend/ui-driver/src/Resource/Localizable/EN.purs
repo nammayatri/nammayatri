@@ -407,6 +407,7 @@ getEN stringKey =
         ENTER_CURRENT_ODOMETER_READING -> "Enter current odometer reading"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "Enter the last 4 digits of odometer"
         ENTER_THE_DIGITS_OF_ODOMETER -> "Enter the digits of odometer"
+        ODOMETER_READING_VALIDATION_FAILED -> "Please enter valid odometer reading"
         DELETE -> "Delete"
         VIEW -> "View"
         ISSUE_NO -> "Issue No."

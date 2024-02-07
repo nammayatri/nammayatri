@@ -408,6 +408,7 @@ getTE stringKey =
         ENTER_CURRENT_ODOMETER_READING -> "ప్రస్తుత ఓడోమీటర్ రీడింగ్‌ను నమోదు చేయండి"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "ఓడోమీటర్ యొక్క చివరి 4 అంకెలను నమోదు చేయండి"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ఓడోమీటర్ యొక్క అంకెలను నమోదు చేయండి"
+        ODOMETER_READING_VALIDATION_FAILED -> "దయచేసి చెల్లుబాటు అయ్యే ఓడోమీటర్ రీడింగ్‌ని నమోదు చేయండి"
         DELETE -> "తొలగించు"
         VIEW -> "చూడు"
         ISSUE_NO -> "సంచిక నం."
