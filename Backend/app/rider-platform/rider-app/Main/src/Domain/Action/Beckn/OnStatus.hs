@@ -259,6 +259,8 @@ buildNewRide mbMerchant booking NewRideInfo {..} = do
       isFreeRide = Nothing
       safetyCheckStatus = Nothing
       endOtp = Nothing
+      startOdometerReading = Nothing
+      endOdometerReading = Nothing
   pure $ DRide.Ride {..}
 
 mkBookingCancellationReason ::

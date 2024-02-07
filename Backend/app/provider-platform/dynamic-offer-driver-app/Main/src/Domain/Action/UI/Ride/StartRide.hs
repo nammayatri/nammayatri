@@ -173,7 +173,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       then do
         endOtp <- Just <$> generateOTPCode
         QRide.updateEndRideOtp ride.id endOtp
-        return $ ride {DRide.endOtp = endOtp}
+        return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer}
       else pure ride
 
   whenWithLocationUpdatesLock driverId $ do

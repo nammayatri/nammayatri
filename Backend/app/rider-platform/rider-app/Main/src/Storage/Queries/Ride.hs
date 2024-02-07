@@ -327,7 +327,7 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
               isconfirmedRentalRide = case bookingDetails of
                 DRB.RentalDetails _ -> booking.status == DRB.CONFIRMED
                 _ -> False
-           in isJust maybeRide || isJust otpCode && isNothing maybeRide || isconfirmedRentalRide
+           in isJust maybeRide || isJust otpCode || isconfirmedRentalRide
 
 countRidesByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m Int
 countRidesByRiderId riderId = do
@@ -466,6 +466,8 @@ instance ToTType' BeamR.Ride Ride where
         BeamR.createdAt = createdAt,
         BeamR.updatedAt = updatedAt,
         BeamR.driverMobileCountryCode = driverMobileCountryCode,
+        BeamR.startOdometerReading = startOdometerReading,
+        BeamR.endOdometerReading = endOdometerReading,
         BeamR.driverImage = driverImage,
         BeamR.safetyCheckStatus = safetyCheckStatus,
         BeamR.allowedEditLocationAttempts = allowedEditLocationAttempts,
