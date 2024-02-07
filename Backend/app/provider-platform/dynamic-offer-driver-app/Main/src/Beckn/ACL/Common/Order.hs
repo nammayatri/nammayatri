@@ -134,6 +134,7 @@ buildDistanceTagGroup ride = do
     realToFrac <$> ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present.")
   let traveledDistance :: HighPrecMeters = ride.traveledDistance
+      endOdometerValue = (.value) <$> ride.endOdometerReading
   pure
     [ Tags.TagGroup
         { display = False,
@@ -143,7 +144,7 @@ buildDistanceTagGroup ride = do
             [ Tags.Tag (Just False) (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
               Tags.Tag (Just False) (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
             ]
-              <> [Tags.Tag (Just False) (Just "end_odometer_reading") (Just "End Odometer Reading") (show <$> ride.endOdometerReading) | isJust ride.endOdometerReading]
+              <> [Tags.Tag (Just False) (Just "end_odometer_reading") (Just "End Odometer Reading") (show <$> endOdometerValue) | isJust endOdometerValue]
         }
     ]
 

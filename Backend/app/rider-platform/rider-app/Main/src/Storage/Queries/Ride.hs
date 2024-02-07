@@ -118,6 +118,8 @@ updateMultiple rideId ride = do
       Se.Set BeamR.rideStartTime ride.rideStartTime,
       Se.Set BeamR.rideEndTime ride.rideEndTime,
       Se.Set BeamR.endOtp ride.endOtp,
+      Se.Set BeamR.startOdometerReading ride.startOdometerReading,
+      Se.Set BeamR.endOdometerReading ride.endOdometerReading,
       Se.Set BeamR.updatedAt now
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]

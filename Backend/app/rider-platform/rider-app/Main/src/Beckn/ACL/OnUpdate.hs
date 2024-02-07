@@ -146,7 +146,7 @@ parseEvent _ (OnUpdate.RideStarted rsEvent) = do
   let endOtp_ = Just authorization.token
       startOdometerReading = case rsEvent.fulfillment.tags of
         Nothing -> Nothing
-        Just tg -> readMaybe . T.unpack =<< getTag "start_odometer_reading" "Start Odometer Reading" tg
+        Just tg -> readMaybe . T.unpack =<< getTag "ride_odometer_details" "start_odometer_reading" tg
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
@@ -157,7 +157,7 @@ parseEvent _ (OnUpdate.RideCompleted rcEvent) = do
   tagsGroup <- fromMaybeM (InvalidRequest "agent tags is not present in RideCompleted Event.") rcEvent.fulfillment.tags
   let personTagsGroup = rcEvent.fulfillment.person.tags
   let tripEndLocation = getLocationFromTag personTagsGroup "current_location" "current_location_lat" "current_location_lon"
-  let endOdometerReading = readMaybe . T.unpack =<< getTag "end_odometer_reading" "End Odometer Reading" tagsGroup
+  let endOdometerReading = readMaybe . T.unpack =<< getTag "ride_distance_details" "end_odometer_reading" tagsGroup
   chargeableDistance :: HighPrecMeters <-
     fromMaybeM (InvalidRequest "chargeable_distance is not present.") $
       readMaybe . T.unpack
@@ -325,7 +325,7 @@ parseRideStartedEvent order = do
       tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
   let startOdometerReading = case tagGroups of
         Nothing -> Nothing
-        Just tg -> readMaybe . T.unpack =<< Utils.getTagV2 "start_odometer_reading" "Start Odometer Reading" tg
+        Just tg -> readMaybe . T.unpack =<< Utils.getTagV2 "ride_odometer_details" "start_odometer_reading" tg
   let tripStartLocation = getLocationFromTagV2 personTagsGroup "current_location" "current_location_lat" "current_location_lon"
   pure $
     DOnUpdate.RideStartedReq
@@ -351,7 +351,7 @@ parseRideCompletedEvent order = do
     fromMaybeM (InvalidRequest "traveled_distance is not present in RideCompleted Event.") $
       readMaybe . T.unpack
         =<< Utils.getTagV2 "ride_distance_details" "traveled_distance" tagGroups
-  let endOdometerReading = readMaybe . T.unpack =<< Utils.getTagV2 "end_odometer_reading" "End Odometer Reading" tagGroups
+  let endOdometerReading = readMaybe . T.unpack =<< Utils.getTagV2 "ride_distance_details" "end_odometer_reading" tagGroups
   fareBreakups' <- order.orderQuote >>= (.quotationBreakup) & fromMaybeM (InvalidRequest "quote breakup is not present in RideCompleted Event.")
   fareBreakups <- traverse mkOnUpdateFareBreakup fareBreakups'
   let personTagsGroup = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
