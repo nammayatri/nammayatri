@@ -21,6 +21,10 @@ import RemoteConfig as RC
 
 getBannerConfigs :: forall action. HomeScreenState -> (BannerCarousel.Action -> action) -> Array (BannerCarousel.Config (BannerCarousel.Action -> action))
 getBannerConfigs state action =
+  (if state.props.city == ST.Chennai
+  then [metroBannerConfig state action]
+  else [])
+  <>
   (if isJust state.props.sosBannerType && state.data.config.feature.enableSafetyFlow
     then [sosSetupBannerConfig state action] 
     else [])

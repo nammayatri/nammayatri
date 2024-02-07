@@ -245,6 +245,7 @@ emergencyContactsView state push =
                       , cornerRadius 24.0
                       , padding $ Padding 8 8 8 8
                       , onClick push $ const $ CallContact index
+                      , rippleColor Color.rippleShade
                       ]
                       [ imageView
                           [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_call_white_unfilled"
@@ -268,7 +269,7 @@ callPoliceView state push text' =
       , cornerRadius 8.0
       , background Color.redOpacity20
       ]
-        <> if state.props.showTestDrill then [ alpha 0.6 ] else [ onClick push $ const $ if state.props.showCallPolice then CallPolice else ShowPoliceView ]
+        <> if state.props.showTestDrill then [ alpha 0.6 ] else [ rippleColor Color.rippleShade, onClick push $ const $ if state.props.showCallPolice then CallPolice else ShowPoliceView ]
     )
     [ imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_police"

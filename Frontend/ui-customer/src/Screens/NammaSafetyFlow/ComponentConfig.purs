@@ -38,6 +38,7 @@ startNSOnboardingButtonConfig state =
     , visibility = visibility'
     , margin = Margin 16 0 16 24
     , id = "ScreenStartOnboardingButton"
+    , enableRipple = true
     }
   where
   visibility' = if state.data.hasCompletedSafetySetup || state.props.onRide then GONE else VISIBLE
@@ -50,6 +51,7 @@ continueNextStepButtonConfig state =
       }
     , margin = Margin 16 0 16 24
     , id = "SetupScreenContinueNextStepButton"
+    , enableRipple = true
     }
   where
   text' =
@@ -69,6 +71,7 @@ cancelSOSBtnConfig state =
       }
     , margin = MarginTop 10
     , stroke = "1," <> Color.white900
+    , enableRipple = true
     }
 
 activateSoSButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
@@ -78,6 +81,7 @@ activateSoSButtonConfig state =
     , margin = Margin 16 0 16 8
     , background = Color.white900
     , id = "SafetyScreenActivateSosButton"
+    , enableRipple = true
     }
 
 dismissSoSButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
@@ -88,6 +92,7 @@ dismissSoSButtonConfig state =
     , stroke = "1," <> Color.white900
     , background = Color.white900
     , id = "SafetyScreenDismissSosButton"
+    , enableRipple = true
     }
 
 goToDrillButtonConfig :: NammaSafetyScreenState -> PrimaryButton.Config
@@ -98,6 +103,7 @@ goToDrillButtonConfig state =
       }
     , margin = Margin 16 0 16 24
     , id = "SafetyScreenGoToDrillButton"
+    , enableRipple = true
     }
 
 --------------------------------------------------- removeContactPopUpModelConfig -----------------------------------------------------
@@ -109,12 +115,14 @@ removeContactPopUpModelConfig state =
     , option1
       { text = getString CANCEL_
       , strokeColor = Color.black700
+      , enableRipple = true
       }
     , option2
       { text = getString YES_REMOVE
       , background = Color.red
       , color = Color.white900
       , strokeColor = Color.red
+      , enableRipple = true
       }
     , backgroundClickable = false
     , buttonLayoutMargin = MarginBottom if EHC.os == "IOS" then 0 else 24
@@ -141,6 +149,7 @@ confirmPopUpModelConfig state =
       , background = Color.black900
       , margin = MarginTop 16
       , width = MATCH_PARENT
+      , enableRipple = true
       }
     , secondaryText
       { text = getString ACTIVATE_NAMMA_SAFETY_POPUP_DESC
@@ -154,6 +163,7 @@ confirmPopUpModelConfig state =
       , strokeColor = Color.white900
       , width = MATCH_PARENT
       , margin = MarginLeft 0
+      , enableRipple = true
       }
     }
 
@@ -167,5 +177,6 @@ startTestDrillButtonConfig state =
       }
     , margin = MarginVertical 48 24
     , background = Color.white900
+    , enableRipple = true
     }
 

@@ -893,7 +893,7 @@ callPoliceView state push =
       , cornerRadius 8.0
       , background Color.redOpacity20
       ]
-        <> if state.props.showTestDrill then [ alpha 0.6 ] else [ onClick push $ const $ CallPolice ]
+        <> if state.props.showTestDrill then [ alpha 0.6 ] else [ rippleColor Color.rippleShade, onClick push $ const $ CallPolice ]
     )
     [ imageView
         [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_police"

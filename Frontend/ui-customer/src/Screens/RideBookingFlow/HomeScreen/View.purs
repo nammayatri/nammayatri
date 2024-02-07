@@ -929,6 +929,7 @@ sosView push state =
             , background Color.white900
             , cornerRadius 20.0
             , onClick push $ const OpenEmergencyHelp
+            , rippleColor Color.rippleShade
             ]
             [ linearLayout
                 [ height WRAP_CONTENT
