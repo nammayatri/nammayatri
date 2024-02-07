@@ -164,6 +164,10 @@ checkRideStatus rideAssigned = do
             when (isNothing currRideListItem.rideRating) $ do
               when (length listResp.list > 0) $ do
                 let nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
+                    fareProductType = ((resp.bookingDetails) ^. _fareProductType)
+                    (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+                    (RideBookingDetails contents) = bookingDetails.contents
+                    (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
                 modifyScreenState $ HomeScreenStateType (\homeScreen → homeScreen{
                     props { currentStage = RideCompleted
                           , estimatedDistance = contents.estimatedDistance
@@ -201,9 +205,20 @@ checkRideStatus rideAssigned = do
                           , finalAmount = (fromMaybe 0 currRideListItem.computedPrice)
                           , driverInfoCardState {
                             price = resp.estimatedTotalFare,
-                            rideId = currRideListItem.id
+                            rideId = currRideListItem.id,
+                            rentalData 
+                                { finalDuration = (fromMaybe 0 resp.duration) / (60*60)
+                                , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
+                                , baseDuration = (fromMaybe 0 resp.estimatedDuration) / (60*60)
+                                , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000
+                                }
                           }
                           , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}
+                          , rideType = 
+                              if fareProductType == "RENTAL" 
+                                then RideType.RENTAL_RIDE 
+                              else RideType.NORMAL_RIDE
+                         
                           }
                 })
                 updateLocalStage RideCompleted

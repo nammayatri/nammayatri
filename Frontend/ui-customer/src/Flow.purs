@@ -924,32 +924,68 @@ homeScreenFlow = do
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}})
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       homeScreenFlow
-            "TRIP_FINISHED"       -> do -- TRIP FINISHED
-                                      if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
-                                        _ <- pure $ metaLogEvent "ny_user_first_ride_completed"
-                                        (GetProfileRes response) <- Remote.getProfileBT ""
-                                        setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
-                                        else pure unit
-                                      let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
-                                          destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
-                                      _ <- pure $ metaLogEvent "ny_user_ride_completed"
-                                      _ <- updateLocalStage HomeScreen
-                                      setValueToLocalStore IS_SOS_ACTIVE "false"
-                                      modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{sosId = ""}})
-                                      if (state.props.bookingId /= "") then do
-                                        (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
-                                        let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
-                                            (RideBookingDetails contents) = bookingDetails.contents
-                                            (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
-                                            finalAmount =  getFinalAmount (RideBookingRes resp)
-                                            differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
-                                            nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
-                                        lift $ lift $ triggerRideStatusEvent notification (Just finalAmount) (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
-                                        setValueToLocalStore PICKUP_DISTANCE "0"
-                                        liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_ride_completed" (rideCompletedDetails (RideBookingRes resp))
-                                        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{startedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A", startedAtUTC = fromMaybe "" resp.rideStartTime ,endedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A", finalAmount = finalAmount, rideRatingState {driverName = ride.driverName, rideId = ride.id , distanceDifference = differenceOfDistance} , ratingViewState { rideBookingRes = (RideBookingRes resp), issueFacedView = nightSafetyFlow}, driverInfoCardState {initDistance = Nothing}},props{currentStage = RideCompleted, estimatedDistance = contents.estimatedDistance, nightSafetyFlow = nightSafetyFlow, showOfferedAssistancePopUp = (resp.hasDisability == Just true)}})
-                                        homeScreenFlow
-                                        else homeScreenFlow
+            "TRIP_FINISHED" -> do -- TRIP FINISHED
+              if (getValueToLocalStore HAS_TAKEN_FIRST_RIDE == "false") then do
+                _ <- pure $ metaLogEvent "ny_user_first_ride_completed"
+                (GetProfileRes response) <- Remote.getProfileBT ""
+                setValueToLocalStore HAS_TAKEN_FIRST_RIDE ( show response.hasTakenRide)
+              else 
+                pure unit
+
+              let sourceSpecialTagIcon = specialLocationIcons state.props.zoneType.sourceTag
+                  destSpecialTagIcon = specialLocationIcons state.props.zoneType.destinationTag
+
+              _ <- pure $ metaLogEvent "ny_user_ride_completed"
+              _ <- updateLocalStage HomeScreen
+              setValueToLocalStore IS_SOS_ACTIVE "false"
+              modifyScreenState $ NammaSafetyScreenStateType (\nammaSafetyScreen -> nammaSafetyScreen{data{sosId = ""}})
+
+              if (state.props.bookingId /= "") then do
+                (RideBookingRes resp) <- Remote.rideBookingBT (state.props.bookingId)
+                let (RideBookingAPIDetails bookingDetails) = resp.bookingDetails
+                    (RideBookingDetails contents) = bookingDetails.contents
+                    (RideAPIEntity ride) = fromMaybe dummyRideAPIEntity (resp.rideList !! 0)
+                    finalAmount =  getFinalAmount (RideBookingRes resp)
+                    differenceOfDistance = fromMaybe 0 contents.estimatedDistance - (fromMaybe 0 ride.chargeableRideDistance)
+                    nightSafetyFlow = showNightSafetyFlow resp.hasNightIssue resp.rideStartTime resp.rideEndTime
+
+                lift $ lift $ triggerRideStatusEvent notification (Just finalAmount) (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
+                setValueToLocalStore PICKUP_DISTANCE "0"
+                liftFlowBT $ logEventWithMultipleParams logField_ "ny_rider_ride_completed" (rideCompletedDetails (RideBookingRes resp))
+                modifyScreenState $ HomeScreenStateType (\homeScreen -> 
+                  homeScreen
+                    { data
+                        { startedAt = convertUTCtoISC (fromMaybe "" resp.rideStartTime ) "h:mm A"
+                        , startedAtUTC = fromMaybe "" resp.rideStartTime
+                        , endedAt = convertUTCtoISC (fromMaybe "" resp.rideEndTime ) "h:mm A"
+                        , finalAmount = finalAmount
+                        , rideRatingState 
+                            { driverName = ride.driverName
+                            , rideId = ride.id
+                            , distanceDifference = differenceOfDistance
+                            }
+                        , ratingViewState 
+                            { rideBookingRes = (RideBookingRes resp)
+                            , issueFacedView = nightSafetyFlow
+                            }
+                        , driverInfoCardState 
+                            { initDistance = Nothing
+                            , rentalData 
+                                { finalDuration = (fromMaybe 0 resp.duration) / (60*60)
+                                , finalDistance = (fromMaybe 0 ride.chargeableRideDistance)/1000
+                                }
+                            }
+                        }
+                    , props
+                        { currentStage = RideCompleted
+                        , estimatedDistance = contents.estimatedDistance
+                        , nightSafetyFlow = nightSafetyFlow
+                        , showOfferedAssistancePopUp = (resp.hasDisability == Just true)
+                        }
+                    })
+                homeScreenFlow
+              else 
+                homeScreenFlow
             "CANCELLED_PRODUCT"   -> do -- REMOVE POLYLINES
                                       _ <- pure $ removeAllPolylines ""
                                       _ <- updateLocalStage HomeScreen
