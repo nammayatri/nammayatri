@@ -2,7 +2,6 @@ module Resources.Localizable.EN where
 
 import Prelude ((<>))
 import Language.Types (STR(..))
-import Prelude ((<>))
 
 getEN :: STR -> String
 getEN stringKey =
