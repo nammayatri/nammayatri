@@ -124,7 +124,7 @@ verifyRC ::
   DriverRCReq ->
   Maybe Vehicle.Variant -> -- in case hardcoded variant passed from dashboard, then ignore variant coming from IDFY
   Flow DriverRCRes
-verifyRC isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@DriverRCReq {..} mbVariant = do
+verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req@DriverRCReq {..} mbVariant = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbFleetOwnerId <- Redis.safeGet $ makeFleetOwnerKey vehicleRegistrationCertNumber
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
@@ -175,16 +175,11 @@ verifyRC isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
         case mRCAssociation of
           Just assoc -> do
             now <- getCurrentTime
-            when (maybe True (now >) assoc.associatedTill) $ -- if that association is old, create new association for that driver
-              createRCAssociation person.id vehicleRC
-            RCQuery.updateFleetOwnerId vehicleRC.id mbFleetOwnerId
+            if (maybe True (now >) assoc.associatedTill)
+              then verifyRCFlow person merchantOpCityId onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
+              else RCQuery.updateFleetOwnerId vehicleRC.id mbFleetOwnerId
           Nothing -> do
-            -- if no association to driver, create one. No need to verify RC as already verified except in fallback case
-            if isNothing dateOfRegistration
-              then do
-                createRCAssociation person.id vehicleRC
-                RCQuery.updateFleetOwnerId vehicleRC.id mbFleetOwnerId
-              else verifyRCFlow person merchantOpCityId onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
+            verifyRCFlow person merchantOpCityId onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
       Nothing ->
         verifyRCFlow person merchantOpCityId onboardingDocumentConfig.checkExtraction vehicleRegistrationCertNumber imageId dateOfRegistration multipleRC mbVariant
 
@@ -198,18 +193,6 @@ verifyRC isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
       unless (imageMetadata.imageType == Image.VehicleRegistrationCertificate) $
         throwError (ImageInvalidType (show Image.VehicleRegistrationCertificate) (show imageMetadata.imageType))
       S3.get $ T.unpack imageMetadata.s3Path
-
-    createRCAssociation driverId rc = do
-      driverRCAssoc <- Domain.makeRCAssociation driverId rc.id (convertTextToUTC (Just "2099-12-12"))
-      DAQuery.create driverRCAssoc
-      when (isNothing multipleRC) $ do
-        rcNumber <- decrypt rc.certificateNumber
-        let rcStatusReq =
-              RCStatusReq
-                { rcNo = rcNumber,
-                  isActivate = True
-                }
-        void $ linkRCStatus (driverId, merchantId, merchantOpCityId) rcStatusReq
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe Vehicle.Variant -> Flow ()
 verifyRCFlow person merchantOpCityId imageExtraction rcNumber imageId dateOfRegistration multipleRC mbVariant = do

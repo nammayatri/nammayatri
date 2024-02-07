@@ -16,9 +16,14 @@ module SharedLogic.SearchTryLocker
   ( whenSearchTryCancellable,
     isSearchTryCancelled,
     markSearchTryAsAssigned,
+    isBookingCancelled,
+    whenBookingCancellable,
+    markBookingAsAssigned,
+    isBookingAssigned,
   )
 where
 
+import Domain.Types.Booking (Booking)
 import Domain.Types.SearchTry (SearchTry)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
@@ -63,3 +68,42 @@ mkCancelledKey searchTryId = "SearchTry:Cancelled:SearchTryId-" <> searchTryId.g
 
 mkAssignedKey :: Id SearchTry -> Text
 mkAssignedKey searchTryId = "SearchTry:Assigned:SearchTryId-" <> searchTryId.getId
+
+isBookingCancelled ::
+  CacheFlow m r =>
+  Id Booking ->
+  m Bool
+isBookingCancelled bookingId = do
+  fromMaybe False <$> Hedis.get (mkBookingCancelledKey bookingId)
+
+isBookingAssigned ::
+  CacheFlow m r =>
+  Id Booking ->
+  m Bool
+isBookingAssigned bookingId = do
+  fromMaybe False <$> Hedis.get (mkBookingAssignedKey bookingId)
+
+whenBookingCancellable ::
+  CacheFlow m r =>
+  Id Booking ->
+  m () ->
+  m ()
+whenBookingCancellable bookingId actions = do
+  isBookingCancelled' <- isBookingCancelled bookingId
+  isBookingAssigned' <- isBookingAssigned bookingId
+  unless (isBookingCancelled' || isBookingAssigned') $ do
+    Hedis.setExp (mkBookingCancelledKey bookingId) True 120
+    actions
+
+markBookingAsAssigned ::
+  CacheFlow m r =>
+  Id Booking ->
+  m ()
+markBookingAsAssigned bookingId = do
+  Hedis.setExp (mkBookingAssignedKey bookingId) True 120
+
+mkBookingCancelledKey :: Id Booking -> Text
+mkBookingCancelledKey bookingId = "Booking:Cancelled:BookingId-" <> bookingId.getId
+
+mkBookingAssignedKey :: Id Booking -> Text
+mkBookingAssignedKey bookingId = "Booking:Assigned:BookingId-" <> bookingId.getId

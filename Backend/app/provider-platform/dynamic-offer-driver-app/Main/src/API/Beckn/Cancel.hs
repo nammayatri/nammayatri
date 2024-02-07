@@ -70,7 +70,7 @@ cancel transporterId subscriber reqBS = withFlowHandlerBecknAPI do
     Right cancelSearchReq -> do
       searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
       fork ("cancelSearch:" <> cancelSearchReq.transactionId) $
-        DCancel.cancelSearch transporterId cancelSearchReq searchTry
+        DCancel.cancelSearch transporterId searchTry
   return Ack
 
 cancelLockKey :: Text -> Text

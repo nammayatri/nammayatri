@@ -55,6 +55,6 @@ instance B.Table SearchTryT where
 
 type SearchTry = SearchTryT Identity
 
-$(enableKVPG ''SearchTryT ['id] [['requestId]])
+$(enableKVPG ''SearchTryT ['id] [['requestId], ['estimateId]])
 
 $(mkTableInstances ''SearchTryT "search_try")
