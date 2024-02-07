@@ -40,7 +40,7 @@ import Components.StatsModel as StatsModel
 import Data.Array as DA
 import Data.Int (fromString)
 import Data.Int as Int
-import Data.Maybe (Maybe(..), fromMaybe, isJust)
+import Data.Maybe (Maybe(..), fromMaybe, isJust,maybe)
 import Data.String as DS
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Suggestions (getSuggestionsfromKey)
@@ -118,7 +118,7 @@ rideActionModalConfig state =
     rideStartTimer = state.props.rideStartTimer,
     tripDuration = (\tripDuration -> (show ( tripDuration / 3600)) <> ":" <> (show ( (tripDuration `mod` 3600) / 60)) <> " Hr") <$> state.data.activeRide.tripDuration,
     rideStartTime = state.data.activeRide.tripStartTime,
-    startODOReading = (getValueToLocalStore RIDE_START_ODOMETER_READING)
+    startODOReading = maybe (getValueToLocalStore RIDE_START_ODOMETER_READING) show state.data.activeRide.startOdometerReading
     }
     in rideActionModalConfig'
 
@@ -276,6 +276,7 @@ newStopPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
 newStopPopupConfig state = let
   config' = PopUpModal.config
   popUpConfig' = config'{
+    optionButtonOrientation = "VERTICAL",
     gravity = CENTER,
     margin = Margin 16 20 16 20,
     buttonLayoutMargin = Margin 16 0 16 20 ,
@@ -292,11 +293,20 @@ newStopPopupConfig state = let
     },
     option1 {
       text = (getString NAVIGATE_TO_LOCATION)
+    , margin = Margin 16 0 16 8
     , background = Color.black900
     , color = Color.yellow900
+    ,gravity = CENTER
+      , width = MATCH_PARENT
     },
     option2 {
-      visibility = false
+      text = (getString CLOSE)
+    , margin = Margin 16 0 16 8
+    , background = Color.white900
+    , color = Color.black900
+    , strokeColor = Color.white900
+    , gravity = CENTER
+    , width = MATCH_PARENT
     },
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
@@ -731,7 +741,7 @@ enterOdometerReadingConfig state = let
         visibility = boolToVisibility $ state.props.otpIncorrect || state.props.otpAttemptsExceeded
       },
       subHeadingConfig {
-        text = getString (ENTER_THE_DIGITS_OF_ODOMETER),
+        text = if state.props.endRideOdometerReadingValidationFailed then getString (ODOMETER_READING_VALIDATION_FAILED) else getString (ENTER_THE_DIGITS_OF_ODOMETER),
         visibility = boolToVisibility $ not state.props.otpAttemptsExceeded,
         textStyle = FontStyle.Body1,
         gravity = CENTER
@@ -1311,7 +1321,7 @@ getRideCompletedConfig state = let
       background = Color.mangolia
     },
     rentalRideConfig {
-    rideStartODOReading = (getValueToLocalStore RIDE_START_ODOMETER_READING) <> "Km",
+    rideStartODOReading = (maybe (getValueToLocalStore RIDE_START_ODOMETER_READING) show state.data.activeRide.startOdometerReading) <> "Km",
     rideEndODOReading = (getValueToLocalStore RIDE_END_ODOMETER_READING) <> "Km",
     baseRideDuration =  (show $ (fromMaybe 0 state.data.activeRide.tripDuration) / 3600) <> " hr " <> (show $ ((fromMaybe 0 state.data.activeRide.tripDuration) `mod` 3600 / 60)) <> " m",
     baseRideDistance = if state.data.activeRide.distance <= 0.0 then "0.0" else if(state.data.activeRide.distance < 1000.0) then HU.parseFloat (state.data.activeRide.distance) 2 <> " m" else HU.parseFloat((state.data.activeRide.distance / 1000.0)) 2 <> " km",

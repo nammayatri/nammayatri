@@ -92,7 +92,7 @@ public class NotificationUtils {
     public static String SAFETY_ALERT = "SAFETY_ALERT";
     public static String RENTAL = "Rental";
     public static String INTERCITY = "InterCity";
-    public static String NEW_STOP_ADDED = "NEW_STOP_ADDED";
+    public static String NEW_STOP_ADDED = "ADD_STOP";
     public static String EDIT_STOP = "EDIT_STOP";
     public static Uri soundUri = null;
     public static OverlaySheetService.OverlayBinder binder;
