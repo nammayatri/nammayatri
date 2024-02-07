@@ -93,14 +93,15 @@ buildConfirmReqV2 req = do
   fulfillment <- req.confirmReqMessage.confirmReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
   customerPhoneNumber <- fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "Customer Phone not found")
   let customerMobileCountryCode = "+91" -- TODO: check how to get countrycode via ONDC
-  fromAddress <- fulfillment.fulfillmentStops >>= Utils.getStartLocation >>= (.stopLocation) >>= Utils.parseAddress & fromMaybeM (InvalidRequest "Start location not found")
+  fromAddress' <- fulfillment.fulfillmentStops >>= Utils.getStartLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
+  fromAddress <- fromAddress' & fromMaybeM (InvalidRequest "Start location not found")
   let mbRiderName = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personName)
   let vehCategory = fulfillment.fulfillmentVehicle >>= (.vehicleCategory)
       vehVariant = fulfillment.fulfillmentVehicle >>= (.vehicleVariant)
   vehicleVariant <- Utils.parseVehicleVariant vehCategory vehVariant & fromMaybeM (InvalidRequest $ "Unable to parse vehicle category:- " <> show vehCategory <> " and variant:- " <> show vehVariant)
   let driverId = req.confirmReqMessage.confirmReqMessageOrder.orderProvider >>= (.providerId)
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag
-  let toAddress = fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) >>= Utils.parseAddress
+  toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
   return $
     DConfirm.DConfirmReq
       { ..

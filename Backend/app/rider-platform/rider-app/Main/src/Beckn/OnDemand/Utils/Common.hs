@@ -82,9 +82,11 @@ mkStops origin stops startTime =
                    <$> stops
                )
         )
-  where
-    mkAddress :: DLoc.LocationAddress -> Text
-    mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]
+
+mkAddress :: DLoc.LocationAddress -> Text
+mkAddress DLoc.LocationAddress {..} =
+  let res = map (Just . fromMaybe "") [door, building, street, area, city, state, country]
+   in T.intercalate "<>" $ catMaybes res
 
 mkPaymentTags :: Maybe [Spec.TagGroup]
 mkPaymentTags =
@@ -263,6 +265,3 @@ mkStops' origin mDestination =
                     stopTime = Nothing
                   }
           ]
-  where
-    mkAddress :: DLoc.LocationAddress -> Text
-    mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]

@@ -74,7 +74,7 @@ mkStops origin mbDestination = do
               { stopLocation =
                   Just $
                     Spec.Location
-                      { locationAddress = Nothing, -- JAYPAL, Confirm if it is correct to put it here
+                      { locationAddress = Nothing, -- For start and end in on_search, we send address as nothing
                         locationAreaCode = Nothing,
                         locationCity = Nothing,
                         locationCountry = Nothing,
@@ -185,27 +185,35 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "CAB", Just "TAXI_PLUS") -> Just Variant.TAXI_PLUS
   _ -> Nothing
 
-parseAddress :: Spec.Location -> Maybe DL.LocationAddress
-parseAddress Spec.Location {..} = do
+parseAddress :: MonadFlow m => Spec.Location -> m (Maybe DL.LocationAddress)
+parseAddress loc@Spec.Location {..} = do
   let areaCode = locationAreaCode
-  let city = locationCity >>= (.cityName)
-  let state = locationState >>= (.stateName)
-  let country = locationCountry >>= (.countryName)
-  let fullAddress = mkFullAddress city state country
-  Just $
-    DL.LocationAddress
-      { street = Nothing,
-        door = Nothing,
-        building = Nothing,
-        area = Nothing, -- TODO: Fetch this, discuss with ONDC
-        ..
-      }
+  let city' = locationCity >>= (.cityName)
+  let state' = locationState >>= (.stateName)
+  let country' = locationCountry >>= (.countryName)
+  locationAddress' <- locationAddress & fromMaybeM (InvalidRequest $ "Missing locationAddress:-" <> show loc)
+  address@OS.Address {..} <- buildAddressFromText locationAddress'
+  let fullAddress = mkFullAddress address
+  pure $
+    Just $
+      DL.LocationAddress
+        { area = locality, -- TODO: Fetch this, discuss with ONDC
+          city = city',
+          state = state',
+          country = country',
+          ..
+        }
   where
-    mkFullAddress city state country = do
-      let strictFields = catMaybes $ filter (not . isEmpty) [locationAddress, city, state, country]
+    mkFullAddress OS.Address {..} = do
+      let strictFields = catMaybes $ filter (not . isEmpty) [door, building, street, locality, city, state, area_code, country]
       if null strictFields
         then Nothing
         else Just $ T.intercalate ", " strictFields
+    -- mkFullAddress city state country = do
+    --   let strictFields = catMaybes $ filter (not . isEmpty) [locationAddress, city, state, country]
+    --   if null strictFields
+    --     then Nothing
+    --     else Just $ T.intercalate ", " strictFields
 
     isEmpty :: Maybe Text -> Bool
     isEmpty = maybe True (T.null . T.replace " " "")
@@ -254,9 +262,6 @@ mkStops' origin mbDestination mAuthorization =
               <$> mbDestination
           ]
   where
-    mkAddress :: DLoc.LocationAddress -> Text
-    mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]
-
     mkAuthorization :: Text -> Maybe Spec.Authorization
     mkAuthorization auth =
       Just $
@@ -264,6 +269,11 @@ mkStops' origin mbDestination mAuthorization =
           { authorizationToken = Just auth,
             authorizationType = Just "OTP"
           }
+
+mkAddress :: DLoc.LocationAddress -> Text
+mkAddress DLoc.LocationAddress {..} =
+  let res = map (Just . fromMaybe "") [door, building, street, area, city, state, country]
+   in T.intercalate "<>" $ catMaybes res
 
 data DriverInfo = DriverInfo
   { mobileNumber :: Text,
@@ -325,9 +335,6 @@ mkStopsOUS booking ride rideOtp =
             )
               <$> mbDestination
           ]
-  where
-    mkAddress :: DLoc.LocationAddress -> Text
-    mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]
 
 -- common for on_update & on_status
 mkFulfillmentV2 ::
@@ -565,3 +572,21 @@ mkArrivalTimeTagGroupV2 arrivalTime =
             ]
       }
   ]
+
+buildAddressFromText :: MonadFlow m => Text -> m OS.Address
+buildAddressFromText fullAddress = do
+  let splitedAddress = T.splitOn "<>" fullAddress
+      totalAddressComponents = List.length splitedAddress
+  logDebug $ "Search Address:-" <> fullAddress
+  unless (totalAddressComponents == 7) $
+    throwError . InvalidRequest $ "Address should have 7 components seperated by `<>`, address:-" <> fullAddress
+  let area_code_ = Nothing
+      building_ = Just $ splitedAddress List.!! 1
+      city_ = Just $ splitedAddress List.!! 4
+      country_ = Just $ splitedAddress List.!! 6
+      door_ = Just $ splitedAddress List.!! 0
+      locality_ = Just $ splitedAddress List.!! 3
+      state_ = Just $ splitedAddress List.!! 5
+      street_ = Just $ splitedAddress List.!! 2
+      ward_ = Just $ T.intercalate ", " $ catMaybes [door_, building_, locality_]
+  pure $ OS.Address {area_code = area_code_, building = building_, city = city_, country = country_, door = door_, locality = locality_, state = state_, street = street_, ward = ward_}

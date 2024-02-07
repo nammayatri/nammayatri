@@ -16,7 +16,7 @@
 module Beckn.ACL.Select (buildSelectReq, buildSelectReqV2) where
 
 import Beckn.ACL.Common (castVariant, mkLocation)
-import qualified Beckn.OnDemand.Utils.Common as Common
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -26,7 +26,6 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Location as Location
-import qualified Domain.Types.LocationAddress as LocationAddress
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
@@ -164,7 +163,7 @@ mkStops origin destination =
             { stopLocation =
                 Just $
                   Spec.Location
-                    { locationAddress = Just $ mkAddress origin.address,
+                    { locationAddress = Just $ UCommon.mkAddress origin.address,
                       locationAreaCode = origin.address.areaCode,
                       locationCity = Just $ Spec.City Nothing origin.address.city,
                       locationCountry = Just $ Spec.Country Nothing origin.address.country,
@@ -180,7 +179,7 @@ mkStops origin destination =
             { stopLocation =
                 Just $
                   Spec.Location
-                    { locationAddress = Just $ mkAddress destination.address,
+                    { locationAddress = Just $ UCommon.mkAddress destination.address,
                       locationAreaCode = destination.address.areaCode,
                       locationCity = Just $ Spec.City Nothing destination.address.city,
                       locationCountry = Just $ Spec.Country Nothing destination.address.country,
@@ -193,13 +192,10 @@ mkStops origin destination =
               stopTime = Nothing
             }
         ]
-  where
-    mkAddress :: LocationAddress.LocationAddress -> Text
-    mkAddress LocationAddress.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]
 
 tfVehicle :: (MonadFlow m) => DSelect.DSelectRes -> m Spec.Vehicle
 tfVehicle res = do
-  let (category, variant) = Common.castVehicleVariant res.variant
+  let (category, variant) = UCommon.castVehicleVariant res.variant
       vehicleColor = Nothing
       vehicleMake = Nothing
       vehicleModel = Nothing

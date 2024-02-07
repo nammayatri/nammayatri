@@ -9,6 +9,7 @@ import qualified Beckn.Types.Core.Taxi.API.Search
 import qualified Beckn.Types.Core.Taxi.Common.Address
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
+import qualified Data.List as L
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
 import qualified Domain.Types.Merchant
@@ -20,7 +21,8 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber
-import Kernel.Utils.Common (type (:::))
+import Kernel.Utils.Common (fromMaybeM, type (:::))
+import Tools.Error
 
 buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m Domain.Action.Beckn.Search.DSearchReq
 buildSearchReq messageId subscriber req context = do
@@ -45,19 +47,12 @@ buildSearchReq messageId subscriber req context = do
   transactionId_ <- Beckn.OnDemand.Utils.Common.getTransactionId context
   pure $ Domain.Action.Beckn.Search.DSearchReq {bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, customerLanguage = customerLanguage_, customerPhoneNum = customerPhoneNum_, device = device_, disabilityTag = disabilityTag_, dropAddrress = dropAddrress_, dropLocation = dropLocation_, isReallocationEnabled = isReallocationEnabled_, messageId = messageId_, pickupAddress = pickupAddress_, pickupLocation = pickupLocation_, pickupTime = pickupTime_, routeDistance = routeDistance_, routeDuration = routeDuration_, routePoints = routePoints_, transactionId = transactionId_}
 
+-- [door, building, street, area, city, state, areaCode, country]
 tfAddress :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Maybe BecknV2.OnDemand.Types.Location -> m (Maybe Beckn.Types.Core.Taxi.Common.Address.Address)
 tfAddress Nothing = pure Nothing
 tfAddress (Just location) = do
-  let area_code_ = Nothing
-  let building_ = Nothing
-  let city_ = Nothing
-  let country_ = Nothing
-  let door_ = location.locationAddress
-  let locality_ = Nothing
-  let state_ = Nothing
-  let street_ = Nothing
-  let ward_ = Nothing
-  let returnData = Beckn.Types.Core.Taxi.Common.Address.Address {area_code = area_code_, building = building_, city = city_, country = country_, door = door_, locality = locality_, state = state_, street = street_, ward = ward_}
+  fullAddress <- location.locationAddress & fromMaybeM (InvalidRequest $ "Location address is missing, location:-" <> show location)
+  returnData <- Beckn.OnDemand.Utils.Common.buildAddressFromText fullAddress
   let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then pure Nothing
