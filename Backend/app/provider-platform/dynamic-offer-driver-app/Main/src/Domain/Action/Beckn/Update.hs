@@ -153,7 +153,7 @@ buildLocationMapping locationId entityId isEdit merchantId merchantOperatingCity
   now <- getCurrentTime
   prevOrder <- QLM.maxOrderByEntity entityId
   when isEdit $ QLM.updatePastMappingVersions entityId prevOrder
-  let version = "LATEST"
+  let version = QLM.latestTag
       tag = DLM.BOOKING
   return $
     DLM.LocationMapping

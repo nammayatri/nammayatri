@@ -347,7 +347,7 @@ mkLocationFromLocationMapping ::
   Int ->
   m (Maybe DLoc.Location)
 mkLocationFromLocationMapping bookingId order = do
-  locMap <- listToMaybe <$> QLM.findByEntityIdOrderAndVersion bookingId order "LATEST"
+  locMap <- listToMaybe <$> QLM.findByEntityIdOrderAndVersion bookingId order QLM.latestTag
   case locMap of
     Nothing -> pure Nothing
     Just locMap_ -> QL.findById locMap_.locationId

@@ -439,7 +439,6 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequest.SearchReqLocation
       Storage.Beam.SearchRequestForDriver
-      Storage.Beam.SearchRequestSpecialZone
       Storage.Beam.SearchTry
       Storage.Beam.SystemConfigs
       Storage.Beam.Translations
@@ -574,7 +573,6 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequest.SearchReqLocation
       Storage.Queries.SearchRequestForDriver
-      Storage.Queries.SearchRequestSpecialZone
       Storage.Queries.SearchTry
       Storage.Queries.Translations
       Storage.Queries.Vehicle

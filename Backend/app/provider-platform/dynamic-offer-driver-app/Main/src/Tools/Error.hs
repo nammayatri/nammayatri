@@ -939,3 +939,24 @@ instance IsHTTPError RentalError where
   toHttpCode _ = E400
 
 instance IsAPIError RentalError
+
+data LocationMappingError
+  = FromLocationMappingNotFound Text
+  | FromLocationNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''LocationMappingError
+
+instance IsBaseError LocationMappingError where
+  toMessage = \case
+    FromLocationMappingNotFound id_ -> Just $ "From location mapping not found for entity id: " <> id_ <> "."
+    FromLocationNotFound id_ -> Just $ "From location not found for locationId: " <> id_ <> "."
+
+instance IsHTTPError LocationMappingError where
+  toErrorCode = \case
+    FromLocationMappingNotFound _ -> "FROM_LOCATION_MAPPING_NOT_FOUND"
+    FromLocationNotFound _ -> "FROM_LOCATION_NOT_FOUND"
+
+  toHttpCode _ = E500
+
+instance IsAPIError LocationMappingError

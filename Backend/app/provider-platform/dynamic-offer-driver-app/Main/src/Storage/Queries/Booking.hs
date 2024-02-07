@@ -16,6 +16,7 @@
 
 module Storage.Queries.Booking where
 
+import Data.List (sortBy)
 import Data.Ord
 import qualified Data.Text as T
 import Domain.Types.Booking
@@ -44,6 +45,7 @@ import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.FareParameters as QueriesFP
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import Tools.Error
 
 createBooking' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Booking -> m ()
 createBooking' = createWithKV
@@ -202,17 +204,13 @@ instance FromTType' BeamB.Booking Booking where
           QLM.create dropLocMapping
           return (pickupLoc, Just dropLoc)
         _ -> do
-          let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-          fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-          fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
+          fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+          fl <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
           tl <- do
-            let toLocationMappings = filter (\loc -> loc.order /= 0) mappings
-            if (null toLocationMappings)
-              then return Nothing
-              else do
-                let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-                QL.findById toLocMap.locationId
+            let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+            maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
+
           return (fl, tl)
 
     fp <- QueriesFP.findById (Id fareParametersId)

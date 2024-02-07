@@ -86,7 +86,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDeta
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
-import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
 import qualified "dynamic-offer-driver-app" Storage.Beam.Volunteer as Volunteer
@@ -159,7 +158,6 @@ data DeleteModel
   | RiderDetailsDelete
   | SearchRequestDelete
   | SearchRequestForDriverDelete
-  | SearchRequestSpecialZoneDelete
   | SearchTryDelete
   | VehicleDelete
   | VolunteerDelete
@@ -244,7 +242,6 @@ getTagDelete RideDetailsDelete = "RideDetailsOptions"
 getTagDelete RiderDetailsDelete = "RiderDetailsOptions"
 getTagDelete SearchRequestDelete = "SearchRequestOptions"
 getTagDelete SearchRequestForDriverDelete = "SearchRequestForDriverOptions"
-getTagDelete SearchRequestSpecialZoneDelete = "SearchRequestSpecialZoneOptions"
 getTagDelete SearchTryDelete = "SearchTryOptions"
 getTagDelete VehicleDelete = "VehicleOptions"
 getTagDelete VolunteerDelete = "VolunteerOptions"
@@ -324,7 +321,6 @@ parseTagDelete "RideDetailsOptions" = return RideDetailsDelete
 parseTagDelete "RiderDetailsOptions" = return RiderDetailsDelete
 parseTagDelete "SearchRequestOptions" = return SearchRequestDelete
 parseTagDelete "SearchRequestForDriverOptions" = return SearchRequestForDriverDelete
-parseTagDelete "SearchRequestSpecialZoneOptions" = return SearchRequestSpecialZoneDelete
 parseTagDelete "SearchTryOptions" = return SearchTryDelete
 parseTagDelete "VehicleOptions" = return VehicleDelete
 parseTagDelete "VolunteerOptions" = return VolunteerDelete
@@ -409,7 +405,6 @@ data DBDeleteObject
   | RiderDetailsDeleteOptions DeleteModel (Where Postgres RiderDetails.RiderDetailsT)
   | SearchRequestDeleteOptions DeleteModel (Where Postgres SearchRequest.SearchRequestT)
   | SearchRequestForDriverDeleteOptions DeleteModel (Where Postgres SearchRequestForDriver.SearchRequestForDriverT)
-  | SearchRequestSpecialZoneDeleteOptions DeleteModel (Where Postgres SearchRequestSpecialZone.SearchRequestSpecialZoneT)
   | SearchTryDeleteOptions DeleteModel (Where Postgres SearchTry.SearchTryT)
   | VehicleDeleteOptions DeleteModel (Where Postgres Vehicle.VehicleT)
   | VolunteerDeleteOptions DeleteModel (Where Postgres Volunteer.VolunteerT)
@@ -632,9 +627,6 @@ instance FromJSON DBDeleteObject where
       SearchRequestForDriverDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ SearchRequestForDriverDeleteOptions deleteModel whereClause
-      SearchRequestSpecialZoneDelete -> do
-        whereClause <- parseDeleteCommandValues contents
-        return $ SearchRequestSpecialZoneDeleteOptions deleteModel whereClause
       SearchTryDelete -> do
         whereClause <- parseDeleteCommandValues contents
         return $ SearchTryDeleteOptions deleteModel whereClause
