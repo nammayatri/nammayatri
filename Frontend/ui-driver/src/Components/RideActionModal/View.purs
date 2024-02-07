@@ -311,6 +311,7 @@ openGoogleMap push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity RIGHT
+  , visibility $ boolToVisibility $ config.startRideActive || config.rideType /= ST.Rental || Maybe.isJust config.stopAddress 
   ][  linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
@@ -444,7 +445,7 @@ durationText time =
   let seconds = Maybe.maybe 0 (\time -> abs $ runFn2 JB.differenceBetweenTwoUTC time (getCurrentUTC "")) time
       hours = seconds / 3600
       minutes = (seconds `mod` 3600) / 60
-  in (if hours > 0 then (show hours) <> " hr " else "") <> (show minutes) <> " m"
+  in (if hours > 0 then (show hours) <> " : " else "0:") <> (show minutes) <> " m"
 
 
 rentalRideDescView :: forall w . Config -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w

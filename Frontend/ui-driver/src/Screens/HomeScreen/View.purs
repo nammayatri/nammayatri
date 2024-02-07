@@ -103,9 +103,9 @@ screen initialState =
           _ <- HU.storeCallBackForNotification push Notification
           _ <- HU.storeCallBackTime push TimeUpdate
           _ <- runEffectFn2 JB.storeKeyBoardCallback push KeyboardCallback
-          void $ JB.storeCallBackImageUpload push CallBackImageUpload
-          void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
-          void $ HU.storeCallBackForAddRideStop push CallBackNewStop          
+          when (initialState.data.activeRide.tripType == ST.Rental) $ void $ JB.storeCallBackImageUpload push CallBackImageUpload
+          when (initialState.data.activeRide.tripType == ST.Rental) $ void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
+                    
           when (getValueToLocalNativeStore IS_RIDE_ACTIVE == "true" && initialState.data.activeRide.status == NOTHING) do
             void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
               (GetRidesHistoryResp activeRideResponse) <- Remote.getRideHistoryReqBT "1" "0" "true" "null" "null"
@@ -181,6 +181,8 @@ screen initialState =
                                   else pure unit
                                 push GetMessages
             "RideStarted"    -> do
+
+                                when (initialState.data.activeRide.tripType == ST.Rental) $ void $ HU.storeCallBackForAddRideStop push CallBackNewStop
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LAT (HU.toStringJSON initialState.data.activeRide.src_lat)
                                 _ <- pure $ setValueToLocalNativeStore RIDE_START_LON (HU.toStringJSON initialState.data.activeRide.src_lon)
                                 _ <- pure $ setValueToLocalNativeStore RIDE_END_LAT (HU.toStringJSON initialState.data.activeRide.dest_lat)
@@ -192,7 +194,7 @@ screen initialState =
                                 _ <- push RemoveChat
                                 _ <- launchAff $ flowRunner defaultGlobalState $ launchMaps push TriggerMaps
                                 
-                                if (initialState.data.activeRide.tripType == ST.Rental)
+                                if (initialState.data.activeRide.tripType == ST.Rental && getValueToLocalStore RENTAL_RIDE_STATUS_POLLING == "False")
                                   then do
                                     _ <- pure $ spy "global event rentalRideStatusPolling"
                                     void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING_ID (HU.generateUniqueId unit)
@@ -1789,18 +1791,16 @@ rideStatusPolling pollingId duration state push action = do
 
 rentalRideStatusPolling :: forall action. String -> Number -> HomeScreenState -> (action -> Effect Unit) -> (Paths -> Maybe StopLocation -> Maybe StopLocation -> action) -> Flow GlobalState Unit
 rentalRideStatusPolling pollingId duration state push action = do
-  _ <- pure $ spy "inside rentalRideStatusPolling" ""
-  --debug
-  _ <- pure $ printLog "inside rentalRideStatusPolling value of lat and lon" (show state.data.activeRide.nextStopLat <> " " <> show state.data.activeRide.nextStopLon)
-  --
+ 
   if isRentalRideStatusPollingActive state then do
+    _ <- pure $ spy "inside rentalRideStatusPolling" ""
+    _ <- pure $ printLog "inside rentalRideStatusPolling value of lat and lon" (show state.data.activeRide.nextStopLat <> " " <> show state.data.activeRide.nextStopLon)
+  
     activeRideResponse <- Remote.getRideHistoryReq "1" "0" "true" "null" "null"
     case activeRideResponse of
       Right (GetRidesHistoryResp rideList) -> do
         case (rideList.list DA.!! 0) of
           Just (RidesInfo {nextStopLocation,lastStopLocation}) -> do
-            _ <- pure $ printLog "value of checkNextStopLocationIsSame " $ checkNextStopLocationIsSame nextStopLocation (constructLocationInfo state.data.activeRide.nextStopLat state.data.activeRide.nextStopLon)
-  
             if not (checkNextStopLocationIsSame nextStopLocation (constructLocationInfo state.data.activeRide.nextStopLat state.data.activeRide.nextStopLon)) && not state.props.showNewStopPopup then do
               currentLocation <- doAff do liftEffect JB.getCurrentLatLong 
               doAff do liftEffect $ push $ action currentLocation nextStopLocation lastStopLocation
