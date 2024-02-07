@@ -1117,7 +1117,7 @@ eval (UpdateCurrentStage stage (RideBookingRes resp)) state = do
                                 else if fareProductType == "INTER_CITY" then INTERCITY
                                 else if (fareProductType == "RENTAL") then RENTALS 
                                 else ESTIMATES
-      otp = if searchResultType == QUOTES then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if ((fareProductType == "RENTAL") && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
+      otp = if searchResultType == QUOTES then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if (((fareProductType == "RENTAL") || (fareProductType == "INTER_CITY"))  && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
       newState = state{data{driverInfoCardState {rentalData{startTimeUTC = fromMaybe "" resp.rideStartTime, baseDuration = spy "estimatedDuration ::: " ((fromMaybe 0 resp.estimatedDuration) / 3600) , baseDistance = (fromMaybe 0 resp.estimatedDistance) / 1000 },destination =  decodeAddress (Booking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))) , destinationLat = toLocation.lat , destinationLng = toLocation.lon , destinationAddress = getAddressFromBooking (fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation))} 
                         }
                       , props{stopLoc = Just {lat : stopLocationDetails^._lat, lng : stopLocationDetails^._lon, stopLocAddress : decodeAddress (Booking stopLocationDetails) }}}

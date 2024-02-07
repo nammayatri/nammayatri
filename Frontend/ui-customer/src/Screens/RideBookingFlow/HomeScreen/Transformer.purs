@@ -133,7 +133,7 @@ getDriverInfo vehicleVariant (RideBookingRes resp) isQuote =
       stopLocation = if fareProductType == "RENTAL" then _stopLocation else _toLocation
       (BookingLocationAPIEntity toLocation) = fromMaybe dummyBookingDetails (resp.bookingDetails ^._contents^.stopLocation)
   in  {
-        otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if ((fareProductType == "RENTAL") && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
+        otp : if isQuote then fromMaybe "" ((resp.bookingDetails)^._contents ^._otpCode) else if (((fareProductType == "RENTAL")|| (fareProductType == "INTER_CITY")) && isLocalStageOn RideStarted) then fromMaybe "" rideList.endOtp else rideList.rideOtp
       , driverName : if length (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) < 4 then
                         (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0)) <> " " <> (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 1)) else
                           (fromMaybe "" ((split (Pattern " ") (rideList.driverName)) DA.!! 0))
