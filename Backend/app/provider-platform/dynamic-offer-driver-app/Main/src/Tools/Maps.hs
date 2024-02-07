@@ -99,17 +99,17 @@ getEstimatedPickupDistances = runWithServiceConfig Maps.getDistances (.getEstima
 
 getRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
 getRoutes merchantId merchantOpCityId req = do
-  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getRoutes) merchantId merchantOpCityId req
 
 getPickupRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
 getPickupRoutes merchantId merchantOpCityId req = do
-  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getPickupRoutes) merchantId merchantOpCityId req
 
 getTripRoutes :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> GetRoutesReq -> m GetRoutesResp
 getTripRoutes merchantId merchantOpCityId req = do
-  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- TConfig.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   runWithServiceConfig (Maps.getRoutes transporterConfig.isAvoidToll) (.getTripRoutes) merchantId merchantOpCityId req
 
 snapToRoad ::
@@ -145,7 +145,7 @@ snapToRoadWithFallback merchantId merchantOperatingCityId = Maps.snapToRoadWithF
     handler = Maps.SnapToRoadHandler {..}
 
     getConfidenceThreshold = do
-      transporterConfig <- TConfig.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (MerchantNotFound merchantOperatingCityId.getId)
+      transporterConfig <- TConfig.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (MerchantNotFound merchantOperatingCityId.getId)
       pure $ transporterConfig.snapToRoadConfidenceThreshold
 
     getProvidersList = do
