@@ -271,5 +271,6 @@ instance ToTType' BeamTC.TransporterConfig TransporterConfig where
         BeamTC.specialLocationTags = specialLocationTags,
         BeamTC.kaptureDisposition = kaptureDisposition,
         BeamTC.dummyFromLocation = Just $ toJSON dummyFromLocation,
-        BeamTC.dummyToLocation = Just $ toJSON dummyToLocation
+        BeamTC.dummyToLocation = Just $ toJSON dummyToLocation,
+        BeamTC.supportedVehicles = supportedVehicles
       }

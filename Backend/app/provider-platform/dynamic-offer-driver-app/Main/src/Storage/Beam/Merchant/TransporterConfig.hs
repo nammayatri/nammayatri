@@ -18,6 +18,7 @@ module Storage.Beam.Merchant.TransporterConfig where
 
 import qualified Data.Aeson as A
 import qualified Database.Beam as B
+import Domain.Types.Vehicle.Variant (Variant)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -140,7 +141,8 @@ data TransporterConfigT f = TransporterConfigT
     dummyFromLocation :: B.C f (Maybe A.Value),
     dummyToLocation :: B.C f (Maybe A.Value),
     scheduleRideBufferTime :: B.C f Seconds,
-    considerDriversForSearch :: B.C f Bool
+    considerDriversForSearch :: B.C f Bool,
+    supportedVehicles :: B.C f [Variant]
   }
   deriving (Generic, B.Beamable)
 

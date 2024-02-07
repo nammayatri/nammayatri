@@ -237,7 +237,8 @@ data DriverInformationRes = DriverInformationRes
     maskedDeviceToken :: Maybe Text,
     currentDues :: Maybe HighPrecMoney,
     manualDues :: Maybe HighPrecMoney,
-    blockStateModifier :: Maybe Text
+    blockStateModifier :: Maybe Text,
+    isVehicleSupported :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -273,7 +274,8 @@ data DriverEntityRes = DriverEntityRes
     aadhaarCardPhoto :: Maybe Text,
     freeTrialDaysLeft :: Int,
     maskedDeviceToken :: Maybe Text,
-    blockStateModifier :: Maybe Text
+    blockStateModifier :: Maybe Text,
+    isVehicleSupported :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -600,6 +602,7 @@ buildDriverEntityRes (person, driverInfo) = do
     return mediaEntry.url
   aadhaarCardPhotoResp <- try @_ @SomeException (fetchAndCacheAadhaarImage person driverInfo)
   let aadhaarCardPhoto = join (eitherToMaybe aadhaarCardPhotoResp)
+  let isVehicleSupported = maybe False (\vehicle -> vehicle.variant `elem` transporterConfig.supportedVehicles) vehicleMB
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   let rating =
         if transporterConfig.ratingAsDecimal
@@ -638,7 +641,8 @@ buildDriverEntityRes (person, driverInfo) = do
         mediaUrl = mediaUrl,
         aadhaarCardPhoto = aadhaarCardPhoto,
         freeTrialDaysLeft = freeTrialDaysLeft,
-        maskedDeviceToken = maskedDeviceToken
+        maskedDeviceToken = maskedDeviceToken,
+        isVehicleSupported = isVehicleSupported
       }
 
 deleteDriver :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, MonadReader r m) => SP.Person -> Id SP.Person -> m APISuccess

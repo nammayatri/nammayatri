@@ -20,7 +20,7 @@ import Data.Aeson
 import Kernel.Prelude hiding (first)
 import Kernel.Utils.GenericPretty
 import Kernel.Utils.TH (mkFromHttpInstanceForEnum)
-import Tools.Beam.UtilsTH (mkBeamInstancesForEnum)
+import Tools.Beam.UtilsTH (mkBeamInstancesForEnumAndList)
 
 data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
   deriving
@@ -38,6 +38,6 @@ data Variant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW | TAXI | TAXI_PLUS
     )
   deriving (PrettyShow) via Showable Variant
 
-$(mkBeamInstancesForEnum ''Variant)
+$(mkBeamInstancesForEnumAndList ''Variant)
 
 $(mkFromHttpInstanceForEnum ''Variant)

@@ -19,6 +19,7 @@ import Domain.Types.Common
 import Domain.Types.Location (DummyLocationInfo)
 import Domain.Types.Merchant (Merchant)
 import Domain.Types.Merchant.MerchantOperatingCity (MerchantOperatingCity)
+import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Notification.FCM.Types (FCMConfig)
 import Kernel.External.Types (Language)
@@ -165,7 +166,8 @@ data TransporterConfigD u = TransporterConfig
     dummyFromLocation :: DummyLocationInfo,
     dummyToLocation :: DummyLocationInfo,
     scheduleRideBufferTime :: NominalDiffTime,
-    considerDriversForSearch :: Bool
+    considerDriversForSearch :: Bool,
+    supportedVehicles :: [Variant]
   }
   deriving (Generic, Show)
 
