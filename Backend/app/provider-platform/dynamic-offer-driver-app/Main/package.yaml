@@ -117,6 +117,7 @@ dependencies:
   - JuicyPixels
   - JuicyPixels-extra
   - base64-bytestring
+  - pureMD5
 
 ghc-options:
   - -fwrite-ide-info

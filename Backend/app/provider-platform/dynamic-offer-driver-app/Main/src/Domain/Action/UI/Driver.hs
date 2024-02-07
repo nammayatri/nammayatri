@@ -75,8 +75,11 @@ module Domain.Action.UI.Driver
 where
 
 import AWS.S3 as S3
+import qualified Client.Main as CM
 import Control.Monad.Extra (mapMaybeM)
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Message as Common
+import qualified Data.Aeson as DA
+import Data.Digest.Pure.MD5 as MD5
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
 import Data.List (intersect, (\\))
@@ -168,6 +171,7 @@ import Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.GoHomeConfig as CQGHC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchantOpCity
 import qualified Storage.CachedQueries.Merchant.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest as QDGR
@@ -236,7 +240,8 @@ data DriverInformationRes = DriverInformationRes
     maskedDeviceToken :: Maybe Text,
     currentDues :: Maybe HighPrecMoney,
     manualDues :: Maybe HighPrecMoney,
-    blockStateModifier :: Maybe Text
+    blockStateModifier :: Maybe Text,
+    frontendConfigHash :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -439,8 +444,9 @@ getInformation ::
     HasField "s3Env" r (S3.S3Env m)
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe Int ->
   m DriverInformationRes
-getInformation (personId, merchantId, merchantOpCityId) = do
+getInformation (personId, merchantId, merchantOpCityId) mbToss = do
   let driverId = cast personId
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverStats <- runInReplica $ QDriverStats.findById driverId >>= fromMaybeM DriverInfoNotFound
@@ -451,11 +457,25 @@ getInformation (personId, merchantId, merchantOpCityId) = do
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf (fromIntegral dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
+  city <- (QMerchantOpCity.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)) <&> (.city)
+  frntndfgs <- getFrontendConfigs city
+  let mbMd5Digest = (T.pack . show . MD5.md5 . DA.encode) <$> frntndfgs
   organization <-
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
-  makeDriverInformationRes merchantOpCityId driverEntity organization driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues)
+  makeDriverInformationRes merchantOpCityId driverEntity organization driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) mbMd5Digest
+  where
+    getFrontendConfigs city = do
+      ghcCond <- liftIO $ CM.hashMapToString $ HM.fromList [(T.pack "city", (DA.String . T.pack . show) city)]
+      contextValue <- case mbToss of
+        Just toss -> liftIO $ CM.evalExperiment "atlas_driver_ui" ghcCond toss
+        Nothing -> liftIO $ CM.evalCtx "atlas_driver_ui" ghcCond
+      case contextValue of
+        Left err -> do
+          logError $ "Error in getting frontend configs: " <> show err
+          return Nothing
+        Right cfgs -> return $ Just cfgs
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, _merchantId, merchantOpCityId) isActive mode = do
@@ -701,7 +721,7 @@ updateDriver (personId, _, merchantOpCityId) req = do
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo personId merchantOpCityId Nothing
-  makeDriverInformationRes merchantOpCityId driverEntity org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing
+  makeDriverInformationRes merchantOpCityId driverEntity org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing Nothing
   where
     checkIfCanDowngrade mVehicle = do
       case mVehicle of
@@ -740,8 +760,8 @@ updateMetaData (personId, _, _) req = do
   QMeta.updateMetaData personId req.device req.deviceOS req.deviceDateTime req.appPermissions
   return Success
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> m DriverInformationRes
-makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues = do
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe (Id DR.DriverReferral) -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> m DriverInformationRes
+makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode driverStats dghInfo currentDues manualDues md5DigestHash = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   CQGHC.findByMerchantOpCityId merchantOpCityId (Just id) >>= \cfg ->
     return $
@@ -752,6 +772,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} org referralCode 
           driverGoHomeInfo = dghInfo,
           isGoHomeEnabled = cfg.enableGoHome,
           operatingCity = merchantOperatingCity.city,
+          frontendConfigHash = md5DigestHash,
           ..
         }
 
