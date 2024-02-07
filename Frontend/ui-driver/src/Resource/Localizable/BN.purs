@@ -423,6 +423,7 @@ getBN stringKey =
         ENTER_CURRENT_ODOMETER_READING ->  "বর্তমান ওডোমিটার রিডিং লিখুন"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER ->  "ওডোমিটারের শেষ 4 অঙ্ক লিখুন"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ওডোমিটারের অঙ্ক লিখুন"
+        ODOMETER_READING_VALIDATION_FAILED -> "অনুগ্রহ করে বৈধ ওডোমিটার রিডিং লিখুন"
         ADDED_VOICE_NOTE ->  "ভয়েস নোট যোগ করা হয়েছে"
         NO_VOICE_NOTE_ADDED ->  "কোন ভয়েস নোট যোগ করা হয়নি"
         CALL_CUSTOMER_TITLE ->  "গ্রাহককে কল করবেন?"

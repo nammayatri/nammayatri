@@ -70,7 +70,9 @@ initData = {
           nextStopLon : Nothing,
           lastStopLat : Nothing,
           lastStopLon : Nothing,
-          actualRideDuration : Nothing
+          actualRideDuration : Nothing,
+          startOdometerReading : Nothing,
+          endOdometerReading : Nothing
         },
         cancelRideModal : {
           selectionOptions : [],
@@ -186,6 +188,7 @@ initData = {
         endRideOdometerImage : "",
         enterOdometerReadingModal : false,
         endRideOdometerReadingModal : false,
+        endRideOdometerReadingValidationFailed : false,
         showNewStopPopup : false,
         rideOtp : "",
         enterOtpFocusIndex : 0,
