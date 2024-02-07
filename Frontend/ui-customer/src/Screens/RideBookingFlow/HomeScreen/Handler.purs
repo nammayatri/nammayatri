@@ -212,5 +212,6 @@ homeScreen = do
       App.BackT $ App.NoBack <$> (pure $ GO_TO_SEARCH_LOCATION_SCREEN updatedState isSource)
     RideSearchSO -> 
       App.BackT $ App.NoBack <$> (pure $ GO_TO_RIDE_SEARCH_FLOW)
-    ConfirmRentalRideSO -> 
+    ConfirmRentalRideSO state -> do
+      modifyScreenState $ HomeScreenStateType (\homeScreenState -> state)
       App.BackT $ App.NoBack <$> (pure $ CONFIRM_RENTAL_RIDE)

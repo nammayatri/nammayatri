@@ -336,7 +336,7 @@ view push state =
                   , accessibilityHint $ camelCaseToSentenceCase (show state.props.currentStage)
                   ][ 
                     if isHomeScreenView state then homeScreenViewV2 push state else emptyTextView state
-                  , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen" 
+                  , if isHomeScreenView state then emptyTextView state else mapView push state "CustomerHomeScreen" (not (isHomeScreenView state))
                     ]
                 , linearLayout[height MATCH_PARENT, width MATCH_PARENT , background Color.white900, visibility $ boolToVisibility $ isJust state.data.rideHistoryTrip || state.props.isRepeatRide][]
                 , linearLayout
@@ -1094,8 +1094,8 @@ bannersCarousal view state push =
   linearLayout
   [ height WRAP_CONTENT
   , width MATCH_PARENT
-  , margin $ MarginTop 12
-  ][CarouselHolder.carouselView push $ getCarouselConfig view state]
+  , margin $ MarginTop 12][]
+  -- ][CarouselHolder.carouselView push $ getCarouselConfig view state] -- uncomment this pleeze
 
 emptySuggestionsBanner :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 emptySuggestionsBanner state push = 
@@ -2221,9 +2221,8 @@ searchLocationModelView push state =
   linearLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
-    , visibility GONE
     , background if state.props.isRideServiceable then Color.transparent else Color.white900
-    ][]
+    ][ SearchLocationModel.view (push <<< SearchLocationModelActionController) $ searchLocationModelViewState state]
 
 ------------------------ quoteListModelView ---------------------------
 quoteListModelView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -3472,7 +3471,7 @@ homeScreenViewV2 push state =
                                     (if not state.props.isSrcServiceable && state.props.currentStage == HomeScreen then
                                       [locationUnserviceableView push state]
                                     else 
-                                      ( [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" else emptyTextView state]
+                                      ( [if isHomeScreenView state then mapView push state "CustomerHomeScreenMap" (isHomeScreenView state) else emptyTextView state]
                                       <> (maybe [] (\item -> [bannersCarousal item state push]) state.data.bannerData.bannerItem)
                                       <> [ shimmerView state
                                       , if state.data.config.feature.enableAdditionalServices then additionalServicesView push state else linearLayout[visibility GONE][]
@@ -3811,18 +3810,17 @@ pickupLocationView push state =
             ]
         ]
 
-mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> PrestoDOM (Effect Unit) w
-mapView push state idTag = 
+mapView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> String -> Boolean -> PrestoDOM (Effect Unit) w
+mapView push state idTag isMapVisible = 
   let mapDimensions = spy "getMapDimensions" $ getMapDimensions state
-      _ = spy "Inside mapView" state
+      _ = spy "Inside mapView" isMapVisible
   in
-  PrestoAnim.animationSet [ fadeInWithDelay 250 true ] $
+  PrestoAnim.animationSet [ fadeInWithDelay 250 isMapVisible ] $
   relativeLayout
     [ height mapDimensions.height
     , width mapDimensions.width 
     , cornerRadius if state.props.currentStage == HomeScreen then 16.0 else 0.0
     , stroke $ "1,"<>Color.grey700
-    -- , background Color.white900
     , margin if state.props.currentStage == HomeScreen then (Margin 16 16 16 0) else (Margin 0 0 0 0)
     , onAnimationEnd
             ( \action -> do
@@ -3836,8 +3834,6 @@ mapView push state idTag =
                   HomeScreen -> if ((getSearchType unit) == "direct_search") then push DirectSearch else pure unit
                   RideSearch -> push $ RideSearchAction 
                   ConfirmRentalRide -> push $ ConfirmRentalRideAction
-                  ChangeToRideAccepted -> push $ ChangeToRideAcceptedAction
-                  ChangeToRideStarted -> push $ ChangeToRideStartedAction
                   _ -> pure unit
                 -- if state.props.currentStage == RideSearch then push $ RideSearchAction else pure unit
             )

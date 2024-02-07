@@ -1613,7 +1613,13 @@ public class MobilityCommonBridge extends HyperBridge {
                     checkAndAnimatePolyline(color, style, polylineWidth, polylineOptions, mapRouteConfigObject, gMap);
                     if (rentalPolylineOption.getPoints().size() > 1)
                       drawRentalsPolyline(color, "DASH", polylineWidth, rentalPolylineOption, mapRouteConfigObject, gMap);
-
+                    else 
+                        {
+                            if (rentalPolyline != null){
+                            rentalPolyline.remove();
+                            rentalPolyline = null;
+                            }  
+                        }
                     if (destMarker != null && !destMarker.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
                         LatLng dest = points.get(0);
