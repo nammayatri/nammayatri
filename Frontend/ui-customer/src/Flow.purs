@@ -1724,9 +1724,8 @@ rideSearchFlow flowType = do
       homeScreenFlow
     else do
       let updatedLocationList = updateLocListWithDistance finalState.data.destinationSuggestions finalState.props.sourceLat finalState.props.sourceLong true finalState.data.config.suggestedTripsAndLocationConfig.locationWithinXDist
-      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {locationList = updatedLocationList}, props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = HomeScreen}})
-      modifyScreenState $ SearchLocationScreenStateType (\searchLocationScreen -> searchLocationScreen{data{locationList = updatedLocationList}})
-      searchLocationFlow
+      modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data {locationList = updatedLocationList}, props{isSource = Just false, isRideServiceable = true, isSrcServiceable = true, isDestServiceable = true, currentStage = SearchLocationModel}})
+      homeScreenFlow
 
 getfeedbackReq :: HomeScreenState -> FeedbackReq
 getfeedbackReq state = (Remote.makeFeedBackReq (state.data.rideRatingState.rating) (state.data.rideRatingState.rideId) (state.data.rideRatingState.feedback) (state.data.ratingViewState.wasOfferedAssistance))
@@ -3408,7 +3407,9 @@ searchLocationFlow = do
             pure unit
           -- addStopFLow 
         void $ (setValueToLocalStore TRACKING_DRIVER) "False"
-        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ route = Nothing}, props {stopLoc = Just {lat : fromMaybe 0.0 destLoc.lat, lng : fromMaybe 0.0 destLoc.lon, stopLocAddress : destLoc.address}}}) --, driverInfoCardState {destinationLat = fromMaybe homeScreen.data.driverInfoCardState.destinationLat destLoc.lat, destinationLng = fromMaybe homeScreen.data.driverInfoCardState.destinationLng destLoc.lon}}})
+        let driverInfoCard = if isLocalStageOn RideStarted then globalState.homeScreen.data.driverInfoCardState {destinationLat = fromMaybe globalState.homeScreen.data.driverInfoCardState.destinationLat destLoc.lat, destinationLng = fromMaybe globalState.homeScreen.data.driverInfoCardState.destinationLng destLoc.lon} else globalState.homeScreen.data.driverInfoCardState
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{ route = Nothing, driverInfoCardState = driverInfoCard}
+                                                          , props {stopLoc = Just {lat : fromMaybe 0.0 destLoc.lat, lng : fromMaybe 0.0 destLoc.lon, stopLocAddress : destLoc.address}}}) --, driverInfoCardState {destinationLat = fromMaybe homeScreen.data.driverInfoCardState.destinationLat destLoc.lat, destinationLng = fromMaybe homeScreen.data.driverInfoCardState.destinationLng destLoc.lon}}})
         homeScreenFlow
       else if (state.data.fromScreen == (Screen.getScreen Screen.RIDE_SCHEDULED_SCREEN)) then do 
         (GlobalState globalState) <- getState 
@@ -4058,9 +4059,11 @@ updateRideScheduledTime _ = do
     Right (RideBookingListRes listResp) -> do 
       case (head listResp.list) of 
         Just (RideBookingRes resp )-> do 
-          let rideScheduledTime = fromMaybe "" resp.rideScheduledTime
-          modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = if rideScheduledTime == "" then Nothing else Just { rideScheduledAtUTC : rideScheduledTime, bookingId : resp.id } }})
-          pure unit 
+          when (resp.bookingDetails ^._fareProductType == "RENTAL") $ do 
+            let rideScheduledTime = fromMaybe "" resp.rideScheduledTime
+            modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{rentalsInfo = if rideScheduledTime == "" then Nothing else Just { rideScheduledAtUTC : rideScheduledTime, bookingId : resp.id } }})
+            pure unit 
+          pure unit
         Nothing -> pure unit
     Left (err) -> pure unit
   pure unit

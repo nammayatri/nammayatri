@@ -1554,8 +1554,8 @@ public class MobilityCommonBridge extends HyperBridge {
                         double lng = coordinate.getDouble("lng");
                         double lat = coordinate.getDouble("lat");
                         int vehicleSizeTagIcon = mapRouteConfigObject.getInt("vehicleSizeTagIcon");
-                        upsertMarkerV2(sourceMarker,String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f, purescriptId);
-                        animateCameraV2(lat,lng,20.0f, ZoomType.ZOOM, purescriptId);
+                        upsertMarkerV2(sourceMarker, String.valueOf(lat), String.valueOf(lng), vehicleSizeTagIcon, 0.5f, 0.5f, purescriptId);
+                        animateCameraV2(lat, lng, 20.0f, ZoomType.ZOOM, purescriptId);
                         return;
                     }
                     JSONObject sourceCoordinates = (JSONObject) coordinates.get(0);
@@ -1568,10 +1568,10 @@ public class MobilityCommonBridge extends HyperBridge {
                     JSONObject rentalEndCoordinates = null;
                     double rentalDestLat = 0.0;
                     double rentalDestLong = 0.0;
-                    if (rentalCoordinates.length() >= 1){
-                    rentalEndCoordinates = (JSONObject) rentalCoordinates.get(rentalCoordinates.length() - 1);
-                    rentalDestLat = rentalEndCoordinates.getDouble("lat");
-                    rentalDestLong = rentalEndCoordinates.getDouble("lng");
+                    if (rentalCoordinates.length() >= 1) {
+                        rentalEndCoordinates = (JSONObject) rentalCoordinates.get(rentalCoordinates.length() - 1);
+                        rentalDestLat = rentalEndCoordinates.getDouble("lat");
+                        rentalDestLong = rentalEndCoordinates.getDouble("lng");
                     }
 
                     JSONArray abc = coordinates;
@@ -1582,12 +1582,12 @@ public class MobilityCommonBridge extends HyperBridge {
                         // LatLng toPointObj = new LatLng(destLat, destLong);
                         // polylineOptions.add(toPointObj);
                         // polylineOptions.add(fromPointObj);
-                       for (int i = coordinates.length() - 1; i >= 0; i--) {
-                           JSONObject coordinate = (JSONObject) coordinates.get(i);
-                           double lng = coordinate.getDouble("lng");
-                           double lat = coordinate.getDouble("lat");
-                           polylineOptions.add(new LatLng(lat, lng));
-                       }
+                        for (int i = coordinates.length() - 1; i >= 0; i--) {
+                            JSONObject coordinate = (JSONObject) coordinates.get(i);
+                            double lng = coordinate.getDouble("lng");
+                            double lat = coordinate.getDouble("lat");
+                            polylineOptions.add(new LatLng(lat, lng));
+                        }
                         for (int i = rentalCoordinates.length() - 1; i >= 0; i--) {
                             JSONObject coordinate = (JSONObject) rentalCoordinates.get(i);
                             double lng = coordinate.getDouble("lng");
@@ -1602,24 +1602,22 @@ public class MobilityCommonBridge extends HyperBridge {
                         polylineOptions.add(fromPointObj);
                     }
 
-                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0 && normalRoutedistance <= 50000 ) {
+                    if (sourceLat != 0.0 && sourceLong != 0.0 && destLat != 0.0 && destLong != 0.0 && normalRoutedistance <= 50000) {
                         double destinationLat = rentalDestLat == 0.0 ? destLat : rentalDestLat;
                         double destinationLong = rentalDestLong == 0.0 ? destLong : rentalDestLong;
-                        moveCameraV2(sourceLat, sourceLong, destinationLat ,destinationLong , abc, purescriptId);
+                        moveCameraV2(sourceLat, sourceLong, destinationLat, destinationLong, abc, purescriptId);
                     }
                     String sourceSpecialTagIcon = mapRouteConfigObject.getString("sourceSpecialTagIcon");
                     String destinationSpecialTagIcon = mapRouteConfigObject.getString("destSpecialTagIcon");
 
                     checkAndAnimatePolyline(color, style, polylineWidth, polylineOptions, mapRouteConfigObject, gMap);
-                    if (rentalPolylineOption.getPoints().size() > 1)
-                      drawRentalsPolyline(color, "DASH", polylineWidth, rentalPolylineOption, mapRouteConfigObject, gMap);
-                    else 
-                        {
-                            if (rentalPolyline != null){
-                            rentalPolyline.remove();
-                            rentalPolyline = null;
-                            }  
-                        }
+                    if (rentalPolyline != null) {
+                        rentalPolyline.remove();
+                        rentalPolyline = null;
+                    }
+                    if (rentalPolylineOption.getPoints().size() > 1) {
+                        drawRentalsPolyline(color, "DASH", polylineWidth, rentalPolylineOption, mapRouteConfigObject, gMap);
+                    }
                     if (destMarker != null && !destMarker.equals("")) {
                         List<LatLng> points = polylineOptions.getPoints();
                         LatLng dest = points.get(0);
