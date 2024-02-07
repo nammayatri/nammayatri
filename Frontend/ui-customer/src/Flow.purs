@@ -3933,7 +3933,7 @@ rentalScreenFlow = do
       let dropLoc = fromMaybe SearchLocationScreenData.dummyLocationInfo state.data.dropLoc
       PlaceName address <- getPlaceName (fromMaybe 0.0 state.data.pickUpLoc.lat) (fromMaybe 0.0 state.data.pickUpLoc.lon) HomeScreenData.dummyLocation
       PlaceName destAddress <- getPlaceName (fromMaybe 0.0 dropLoc.lat) (fromMaybe 0.0 dropLoc.lon) HomeScreenData.dummyLocation
-      let currentTime = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 120 -- TODO-codex :: Need to check if this is the correct way
+      let currentTime = runFn2 EHC.getUTCAfterNSecondsImpl (EHC.getCurrentUTC "") 60 -- TODO-codex :: Delay, need to check if this is the correct way
           isTimeAheadOfCurrent = unsafePerformEffect $ runEffectFn2 compareDate (state.data.startTimeUTC) currentTime
           newState = if state.data.startTimeUTC == "" || not isTimeAheadOfCurrent then state {data {startTimeUTC = currentTime}} else state
       -- (SearchRes rideSearchRes) <- Remote.rideSearchBT (Remote.mkRentalSearchReq (fromMaybe 0.0 newState.data.pickUpLoc.lat)  (fromMaybe 0.0 newState.data.pickUpLoc.lon) (dropLoc.lat) (dropLoc.lon) (encodeAddress address.formattedAddress [] Nothing) (encodeAddress destAddress.formattedAddress [] Nothing) newState.data.startTimeUTC (newState.data.rentalBookingData.baseDistance * 1000) (newState.data.rentalBookingData.baseDuration * 60 * 60))
