@@ -167,10 +167,13 @@ videoView push state =
             ]
             [ imageView
                 [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_close_white"
-                , height $ V 24
-                , width $ V 24
-                , margin $ Margin 16 16 16 16
+                , height $ V 40
+                , width $ V 40
+                , padding $ Padding 8 8 8 8
+                , margin $ Margin 8 8 8 8
                 , onClick push $ const BackPressed
+                , rippleColor Color.rippleShade
+                , cornerRadius 20.0
                 ]
             , textView
                 $ [ text $ getString LEARN_ABOUT_NAMMA_SAFETY
@@ -247,7 +250,7 @@ arrowButtonView isDirectionRight marginRight isActive push action =
       , margin $ MarginRight marginRight
       ]
         <> if isActive then
-            [ onClick push $ const action ]
+            [ rippleColor Color.rippleShade, onClick push $ const action ]
           else
             [ alpha 0.5 ]
     )
@@ -256,7 +259,7 @@ arrowButtonView isDirectionRight marginRight isActive push action =
             $ fetchImage FF_ASSET
                 if isDirectionRight then
                   "ny_ic_arrow_right_black"
-                else
+                else  
                   "ny_ic_arrow_left_black"
         , height $ V 18
         , width $ V 18

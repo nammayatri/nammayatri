@@ -89,15 +89,17 @@ genericHeaderConfig title useLightColor showCrossImage =
     , background = Color.transparent
     , prefixImageConfig
       { imageUrl = prefixImage
-      , margin = Margin 12 14 12 12
       , visibility = VISIBLE
+      , margin = Margin 8 8 8 8
+      , layoutMargin = Margin 4 6 4 4
+      , enableRipple = true
       }
     , textConfig
       { text = title
       , color = textColor
-      , margin = MarginLeft 0
+      , margin = MarginLeft 5
       }
-    , padding = PaddingHorizontal 5 5
+    , padding = PaddingHorizontal 2 5
     }
   where
   prefixImage = case showCrossImage, useLightColor of
