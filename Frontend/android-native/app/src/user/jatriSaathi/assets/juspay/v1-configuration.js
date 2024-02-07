@@ -278,6 +278,7 @@ window.getMerchantConfig = function () {
       , "showNearByDrivers": true
       , "enableBookingPreference" : false
       , "showInfoIcon" : false
+      , "genericLoaderLottie" : "ic_vehicle_processing,https://assets.juspay.in//beckn/jatrisaathi/user/lottie/ic_vehicle_processing.json"
       , "variantInfo" : {
           "hatchback" : {
             "name" : "AC Cab",
