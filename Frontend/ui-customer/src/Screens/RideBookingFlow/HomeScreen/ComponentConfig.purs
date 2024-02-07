@@ -1569,7 +1569,13 @@ rideCompletedCardConfig state =
         enableContactSupport = state.data.config.feature.enableSupport,
         needHelpText = getString NEED_HELP,
         showRentalRideDetails = state.data.rideType == RideType.RENTAL_RIDE,
-        rentalBookingData = RideCompletedCard.dummyRentalBookingConfig,
+        rentalBookingData {
+          baseDuration = state.data.driverInfoCardState.rentalData.baseDistance
+        , baseDistance = state.data.driverInfoCardState.rentalData.baseDuration
+        , finalDuration = state.data.driverInfoCardState.rentalData.finalDuration
+        , finalDistance = state.data.driverInfoCardState.rentalData.finalDistance
+        , finalFare = state.data.finalAmount
+        },
         rentalRowDetails {
           rideTime = getString RIDE_TIME
         , rideDistance = getString RIDE_DISTANCE

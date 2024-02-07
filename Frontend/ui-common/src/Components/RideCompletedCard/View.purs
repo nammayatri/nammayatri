@@ -707,29 +707,29 @@ rentalTripDetailsView config push =
       ] 
       [ rentalTripRowView config push RideTime
       , rentalTripRowView config push RideDistance
-      , separatorView
-      , rentalTripRowView config push RideStartedAt
-      , rentalTripRowView config push RideEndedAt
+      -- , separatorView
+      -- , rentalTripRowView config push RideStartedAt
+      -- , rentalTripRowView config push RideEndedAt
       ]
-    , textView $
-      [ text rentalRowDetails.fareUpdateTitle
-      , color Color.black800
-      , margin $ MarginVertical 24 8
-      ] <> FontStyle.body1 TypoGraphy
-    , linearLayout
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , cornerRadius 9.0
-      , background Color.white900
-      , padding $ Padding 16 16 16 16
-      , stroke $ "1,"<> Color.grey900
-      , orientation VERTICAL
-      ]
-      [ rentalTripRowView config push EstimatedFare
-      , rentalTripRowView config push ExtraTimePrice
-      , separatorView
-      , rentalTripRowView config push TotalFare
-      ]
+    -- , textView $
+    --   [ text rentalRowDetails.fareUpdateTitle
+    --   , color Color.black800
+    --   , margin $ MarginVertical 24 8
+    --   ] <> FontStyle.body1 TypoGraphy
+    -- , linearLayout
+    --   [ height WRAP_CONTENT
+    --   , width MATCH_PARENT
+    --   , cornerRadius 9.0
+    --   , background Color.white900
+    --   , padding $ Padding 16 16 16 16
+    --   , stroke $ "1,"<> Color.grey900
+    --   , orientation VERTICAL
+    --   ]
+    --   [ rentalTripRowView config push EstimatedFare
+    --   , rentalTripRowView config push ExtraTimePrice
+    --   , separatorView
+    --   , rentalTripRowView config push TotalFare
+    --   ]
     ]
 
 rentalTripRowView :: forall w. Config -> (Action -> Effect Unit) -> RentalRowView -> PrestoDOM (Effect Unit) w
