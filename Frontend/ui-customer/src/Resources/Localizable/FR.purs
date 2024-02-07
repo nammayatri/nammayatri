@@ -1004,3 +1004,4 @@ getFR stringKey =
         PENDING_STR -> "En attente"
         PAST_TICKETS -> "Billets passés"
         ONE_WAY_STR -> "Aller simple"
+        TERMS_AND_CONDITIONS_UPDATED -> "Les conditions générales et la politique de confidentialité ont été mises à jour"

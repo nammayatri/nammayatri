@@ -123,6 +123,7 @@ data KeyStore = USER_NAME
                 | ENTERED_RC
                 | ENTERED_DL
                 | COINS_POPUP_SHOWN_DATE
+                | T_AND_C_VERSION
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
