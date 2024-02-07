@@ -945,3 +945,4 @@ getHI stringKey =
         TEST_DRILL -> "परीक्षण ड्रिल पूरा करें"
         RIDE_ENDED name -> name <> " की सवारी समाप्त हो गई"
         RIDE_SHARED_WITH_SELECTED_CONTACTS -> "चयनित संपर्कों के साथ यात्रा साझा की गई"
+        TERMS_AND_CONDITIONS_UPDATED -> "नियम एवं शर्तें और गोपनीयता नीति अद्यतन कर दी गई है"

@@ -947,3 +947,4 @@ getKN stringKey =
         TEST_DRILL -> "ಟೆಸ್ಟ್ ಡ್ರಿಲ್"
         RIDE_ENDED name -> name <> " ಸವಾರಿ ಮುಗಿದಿದೆ"
         RIDE_SHARED_WITH_SELECTED_CONTACTS -> "ನಿಮ್ಮ ಸವಾರಿಯನ್ನು ಆಯ್ಕೆಮಾಡಿದ ಸಂಪರ್ಕಗಳೊಡನೆ ಹಂಚಿಕೊಳ್ಳಲಾಗಿದೆ"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&Cಗಳು ಮತ್ತು ಗೌಪ್ಯತೆ ನೀತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"

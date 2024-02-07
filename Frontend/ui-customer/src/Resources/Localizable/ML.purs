@@ -963,3 +963,4 @@ getML stringKey =
         TEST_DRILL -> "ടെസ്റ്റ് ഡ്രിൽ"
         RIDE_ENDED name -> name <> " യാത്ര അവസാനിച്ചു"
         RIDE_SHARED_WITH_SELECTED_CONTACTS -> "നിങ്ങളുടെ യാത്ര തിരഞ്ഞെടുത്ത കോണ്ടാക്റ്റുകൾക്ക് പങ്കിട്ടു"
+        TERMS_AND_CONDITIONS_UPDATED -> "ടി&സിയും സ്വകാര്യതാ നയവും അപ്ഡേറ്റ് ചെയ്തിട്ടുണ്ട്"

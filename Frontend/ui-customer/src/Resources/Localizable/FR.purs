@@ -947,3 +947,4 @@ getFR stringKey =
         COMPLETE_YOUR_TEST_DRILL -> "Terminer l'exercice de test"
         TEST_DRILL -> "Exercice de test"
         RIDE_SHARED_WITH_SELECTED_CONTACTS -> "Trajet partagé avec les contacts sélectionnés"
+        TERMS_AND_CONDITIONS_UPDATED -> "Les conditions générales et la politique de confidentialité ont été mises à jour"
