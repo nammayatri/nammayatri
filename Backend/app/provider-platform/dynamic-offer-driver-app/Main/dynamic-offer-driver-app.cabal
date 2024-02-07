@@ -760,6 +760,7 @@ library
     , persistent
     , postgresql-simple
     , prometheus-client
+    , pureMD5
     , random
     , record-dot-preprocessor
     , record-hasfield
@@ -875,6 +876,7 @@ executable dynamic-offer-driver-app-exe
     , persistent
     , postgresql-simple
     , prometheus-client
+    , pureMD5
     , random
     , record-dot-preprocessor
     , record-hasfield
