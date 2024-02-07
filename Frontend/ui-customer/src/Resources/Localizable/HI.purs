@@ -1003,3 +1003,7 @@ getHI stringKey =
         PAST_TICKETS -> "पिछले टिकट"
         ONE_WAY_STR -> "एक तरफा"
         TERMS_AND_CONDITIONS_UPDATED -> "नियम एवं शर्तें और गोपनीयता नीति अद्यतन कर दी गई है"
+        SHARE_TICKET -> "टिकट साझा करें"
+        ORIGIN -> "मूल"
+
+

@@ -2997,10 +2997,9 @@ metroTicketBookingFlow = do
   (GlobalState currentState) <- getState
   config <- getAppConfigFlowBT appConfig
   metroStationsList <- lift $ lift $ getMetroStationsObjFromLocal ""
-  let diffSec = spy "DIFF" $ runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") metroStationsList.lastUpdatedAt
+  let diffSec = runFn2 differenceBetweenTwoUTCInMinutes (getCurrentUTC "") metroStationsList.lastUpdatedAt
       metroStationValidTill  = config.metroTicketingConfig.metroStationTtl
   if ( getValueToLocalStore METRO_STATIONS == "__failed" || getValueToLocalStore METRO_STATIONS == "(null)" || diffSec > metroStationValidTill || null metroStationsList.stations ) then do
-    void $ pure $ spy "METRO_STATIONS LIST CALLED" currentState
     (GetMetroStationResponse getMetroStationResp) <- Remote.getMetroStationBT ""
     void $ pure $ saveObject "METRO_STATIONS" (getMetroStationsList getMetroStationResp)
     let parsedMetroStation = map (\(GetMetroStationResp item) -> {
@@ -3020,7 +3019,6 @@ metroTicketBookingFlow = do
                       Src -> Just SearchLocPickup
                       Dest -> Just SearchLocDrop
       if null searchLocationState.data.metroStations then do
-        void $ pure $ spy "METRO_STATIONS LIST CALLED 2" searchLocationState.data.metroStations
         metroStationsList <- lift $ lift $ getMetroStationsObjFromLocal ""
         let parsedMetroStation = map (\(GetMetroStationResp item) -> {
                           stationName : item.name,
@@ -3029,13 +3027,11 @@ metroTicketBookingFlow = do
         modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
         modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = parsedMetroStation, updatedMetroStations = parsedMetroStation}})
       else do
-        void $ pure $ spy "METRO_STATIONS LIST CALLED 3" searchLocationState.data.metroStations
         modifyScreenState $ SearchLocationScreenStateType (\_ -> SearchLocationScreenData.initData)
         modifyScreenState $ SearchLocationScreenStateType (\slsState -> slsState{props{actionType = MetroStationSelectionAction, canSelectFromFav = false, focussedTextField = textFieldFocus}, data { fromScreen = getScreen Screen.METRO_TICKET_BOOKING_SCREEN, metroStations = searchLocationState.data.metroStations, updatedMetroStations = searchLocationState.data.metroStations}})
       searchLocationFlow
     METRO_FARE_AND_PAYMENT state -> do
       if state.props.currentStage == MetroTicketSelection then do
-        void $ pure $ spy "METRO_FARE_AND_PAYMENT LIST CALLED" state
         (SearchMetroResp searchMetroResp) <- Remote.searchMetroBT (Remote.makeSearchMetroReq state.data.srcCode state.data.destCode state.data.ticketCount)
         modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ searchId = searchMetroResp.searchId}, props { currentStage = GetMetroQuote }})
         metroTicketBookingFlow
@@ -3043,7 +3039,6 @@ metroTicketBookingFlow = do
           (confirmMetroQuoteResp) <- Remote.confirmMetroQuoteBT state.data.quoteId
           let (MetroTicketBookingStatus metroBookingStatus) = confirmMetroQuoteResp
           modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{data{ bookingId = ( (metroBookingStatus.bookingId))}})
-          void $ pure $ spy "METRO_FARE_AND_PAYMENT LIST CALLED" (show $ (metroBookingStatus.bookingId))
           void $ lift $ lift $ delay $ Milliseconds 3000.0
           metroTicketPaymentFlow metroBookingStatus.bookingId
           else do
@@ -3059,7 +3054,6 @@ metroTicketBookingFlow = do
     REFRESH_METRO_TICKET_SCREEN state -> do
       modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{props { currentStage = ConfirmMetroQuote }})
       modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusScreen{data{quoteId = state.data.quoteId}})
-      _ <- pure $ spy "REFRESH_METRO_TICKET_SCREEN" state
       metroTicketBookingFlow
     GO_TO_HOME_FROM_METRO_TICKET -> homeScreenFlow
     where
@@ -3071,7 +3065,6 @@ metroTicketBookingFlow = do
 
 metroTicketPaymentFlow :: String ->  FlowBT String Unit
 metroTicketPaymentFlow bookingId = do
-  void $ pure $ spy "metroTicketPaymentFlow" bookingId
   liftFlowBT $ initiatePaymentPage
   (GetMetroBookingStatusResp getMetroStatusResp) <- Remote.getMetroStatusBT bookingId
   let (MetroTicketBookingStatus metroTicketStatusResp) = getMetroStatusResp
@@ -3091,7 +3084,6 @@ metroTicketPaymentFlow bookingId = do
           void $ lift $ lift $ delay $ Milliseconds 3000.0
           setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "true"
           modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusScreen{data{bookingId = bookingId}})
-
           (GetMetroBookingStatusResp getMetroStatusResp2) <- Remote.getMetroStatusBT bookingId
           let (MetroTicketBookingStatus metroTicketStatusResp2) = getMetroStatusResp2
           _ <- pure $ toggleBtnLoader "" false
@@ -3365,21 +3357,21 @@ metroTicketStatusFlow = do
     REFRESH_STATUS_AC state -> do
       void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
-      (GetMetroBookingStatusResp getMetroStatusResp2) <- Remote.getMetroStatusBT state.data.bookingId 
-      let (MetroTicketBookingStatus metroTicketStatusResp2) = getMetroStatusResp2
-          paymentOrder = metroTicketStatusResp2.payment >>= (\(FRFSBookingPaymentAPI payment') ->  payment'.paymentOrder)
+      (GetMetroBookingStatusResp metroStatusResp) <- Remote.getMetroStatusBT state.data.bookingId 
+      let (MetroTicketBookingStatus metroTicketStatusResp) = metroStatusResp
+          paymentOrder = metroTicketStatusResp.payment >>= (\(FRFSBookingPaymentAPI payment') ->  payment'.paymentOrder)
           shortOrderID = case paymentOrder of 
                             Just (CreateOrderRes orderResp) -> orderResp.order_id
                             Nothing -> ""
       void $ lift $ lift $ toggleLoader false
-      modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer getMetroStatusResp2 metroTicketDetailsState)
-      modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer getMetroStatusResp2 shortOrderID metroTicketStatusScreen)
+      modifyScreenState $ MetroTicketDetailsScreenStateType (\metroTicketDetailsState -> metroTicketDetailsTransformer metroStatusResp metroTicketDetailsState)
+      modifyScreenState $ MetroTicketStatusScreenStateType (\metroTicketStatusScreen -> metroTicketStatusTransformer metroStatusResp shortOrderID metroTicketStatusScreen)
       metroTicketStatusFlow
     GO_TO_TRY_AGAIN_PAYMENT state -> do 
       modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state{props {currentStage = ST.MetroTicketSelection}})
       metroTicketBookingFlow
     _ -> metroTicketStatusFlow
-  pure unit
+  -- pure unit
 
 
 searchLocationFlow :: FlowBT String Unit

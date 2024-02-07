@@ -1005,3 +1005,5 @@ getKN stringKey =
         PAST_TICKETS -> "ಹಿಂದಿನ ಟಿಕೆಟ್ಗಳು"
         ONE_WAY_STR -> "ಒಂದು ದಾರಿ"
         TERMS_AND_CONDITIONS_UPDATED -> "T&Cಗಳು ಮತ್ತು ಗೌಪ್ಯತೆ ನೀತಿಯನ್ನು ನವೀಕರಿಸಲಾಗಿದೆ"
+        SHARE_TICKET -> "ಟಿಕೆಟ್ ಹಂಚಿಕೊಳ್ಳಿ"
+        ORIGIN -> "ಮೂಲ"

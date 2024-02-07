@@ -92,23 +92,13 @@ screen initialState =
   }
   where
   getMetroStatusEvent push = do
-    void $ pure $ spy "getMetroStatusEvent" ""
     void $ launchAff $ flowRunner defaultGlobalState $ metroPaymentStatusPooling initialState.data.bookingId initialState.data.validUntil 3000.0 initialState push MetroPaymentStatusAction
-    -- if initialState.props.paymentStatus == PP.Success then do
-    --   void $ pure $ spy "getMetroStatusEvent" ""
-    --   void $ launchAff $ flowRunner defaultGlobalState $ do
-    --     void $ delay $ Milliseconds 4000.0 
-    --     liftFlow $ push $ ViewTicketBtnOnClick PrimaryButton.OnClick
-    --     -- startTimer 4 "success" "1" push CountDown
-    --   -- startTimer 4 "success" "1" push CountDown
-    -- else pure unit
     pure $ pure unit
 --------------------------------------------------------------------------------------------
-
+-- Spy is required to debug the flow
 metroPaymentStatusPooling :: forall action. String -> String -> Number -> ST.MetroTicketStatusScreenState -> (action -> Effect Unit) -> (MetroTicketBookingStatus -> action) -> Flow GlobalState Unit
 metroPaymentStatusPooling bookingId validUntil delayDuration state push action = do
-  let dummy = spy (getCurrentUTC "") validUntil
-  let diffSec = spy "DIFF validUntil" $ runFn2 JB.differenceBetweenTwoUTC  validUntil (getCurrentUTC "")
+  let diffSec = runFn2 JB.differenceBetweenTwoUTC  validUntil (getCurrentUTC "")
   if (getValueToLocalStore METRO_PAYMENT_STATUS_POOLING) == "true" && bookingId /= "" then do
     ticketStatus <-  Remote.getMetroBookingStatus bookingId 
     void $ pure $ spy "ticketStatus" ticketStatus
@@ -257,10 +247,10 @@ bookingStatusBody :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Eff
 bookingStatusBody state push paymentStatus = 
   let 
     headerImgConfig = {
-                          src : fetchImage FF_COMMON_ASSET "ny_ic_chennai_metro"
-                        , width : V 41
-                        , height : V 41
-                        }
+                        src : fetchImage FF_COMMON_ASSET "ny_ic_chennai_metro"
+                      , width : V 41
+                      , height : V 41
+                      }
                       
   in 
     linearLayout
@@ -348,7 +338,6 @@ bookingConfirmationActions state push paymentStatus =
 paymentStatusHeader :: forall w. ST.MetroTicketStatusScreenState -> (Action -> Effect Unit) -> PP.PaymentStatus -> PrestoDOM (Effect Unit) w
 paymentStatusHeader state push paymentStatus = 
   let transcationConfig = getTransactionConfig paymentStatus
-      paymentSt = spy "paymentStatus" paymentStatus
       refreshStatusBtn = 
         if(paymentStatus == PP.Pending) then
           (PrimaryButton.view (push <<< RefreshStatusAC) (refreshStatusButtonConfig state))
@@ -391,27 +380,7 @@ paymentStatusHeader state push paymentStatus =
       , commonTV push transcationConfig.statusTimeDesc Color.black700 (FontStyle.body3 TypoGraphy) 5 CENTER NoAction
       , copyTransactionView
       , refreshStatusBtn
-      -- , paymentLottieLoader push state
     ]
--- paymentLottieLoader push state =
---   linearLayout
---   [ height WRAP_CONTENT
---   , width MATCH_PARENT
---   , gravity CENTER_HORIZONTAL
---   ][  lottieAnimationView
---       [ height $ if EHC.os == "IOS" then V 170 else V 130
---       , width $ V 130
---       , padding $ PaddingBottom 80
---       , margin (MarginTop ((screenHeight unit)/ 7 - (if EHC.os == "IOS" then 140 else 90)))
---       , gravity CENTER
---       , id (getNewIDWithTag "paymentLoader")
---       , visibility if state.props.paymentStatus == PP.Success  then VISIBLE else GONE
---       , afterRender (\action -> do
---         void $ pure $ JB.startLottieProcess JB.lottieAnimationConfig {rawJson = (getAssetsBaseUrl FunctionCall) <> "lottie/payment_lottie_loader.json", lottieId = (getNewIDWithTag "paymentLoader"), scaleType="CENTER_CROP", repeat = true, speed = 0.8 }
---         push action
---         ) (const NoAction)
---       ]
---     ]
 
 commonTV :: forall w. (Action -> Effect Unit) -> String -> String -> (forall properties. (Array (Prop properties))) -> Int -> Gravity -> Action -> PrestoDOM (Effect Unit) w
 commonTV push text' color' fontStyle marginTop gravity' action =

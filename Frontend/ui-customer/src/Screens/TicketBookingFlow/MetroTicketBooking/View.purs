@@ -49,6 +49,7 @@ import Data.Time.Duration (Milliseconds(..))
 import Components.RequestInfoCard as InfoCard
 import Language.Strings
 import Language.Types
+import Data.String as DS
 
 screen :: ST.MetroTicketBookingScreenState -> Screen Action ST.MetroTicketBookingScreenState ScreenOutput
 screen initialState =
@@ -204,16 +205,18 @@ infoSelectioView state push =
       ]
 
 selectionTab :: forall w . String  -> ST.TicketType -> (Action -> Effect Unit) -> ST.MetroTicketBookingScreenState -> PrestoDOM (Effect Unit) w
-selectionTab _text ticketType push state =
+selectionTab _text ticketType push state = 
+  let ticketEnabled = ticketType == state.data.ticketType
+  in
   textView
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
   , text _text
-  , background if ticketType == state.data.ticketType then Color.black900 else Color.white900
+  , background if ticketEnabled then Color.black900 else Color.white900
   , padding (Padding 8 8 8 8)
   , weight 1.0
   , gravity CENTER
-  , color if ticketType == state.data.ticketType then Color.white900 else Color.black900
+  , color if ticketEnabled then Color.white900 else Color.black900
   , cornerRadius 20.0
   , textSize FontSize.a_14
   , onClick (\action ->
@@ -418,17 +421,17 @@ textViewForLocation label actionId push state =
         [ height MATCH_PARENT
         , width WRAP_CONTENT
         , text $ if actionId == Src then 
-                    if state.data.srcLoc == "" then (getString STARTING_FROM) <> "?" else state.data.srcLoc
+                    if (DS.null state.data.srcLoc) then (getString STARTING_FROM) <> "?" else state.data.srcLoc
                   else 
-                    if state.data.destLoc == "" then (getString WHERE_TO) else state.data.destLoc
+                    if (DS.null state.data.destLoc) then (getString WHERE_TO) else state.data.destLoc
         , color Color.black800
         , gravity CENTER_VERTICAL
         , singleLine true
         , margin $ MarginHorizontal 20 10
         , alpha $ if actionId == Src then 
-                    if state.data.srcLoc == "" then 0.5 else 1.0
+                    if (DS.null state.data.srcLoc) then 0.5 else 1.0
                   else 
-                    if state.data.destLoc == "" then 0.5 else 1.0
+                    if (DS.null state.data.destLoc) then 0.5 else 1.0
         ] <> (FontStyle.getFontStyle FontStyle.SubHeading1 LanguageStyle)
     ]
     ]

@@ -67,6 +67,7 @@ view push state =
   ] [ headerView push state
         , scrollableView push state
         ]
+
 shimmerView :: forall w . ST.MetroMyTicketsScreenState -> PrestoDOM (Effect Unit) w
 shimmerView state =
   shimmerFrameLayout[ 

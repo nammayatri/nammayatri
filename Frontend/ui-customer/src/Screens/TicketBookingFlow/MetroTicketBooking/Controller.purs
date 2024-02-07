@@ -40,8 +40,7 @@ instance loggableAction :: Loggable Action where
   performLog action appId  = case action of
     _ -> pure unit
 
-data Action = AfterRender
-            | BackPressed
+data Action = BackPressed
             | NoAction
             | GenericHeaderAC GenericHeader.Action
             | UpdateButtonAction PrimaryButton.Action
@@ -98,7 +97,6 @@ eval (GetMetroQuotesAction resp) state = do
     _ <- pure $ toggleBtnLoader "" false
     continue state
   else do
-    _ <- pure $ spy "GetMetroQuotesActionresp" resp
     _ <- pure $ toggleBtnLoader "" false
     updateAndExit state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}} $ Refresh state { data {ticketPrice = (getquoteData state resp).price, quoteId = (getquoteData state resp).quoteId }, props { currentStage = ST.ConfirmMetroQuote}}
 

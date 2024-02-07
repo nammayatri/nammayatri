@@ -64,7 +64,7 @@ ticketItemTransformer (MetroTicketBookingStatus bookingItem) =
     , noOfTickets : noOfTickets'
     , metroTicketStatusApiResp :  metroTicketStatusApiResp'
     , status : status'
-    , validUntill : ticketsValidTill -- validUntill'
+    , validUntill : ticketsValidTill
   }
 
 getStationName :: Maybe FRFSStationAPI -> String

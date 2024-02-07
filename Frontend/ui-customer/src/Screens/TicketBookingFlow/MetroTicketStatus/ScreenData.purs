@@ -46,32 +46,13 @@ dummyMetroBookingStatus =
   MetroTicketBookingStatus {
     _type: "SingleJourney",
     createdAt : "",
-    bookingId : "d663387c-b2b1-4e1b-9dd5-269c777fe5c1",
+    bookingId : "",
     payment : Nothing,
     price: 1,
     quantity: 2,
     stations: [],
     status: "CONFIRMED",
-    tickets: [
-        FRFSTicketAPI {
-          status : "ACTIVE"
-        , qrData : "Namma Yatri"
-        , validTill : "30 Jan 2024, 22:00"
-        , ticketNumber : "JASF98234324"
-        }
-      , FRFSTicketAPI {
-          status : "ACTIVE"
-        , qrData : "Namma Yatri PARTNER"
-        , validTill : "30 Jan 2024, 22:00"
-        , ticketNumber : "324F98223984923"
-        }
-      , FRFSTicketAPI {
-          status : "ACTIVE"
-        , qrData : "Namma Yatri CHENNAI"
-        , validTill : "30 Jan 2024, 22:00"
-        , ticketNumber : "KJQEDF98234324"
-        }
-    ],
+    tickets: [],
     vehicleType: "Metro_",
     validTill: "2024-01-26T19:37:12.516Z"
     }

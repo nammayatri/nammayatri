@@ -1002,3 +1002,5 @@ getEN stringKey =
         PAST_TICKETS -> "Past Tickets"
         ONE_WAY_STR -> "One Way"
         TERMS_AND_CONDITIONS_UPDATED -> "T&C's and Privacy policy have been updated"
+        SHARE_TICKET -> "Share Ticket"
+        ORIGIN -> "Origin"

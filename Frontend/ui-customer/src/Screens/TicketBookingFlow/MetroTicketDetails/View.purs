@@ -136,7 +136,7 @@ headerView push state =
       , textView $ [
           width WRAP_CONTENT
         , height WRAP_CONTENT
-        , text "Share Ticket"
+        , text $ getString SHARE_TICKET
         , color Color.blue900
         , margin $ MarginLeft 8
         ] <> FontStyle.body1 TypoGraphy

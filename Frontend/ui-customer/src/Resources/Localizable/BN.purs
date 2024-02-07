@@ -1003,3 +1003,5 @@ getBN stringKey =
         PAST_TICKETS -> "গত টিকেটগুলি"
         ONE_WAY_STR -> "একদিক"
         TERMS_AND_CONDITIONS_UPDATED -> "T&C এবং গোপনীয়তা নীতি আপডেট করা হয়েছে"
+        SHARE_TICKET -> "টিকেট শেয়ার করুন"
+        ORIGIN -> "উৎপত্তি"

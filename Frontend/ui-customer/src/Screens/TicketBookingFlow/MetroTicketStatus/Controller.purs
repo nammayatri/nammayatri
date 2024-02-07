@@ -78,15 +78,13 @@ data ScreenOutput = NoOutput
 
 eval :: Action -> MetroTicketStatusScreenState -> Eval Action ScreenOutput MetroTicketStatusScreenState
 
-eval (BackPressed) state = exit GoBack --continue state -- Handle Back Press
+eval (BackPressed) state = exit GoBack
 
 eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatus)) state = do
-  -- let (MetroTicketBookingStatus getMetroStatusResp2) = metroTicketBookingStatus
   case metroTicketBookingStatus.status of 
     "CONFIRMED" -> do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
       continueWithCmd state{ props{paymentStatus = PP.Success, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}} [do
-            void $ pure $ spy "getMetroStatusEvent" ""
             push <- getPushFn Nothing "MetroTicketStatusScreen"
             void $ launchAff $ flowRunner defaultGlobalState $ do
               void $ delay $ Milliseconds 4000.0 
@@ -95,24 +93,9 @@ eval (MetroPaymentStatusAction (MetroTicketBookingStatus metroTicketBookingStatu
     "FAILED" -> do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
       continue state{ props{paymentStatus = PP.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
-      
-      -- continue 
-      --   state{
-      --     props{
-      --       paymentStatus = Common.Failed
-      --     , showShimmer = false
-      --     }
-      --   }
     "EXPIRED" -> do
       void $ pure $ setValueToLocalStore METRO_PAYMENT_STATUS_POOLING "false"
       continue state{ props{paymentStatus = PP.Failed, showShimmer = false}, data {resp = (MetroTicketBookingStatus metroTicketBookingStatus)}}
-      -- continue 
-      --   state{
-      --     props{
-      --       paymentStatus = Common.Failed
-      --     , showShimmer = false
-      --     }
-      --   }
     "PAYMENT_PENDING" -> 
       continue $ metroTicketStatusTransformer ( MetroTicketBookingStatus metroTicketBookingStatus) "" state
     _ -> continue state
@@ -139,7 +122,6 @@ eval (AfterRender) state = continue state{
 }
 
 eval (CountDown seconds status timerID) state = do
-  void $ pure $ spy "status" status
   if status == "EXPIRED" then do
     void $ pure $ clearTimerWithId state.data.timerId
     continueWithCmd state { data { timerId = ""} } [pure (ViewTicketBtnOnClick PrimaryButton.OnClick)]
