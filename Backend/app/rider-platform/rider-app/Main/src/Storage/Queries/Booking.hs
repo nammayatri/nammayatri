@@ -16,6 +16,7 @@
 module Storage.Queries.Booking where
 
 import Control.Applicative
+import Data.List (sortBy)
 import Data.Ord
 import qualified Database.Beam as B
 import qualified Domain.Types.Booking.BookingLocation as DBBL
@@ -50,6 +51,7 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Quote ()
 import qualified Storage.Queries.TripTerms as QTT
+import Tools.Error
 
 createBooking' :: MonadFlow m => Booking -> m ()
 createBooking' = createWithKV
@@ -118,9 +120,9 @@ findLatestByRiderId (Id riderId) =
                   ]
               ]
           ]
-        sortBy = Se.Desc BeamB.createdAt
+        sortBy' = Se.Desc BeamB.createdAt
         limit' = Just 1
-    findAllWithOptionsKV options sortBy limit' Nothing
+    findAllWithOptionsKV options sortBy' limit' Nothing
     <&> listToMaybe
     <&> (Domain.status <$>)
 
@@ -298,13 +300,12 @@ instance FromTType' BeamB.Booking Booking where
               DRB.InterCityDetails <$> buildInterCityDetails toLocationId
           return (pickupLoc, bookingDetails)
         else do
-          let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-              toLocationMappings = filter (\loc -> loc.order /= 0) mappings
-          let toLoc = if null toLocationMappings then Nothing else Just $ maximumBy (comparing (.order)) toLocationMappings
-              toLocId = (.locationId.getId) <$> toLoc
+          fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+          fl <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
-          fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-          fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in booking for fromLocationId: " <> fromLocMap.locationId.getId)
+          let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+              toLocId = (.locationId.getId) <$> mbToLocationMapping
+
           bookingDetails <- case fareProductType of
             DFF.ONE_WAY -> DRB.OneWayDetails <$> buildOneWayDetails toLocId
             DFF.RENTAL -> DRB.RentalDetails <$> buildRentalDetails stopLocationId

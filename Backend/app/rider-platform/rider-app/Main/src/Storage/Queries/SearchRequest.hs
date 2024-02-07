@@ -15,6 +15,7 @@
 
 module Storage.Queries.SearchRequest where
 
+import Data.List (sortBy)
 import Data.Ord
 import Data.Text (strip)
 import qualified Domain.Types.LocationMapping as DLM
@@ -26,7 +27,6 @@ import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Version
@@ -36,6 +36,7 @@ import qualified Storage.Beam.SearchRequest as BeamSR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import Tools.Error
 
 createDSReq' :: MonadFlow m => SearchRequest -> m ()
 createDSReq' = createWithKV
@@ -95,44 +96,30 @@ instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
     bundleVersion' <- mapM readVersion (strip <$> bundleVersion)
     clientVersion' <- mapM readVersion (strip <$> clientVersion)
+
+    fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+    fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
+
     mappings <- QLM.findByEntityId id
-    let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-        toLocationMappings = filter (\loc -> loc.order /= 0) mappings
-    fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-    fl <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
-    tl <-
-      if null toLocationMappings
-        then return Nothing
-        else do
-          let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-          QL.findById toLocMap.locationId
+    let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
+
     merchantOperatingCityId' <- backfillMOCId merchantOperatingCityId
     pure $
       Just
         SearchRequest
           { id = Id id,
-            startTime = startTime,
-            validTill = validTill,
             riderId = Id riderId,
-            fromLocation = fl,
-            toLocation = tl,
             distance = HighPrecMeters <$> distance,
             maxDistance = HighPrecMeters <$> maxDistance,
-            estimatedRideDuration = estimatedRideDuration,
-            device = device,
             merchantId = Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
             bundleVersion = bundleVersion',
             clientVersion = clientVersion',
-            language = language,
-            disabilityTag = disabilityTag,
-            customerExtraFee = customerExtraFee,
-            autoAssignEnabled = autoAssignEnabled,
-            autoAssignEnabledV2 = autoAssignEnabledV2,
             availablePaymentMethods = Id <$> availablePaymentMethods,
             selectedPaymentMethodId = Id <$> selectedPaymentMethodId,
             riderPreferredOption = fromMaybe OneWay riderPreferredOption,
-            createdAt = createdAt
+            ..
           }
     where
       backfillMOCId = \case

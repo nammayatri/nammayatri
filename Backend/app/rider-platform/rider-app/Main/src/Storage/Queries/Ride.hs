@@ -16,6 +16,7 @@
 module Storage.Queries.Ride where
 
 import qualified "dashboard-helper-api" Dashboard.RiderPlatform.Ride as Common
+import Data.List (sortBy)
 import Data.Ord
 import qualified Database.Beam as B
 import Database.Beam.Backend (autoSqlValueSyntax)
@@ -33,7 +34,6 @@ import EulerHS.Prelude (whenNothingM_)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
@@ -46,6 +46,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.Person ()
+import Tools.Error
 
 createRide' :: MonadFlow m => Ride -> m ()
 createRide' = createWithKV
@@ -351,51 +352,36 @@ updateEditLocationAttempts rideId attempts = do
     ]
     [Se.Is BeamR.id (Se.Eq $ getId rideId)]
 
-createMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m [DLM.LocationMapping]
+createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe Text -> Maybe Text -> m (DLM.LocationMapping, Maybe DLM.LocationMapping)
 createMapping bookingId rideId merchantId merchantOperatingCityId = do
-  mappings <- QLM.findByEntityId bookingId
-  when (null mappings) $ throwError (InternalError "Entity Mappings for Booking Not Found") -- this case should never occur
-  let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-      toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+  fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
+  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
 
-  fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+  mbToLocationRideMapping <- do
+    mappings <- QLM.findByEntityId bookingId
+    let mbToLocMap = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    (\toLocMap -> SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)) `mapM` mbToLocMap
 
-  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
   QLM.create fromLocationRideMapping
-
-  toLocationRideMappings <-
-    if not (null toLocationMappings)
-      then do
-        let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-        toLocationRideMapping <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE (Id <$> merchantId) (Id <$> merchantOperatingCityId)
-        QLM.create toLocationRideMapping
-        return [toLocationRideMapping]
-      else return []
-
-  return $ fromLocationRideMapping : toLocationRideMappings
+  whenJust mbToLocationRideMapping QLM.create
+  return (fromLocationRideMapping, mbToLocationRideMapping)
 
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
-    rideMappings <-
+    (fromLocationMapping, mbToLocationMapping) <-
       if null mappings
         then do
           void $ QBooking.findById (Id bookingId)
           createMapping bookingId id merchantId merchantOperatingCityId
-        else return mappings
-
-    let fromLocationMapping = filter (\loc -> loc.order == 0) rideMappings
-        toLocationMappings = filter (\loc -> loc.order /= 0) rideMappings
-
-    fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-
-    fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
-    toLocation <-
-      if null toLocationMappings
-        then return Nothing
         else do
-          let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-          QL.findById toLocMap.locationId
+          fromLocationMapping' <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+          let mbToLocationMapping' = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+          return (fromLocationMapping', mbToLocationMapping')
+
+    fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
+    toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
+
     tUrl <- parseBaseUrl `mapM` trackingUrl
     pure $
       Just
@@ -406,31 +392,9 @@ instance FromTType' BeamR.Ride Ride where
             shortId = ShortId shortId,
             merchantId = Id <$> merchantId,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
-            status = status,
-            driverName = driverName,
-            driverRating = driverRating,
-            driverMobileNumber = driverMobileNumber,
-            driverRegisteredAt = driverRegisteredAt,
-            driverImage = driverImage,
-            vehicleNumber = vehicleNumber,
-            vehicleModel = vehicleModel,
-            vehicleColor = vehicleColor,
-            vehicleVariant = vehicleVariant,
-            otp = otp,
-            endOtp = endOtp,
             trackingUrl = tUrl,
             fare = roundToIntegral <$> fare,
             totalFare = roundToIntegral <$> totalFare,
-            chargeableDistance = chargeableDistance,
-            traveledDistance = traveledDistance,
-            driverArrivalTime = driverArrivalTime,
-            rideStartTime = rideStartTime,
-            rideEndTime = rideEndTime,
-            rideRating = rideRating,
-            createdAt = createdAt,
-            updatedAt = updatedAt,
-            driverMobileCountryCode = driverMobileCountryCode,
-            allowedEditLocationAttempts = allowedEditLocationAttempts,
             ..
           }
 

@@ -164,9 +164,6 @@ handler ValidatedDSearchReq {..} sReq = do
         (pool, policies) <- selectDriversAndMatchFarePolicies merchantId merchantOpCityId mbDistance fromLocation transporterConfig farePolicies
         pure (nonEmpty pool, policies)
       else return (Nothing, catMaybes $ everyPossibleVariant <&> \var -> find ((== var) . (.vehicleVariant)) farePolicies)
-  -- whenJustM
-  --   (QSearchRequestSpecialZone.findByMsgIdAndBapIdAndBppId sReq.messageId sReq.bapId merchantId)
-  --   (\_ -> throwError $ InvalidRequest "Duplicate Search request")
   searchReq <- buildSearchRequest sReq bapCity possibleTripOption.schedule possibleTripOption.isScheduled merchantId merchantOpCityId fromLocation mbToLocation mbDistance mbDuration allFarePoliciesProduct.specialLocationTag allFarePoliciesProduct.area cancellationDues
   whenJust mbSetRouteInfo $ \setRouteInfo -> setRouteInfo searchReq.id
   triggerSearchEvent SearchEventData {searchRequest = searchReq, merchantId = merchantId}

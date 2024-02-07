@@ -15,6 +15,7 @@
 
 module Storage.Queries.SearchRequest where
 
+import Data.List (sortBy)
 import Data.Ord
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.SearchRequest as Domain
@@ -31,6 +32,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import Tools.Error
 
 createDSReq' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => SearchRequest -> m ()
 createDSReq' = createWithKV
@@ -72,24 +74,18 @@ updateAutoAssign searchRequestId autoAssignedEnabled =
 
 instance FromTType' BeamSR.SearchRequest SearchRequest where
   fromTType' BeamSR.SearchRequestT {..} = do
-    mappings <- QLM.findByEntityId id
     pUrl <- parseBaseUrl bapUri
     now <- getCurrentTime
     merchant <- CQM.findById (Id providerId) >>= fromMaybeM (MerchantNotFound providerId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId (Id <$> merchantOperatingCityId) merchant bapCity
 
-    fromLocation <- do
-      let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-      fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-      QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in search request for fromLocationId: " <> fromLocMap.locationId.getId)
+    fromLocationMapping <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+    fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
 
-    toLocation <- do
-      let toLocationMappings = filter (\loc -> loc.order /= 0) mappings
-      if (null toLocationMappings)
-        then return Nothing
-        else do
-          let toLocMap = maximumBy (comparing (.order)) toLocationMappings
-          QL.findById toLocMap.locationId
+    mappings <- QLM.findByEntityId id
+    let mbToLocationMapping = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
+
     let startTime_ = fromMaybe now startTime
         validTill_ = fromMaybe (addUTCTime 600 startTime_) validTill -- 10 minutes, just to handle backward compatibility
     pure $

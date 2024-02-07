@@ -83,7 +83,6 @@ import qualified "dynamic-offer-driver-app" Storage.Beam.RideDetails as RideDeta
 import qualified "dynamic-offer-driver-app" Storage.Beam.RiderDetails as RiderDetails
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequest as SearchRequest
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestForDriver as SearchRequestForDriver
-import qualified "dynamic-offer-driver-app" Storage.Beam.SearchRequestSpecialZone as SearchRequestSpecialZone
 import qualified "dynamic-offer-driver-app" Storage.Beam.SearchTry as SearchTry
 import qualified "dynamic-offer-driver-app" Storage.Beam.Vehicle as Vehicle
 import qualified "dynamic-offer-driver-app" Storage.Beam.Volunteer as Volunteer
@@ -154,7 +153,6 @@ data DBCreateObject
   | RiderDetailsObject RiderDetails.RiderDetails
   | SearchRequestObject SearchRequest.SearchRequest
   | SearchRequestForDriverObject SearchRequestForDriver.SearchRequestForDriver
-  | SearchRequestSpecialZoneObject SearchRequestSpecialZone.SearchRequestSpecialZone
   | SearchTryObject SearchTry.SearchTry
   | VehicleObject Vehicle.Vehicle
   | VolunteerObject Volunteer.Volunteer
@@ -242,7 +240,6 @@ modelName (RideDetailsObject _) = "RideDetails"
 modelName (RiderDetailsObject _) = "RiderDetails"
 modelName (SearchRequestObject _) = "SearchRequest"
 modelName (SearchRequestForDriverObject _) = "SearchRequestForDriver"
-modelName (SearchRequestSpecialZoneObject _) = "SearchRequestSpecialZone"
 modelName (SearchTryObject _) = "SearchTry"
 modelName (VehicleObject _) = "Vehicle"
 modelName (VolunteerObject _) = "Volunteer"

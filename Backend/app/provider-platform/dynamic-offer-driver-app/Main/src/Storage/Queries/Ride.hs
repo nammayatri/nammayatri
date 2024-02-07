@@ -22,7 +22,6 @@ import Data.Either
 import qualified Data.HashMap.Strict as HashMap
 import Data.Int
 import Data.List (zip7)
-import qualified Data.List as DL
 import Data.Maybe
 import Data.Time hiding (getCurrentTime)
 import qualified Database.Beam as B
@@ -70,6 +69,7 @@ import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.RideDetails ()
 import Storage.Queries.RiderDetails ()
+import Tools.Error
 
 data DatabaseWith2 table1 table2 f = DatabaseWith2
   { dwTable1 :: f (B.TableEntity table1),
@@ -538,22 +538,19 @@ findCancelledBookingId (Id driverId) = findAllWithKV [Se.And [Se.Is BeamR.driver
 findRideByRideShortId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ShortId Ride -> m (Maybe Ride)
 findRideByRideShortId (ShortId shortId) = findOneWithKV [Se.Is BeamR.shortId $ Se.Eq shortId]
 
-createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m [DLM.LocationMapping]
+createMapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m (DLM.LocationMapping, Maybe DLM.LocationMapping)
 createMapping bookingId rideId merchantId merchantOperatingCityId = do
-  mappings <- QLM.findByEntityId bookingId
-  when (null mappings) $ throwError (InternalError "Entity Mappings for Booking Not Found") -- this case should never occur
-  let fromLocationMapping = filter (\loc -> loc.order == 0) mappings
-      toLocationMappings = filter (\loc -> loc.order /= 0) mappings
+  fromLocationMapping <- QLM.getLatestStartByEntityId bookingId >>= fromMaybeM (FromLocationMappingNotFound bookingId)
+  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocationMapping.locationId rideId DLM.RIDE merchantId merchantOperatingCityId
 
-  fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
+  mbToLocationRideMapping <- do
+    mappings <- QLM.findByEntityId bookingId
+    let mbToLocMap = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+    (\toLocMap -> SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE merchantId merchantOperatingCityId) `mapM` mbToLocMap
 
-  when (null toLocationMappings) $ throwError (InternalError "Entity Mappings For ToLocation Not Found")
-  let toLocMap = DL.maximumBy (comparing (.order)) toLocationMappings
-  fromLocationRideMapping <- SLM.buildPickUpLocationMapping fromLocMap.locationId rideId DLM.RIDE merchantId merchantOperatingCityId
-  toLocationRideMappings <- SLM.buildDropLocationMapping toLocMap.locationId rideId DLM.RIDE merchantId merchantOperatingCityId
-
-  void $ QLM.create fromLocationRideMapping >> QLM.create toLocationRideMappings
-  return [fromLocationRideMapping, toLocationRideMappings]
+  QLM.create fromLocationRideMapping
+  whenJust mbToLocationRideMapping QLM.create
+  return (fromLocationRideMapping, mbToLocationRideMapping)
 
 findTotalRidesInDay :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> UTCTime -> m [DRide.Ride]
 findTotalRidesInDay (Id driverId) time = do
@@ -741,24 +738,18 @@ totalEarningsByFleetOwnerPerVehicleAndDriver fleetId vehicleNumber driverId = do
 instance FromTType' BeamR.Ride Ride where
   fromTType' BeamR.RideT {..} = do
     mappings <- QLM.findByEntityId id
-    rideMappings <-
+    (fromLocationMapping, mbToLocationMapping) <-
       if null mappings
         then do
           void $ QBooking.findById (Id bookingId)
           createMapping bookingId id (Id <$> merchantId) (Id <$> merchantOperatingCityId)
-        else return mappings
-    let fromLocationMapping = filter (\loc -> loc.order == 0) rideMappings
-
-    fromLocMap <- listToMaybe fromLocationMapping & fromMaybeM (InternalError "Entity Mappings For FromLocation Not Found")
-    fromLocation <- QL.findById fromLocMap.locationId >>= fromMaybeM (InternalError $ "FromLocation not found in ride for fromLocationId: " <> fromLocMap.locationId.getId)
-
-    toLocation <- do
-      let toLocationMappings = filter (\loc -> loc.order /= 0) mappings
-      if (null toLocationMappings)
-        then return Nothing
         else do
-          let toLocMap = DL.maximumBy (comparing (.order)) toLocationMappings
-          QL.findById toLocMap.locationId
+          fromLocationMapping' <- QLM.getLatestStartByEntityId id >>= fromMaybeM (FromLocationMappingNotFound id)
+          let mbToLocationMapping' = listToMaybe . sortBy (comparing (Down . (.order))) $ filter (\loc -> loc.order /= 0) mappings
+          return (fromLocationMapping', mbToLocationMapping')
+
+    fromLocation <- QL.findById fromLocationMapping.locationId >>= fromMaybeM (FromLocationNotFound fromLocationMapping.locationId.getId)
+    toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
 
     tUrl <- parseBaseUrl trackingUrl
     merchant <- case merchantId of
