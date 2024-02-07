@@ -104,6 +104,7 @@ type API =
              :> Post '[JSON] APISuccess
            :<|> "profile"
              :> ( TokenAuth
+                    :> QueryParam "toss" Int
                     :> Get '[JSON] DDriver.DriverInformationRes
                     :<|> TokenAuth
                       :> ReqBody '[JSON] DDriver.UpdateDriverReq
@@ -218,8 +219,8 @@ handler =
     :<|> getDownloadInvoiceData
     :<|> getDummyRideRequest
 
-getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DDriver.DriverInformationRes
-getInformation = withFlowHandlerAPI . DDriver.getInformation
+getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Int -> FlowHandler DDriver.DriverInformationRes
+getInformation (personId, driverId, merchantOpCityId) = withFlowHandlerAPI . DDriver.getInformation (personId, driverId, merchantOpCityId)
 
 setActivity :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DI.DriverMode -> FlowHandler APISuccess
 setActivity (personId, driverId, merchantOpCityId) isActive = withFlowHandlerAPI . DDriver.setActivity (personId, driverId, merchantOpCityId) isActive
