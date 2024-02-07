@@ -60,6 +60,7 @@ window.getMerchantConfig = function () {
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "termsLink" : "https://docs.google.com/document/d/19pQUgTWXBqcM7bjy4SU1-z33r-iXsdPMfZggBTXbdR4"
+    , "termsVersion" : 1.0
     , "privacyLink" : "https://docs.google.com/document/d/1-bcjLOZ_gR0Rda2BNmkKnqVds8Pm23v1e7JbSDdM70E"
     , "appData" : {
       "link" : getAppLink(window.__OS)
@@ -148,7 +149,7 @@ window.getMerchantConfig = function () {
       "GO_TO_ZONE" : "Go to Yatri Sathi Zone",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri Sathi will try to resolve it in under 24 hours.",
       "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Yatri Sathi Support. Do you want to proceed?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at nammayatri.support@juspay.in for any queries."
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at support@nammayatri.in for any queries."
 
     },
     "hindiStrings": {

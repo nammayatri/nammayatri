@@ -1003,3 +1003,4 @@ getML stringKey =
         PENDING_STR -> "പരിഹാരം കാത്തിരിക്കുന്നു"
         PAST_TICKETS -> "കഴിഞ്ഞ ടിക്കറ്റുകൾ"
         ONE_WAY_STR -> "ഒരു വഴി"
+        TERMS_AND_CONDITIONS_UPDATED -> "ടി&സിയും സ്വകാര്യതാ നയവും അപ്ഡേറ്റ് ചെയ്തിട്ടുണ്ട്"

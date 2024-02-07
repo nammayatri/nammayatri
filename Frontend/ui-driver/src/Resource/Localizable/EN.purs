@@ -1225,3 +1225,4 @@ getEN stringKey =
         CONTACT_SUPPORT_VIA -> "Contact Support via"
         YOU_CAN_SHARE_SCREENSHOT -> "You can share screenshots and documents  for manual onboarding"
         PLACE_A_CALL -> "Place a call for quick help in getting documents verified"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&C's and Privacy policy have been updated"

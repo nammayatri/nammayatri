@@ -89,7 +89,7 @@ window.getMerchantConfig = function () {
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "OTP for the Namma Yatri zone has been expired, please try booking again",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Namma Yatri will try to resolve it in under 24 hours.",
       "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Namma Yatri Support. Do you want to proceed?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at nammayatri.support@juspay.in for any queries."
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at support@nammayatri.in for any queries."
     },
     "hindiStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "आपका स्थान हमारे सिस्टम को आस पास के सभी ऑटो को मैप करने में सहायता कर्ता है और आपको सबसे तेज सवारी प्रदान करता है",
@@ -104,7 +104,7 @@ window.getMerchantConfig = function () {
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "नम्मा यात्री क्षेत्र के लिए OTP समाप्त हो गया है, कृपया पुनः बुकिंग का प्रयास करें",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "अपने मामले का वर्णन करें। नम्मा यात्री 24 घंटे के अंदर इसका समाधान करने का प्रयास करेगा।",
       "CALL_SUPPORT_DESCRIPTION" : "आप नम्मा यात्री सहायता को कॉल करने वाले हैं। क्या आपकी आगे बढ़ने की इच्छा है?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "हमें उम्मीद है कि समस्या का समाधान हो गया है, किसी भी प्रश्न के लिए बेझिझक हमें nammayatri.support@juspay.in पर लिखें।"
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "हमें उम्मीद है कि समस्या का समाधान हो गया है, किसी भी प्रश्न के लिए बेझिझक हमें support@nammayatri.in पर लिखें।"
     },
     "kannadaStrings": {
       "YOUR_LOCATION_HELPS_OUR_SYSTEM" : "ನಿಮ್ಮ ಸ್ಥಳವು ನಮ್ಮ ಸಿಸ್ಟಂ ಅನ್ನು ಆಟೋಗಳ ಮೂಲಕ ನಕ್ಷೆ ಮಾಡಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ ಮತ್ತು ನಿಮಗೆ ಸಾಧ್ಯವಿರುವ ವೇಗದ ಸವಾರಿಯನ್ನು ನೀಡುತ್ತದೆ.",
@@ -119,7 +119,7 @@ window.getMerchantConfig = function () {
       "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "ನಮ್ಮ ಯಾತ್ರಿ ವಲಯದ OTP ಅವಧಿ ಮುಗಿದಿದೆ, ದಯವಿಟ್ಟು ಮತ್ತೆ ಬುಕ್ ಮಾಡಲು ಪ್ರಯತ್ನಿಸಿ",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ವಿವರಿಸಿ. ನಮ್ಮ ಯಾತ್ರಿ ಅದನ್ನು 24 ಗಂಟೆಗಳಲ್ಲಿ ಪರಿಹರಿಸಲು ಪ್ರಯತ್ನಿಸುತ್ತದೆ.",
       "CALL_SUPPORT_DESCRIPTION" : "ನೀವು ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಲಾಗಿದೆ ಎಂದು ನಾವು ಭಾವಿಸುತ್ತೇವೆ, ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿಗೆ ನಮಗೆ nammayatri.support@juspay.in ನಲ್ಲಿ ಬರೆಯಲು ಮುಕ್ತವಾಗಿರಿ."
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಲಾಗಿದೆ ಎಂದು ನಾವು ಭಾವಿಸುತ್ತೇವೆ, ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿಗೆ ನಮಗೆ support@nammayatri.in ನಲ್ಲಿ ಬರೆಯಲು ಮುಕ್ತವಾಗಿರಿ."
     },
     "languageList": [{
       "name": "English",
@@ -172,9 +172,10 @@ window.getMerchantConfig = function () {
       "physicalImpairmentVideo" : "https://youtu.be/-ku9Gc8U5B8",
       "hearingImpairmentVideo" : "https://www.youtube.com/watch?v=QcKeSF9uiJ4"
     }
-    , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
+    , "SUPPORT_EMAIL" : "support@nammayatri.in"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "callOptions" : ["ANONYMOUS", "DIRECT"]
+    , "termsVersion" : 2.0
     , "showDisabilityBanner" : false
     , "enableContactSupport" : false
     , "enableGeocoder" : true
@@ -221,7 +222,7 @@ window.getMerchantConfig = function () {
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)
-      , "supportMail" :"nammayatri.support@juspay.in"
+      , "supportMail" :"support@nammayatri.in"
       , "name" : "Namma Yatri"
       , "website" : "https://nammayatri.in/"
     }

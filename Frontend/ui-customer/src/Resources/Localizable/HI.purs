@@ -1002,5 +1002,4 @@ getHI stringKey =
         PENDING_STR -> "लंबित"
         PAST_TICKETS -> "पिछले टिकट"
         ONE_WAY_STR -> "एक तरफा"
-
-
+        TERMS_AND_CONDITIONS_UPDATED -> "नियम एवं शर्तें और गोपनीयता नीति अद्यतन कर दी गई है"

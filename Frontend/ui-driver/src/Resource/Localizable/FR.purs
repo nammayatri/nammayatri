@@ -933,4 +933,5 @@ getFR stringKey =
         ACTIVATED_CUSTOMERS_INFO -> "Les clients recommandés qui ont réussi leur première course"
         CUSTOMER_REFERRAL_CODE -> "Code de référence du client"
         ACCEPT_RIDE_TO_ENTER_LEADERBOARD -> "Acceptez les trajets et \n devenez un chauffeur de premier plan"
+        TERMS_AND_CONDITIONS_UPDATED -> "Les conditions générales et la politique de confidentialité ont été mises à jour"
         _ -> ""

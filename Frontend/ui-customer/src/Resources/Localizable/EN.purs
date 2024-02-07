@@ -1001,3 +1001,4 @@ getEN stringKey =
         PENDING_STR -> "Pending"
         PAST_TICKETS -> "Past Tickets"
         ONE_WAY_STR -> "One Way"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&C's and Privacy policy have been updated"

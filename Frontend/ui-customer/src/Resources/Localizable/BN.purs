@@ -1002,3 +1002,4 @@ getBN stringKey =
         PENDING_STR ->  "মুলতুবি"
         PAST_TICKETS -> "গত টিকেটগুলি"
         ONE_WAY_STR -> "একদিক"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&C এবং গোপনীয়তা নীতি আপডেট করা হয়েছে"
