@@ -945,3 +945,4 @@ getBN stringKey =
         TEST_DRILL -> "টেস্ট ড্রিল"
         RIDE_ENDED name -> name <> " রাইড শেষ হয়েছে"
         RIDE_SHARED_WITH_SELECTED_CONTACTS -> "রাইড নিরাপদ হিসাবে চিহ্নিত করুন"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&C এবং গোপনীয়তা নীতি আপডেট করা হয়েছে"

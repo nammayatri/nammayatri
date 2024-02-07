@@ -944,3 +944,4 @@ getEN stringKey =
         COMPLETE_YOUR_TEST_DRILL -> "Complete Your Test Safety Drill: Safety First!"
         TEST_DRILL -> "Test Drill"
         RIDE_SHARED_WITH_SELECTED_CONTACTS -> "Ride shared with selected contacts"
+        TERMS_AND_CONDITIONS_UPDATED -> "T&C's and Privacy policy have been updated"

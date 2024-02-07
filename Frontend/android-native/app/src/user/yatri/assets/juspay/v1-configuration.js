@@ -136,7 +136,7 @@ window.getMerchantConfig = function () {
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "Please enable location permissions for Yatri from the settings app to start looking for rides.",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri will try to resolve it in under 24 hours.",
       "CALL_SUPPORT_DESCRIPTION" : "You are about to place a call to Yatri Support. Do you want to proceed?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at nammayatri.support@juspay.in for any queries.",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "We hope the issue is resolved, feel free to write to us at support@nammayatri.in for any queries.",
       "ABOUT_SOS_12" : "Choose an appropriate SOS option from: Call Police (112)/ Call Yatri support/ Record video (to share with emergency contacts & Yatri",
       "SAFETY_MEASURE_5" : "Safety Training and Certification for all Yatri Drivers",
       "SHARE_LOCATION_AND_RIDE_DETAILS_WITH_NAMMA_YATRI_SUPPORT_TEAM" : "Share location and ride details with Yatri Support Team",
@@ -168,7 +168,7 @@ window.getMerchantConfig = function () {
       "PLEASE_ENABLE_LOCATION_PERMISSION" : "റൈഡുകൾക്കായി തിരയാൻ ക്രമീകരണ ആപ്പിൽ നിന്ന് യാത്രയ്‌ക്ക് ലൊക്കേഷൻ അനുമതികൾ പ്രവർത്തനക്ഷമമാക്കുക.",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "നിങ്ങളുടെ പ്രശ്നം വിവരിക്കുക. 24 മണിക്കൂറിനുള്ളിൽ അത് പരിഹരിക്കാൻ യാത്രി ശ്രമിക്കും.",
       "CALL_SUPPORT_DESCRIPTION" : "നിങ്ങൾ യാത്രി സപ്പോർട്ടിലേക്ക് ഒരു കോൾ ചെയ്യാൻ പോകുകയാണ്. നിങ്ങൾക്ക് തുടരണോ?",
-      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "പ്രശ്‌നം പരിഹരിച്ചുവെന്ന് ഞങ്ങൾ പ്രതീക്ഷിക്കുന്നു, എന്തെങ്കിലും ചോദ്യങ്ങൾക്ക് nammayatri.support@juspay.in എന്ന വിലാസത്തിൽ ഞങ്ങൾക്ക് എഴുതാൻ മടിക്കേണ്ടതില്ല.",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "പ്രശ്‌നം പരിഹരിച്ചുവെന്ന് ഞങ്ങൾ പ്രതീക്ഷിക്കുന്നു, എന്തെങ്കിലും ചോദ്യങ്ങൾക്ക് support@nammayatri.in എന്ന വിലാസത്തിൽ ഞങ്ങൾക്ക് എഴുതാൻ മടിക്കേണ്ടതില്ല.",
       "ABOUT_SOS_12" : "കുറഞ്ഞുപയോഗിക്കാൻ പോലീസ് (112) / യാത്രി പിന്തുണ / വീഡിയോ റെക്കോർഡ് (എയർ ഇമേജന്‍സി കോണ്ടാക്ട്സ് & യാത്രി) നിരവധി എസ്ഓഎസ് ഓപ്ഷനുകൾക്ക് ഉചിതമായി തിരഞ്ഞെടുക്കുക",
       "SAFETY_MEASURE_5" : "എല്ലാ യാത്രി ഡ്രൈവറുകളും സുരക്ഷാ പ്രശിക്ഷണം ലഭിക്കുന്നു",
       "SHARE_LOCATION_AND_RIDE_DETAILS_WITH_NAMMA_YATRI_SUPPORT_TEAM" : "യാത്രി പിന്തുണ ടീംയോട് ലൊക്കേഷൻ പങ്കിടുക വാഹന വിശദാംശങ്ങൾക്കോട്",
@@ -212,7 +212,7 @@ window.getMerchantConfig = function () {
       "query" : "google.navigation:q=%f,%f"
       , "packageName" : "com.google.android.apps.maps"
     }
-    , "SUPPORT_EMAIL" : "nammayatri.support@juspay.in"
+    , "SUPPORT_EMAIL" : "support@nammayatri.in"
     , "OTP_MESSAGE_REGEX" : "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
     , "showDisabilityBanner" : false
   
@@ -251,10 +251,11 @@ window.getMerchantConfig = function () {
     }
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+"
     , "termsLink" :"https://docs.google.com/document/d/1zmQWO_L4EjyCXC3xSlp1f3DS2wI4HfbHxg42tXelWe0"
+    , "termsVersion" : 1.0
     , "privacyLink" : "https://docs.google.com/document/d/1gI_P4oZnVwE0O71rI4Mi8rpZbL9rsIRkyewbql85Np8"
     , "appData" : {
       "link" : getAppLink(window.__OS)
-      , "supportMail" :"nammayatri.support@juspay.in"
+      , "supportMail" :"support@nammayatri.in"
       , "name" : "Yatri"
       , "website" : "https://www.getyatri.com"
     },
