@@ -17,7 +17,7 @@ module Flow where
 
 import Engineering.Helpers.LogEvent
 import Accessor
-import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate)
+import Common.Types.App (GlobalPayload(..), SignatureAuthData(..), Payload(..), Version(..), LocationData(..), EventPayload(..), ClevertapEventParams, OTPChannel(..), LazyCheck(..), FCMBundleUpdate, RideType(..))
 import Components.LocationListItem.Controller (locationListStateObj, dummyAddress)
 import Components.SavedLocationCard.Controller (getCardType)
 import Components.ChooseVehicle.Controller as ChooseVehicle
@@ -794,9 +794,9 @@ homeScreenFlow = do
       homeScreenFlow
     CONFIRM_RIDE state -> do
       pure $ enableMyLocation false
-      let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == QUOTES 
+      let selectedQuote = if state.props.isSpecialZone && state.data.currentSearchResultType == ST.QUOTES 
                             then state.data.specialZoneSelectedQuote 
-                          else if state.data.currentSearchResultType == INTERCITY 
+                          else if state.data.currentSearchResultType == ST.INTER_CITY 
                             then state.data.selectedQuoteId
                           else state.props.selectedQuote
       
@@ -921,7 +921,7 @@ homeScreenFlow = do
                                             currentSourceGeohash = runFn3 encodeGeohash srcLat srcLon state.data.config.suggestedTripsAndLocationConfig.geohashPrecision
                                             currentMap = getSuggestionsMapFromLocal FunctionCall
                                             updatedMap = addOrUpdateSuggestedTrips currentSourceGeohash currTrip false currentMap state.data.config.suggestedTripsAndLocationConfig
-                                        void $ pure $ setSuggestionsMap updatedMap
+                                        when (state.data.rideType /= RENTAL_RIDE) $ void $ pure $ setSuggestionsMap updatedMap
                                         modifyScreenState $ HomeScreenStateType (\homeScreen -> newState{data{suggestionsData{suggestionsMap = getSuggestionsMapFromLocal FunctionCall }}})
                                         lift $ lift $ triggerRideStatusEvent notification Nothing (Just state.props.bookingId) $ getScreenFromStage state.props.currentStage
                                       homeScreenFlow
