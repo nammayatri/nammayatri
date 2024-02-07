@@ -199,6 +199,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                                 String entityPayload = remoteMessage.getData().get("entity_data");
                                 if (entityPayload != null){
                                     JSONObject driverPayloadJsonObject = new JSONObject(entityPayload);
+                                    addUpdateStop(driverPayloadJsonObject);
                                     if(driverPayloadJsonObject.has("isEdit") && !driverPayloadJsonObject.isNull("isEdit")){
                                         String stopStatus = driverPayloadJsonObject.optBoolean("isEdit",false) ? "EDIT_STOP" : "ADD_STOP";
                                         payload.put("stopStatus", stopStatus);
@@ -447,6 +448,41 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             startWidgetService(null, payload, entity_payload);
         } else {
             NotificationUtils.showAllocationNotification(this, payload, entity_payload);
+        }
+    }
+
+    private void addUpdateStop(JSONObject driverPayloadJsonObject){
+        try {
+            String stopTitle = driverPayloadJsonObject.has("isEdit") && driverPayloadJsonObject.getBoolean("isEdit") ? "Customer Edited a stop!": "Customer added a stop!"; // TODO:: Temporary added until this data comes from backend
+            driverPayloadJsonObject.put("title", stopTitle);
+            driverPayloadJsonObject.put("okButtonText", "Navigate to location");
+            driverPayloadJsonObject.put("cancelButtonText", "Close");
+            driverPayloadJsonObject.put("imageUrl", "https://firebasestorage.googleapis.com/v0/b/jp-beckn-dev.appspot.com/o/do_not%2Fadd_stop.png?alt=media&token=063c3661-3cfe-4950-a043-f7f49ed2c7fc");
+            driverPayloadJsonObject.put("titleVisibility", true);
+            driverPayloadJsonObject.put("buttonOkVisibility", true);
+            driverPayloadJsonObject.put("buttonCancelVisibility", true);
+            driverPayloadJsonObject.put("imageVisibility", true);
+            driverPayloadJsonObject.put("buttonLayoutVisibility", true);
+            driverPayloadJsonObject.put("actions", new JSONArray().put("NAVIGATE"));
+            double editLat = Double.NaN;
+            double editLon = Double.NaN;
+            if (driverPayloadJsonObject.has("stop")) {
+                JSONObject stopObject = driverPayloadJsonObject.getJSONObject("stop");
+                if (stopObject.has("gps")) {
+                    JSONObject gpsObject = stopObject.getJSONObject("gps");
+                    if (gpsObject.has("lat")) {
+                        editLat = gpsObject.getDouble("lat");
+                    }
+                    if (gpsObject.has("lon")) {
+                        editLon = gpsObject.getDouble("lon");
+                    }
+                }
+            }
+            driverPayloadJsonObject.put("editlat", editLat);
+            driverPayloadJsonObject.put("editlon", editLon);
+            showOverlayMessage(driverPayloadJsonObject);
+        }catch (Exception e){
+            e.printStackTrace();
         }
     }
 
