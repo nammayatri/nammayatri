@@ -151,6 +151,7 @@ mkDistanceTagGroup ride = do
     realToFrac <$> ride.chargeableDistance
       & fromMaybeM (InternalError "Ride chargeable distance is not present in OnUpdateBuildReq ride.")
   let traveledDistance :: HighPrecMeters = ride.traveledDistance
+  let endOdometerReading :: Maybe Centesimal = (.value) <$> ride.endOdometerReading
   pure $
     Just
       [ Spec.TagGroup
@@ -166,6 +167,7 @@ mkDistanceTagGroup ride = do
               Just $
                 chargeableDistanceSingleton chargeableDistance
                   ++ traveledDistanceSingleton traveledDistance
+                  ++ endOdometerSingleton endOdometerReading
           }
       ]
   where
@@ -195,6 +197,20 @@ mkDistanceTagGroup ride = do
                   },
             tagDisplay = Just False,
             tagValue = Just $ show traveledDistance
+          }
+
+    endOdometerSingleton endOdometerReading =
+      List.singleton $
+        Spec.Tag
+          { tagDescriptor =
+              Just $
+                Spec.Descriptor
+                  { descriptorCode = Just "end_odometer_reading",
+                    descriptorName = Just "End Odometer Reading",
+                    descriptorShortDesc = Nothing
+                  },
+            tagDisplay = Just False,
+            tagValue = show <$> endOdometerReading
           }
 
 mkPreviousCancellationReasonsTags :: SBCR.CancellationSource -> Maybe [Spec.TagGroup]
