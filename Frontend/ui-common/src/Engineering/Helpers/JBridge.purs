@@ -459,7 +459,7 @@ removeAllPolylines str = removeAllPolylinesImpl markersToRemove
     removeAllPolylinesImpl mrkrToRemove = runFn2 removeAllPolylinesAndMarkers mrkrToRemove unit
     
     markersToRemove :: Array String   
-    markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_src_marker", "ny_ic_dest_marker"]
+    markersToRemove = ["ic_auto_nav_on_map" , "ny_ic_vehicle_nav_on_map" , "ny_ic_black_yellow_auto" , "ny_ic_src_marker", "ny_ic_dest_marker", "ny_ic_blue_marker"]
 
 
 setKeyInSharedPrefKeys :: forall st. String -> String -> Flow st Unit

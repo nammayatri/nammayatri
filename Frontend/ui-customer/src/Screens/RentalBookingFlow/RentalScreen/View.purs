@@ -37,7 +37,7 @@ import Language.Types (STR(..))
 import Services.API(GetQuotesRes(..), SearchReqLocationAPIEntity(..), RideBookingRes(..))
 import Effect.Aff (launchAff)
 import Effect.Class (liftEffect)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout)
+import PrestoDOM (Accessiblity(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Screen, background, color, cornerRadius, gravity, height, id, linearLayout, margin, onAnimationEnd, onClick, orientation, padding, relativeLayout, scrollView, stroke, text, textView, weight, width, onBackPressed, visibility, shimmerFrameLayout, accessibility, imageView, imageWithFallback)
 import Screens.RentalBookingFlow.RentalScreen.ComponentConfig (genericHeaderConfig, incrementDecrementConfig, mapInputViewConfig, primaryButtonConfig, rentalRateCardConfig)
 import Screens.RentalBookingFlow.RentalScreen.Controller (Action(..), FareBreakupRowType(..), ScreenOutput, eval)
 import Screens.Types (RentalScreenState, RentalScreenStage(..), RentalQuoteList)
@@ -47,7 +47,7 @@ import Styles.Colors as Color
 import Services.Backend (getQuotes, rideBooking)
 import Data.Either (Either(..))
 import Data.Time.Duration (Milliseconds(..))
-import Helpers.Utils (decodeError)
+import Helpers.Utils (decodeError, fetchImage, FetchImageFrom(..))
 import Log (printLog)
 import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Lens ((^.))
@@ -222,9 +222,9 @@ rentalVariantSelectionView push state =
           , margin $ MarginBottom 32
           , orientation VERTICAL
           ]
-          [ if spy "Inside rentalsQuoteLIst" (null state.data.rentalsQuoteList) && state.props.showShimmer 
-              then shimmerView push state
-              else chooseVehicleView push state
+          [ if spy "Inside rentalsQuoteLIst" (null state.data.rentalsQuoteList) && state.props.showShimmer then shimmerChooseVehicleView push state
+            else if null state.data.rentalsQuoteList then noQuotesErrorModel state 
+            else chooseVehicleView push state
           ]
         ]
     , linearLayout
@@ -391,8 +391,8 @@ getRentalQuotes action flowStatusAction count duration push state = do
   else
     pure unit
 
-
-shimmerView push state = 
+shimmerChooseVehicleView :: forall w. (Action -> Effect Unit) -> RentalScreenState -> PrestoDOM (Effect Unit) w
+shimmerChooseVehicleView push state = 
   shimmerFrameLayout 
     [ width MATCH_PARENT
     , height WRAP_CONTENT
@@ -418,3 +418,46 @@ shimmerView push state =
         , background Color.greyDark
         ]
         []
+
+noQuotesErrorModel :: forall w . RentalScreenState -> PrestoDOM (Effect Unit) w
+noQuotesErrorModel state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , gravity CENTER
+    , background Color.white900
+    , accessibility DISABLE
+    , margin $ MarginVertical ((EHC.screenHeight unit)/6) 60
+    ][ linearLayout
+       [ weight 1.0
+       , width MATCH_PARENT
+       ][]
+      , linearLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , gravity CENTER
+      ][imageView
+        [ height $ V 115
+        , width $ V 161
+        , accessibility DISABLE
+        , imageWithFallback $ fetchImage FF_ASSET $ "ny_ic_no_quotes_color"
+        ]
+      , textView $
+        [ height WRAP_CONTENT
+        , width $ V ((EHC.screenWidth unit / 2) + (EHC.screenWidth unit /3))
+        , color Color.black800
+        , text (getString SORRY_WE_COULDNT_FIND_ANY_RIDES)
+        , margin $ MarginVertical 20 4
+        , gravity CENTER
+        ] <> FontStyle.h2 TypoGraphy
+      , textView $
+        [ height WRAP_CONTENT
+        , width $ V ((EHC.screenWidth unit / 2) + (EHC.screenWidth unit /3))
+        , text (getString IT_SEEMS_TO_BE_A_VERY_BUSY_DAY)
+        , color Color.black700
+        , gravity CENTER
+        ] <> FontStyle.paragraphText TypoGraphy
+    ]
+    ]

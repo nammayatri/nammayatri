@@ -126,7 +126,7 @@ eval (GetRentalQuotes (GetQuotesRes quoteRes)) state = do
     in { quoteDetails : quoteDetails, index : currIndex, activeIndex : 0 , fareDetails : fareDetails}
     ) filteredQuoteList)
   let _ = spy "rentalsQuoteList GetRentalQuotes" rentalsQuoteList
-  continue state { data{rentalsQuoteList = rentalsQuoteList}, props{showShimmer = false, showPrimaryButton = true}}
+  continue state { data{rentalsQuoteList = rentalsQuoteList}, props{showShimmer = false, showPrimaryButton = not (DA.null rentalsQuoteList)}}
 
 eval (CheckFlowStatusAction) state = continue state{data{currentStage = RENTAL_SELECT_PACKAGE}, props{showShimmer = false, showPrimaryButton = false}}
 
@@ -195,7 +195,7 @@ eval (InputViewAC (InputViewController.TextFieldFocusChanged id isFocused hasFoc
   case state.data.currentStage of
     RENTAL_SELECT_PACKAGE -> exit $ SearchLocationForRentals state id
     RENTAL_SELECT_VARIANT -> 
-      if (id == "DateAndTime") then continueWithCmd state{data{currentStage = RENTAL_SELECT_PACKAGE}} 
+      if (id == "DateAndTime") then continueWithCmd state{data{currentStage = RENTAL_SELECT_PACKAGE}, props{showPrimaryButton = true}} 
         [ do 
           push <- getPushFn Nothing "RentalScreen"
           _ <- launchAff $ showDateTimePicker push DateTimePickerAction

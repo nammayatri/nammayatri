@@ -304,6 +304,7 @@ initData = {
     , rideDurationTimer : ""
     , rideDurationTimerId : ""
     , stopLoc : Nothing
+    , showRentalInfo : false
     }
 }
 

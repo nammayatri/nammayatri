@@ -173,7 +173,10 @@ screen initialState =
                   void $ pure $ setValueToLocalStore TRACKING_ID (getNewTrackingId unit)
                   let pollingCount = ceil ((toNumber initialState.props.searchExpire)/((fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) / 1000.0))
                   void $ launchAff $ flowRunner defaultGlobalState $ getQuotesPolling (getValueToLocalStore TRACKING_ID) GetQuotesList Restart pollingCount (fromMaybe 0.0 (NUM.fromString (getValueToLocalStore TEST_POLLING_INTERVAL))) push initialState
-              ConfirmingRide -> void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
+              ConfirmingRide -> do
+                if initialState.data.rideType == RideType.NORMAL_RIDE then 
+                  void $ launchAff $ flowRunner defaultGlobalState $ confirmRide GetRideConfirmation 5 3000.0 push initialState
+                else void $ launchAff $ flowRunner defaultGlobalState $ rentalAndIntercityConfirmRide GetRideConfirmation 15 3000.0 push initialState
               HomeScreen -> do
                 let suggestionsMap = getSuggestionsMapFromLocal FunctionCall
                 if (getValueToLocalStore UPDATE_REPEAT_TRIPS == "true" && Map.isEmpty suggestionsMap) then do
@@ -394,7 +397,7 @@ view push state =
             -- , if state.data.config.feature.enableZooTicketBookingFlow then bottomNavBarView push state else emptyTextView state
             , if state.data.settingSideBar.opened /= SettingSideBar.CLOSED then settingSideBarView push state else emptyTextView state
             , if (state.props.currentStage == SearchLocationModel || state.props.currentStage == FavouriteLocationModel) then searchLocationView push state else emptyTextView state
-            , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain ]) then (quoteListModelView push state) else emptyTextView state
+            , if (any (_ == state.props.currentStage) [ FindingQuotes, QuoteList, TryAgain, ConfirmingQuotes]) then (quoteListModelView push state) else emptyTextView state
             , if (state.props.isCancelRide) then (cancelRidePopUpView push state) else emptyTextView state
             , if (state.props.isPopUp /= NoPopUp) then (logOutPopUpView push state) else emptyTextView state
             , if (state.props.isLocationTracking) then (locationTrackingPopUp push state) else emptyTextView state
@@ -416,6 +419,7 @@ view push state =
             , if state.props.callSupportPopUp then callSupportPopUpView push state else emptyTextView state
             , if state.props.showDisabilityPopUp &&  (getValueToLocalStore DISABILITY_UPDATED == "true") then disabilityPopUpView push state else emptyTextView state
             , if state.data.waitTimeInfo && state.props.currentStage == RideAccepted then waitTimeInfoPopUp push state else emptyTextView state
+            , if state.props.showRentalInfo then rentalInfoPopUp push state else emptyTextView state
             , if showSafetyAlertPopup then safetyAlertPopup push state else  emptyTextView state
             , if state.props.showShareRide then shareRidePopup push state else emptyTextView state
             , if state.props.repeatRideTimer /= "0" 
@@ -2891,6 +2895,7 @@ waitTimeInfoPopUp push state =
   , accessibility DISABLE
   ][ RequestInfoCard.view (push <<< RequestInfoCardAction) (waitTimeInfoCardConfig state) ]
 
+
 lottieLoaderView :: forall w. HomeScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 lottieLoaderView state push =
   lottieAnimationView
@@ -3004,6 +3009,8 @@ updateRecentTrips action push response = do
 driverLocationTracking :: forall action. (action -> Effect Unit) -> (String -> RideBookingRes -> action) -> (String -> action) -> (Int -> Int -> action) -> Number -> String -> HomeScreenState -> String -> Flow GlobalState Unit
 driverLocationTracking push action driverArrivedAction updateState duration trackingId state routeState = do
   _ <- pure $ printLog "trackDriverLocation2_function" trackingId
+  when (isLocalStageOn RideStarted) $ do 
+    void $ pure $ removeMarker "ny_ic_blue_marker"
   void $ pure $ spy "INside state" state
   (GlobalState currentState) <- getState 
   void $ pure $ spy "inside currentState" currentState.homeScreen
@@ -3140,6 +3147,53 @@ confirmRide action count duration push state = do
   else
     pure unit
 
+rentalAndIntercityConfirmRide :: forall action. (RideBookingRes -> action) -> Int -> Number -> (action -> Effect Unit) -> HomeScreenState -> Flow GlobalState Unit
+rentalAndIntercityConfirmRide action count duration push state = do -- TODO-codex : refactor current confirm Ride on the basis of fareProductType for Rental, Intercity and SpecialZone
+  if (count /= 0) && (isLocalStageOn ConfirmingRide) && (state.props.bookingId /= "")then do
+    resp <- rideBooking (state.props.bookingId)
+    _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
+    case resp of
+      Right response -> do
+        _ <- pure $ printLog "api Results " response
+        let (RideBookingRes resp) = response
+            fareProductType = (resp.bookingDetails) ^. _fareProductType
+            status = if any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL", "INTER_CITY"] then "CONFIRMED" else "TRIP_ASSIGNED"
+            willRideListNull = any ( _ == fareProductType ) ["OneWaySpecialZoneAPIDetails" , "RENTAL", "INTER_CITY"]
+        if  status == resp.status && (willRideListNull || not (null resp.rideList)) then do
+            doAff do liftEffect $ push $ action response
+            -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"
+            pure unit
+        else do
+            void $ delay $ Milliseconds duration
+            confirmRide action (count - 1) duration push state
+      Left err -> do
+        _ <- pure $ printLog "api error " err
+        void $ delay $ Milliseconds duration
+        confirmRide action (count - 1) duration push state
+  else
+    pure unit
+  --   resp <- rideBooking (state.props.bookingId)
+  --   _ <- pure $ printLog "response to confirm ride:- " (state.props.searchId)
+  --   case resp of
+  --     Right response -> do
+  --       _ <- pure $ printLog "api Results " response
+  --       let (RideBookingRes resp) = response
+  --           fareProductType = (resp.bookingDetails) ^. _fareProductType
+  --           status = if any ( _ == fareProductType) ["RENTAL", "INTER_CITY"] then "TRIP_ASSIGNED" else "CONFIRMED"
+  --       if status == resp.status && not (null resp.rideList) then do
+  --           doAff do liftEffect $ push $ action response
+  --           -- _ <- pure $ logEvent state.data.logField "ny_user_ride_assigned"
+  --           pure unit
+  --       else do
+  --           void $ delay $ Milliseconds duration
+  --           rentalAndIntercityConfirmRide action (count - 1) duration push state
+  --     Left err -> do
+  --       _ <- pure $ printLog "api error " err
+  --       void $ delay $ Milliseconds duration
+  --       confirmRide action (count - 1) duration push state
+  -- else
+  --   pure unit
+
 cancelRidePopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelRidePopUpView push state =
   linearLayout
@@ -3266,6 +3320,14 @@ zoneTimerExpiredView state push =
   , width MATCH_PARENT
   , gravity CENTER
   ][ PopUpModal.view (push <<< ZoneTimerExpired) (zoneTimerExpiredConfig state)]
+
+rentalInfoPopUp :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+rentalInfoPopUp push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , gravity CENTER
+  ][ PopUpModal.view (push <<< RentalInfoAction) (rentalInfoViewConfig state)]
 
 currentLocationView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 currentLocationView push state =

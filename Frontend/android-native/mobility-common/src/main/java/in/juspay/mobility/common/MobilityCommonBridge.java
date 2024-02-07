@@ -1899,6 +1899,7 @@ public class MobilityCommonBridge extends HyperBridge {
                 removeMarker("ny_ic_black_yellow_auto");
                 removeMarker("ny_ic_src_marker");
                 removeMarker("ny_ic_dest_marker");
+                removeMarker("ny_ic_blue_marker");
             } else{
                 try {
                     JSONArray jsonArray = null;

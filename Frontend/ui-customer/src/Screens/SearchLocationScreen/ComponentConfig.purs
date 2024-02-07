@@ -157,7 +157,7 @@ mapInputViewConfig state isEditable = let
                , cornerRadius : 4.0
                , margin : item.margin
                , imageName : item.prefixImageName
-               , textColor : Color.white900
+               , textColor : if item.textValue == "" then Color.grey900 else Color.white900
                , prefixImageVisibility : GONE 
                , prefixImageConfig : InputView.dummyImageConfig
                }
@@ -176,7 +176,7 @@ inputViewArray state =
     pickUpFocussed = state.props.focussedTextField == MB.Just ST.SearchLocPickup 
     dropLocFocussed = state.props.focussedTextField == MB.Just ST.SearchLocDrop 
   in 
-    [ { textValue :  if addressOnMap /= "" && pickUpFocussed then addressOnMap else (if state.props.textFieldText.pickUpLoc == "" then srcLoc else state.props.textFieldText.pickUpLoc )
+    [ { textValue :  srcLoc
       , isFocussed : pickUpFocussed
       , prefixImageName : "ny_ic_green_circle"
       , margin : MarginTop 8
@@ -185,7 +185,7 @@ inputViewArray state =
       , id : ST.SearchLocPickup
       , isEditable : not $ (state.data.fromScreen == getScreen RIDE_SCHEDULED_SCREEN) || (state.props.actionType == ST.AddingStopAction && (state.data.fromScreen == getScreen HOME_SCREEN))
       } ,
-      { textValue : if addressOnMap /= "" && dropLocFocussed then addressOnMap else destLoc
+      { textValue : destLoc
       , isFocussed : dropLocFocussed
       , prefixImageName : if state.props.actionType == ST.SearchLocationAction then "ny_ic_red_circle" else "ny_ic_blue_circle"
       , margin : MarginTop 8

@@ -934,12 +934,12 @@ rentalDetailsView push state =
   , background Color.white900
   , visibility $ boolToVisibility $ state.props.rideType == RideType.RENTAL_RIDE
   ]
-  [ rentalTimeView push state TIME
+  [ rentalTimeView push state TIME false
   , separatorView true
-  , rentalTimeView push state DISTANCE
+  , rentalTimeView push state DISTANCE false
   , separatorView true
-  , rentalTimeView push state STARTING_ODO
-  -- (Array.mapWithIndex (\index item -> 
+  , rentalTimeView push state STARTING_ODO true
+  -- (Array.mapWithIndex (\index item -> TODO-codex : Refactor
   --   linearLayout
   --   [ height WRAP_CONTENT
   --   , width WRAP_CONTENT
@@ -950,8 +950,8 @@ rentalDetailsView push state =
   -- ) [{text : TIME}, {text : DISTANCE}, {text : STARTING_ODO}])
   ]
 
-rentalTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> STR -> PrestoDOM (Effect Unit) w
-rentalTimeView push state showText =
+rentalTimeView :: forall w. (Action -> Effect Unit) -> DriverInfoCardState -> STR -> Boolean -> PrestoDOM (Effect Unit) w
+rentalTimeView push state showText showInfo =
   let rentalData = state.data.rentalData
       isRideStarted = state.props.currentStage == RideStarted
   in 
@@ -966,32 +966,42 @@ rentalTimeView push state showText =
         else pure unit
       ) (const NoAction)
     ]
-    [ textView $
+    [ linearLayout[height WRAP_CONTENT
+      , width WRAP_CONTENT][textView $
       [ height WRAP_CONTENT
       , width WRAP_CONTENT
       , text $ getString showText
       , color Color.black650
       , singleLine true
       ] <> FontStyle.body3 TypoGraphy
+    , imageView 
+            [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue_lg"
+            , height $ V 15
+            , visibility $ boolToVisibility $ showInfo
+            , width $ V 15 
+            , margin $ MarginLeft 4 
+            , onClick push $ const $ RentalInfo
+            ]]
     , linearLayout
       [ height MATCH_PARENT
       , width $ if isTime showText then WRAP_CONTENT else MATCH_PARENT
       , orientation HORIZONTAL
       ] 
       [ textView $
-        [ height WRAP_CONTENT
-        , width WRAP_CONTENT
-        , text $ case showText of 
-            TIME -> (if isRideStarted then state.props.rideDurationTimer else "0") <> "hr"
-            DISTANCE -> show rentalData.baseDistance <> "km"
-            _ -> if rentalData.startOdometer == "" then "-" else rentalData.startOdometer <> "km"
-        , color Color.black800
-        ] <> FontStyle.body1 TypoGraphy
+            [ height WRAP_CONTENT
+            , width WRAP_CONTENT
+            , text $ case showText of 
+                TIME -> (if isRideStarted then state.props.rideDurationTimer else "0") <> " hr"
+                DISTANCE -> show rentalData.baseDistance <> " km"
+                _ -> if rentalData.startOdometer == "" then "-" else rentalData.startOdometer <> " km"
+            , color Color.black800
+            ] <> FontStyle.body1 TypoGraphy
+
       , textView $
         [ height WRAP_CONTENT
         , width WRAP_CONTENT
         , visibility $ boolToVisibility $ isTime showText
-        , text $ " / " <> show rentalData.baseDuration <> "hr"
+        , text $ " / " <> show rentalData.baseDuration <> " hr"
         , color Color.black600
         ] <> FontStyle.body1 TypoGraphy
       ]

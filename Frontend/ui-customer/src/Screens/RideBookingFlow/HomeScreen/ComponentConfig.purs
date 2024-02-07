@@ -1266,6 +1266,31 @@ zoneTimerExpiredConfig state = let
   }
   in popUpConfig'
 
+rentalInfoViewConfig :: ST.HomeScreenState ->  PopUpModal.Config
+rentalInfoViewConfig state = let
+  config' = PopUpModal.config
+  popUpConfig' = config'{
+    gravity = CENTER
+  , cornerRadius = Corners 16.0 true true true true
+  , margin = Margin 24 32 24 0
+  , primaryText {
+      text = "Rental Ride Info"
+    }
+  , secondaryText {
+      text = "Please verify the odometer reading before sharing end ride otp"
+    , margin = Margin 16 4 16 24
+    , color = Color.black700
+    }
+  , option1 {
+      visibility = false
+    }
+  , option2 {
+      text =  getString OK_GOT_IT
+    , margin = (MarginHorizontal 16 16)
+    }
+  }
+  in popUpConfig'
+
 menuButtonConfig :: ST.HomeScreenState -> ST.Location -> MenuButton.Config
 menuButtonConfig state item = let
     config = MenuButton.config

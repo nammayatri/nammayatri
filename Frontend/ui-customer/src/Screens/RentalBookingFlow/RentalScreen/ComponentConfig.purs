@@ -22,7 +22,7 @@ import Components.InputView as InputView
 import Components.PrimaryButton as PrimaryButton
 import Components.RateCard as RateCard
 import Components.SeparatorView.View as SeparatorView
-import Data.Array ((!!), singleton)
+import Data.Array ((!!), singleton, null)
 import Data.Maybe as MB
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
@@ -30,7 +30,7 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Mobility.Prelude (boolToVisibility)
-import Prelude (map, show, not, (<>), (==), ($), (>), (-), (<), (+))
+import Prelude (map, show, not, (<>), (==), ($), (>), (-), (<), (+), (||), (&&))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), Visibility(..))
 import Screens.Types (DateTimeConfig, RentalScreenStage(..), RentalScreenState)
 import Styles.Colors as Color
@@ -118,7 +118,7 @@ mapInputViewConfig :: RentalScreenState -> InputView.InputViewConfig
 mapInputViewConfig state = 
   let config = InputView.config 
       isSelectPackageStage = state.data.currentStage == RENTAL_SELECT_PACKAGE
-      suffixButtonText = if null state.data.startTimeUTC
+      suffixButtonText = if state.data.startTimeUTC == ""
                           then getString NOW
                           else formatDate "hh" <> ":" <> formatDate "mm" <> " " <> formatDate "A" <> ", " <> formatDate "MMM" <> " " <> formatDate "D"
       inputViewConfig' = config
@@ -190,7 +190,7 @@ mapInputViewConfig state =
           }
         , textColor : if isSelectPackageStage then Color.black600 else Color.white900
         } ,
-        { textValue : if isSelectPackageStage then dropLocText else show state.data.rentalBookingData.baseDuration <> " hr · " <> show state.data.rentalBookingData.baseDistance <> " km"
+        { textValue : if isSelectPackageStage then dropLocText else " " <> show state.data.rentalBookingData.baseDuration <> " hr · " <> show state.data.rentalBookingData.baseDistance <> " km"
         , isFocussed : false
         , imageName : "ny_ic_blue_circle"
         , margin : MarginVertical 12 8

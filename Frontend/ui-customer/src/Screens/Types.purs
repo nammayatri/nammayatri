@@ -686,6 +686,7 @@ data Stage = HomeScreen
            | ConfirmRentalRide
            | ChangeToRideAccepted
            | ChangeToRideStarted
+           | ConfirmingQuotes
 
 derive instance genericStage :: Generic Stage _
 instance eqStage :: Eq Stage where eq = genericEq
@@ -959,6 +960,7 @@ type HomeScreenStateProps =
   , showEndOTP :: Boolean
   , rideDurationTimer :: String
   , rideDurationTimerId :: String
+  , showRentalInfo :: Boolean
   }
 
 data BottomNavBarIcon = TICKETING | MOBILITY

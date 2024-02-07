@@ -40,6 +40,7 @@ data Action = NoAction
             | CollapseBottomSheet
             | RideDurationTimer String String Int
             | AddStop 
+            | RentalInfo
 
 type DriverInfoCardState =
   { props :: DriverInfoCardProps

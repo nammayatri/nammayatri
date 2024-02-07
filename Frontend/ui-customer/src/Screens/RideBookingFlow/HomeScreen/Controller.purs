@@ -940,6 +940,7 @@ data Action = NoAction
             | UpdateFollowers FollowRideRes
             | GoToFollowRide 
             | ShowEndOTP
+            | RentalInfoAction PopUpModal.Action
 
 eval :: Action -> HomeScreenState -> Eval Action ScreenOutput HomeScreenState
 eval (ChooseSingleVehicleAction (ChooseVehicleController.ShowRateCard config)) state = do
@@ -1298,6 +1299,8 @@ eval (UpdateSheetState sheetState) state = continue state {props {sheetState = N
 eval (DriverInfoCardActionController (DriverInfoCardController.CollapseBottomSheet)) state = continue state {props {sheetState = Just COLLAPSED, currentSheetState = COLLAPSED}}
 
 eval (DriverInfoCardActionController (DriverInfoCardController.AddStop)) state = exit $ Add_Stop state
+
+eval (DriverInfoCardActionController (DriverInfoCardController.RentalInfo)) state = continue state {props {showRentalInfo = true}}
 
 eval RemoveNotification state = do
   continue state {props { showChatNotification = false, isChatNotificationDismissed = true}}
@@ -2412,6 +2415,12 @@ eval (RateCardAction RateCard.GoToWaitingCharges) state = continue state { data{
 eval (RequestInfoCardAction RequestInfoCard.Close) state = continue state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false }}
 
 eval (RequestInfoCardAction RequestInfoCard.BackPressed) state = continue state { props { showMultipleRideInfo = false }, data {waitTimeInfo = false }}
+
+eval (RentalInfoAction PopUpModal.DismissPopup) state = continue state
+
+eval (RentalInfoAction PopUpModal.OnButton1Click) state = continue state { props { showRentalInfo = false}}
+
+eval (RentalInfoAction PopUpModal.OnButton2Click) state = continue state { props { showRentalInfo = false}}
 
 eval (RequestInfoCardAction RequestInfoCard.NoAction) state = continue state
 
