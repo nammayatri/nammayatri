@@ -114,6 +114,7 @@ dependencies:
   - scheduler
   - singletons
   - singletons-th
+  - regex-posix
 
 ghc-options:
   - -fwrite-ide-info

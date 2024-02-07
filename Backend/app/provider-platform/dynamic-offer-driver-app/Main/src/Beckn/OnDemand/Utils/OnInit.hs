@@ -1,8 +1,8 @@
 module Beckn.OnDemand.Utils.OnInit where
 
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
-import Data.Text as T
 import qualified Domain.Types.Location as DLoc
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Gps as Gps
@@ -18,7 +18,7 @@ mkStops origin mbDestination =
                 { stopLocation =
                     Just $
                       Spec.Location
-                        { locationAddress = Just $ mkAddress origin.address,
+                        { locationAddress = Just $ UCommon.mkAddress origin.address,
                           locationAreaCode = origin.address.areaCode,
                           locationCity = Just $ Spec.City Nothing origin.address.city,
                           locationCountry = Just $ Spec.Country Nothing origin.address.country,
@@ -35,7 +35,7 @@ mkStops origin mbDestination =
                   { stopLocation =
                       Just $
                         Spec.Location
-                          { locationAddress = Just $ mkAddress destination.address,
+                          { locationAddress = Just $ UCommon.mkAddress destination.address,
                             locationAreaCode = destination.address.areaCode,
                             locationCity = Just $ Spec.City Nothing destination.address.city,
                             locationCountry = Just $ Spec.Country Nothing destination.address.country,
@@ -50,6 +50,3 @@ mkStops origin mbDestination =
             )
               <$> mbDestination
           ]
-  where
-    mkAddress :: DLoc.LocationAddress -> Text
-    mkAddress DLoc.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]
