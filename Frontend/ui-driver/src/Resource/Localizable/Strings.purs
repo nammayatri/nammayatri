@@ -36,6 +36,13 @@ getString key =
   let language = getLanguageLocale languageKey
   in getStringFromConfigOrLocal language key
 
+getStringEnToHi :: STR -> String
+getStringEnToHi key = 
+  let language = getLanguageLocale "languageKey"
+  in case language of
+    "EN_US" -> getStringFromLocal "HI_IN" key
+    _       -> getStringFromConfigOrLocal language key
+
 getStringFromConfigOrLocal :: String -> STR -> String
 getStringFromConfigOrLocal language key = 
   case (getStringFromConfig key Just Nothing) of
