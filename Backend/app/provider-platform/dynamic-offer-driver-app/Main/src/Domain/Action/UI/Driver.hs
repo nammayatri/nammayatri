@@ -791,9 +791,6 @@ isAllowedExtraFee extraFee val = extraFee.minFee <= val && val <= extraFee.maxFe
 offerQuoteLockKey :: Id Person -> Text
 offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 
-offerQuoteLockSearchTryKey :: Id DST.SearchTry -> Text
-offerQuoteLockSearchTryKey searchTryId = "Driver:OfferQuote:SearchTryId-" <> searchTryId.getId
-
 -- DEPRECATED
 offerQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> DriverOfferReq -> Flow APISuccess
 offerQuote (driverId, merchantId, merchantOpCityId) DriverOfferReq {..} = do
@@ -937,18 +934,19 @@ respondQuote (driverId, merchantId, merchantOpCityId) req = do
       return driverFCMPulledList
 
     acceptStaticOfferDriverRequest searchTry driver = do
-      searchTryKey :: Maybe Bool <- Redis.get (offerQuoteLockSearchTryKey searchTry.id)
-      when (isJust searchTryKey) $ throwError RideRequestAlreadyAccepted
-      Redis.setExp (offerQuoteLockSearchTryKey searchTry.id) True 60
       whenJust req.offeredFare $ \_ -> throwError (InvalidRequest "Driver can't offer rental fare")
       quote <- QQuote.findById (Id searchTry.estimateId) >>= fromMaybeM (QuoteNotFound searchTry.estimateId)
       booking <- QBooking.findByQuoteId quote.id.getId >>= fromMaybeM (BookingDoesNotExist quote.id.getId)
+      isBookingAssigned' <- CS.isBookingAssigned booking.id
+      when isBookingAssigned' $ throwError RideRequestAlreadyAccepted
+      isBookingCancelled' <- CS.isBookingCancelled booking.id
+      when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
+      CS.markBookingAsAssigned booking.id
       unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
       QST.updateStatus searchTry.id DST.COMPLETED
       (ride, _, vehicle) <- initializeRide merchantId driver booking Nothing booking.id.getId
       driverFCMPulledList <- deactivateExistingQuotes merchantOpCityId merchantId driver.id searchTry.id quote.estimatedFare
       void $ sendRideAssignedUpdateToBAP booking ride driver vehicle
-      void $ Redis.del (offerQuoteLockSearchTryKey searchTry.id)
       return driverFCMPulledList
 
 getStats ::
