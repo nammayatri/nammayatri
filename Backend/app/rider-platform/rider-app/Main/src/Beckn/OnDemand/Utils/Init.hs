@@ -14,12 +14,11 @@
 
 module Beckn.OnDemand.Utils.Init where
 
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified Data.Aeson as A
 import Data.List (singleton)
-import qualified Data.Text as T
 import qualified Domain.Types.Location as Location
-import qualified Domain.Types.LocationAddress as LocationAddress
 import qualified Domain.Types.Merchant.MerchantPaymentMethod as DMPM
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Gps as Gps
@@ -36,7 +35,7 @@ mkStops origin mDestination mStartOtp =
                 { stopLocation =
                     Just $
                       Spec.Location
-                        { locationAddress = Just $ mkAddress origin.address,
+                        { locationAddress = Just $ UCommon.mkAddress origin.address,
                           locationAreaCode = origin.address.areaCode,
                           locationCity = Just $ Spec.City Nothing origin.address.city,
                           locationCountry = Just $ Spec.Country Nothing origin.address.country,
@@ -61,7 +60,7 @@ mkStops origin mDestination mStartOtp =
                   { stopLocation =
                       Just $
                         Spec.Location
-                          { locationAddress = Just $ mkAddress destination.address,
+                          { locationAddress = Just $ UCommon.mkAddress destination.address,
                             locationAreaCode = destination.address.areaCode,
                             locationCity = Just $ Spec.City Nothing destination.address.city,
                             locationCountry = Just $ Spec.Country Nothing destination.address.country,
@@ -76,9 +75,6 @@ mkStops origin mDestination mStartOtp =
             )
               <$> mDestination
           ]
-  where
-    mkAddress :: LocationAddress.LocationAddress -> Text
-    mkAddress LocationAddress.LocationAddress {..} = T.intercalate ", " $ catMaybes [door, building, street]
 
 mkPayment :: Maybe DMPM.PaymentMethodInfo -> [Spec.Payment]
 mkPayment (Just DMPM.PaymentMethodInfo {..}) =
