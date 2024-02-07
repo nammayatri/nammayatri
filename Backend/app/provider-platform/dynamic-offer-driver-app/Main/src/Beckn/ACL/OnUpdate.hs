@@ -63,7 +63,8 @@ buildOnUpdateMessage (RideAssignedBuildReq DRideAssignedReq {..}) = do
       }
 buildOnUpdateMessage (RideStartedBuildReq DRideStartedReq {..}) = do
   let personTag = Common.mkLocationTagGroup tripStartLocation
-  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing Nothing (Just $ Tags.TG personTag) False False
+      odometerTag = Common.mkOdometerTagGroup ((.value) <$> ride.startOdometerReading)
+  fulfillment <- Common.mkFulfillment (Just driver) ride booking (Just vehicle) Nothing (Just $ Tags.TG odometerTag) (Just $ Tags.TG personTag) False False
   return $
     OnUpdate.OnUpdateMessage
       { order =

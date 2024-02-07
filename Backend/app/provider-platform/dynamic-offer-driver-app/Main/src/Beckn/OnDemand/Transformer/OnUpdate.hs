@@ -68,7 +68,8 @@ buildOnUpdateReqV2 action domain messageId bppSubscriberId bppUri city country =
   OU.RideStartedBuildReq OU.DRideStartedReq {..} -> do
     context <- CU.buildContextV2 action domain messageId (Just booking.transactionId) booking.bapId booking.bapUri (Just bppSubscriberId) (Just bppUri) city country
     let personTag = Utils.mkLocationTagGroupV2 tripStartLocation -- why are we sending trip start and end location in personTags?
-    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing Nothing (Just personTag) False False (Just $ show Event.RIDE_STARTED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
+        odometerTag = Utils.mkOdometerTagGroupV2 ((.value) <$> ride.startOdometerReading)
+    fulfillment <- Utils.mkFulfillmentV2 (Just driver) ride booking (Just vehicle) Nothing (Just odometerTag) (Just personTag) False False (Just $ show Event.RIDE_STARTED) -- TODO::Beckn, decide on fulfillment.state.descriptor.code mapping according to spec-v2
     pure $
       Spec.OnUpdateReq
         { onUpdateReqError = Nothing,

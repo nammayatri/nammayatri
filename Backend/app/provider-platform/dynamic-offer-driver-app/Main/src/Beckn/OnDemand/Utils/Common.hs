@@ -573,6 +573,34 @@ mkArrivalTimeTagGroupV2 arrivalTime =
       }
   ]
 
+mkOdometerTagGroupV2 :: Maybe Centesimal -> [Spec.TagGroup]
+mkOdometerTagGroupV2 startOdometerReading =
+  [ Spec.TagGroup
+      { tagGroupDisplay = Just False,
+        tagGroupDescriptor =
+          Just $
+            Spec.Descriptor
+              { descriptorCode = Just "ride_odometer_details",
+                descriptorName = Just "Ride Odometer Details",
+                descriptorShortDesc = Nothing
+              },
+        tagGroupList =
+          Just
+            [ Spec.Tag
+                { tagDisplay = Just False,
+                  tagDescriptor =
+                    Just $
+                      Spec.Descriptor
+                        { descriptorCode = Just "start_odometer_reading",
+                          descriptorName = Just "Start Odometer Reading",
+                          descriptorShortDesc = Nothing
+                        },
+                  tagValue = show <$> startOdometerReading
+                }
+            ]
+      }
+  ]
+
 buildAddressFromText :: MonadFlow m => Text -> m OS.Address
 buildAddressFromText fullAddress = do
   let splitedAddress = T.splitOn "<>" fullAddress

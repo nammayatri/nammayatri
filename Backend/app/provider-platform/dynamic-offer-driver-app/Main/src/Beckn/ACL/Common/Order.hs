@@ -15,6 +15,7 @@
 module Beckn.ACL.Common.Order
   ( mkFulfillment,
     buildDistanceTagGroup,
+    mkOdometerTagGroup,
     mkArrivalTimeTagGroup,
     buildRideCompletedQuote,
     mkRideCompletedPayment,
@@ -142,8 +143,19 @@ buildDistanceTagGroup ride = do
             [ Tags.Tag (Just False) (Just "chargeable_distance") (Just "Chargeable Distance") (Just $ show chargeableDistance),
               Tags.Tag (Just False) (Just "traveled_distance") (Just "Traveled Distance") (Just $ show traveledDistance)
             ]
+              <> [Tags.Tag (Just False) (Just "end_odometer_reading") (Just "End Odometer Reading") (show <$> ride.endOdometerReading) | isJust ride.endOdometerReading]
         }
     ]
+
+mkOdometerTagGroup :: Maybe Centesimal -> [Tags.TagGroup]
+mkOdometerTagGroup startOdometerReading =
+  [ Tags.TagGroup
+      { display = False,
+        code = "ride_odometer_details",
+        name = "Ride Odometer Details",
+        list = [Tags.Tag (Just False) (Just "start_odometer_reading") (Just "Start Odometer Reading") (show <$> startOdometerReading) | isJust startOdometerReading]
+      }
+  ]
 
 mkLocationTagGroup :: Maybe Maps.LatLong -> [Tags.TagGroup]
 mkLocationTagGroup location =

@@ -52,6 +52,8 @@ data RideT f = RideT
     rideEndTime :: B.C f (Maybe UTCTime),
     rideRating :: B.C f (Maybe Int),
     allowedEditLocationAttempts :: B.C f (Maybe Int),
+    startOdometerReading :: B.C f (Maybe Centesimal),
+    endOdometerReading :: B.C f (Maybe Centesimal),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     driverImage :: B.C f (Maybe Text),

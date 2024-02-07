@@ -90,7 +90,8 @@ data OnUpdateReq
       { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         tripStartLocation :: Maybe LatLong,
-        endOtp_ :: Maybe Text
+        endOtp_ :: Maybe Text,
+        startOdometerReading :: Maybe Centesimal
       }
   | RideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -101,7 +102,8 @@ data OnUpdateReq
         chargeableDistance :: HighPrecMeters,
         traveledDistance :: HighPrecMeters,
         paymentUrl :: Maybe Text,
-        tripEndLocation :: Maybe LatLong
+        tripEndLocation :: Maybe LatLong,
+        endOdometerReading :: Maybe Centesimal
       }
   | BookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -163,7 +165,8 @@ data ValidatedOnUpdateReq
         booking :: SRB.Booking,
         ride :: SRide.Ride,
         tripStartLocation :: Maybe LatLong,
-        endOtp_ :: Maybe Text
+        endOtp_ :: Maybe Text,
+        startOdometerReading :: Maybe Centesimal
       }
   | ValidatedRideCompletedReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -176,7 +179,8 @@ data ValidatedOnUpdateReq
         ride :: SRide.Ride,
         person :: DP.Person,
         paymentUrl :: Maybe Text,
-        tripEndLocation :: Maybe LatLong
+        tripEndLocation :: Maybe LatLong,
+        endOdometerReading :: Maybe Centesimal
       }
   | ValidatedBookingCancelledReq
       { bppBookingId :: Id SRB.BPPBooking,
@@ -340,6 +344,8 @@ onUpdate ValidatedRideAssignedReq {..} = do
             safetyCheckStatus = Nothing,
             isFreeRide = Just isFreeRide,
             endOtp = Nothing,
+            startOdometerReading = Nothing,
+            endOdometerReading = Nothing,
             ..
           }
 onUpdate ValidatedRideStartedReq {..} = do
@@ -352,7 +358,8 @@ onUpdate ValidatedRideStartedReq {..} = do
         ride{status = SRide.INPROGRESS,
              rideStartTime = Just rideStartTime,
              rideEndTime = Nothing,
-             endOtp = endOtp_
+             endOtp = endOtp_,
+             startOdometerReading = startOdometerReading
             }
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
@@ -375,7 +382,8 @@ onUpdate ValidatedRideCompletedReq {..} = do
              fare = Just fare,
              totalFare = Just totalFare,
              chargeableDistance = Just chargeableDistance,
-             rideEndTime = Just rideEndTime
+             rideEndTime = Just rideEndTime,
+             endOdometerReading = endOdometerReading
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups
   minTripDistanceForReferralCfg <- asks (.minTripDistanceForReferralCfg)
