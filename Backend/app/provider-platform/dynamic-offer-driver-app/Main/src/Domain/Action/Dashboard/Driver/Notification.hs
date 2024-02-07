@@ -69,7 +69,7 @@ triggerDummyRideRequest ::
   m APISuccess
 triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   vehicle <- B.runInReplica $ QVehicle.findById driver.id >>= fromMaybeM (VehicleDoesNotExist driver.id.getId)
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just driver.id) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOperatingCityId.getId)
   let dummyFromLocation = transporterConfig.dummyFromLocation
       dummyToLocation = transporterConfig.dummyToLocation
 

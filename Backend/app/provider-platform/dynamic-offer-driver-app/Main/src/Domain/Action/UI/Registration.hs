@@ -170,7 +170,7 @@ auth isDashboard req mbBundleVersion mbClientVersion = do
 createDriverDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id SP.Person -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> m ()
 createDriverDetails personId merchantId merchantOpCityId = do
   now <- getCurrentTime
-  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just personId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast personId
   mbDriverLicense <- runInReplica $ QDL.findByDriverId driverId
   let driverInfo =

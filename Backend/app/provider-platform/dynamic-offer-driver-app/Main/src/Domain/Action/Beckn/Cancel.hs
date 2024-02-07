@@ -116,7 +116,7 @@ cancel req merchant booking = do
       logDebug $ "RideCancelled Coin Event by customer distance to pickup" <> show disToPickup
       logDebug "RideCancelled Coin Event by customer"
       DC.driverCoinsEvent ride.driverId merchant.id booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup)
-      transporterConfig <- SCT.findByMerchantOpCityId booking.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      transporterConfig <- SCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just ride.driverId) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
 
       when transporterConfig.canAddCancellationFee do
         customerCancellationChargesCalculation transporterConfig booking disToPickup

@@ -344,7 +344,7 @@ createDriverFee ::
   SRB.Booking ->
   m ()
 createDriverFee merchantId merchantOpCityId driverId rideFare newFareParams maxShards driverInfo booking = do
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOpCityId (Just driverId) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   freeTrialDaysLeft <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
   mbDriverPlan <- getPlanAndPushToDefualtIfEligible transporterConfig freeTrialDaysLeft
   let govtCharges = fromMaybe 0 newFareParams.govtCharges

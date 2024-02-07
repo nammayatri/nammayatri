@@ -16,6 +16,7 @@ module SharedLogic.DriverPool.Config where
 
 import Client.Main as CM
 import Data.Aeson as DA
+import System.Random
 -- import Domain.Types.Merchant.DriverPoolConfig as DPC
 
 -- import Data.Aeson.Key
@@ -55,7 +56,10 @@ getDriverPoolConfig merchantOpCityId mbvt dist = do
   dpcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList ([(pack "merchantOperatingCityId", DA.String (getId merchantOpCityId)), (pack "tripDistance", DA.String (Text.pack (show dist)))] ++ (bool [] [(pack "variant", DA.String (Text.pack (show $ fromJust mbvt)))] (isJust mbvt)))
   logDebug $ "the context value is " <> show dpcCond
   tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
-  contextValue <- liftIO $ CM.evalCtx (fromMaybe "test" tenant) dpcCond
+  gen <- newStdGen
+  let (toss,_) = randomR (1, 100) gen :: (Int, StdGen)
+  logDebug $ "the toss value is for driver pool config " <> show toss
+  contextValue <- liftIO $ CM.evalExperiment (fromMaybe "atlas_driver_offer_bpp_v2" tenant) dpcCond toss
   case contextValue of
     Left err -> error $ (pack "error in fetching the context value ") <> (pack err)
     Right contextValue' -> do

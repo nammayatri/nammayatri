@@ -33,13 +33,17 @@ import Kernel.Utils.Logging
 import qualified Storage.Queries.GoHomeConfig as Queries
 import qualified System.Environment as SE
 import Tools.Error (GenericError (..))
+import System.Random
 
 findByMerchantOpCityId :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r) => Id MerchantOperatingCity -> m GoHomeConfig
 findByMerchantOpCityId id = do
   ghcCond <- liftIO $ CM.hashMapToString $ HashMap.fromList [(pack "merchantOperatingCityId", DA.String (getId id))]
   logDebug $ "the context is " <> show ghcCond
   tenant <- liftIO $ SE.lookupEnv "DRIVER_TENANT"
-  contextValue <- liftIO $ CM.evalCtx (fromMaybe "test" tenant) ghcCond
+  gen <- newStdGen
+  let (toss,_) = randomR (1, 100) gen :: (Int, StdGen)
+  logDebug $ "the toss value is for gohomeConig " <> show toss
+  contextValue <- liftIO $ CM.evalExperiment (fromMaybe "atlas_driver_offer_bpp_v2" tenant) ghcCond toss
   case contextValue of
     Left err -> error $ (pack "error in fetching the context value for GoHomeConfig ") <> (pack err)
     Right contextValue' -> do

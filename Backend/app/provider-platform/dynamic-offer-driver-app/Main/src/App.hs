@@ -62,6 +62,8 @@ import "utils" Utils.Common.Events as UE
 runDynamicOfferDriverApp :: (AppCfg -> AppCfg) -> IO ()
 runDynamicOfferDriverApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "dynamic-offer-driver-app"
+  _ <- CM.initSuperPositionClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
+  _ <- CM.runSuperPositionPolling appCfg.cacConfig.tenants
   _ <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacConfig.tenants
   _ <- CM.startCACPolling appCfg.cacConfig.tenants
   Metrics.serve (appCfg.metricsPort)

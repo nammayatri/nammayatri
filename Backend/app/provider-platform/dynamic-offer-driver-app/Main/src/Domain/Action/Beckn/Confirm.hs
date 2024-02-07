@@ -243,7 +243,7 @@ handler transporter req quote = do
       shortId <- generateShortId
       -- let otp = T.takeEnd 4 customerPhoneNumber
       now <- getCurrentTime
-      transporterConfig <- TC.findByMerchantOpCityId booking.merchantOperatingCityId >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      transporterConfig <- TC.findByMerchantOpCityId booking.merchantOperatingCityId (Just driverId) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
       trackingUrl <- buildTrackingUrl guid
       return
         DRide.Ride
