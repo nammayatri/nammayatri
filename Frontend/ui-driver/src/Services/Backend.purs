@@ -292,7 +292,12 @@ makeStartRideReq otp odometerReading fileId lat lon ts = StartRideReq {
 }
 --------------------------------- endRide ---------------------------------------------------------------------------------------------------------------------------------
 
-
+endRide :: String -> EndRideReq -> Flow GlobalState (Either ErrorResponse EndRideResponse)
+endRide productId payload = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.endRide productId) unwrapResponse $ callAPI headers ((EndRideRequest productId payload))
+    where
+      unwrapResponse (x) = x
 
 
 makeEndRideReq :: Maybe String -> Maybe String -> Maybe String -> Number -> Number -> Maybe Boolean -> Int -> Int -> String -> EndRideReq
@@ -313,6 +318,13 @@ makeEndRideReq endOtp endOdometerReading fileId lat lon numDeviation tripDistanc
 }
 
 --------------------------------- ARRIVED AT STOP ---------------------------------------------------------------------------------------------------------------------------------
+
+arrivedStop :: String -> LatLong -> Flow GlobalState (Either ErrorResponse ArrivedAtStopResponse)
+arrivedStop productId payload = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.arrivedAtStop productId) unwrapResponse $ callAPI headers ((ArrivedAtStopRequest productId payload))
+    where
+      unwrapResponse (x) = x
 
 
 makeArrivedAtStopReq :: String -> String -> LatLong

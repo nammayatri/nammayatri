@@ -408,6 +408,7 @@ getML stringKey =
         ENTER_CURRENT_ODOMETER_READING -> "നിലവിലെ ഓഡമീറ്റർ റീഡിങ് നൽകുക"
         ENTER_THE_LAST_4_DIGITS_OF_ODOMETER -> "ഓഡമീറ്റർ നിലവിലെ അവസാനത്തെ 4 അക്ക നൽകുക"
         ENTER_THE_DIGITS_OF_ODOMETER -> "ഓഡോമീറ്ററിൻ്റെ അക്കങ്ങൾ നൽകുക"
+        ODOMETER_READING_VALIDATION_FAILED -> "സാധുവായ ഓഡോമീറ്റർ റീഡിംഗ് നൽകുക"
         DELETE ->  "ഇല്ലാതാക്കുക"
         VIEW ->  "കാണുക"
         ISSUE_NO ->  "ഇഷ്യൂ നം."
