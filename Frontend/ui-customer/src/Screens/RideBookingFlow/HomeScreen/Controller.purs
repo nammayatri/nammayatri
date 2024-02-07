@@ -1682,12 +1682,12 @@ eval WhereToClick state = do
   -- exit $ UpdateSavedLocation updateState 
 
 eval (RideCompletedAC (RideCompletedCard.SkipButtonActionController (PrimaryButtonController.OnClick))) state = do
+  void $ pure $ toggleBtnLoader "SkipButton" false
   let _ = spy (show state.data.rideType) state
   if state.data.rideType == RideType.RENTAL_RIDE then continue state {data {rideType = RideType.NORMAL_RIDE}}
   else   
     case state.data.ratingViewState.issueFacedView of
       true -> do
-              void $ pure $ toggleBtnLoader "SkipButton" false
               _ <- pure $ setValueToLocalStore REFERRAL_STATUS "HAS_TAKEN_RIDE"
               let newState = state
                             { props { nightSafetyFlow = false }
