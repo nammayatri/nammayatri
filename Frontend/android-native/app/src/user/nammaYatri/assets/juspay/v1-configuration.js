@@ -121,6 +121,21 @@ window.getMerchantConfig = function () {
       "CALL_SUPPORT_DESCRIPTION" : "ನೀವು ನಮ್ಮ ಯಾತ್ರಿ ಬೆಂಬಲಕ್ಕೆ ಕರೆ ಮಾಡಲಿರುವಿರಿ. ನೀವು ಮುಂದುವರೆಯಲು ಬಯಸುವಿರಾ?",
       "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "ಸಮಸ್ಯೆಯನ್ನು ಪರಿಹರಿಸಲಾಗಿದೆ ಎಂದು ನಾವು ಭಾವಿಸುತ್ತೇವೆ, ಯಾವುದೇ ಪ್ರಶ್ನೆಗಳಿಗೆ ನಮಗೆ nammayatri.support@juspay.in ನಲ್ಲಿ ಬರೆಯಲು ಮುಕ್ತವಾಗಿರಿ."
     },
+    "tamilStrings": {
+      "YOUR_LOCATION_HELPS_OUR_SYSTEM": "உங்கள் இருப்பிடம் எங்கள் கணினிக்கு அருகில் உள்ள அனைத்தையும் ஆட்டோக்கள் மூலம் வரைபடமாக்கி, உங்களுக்கு விரைவான பயணத்தை சாத்தியமாக்க உதவுகிறது.",
+      "LOCATION_PERMISSION_SUBTITLE_NEW_USER" : "நம்ம யாத்ரிக்கு வரவேற்கிறோம்! \nசவாரிகளை முன்பதிவு செய்யத் தொடங்க, உங்களைக் கண்டறிய எங்களை அனுமதிக்கவும்!",
+      "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL" : "இணையதளம்: <u>https://nammayatri.in/</u>",
+      "YOUR_FEEDBACK_HELPS_US" : "உங்கள் கருத்து நம் யாத்ரி அனுபவத்தை மேம்படுத்த உதவுகிறது",
+      "LEARN_HOW_TEXT" : "நம்மயாத்ரி உங்கள் தேவைகளை எப்படிப் பூர்த்தி செய்கிறது",
+      "DRIVER_ADDITIONS_ARE_CALCULATED_AT_RATE" : "டிரைவர் சேர்க்கை வரம்புகள் அடிப்படைக் கட்டணத்தில் 10% கணக்கிடப்பட்டு, அருகிலுள்ள ₹10 வரை கணக்கிடப்படும்",
+      "FARE_INFO_TEXT" : "கர்நாடக மாநில அரசு விதிகளின் அடிப்படையிலான ஆட்டோ ஓட்டுநர் சேர்க்கையின் அடிப்படையில் கட்டணம் நிர்ணயிக்கப்பட்டுள்ளது, மேலும் இது நம்ம யாத்ரியால் நிர்ணயிக்கப்படவில்லை.",
+      "PLEASE_ENABLE_LOCATION_PERMISSION" : "சவாரிகளைத் தேடத் தொடங்க, அமைப்புகள் பயன்பாட்டிலிருந்து நம்ம யாத்ரிக்கான இருப்பிட அனுமதிகளை இயக்கவும்.",
+      "TAXI_FROM_ZONE" : "நம்ம யாத்ரி மண்டலத்திலிருந்து",
+      "OTP_FOR_THE_JATRI_SATHI_ZONE_HAS_BEEN_EXPIRED_PLEASE_TRY_LOOKING_AGAIN" : "நம்ம யாத்ரி மண்டலத்திற்கான OTP காலாவதியானது, மீண்டும் முன்பதிவு செய்ய முயற்சிக்கவும்",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "உங்கள் சிக்கலை விவரிக்கவும். நம்ம யாத்ரி 24 மணி நேரத்திற்குள் அதைத் தீர்க்க முயற்சிக்கும்.",
+      "CALL_SUPPORT_DESCRIPTION" : "நம்ம யாத்ரி ஆதரவிற்கு அழைப்பை மேற்கொள்ள உள்ளீர்கள். தொடர விரும்புகிறீர்களா?",
+      "WE_HOPE_THE_ISSUE_IS_RESOLVED" : "சிக்கல் தீர்ந்துவிட்டது என்று நம்புகிறோம், ஏதேனும் கேள்விகளுக்கு தயங்காமல் எங்களுக்கு nammayatri.support@juspay.in இல் எழுதவும்."
+    },
     "languageList": [{
       "name": "English",
       "value": "EN_US",
@@ -133,7 +148,12 @@ window.getMerchantConfig = function () {
       "name": "हिंदी",
       "value": "HI_IN",
       "subTitle": "Hindi"
-    }],
+    }, {
+      "name": "தமிழ்",
+      "value": "TA_IN",
+      "subTitle": "Tamil"
+    }
+  ],
     "bannerConfig" : {
       "backgroundColor" : "#F0FAF0"
       , "title" : "Complete your profile for a personalised ride experience"
