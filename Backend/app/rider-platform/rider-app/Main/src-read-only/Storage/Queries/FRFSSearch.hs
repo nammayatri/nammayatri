@@ -49,15 +49,15 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.FRFSSearch.FRFSSearch {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.fromStationId $ (Kernel.Types.Id.getId fromStationId),
-      Se.Set Beam.quantity $ quantity,
-      Se.Set Beam.riderId $ (Kernel.Types.Id.getId riderId),
-      Se.Set Beam.toStationId $ (Kernel.Types.Id.getId toStationId),
-      Se.Set Beam.vehicleType $ vehicleType,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
+      Se.Set Beam.quantity quantity,
+      Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
+      Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

@@ -42,19 +42,19 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.RiderConfig.RiderConfig {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.appUrl $ appUrl,
-      Se.Set Beam.enableEmergencyContactAddedMessage $ enableEmergencyContactAddedMessage,
-      Se.Set Beam.enableLocalPoliceSupport $ enableLocalPoliceSupport,
-      Se.Set Beam.enableSupportForSafety $ enableSupportForSafety,
-      Se.Set Beam.localPoliceNumber $ localPoliceNumber,
-      Se.Set Beam.safetyCheckEndTime $ safetyCheckEndTime,
-      Se.Set Beam.safetyCheckStartTime $ safetyCheckStartTime,
-      Se.Set Beam.timeDiffFromUtc $ timeDiffFromUtc,
-      Se.Set Beam.trackingShortUrlPattern $ trackingShortUrlPattern,
-      Se.Set Beam.videoFileSizeUpperLimit $ videoFileSizeUpperLimit,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.appUrl appUrl,
+      Se.Set Beam.enableEmergencyContactAddedMessage enableEmergencyContactAddedMessage,
+      Se.Set Beam.enableLocalPoliceSupport enableLocalPoliceSupport,
+      Se.Set Beam.enableSupportForSafety enableSupportForSafety,
+      Se.Set Beam.localPoliceNumber localPoliceNumber,
+      Se.Set Beam.safetyCheckEndTime safetyCheckEndTime,
+      Se.Set Beam.safetyCheckStartTime safetyCheckStartTime,
+      Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
+      Se.Set Beam.trackingShortUrlPattern trackingShortUrlPattern,
+      Se.Set Beam.videoFileSizeUpperLimit videoFileSizeUpperLimit,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)

@@ -64,16 +64,16 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.SpecialOccasion.SpecialOccasion {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.businessHours $ (Kernel.Types.Id.getId <$> businessHours),
-      Se.Set Beam.date $ date,
-      Se.Set Beam.dayOfWeek $ dayOfWeek,
-      Se.Set Beam.description $ description,
-      Se.Set Beam.entityId $ entityId,
-      Se.Set Beam.specialDayType $ specialDayType,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
+      Se.Set Beam.date date,
+      Se.Set Beam.dayOfWeek dayOfWeek,
+      Se.Set Beam.description description,
+      Se.Set Beam.entityId entityId,
+      Se.Set Beam.specialDayType specialDayType,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

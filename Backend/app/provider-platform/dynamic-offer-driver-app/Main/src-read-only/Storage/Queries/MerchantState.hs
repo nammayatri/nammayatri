@@ -45,9 +45,9 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.MerchantState.MerchantState {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowedDestinationStates $ allowedDestinationStates,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.allowedDestinationStates allowedDestinationStates,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),

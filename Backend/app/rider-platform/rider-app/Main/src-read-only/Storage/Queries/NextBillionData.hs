@@ -36,12 +36,12 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.NextBillionData.NextBillionData {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.mapsProvider $ mapsProvider,
-      Se.Set Beam.routes $ routes,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.mapsProvider mapsProvider,
+      Se.Set Beam.routes routes,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.searchRequestId $ Se.Eq (Kernel.Types.Id.getId searchRequestId)

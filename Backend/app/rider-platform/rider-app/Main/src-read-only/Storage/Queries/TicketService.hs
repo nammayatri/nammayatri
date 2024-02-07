@@ -48,18 +48,18 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.TicketService.TicketService {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.allowFutureBooking $ allowFutureBooking,
-      Se.Set Beam.businessHours $ (Kernel.Types.Id.getId <$> businessHours),
-      Se.Set Beam.expiry $ expiry,
-      Se.Set Beam.maxVerification $ maxVerification,
-      Se.Set Beam.operationalDays $ operationalDays,
-      Se.Set Beam.placesId $ placesId,
-      Se.Set Beam.service $ service,
-      Se.Set Beam.shortDesc $ shortDesc,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.allowFutureBooking allowFutureBooking,
+      Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
+      Se.Set Beam.expiry expiry,
+      Se.Set Beam.maxVerification maxVerification,
+      Se.Set Beam.operationalDays operationalDays,
+      Se.Set Beam.placesId placesId,
+      Se.Set Beam.service service,
+      Se.Set Beam.shortDesc shortDesc,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

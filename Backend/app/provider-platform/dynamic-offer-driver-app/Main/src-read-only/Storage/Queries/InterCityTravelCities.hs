@@ -45,11 +45,11 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.InterCityTravelCities.InterCityTravelCities {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.lat $ lat,
-      Se.Set Beam.lng $ lng,
-      Se.Set Beam.state $ state,
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.lat lat,
+      Se.Set Beam.lng lng,
+      Se.Set Beam.state state,
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.cityName $ Se.Eq cityName,

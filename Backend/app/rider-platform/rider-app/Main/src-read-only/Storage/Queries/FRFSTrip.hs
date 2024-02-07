@@ -48,16 +48,16 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.FRFSTrip.FRFSTrip {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bppFulfillmentId $ bppFulfillmentId,
-      Se.Set Beam.quoteId $ (Kernel.Types.Id.getId quoteId),
-      Se.Set Beam.stationCode $ stationCode,
-      Se.Set Beam.stationName $ stationName,
-      Se.Set Beam.stationType $ stationType,
-      Se.Set Beam.stopSequence $ stopSequence,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.bppFulfillmentId bppFulfillmentId,
+      Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
+      Se.Set Beam.stationCode stationCode,
+      Se.Set Beam.stationName stationName,
+      Se.Set Beam.stationType stationType,
+      Se.Set Beam.stopSequence stopSequence,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

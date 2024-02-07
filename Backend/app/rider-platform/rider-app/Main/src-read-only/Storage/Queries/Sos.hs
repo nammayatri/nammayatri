@@ -56,8 +56,8 @@ updateStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.Sos.
 updateStatus status (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.status $ status,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.status status,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.Is Beam.id $ Se.Eq id
     ]
@@ -74,15 +74,15 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.Sos.Sos {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.flow $ flow,
-      Se.Set Beam.personId $ (Kernel.Types.Id.getId personId),
-      Se.Set Beam.rideId $ (Kernel.Types.Id.getId rideId),
-      Se.Set Beam.status $ status,
-      Se.Set Beam.ticketId $ ticketId,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.flow flow,
+      Se.Set Beam.personId (Kernel.Types.Id.getId personId),
+      Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
+      Se.Set Beam.status status,
+      Se.Set Beam.ticketId ticketId,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

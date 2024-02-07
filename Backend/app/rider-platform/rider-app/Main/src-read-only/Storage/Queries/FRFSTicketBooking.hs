@@ -62,9 +62,9 @@ updateBPPOrderIdAndStatusById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => 
 updateBPPOrderIdAndStatusById bppOrderId status (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bppOrderId $ bppOrderId,
-      Se.Set Beam.status $ status,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.bppOrderId bppOrderId,
+      Se.Set Beam.status status,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.Is Beam.id $ Se.Eq id
     ]
@@ -73,8 +73,8 @@ updateStatusById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Types.
 updateStatusById status (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.status $ status,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.status status,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.Is Beam.id $ Se.Eq id
     ]
@@ -83,9 +83,9 @@ updateValidTillAndStatusById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => D
 updateValidTillAndStatusById status validTill (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.status $ status,
-      Se.Set Beam.validTill $ validTill,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.status status,
+      Se.Set Beam.validTill validTill,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.Is Beam.id $ Se.Eq id
     ]
@@ -94,8 +94,8 @@ updateValidTillById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Pre
 updateValidTillById validTill (Kernel.Types.Id.Id id) = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.validTill $ validTill,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.validTill validTill,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.Is Beam.id $ Se.Eq id
     ]
@@ -112,29 +112,29 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam._type $ _type,
-      Se.Set Beam.bppItemId $ bppItemId,
-      Se.Set Beam.bppOrderId $ bppOrderId,
-      Se.Set Beam.bppSubscriberId $ bppSubscriberId,
-      Se.Set Beam.bppSubscriberUrl $ bppSubscriberUrl,
-      Se.Set Beam.fromStationId $ (Kernel.Types.Id.getId fromStationId),
-      Se.Set Beam.price $ price,
-      Se.Set Beam.providerDescription $ providerDescription,
-      Se.Set Beam.providerId $ providerId,
-      Se.Set Beam.providerName $ providerName,
-      Se.Set Beam.quantity $ quantity,
-      Se.Set Beam.quoteId $ (Kernel.Types.Id.getId quoteId),
-      Se.Set Beam.riderId $ (Kernel.Types.Id.getId riderId),
-      Se.Set Beam.searchId $ (Kernel.Types.Id.getId searchId),
-      Se.Set Beam.stationsJson $ stationsJson,
-      Se.Set Beam.status $ status,
-      Se.Set Beam.toStationId $ (Kernel.Types.Id.getId toStationId),
-      Se.Set Beam.validTill $ validTill,
-      Se.Set Beam.vehicleType $ vehicleType,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam._type _type,
+      Se.Set Beam.bppItemId bppItemId,
+      Se.Set Beam.bppOrderId bppOrderId,
+      Se.Set Beam.bppSubscriberId bppSubscriberId,
+      Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
+      Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
+      Se.Set Beam.price price,
+      Se.Set Beam.providerDescription providerDescription,
+      Se.Set Beam.providerId providerId,
+      Se.Set Beam.providerName providerName,
+      Se.Set Beam.quantity quantity,
+      Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
+      Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
+      Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
+      Se.Set Beam.stationsJson stationsJson,
+      Se.Set Beam.status status,
+      Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
+      Se.Set Beam.validTill validTill,
+      Se.Set Beam.vehicleType vehicleType,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

@@ -11,7 +11,8 @@
     };
 
     namma-dsl = {
-      url = "github:nammayatri/namma-dsl";
+      url = "github:nammayatri/namma-dsl/remove-warnings";
+      # url = "github:nammayatri/namma-dsl";
       flake = false;
       # inputs = {
       #   # common.follows = "common";

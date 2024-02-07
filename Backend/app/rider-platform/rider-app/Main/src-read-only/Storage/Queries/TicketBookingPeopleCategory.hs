@@ -49,14 +49,14 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.TicketBookingPeopleCategory.TicketBookingPeopleCategory {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.name $ name,
-      Se.Set Beam.numberOfUnits $ numberOfUnits,
-      Se.Set Beam.pricePerUnit $ pricePerUnit,
-      Se.Set Beam.ticketBookingServiceCategoryId $ (Kernel.Types.Id.getId ticketBookingServiceCategoryId),
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.name name,
+      Se.Set Beam.numberOfUnits numberOfUnits,
+      Se.Set Beam.pricePerUnit pricePerUnit,
+      Se.Set Beam.ticketBookingServiceCategoryId (Kernel.Types.Id.getId ticketBookingServiceCategoryId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

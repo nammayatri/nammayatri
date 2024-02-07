@@ -38,8 +38,8 @@ updateBlockedSeats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prel
 updateBlockedSeats blocked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.blocked $ blocked,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.blocked blocked,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
@@ -51,8 +51,8 @@ updateBookedSeats :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Prelu
 updateBookedSeats booked (Kernel.Types.Id.Id ticketServiceCategoryId) date = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.booked $ booked,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.booked booked,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.ticketServiceCategoryId $ Se.Eq ticketServiceCategoryId,
@@ -72,14 +72,14 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.SeatManagement.SeatManagement {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.blocked $ blocked,
-      Se.Set Beam.booked $ booked,
-      Se.Set Beam.date $ date,
-      Se.Set Beam.ticketServiceCategoryId $ (Kernel.Types.Id.getId ticketServiceCategoryId),
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.blocked blocked,
+      Se.Set Beam.booked booked,
+      Se.Set Beam.date date,
+      Se.Set Beam.ticketServiceCategoryId (Kernel.Types.Id.getId ticketServiceCategoryId),
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)

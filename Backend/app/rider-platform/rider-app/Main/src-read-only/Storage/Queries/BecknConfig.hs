@@ -51,18 +51,18 @@ updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Domain.Type
 updateByPrimaryKey Domain.Types.BecknConfig.BecknConfig {..} = do
   now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.domain $ domain,
-      Se.Set Beam.gatewayUrl $ showBaseUrl $ gatewayUrl,
-      Se.Set Beam.paymentParamsJson $ paymentParamsJson,
-      Se.Set Beam.registryUrl $ showBaseUrl $ registryUrl,
-      Se.Set Beam.settlementType $ settlementType,
-      Se.Set Beam.subscriberId $ subscriberId,
-      Se.Set Beam.subscriberUrl $ showBaseUrl $ subscriberUrl,
-      Se.Set Beam.uniqueKeyId $ uniqueKeyId,
-      Se.Set Beam.merchantId $ (Kernel.Types.Id.getId <$> merchantId),
-      Se.Set Beam.merchantOperatingCityId $ (Kernel.Types.Id.getId <$> merchantOperatingCityId),
-      Se.Set Beam.createdAt $ createdAt,
-      Se.Set Beam.updatedAt $ now
+    [ Se.Set Beam.domain domain,
+      Se.Set Beam.gatewayUrl $ showBaseUrl gatewayUrl,
+      Se.Set Beam.paymentParamsJson paymentParamsJson,
+      Se.Set Beam.registryUrl $ showBaseUrl registryUrl,
+      Se.Set Beam.settlementType settlementType,
+      Se.Set Beam.subscriberId subscriberId,
+      Se.Set Beam.subscriberUrl $ showBaseUrl subscriberUrl,
+      Se.Set Beam.uniqueKeyId uniqueKeyId,
+      Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
+      Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.updatedAt now
     ]
     [ Se.And
         [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
@@ -96,13 +96,13 @@ instance ToTType' Beam.BecknConfig Domain.Types.BecknConfig.BecknConfig where
   toTType' Domain.Types.BecknConfig.BecknConfig {..} = do
     Beam.BecknConfigT
       { Beam.domain = domain,
-        Beam.gatewayUrl = showBaseUrl (gatewayUrl),
+        Beam.gatewayUrl = showBaseUrl gatewayUrl,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.paymentParamsJson = paymentParamsJson,
-        Beam.registryUrl = showBaseUrl (registryUrl),
+        Beam.registryUrl = showBaseUrl registryUrl,
         Beam.settlementType = settlementType,
         Beam.subscriberId = subscriberId,
-        Beam.subscriberUrl = showBaseUrl (subscriberUrl),
+        Beam.subscriberUrl = showBaseUrl subscriberUrl,
         Beam.uniqueKeyId = uniqueKeyId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
